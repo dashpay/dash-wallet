@@ -53,6 +53,31 @@ sealed class SdkWriteResult<out T> {
 }
 
 /**
+ * The result of an SDK submission a wallet wipe cancelled
+ * ([de.schildbach.wallet.payments.FundingSelectionLock.withSharedSubmission]). Cancelled before
+ * it was submitted, nothing went out: [SdkWriteResult.NotBroadcast]. Cancelled after, it may
+ * have: [SdkWriteResult.Ambiguous] carrying a
+ * [de.schildbach.wallet.payments.WalletWipedDuringSubmissionException], a
+ * PaymentSubmissionPendingException, so a caller that rethrows the cause reports it as "may have
+ * been sent", and it is never a cancellation, which would read as "nothing happened".
+ */
+internal fun wipeCancelledWriteResult(
+    operation: String,
+    txIdHex: String?,
+    cause: de.schildbach.wallet.payments.WalletWipedCancellationException,
+    submitted: Boolean
+): SdkWriteResult<Nothing> = if (!submitted) {
+    SdkWriteResult.NotBroadcast("$operation: a wallet wipe cancelled it before it was submitted", cause)
+} else {
+    LoggerFactory.getLogger(SdkWriteResult::class.java).error(
+        "SDK {}: a wallet wipe cancelled it after submission{}; the outcome is unknown and it is NOT retried",
+        operation,
+        txIdHex?.let { " ($it)" } ?: ""
+    )
+    SdkWriteResult.Ambiguous(de.schildbach.wallet.payments.WalletWipedDuringSubmissionException(txIdHex, cause))
+}
+
+/**
  * The no-double-broadcast decision table for a throwable raised by the
  * SDK's native write call itself (preflight failures never reach here —
  * they are [SdkWriteResult.NotBroadcast] by construction).
@@ -110,6 +135,14 @@ internal const val REASON_PRE_BROADCAST_BUILD_SHORTFALL =
     "pre-broadcast build failure (insufficient funds / coin selection)"
 internal const val REASON_PRE_BROADCAST_ASSET_LOCK_SELECTION =
     "pre-broadcast asset-lock coin-selection failure"
+/**
+ * [classifyBroadcastFailure] reason for an asset-lock transaction that could
+ * not be SIGNED (typically the seed was unreadable because the device was
+ * locked: "mnemonic resolver failed with code 3"). Nothing was built, so
+ * nothing was submitted; retryable once the signer is available again.
+ */
+internal const val REASON_PRE_BROADCAST_ASSET_LOCK_SIGNING =
+    "pre-broadcast asset-lock signing failure"
 
 internal fun classifyBroadcastFailure(t: Throwable): SdkWriteResult<Nothing> = when {
     t is DashSdkError.InvalidParameter ||
@@ -255,6 +288,16 @@ internal fun classifyBroadcastFailure(t: Throwable): SdkWriteResult<Nothing> = w
     // Retryable with a smaller amount.
     t.message?.contains("asset lock coin selection is short") == true ->
         SdkWriteResult.NotBroadcast(REASON_PRE_BROADCAST_ASSET_LOCK_SELECTION, t)
+    // The asset-lock BUILDER failed to sign its own L1 transaction — an
+    // unsigned transaction cannot have been broadcast, and the builder runs
+    // before every later stage, so nothing at all was submitted. Observed
+    // live (MO-1099, build 37, CoinJoin shield while the phone was locked):
+    // "Asset lock transaction failed: Asset lock builder failed: Transaction
+    // builder error: Signing failed: mnemonic resolver failed with code 3".
+    // Deliberately NOT a bare "Signing failed"/"signer failed" match: a
+    // signer failure in a LATER Platform stage happens after the lock is out.
+    t.message?.let { m -> m.contains("Asset lock builder failed") && m.contains("Signing failed") } == true ->
+        SdkWriteResult.NotBroadcast(REASON_PRE_BROADCAST_ASSET_LOCK_SIGNING, t)
     // The SDK's SPV client wasn't running when broadcast was attempted, so the
     // tx never left the device (observed live: the interim shield pipeline
     // broadcasts via the shadow SPV, which our recovery paths stop/reset — the

@@ -19,6 +19,7 @@ package org.dash.wallet.integrations.maya.api
 
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.services.WalletSession
 import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
 
 /**
@@ -36,7 +37,9 @@ interface MayaBlockchainApi {
      */
     suspend fun commitSwapTransaction(
         tradeId: String,
-        swapTradeUIModel: SwapTradeUIModel
+        swapTradeUIModel: SwapTradeUIModel,
+        /** The wallet the swap was confirmed on; null takes the one installed on entry. */
+        session: WalletSession? = null
     ): ResponseResource<SwapTradeUIModel>
 
     /**
@@ -45,7 +48,13 @@ interface MayaBlockchainApi {
      * directly after refreshing the route via SwapKit's own API.
      */
     suspend fun buildAndSendSwapTx(
-        swapTradeUIModel: SwapTradeUIModel
+        swapTradeUIModel: SwapTradeUIModel,
+        /**
+         * The wallet the swap was confirmed on (review 5560810479). The deposit is refused, with
+         * nothing sent and its reservation released, once that wallet has been wiped or replaced.
+         * Null takes the one installed on entry.
+         */
+        session: WalletSession? = null
     ): ResponseResource<SwapTradeUIModel>
 
     /**

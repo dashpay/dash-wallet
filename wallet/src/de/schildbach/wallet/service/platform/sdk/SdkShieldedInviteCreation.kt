@@ -363,6 +363,10 @@ class SdkShieldedInviteCreation internal constructor(
         val criticalResult: SdkWriteResult<InvitationLinkData> = withContext(NonCancellable) {
             // THE funding transfer — one attempt, ~30s Halo 2 proof. One transfer,
             // TWO notes to the same one-time address (see [inviteFundingSplit]).
+            // The pending reconciliation is durable before anything is submitted
+            // (see ShieldedBalanceService.beginExternalShieldedSpend).
+            val spendStartedAtMs = shieldedBalanceService.beginExternalShieldedSpend()
+                ?: return@withContext notBroadcast("could not record the pending shielded spend", null)
             try {
                 source.fundNotesToRaw43(walletId, key.address, inviteFundingSplit(denominationCredits))
             } catch (t: Throwable) {
@@ -377,9 +381,13 @@ class SdkShieldedInviteCreation internal constructor(
                             "shielded invite funding outcome unconfirmed — the note MAY exist; do NOT retry",
                             t
                         )
+                        // The transfer MAY have spent pool notes: the
+                        // reconciliation begun above stays until settlement.
                         SdkWriteResult.Ambiguous(t)
                     }
                 }
+            } finally {
+                endPoolSpend(spendStartedAtMs)
             }
 
             // Advisory scan hint; a missing height is fine (claim scans without one).
@@ -461,6 +469,17 @@ class SdkShieldedInviteCreation internal constructor(
     private fun notBroadcast(reason: String, cause: Throwable?): SdkWriteResult.NotBroadcast {
         log.info("shielded invite not created ({})", reason, cause)
         return SdkWriteResult.NotBroadcast(reason, cause)
+    }
+
+    /**
+     * The invite-funding transfer's SDK call is over (whatever its outcome):
+     * hand the reconciliation it began to settlement
+     * ([ShieldedBalanceService.endExternalShieldedSpend]). Best-effort and
+     * NonCancellable — the spend's durable record already exists.
+     */
+    private suspend fun endPoolSpend(spendStartedAtMs: Long) = withContext(NonCancellable) {
+        runCatching { shieldedBalanceService.endExternalShieldedSpend(spendStartedAtMs) }
+            .onFailure { log.warn("pool-spend end failed; settlement waits for the next pass", it) }
     }
 
     private suspend fun isEnabled(): Boolean = try {

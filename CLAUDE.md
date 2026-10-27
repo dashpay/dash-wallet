@@ -98,16 +98,18 @@ The app follows **MVVM (Model-View-ViewModel)** architecture with the following 
 
 ### Key Technologies
 - **Language**: Kotlin (primary), Java (legacy code)
-- **UI**: Android Views with Data Binding, Jetpack Compose for newer components
+- **UI**: Android Views with ViewBinding (no Data Binding), Jetpack Compose for newer components (new UI must be Compose)
 - **Dependency Injection**: Dagger Hilt
 - **Database**: Room with SQLite
 - **Networking**: Retrofit, OkHttp
 - **Architecture Components**: ViewModel, LiveData/StateFlow, Navigation Component
-- **Cryptocurrency**: dashj library (fork of bitcoinj)
+- **Cryptocurrency**: the Dash Platform Kotlin SDK (Rust over JNI) owns L1 after the cutover; dashj (bitcoinj fork) still
+  holds the seed and legacy types. See `docs/code-knowledge/00-project-map.md` §2
 
 ### Module Dependencies
 - Main wallet module depends on common, features, and integration modules
-- Uses external dependencies like dashj for Dash blockchain functionality
+- Uses the Dash Platform Kotlin SDK for L1 and Platform after the cutover. dashj remains for the seed and legacy types,
+  and as an opt-in sync diagnostic
 - Firebase for analytics and crash reporting
 - Material Design components for UI
 
@@ -121,7 +123,7 @@ The app follows **MVVM (Model-View-ViewModel)** architecture with the following 
 ### Development Setup
 - Set build variant to required flavor (e.g., `_testNet3Debug` for testnet development)
 - Android SDK Build Tools version 35+ and NDK required
-- Uses Gradle 8.9 with Kotlin 2.1.0
+- Uses Gradle 8.13 (AGP 8.13.2) with Kotlin 2.1.0
 
 ### Build Flavors
 - **prod**: Production mainnet build (non-debuggable, ProGuard optimized)
@@ -138,4 +140,18 @@ The app follows **MVVM (Model-View-ViewModel)** architecture with the following 
 - The app supports both mainnet and testnet Dash networks
 - Exchange rate data comes from multiple sources (CTX, BitPay, Dash Central, etc.)
 - Supports NFC for Dash payment requests
-- Uses dashj library for Dash-specific blockchain operations
+- After the cutover, L1 (balance, history, sends) belongs to the Kotlin SDK. The dashj wallet is still loaded on every
+  launch for its seed and legacy types
+
+## Before pushing a PR branch
+PRs are reviewed by thepastaclaw, which approves only at zero findings and carries every finding forward across pushes.
+Run `/pre-review` (`.claude/skills/pre-review/`) on the committed branch first: the same model with the bot's
+prompts, findings verified and fixed by class. It needs the Codex CLI with access to ChatGPT (`codex login`, or
+`CODEX_API_KEY`; see `.claude/skills/pre-review/README.md`). Turn on its push gate (a git pre-push hook) for a
+clone with `.claude/skills/pre-review/prereview.sh --install`.
+
+## Code knowledge (read before writing v12 code)
+`docs/code-knowledge/` distils every thepastaclaw/coderabbitai finding on the v12 PRs and a map of the code:
+[`checklist.md`](docs/code-knowledge/checklist.md) before pushing, [`README.md`](docs/code-knowledge/README.md) for the
+rules by area (fail-closed reads, concurrency, durability, money/SDK, lifecycle, security, testing, style, review bots)
+and [`00-project-map.md`](docs/code-knowledge/00-project-map.md) for what to read before touching an area.

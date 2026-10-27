@@ -517,6 +517,15 @@ class SdkTransparentUsernameCreation internal constructor(
      * by default keeps the host-JVM tests unaffected.
      */
     private val secretWriteFence: WalletSecretWriteFence = WalletSecretWriteFence(),
+    /**
+     * True while an uncertain BIP70 payment's inputs are exposed to the engine's coin selection
+     * ([de.schildbach.wallet.payments.PendingPaymentFundingGate]); a FRESH registration build is
+     * then refused with [L1_PENDING_PAYMENT_UNPROTECTED_REASON]. Resuming a tracked lock re-consumes
+     * that lock's own outputs and is never asked. Default false keeps the host-JVM tests inert.
+     */
+    private val freshFundingBlocked: suspend () -> Boolean = { false },
+    /** Shared with a resubmission's reactivation; see [de.schildbach.wallet.payments.FundingSelectionLock]. */
+    private val fundingSelection: de.schildbach.wallet.payments.FundingSelectionLock,
     /** Drops the old name request's lost or locked status before a name-only retry. No-op by default. */
     private val clearPreviousNameRequest: suspend () -> Unit = {},
     /**
@@ -541,12 +550,14 @@ class SdkTransparentUsernameCreation internal constructor(
         assetLockKindResolver: AssetLockKindResolver,
         applicationScope: CoroutineScope,
         secretWriteFence: WalletSecretWriteFence,
+        fundingGate: de.schildbach.wallet.payments.PendingPaymentFundingGate,
         dpnsLock: DpnsRegistrationLock,
         // A Provider: only a name-only retry reads it, and it pulls in the platform services.
         platformRepo: javax.inject.Provider<de.schildbach.wallet.ui.dashpay.PlatformRepo>
     ) : this(
         source = DashSdkTransparentUsernameSource(sdkService),
         cutoverCommitted = { sdkL1SendService.cutoverCommitted() },
+        cutoverCommittedOrUnknown = { sdkL1SendService.cutoverCommittedOrUnknown() },
         // Lazy: Constants untouched at construction (inert-until-called).
         feeDuffs = { contested -> transparentUsernameFeeDuffs(contested, sdkService) },
         handOffToLegacy = { identityId ->
@@ -571,6 +582,8 @@ class SdkTransparentUsernameCreation internal constructor(
         },
         executorScope = applicationScope,
         secretWriteFence = secretWriteFence,
+        freshFundingBlocked = { fundingGate.isFreshFundingBlocked() },
+        fundingSelection = fundingGate.selectionLock,
         clearPreviousNameRequest = {
             // the lost or locked status belonged to the old name, not to this request
             blockchainIdentityConfig.remove(BlockchainIdentityConfig.USERNAME_REQUESTED)
@@ -578,7 +591,6 @@ class SdkTransparentUsernameCreation internal constructor(
         nameAlreadyTaken = { identityIdBase58, label ->
             identityOwnsOrContendsFor(platformRepo.get(), identityIdBase58, label)
         },
-        cutoverCommittedOrUnknown = { sdkL1SendService.cutoverCommittedOrUnknown() },
         dpnsLock = dpnsLock
     )
 
@@ -614,8 +626,19 @@ class SdkTransparentUsernameCreation internal constructor(
         false
     }
 
-    /** Whether the cutover is committed, or null when the state cannot be read (routing that must fail closed). */
-    suspend fun cutoverStateOrUnknown(): Boolean? = cutoverCommittedOrUnknown()
+    /**
+     * Whether the cutover is committed, or null when the state cannot be read (review
+     * 4299080469). For a routing decision where "not committed" starts the dashj identity path,
+     * which resets a registered identity or funds through the held engine: unknown must refuse.
+     */
+    suspend fun cutoverStateOrUnknown(): Boolean? = try {
+        cutoverCommittedOrUnknown()
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        log.warn("failed to read the cutover state; it is unknown", e)
+        null
+    }
 
     /**
      * Start the creation on the application scope. Returns false — and
@@ -740,6 +763,15 @@ class SdkTransparentUsernameCreation internal constructor(
      * three-valued contract holds ([SdkWriteResult.Ambiguous] is never
      * retried by anyone).
      */
+    /** [freshFundingBlocked], failing closed. */
+    private suspend fun isFreshFundingBlockedSafe(): Boolean = try {
+        freshFundingBlocked()
+    } catch (t: Throwable) {
+        if (t is CancellationException) throw t
+        log.warn("could not check for unprotected pending payments; refusing the fresh build", t)
+        true
+    }
+
     suspend fun createUsernameTransparent(
         username: String,
         secondaryUsername: String? = null
@@ -809,6 +841,11 @@ class SdkTransparentUsernameCreation internal constructor(
             // the FRESH build rather than risk a double-pay. Retry-safe:
             // nothing was spent.
             return notBroadcast("resume-gate recovery lookup failed", t)
+        }
+        // A fresh build selects new inputs; refuse it (before any key is derived) while an
+        // uncertain payment's inputs are exposed. Nothing is spent, so it is retry-safe.
+        if (existingLock == null && isFreshFundingBlockedSafe()) {
+            return SdkWriteResult.NotBroadcast(L1_PENDING_PAYMENT_UNPROTECTED_REASON)
         }
         val includeDashPayKeys = existingLock == null
 
@@ -901,14 +938,18 @@ class SdkTransparentUsernameCreation internal constructor(
                     )
                     source.resumeRegistrationFromAssetLock(walletId, existingLock, identityIndex, keys)
                 } else {
-                    source.registerWithWalletFunding(
-                        walletIdHex = walletId,
-                        // Set whenever existingLock is null (see above).
-                        amountDuffs = checkNotNull(amountDuffs) { "fresh funding amount not resolved" },
-                        accountIndex = ACCOUNT_INDEX,
-                        identityIndex = identityIndex,
-                        keys = keys
-                    )
+                    // Asked again under the shared selection lock and held through the build
+                    // (review 4309551218): a resubmission's reactivation cannot slip in between.
+                    fundingSelection.selectIfAllowed({ isFreshFundingBlockedSafe() }) {
+                        source.registerWithWalletFunding(
+                            walletIdHex = walletId,
+                            // Set whenever existingLock is null (see above).
+                            amountDuffs = checkNotNull(amountDuffs) { "fresh funding amount not resolved" },
+                            accountIndex = ACCOUNT_INDEX,
+                            identityIndex = identityIndex,
+                            keys = keys
+                        )
+                    }?.value ?: return SdkWriteResult.NotBroadcast(L1_PENDING_PAYMENT_UNPROTECTED_REASON)
                 }
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t

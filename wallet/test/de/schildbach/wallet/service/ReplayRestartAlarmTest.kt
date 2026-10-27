@@ -160,6 +160,40 @@ class ReplayRestartAlarmTest {
         )
     }
 
+    /**
+     * The service armed the restart itself just before stopping (memory pressure, a blockstore
+     * stall): its own teardown must not retire the alarm it is relying on to come back, even when
+     * no replay is in progress (review 4245734685).
+     */
+    @Test
+    fun aTeardownAfterTheServiceAskedForARecoveryRestart_leavesTheAlarm() {
+        assertEquals(
+            ReplayRestartAlarmAction.LEAVE,
+            decideOnReplayRestartAlarm(
+                initialised = true,
+                replaying = false,
+                deliberateStop = false,
+                bindBlocked = false,
+                recoveryRestartRequested = true
+            )
+        )
+    }
+
+    /** A wipe or reset still retires it: there is nothing left to restart for. */
+    @Test
+    fun aDeliberateStopRetiresEvenARequestedRecoveryRestart() {
+        assertEquals(
+            ReplayRestartAlarmAction.RETIRE,
+            decideOnReplayRestartAlarm(
+                initialised = true,
+                replaying = false,
+                deliberateStop = true,
+                bindBlocked = false,
+                recoveryRestartRequested = true
+            )
+        )
+    }
+
     /** §37: the refused starts after Andrei's stuck cleanup must not retire the alarm that keeps trying. */
     @Test
     fun aTeardownOfAnInstanceThatNeverInitialised_leavesTheAlarmAlone() {

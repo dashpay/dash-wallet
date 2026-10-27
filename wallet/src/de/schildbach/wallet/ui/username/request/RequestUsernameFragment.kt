@@ -260,6 +260,7 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
                 enoughBalance = it.enoughBalance,
                 usernameExists = it.usernameExists,
                 usernameContestable = it.usernameContestable,
+                usernameBlocked = it.usernameBlocked,
                 fundingNoteAnchored = it.fundingNoteAnchored
             )
             // While the shielded pool is still preparing, its balance is a
@@ -643,6 +644,12 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
     }
 
     private fun onContinue() {
+        val username = binding.usernameInput.text.toString()
+        if (!requestUserNameViewModel.hasAvailableResultFor(username)) {
+            // the button state can lag the input; never continue without a current result for this name
+            processUsername(username)
+            return
+        }
         KeyboardUtil.hideKeyboard(requireContext(), binding.usernameInput)
 
         if (requestUserNameViewModel.uiState.value.usernameContestable) {

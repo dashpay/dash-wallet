@@ -26,9 +26,14 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.currentTime
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import org.dash.wallet.common.money.Dash
 import org.dashfoundation.dashsdk.errors.DashSdkError
 import org.junit.Assert.assertEquals
@@ -59,6 +64,8 @@ class SdkL1SendServiceTest {
     private class FakeSource(
         var boundWalletId: () -> String? = { null },
         var onSend: (String, String, Long) -> String = { _, _, _ -> "00".repeat(32) },
+        /** Runs after [onSend] submitted, before the native call returns: may suspend. */
+        var afterSendSubmitted: suspend () -> Unit = {},
         var onSpendable: () -> Long = { throw IllegalStateException("spendable not stubbed") },
         var onSendAll: (String, String, Long) -> String = { _, _, _ ->
             throw IllegalStateException("send-all not stubbed")
@@ -88,7 +95,57 @@ class SdkL1SendServiceTest {
             return boundWalletId()
         }
 
+        // ── CoinJoin consolidation (mirrors DashSdkL1SendSource: a throwing
+        // `prepared` abandons the finalized build, releasing its inputs) ──
+        var consolidationAbandons = 0
+        var consolidationBroadcasts = 0
+        val consolidationWallets = mutableListOf<String>()
+
+        /** The persisted address table's answer: which own account holds the destination. */
+        var owner: (String, String) -> OwnDestinationAccount? = { _, _ -> OwnDestinationAccount.BIP44 }
+        val ownershipChecks = mutableListOf<Pair<String, String>>()
+        var ownershipCheckedInsideLock = false
+
+        override suspend fun destinationOwner(walletIdHex: String, address: String): OwnDestinationAccount? {
+            ownershipChecks += walletIdHex to address
+            ownershipCheckedInsideLock = insideLock
+            return owner(walletIdHex, address)
+        }
+
+        override suspend fun consolidateCoinJoin(
+            walletIdHex: String,
+            destination: String,
+            amount: Long,
+            drain: Boolean,
+            prepared: suspend (ByteArray) -> Unit
+        ): String {
+            consolidationWallets += walletIdHex
+            try {
+                prepared(byteArrayOf(1, 2, 3))
+            } catch (t: Throwable) {
+                consolidationAbandons++
+                throw t
+            }
+            consolidationBroadcasts++
+            return "11".repeat(32)
+        }
+
+        /** Runs before the core-send lock is acquired: stands in for waiting on a held lock. */
+        var waitForCoreSendLock: suspend () -> Unit = {}
+
+        /** The faked CoinJoin-account drain (the interface default throws). */
+        var onDrainCoinJoin: (String, String, Long) -> String = { _, _, _ ->
+            throw UnsupportedOperationException("drain not stubbed")
+        }
+        var drainCoinJoinCalls = 0
+
+        override suspend fun drainCoinJoinToAddress(walletIdHex: String, addressBase58: String, floorDuffs: Long): String {
+            drainCoinJoinCalls++
+            return onDrainCoinJoin(walletIdHex, addressBase58, floorDuffs)
+        }
+
         override suspend fun <T> withCoreSendLock(walletIdHex: String, block: suspend () -> T): T {
+            waitForCoreSendLock()
             check(!insideLock) { "core-send lock is NOT reentrant — nested acquisition would deadlock" }
             lockAcquisitions++
             insideLock = true
@@ -108,7 +165,9 @@ class SdkL1SendServiceTest {
             lastWalletId = walletIdHex
             lastAddress = addressBase58
             lastAmountDuffs = amountDuffs
-            return onSend(walletIdHex, addressBase58, amountDuffs)
+            val sent = onSend(walletIdHex, addressBase58, amountDuffs)
+            afterSendSubmitted()
+            return sent
         }
 
         override suspend fun spendableBalanceDuffs(walletIdHex: String): Long {
@@ -174,9 +233,41 @@ class SdkL1SendServiceTest {
 
         override suspend fun releaseDeferredPayment(walletIdHex: String, payment: SdkDeferredPayment) {
             mayaReleaseCalls++
+            releasedOnWallets += walletIdHex
+        }
+
+        // ── BIP70 deferred build / broadcast ──────────────────────────────
+        val releasedOnWallets = mutableListOf<String>()
+        var deferredBuildCalls = 0
+        val broadcastOnWallets = mutableListOf<String>()
+
+        override suspend fun buildDeferredPayment(
+            walletIdHex: String,
+            recipients: List<Pair<String, Long>>
+        ): SdkDeferredPayment {
+            deferredBuildCalls++
+            return SdkDeferredPayment(txidHex = "dd".repeat(32), rawTxBytes = ByteArray(0), feeDuffs = 226L, native = null)
+        }
+
+        /** Runs inside the faked native broadcast; a blocking one stands in for a native call. */
+        var onDeferredBroadcast: () -> Unit = {}
+
+        override suspend fun broadcastDeferredPayment(walletIdHex: String, payment: SdkDeferredPayment): String {
+            onDeferredBroadcast()
+            broadcastOnWallets += walletIdHex
+            return payment.txidHex
         }
 
         override suspend fun unusedExternalAddress(walletIdHex: String): String? = externalAddress
+
+        /** Null = the interface default (no raw-bytes broadcast in the pinned SDK). */
+        var onRawBroadcast: ((ByteArray) -> String)? = null
+        val rawBroadcasts = mutableListOf<ByteArray>()
+
+        override suspend fun broadcastRawTransaction(rawTx: ByteArray): String {
+            rawBroadcasts += rawTx
+            return onRawBroadcast?.invoke(rawTx) ?: super.broadcastRawTransaction(rawTx)
+        }
     }
 
     private fun config(enabled: Boolean?, cutoverState: String? = null): DashPayConfig = mockk {
@@ -228,7 +319,10 @@ class SdkL1SendServiceTest {
         utxoCount: suspend (String) -> Int = { 1 },
         // Fresh empty registry by default: no seam locks, drain paths
         // exercisable. Seam-lock refusal is covered by dedicated tests.
-        seamRegistry: SeamOutputLockRegistry = SeamOutputLockRegistry()
+        seamRegistry: SeamOutputLockRegistry = SeamOutputLockRegistry(),
+        unprotectedPendingPayment: suspend () -> Boolean = { false },
+        fundingSelection: de.schildbach.wallet.payments.FundingSelectionLock =
+            de.schildbach.wallet.payments.FundingSelectionLock()
     ) = SdkL1SendService(
         source = source,
         dashPayConfig = config(enabled, cutoverState),
@@ -238,7 +332,9 @@ class SdkL1SendServiceTest {
         spendableUtxoCount = utxoCount,
         seamOutputLockRegistry = seamRegistry,
         onSelfSpendBroadcast = { selfSpendMarks++ },
-        bridgeAfterBroadcast = bridgeAfterBroadcast
+        bridgeAfterBroadcast = bridgeAfterBroadcast,
+        hasUnprotectedPendingPayment = unprotectedPendingPayment,
+        fundingSelection = fundingSelection
     )
 
     /** A source in the fully-ready state: wallet bound, send succeeds. */
@@ -497,6 +593,287 @@ class SdkL1SendServiceTest {
         assertEquals(0, source.sendCalls)
     }
 
+    private fun consolidationService(
+        source: FakeSource,
+        seamRegistry: SeamOutputLockRegistry = SeamOutputLockRegistry(),
+        unprotectedPendingPayment: suspend () -> Boolean = { false },
+        fundingSelection: de.schildbach.wallet.payments.FundingSelectionLock =
+            de.schildbach.wallet.payments.FundingSelectionLock()
+    ) = SdkL1SendService(
+        source = source,
+        dashPayConfig = config(true),
+        isValidAddress = { true },
+        l1Progress = { caughtUpProgress() },
+        hasAppLockedCoinJoinOutputs = { false },
+        seamOutputLockRegistry = seamRegistry,
+        hasUnprotectedPendingPayment = unprotectedPendingPayment,
+        fundingSelection = fundingSelection
+    )
+
+    /** A consolidation selects fresh CoinJoin inputs: refused, never built, while a pending payment is exposed. */
+    @Test
+    fun consolidateCoinJoin_pendingPaymentExposed_isRefusedAndNeverBuilds() = runBlocking {
+        val source = readySource()
+        val svc = consolidationService(source, unprotectedPendingPayment = { true })
+        var prepared = false
+        val result = svc.consolidateCoinJoin(walletId, validAddress, 1L, drain = true) { prepared = true }
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertTrue(isPaymentStillConfirmingReason((result as SdkWriteResult.NotBroadcast).reason))
+        assertFalse(prepared)
+        assertTrue(source.consolidationWallets.isEmpty())
+    }
+
+    /** The gate is asked again under the shared hold: a payment exposed after the preflight still refuses. */
+    @Test
+    fun consolidateCoinJoin_pendingPaymentExposedUnderTheHold_isRefused() = runBlocking {
+        val source = readySource()
+        var asks = 0
+        val svc = consolidationService(source, unprotectedPendingPayment = { ++asks > 1 })
+        val result = svc.consolidateCoinJoin(walletId, validAddress, 1L, drain = true) { }
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertTrue(isPaymentStillConfirmingReason((result as SdkWriteResult.NotBroadcast).reason))
+        assertTrue(source.consolidationWallets.isEmpty())
+    }
+
+    /** A rebind between the preflight and the hold refuses: the SDK builds on whichever wallet is bound. */
+    @Test
+    fun consolidateCoinJoin_reboundUnderTheHold_isRefusedAndNeverBuilds() = runBlocking {
+        var lookups = 0
+        val source = FakeSource(boundWalletId = { if (++lookups == 1) walletId else "02".repeat(32) })
+        val svc = consolidationService(source)
+        val result = svc.consolidateCoinJoin(walletId, validAddress, 1L, drain = true) { }
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertTrue(source.consolidationWallets.isEmpty())
+        assertEquals(0, source.lockAcquisitions)
+    }
+
+    /** The build and broadcast run inside the shared funding hold: a reactivation cannot take it meanwhile. */
+    @Test
+    fun consolidateCoinJoin_buildsInsideTheSharedHold() = runBlocking {
+        val lock = de.schildbach.wallet.payments.FundingSelectionLock()
+        val source = readySource()
+        val svc = consolidationService(source, fundingSelection = lock)
+        var exclusiveDuringBuild: Unit? = Unit
+        val result = svc.consolidateCoinJoin(walletId, validAddress, 1L, drain = true) {
+            exclusiveDuringBuild = lock.tryExclusive { }
+        }
+        assertTrue(result is SdkWriteResult.Broadcast)
+        assertEquals(null, exclusiveDuringBuild)
+    }
+
+    /** Cancelled once the txid checkpoint is being written: the broadcast still follows, nothing is abandoned. */
+    @Test
+    fun consolidateCoinJoin_cancelledAtTheCheckpoint_stillBroadcasts() = runBlocking {
+        val source = readySource()
+        val svc = consolidationService(source)
+        var result: SdkWriteResult<String>? = null
+        lateinit var call: kotlinx.coroutines.Job
+        call = launch {
+            result = svc.consolidateCoinJoin(walletId, validAddress, 1L, drain = true) {
+                call.cancel()
+                kotlinx.coroutines.delay(10) // the checkpoint write, suspended when cancelled
+            }
+        }
+        call.join()
+        assertEquals(1, source.consolidationBroadcasts)
+        assertEquals(0, source.consolidationAbandons)
+        assertTrue(result is SdkWriteResult.Broadcast)
+    }
+
+    /**
+     * The CoinJoin drains use the send-all union: an SDK-only output locked in
+     * the seam registry (invisible to the dashj check) refuses consolidation
+     * and the migration's shield guard, and so does a registry that cannot be read.
+     */
+    @Test
+    fun consolidateCoinJoin_seamLockedOrUnreadableRegistry_isNotBroadcastAndNeverBuilds() = runBlocking {
+        val unreadable = mockk<SeamOutputLockRegistry> {
+            every { hasAnyLocks() } throws IllegalStateException("registry unavailable")
+        }
+        val locked = SeamOutputLockRegistry().apply { lockOutput("ee".repeat(32), 0) }
+        for (registry in listOf(locked, unreadable)) {
+            val source = readySource()
+            val svc = consolidationService(source, registry)
+            assertTrue(svc.coinJoinOutputsLocked())
+            var prepared = false
+            val result = svc.consolidateCoinJoin(walletId, validAddress, 1L, drain = true) { prepared = true }
+            assertEquals(SdkWriteResult.NotBroadcast("CoinJoin outputs are locked"), result)
+            assertFalse(prepared)
+            assertTrue(source.consolidationWallets.isEmpty())
+        }
+        assertFalse(consolidationService(readySource()).coinJoinOutputsLocked())
+    }
+
+    /** A seam lock of a wiped wallet never blocks the next wallet's CoinJoin drain (registry is process-wide). */
+    @Test
+    fun consolidateCoinJoin_seamLockOfAWipedWallet_noLongerBlocks() = runBlocking {
+        val registry = SeamOutputLockRegistry().apply { lockOutput("ee".repeat(32), 0) }
+        val svc = consolidationService(readySource(), registry)
+        assertTrue(svc.coinJoinOutputsLocked())
+        registry.clearForWalletWipe()
+        assertFalse(svc.coinJoinOutputsLocked())
+    }
+
+    @Test
+    fun consolidateCoinJoin_bindLookupFailure_isNotBroadcast() = runBlocking {
+        val failure = IllegalStateException("bootstrap failed")
+        val source = FakeSource(boundWalletId = { throw failure })
+        val svc = consolidationService(source)
+        val result = svc.consolidateCoinJoin(walletId, validAddress, 1L, drain = true) { }
+        assertEquals(SdkWriteResult.NotBroadcast("SDK bootstrap/bind lookup failed", failure), result)
+        assertEquals(1, source.boundCalls)
+        assertEquals(0, source.lockAcquisitions)
+    }
+
+    @Test
+    fun consolidateCoinJoin_walletNotBound_isNotBroadcast() = runBlocking {
+        val source = FakeSource(boundWalletId = { null })
+        val svc = consolidationService(source)
+        val result = svc.consolidateCoinJoin(walletId, validAddress, 1L, drain = true) { }
+        assertEquals(SdkWriteResult.NotBroadcast("wallet not bound"), result)
+        assertEquals(0, source.lockAcquisitions)
+    }
+
+    @Test
+    fun consolidateCoinJoin_rejectedSignedDrain_isAbandonedAndNotBroadcast() = runBlocking {
+        // The migration rejects a partial drain inside `prepared`
+        // (validateCoinJoinConsolidation): nothing is broadcast, the build is
+        // abandoned (inputs released) and the result is a definitive
+        // pre-broadcast failure, never Ambiguous.
+        val source = readySource()
+        val rejection = IllegalArgumentException("Drain must spend every snapshot coin (spends 2 of 3)")
+        val svc = consolidationService(source)
+        val result = svc.consolidateCoinJoin(walletId, validAddress, 1L, drain = true) { throw rejection }
+        // Compared by message: crossing withContext, coroutine debug mode may rethrow a copy.
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertEquals("consolidation preparation failed", (result as SdkWriteResult.NotBroadcast).reason)
+        assertEquals(rejection.message, result.cause?.message)
+        assertEquals(1, source.consolidationAbandons)
+        assertEquals(0, source.consolidationBroadcasts)
+    }
+
+    @Test
+    fun consolidateCoinJoin_differentBoundWallet_isNotBroadcastAndNeverBuilds() = runBlocking {
+        // A rebind since the migration's snapshot: never build toward its destination.
+        val source = FakeSource(boundWalletId = { "02".repeat(32) })
+        val svc = consolidationService(source)
+        var prepared = false
+        val result = svc.consolidateCoinJoin(walletId, validAddress, 1L, drain = true) { prepared = true }
+        assertEquals(SdkWriteResult.NotBroadcast("bound wallet is not the migration's wallet"), result)
+        assertTrue(source.consolidationWallets.isEmpty())
+        assertEquals(0, source.lockAcquisitions)
+        assertFalse(prepared)
+    }
+
+    @Test
+    fun consolidateCoinJoin_buildsOnTheExpectedWalletById() = runBlocking {
+        val source = readySource()
+        val svc = consolidationService(source)
+        val result = svc.consolidateCoinJoin(walletId, validAddress, 1L, drain = true) { }
+        assertTrue(result is SdkWriteResult.Broadcast)
+        assertEquals(listOf(walletId), source.consolidationWallets)
+        // The destination was bound to that same wallet, under the build's lock.
+        assertEquals(listOf(walletId to validAddress), source.ownershipChecks)
+        assertTrue(source.ownershipCheckedInsideLock)
+    }
+
+    @Test
+    fun consolidateCoinJoin_destinationNotOwnedByTheWallet_isNotBroadcastAndNeverBuilds() = runBlocking {
+        // A valid address of ANOTHER wallet (or none in the persisted table): refuse before building.
+        val source = readySource().apply { owner = { _, _ -> null } }
+        val svc = consolidationService(source)
+        var prepared = false
+        val result = svc.consolidateCoinJoin(walletId, validAddress, 1L, drain = true) { prepared = true }
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertEquals(DESTINATION_NOT_OWNED, (result as SdkWriteResult.NotBroadcast).cause?.message)
+        assertTrue(source.consolidationWallets.isEmpty())
+        assertFalse(prepared)
+    }
+
+    @Test
+    fun consolidateCoinJoin_unreadableOwnership_isNotBroadcastAndNeverBuilds() = runBlocking {
+        val source = readySource().apply { owner = { _, _ -> throw java.io.IOException("db closed") } }
+        val svc = consolidationService(source)
+        val result = svc.consolidateCoinJoin(walletId, validAddress, 1L, drain = true) { }
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertTrue(source.consolidationWallets.isEmpty())
+    }
+
+    // ── CoinJoin consolidation replay (exact persisted bytes) ────────────
+
+    private val replayBytes = byteArrayOf(1, 2, 3, 4)
+
+    @Test
+    fun rebroadcastConsolidation_submitsTheExactBytes() = runBlocking {
+        val source = readySource().apply { onRawBroadcast = { txid } }
+        val result = service(source).rebroadcastCoinJoinConsolidation(walletId, replayBytes, txid)
+        assertEquals(ConsolidationReplay.SUBMITTED, result)
+        assertEquals(1, source.rawBroadcasts.size)
+        assertTrue(source.rawBroadcasts.single().contentEquals(replayBytes))
+        assertEquals(listOf(txid), bridgedTxids)
+        assertEquals(0, source.sendCalls)
+        assertEquals(0, source.sendAllCalls)
+    }
+
+    @Test
+    fun rebroadcastConsolidation_anotherBoundWallet_neverSubmits() = runBlocking {
+        val source = FakeSource(boundWalletId = { "02".repeat(32) }).apply { onRawBroadcast = { txid } }
+        assertEquals(ConsolidationReplay.FAILED, service(source).rebroadcastCoinJoinConsolidation(walletId, replayBytes, txid))
+        assertEquals(0, source.rawBroadcasts.size)
+    }
+
+    @Test
+    fun rebroadcastConsolidation_submitsInsideTheSharedHold() = runBlocking {
+        val lock = de.schildbach.wallet.payments.FundingSelectionLock()
+        var exclusiveDuringBroadcast: Unit? = Unit
+        val source = readySource().apply {
+            onRawBroadcast = {
+                exclusiveDuringBroadcast = kotlinx.coroutines.runBlocking { lock.tryExclusive { } }
+                txid
+            }
+        }
+        assertEquals(
+            ConsolidationReplay.SUBMITTED,
+            service(source, fundingSelection = lock).rebroadcastCoinJoinConsolidation(walletId, replayBytes, txid)
+        )
+        assertEquals(null, exclusiveDuringBroadcast)
+    }
+
+    @Test
+    fun rebroadcastConsolidation_alreadyKnownCountsAsSubmitted() = runBlocking {
+        for (answer in listOf("txn-already-known", "txn-already-in-mempool", "Transaction already in block chain")) {
+            val source = readySource().apply { onRawBroadcast = { throw IllegalStateException("rejected: $answer") } }
+            assertEquals(answer, ConsolidationReplay.SUBMITTED,
+                service(source).rebroadcastCoinJoinConsolidation(walletId, replayBytes, txid))
+        }
+    }
+
+    @Test
+    fun rebroadcastConsolidation_conflictIsTerminal() = runBlocking {
+        val source = readySource().apply {
+            onRawBroadcast = { throw RuntimeException("wrapped", IllegalStateException("txn-mempool-conflict")) }
+        }
+        assertEquals(ConsolidationReplay.CONFLICT, service(source).rebroadcastCoinJoinConsolidation(walletId, replayBytes, txid))
+        assertEquals(1, source.rawBroadcasts.size)
+    }
+
+    @Test
+    fun rebroadcastConsolidation_withoutARawBroadcastApiIsUnavailable() = runBlocking {
+        val source = readySource()
+        assertEquals(ConsolidationReplay.UNAVAILABLE, service(source).rebroadcastCoinJoinConsolidation(walletId, replayBytes, txid))
+        assertTrue(bridgedTxids.isEmpty())
+    }
+
+    @Test
+    fun rebroadcastConsolidation_otherFailuresAndClosedGateAreRetryable() = runBlocking {
+        val failing = readySource().apply { onRawBroadcast = { throw IllegalStateException("bad-txns-inputs-missingorspent") } }
+        assertEquals(ConsolidationReplay.FAILED, service(failing).rebroadcastCoinJoinConsolidation(walletId, replayBytes, txid))
+        val gated = readySource().apply { onRawBroadcast = { txid } }
+        assertEquals(ConsolidationReplay.FAILED,
+            service(gated, progress = { ShadowSyncProgress.IDLE }).rebroadcastCoinJoinConsolidation(walletId, replayBytes, txid))
+        assertEquals(0, gated.rawBroadcasts.size)
+    }
+
     // ── The evidence gate (reuses evaluateWalletFundingGate) ─────────────
 
     @Test
@@ -720,7 +1097,8 @@ class SdkL1SendServiceTest {
             dashPayConfig = config(true),
             isValidAddress = { true },
             l1Progress = { caughtUpProgress() },
-            onSelfSpendBroadcast = { throw IllegalStateException("shadow not running") }
+            onSelfSpendBroadcast = { throw IllegalStateException("shadow not running") },
+            fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
         )
         val result = svc.sendToAddress(validAddress, amount, emptyWallet = false)
         assertEquals(SdkWriteResult.Broadcast(txid), result)
@@ -758,7 +1136,8 @@ class SdkL1SendServiceTest {
             service(source).sendToAddress(validAddress, amount, emptyWallet = false) { throw boom }
             fail("expected the beforeBroadcast throw to propagate")
         } catch (e: IllegalStateException) {
-            assertSame(boom, e)
+            // the caller's own exception (debug-mode stack-trace recovery may hand back a copy of it)
+            assertTrue(e === boom || e.cause === boom)
         }
         assertEquals(0, source.sendCalls)
         assertEquals(0, selfSpendMarks)
@@ -811,7 +1190,7 @@ class SdkL1SendServiceTest {
     }
 
     private fun cutoverFlowService(config: DashPayConfig) =
-        SdkL1SendService(source = readySource(), dashPayConfig = config, isValidAddress = { true })
+        SdkL1SendService(source = readySource(), dashPayConfig = config, isValidAddress = { true }, fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock())
 
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test
@@ -1091,7 +1470,8 @@ class SdkL1SendServiceTest {
             source = source,
             dashPayConfig = config(false, "CUT_OVER"),
             isValidAddress = { it == validAddress },
-            l1Progress = { caughtUpProgress() }
+            l1Progress = { caughtUpProgress() },
+            fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
         )
         val drained = svc.sendToAddress(validAddress, amount, emptyWallet = true)
         assertTrue(drained is SdkWriteResult.NotBroadcast)
@@ -1255,7 +1635,8 @@ class SdkL1SendServiceTest {
                 .sendToAddress(validAddress, amount, emptyWallet = true) { throw boom }
             fail("expected the beforeBroadcast throw to propagate")
         } catch (e: IllegalStateException) {
-            assertSame(boom, e)
+            // the caller's own exception (debug-mode stack-trace recovery may hand back a copy of it)
+            assertTrue(e === boom || e.cause === boom)
         }
         assertEquals(0, source.sendAllCalls)
         assertEquals(0, selfSpendMarks)
@@ -1462,7 +1843,7 @@ class SdkL1SendServiceTest {
         val source = mayaSource(spendable = 1_000_000L, feeDuffs = 500L)
         val svc = service(source, hasAppLockedOutputs = { true })
         try {
-            svc.buildDeferredMayaDeposit(validAddress, 50_000L, ByteArray(40), isMaxDeposit = true)
+            svc.buildDeferredMayaDeposit(validAddress, 50_000L, ByteArray(40), isMaxDeposit = true, stillOwned = { true })
             fail("expected a direct max build to be refused while app-locked outputs exist")
         } catch (e: IllegalStateException) {
             assertTrue(e.message!!.contains("app-locked"))
@@ -1476,7 +1857,7 @@ class SdkL1SendServiceTest {
         val registry = SeamOutputLockRegistry().apply { lockOutput("ee".repeat(32), 0) }
         try {
             service(source, seamRegistry = registry)
-                .buildDeferredMayaDeposit(validAddress, 50_000L, ByteArray(40), isMaxDeposit = true)
+                .buildDeferredMayaDeposit(validAddress, 50_000L, ByteArray(40), isMaxDeposit = true, stillOwned = { true })
             fail("expected a direct max build to be refused while seam locks exist")
         } catch (e: IllegalStateException) {
             assertTrue(e.message!!.contains("app-locked"))
@@ -1491,7 +1872,7 @@ class SdkL1SendServiceTest {
         // holding a CrowdNode balance.
         val source = mayaSource(spendable = 1_000_000L, feeDuffs = 500L)
         val svc = service(source, hasAppLockedOutputs = { true })
-        svc.buildDeferredMayaDeposit(validAddress, 50_000L, ByteArray(40), isMaxDeposit = false)
+        svc.buildDeferredMayaDeposit(validAddress, 50_000L, ByteArray(40), isMaxDeposit = false, stillOwned = { true })
         assertEquals(1, source.mayaBuildCalls)
     }
 
@@ -1505,5 +1886,513 @@ class SdkL1SendServiceTest {
             assertTrue(e.message!!.contains("memoSizeBytes"))
         }
         Unit
+    }
+
+    // ── fresh funding vs. a resubmission's reactivation (review 4309551218) ──
+
+    @Test
+    fun aFreshSendAuthorizedBeforeAReactivation_neverSelectsTheReactivatedInputs() = runBlocking {
+        // The send passed the gate while T1 was still released; a resubmission then reactivated
+        // T1 (the gate now refuses). The send must not go on to select T1's inputs.
+        val lock = de.schildbach.wallet.payments.FundingSelectionLock()
+        var t1Active = false
+        val source = readySource()
+        val svc = service(source, unprotectedPendingPayment = { t1Active }, fundingSelection = lock)
+
+        val reactivating = CompletableDeferred<Unit>()
+        val reactivated = CompletableDeferred<Unit>()
+        val reactivation = async(Dispatchers.Default) {
+            lock.tryExclusive {
+                reactivating.complete(Unit)
+                reactivated.await()
+                t1Active = true // the record is active again: fresh funding must be refused
+            }
+        }
+        reactivating.await()
+        val send = async(Dispatchers.Default) { svc.sendToAddress(validAddress, Dash(10_000L), emptyWallet = false) }
+        delay(200)
+        reactivated.complete(Unit)
+        reactivation.await()
+
+        val result = send.await()
+        assertTrue("refused, not sent: $result", result is SdkWriteResult.NotBroadcast)
+        assertEquals("never reached coin selection", 0, source.sendCalls)
+    }
+
+    @Test
+    fun aSendIsNotBlockedByALongRunningRegistration() = runBlocking {
+        // a username registration funds under the same lock and can wait minutes for its asset
+        // lock's IS/ChainLock; fresh fundings share the lock and never wait for each other
+        val lock = de.schildbach.wallet.payments.FundingSelectionLock()
+        val source = readySource()
+        val svc = service(source, fundingSelection = lock)
+        val registering = CompletableDeferred<Unit>()
+        val finish = CompletableDeferred<Unit>()
+        val registration = async(Dispatchers.Default) {
+            lock.withShared {
+                registering.complete(Unit)
+                finish.await()
+            }
+        }
+        registering.await()
+
+        val result = kotlinx.coroutines.withTimeout(2_000) {
+            svc.sendToAddress(validAddress, Dash(10_000L), emptyWallet = false)
+        }
+
+        assertTrue("sent while the registration runs: $result", result is SdkWriteResult.Broadcast)
+        finish.complete(Unit)
+        registration.await()
+    }
+
+    // ── a deferred broadcast across a wipe ────────────────────────────────
+    //
+    // The SDK broadcasts from whichever wallet is bound. A reservation built on one wallet must
+    // never be consumed on another, and its broadcast must be serialized with a wipe.
+
+    // ── an immediate send across a wipe: refused, not sent, or sent-or-unknown ──
+
+    @Test
+    fun sendToAddress_aWipeUnderWayBeforeTheHold_isNotBroadcast_andNeverReachesTheSdk() = runBlocking {
+        val lock = de.schildbach.wallet.payments.FundingSelectionLock()
+        val source = readySource()
+        val svc = service(source, fundingSelection = lock)
+        lock.raiseWipeBarrier()
+        try {
+            val result = svc.sendToAddress(validAddress, amount, emptyWallet = false)
+
+            assertTrue("refused before admission: $result", result is SdkWriteResult.NotBroadcast)
+            assertEquals(0, source.sendCalls)
+        } finally {
+            lock.lowerWipeBarrier()
+        }
+    }
+
+    @Test
+    fun sendToAddress_aWipeBeforeTheNativeCall_isNotBroadcast() = runBlocking {
+        // cancelled in the call site's pre-send hook, before the SDK was asked to send
+        val lock = de.schildbach.wallet.payments.FundingSelectionLock()
+        val source = readySource()
+        val svc = service(source, fundingSelection = lock)
+        try {
+            val result = svc.sendToAddress(validAddress, amount, emptyWallet = false) {
+                lock.raiseWipeBarrier()
+                kotlinx.coroutines.yield() // the cancellation lands here
+            }
+
+            assertTrue("nothing was submitted: $result", result is SdkWriteResult.NotBroadcast)
+            assertEquals("never reached the SDK send", 0, source.sendCalls)
+        } finally {
+            lock.lowerWipeBarrier()
+        }
+    }
+
+    @Test
+    fun sendAll_aWipeWhileWaitingForTheCoreSendLock_isNotBroadcast() = runBlocking {
+        // The core-send lock wait is cancellable and can be long: a wipe that cancels it has sent
+        // nothing, so it must not be reported as sent-or-unknown.
+        val lock = de.schildbach.wallet.payments.FundingSelectionLock()
+        val source = drainReadySource().apply {
+            waitForCoreSendLock = {
+                lock.raiseWipeBarrier()
+                kotlinx.coroutines.awaitCancellation() // still waiting when the wipe cancels the hold
+            }
+        }
+        val svc = service(source, enabled = false, cutoverState = "CUT_OVER", fundingSelection = lock)
+        try {
+            val result = kotlinx.coroutines.withTimeout(5_000) {
+                svc.sendToAddress(validAddress, amount, emptyWallet = true)
+            }
+
+            assertTrue("nothing was submitted: $result", result is SdkWriteResult.NotBroadcast)
+            assertEquals("never reached the SDK drain", 0, source.sendAllCalls)
+        } finally {
+            lock.lowerWipeBarrier()
+        }
+    }
+
+    @Test
+    fun coinJoinDrain_aWipeWhileWaitingForTheCoreSendLock_isNotBroadcast() = runBlocking {
+        val lock = de.schildbach.wallet.payments.FundingSelectionLock()
+        val source = readySource().apply { onDrainCoinJoin = { _, _, _ -> txid } }
+        val svc = consolidationService(source, fundingSelection = lock)
+        // Without a wipe the drain goes out: the refusal below is the wipe's, not a gate's.
+        assertEquals(SdkWriteResult.Broadcast(txid), svc.drainCoinJoinAccountTo(validAddress))
+        source.drainCoinJoinCalls = 0
+        source.waitForCoreSendLock = {
+            lock.raiseWipeBarrier()
+            kotlinx.coroutines.awaitCancellation()
+        }
+        try {
+            val result = kotlinx.coroutines.withTimeout(5_000) { svc.drainCoinJoinAccountTo(validAddress) }
+
+            assertTrue("nothing was submitted: $result", result is SdkWriteResult.NotBroadcast)
+            assertEquals("never reached the SDK drain", 0, source.drainCoinJoinCalls)
+        } finally {
+            lock.lowerWipeBarrier()
+        }
+    }
+
+    @Test
+    fun sendToAddress_aWipeDuringTheNativeCall_isSentOrUnknown_neverACancellation() = runBlocking {
+        // the native call submitted, then the wipe cancelled the hold before the txid came back:
+        // the payment may be on the network, so it is Ambiguous with a pending (non-retryable)
+        // cause, never a CancellationException and never NotBroadcast
+        val lock = de.schildbach.wallet.payments.FundingSelectionLock()
+        val source = readySource().apply {
+            afterSendSubmitted = {
+                lock.raiseWipeBarrier()
+                kotlinx.coroutines.yield() // the cancellation lands before the call returns
+            }
+        }
+        val svc = service(source, fundingSelection = lock)
+        try {
+            val result = svc.sendToAddress(validAddress, amount, emptyWallet = false)
+
+            assertTrue("sent-or-unknown: $result", result is SdkWriteResult.Ambiguous)
+            val cause = (result as SdkWriteResult.Ambiguous).cause
+            assertTrue(
+                "a pending payment, never a cancellation: $cause",
+                cause is de.schildbach.wallet.payments.WalletWipedDuringSubmissionException &&
+                    cause is org.dash.wallet.common.services.PaymentSubmissionPendingException &&
+                    cause !is kotlinx.coroutines.CancellationException
+            )
+            assertEquals(1, source.sendCalls)
+            assertTrue("no bridge for a send the wipe cut short", bridgedTxids.isEmpty())
+        } finally {
+            lock.lowerWipeBarrier()
+        }
+    }
+
+    @Test
+    fun sendToAddress_aWipeAfterTheNativeCallReturned_keepsTheBroadcast() = runBlocking {
+        // the txid came back before the cancellation was noticed: the result stands
+        val lock = de.schildbach.wallet.payments.FundingSelectionLock()
+        val source = readySource().apply { afterSendSubmitted = { lock.raiseWipeBarrier() } }
+        val svc = service(source, fundingSelection = lock)
+        try {
+            val result = svc.sendToAddress(validAddress, amount, emptyWallet = false)
+
+            assertEquals(SdkWriteResult.Broadcast(txid), result)
+        } finally {
+            lock.lowerWipeBarrier()
+        }
+    }
+
+    @Test
+    fun sendToAddress_nestedInACallersHold_passesTheWipeUpWithTheSubmissionMarked() = runBlocking {
+        // under a caller's own submission hold the service does not report the wipe itself: the
+        // caller, the only one still running afterwards, does, and sees that the send went out
+        val lock = de.schildbach.wallet.payments.FundingSelectionLock()
+        val source = readySource().apply {
+            afterSendSubmitted = {
+                lock.raiseWipeBarrier()
+                kotlinx.coroutines.yield()
+            }
+        }
+        val svc = service(source, fundingSelection = lock)
+        try {
+            val outcome = lock.withSharedSubmission(
+                refused = { "refused" },
+                cancelled = { _, submitted -> if (submitted) "sent-or-unknown" else "not sent" }
+            ) {
+                svc.sendToAddress(validAddress, amount, emptyWallet = false)
+                "completed"
+            }
+
+            assertEquals("sent-or-unknown", outcome)
+        } finally {
+            lock.lowerWipeBarrier()
+        }
+    }
+
+    @Test
+    fun deferredBroadcast_refusesWhenTheBoundWalletIsNotTheOneItWasBuiltOn() = runBlocking {
+        var bound = walletId
+        val source = FakeSource(boundWalletId = { bound })
+        val svc = service(source)
+        val payment = svc.buildDeferredPayment(listOf(validAddress to 10_000L), stillOwned = { true })
+
+        bound = "ef".repeat(32) // a wipe replaced the wallet and bound the new one
+        val result = svc.broadcastDeferredPayment(payment) { true }
+
+        assertTrue("broadcast onto another wallet: $result", result is SdkWriteResult.NotBroadcast)
+        assertTrue("reached the SDK broadcast", source.broadcastOnWallets.isEmpty())
+    }
+
+    @Test
+    fun deferredBroadcast_waitsForAWipeUnderWay_andIsThenRefused() = runBlocking {
+        val lock = de.schildbach.wallet.payments.FundingSelectionLock()
+        val source = FakeSource(boundWalletId = { walletId })
+        val svc = service(source, fundingSelection = lock)
+        val payment = svc.buildDeferredPayment(listOf(validAddress to 10_000L), stillOwned = { true })
+
+        val wiping = CompletableDeferred<Unit>()
+        val finishWipe = CompletableDeferred<Unit>()
+        val wipe = async(Dispatchers.Default) {
+            lock.exclusiveForWipe {
+                wiping.complete(Unit)
+                finishWipe.await()
+            }
+        }
+        wiping.await()
+        val broadcast = async(Dispatchers.Default) { svc.broadcastDeferredPayment(payment) { true } }
+        delay(200)
+        assertTrue("broadcast while the wipe cleared the wallet", source.broadcastOnWallets.isEmpty())
+        finishWipe.complete(Unit)
+        wipe.await()
+
+        val result = kotlinx.coroutines.withTimeout(2_000) { broadcast.await() }
+        assertTrue("a broadcast that waited through a wipe went on: $result", result is SdkWriteResult.NotBroadcast)
+        assertTrue(source.broadcastOnWallets.isEmpty())
+    }
+
+    @Test
+    fun deferredBroadcast_aWipeStartedDuringTheNativeBroadcastTearsNothingDownUntilItReturns() = runBlocking {
+        // Reset Wallet as production runs it (WalletWipeSequence.finish with the barrier raised
+        // first), started while a native broadcast, deaf to cancellation, is under way: neither the
+        // wallet detach nor the SDK teardown nor the verifier's clear may run until it returns.
+        val lock = de.schildbach.wallet.payments.FundingSelectionLock()
+        val inNative = java.util.concurrent.CountDownLatch(1)
+        val releaseNative = java.util.concurrent.CountDownLatch(1)
+        val nativeReturned = java.util.concurrent.atomic.AtomicBoolean(false)
+        val source = FakeSource(boundWalletId = { walletId })
+        val svc = service(source, fundingSelection = lock)
+        val payment = svc.buildDeferredPayment(listOf(validAddress to 10_000L), stillOwned = { true })
+        source.onDeferredBroadcast = {
+            inNative.countDown()
+            releaseNative.await()
+            nativeReturned.set(true)
+        }
+        val broadcast = async(Dispatchers.Default) { svc.broadcastDeferredPayment(payment) { true } }
+        assertTrue(inNative.await(5, java.util.concurrent.TimeUnit.SECONDS))
+
+        val events = java.util.concurrent.CopyOnWriteArrayList<String>()
+        lock.raiseWipeBarrier() // the user confirmed Reset Wallet
+        val wipe = async(Dispatchers.Default) {
+            de.schildbach.wallet.util.WalletWipeSequence.finish(
+                pending = { de.schildbach.wallet.util.WalletWipeState.Pending.PENDING },
+                fundingBarrier = lock,
+                detachWallet = { events += "detach after native=${nativeReturned.get()}" },
+                destroy = {
+                    events += "sdk teardown"
+                    lock.exclusiveForWipe { events += "verifier clear" }
+                },
+                markComplete = { events += "complete" }
+            )
+        }
+        // a broadcast asked for now is refused at once, its owner never asked
+        var askedOwner = false
+        val late = kotlinx.coroutines.withTimeout(2_000) {
+            svc.broadcastDeferredPayment(payment) { askedOwner = true; true }
+        }
+        assertTrue("a broadcast was admitted during the wipe: $late", late is SdkWriteResult.NotBroadcast)
+        assertFalse(askedOwner)
+        delay(300)
+        val tornDownEarly = events.toList()
+        releaseNative.countDown() // never left blocked, whatever the assertion below says
+        assertTrue("the wipe tore down while the native broadcast ran: $tornDownEarly", tornDownEarly.isEmpty())
+
+        val result = kotlinx.coroutines.withTimeout(5_000) { broadcast.await() }
+        assertTrue("the broadcast that went out is reported as such: $result", result is SdkWriteResult.Broadcast)
+        assertTrue(kotlinx.coroutines.withTimeout(5_000) { wipe.await() })
+        assertEquals(
+            listOf("detach after native=true", "sdk teardown", "verifier clear", "complete"),
+            events
+        )
+        assertEquals("one broadcast, the admitted one", listOf(walletId), source.broadcastOnWallets)
+        assertFalse(lock.isWipeBarrierRaised)
+    }
+
+    @Test
+    fun deferredBroadcast_asksTheOwnerUnderTheHold_andRefusesAWipedOne() = runBlocking {
+        val source = FakeSource(boundWalletId = { walletId })
+        val svc = service(source)
+        val payment = svc.buildDeferredPayment(listOf(validAddress to 10_000L), stillOwned = { true })
+
+        val result = svc.broadcastDeferredPayment(payment) { false }
+
+        assertTrue("broadcast for a wiped wallet: $result", result is SdkWriteResult.NotBroadcast)
+        assertTrue(source.broadcastOnWallets.isEmpty())
+    }
+
+    @Test
+    fun deferredBroadcast_broadcastsOnTheWalletItWasBuiltOn() = runBlocking {
+        val source = FakeSource(boundWalletId = { walletId })
+        val svc = service(source)
+        val payment = svc.buildDeferredPayment(listOf(validAddress to 10_000L), stillOwned = { true })
+
+        val result = svc.broadcastDeferredPayment(payment) { true }
+
+        assertTrue("$result", result is SdkWriteResult.Broadcast)
+        assertEquals(listOf(walletId), source.broadcastOnWallets)
+    }
+
+    @Test
+    fun deferredBroadcast_neverBroadcastsAPaymentWithNoRecordedWallet() = runBlocking {
+        val source = FakeSource(boundWalletId = { walletId })
+        val payment = SdkDeferredPayment("dd".repeat(32), ByteArray(0), 226L, null)
+
+        val result = service(source).broadcastDeferredPayment(payment) { true }
+
+        assertTrue("$result", result is SdkWriteResult.NotBroadcast)
+        assertTrue(source.broadcastOnWallets.isEmpty())
+    }
+
+    @Test
+    fun deferredBroadcast_insideAHeldLock_passesThrough_evenWithAWipeWaiting() = runBlocking {
+        // a caller that already holds the lock (shared) must neither deadlock nor be counted twice
+        val lock = de.schildbach.wallet.payments.FundingSelectionLock()
+        val source = FakeSource(boundWalletId = { walletId })
+        val svc = service(source, fundingSelection = lock)
+        val payment = svc.buildDeferredPayment(listOf(validAddress to 10_000L), stillOwned = { true })
+
+        val result = kotlinx.coroutines.withTimeout(2_000) {
+            lock.withShared { svc.broadcastDeferredPayment(payment) { true } }
+        }
+        assertTrue("$result", result is SdkWriteResult.Broadcast)
+        // released once: a wipe now runs at once
+        assertEquals("wiped", kotlinx.coroutines.withTimeout(2_000) { lock.exclusiveForWipe { "wiped" } })
+    }
+
+    @Test
+    fun deferredBuild_asksTheOwnerUnderTheHold_andBuildsNothingForAWipedOne() = runBlocking {
+        val source = FakeSource(boundWalletId = { walletId })
+        try {
+            service(source).buildDeferredPayment(listOf(validAddress to 10_000L), stillOwned = { false })
+            fail("built for a wiped wallet")
+        } catch (expected: IllegalStateException) {
+            // refused
+        }
+        assertEquals(0, source.deferredBuildCalls)
+    }
+
+    @Test
+    fun sendToAddress_refusesWhenTheBoundWalletChangedBeforeTheHold() = runBlocking {
+        var bound = walletId
+        val source = readySource().apply { boundWalletId = { bound } }
+        val svc = service(source)
+
+        // the wallet is swapped after the preflight read the bound wallet, before the send
+        val result = svc.sendToAddress(validAddress, amount, emptyWallet = false) { bound = "ef".repeat(32) }
+
+        assertTrue("sent from another wallet: $result", result is SdkWriteResult.NotBroadcast)
+        assertEquals(0, source.sendCalls)
+    }
+
+    @Test
+    fun deferredRelease_neverReleasesOnAnotherWallet() = runBlocking {
+        var bound = walletId
+        val source = FakeSource(boundWalletId = { bound })
+        val svc = service(source)
+        val payment = svc.buildDeferredPayment(listOf(validAddress to 10_000L), stillOwned = { true })
+
+        bound = "ef".repeat(32)
+        svc.releaseDeferredPayment(payment)
+
+        assertTrue("released on another wallet: ${source.releasedOnWallets}", source.releasedOnWallets.isEmpty())
+    }
+
+    // ── unprotected pending payment (review 4245734665) ────────────────────
+    //
+    // After a restart an uncertain BIP70 payment's inputs are locked only on the dashj side, and
+    // SDK coin selection cannot see those locks. Every SDK-funded build must refuse while such a
+    // payment is outstanding.
+
+    @Test
+    fun sendToAddress_refusesWhileAPendingPaymentIsUnprotected() = runBlocking {
+        val source = readySource()
+        val svc = service(source, unprotectedPendingPayment = { true })
+
+        val result = svc.sendToAddress(validAddress, amount, emptyWallet = false)
+
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertTrue(
+            (result as SdkWriteResult.NotBroadcast).reason.contains(L1_PENDING_PAYMENT_UNPROTECTED_REASON)
+        )
+        assertEquals("nothing may be built while the old inputs are exposed", 0, source.sendCalls)
+    }
+
+    @Test
+    fun sendToAddress_proceedsOnceNoPendingPaymentIsUnprotected() = runBlocking {
+        val source = readySource()
+        val svc = service(source, unprotectedPendingPayment = { false })
+
+        val result = svc.sendToAddress(validAddress, amount, emptyWallet = false)
+
+        assertTrue(result is SdkWriteResult.Broadcast)
+    }
+
+    @Test
+    fun buildDeferredPayment_refusesWhileAPendingPaymentIsUnprotected() = runBlocking {
+        val svc = service(readySource(), unprotectedPendingPayment = { true })
+
+        try {
+            svc.buildDeferredPayment(listOf(validAddress to 10_000L), stillOwned = { true })
+            fail("a deferred build went ahead while a pending payment's inputs were exposed")
+        } catch (e: org.dash.wallet.common.services.PaymentStillConfirmingException) {
+            assertTrue(e.message!!.isNotEmpty())
+        }
+        Unit
+    }
+
+    @Test
+    fun aRefusedSendSurfacesAsPaymentStillConfirming() {
+        val e = de.schildbach.wallet.payments.sdkSendNotAttemptedException(
+            "sendToAddress: $L1_PENDING_PAYMENT_UNPROTECTED_REASON"
+        )
+        assertTrue(e is org.dash.wallet.common.services.PaymentStillConfirmingException)
+    }
+
+    @Test
+    fun aDeferredBuildRecordsALowerBoundOfTheHeightItWasReservedAt() = runBlocking {
+        // The pending-payment gate measures the reservation's remaining life in blocks from
+        // here, so it must never be above the engine's processed height (review 2a8b1c7c057e).
+        val source = mayaSource(spendable = 1_000_000L, feeDuffs = 500L)
+        // within the funding gate's tolerance, with the cursors a little apart
+        val behind = caughtUpProgress().copy(filterHeight = 1_499_999, walletSyncedHeight = 1_499_998)
+        val payment = service(source, progress = { behind })
+            .buildDeferredMayaDeposit(validAddress, 50_000L, ByteArray(40), stillOwned = { true })
+
+        assertEquals("the committed wallet cursor", 1_499_998L, payment.reservedAtHeight)
+    }
+
+    @Test
+    fun aDeferredBuildWithNoCommittedCursorRecordsNoHeight() = runBlocking {
+        // Review 28775c57d545: header and filter cursors at the tip say nothing about how far the
+        // engine has processed (that can be 100 blocks behind). Recording one as the reservation
+        // height would make an older reservation look fresh; unknown must stay unknown.
+        val source = mayaSource(spendable = 1_000_000L, feeDuffs = 500L)
+        val noCommittedCursor = caughtUpProgress().copy(walletSyncedHeight = 0)
+        val payment = service(source, progress = { noCommittedCursor })
+            .buildDeferredMayaDeposit(validAddress, 50_000L, ByteArray(40), stillOwned = { true })
+
+        assertNull(payment.reservedAtHeight)
+    }
+
+    @Test
+    fun aDeferredBuildWithNoKnownHeightRecordsNone() = runBlocking {
+        val source = mayaSource(spendable = 1_000_000L, feeDuffs = 500L)
+        val unknown = caughtUpProgress().copy(headerHeight = 0, filterHeight = 0, walletSyncedHeight = 0)
+        val payment = try {
+            service(source, progress = { unknown }).buildDeferredMayaDeposit(validAddress, 50_000L, ByteArray(40), stillOwned = { true })
+        } catch (e: IllegalStateException) {
+            // the funding gate may refuse an engine with no heights at all, which is fine too
+            return@runBlocking
+        }
+        assertNull(payment.reservedAtHeight)
+    }
+
+    @Test
+    fun coinJoinDrain_refusesWhileAPendingPaymentIsUnprotected() = runBlocking {
+        // The drain selects fresh transparent inputs too (review 1b15e950af15). The FakeSource
+        // has no drain; reaching it would throw UnsupportedOperationException, which this
+        // refusal must come before.
+        val svc = service(readySource(), unprotectedPendingPayment = { true })
+
+        val result = svc.drainCoinJoinAccountTo(validAddress)
+
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertTrue(isPaymentStillConfirmingReason((result as SdkWriteResult.NotBroadcast).reason))
     }
 }

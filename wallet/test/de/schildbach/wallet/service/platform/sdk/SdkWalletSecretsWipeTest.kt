@@ -229,7 +229,8 @@ class SdkWalletSecretsWipeTest {
         try {
             runBlocking {
                 WalletWipeSequence.finish(
-                    pending = { true },
+                    pending = { de.schildbach.wallet.util.WalletWipeState.Pending.PENDING },
+                    fundingBarrier = de.schildbach.wallet.payments.FundingSelectionLock(),
                     detachWallet = { },
                     destroy = {
                         clearForWalletWipe { throw IllegalStateException("removeWallet failed") }
@@ -254,7 +255,8 @@ class SdkWalletSecretsWipeTest {
         var markedComplete = false
         val ran = runBlocking {
             WalletWipeSequence.finish(
-                pending = { true },
+                pending = { de.schildbach.wallet.util.WalletWipeState.Pending.PENDING },
+                fundingBarrier = de.schildbach.wallet.payments.FundingSelectionLock(),
                 detachWallet = { },
                 destroy = {
                     clearForWalletWipe { store.removeWalletEntries() }
@@ -301,7 +303,8 @@ class SdkWalletSecretsWipeTest {
         var markedComplete = false
         try {
             WalletWipeSequence.finish(
-                pending = { true },
+                pending = { de.schildbach.wallet.util.WalletWipeState.Pending.PENDING },
+                fundingBarrier = de.schildbach.wallet.payments.FundingSelectionLock(),
                 detachWallet = { },
                 destroy = {
                     val outcome = fencedSdkSecretsWipe(
@@ -562,7 +565,8 @@ class SdkWalletSecretsWipeTest {
         var markedComplete = false
         try {
             WalletWipeSequence.finish(
-                pending = { true },
+                pending = { de.schildbach.wallet.util.WalletWipeState.Pending.PENDING },
+                fundingBarrier = de.schildbach.wallet.payments.FundingSelectionLock(),
                 detachWallet = { },
                 destroy = {
                     outcome = fencedSdkSecretsWipe(

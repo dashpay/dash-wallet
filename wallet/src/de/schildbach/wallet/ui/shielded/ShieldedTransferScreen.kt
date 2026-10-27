@@ -598,7 +598,7 @@ private fun TransferHintOrError(uiState: ShieldedTransferUIState) {
                     textAlign = TextAlign.Center
                 )
                 Text(
-                    text = stringResource(R.string.shielded_transfer_failed_message),
+                    text = stringResource(shieldedNotSentMessageRes(uiState.submitState)),
                     style = MyTheme.Typography.BodySmall,
                     color = LocalDashColors.current.textSecondary,
                     textAlign = TextAlign.Center,

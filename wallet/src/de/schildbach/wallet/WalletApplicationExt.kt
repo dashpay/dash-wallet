@@ -21,6 +21,7 @@ package de.schildbach.wallet
 
 import androidx.work.WorkManager
 import de.schildbach.wallet.service.platform.sdk.SdkSecretsWipeOutcome
+import de.schildbach.wallet.service.platform.sdk.SeamOutputLockRegistry
 import de.schildbach.wallet.service.platform.sdk.WalletSecretWriteFence
 import de.schildbach.wallet.service.platform.sdk.fencedSdkSecretsWipe
 import de.schildbach.wallet.service.platform.work.PublishTransactionMetadataOperation
@@ -38,6 +39,7 @@ import kotlinx.coroutines.withContext
 import org.dash.wallet.common.data.BaseConfig
 import org.slf4j.LoggerFactory
 import java.io.IOException
+import java.util.concurrent.atomic.AtomicBoolean
 
 object WalletApplicationExt {
     private val log = LoggerFactory.getLogger(WalletApplicationExt::class.java)
@@ -59,26 +61,51 @@ object WalletApplicationExt {
      * dispatcher, against the fragment that had asked for the reset — by then
      * that fragment had been detached for two minutes and the process died
      * with "Fragment SecurityFragment not attached to Activity".
+     *
+     * @return false when the reset was REFUSED because its marker could not be
+     *   confirmed: nothing was handed off, paused or torn down, the wallet is
+     *   intact, and the caller must tell the user Reset Wallet failed.
      */
-    fun WalletApplication.beginWalletWipe() {
-        // Stop transaction-metadata saves now, not at the destroy phase: the
-        // service teardown in between can take minutes, and a save of this
-        // wallet's settings must not write or enqueue a publish once the user
-        // has confirmed the reset. The queue stays paused — refusing new saves
-        // — until finishWalletWipe() is done; destroyWalletData() also waits
-        // for the cancelled save to stop before anything is cleared.
-        transactionMetadataSaveQueue.pause()
-        // ...and publishes already handed to WorkManager: the cancelAllWork()
-        // in the destroy phase comes after the same teardown.
-        PublishTransactionMetadataOperation.cancelAll(this)
-        WalletWipeSequence.begin(
+    fun WalletApplication.beginWalletWipe(): Boolean {
+        val confirmed = WalletWipeSequence.begin(
             markPending = { WalletWipeState.begin(filesDir, noBackupFilesDir) },
+            // Raised as soon as the marker is confirmed, before anything else: from here on no
+            // payment may fund, broadcast or post for this wallet, and the ones under way are
+            // cancelled. The wipe waits for them to release (WalletWipeSequence.finish, and the
+            // service teardown before it) before anything of the wallet or the SDK is torn down.
+            fundingBarrier = fundingSelectionLock,
             handOffUi = {
+                // Stop transaction-metadata saves now, not at the destroy phase: the
+                // service teardown in between can take minutes, and a save of this
+                // wallet's settings must not write or enqueue a publish once the user
+                // has confirmed the reset. The queue stays paused — refusing new saves
+                // — until finishWalletWipe() is done; destroyWalletData() also waits
+                // for the cancelled save to stop before anything is cleared.
+                transactionMetadataSaveQueue.pause()
+                // ...and publishes already handed to WorkManager: the cancelAllWork()
+                // in the destroy phase comes after the same teardown.
+                PublishTransactionMetadataOperation.cancelAll(this)
                 setWipeInProgress(true)
                 restartService.performRestart(this, true, false)
             }
         )
+        // Handed to the teardown (consumeConfirmedWipeBegin) so it wipes even if the marker
+        // later reads as unknown.
+        if (confirmed) {
+            confirmedWipeBegin.set(true)
+        }
+        return confirmed
     }
+
+    /**
+     * Set by a confirmed [beginWalletWipe] in this process, taken once by the
+     * service teardown that finishes it. Per process on purpose: a confirmed
+     * begin never outlives the process that asked for it.
+     */
+    private val confirmedWipeBegin = AtomicBoolean(false)
+
+    /** Whether a confirmed Reset Wallet is waiting for its teardown; clears it. */
+    fun consumeConfirmedWipeBegin(): Boolean = confirmedWipeBegin.getAndSet(false)
 
     /**
      * Phase 3-5 of Reset Wallet: detach the in-memory wallet, destroy
@@ -86,7 +113,7 @@ object WalletApplicationExt {
      * it is called from the blockchain service's teardown coroutine, and the
      * SDK cleanup inside it ran for nearly two minutes on a live device.
      */
-    suspend fun WalletApplication.finishWalletWipe() {
+    suspend fun WalletApplication.finishWalletWipe(beginConfirmed: Boolean) {
         var wipeFinished = false
         try {
             // A failure here must not become an uncaught exception in the
@@ -95,7 +122,9 @@ object WalletApplicationExt {
             // marker stays behind instead, and the next launch re-runs it.
             wipeFinished = runCatching {
                 WalletWipeSequence.finish(
-                    pending = { WalletWipeState.isPending(filesDir, noBackupFilesDir) },
+                    beginConfirmed = beginConfirmed,
+                    pending = { WalletWipeState.pendingState(filesDir, noBackupFilesDir) },
+                    fundingBarrier = fundingSelectionLock,
                     detachWallet = { withContext(Dispatchers.Main) { detachWalletForWipe() } },
                     destroy = { destroyWalletData() },
                     markComplete = { markWalletWipeComplete() }
@@ -116,7 +145,12 @@ object WalletApplicationExt {
                 // the NEXT wallet persist SDK secrets again. An unfinished one
                 // keeps the old wallet's producers fenced for the rest of this
                 // (degraded) process.
-                if (wipeComplete) walletSecretWriteFence.lower()
+                if (wipeComplete) {
+                    walletSecretWriteFence.lower()
+                    // Configs are cleared: the next wallet may migrate (the wiped one's steps stay refused).
+                    runCatching { coinJoinFundsMigrationService.get().resumeAfterWalletWipe() }
+                        .onFailure { log.warn("mixed-funds migration resume after wipe failed", it) }
+                }
                 // Before the flag drops: onboarding re-routes on it, and an
                 // unfinished wipe must route to the degraded screen, not to
                 // create/restore.
@@ -137,7 +171,10 @@ object WalletApplicationExt {
         // Fence before the coroutine is even scheduled: nothing in this
         // process may persist a secret of the half-destroyed wallet.
         walletSecretWriteFence.raise()
-        wipeScope.launch { finishWalletWipe() }
+        // Likewise for the payment paths, though no wallet is loaded this launch to pay from.
+        fundingSelectionLock.raiseWipeBarrier()
+        // No begin in hand: the marker read at launch decides (UNKNOWN keeps everything for the next start).
+        wipeScope.launch { finishWalletWipe(beginConfirmed = false) }
     }
 
     private suspend fun WalletApplication.destroyWalletData() {
@@ -180,6 +217,12 @@ object WalletApplicationExt {
         // through beginWalletWipe().
         runCatching { transactionMetadataSaveQueue.pauseAndJoin() }
             .onFailure { rethrowCancellation(it); log.warn("tx-metadata save queue pause failed during wipe", it) }
+        // Before the configs are cleared, so nothing of this wallet is written after.
+        resetInMemoryWalletState(
+            seamOutputLockRegistry,
+            { coinJoinFundsMigrationService.get().stopForWalletWipe() },
+            { shieldedBalanceService.get().resetForWalletWipe() }
+        )
         destroyWalletFiles()
         // Live DataStore-backed configs must be cleared through their API (one
         // atomic memory+disk edit) before the leftover files are deleted:
@@ -193,6 +236,24 @@ object WalletApplicationExt {
         notifyWalletWipeListeners()
         destroyWalletSecrets()
         clearDatabasesInner(isWalletWipe = true)
+    }
+
+    /**
+     * Process state with no wallet identity that would outlive Reset Wallet into the
+     * next wallet: seam output locks, the mixed-funds migration, the shield resume
+     * budget. Every step runs even when an earlier one fails.
+     */
+    internal suspend fun resetInMemoryWalletState(
+        seamOutputLocks: SeamOutputLockRegistry,
+        stopMigrationWatcher: suspend () -> Unit,
+        resetShieldResumeBudget: () -> Unit
+    ) {
+        runCatching { seamOutputLocks.clearForWalletWipe() }
+            .onFailure { rethrowCancellation(it); log.warn("seam output-lock clear failed during wipe", it) }
+        runCatching { stopMigrationWatcher() }
+            .onFailure { rethrowCancellation(it); log.warn("mixed-funds watcher stop failed during wipe", it) }
+        runCatching { resetShieldResumeBudget() }
+            .onFailure { rethrowCancellation(it); log.warn("shield resume-budget reset failed during wipe", it) }
     }
 
     private suspend fun WalletApplication.eraseSdkWalletSecrets(): SdkSecretsWipeOutcome {

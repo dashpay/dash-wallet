@@ -198,6 +198,7 @@ class MainViewModelTest {
     }
     private val mockDashPayConfig = mockk<DashPayConfig> {
         every { observe<Long>(any()) } returns MutableStateFlow(0L)
+        every { observePreservingErrors(DashPayConfig.USE_KOTLIN_SDK_SHIELDED) } returns MutableStateFlow(false)
         coEvery { areNotificationsDisabled() } returns false
     }
 
@@ -245,6 +246,7 @@ class MainViewModelTest {
         mockk<de.schildbach.wallet.service.platform.sdk.CoinJoinFundsMigrationService> {
             coEvery { shouldPrompt() } returns false
             coEvery { inFlightMigration() } returns null
+            coEvery { shouldPresentPrompt() } returns false
             every { startInFlightWatcherIfNeeded() } returns Unit
         }
     // Application-scoped owner of the bell badge; the ViewModel only reads its
@@ -259,6 +261,8 @@ class MainViewModelTest {
     private val sdkBindRetryService = mockk<de.schildbach.wallet.service.platform.sdk.SdkBindRetryService> {
         every { blocker } returns kotlinx.coroutines.flow.MutableStateFlow(null)
     }
+    private val shieldedBalanceService =
+        mockk<de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService>(relaxed = true)
     @get:Rule
     var rule: TestRule = InstantTaskExecutorRule()
 
@@ -352,7 +356,8 @@ class MainViewModelTest {
                 l1SyncStatusService,
                 contactRequestNotificationService,
                 swapProvider,
-                sdkBindRetryService
+                sdkBindRetryService,
+                shieldedBalanceService
             )
         )
 
@@ -396,7 +401,8 @@ class MainViewModelTest {
                 l1SyncStatusService,
                 contactRequestNotificationService,
                 swapProvider,
-                sdkBindRetryService
+                sdkBindRetryService,
+                shieldedBalanceService
             )
         )
 
@@ -480,7 +486,8 @@ class MainViewModelTest {
             l1SyncStatusService,
             contactRequestNotificationService,
             swapProvider,
-            sdkBindRetryService
+            sdkBindRetryService,
+            shieldedBalanceService
         )
 
         // The collector is expected to reach the wallet on a background dispatcher.

@@ -250,6 +250,8 @@
     <string name="something_wrong_title">Quelque chose s\'est mal passé !</string>
     <string name="retry">Réessayer</string>
     <string name="gift_card_purchase_failed">Échec de l\'achat de la carte-cadeau</string>
+    <string name="gift_card_save_failed_title">Détails de la carte-cadeau non enregistrés</string>
+    <string name="gift_card_save_failed_message">Votre paiement a bien été envoyé, mais la carte-cadeau n\'a pas pu être enregistrée sur cet appareil. N\'achetez pas cette carte-cadeau à nouveau. Vous trouverez le paiement dans votre historique de transactions, et le support pourra récupérer la carte à partir de celui-ci.</string>
     <string name="try_again">Réessayer</string>
     <string name="cancel">Annuler</string>
     <string name="gift_card_error">Pour quelque raison, nous n\'avons pas pu acheter une carte-cadeau. Veuillez réessayer.</string>

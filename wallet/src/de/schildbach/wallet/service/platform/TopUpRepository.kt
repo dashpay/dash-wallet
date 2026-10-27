@@ -31,6 +31,7 @@ import de.schildbach.wallet.database.dao.TopUpsDao
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.database.entity.Invitation
 import de.schildbach.wallet.database.entity.TopUp
+import de.schildbach.wallet.payments.PendingDirectPaymentVerifier
 import de.schildbach.wallet.service.DashSystemService
 import de.schildbach.wallet.service.platform.sdk.ContestedUsernameFees
 import de.schildbach.wallet.service.platform.sdk.DashSdkService
@@ -97,7 +98,7 @@ interface TopUpRepository {
         keyParameter: KeyParameter?
     )
 
-    fun createTopupTransaction(
+    suspend fun createTopupTransaction(
         blockchainIdentity: BlockchainIdentity,
         topupAmount: Coin,
         keyParameter: KeyParameter?
@@ -180,6 +181,7 @@ class TopUpRepositoryImpl @Inject constructor(
     private val dashPayConfig: DashPayConfig,
     private val dashSystemService: DashSystemService,
     private val sdkTopUpRecoveryService: SdkTopUpRecoveryService,
+    private val pendingPaymentVerifier: PendingDirectPaymentVerifier,
     private val dashSdkService: DashSdkService
 ) : TopUpRepository {
     companion object {
@@ -197,6 +199,9 @@ class TopUpRepositoryImpl @Inject constructor(
         username: String,
         keyParameter: KeyParameter?
     ) {
+        // Before coin selection, not after: restoring locks once a transaction is built does
+        // not remove the outpoints it already chose.
+        pendingPaymentVerifier.awaitRestored()
         val fee = if (Names.isUsernameContestable(username)) {
             ContestedUsernameFees.resolved(dashSdkService).contested
         } else {
@@ -216,11 +221,14 @@ class TopUpRepositoryImpl @Inject constructor(
         blockchainIdentity.initializeAssetLockTransaction(cftx)
     }
 
-    override fun createTopupTransaction(
+    override suspend fun createTopupTransaction(
         blockchainIdentity: BlockchainIdentity,
         topupAmount: Coin,
         keyParameter: KeyParameter?
     ): AssetLockTransaction {
+        // Before coin selection, not after: restoring locks once a transaction is built does
+        // not remove the outpoints it already chose.
+        pendingPaymentVerifier.awaitRestored()
         Context.propagate(walletDataProvider.wallet!!.context)
         val balance = walletDataProvider.wallet!!.getBalance(Wallet.BalanceType.ESTIMATED_SPENDABLE)
         val emptyWallet = balance == topupAmount && balance <= (topupAmount + Transaction.MIN_NONDUST_OUTPUT)
@@ -295,6 +303,8 @@ class TopUpRepositoryImpl @Inject constructor(
      * @return True if successful
      */
     override suspend fun sendTransaction(cftx: AssetLockTransaction): Boolean {
+        // Backstop for callers that built the transaction elsewhere, such as invite funding.
+        pendingPaymentVerifier.awaitRestored()
         log.info("Sending credit funding transaction: ${cftx.txId}")
         return suspendCoroutine { continuation ->
             log.info("adding credit funding transaction listener for ${cftx.txId}")
@@ -385,6 +395,9 @@ class TopUpRepositoryImpl @Inject constructor(
         topUpTx: AssetLockTransaction,
         aesKeyParameter: KeyParameter?
     ) {
+        // Funding runs outside SendCoinsTaskRunner, so it needs the same barrier: after a restart
+        // the input locks of an uncertain payment live only in memory until they are restored.
+        pendingPaymentVerifier.awaitRestored()
         val topUp = topUpsDao.getByTxId(
             topUpTx.txId
         ) ?: addTopUp(topUpTx.txId)
@@ -561,6 +574,9 @@ class TopUpRepositoryImpl @Inject constructor(
         keyParameter: KeyParameter?,
         topupAmount: Coin
     ): AssetLockTransaction {
+        // Before coin selection, not after: restoring locks once a transaction is built does
+        // not remove the outpoints it already chose.
+        pendingPaymentVerifier.awaitRestored()
         // dashj Context does not work with coroutines well, so we need to call Context.propogate
         // in each suspend method that uses the dashj Context
         Context.propagate(walletApplication.wallet!!.context)

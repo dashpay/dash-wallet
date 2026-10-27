@@ -22,6 +22,8 @@ import android.content.ComponentCallbacks2
 import android.content.Intent
 import android.os.HandlerThread
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.service.BlockchainServiceImpl.Companion.ReplayRestartAlarmAction
+import de.schildbach.wallet.service.BlockchainServiceImpl.Companion.decideOnReplayRestartAlarm
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
@@ -86,6 +88,7 @@ class ServiceSelfStopTest {
 
     @Test
     fun `memory pressure stops with the newest delivered start id`() {
+        stubRestartAlarm() // an accepted memory-pressure stop arms its recovery restart
         deliverStart()
         service.onTrimMemory(ComponentCallbacks2.TRIM_MEMORY_COMPLETE)
         verify(exactly = 1) { service.stopSelfResult(1) }
@@ -174,5 +177,154 @@ class ServiceSelfStopTest {
         assertTrue(service.handleWalletLifecycleCommand(BlockchainService.ACTION_RESET_BLOCKCHAIN))
         verify(exactly = 1) { service.stopSelfResult(alarm) }
         verify(exactly = 0) { service.stopSelf() }
+    }
+
+    // ── recovery restarts through the gate (#1623 merged with the round-1 recovery alarm) ──
+
+    /** Restart alarms this instance armed; counted instead of reaching the AlarmManager. */
+    private var armedRestarts = 0
+
+    private fun stubRestartAlarm() {
+        every { service["rescheduleService"]() } answers { armedRestarts++; Unit }
+    }
+
+    private fun recoveryRequested(): Boolean = ReflectionHelpers.getField(service, "recoveryRestartRequested")
+
+    private fun initialisedWithWallet() {
+        ReflectionHelpers.setField(service, "initCompleted", true)
+        every { application.wallet } returns mockk()
+        every { application.isWalletLoadDegraded } returns false
+        every { application.isRecoveryResetPending } returns false
+    }
+
+    /** What this instance's onDestroy would do with the alarm, given what it has recorded. */
+    private fun teardownDecision(replaying: Boolean = false) =
+        decideOnReplayRestartAlarm(
+            initialised = ReflectionHelpers.getField(service, "initCompleted"),
+            replaying = replaying,
+            deliberateStop = ReflectionHelpers.getField<Boolean>(service, "deleteWalletFileOnShutdown") ||
+                ReflectionHelpers.getField<Boolean>(service, "resetBlockchainOnShutdown"),
+            bindBlocked = false,
+            recoveryRestartRequested = recoveryRequested()
+        )
+
+    @Test
+    fun `a memory-pressure stop the gate refuses arms no recovery alarm and sets no flag`() {
+        stubRestartAlarm()
+        deliverStart()
+        lastIssuedStartId++ // a newer start is pending: the stop is refused
+
+        service.onTrimMemory(ComponentCallbacks2.TRIM_MEMORY_COMPLETE)
+
+        verify(exactly = 1) { service.stopSelfResult(1) }
+        assertEquals("a refused stop must not leave a stray alarm", 0, armedRestarts)
+        assertFalse("a refused stop must not leave a stale recovery flag", recoveryRequested())
+    }
+
+    @Test
+    fun `an accepted memory-pressure stop keeps its recovery alarm through teardown`() {
+        stubRestartAlarm()
+        initialisedWithWallet()
+        deliverStart()
+
+        service.onTrimMemory(ComponentCallbacks2.TRIM_MEMORY_COMPLETE)
+
+        verify(exactly = 1) { service.stopSelfResult(1) }
+        assertEquals(1, armedRestarts)
+        assertTrue(recoveryRequested())
+        // no replay in progress, yet the teardown leaves the alarm that is to bring it back
+        assertEquals(ReplayRestartAlarmAction.LEAVE, teardownDecision())
+    }
+
+    @Test
+    fun `a refused must-stop recovery arms its alarm when the owed stop is honoured`() {
+        // the blockstore stall's shape: one-shot, so the stop is owed when refused
+        stubRestartAlarm()
+        initialisedWithWallet()
+        deliverStart()
+        lastIssuedStartId++
+
+        assertFalse(service.stopSelfForRecovery("blockstore memory stall", mustStop = true))
+        assertEquals(0, armedRestarts)
+        assertFalse(recoveryRequested())
+
+        // the newer command honours the owed stop, and that stop is the recovery stop
+        service.recordStartCommand(lastIssuedStartId)
+        assertTrue(service.handleWalletLifecycleCommand(null))
+        verify(exactly = 1) { service.stopSelfResult(2) }
+        assertEquals(1, armedRestarts)
+        assertTrue(recoveryRequested())
+        assertEquals(ReplayRestartAlarmAction.LEAVE, teardownDecision())
+    }
+
+    @Test
+    fun `a recovery restart that reaches a still-running instance clears the flag`() {
+        // A bound service outlives its accepted stop; once a later command runs normally the
+        // recovery has happened, and the next teardown must decide afresh.
+        stubRestartAlarm()
+        initialisedWithWallet()
+        deliverStart()
+        assertTrue(service.stopSelfForRecovery("memory pressure"))
+        assertTrue(recoveryRequested())
+
+        deliverStart()
+        assertFalse(service.handleWalletLifecycleCommand(null))
+
+        assertFalse(recoveryRequested())
+        assertEquals(ReplayRestartAlarmAction.RETIRE, teardownDecision())
+    }
+
+    @Test
+    fun `a wipe still retires the alarm after a recovery stop`() {
+        stubRestartAlarm()
+        initialisedWithWallet()
+        deliverStart()
+        lastIssuedStartId++
+        assertFalse(service.stopSelfForRecovery("blockstore memory stall", mustStop = true))
+
+        // the newer command is a wipe; the owed recovery stop is honoured in its place
+        service.recordStartCommand(lastIssuedStartId)
+        service.recordWipeRequest(BlockchainService.ACTION_WIPE_WALLET)
+        assertTrue(service.handleWalletLifecycleCommand(BlockchainService.ACTION_WIPE_WALLET))
+
+        assertEquals(ReplayRestartAlarmAction.RETIRE, teardownDecision())
+    }
+
+    // ── the stuck-cleanup recovery stop (review ad532a825b07) ──
+
+    @Test
+    fun `a refused stuck-cleanup stop still brings the service back through the newer command`() {
+        // initCompleted stays false: this instance never initialises
+        stubRestartAlarm()
+        every { application.wallet } returns mockk()
+        deliverStart()
+        service.releaseInitLatchForStuckCleanup()
+        lastIssuedStartId++ // a newer start is queued
+
+        assertFalse(service.stopForStuckCleanup())
+        assertEquals(0, armedRestarts)
+
+        // the newer command: whichever branch stops it must arm the recovery restart
+        service.recordStartCommand(lastIssuedStartId)
+        assertTrue(service.handleWalletLifecycleCommand(null))
+        verify(exactly = 1) { service.stopSelfResult(2) }
+        assertEquals("the accepted stop arms the recovery restart", 1, armedRestarts)
+        assertTrue(recoveryRequested())
+        assertEquals(ReplayRestartAlarmAction.LEAVE, teardownDecision())
+    }
+
+    @Test
+    fun `a command released by the stuck-cleanup latch before the recovery stop runs still arms it`() {
+        // The ordering window: the latch is released first, and a queued command reaches
+        // handleWalletLifecycleCommand before the recovery stop has run.
+        stubRestartAlarm()
+        every { application.wallet } returns mockk()
+        deliverStart()
+
+        service.releaseInitLatchForStuckCleanup()
+        assertTrue(service.handleWalletLifecycleCommand(null))
+        verify(exactly = 1) { service.stopSelfResult(1) }
+        assertEquals("the stop that landed is the recovery stop", 1, armedRestarts)
+        assertTrue(recoveryRequested())
     }
 }

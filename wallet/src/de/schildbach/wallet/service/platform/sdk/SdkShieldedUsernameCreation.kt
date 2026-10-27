@@ -33,6 +33,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
 import org.dash.wallet.common.money.Dash
 import org.dashfoundation.dashsdk.errors.DashSdkError
@@ -849,6 +850,8 @@ class SdkShieldedUsernameCreation internal constructor(
         }
         // LAZY + tracked before start: the job can never run unfenced.
         val job = scope.launch(start = CoroutineStart.LAZY) {
+            // The creation records its pool spend with the balance service
+            // itself, before the SDK call (see createUsernameFromShielded).
             val result = withContext(ioDispatcher) {
                 createUsernameFromShielded(username, secondaryUsername)
             }
@@ -856,15 +859,6 @@ class SdkShieldedUsernameCreation internal constructor(
                 is SdkWriteResult.Broadcast -> ShieldedUsernameSubmitState.Created(result.value)
                 is SdkWriteResult.NotBroadcast -> ShieldedUsernameSubmitState.NotSent(result.reason)
                 is SdkWriteResult.Ambiguous -> ShieldedUsernameSubmitState.MayHaveGoneThrough
-            }
-            if (result !is SdkWriteResult.NotBroadcast) {
-                // The Type-20 spend consumed pool notes OUTSIDE the balance
-                // service's own write paths — without this the More card
-                // shows the pre-spend balance until the next 60s sync pass
-                // (Ambiguous marks stale too: the spend MAY have landed,
-                // and a false "Syncing…" beats a false stale amount).
-                runCatching { shieldedBalanceService.noteExternalShieldedSpendBroadcast() }
-                    .onFailure { log.warn("post-submit balance stale-mark failed; the 60s loop will catch up", it) }
             }
             synchronized(this@SdkShieldedUsernameCreation) {
                 _submitState.value = outcome
@@ -1051,6 +1045,21 @@ class SdkShieldedUsernameCreation internal constructor(
         if (!secretWriteFence.tryAcquire("shielded identity funding")) {
             return SdkWriteResult.NotBroadcast(REASON_WALLET_WIPE_IN_PROGRESS)
         }
+        // The pending reconciliation is durable before anything is submitted
+        // (see ShieldedBalanceService.beginExternalShieldedSpend), so no
+        // surface (the home total, the More card) shows the pre-spend amount
+        // during the proof or the (slow) DPNS registration that follows.
+        val spendStartedAtMs = try {
+            // NonCancellable: a recorded spend must reach its end below.
+            withContext(NonCancellable) { shieldedBalanceService.beginExternalShieldedSpend() }
+        } catch (t: Throwable) {
+            secretWriteFence.release()
+            throw t
+        }
+        if (spendStartedAtMs == null) {
+            secretWriteFence.release()
+            return notBroadcast("could not record the pending shielded spend", null)
+        }
         val identityId = try {
             source.createIdentityFromPool(walletId, identityIndex, keys, denominationCredits, fallbackRaw21)
         } catch (t: Throwable) {
@@ -1066,10 +1075,13 @@ class SdkShieldedUsernameCreation internal constructor(
                             "and the spent notes stay reserved; do NOT retry",
                         t
                     )
+                    // The spend MAY have landed: the reconciliation begun
+                    // above stays until settlement.
                     SdkWriteResult.Ambiguous(t)
                 }
             }
         } finally {
+            endPoolSpend(spendStartedAtMs)
             secretWriteFence.release()
         }
         val identityIdBase58 = Identifier.from(identityId).toString()
@@ -1582,6 +1594,17 @@ class SdkShieldedUsernameCreation internal constructor(
     private fun notBroadcast(reason: String, cause: Throwable?): SdkWriteResult.NotBroadcast {
         log.info("shielded username creation not attempted ({})", reason, cause)
         return SdkWriteResult.NotBroadcast(reason, cause)
+    }
+
+    /**
+     * The identity-funding spend's SDK call is over (whatever its outcome):
+     * hand the reconciliation it began to settlement
+     * ([ShieldedBalanceService.endExternalShieldedSpend]). Best-effort and
+     * NonCancellable — the spend's durable record already exists.
+     */
+    private suspend fun endPoolSpend(spendStartedAtMs: Long) = withContext(NonCancellable) {
+        runCatching { shieldedBalanceService.endExternalShieldedSpend(spendStartedAtMs) }
+            .onFailure { log.warn("pool-spend end failed; settlement waits for the next pass", it) }
     }
 
     /** [displayHrp] with failures contained (a throw must not escape a preflight). */

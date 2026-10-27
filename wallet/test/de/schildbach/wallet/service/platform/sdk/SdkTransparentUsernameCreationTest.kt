@@ -147,7 +147,8 @@ class SdkTransparentUsernameCreationTest {
         source: TransparentUsernameSource,
         fence: WalletSecretWriteFence = WalletSecretWriteFence(),
         executorScope: CoroutineScope? = null,
-        pause: suspend (Long) -> Unit = { pauses += it }
+        pause: suspend (Long) -> Unit = { pauses += it },
+        freshFundingBlocked: suspend () -> Boolean = { false }
     ) = SdkTransparentUsernameCreation(
         source = source,
         cutoverCommitted = { true },
@@ -156,7 +157,9 @@ class SdkTransparentUsernameCreationTest {
         driveCreationState = { state, _ -> creationStates += state },
         executorScope = executorScope,
         pause = pause,
-        secretWriteFence = fence
+        secretWriteFence = fence,
+        freshFundingBlocked = freshFundingBlocked,
+        fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
     )
 
     @Test
@@ -627,6 +630,31 @@ class SdkTransparentUsernameCreationTest {
         scope.cancel()
     }
 
+    // ── unprotected pending payment (review 1b15e950af15) ─────────────────
+
+    @Test
+    fun `a fresh registration is refused while a pending payment is unprotected`() = runTest {
+        val source = source(lockAfterFailure = null)
+
+        val result = creation(source, freshFundingBlocked = { true }).createUsernameTransparent(label)
+
+        assertTrue("must be NotBroadcast, got $result", result is SdkWriteResult.NotBroadcast)
+        assertTrue(isPaymentStillConfirmingReason((result as SdkWriteResult.NotBroadcast).reason))
+        coVerify(exactly = 0) { source.registerWithWalletFunding(any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `resuming a tracked registration lock is not blocked`() = runTest {
+        val source = source(lockAfterFailure = null)
+        coEvery { source.unresolvedRegistrationAssetLock(walletIdHex, 0) } returns lock
+        coEvery { source.resumeRegistrationFromAssetLock(walletIdHex, lock, 0, any()) } returns identityId
+
+        val result = creation(source, freshFundingBlocked = { true }).createUsernameTransparent(label)
+
+        assertTrue("must be Broadcast, got $result", result is SdkWriteResult.Broadcast)
+        coVerify(exactly = 0) { source.registerWithWalletFunding(any(), any(), any(), any(), any()) }
+    }
+
     // ── name-only retry for an existing identity ─────────────────────────
 
     private class RetryRun {
@@ -647,6 +675,7 @@ class SdkTransparentUsernameCreationTest {
         secondary: String?,
         nameAlreadyTaken: suspend (String, String) -> Boolean = { _, _ -> false },
         persistNameContext: (suspend (String, String, String?, Boolean) -> Unit)? = null,
+        handOffToLegacy: ((String) -> Unit)? = null,
         run: RetryRun = RetryRun()
     ): RetryRun {
         val appScope = CoroutineScope(
@@ -658,13 +687,14 @@ class SdkTransparentUsernameCreationTest {
             source = source,
             cutoverCommitted = { true },
             feeDuffs = { feeDuffs },
-            handOffToLegacy = { run.handedOff += it },
+            handOffToLegacy = handOffToLegacy ?: { run.handedOff += it },
             driveCreationState = { state, error -> run.states += state to error },
             persistNameContext = persistNameContext ?: { id, name, second, restoring ->
                 run.nameContexts += listOf(id, name, second, restoring)
             },
             executorScope = appScope,
-            nameAlreadyTaken = nameAlreadyTaken
+            nameAlreadyTaken = nameAlreadyTaken,
+            fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
         ).also { it.ioDispatcher = kotlinx.coroutines.test.StandardTestDispatcher(testScheduler) }
         run.accepted = creation.retryNameForExistingIdentity(identityIdBase58, username, secondary)
         advanceUntilIdle()
@@ -791,7 +821,8 @@ class SdkTransparentUsernameCreationTest {
             nameAlreadyTaken = { _, _ ->
                 synchronized(checkedOn) { checkedOn += Thread.currentThread().name }
                 false
-            }
+            },
+            fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
         ).also { it.ioDispatcher = ioDispatcher }
 
         try {
@@ -822,7 +853,8 @@ class SdkTransparentUsernameCreationTest {
             driveCreationState = { _, _ -> },
             // the first run is still writing its name context
             persistNameContext = { _, _, _, _ -> gate.await() },
-            executorScope = appScope
+            executorScope = appScope,
+            fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
         ).also { it.ioDispatcher = kotlinx.coroutines.test.StandardTestDispatcher(testScheduler) }
 
         assertTrue("the first retry is accepted", creation.retryNameForExistingIdentity(identityIdBase58, "alice3", null))
@@ -870,7 +902,8 @@ class SdkTransparentUsernameCreationTest {
                 driveCreationState = { _, _ -> },
                 persistNameContext = { _, name, _, _ -> persisted += name },
                 executorScope = appScope,
-                secretWriteFence = fence
+                secretWriteFence = fence,
+                fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
             ).also { it.ioDispatcher = kotlinx.coroutines.test.StandardTestDispatcher(testScheduler) }
 
             assertFalse(
@@ -936,7 +969,8 @@ class SdkTransparentUsernameCreationTest {
                 gate.await()
             },
             executorScope = appScope,
-            secretWriteFence = fence
+            secretWriteFence = fence,
+            fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
         ).also { it.ioDispatcher = kotlinx.coroutines.test.StandardTestDispatcher(testScheduler) }
         // the wipe starts after the job passed the fence check and before it is started
         creation.beforeStartForTest = { runBlocking { assertTrue(fence.raiseAndQuiesce(1_000L)) } }
@@ -1090,7 +1124,8 @@ class SdkTransparentUsernameCreationTest {
             cutoverCommitted = { true },
             feeDuffs = { feeDuffs },
             handOffToLegacy = {},
-            nameAlreadyTaken = { id, name -> id == identityIdBase58 && name in owned }
+            nameAlreadyTaken = { id, name -> id == identityIdBase58 && name in owned },
+            fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
         ).also { it.ioDispatcher = kotlinx.coroutines.test.StandardTestDispatcher(testScheduler) }
 
         val first = async { creation.registerDpnsNameForExistingIdentity(identityIdBase58, "alice3") }
@@ -1125,7 +1160,8 @@ class SdkTransparentUsernameCreationTest {
             handOffToLegacy = {},
             driveCreationState = { state, _ -> states += state },
             executorScope = appScope,
-            nameAlreadyTaken = { id, name -> id == identityIdBase58 && name in owned }
+            nameAlreadyTaken = { id, name -> id == identityIdBase58 && name in owned },
+            fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
         ).also { it.ioDispatcher = kotlinx.coroutines.test.StandardTestDispatcher(testScheduler) }
 
         // e.g. the restore worker re-driving the same name for the same identity
@@ -1165,6 +1201,23 @@ class SdkTransparentUsernameCreationTest {
         assertTrue("nothing escapes: ${run.uncaught}", run.uncaught.isEmpty())
         val error = run.states.last().second
         assertTrue("the tile's Try again goes back to the name-only retry: $error", SdkTransparentUsernameCreation.isNameOnlyRetryError(error))
+    }
+
+    @Test
+    fun `a failed recovery handoff after the name registered neither crashes nor stamps an error`() = runTest {
+        // the name is on chain; the handoff is best effort, as on the create path
+        val source = source(lockAfterFailure = null)
+        coEvery { source.registerDpnsName(walletIdHex, identityId, "alice3") } returns "alice3.dash"
+
+        val run = retry(
+            source,
+            "alice3",
+            null,
+            handOffToLegacy = { throw IllegalStateException("WorkManager not initialised") }
+        )
+
+        assertTrue("nothing escapes the app-scoped launch: ${run.uncaught}", run.uncaught.isEmpty())
+        assertEquals(IdentityCreationState.DONE to null, run.states.last())
     }
 
     // --- MO-1069: protocol-gated funding amount ---
@@ -1220,7 +1273,8 @@ class SdkTransparentUsernameCreationTest {
             feeDuffs = { contested -> transparentUsernameFeeDuffs(contested, sdkService) },
             handOffToLegacy = {},
             driveCreationState = { state, _ -> creationStates += state },
-            pause = { pauses += it }
+            pause = { pauses += it },
+            fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
         )
 
     @Test

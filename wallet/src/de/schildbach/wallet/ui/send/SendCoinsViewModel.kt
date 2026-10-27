@@ -486,6 +486,10 @@ class SendCoinsViewModel @Inject constructor(
         // contact payment address, never one without the other.
         val resolved = payee.get()
 
+        // Before coin selection: after a restart the locks of an unresolved payment are gone
+        // until restoration runs, and a transaction built now could spend its outpoints.
+        sendCoinsTaskRunner.awaitPaymentReadiness()
+
         // The contact payment this send pays, once known (inside the try).
         var contactPayment: ContactPaymentAddress? = null
         val transaction = try {
@@ -613,6 +617,9 @@ class SendCoinsViewModel @Inject constructor(
                     finalSendRequest,
                     checkBalanceConditions = checkBalance,
                     intendedRecipient = intendedRecipient,
+                    // the wallet this screen built and confirmed the payment on: a wipe since
+                    // must not have the replacement pay it, on either route
+                    originWallet = wallet,
                     onBroadcast = { txid ->
                         if (payment != null) spentContactPayment.set(payment)
                         signals.broadcast(txid)

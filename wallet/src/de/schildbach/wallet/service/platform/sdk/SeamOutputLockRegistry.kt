@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.service.platform.sdk
 
+import kotlinx.coroutines.CancellationException
 import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
@@ -70,9 +71,43 @@ class SeamOutputLockRegistry @Inject constructor() {
     /** True when the outpoint `txIdHex:vout` is seam-locked (drain-guard union hook — see class KDoc). */
     fun isLocked(txIdHex: String, vout: Int): Boolean = key(txIdHex, vout) in lockedOutpoints
 
+    /**
+     * Reset Wallet: drop every lock. The registry has no wallet identity, so a lock
+     * left behind would block the next wallet's send-all and CoinJoin migration.
+     */
+    fun clearForWalletWipe() {
+        val dropped = lockedOutpoints.size
+        lockedOutpoints.clear()
+        if (dropped > 0) log.info("wallet wipe: dropped {} seam-locked output(s)", dropped)
+    }
+
     private fun key(txIdHex: String, vout: Int): String = "${txIdHex.lowercase()}:$vout"
 
     companion object {
         private val log = LoggerFactory.getLogger(SeamOutputLockRegistry::class.java)
     }
+}
+
+/**
+ * The drain-guard union (B7) every drain that cannot exclude an input uses:
+ * [dashjLocked] OR any seam lock (they carry no account). A throw from either
+ * reads as locked. An extension, so a mocked registry still runs it.
+ */
+fun SeamOutputLockRegistry.outputsAppLocked(operation: String, dashjLocked: () -> Boolean): Boolean {
+    val log = LoggerFactory.getLogger(SeamOutputLockRegistry::class.java)
+    val dashj = try {
+        dashjLocked()
+    } catch (t: Throwable) {
+        if (t is CancellationException) throw t
+        log.warn("{}: app-locked-output preflight failed; blocking (fail closed)", operation, t)
+        true
+    }
+    val seam = try {
+        hasAnyLocks()
+    } catch (t: Throwable) {
+        if (t is CancellationException) throw t
+        log.warn("{}: seam output-lock registry read failed; blocking (fail closed)", operation, t)
+        true
+    }
+    return dashj || seam
 }
