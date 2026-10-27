@@ -1018,6 +1018,60 @@ class ShieldedBalanceServiceTest {
         assertEquals(0, source.startsWhileLatched)
     }
 
+    /**
+     * Review (PR 1651): the owed-stop drain clears its debt whether or not the
+     * native stop succeeded, but a failed stop keeps the stale loop ownership.
+     * A queued bring-up that pays a timed-out stop's debt and fails — the
+     * quiesce latched — must then retry that retained ownership before it
+     * binds a loop; when the retry fails as well, it neither starts the loop
+     * nor reports ready, and a later trigger retries and recovers.
+     */
+    @Test
+    fun bringUp_whoseOwedStopDrainFails_doesNotStartOrReportReady_andTheNextTriggerRecovers() = runBlocking {
+        val commitGate = CompletableDeferred<Unit>()
+        var parked = false
+        var commits = 0
+        // One timeout for the owed-stop drain, one for the bring-up's own retry.
+        val source = readySource().apply { stopTimeoutsRemaining = 2 }
+        val service = service(source, stopLockTimeoutMs = 200, afterReadyCommitted = {
+            if (++commits == 1) {
+                parked = true
+                commitGate.await()
+            }
+        })
+
+        // #1 is past its last check with the loop running; stop A times out and records the debt.
+        val first = async(Dispatchers.Default) { service.ensureShieldedReady() }
+        withTimeout(5_000) { while (!parked) delay(10) }
+        withTimeout(5_000) { service.stop() }
+        assertEquals("the fallback cannot reach the loop", 0, source.stopCalls)
+        source.events.clear()
+
+        // #2 is queued on the lock (UNDISPATCHED: provably before #1 releases), so it pays the debt.
+        val second = async(start = CoroutineStart.UNDISPATCHED) { service.ensureShieldedReady() }
+        assertTrue(second.isActive)
+        commitGate.complete(Unit)
+        assertFalse("#1 was superseded by stop A", first.await())
+
+        assertFalse("not ready over a loop that cannot sync", second.await())
+        assertEquals(
+            "the drain's stop failed, then the bring-up retried the retained ownership and failed again",
+            listOf("stop", "stopFailed", "support", "bound", "stop", "stopFailed"),
+            source.events
+        )
+        assertEquals("…and no loop was started", 1, source.startCalls)
+        assertEquals("…nor bound", 1, source.bindCalls)
+        assertEquals(0, source.startsWhileLatched)
+        assertTrue(source.quiesceLatched)
+        assertEquals(ShieldedSyncStatus.NOT_READY, service.shieldedSyncStatus.value)
+
+        assertTrue("the next trigger recovers", service.ensureShieldedReady())
+        assertEquals("…by retrying the stop once more", 3, source.stopCalls)
+        assertEquals("…and starting exactly one loop", 2, source.startCalls)
+        assertFalse(source.quiesceLatched)
+        assertEquals(0, source.startsWhileLatched)
+    }
+
     /** Regression: after a stop that succeeded, the next bring-up issues no extra native stop. */
     @Test
     fun bringUp_afterASuccessfulStop_issuesNoExtraNativeStop() = runBlocking {
