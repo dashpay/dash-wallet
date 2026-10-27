@@ -97,7 +97,7 @@ import java.util.concurrent.TimeUnit
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainCoroutineRule(
-    private val testDispatcher: TestDispatcher = UnconfinedTestDispatcher()
+    val testDispatcher: TestDispatcher = UnconfinedTestDispatcher()
 ) : TestWatcher() {
     override fun starting(description: Description) {
         Dispatchers.setMain(testDispatcher)
@@ -562,6 +562,66 @@ class MainViewModelTest {
         )
 
         assertEquals(true, viewModel.hideBalance.value)
+    }
+
+    /**
+     * Companion to the fail-closed test above: pins the *recovery* half of the same
+     * contract. `retryWhen` must resubscribe to the upstream read after failing closed,
+     * not just fail closed once and complete — a regression that swapped it for
+     * `catch { emit(true) }` (which fails closed but then completes the flow) would still
+     * pass the fail-closed test above while leaving [MainViewModel.hideBalance] frozen at
+     * `true` forever, never un-hiding once the preference becomes readable again.
+     */
+    @Test(timeout = 1000)
+    fun `hideBalance fails closed, then recovers once a later read succeeds`() {
+        var reads = 0
+        val autoHideBalance = kotlinx.coroutines.flow.flow {
+            if (reads++ == 0) {
+                emit(false)
+                throw java.io.IOException("datastore unreadable")
+            } else {
+                emit(false)
+            }
+        }
+        every { uiConfigMock.observePreservingErrors(WalletUIConfig.AUTO_HIDE_BALANCE) } returns autoHideBalance
+
+        val viewModel = MainViewModel(
+            analyticsService,
+            configMock,
+            uiConfigMock,
+            exchangeRatesMock,
+            walletDataMock,
+            walletApp,
+            identityRepository,
+            platformRepo,
+            platformService,
+            platformSyncService,
+            blockchainIdentityConfigMock,
+            savedStateMock,
+            blockchainStateMock,
+            biometricHelper,
+            deviceInfoProvider,
+            invitationsDaoMock,
+            usernameRequestDaoMock,
+            userAgentDaoMock,
+            dashPayProfileDaoMock,
+            mockDashPayConfig,
+            dashPayContactRequestDao,
+            txDisplayCacheService,
+            crowdNodeApi,
+            coinJoinFundsMigrationService,
+            l1SyncStatusService,
+            contactRequestNotificationService,
+            swapProvider,
+            sdkBindRetryService,
+            shieldedBalanceService
+        )
+
+        assertEquals(true, viewModel.hideBalance.value)
+
+        coroutineRule.testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(false, viewModel.hideBalance.value)
     }
 
     @Test(timeout = 10_000)
