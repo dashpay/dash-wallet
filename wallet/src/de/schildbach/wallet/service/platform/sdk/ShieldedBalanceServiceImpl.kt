@@ -1331,6 +1331,7 @@ class ShieldedBalanceServiceImpl internal constructor(
             log.info("shielded bring-up abandoned before the bind: a stop() arrived while the SDK was starting")
             return false
         }
+        if (!retryFailedNativeStopLocked(generation)) return false
 
         source.configureShielded(shieldedDbPath())
         source.bindShielded(walletId, listOf(DEFAULT_SHIELDED_ACCOUNT))
@@ -1527,18 +1528,61 @@ class ShieldedBalanceServiceImpl internal constructor(
     }
 
     /**
+     * Retry a native stop that failed earlier, before this bring-up starts or
+     * adopts a loop; the caller holds [lock] and sampled [generation] under it.
+     * Returns false when the retry failed too, and the bring-up must not go on.
+     *
+     * 2026-10-27 (QA 12.0.1-qa01, Andrei): a stop() landed during a 40–75 s
+     * pass, the SDK's quiesce gave up after its 10 s drain budget and threw,
+     * and [stopNativeLoop] kept the ownership for "the next stop()". But the
+     * SDK latches its quiescing gate on a timed-out quiesce, and only a later
+     * SUCCESSFUL quiesce reopens it: until then every pass (background and
+     * forced) returns an empty summary without a word, and the cancel took the
+     * loop's registry token, so `isShieldedSyncRunning()` reads false. The
+     * service restarted seconds later, this bring-up overwrote the ownership,
+     * started the loop and reported ready over a loop that never synced again;
+     * the shielded balance froze until the app was restarted.
+     *
+     * Inferred from [loopOwnerGeneration] rather than a separate flag, as the
+     * owed-stop drain does: the ready latch is down here, and every bump of
+     * [stopGeneration] is a stop, so an owner OLDER than this generation is a
+     * loop some stop meant to end and could not — a failed in-lock stop, a
+     * failed superseded-bring-up stop, or a failed owed-stop drain (which
+     * clears its debt regardless). An owner from THIS generation (a bring-up
+     * that threw after the start, with no stop since) was never meant to stop,
+     * and is left to the adopt/start below. On a second failure the ownership
+     * stays, so the next stop() or bring-up tries again.
+     */
+    private suspend fun retryFailedNativeStopLocked(generation: Int): Boolean {
+        val owner = loopOwnerGeneration.get()
+        if (owner == NO_GENERATION || owner >= generation) return true
+        log.warn("shielded: retrying a native sync-loop stop that failed earlier, before starting the loop again")
+        stopNativeLoop()
+        if (loopOwnerGeneration.get() == owner) {
+            log.warn(
+                "shielded bring-up aborted: the native sync loop still cannot be stopped, and the SDK will " +
+                    "not run a pass until a stop succeeds — not starting the loop or reporting ready; the " +
+                    "next trigger retries"
+            )
+            return false
+        }
+        return true
+    }
+
+    /**
      * Stop the native sync loop; [loopOwnerGeneration] is cleared only once
      * the SDK call has returned. Non-cancellable (review, 2026-09-28): the SDK
      * dispatches the stop through `withContext(Dispatchers.IO)`, which a
      * cancelled caller would skip, leaving the loop running with nothing left
      * recording it. A failed stop keeps the ownership, so the next [stop]
-     * tries again instead of returning early. Callers hold [lock].
+     * tries again instead of returning early, and the next bring-up retries it
+     * before starting a loop ([retryFailedNativeStopLocked]). Callers hold [lock].
      */
     private suspend fun stopNativeLoop() {
         val owner = loopOwnerGeneration.get()
         val stopped = withContext(NonCancellable) {
             runCatching { source.stopShieldedSync() }
-                .onFailure { log.warn("failed to stop the shielded sync loop; the next stop() retries it", it) }
+                .onFailure { log.warn("failed to stop the shielded sync loop; the next stop() or bring-up retries it", it) }
                 .isSuccess
         }
         if (stopped) loopOwnerGeneration.compareAndSet(owner, NO_GENERATION)

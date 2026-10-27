@@ -172,6 +172,7 @@ class ShieldedBalanceServiceTest {
         override suspend fun startShieldedSync() {
             startCalls++
             events += "start"
+            if (quiesceLatched) startsWhileLatched++
             nativeLoopRunning = true
             onStart()
             onStartSuspend()
@@ -180,10 +181,33 @@ class ShieldedBalanceServiceTest {
         /** Suspending hook inside the native loop stop — an owed-stop drain that takes a while (review 2026-09-28). */
         var onStopSuspend: suspend () -> Unit = {}
 
+        /**
+         * How many of the next native stops fail the way the SDK's quiesce does
+         * when a pass outlasts its drain budget (QA 12.0.1-qa01): the stop
+         * throws, the cancel took the loop's registry token so [syncRunning]
+         * reads false, and the quiescing gate stays latched ([quiesceLatched])
+         * until a later stop SUCCEEDS — while latched, no pass ever runs.
+         */
+        var stopTimeoutsRemaining = 0
+
+        /** The SDK's latched quiescing gate: a loop started while it is set never syncs. */
+        var quiesceLatched = false
+
+        /** Starts issued while [quiesceLatched] — a "ready" loop that can never run a pass. */
+        var startsWhileLatched = 0
+
         override suspend fun stopShieldedSync() {
             stopCalls++
             events += "stop"
             onStopSuspend()
+            if (stopTimeoutsRemaining > 0) {
+                stopTimeoutsRemaining--
+                quiesceLatched = true
+                syncRunning = false
+                events += "stopFailed"
+                throw IllegalStateException("shielded sync pass did not drain within the quiesce budget")
+            }
+            quiesceLatched = false
             nativeLoopRunning = false
         }
 
@@ -937,6 +961,93 @@ class ShieldedBalanceServiceTest {
         service.stop()
         assertEquals("retried", 2, source.stopCalls)
         assertFalse(source.nativeLoopRunning)
+    }
+
+    /**
+     * QA 12.0.1-qa01 (Andrei, 2026-10-27): a stop() during a long pass timed
+     * out in the SDK's quiesce, which latches the quiescing gate until a later
+     * stop succeeds and makes `isShieldedSyncRunning()` read false. The next
+     * bring-up used to start the loop over the latch and report ready with no
+     * pass ever running again. It must retry the native stop FIRST.
+     */
+    @Test
+    fun bringUp_retriesAFailedNativeStop_beforeStartingTheLoop() = runBlocking {
+        val source = readySource().apply { stopTimeoutsRemaining = 1 }
+        val service = service(source)
+        assertTrue(service.ensureShieldedReady())
+
+        service.stop()
+        assertTrue("the timed-out quiesce latched the gate", source.quiesceLatched)
+        assertFalse("…and the SDK reports no loop", source.syncRunning)
+        source.events.clear()
+
+        assertTrue(service.ensureShieldedReady())
+        assertEquals("the failed stop was retried", 2, source.stopCalls)
+        assertEquals(2, source.startCalls)
+        val stopAt = source.events.indexOf("stop")
+        val startAt = source.events.indexOf("start")
+        assertTrue("the retry ran before the start: ${source.events}", stopAt in 0 until startAt)
+        assertFalse("the retry cleared the latch", source.quiesceLatched)
+        assertEquals("no loop was started over the latch", 0, source.startsWhileLatched)
+    }
+
+    /**
+     * When the bring-up's retry of a failed native stop fails too, the latch
+     * is still closed: the bring-up must neither start the loop nor report
+     * ready, and must keep the ownership so the next trigger retries — which
+     * recovers once a stop succeeds.
+     */
+    @Test
+    fun bringUp_whoseStopRetryFailsToo_doesNotReportReady_andTheNextTriggerRecovers() = runBlocking {
+        val source = readySource().apply { stopTimeoutsRemaining = 2 }
+        val service = service(source)
+        assertTrue(service.ensureShieldedReady())
+        service.stop()
+        assertTrue(source.quiesceLatched)
+
+        assertFalse("not ready over a loop that cannot sync", service.ensureShieldedReady())
+        assertEquals("the retry was attempted", 2, source.stopCalls)
+        assertEquals("…and no loop was started", 1, source.startCalls)
+        assertEquals(0, source.startsWhileLatched)
+        assertTrue(source.quiesceLatched)
+
+        assertTrue("the next trigger recovers", service.ensureShieldedReady())
+        assertEquals("…by retrying the stop once more", 3, source.stopCalls)
+        assertEquals(2, source.startCalls)
+        assertFalse(source.quiesceLatched)
+        assertEquals(0, source.startsWhileLatched)
+    }
+
+    /** Regression: after a stop that succeeded, the next bring-up issues no extra native stop. */
+    @Test
+    fun bringUp_afterASuccessfulStop_issuesNoExtraNativeStop() = runBlocking {
+        val source = readySource()
+        val service = service(source)
+        assertTrue(service.ensureShieldedReady())
+        service.stop()
+        assertEquals(1, source.stopCalls)
+
+        assertTrue(service.ensureShieldedReady())
+        assertEquals("no stop beyond the one stop() issued", 1, source.stopCalls)
+        assertEquals(2, source.startCalls)
+    }
+
+    /**
+     * A bring-up that threw after starting its loop leaves the ownership at its
+     * OWN generation with no stop since; the next bring-up must not stop that
+     * loop needlessly — it adopts or starts as before.
+     */
+    @Test
+    fun bringUp_doesNotStopALoopOwnedByTheCurrentGeneration() = runBlocking {
+        var failStart = true
+        val source = readySource().apply {
+            onStart = { if (failStart) { failStart = false; throw IllegalStateException("start failed after the loop began") } }
+        }
+        val service = service(source)
+        assertFalse(service.ensureShieldedReady())
+
+        assertTrue(service.ensureShieldedReady())
+        assertEquals("no stop: nothing meant this loop to end", 0, source.stopCalls)
     }
 
     /**
