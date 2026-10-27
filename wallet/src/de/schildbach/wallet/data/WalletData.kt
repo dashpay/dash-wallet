@@ -156,6 +156,8 @@ interface WalletData {
 
     fun wrapAllTransactions(vararg wrappers: TransactionWrapperFactory): Collection<TransactionWrapper>
 
+    fun wrapMatchingTransactions(vararg wrappers: TransactionWrapperFactory): Collection<TransactionWrapper>
+
     fun attachOnWalletWipedListener(listener: suspend () -> Unit)
 
     fun detachOnWalletWipedListener(listener: suspend () -> Unit)

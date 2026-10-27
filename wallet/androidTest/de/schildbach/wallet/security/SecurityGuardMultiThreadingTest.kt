@@ -1223,6 +1223,10 @@ class SecurityGuardMultiThreadingTest {
                             TODO("Not yet implemented")
                         }
 
+                        override fun wrapMatchingTransactions(vararg wrappers: TransactionWrapperFactory): Collection<TransactionWrapper> {
+                            TODO("Not yet implemented")
+                        }
+
                         override fun attachOnWalletWipedListener(listener: suspend () -> Unit) {
                             // No-op for testing
                         }

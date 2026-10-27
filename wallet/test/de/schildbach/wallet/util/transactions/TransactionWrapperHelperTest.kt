@@ -30,6 +30,7 @@ import org.bitcoinj.wallet.WalletTransaction
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
 import org.bitcoinj.core.Utils
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSetFactory
+import org.dash.wallet.common.transactions.TransactionWrapper
 import org.junit.Before
 import org.junit.Test
 
@@ -76,8 +77,7 @@ class TransactionWrapperHelperTest {
         receivedTx.inputs[0].connect(receivedConnectedTx.outputs[0])
     }
 
-    @Test
-    fun wrapTransactions_fullCrowdNodeSignUpTxSet_correctWrapping() {
+    private fun wrapSignUpTransactions(includeUnwrapped: Boolean): Pair<Collection<TransactionWrapper>, TransactionWrapper> {
         val wallet = mockk<Wallet>()
         every { wallet.context } returns Context(networkParams)
 
@@ -117,10 +117,25 @@ class TransactionWrapperHelperTest {
             allTransactions,
             bagMock,
             networkParams,
-            crowdNodeWrapperFactory
+            crowdNodeWrapperFactory,
+            includeUnwrapped = includeUnwrapped
         )
+        return wrappedTransactions to crowdNodeWrapper
+    }
+
+    @Test
+    fun wrapTransactions_fullCrowdNodeSignUpTxSet_correctWrapping() {
+        val (wrappedTransactions, crowdNodeWrapper) = wrapSignUpTransactions(includeUnwrapped = true)
 
         assertEquals("Must have CrowdNode wrapper and 2 anon wrappers:", 3, wrappedTransactions.size)
+        assertEquals("CrowdNode wrapper must have 5 transactions", 5, crowdNodeWrapper.transactions.size)
+    }
+
+    @Test
+    fun wrapTransactions_withoutUnwrapped_returnsOnlyFactoryWrappers() {
+        val (wrappedTransactions, crowdNodeWrapper) = wrapSignUpTransactions(includeUnwrapped = false)
+
+        assertEquals("Must have only the CrowdNode wrapper:", listOf(crowdNodeWrapper), wrappedTransactions.toList())
         assertEquals("CrowdNode wrapper must have 5 transactions", 5, crowdNodeWrapper.transactions.size)
     }
 }

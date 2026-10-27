@@ -3617,7 +3617,22 @@ public class WalletApplication extends MultiDexApplication
                 wallet.getTransactions(true),
                 wallet,
                 Constants.NETWORK_PARAMETERS,
-                wrapperFactories
+                wrapperFactories,
+                true
+        );
+    }
+
+    @NonNull
+    @Override
+    public Collection<TransactionWrapper> wrapMatchingTransactions(@NonNull TransactionWrapperFactory... wrapperFactories) {
+        awaitDeferredWalletLoad();
+        org.bitcoinj.core.Context.propagate(Constants.CONTEXT);
+        return TransactionWrapperHelper.INSTANCE.wrapTransactions(
+                wallet.getTransactions(true),
+                wallet,
+                Constants.NETWORK_PARAMETERS,
+                wrapperFactories,
+                false
         );
     }
 

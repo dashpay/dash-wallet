@@ -60,7 +60,7 @@ class CrowdNodeApiAggregatorTest {
     }
 
     private val walletData = mock<WalletDataProvider> {
-        on { wrapAllTransactions(any()) } doReturn listOf()
+        on { wrapMatchingTransactions(any()) } doReturn listOf()
         on { networkId } doReturn networkId
         doNothing().whenever(mock).attachOnWalletWipedListener(any())
     }

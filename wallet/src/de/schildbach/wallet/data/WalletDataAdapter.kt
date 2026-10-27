@@ -158,6 +158,10 @@ class WalletDataAdapter @Inject constructor(
         return walletData.wrapAllTransactions(*wrappers)
     }
 
+    override fun wrapMatchingTransactions(vararg wrappers: TransactionWrapperFactory): Collection<TransactionWrapper> {
+        return walletData.wrapMatchingTransactions(*wrappers)
+    }
+
     override fun attachOnWalletWipedListener(listener: suspend () -> Unit) =
         walletData.attachOnWalletWipedListener(listener)
 
