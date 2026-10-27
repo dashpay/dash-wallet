@@ -190,6 +190,7 @@ import de.schildbach.wallet.util.BackupReplacementState;
 import de.schildbach.wallet.util.RecoveryResetState;
 import de.schildbach.wallet.util.SafeModeRetryWaiters;
 import de.schildbach.wallet.util.StartupBreadcrumbs;
+import de.schildbach.wallet.util.ThreadCpuSampler;
 import de.schildbach.wallet.util.WalletFileSizeGuard;
 import de.schildbach.wallet.util.WalletSaveTracker;
 import de.schildbach.wallet.util.WalletLoadBudget;
@@ -506,6 +507,11 @@ public class WalletApplication extends MultiDexApplication
         // thread. A reaped process leaves NOTHING in its own log; this is the only
         // record of it that reaches the support report.
         ProcessExitReasons.logRecentExits(this);
+        // WHICH THREAD burns CPU while the app is in the background (QA saw
+        // EXCESSIVE_RESOURCE_USAGE kills of the cached process with an empty
+        // log). Non-prod only; samples /proc every minute while no activity
+        // is visible, never keeps the process alive. See ThreadCpuSampler.
+        ThreadCpuSampler.start();
         runStartupStage(StartupBreadcrumbs.STAGE_FIREBASE_INITIALIZED, "FIREBASE_INITIALIZED", () -> {
             FirebaseApp.initializeApp(this);
             if (FirebaseApp.getApps(this).isEmpty()) {
