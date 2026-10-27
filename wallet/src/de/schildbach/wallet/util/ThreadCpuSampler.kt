@@ -179,7 +179,9 @@ object ThreadCpuSampler {
                     val stat = readFile("/proc/self/task/$tid/stat")?.let(ThreadCpuStats::parseStatLine)
                     if (stat != null) threads[stat.tid] = stat
                 }
-                Snapshot(wall, up, process.ticks, threads)
+                // `wall` was taken just before the first read, so this spans every read.
+                val scanMs = SystemClock.elapsedRealtime() - wall
+                Snapshot(wall, up, process.ticks, threads, scanMs)
             }
         } catch (t: Throwable) {
             logQuietly("snapshot failed", t)

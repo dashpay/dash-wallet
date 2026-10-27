@@ -40,6 +40,13 @@ object ThreadCpuStats {
     const val MAX_CHURN_LISTED = 8
 
     /**
+     * A snapshot read slower than this gets ` SLOW_SCAN`: the process total is
+     * read first and the threads after, so over a slow scan the per-thread
+     * numbers no longer line up with `proc`/`cpu`/`unattributed`.
+     */
+    const val SLOW_SCAN_MS = 5_000L
+
+    /**
      * One line of `/proc/<pid>/stat` or `/proc/<pid>/task/<tid>/stat`.
      *
      * @param ticks utime + stime (fields 14 + 15), in clock ticks.
@@ -76,10 +83,12 @@ object ThreadCpuStats {
      * @param unattributedTicks process delta minus the sum of [ranked]:
      *   CPU burnt by threads that died before we could see them. A large
      *   value means short-lived thread churn.
+     * @param scanMs how long the CURRENT snapshot took to read (see [Snapshot.scanMs]).
      */
     data class IntervalReport(
         val wallMs: Long,
         val uptimeMs: Long,
+        val scanMs: Long,
         val threadCount: Int,
         val processDeltaTicks: Long,
         val ranked: List<ThreadDelta>,
@@ -88,12 +97,18 @@ object ThreadCpuStats {
         val unattributedTicks: Long
     )
 
-    /** A point-in-time view of the process. Times are `SystemClock` millis. */
+    /**
+     * A point-in-time view of the process. Times are `SystemClock` millis.
+     *
+     * @param scanMs elapsedRealtime spent reading `/proc/self/stat` plus every
+     *   `/proc/self/task/<tid>/stat` — the window over which this "point" is smeared.
+     */
     data class Snapshot(
         val elapsedRealtimeMs: Long,
         val uptimeMs: Long,
         val processTicks: Long,
-        val threads: Map<Int, ThreadStat>
+        val threads: Map<Int, ThreadStat>,
+        val scanMs: Long
     )
 
     /**
@@ -146,6 +161,7 @@ object ThreadCpuStats {
         return IntervalReport(
             wallMs = curr.elapsedRealtimeMs - prev.elapsedRealtimeMs,
             uptimeMs = curr.uptimeMs - prev.uptimeMs,
+            scanMs = curr.scanMs,
             threadCount = curr.threads.size,
             processDeltaTicks = processDelta,
             ranked = if (deltas.size > topN) deltas.subList(0, topN).toList() else deltas,
@@ -166,6 +182,8 @@ object ThreadCpuStats {
 
     fun isIdle(ticks: Long, clkTck: Long, wallMs: Long): Boolean =
         cpuPercent(ticks, clkTck, wallMs) < IDLE_PERCENT_OF_ONE_CORE
+
+    fun isSlowScan(scanMs: Long): Boolean = scanMs > SLOW_SCAN_MS
 
     /**
      * The threads that get a detailed dump (wchan + Java stack) on a hot
@@ -201,11 +219,13 @@ object ThreadCpuStats {
 
     /**
      * One compact line, e.g.
-     * `proc=187.3% cpu=112400ms wall=60.0s up=60.0s thr=142 top=[12345 tokio-rt R 41230ms, ...] churn=+2[...] -1[...] unattributed=230ms`
+     * `proc=187.3% cpu=112400ms wall=60.0s up=60.0s scan=12ms thr=142 top=[12345 tokio-rt R 41230ms, ...] churn=+2[...] -1[...] unattributed=230ms`
      * (the caller adds the greppable prefix). `wall` is elapsedRealtime
      * (counts deep sleep and freezes), `up` is uptime (stops in deep sleep):
      * a wall gap far beyond the interval with `up` keeping pace means the
-     * process was frozen while the device was awake.
+     * process was frozen while the device was awake. `scan` is how long the
+     * current snapshot took to read; past [SLOW_SCAN_MS] the line ends in
+     * ` SLOW_SCAN` and its per-thread numbers are not consistent with `proc`.
      */
     fun formatLine(report: IntervalReport, clkTck: Long): String {
         val sb = StringBuilder(256)
@@ -213,6 +233,7 @@ object ThreadCpuStats {
         sb.append(" cpu=").append(ticksToMs(report.processDeltaTicks, clkTck)).append("ms")
         sb.append(" wall=").append(fmt1(report.wallMs / 1000.0)).append('s')
         sb.append(" up=").append(fmt1(report.uptimeMs / 1000.0)).append('s')
+        sb.append(" scan=").append(report.scanMs).append("ms")
         sb.append(" thr=").append(report.threadCount)
         sb.append(" top=[")
         report.ranked.forEachIndexed { i, t ->
@@ -230,6 +251,7 @@ object ThreadCpuStats {
         if (report.unattributedTicks > 0) {
             sb.append(" unattributed=").append(ticksToMs(report.unattributedTicks, clkTck)).append("ms")
         }
+        if (isSlowScan(report.scanMs)) sb.append(" SLOW_SCAN")
         return sb.toString()
     }
 

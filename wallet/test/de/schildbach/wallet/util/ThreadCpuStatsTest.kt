@@ -38,8 +38,8 @@ class ThreadCpuStatsTest {
     private fun stat(tid: Int, name: String, ticks: Long, start: Long = 5000, state: Char = 'S') =
         ThreadStat(tid, name, state, ticks, start)
 
-    private fun snap(wallMs: Long, processTicks: Long, vararg threads: ThreadStat) =
-        Snapshot(wallMs, wallMs, processTicks, threads.associateBy { it.tid })
+    private fun snap(wallMs: Long, processTicks: Long, vararg threads: ThreadStat, scanMs: Long = 0) =
+        Snapshot(wallMs, wallMs, processTicks, threads.associateBy { it.tid }, scanMs)
 
     // ── parseStatLine ─────────────────────────────────────────────────
 
@@ -172,14 +172,28 @@ class ThreadCpuStatsTest {
     @Test
     fun `format line carries percent, top threads and churn`() {
         val prev = snap(0, 0, stat(1, "main", 0), stat(2, "gone", 0))
-        val curr = snap(60_000, 9000, stat(1, "main", 100), stat(3, "tokio-runtime-w", 8000, state = 'R'))
+        val curr = snap(60_000, 9000, stat(1, "main", 100), stat(3, "tokio-runtime-w", 8000, state = 'R'), scanMs = 12)
         val line = ThreadCpuStats.formatLine(ThreadCpuStats.diff(prev, curr), clkTck)
         assertEquals(
-            "proc=150.0% cpu=90000ms wall=60.0s up=60.0s thr=2 " +
+            "proc=150.0% cpu=90000ms wall=60.0s up=60.0s scan=12ms thr=2 " +
                 "top=[3 tokio-runtime-w R 80000ms, 1 main S 1000ms] " +
                 "churn=+1[3 tokio-runtime-w] -1[2 gone] unattributed=9000ms",
             line
         )
+    }
+
+    @Test
+    fun `a scan slower than the threshold is flagged SLOW_SCAN`() {
+        val prev = snap(0, 0, stat(1, "main", 0), scanMs = 60_000) // only the CURRENT scan counts
+        fun line(scanMs: Long) =
+            ThreadCpuStats.formatLine(ThreadCpuStats.diff(prev, snap(60_000, 100, stat(1, "main", 100), scanMs = scanMs)), clkTck)
+        assertEquals("proc=1.7% cpu=1000ms wall=60.0s up=60.0s scan=5000ms thr=1 top=[1 main S 1000ms]", line(5_000))
+        assertEquals(
+            "proc=1.7% cpu=1000ms wall=60.0s up=60.0s scan=5001ms thr=1 top=[1 main S 1000ms] SLOW_SCAN",
+            line(5_001)
+        )
+        assertFalse(ThreadCpuStats.isSlowScan(ThreadCpuStats.SLOW_SCAN_MS))
+        assertTrue(ThreadCpuStats.isSlowScan(ThreadCpuStats.SLOW_SCAN_MS + 1))
     }
 
     @Test
