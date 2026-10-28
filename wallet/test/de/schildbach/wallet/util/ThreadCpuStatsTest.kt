@@ -509,4 +509,28 @@ class ThreadCpuStatsTest {
         assertTrue(ThreadCpuStats.javaNameMatchesComm("main", "main"))
         assertFalse(ThreadCpuStats.javaNameMatchesComm("mainline", "main"))
     }
+
+    @Test
+    fun `java names follow ART's truncation rule`() {
+        // Over 15 bytes with a '.' and no '@': ART keeps the LAST 15 bytes.
+        val okHttp = "OkHttp https://api.example.org/..."
+        assertEquals("example.org/...", ThreadCpuStats.commForJavaName(okHttp))
+        assertTrue(ThreadCpuStats.javaNameMatchesComm(okHttp, okHttp.takeLast(15)))
+        assertFalse(ThreadCpuStats.javaNameMatchesComm(okHttp, okHttp.take(15)))
+        // No '.': the FIRST 15, and a suffix does not match.
+        val worker = "DefaultDispatcher-worker-3"
+        assertTrue(ThreadCpuStats.javaNameMatchesComm(worker, "DefaultDispatch"))
+        assertFalse(ThreadCpuStats.javaNameMatchesComm(worker, worker.takeLast(15)))
+        // A '.' AND an '@': the FIRST 15.
+        val at = "Thread@1a2b3c.pool-worker-7"
+        assertTrue(ThreadCpuStats.javaNameMatchesComm(at, at.take(15)))
+        assertFalse(ThreadCpuStats.javaNameMatchesComm(at, at.takeLast(15)))
+        // Exactly 15 bytes or shorter: the whole name, even with a dot.
+        assertTrue(ThreadCpuStats.javaNameMatchesComm("a.b.c.d.e.f.g.h", "a.b.c.d.e.f.g.h"))
+        assertTrue(ThreadCpuStats.javaNameMatchesComm("io.x", "io.x"))
+        assertFalse(ThreadCpuStats.javaNameMatchesComm("io.x", "io.y"))
+        // Unrelated names never match.
+        assertFalse(ThreadCpuStats.javaNameMatchesComm("Signal Catcher", "HeapTaskDaemon"))
+        assertFalse(ThreadCpuStats.javaNameMatchesComm(okHttp, "OkHttp"))
+    }
 }

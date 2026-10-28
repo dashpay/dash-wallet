@@ -447,13 +447,27 @@ object ThreadCpuStats {
 
     private fun fmt1(v: Double): String = String.format(Locale.US, "%.1f", v)
 
-    /**
-     * Android truncates a thread's comm to 15 bytes, so a Java thread named
-     * `DefaultDispatcher-worker-3` appears in /proc as `DefaultDispatch`.
-     */
+    /** The kernel keeps at most this many bytes of a thread's name as its comm. */
     const val COMM_MAX_LEN = 15
 
-    /** Whether a Java thread name could be the /proc comm [comm]. */
-    fun javaNameMatchesComm(javaName: String, comm: String): Boolean =
-        javaName == comm || (comm.length == COMM_MAX_LEN && javaName.startsWith(comm))
+    /**
+     * The /proc comm ART gives a Java thread named [javaName] (`SetThreadName`
+     * in art/runtime/thread.cc): a name over [COMM_MAX_LEN] bytes keeps its
+     * LAST 15 bytes if it contains a '.' and no '@' (so `OkHttp https://host.example/...`
+     * keeps its tail), otherwise its FIRST 15 (`DefaultDispatcher-worker-3` →
+     * `DefaultDispatch`). ART works on the UTF-8 bytes; the cut slice is decoded
+     * the same way the stat line is, so a name cut inside a multi-byte
+     * character may not compare equal — it then reads as unmatched, never as
+     * a wrong thread.
+     */
+    fun commForJavaName(javaName: String): String {
+        val bytes = javaName.toByteArray(Charsets.UTF_8)
+        if (bytes.size <= COMM_MAX_LEN) return javaName
+        val keepTail = javaName.contains('.') && !javaName.contains('@')
+        val from = if (keepTail) bytes.size - COMM_MAX_LEN else 0
+        return String(bytes, from, COMM_MAX_LEN, Charsets.UTF_8)
+    }
+
+    /** Whether a Java thread name could be the /proc comm [comm] (see [commForJavaName]). */
+    fun javaNameMatchesComm(javaName: String, comm: String): Boolean = commForJavaName(javaName) == comm
 }
