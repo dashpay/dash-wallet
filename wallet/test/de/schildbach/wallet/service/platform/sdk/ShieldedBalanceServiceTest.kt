@@ -105,6 +105,8 @@ class ShieldedBalanceServiceTest {
         var lastCoreFeePerByte: Int? = null
 
         var onConfigure: (String) -> Unit = {}
+        /** Suspending configure hook: a bring-up parked inside the native configure. */
+        var onConfigureSuspend: suspend () -> Unit = {}
         var onBind: () -> Unit = {}
         /** Suspending bind hook: a bring-up parked inside the native bind (plan §37). */
         var onBindSuspend: suspend () -> Unit = {}
@@ -143,6 +145,7 @@ class ShieldedBalanceServiceTest {
             lastDbPath = dbPath
             events += "configure"
             onConfigure(dbPath)
+            onConfigureSuspend()
         }
 
         override suspend fun bindShielded(walletId: ByteArray, accounts: List<Int>) {
@@ -1118,6 +1121,45 @@ class ShieldedBalanceServiceTest {
         assertEquals(2, source.bindCalls)
         assertEquals(2, source.startCalls)
         assertEquals(0, source.startsWhileLatched)
+    }
+
+    /**
+     * configureShielded() suspends in a native call too. A stop() that times out
+     * on the lock while the bring-up is parked there tears the Kotlin side down;
+     * the bring-up must re-check for a stop after the configure and decline
+     * before the native bind (which can park indefinitely, plan §37.2) — no
+     * bind, no loop start. The next trigger then brings up normally.
+     */
+    @Test
+    fun bringUp_supersededDuringConfigure_skipsTheBind_andTheNextTriggerRecovers() = runBlocking {
+        val configureGate = CompletableDeferred<Unit>()
+        var configures = 0
+        val source = readySource().apply {
+            onConfigureSuspend = { if (++configures == 1) configureGate.await() }
+        }
+        val service = service(source, stopLockTimeoutMs = 200)
+
+        val bringUp = async(Dispatchers.Default) { service.ensureShieldedReady() }
+        withTimeout(5_000) { while (source.configureCalls == 0) delay(10) }
+        assertTrue("the bring-up is parked inside the configure", bringUp.isActive)
+
+        withTimeout(5_000) { service.stop() } // times out on the lock, tears the Kotlin side down
+        assertEquals(ShieldedSyncStatus.NOT_READY, service.shieldedSyncStatus.value)
+        source.events.clear()
+
+        configureGate.complete(Unit) // the native configure returns into a superseded bring-up
+        assertFalse("superseded: not ready", bringUp.await())
+        assertEquals("no bind or start after the configure", emptyList<String>(), source.events)
+        assertEquals(0, source.bindCalls)
+        assertEquals(0, source.startCalls)
+        assertEquals("nothing was started, so nothing to stop", 0, source.stopCalls)
+        assertEquals(ShieldedSyncStatus.NOT_READY, service.shieldedSyncStatus.value)
+
+        assertTrue("the next trigger brings up normally", service.ensureShieldedReady())
+        assertEquals(2, source.configureCalls)
+        assertEquals(1, source.bindCalls)
+        assertEquals(1, source.startCalls)
+        assertEquals(0, source.stopCalls)
     }
 
     /** Regression: after a stop that succeeded, the next bring-up issues no extra native stop. */
