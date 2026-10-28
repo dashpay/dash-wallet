@@ -58,29 +58,4 @@ class ShieldedUiFormatTest {
             Locale.setDefault(originalLocale)
         }
     }
-
-    @Test
-    fun `fiat plain two-decimal string rounds and keeps a dot separator`() {
-        // MO-1111 follow-up: the editable keypad field also showed raw conversion
-        // precision when switching into fiat mode. Unlike toDisplayNoCode, this format
-        // never calls withLocale(), so it must stay "." regardless of default locale.
-        val originalLocale = Locale.getDefault()
-        Locale.setDefault(Locale.GERMANY)
-        try {
-            assertEquals("232.74", Fiat.parseFiat("USD", "232.7405").toPlainStringTwoDecimals())
-            assertEquals("0.93", Fiat.parseFiat("USD", "0.93").toPlainStringTwoDecimals())
-            assertEquals("5.00", Fiat.parseFiat("USD", "5").toPlainStringTwoDecimals())
-        } finally {
-            Locale.setDefault(originalLocale)
-        }
-    }
-
-    @Test
-    fun `fiat plain two-decimal string rounds down, never up`() {
-        // This text is re-parsed back into the spendable amount (onMaxClick feeds it the
-        // full balance), so rounding up would make the re-parsed amount exceed the balance
-        // it came from and falsely trip "insufficient funds" right after tapping Max.
-        assertEquals("30.33", Fiat.parseFiat("USD", "30.335").toPlainStringTwoDecimals())
-        assertEquals("30.33", Fiat.parseFiat("USD", "30.339").toPlainStringTwoDecimals())
-    }
 }

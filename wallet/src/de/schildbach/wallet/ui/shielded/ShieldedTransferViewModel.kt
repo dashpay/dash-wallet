@@ -295,25 +295,10 @@ data class ShieldedTransferUIState(
 
     /**
      * True when the entered amount is exactly the transferable balance — the "spend
-     * everything" intent [onConfirm] gives a fee-adjusted retry. In fiat mode, comparing
-     * [amount] to [availableBalance] directly would almost never match: both the Max button
-     * and currency-toggle populate [amountText] via [toPlainStringTwoDecimals], a 2-decimal
-     * fiat string, and re-deriving [amount] from that text loses whatever precision the fiat
-     * rate needed beyond 2 decimals — the exact case [onMaxClick] itself is supposed to
-     * express. Comparing the parsed FIAT VALUES (not the raw strings) against the balance's
-     * own rounded fiat value avoids both that lossy round trip and false negatives from
-     * equivalent spellings the keypad allows ("100" vs the formatter's "100.00").
+     * everything" intent [onConfirm] gives a fee-adjusted retry.
      */
     val isMaxSpend: Boolean
-        get() = if (dashMode) {
-            amount == availableBalance
-        } else {
-            val typedFiat = parseDecimalOrNull(amountText)?.toFiat(fiatCode)
-            val maxFiat = availableBalance.toFiatAt(rate)?.toPlainStringTwoDecimals()?.let {
-                Fiat.parseFiat(fiatCode, it)
-            }
-            typedFiat != null && typedFiat == maxFiat
-        }
+        get() = amount == availableBalance
 
     /**
      * Whether the "Insufficient funds" validation message may be SHOWN.
@@ -648,7 +633,7 @@ class ShieldedTransferViewModel @Inject constructor(
         val text = if (state.dashMode) {
             max.toKeypadString()
         } else {
-            max.toFiatAt(state.rate)?.toPlainStringTwoDecimals() ?: return
+            max.toFiatAt(state.rate)?.toPlainString() ?: return
         }
         _uiState.value = state.copy(amountText = text)
         transferExecutor.clearRetryableResult()
@@ -662,7 +647,7 @@ class ShieldedTransferViewModel @Inject constructor(
         val text = when {
             amount.isZero -> "0"
             dashMode -> amount.toKeypadString()
-            else -> amount.toFiatAt(state.rate)?.toPlainStringTwoDecimals() ?: "0"
+            else -> amount.toFiatAt(state.rate)?.toPlainString() ?: "0"
         }
         _uiState.value = state.copy(dashMode = dashMode, amountText = text)
     }

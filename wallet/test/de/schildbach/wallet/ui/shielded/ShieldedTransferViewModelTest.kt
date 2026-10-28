@@ -866,16 +866,16 @@ class ShieldedTransferViewModelTest {
     }
 
     @Test
-    fun isMaxSpend_fiatMode_comparesTheRoundedFiatText_notTheLossyReparsedDash() {
-        // MO-1111 follow-up: in fiat mode, amount re-derives Dash by parsing amountText
-        // back through a 2-decimal fiat string (toPlainStringTwoDecimals), which almost
-        // never round-trips to exactly availableBalance when the rate needs more than 2
-        // decimals to convert exactly — the Max tap/currency toggle populate amountText
-        // with precisely that rounded string, so isMaxSpend must compare against it
-        // directly rather than the lossy re-derived Dash amount.
+    fun isMaxSpend_fiatMode_maxTapRoundTripsExactly() {
+        // MO-1111 pre-review follow-up: onMaxClick must write a lossless fiat string
+        // (Fiat.toPlainString()), not a rounded one, so that amount re-derived from
+        // amountText round-trips back to exactly availableBalance even when the rate
+        // needs more than two decimals to convert exactly — otherwise the plain
+        // amount == availableBalance comparison below misses a true Max tap, and a
+        // Max-tap submission silently sends less than the full balance.
         val rate = Fiat.parseFiat("USD", "232.745198") // does not round-trip at 2 decimals
         val balance = Dash.parse("1.00")
-        val maxFiatText = balance.toFiatAt(rate)!!.toPlainStringTwoDecimals()
+        val maxFiatText = balance.toFiatAt(rate)!!.toPlainString()
 
         val afterMaxTap = ShieldedTransferUIState(
             dashMode = false,
@@ -884,29 +884,12 @@ class ShieldedTransferViewModelTest {
             direction = ShieldedTransferDirection.FromShielded,
             amountText = maxFiatText
         )
+        assertEquals(afterMaxTap.availableBalance, afterMaxTap.amount)
         assertTrue(afterMaxTap.isMaxSpend)
-        // confirms the Dash-domain comparison alone would have missed it
-        assertFalse(afterMaxTap.amount == afterMaxTap.availableBalance)
+        assertFalse(afterMaxTap.insufficientFunds)
 
         val typedLess = afterMaxTap.copy(amountText = "1.00")
         assertFalse(typedLess.isMaxSpend)
-    }
-
-    @Test
-    fun isMaxSpend_fiatMode_recognizesAnEquivalentlySpelledTypedAmount() {
-        // The keypad lets the user type "100" (no decimals) for a balance whose fiat
-        // value formats as "100.00" — comparing raw strings would miss this exact-max
-        // entry entirely, so isMaxSpend must compare the parsed fiat VALUES instead.
-        val rate = Fiat.parseFiat("USD", "100") // 1 DASH == exactly $100, no rounding
-        val balance = Dash.parse("1.00")
-        val typedWithoutDecimals = ShieldedTransferUIState(
-            dashMode = false,
-            rate = rate,
-            shieldedBalance = balance,
-            direction = ShieldedTransferDirection.FromShielded,
-            amountText = "100"
-        )
-        assertTrue(typedWithoutDecimals.isMaxSpend)
     }
 
     // ── "You will transfer ~" hint — always DASH, both directions (user

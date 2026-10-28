@@ -24,7 +24,6 @@ import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.util.toFormattedString
 import org.dash.wallet.common.util.toFormattedStringNoCode
 import java.math.BigDecimal
-import java.math.RoundingMode
 import java.text.NumberFormat
 import de.schildbach.wallet.util.format
 import de.schildbach.wallet.util.setAmount
@@ -180,25 +179,6 @@ fun Fiat.toDisplay(): String = toFormattedString()
  * amount-entry secondary line, which renders its own currency symbol separately.
  */
 fun Fiat.toDisplayNoCode(): String = toFormattedStringNoCode()
-
-private val FIAT_PLAIN_TWO_DECIMALS_FORMAT: MonetaryFormat = MonetaryFormat.FIAT
-    .optionalDecimals()
-    .noCode()
-    .roundingMode(RoundingMode.DOWN)
-
-/**
- * "232.74"-style plain string, capped at two decimals, with the same locale-neutral `.`
- * separator as [Fiat.toPlainString] (this format never calls `.withLocale()`) — for the
- * editable keypad field, which re-parses this text with a hardcoded `.` separator in
- * `processAmountKeyInput()`. Unlike [toDisplayNoCode], safe to feed back into that parser.
- *
- * Rounds DOWN, not half-up: this text is re-parsed back into the spendable `amount` (see
- * [ShieldedSendViewModel]/[ShieldedTransferViewModel]), and `onMaxClick` feeds this exactly
- * the fiat value of the full balance — half-up would round that up roughly half the time,
- * making the re-parsed amount exceed the balance it came from and falsely flip
- * `insufficientFunds` right after the user taps Max.
- */
-fun Fiat.toPlainStringTwoDecimals(): String = FIAT_PLAIN_TWO_DECIMALS_FORMAT.format(this).toString()
 
 /** Ellipsized middle of a long address for one-line display. */
 fun String.ellipsizeAddress(head: Int = 10, tail: Int = 6): String =
