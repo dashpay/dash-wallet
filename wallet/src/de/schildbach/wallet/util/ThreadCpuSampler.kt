@@ -58,8 +58,10 @@ import java.util.concurrent.atomic.AtomicBoolean
  * Greppable prefix: [PREFIX]. On a hot interval (process over
  * [ThreadCpuStats.HOT_PERCENT_OF_ONE_CORE] of one core) the line is WARN and
  * each hot thread also gets its kernel wait channel and — if a Java thread of
- * that name exists — one Java stack. A hot thread with NO Java match is a
- * native (Rust/C++) thread, which is itself the answer we need.
+ * that name exists — one Java stack. A hot thread with NO Java match is
+ * `java=UNMATCHED`: most likely a native (Rust/C++) thread, but a Java thread
+ * that exited or was renamed after the scan looks the same, so it is not
+ * labelled native.
  *
  * Design constraints:
  *  - **Background only.** Starts when [AppForegroundMonitor] says no activity
@@ -155,11 +157,17 @@ object ThreadCpuSampler {
         var samples = 0
         try {
             val session = Session()
-            val baseline = session.snapshot()
-            if (baseline == null) {
-                log.info("$PREFIX unavailable: {}", session.lastFailure ?: "/proc/self not readable")
-                return
+            // A failed baseline is retried each interval: foreground state won't
+            // re-emit, so returning here would end sampling for this whole period.
+            var baseline = session.snapshot()
+            while (baseline == null) {
+                currentCoroutineContext().ensureActive()
+                session.scanFailed("no baseline yet, retrying")
+                delay(SAMPLE_INTERVAL_MS)
+                baseline = session.snapshot()
             }
+            currentCoroutineContext().ensureActive()
+            session.scanSucceeded()
             log.info(
                 "$PREFIX started (app not in foreground) threads={} interval={}s clkTck={}",
                 baseline.threads.size,
@@ -176,7 +184,7 @@ object ThreadCpuSampler {
                 currentCoroutineContext().ensureActive()
                 if (curr == null) {
                     // `prev` stays the baseline: the next good sample spans the gap.
-                    session.scanFailed()
+                    session.scanFailed("keeping last good sample as baseline")
                     continue
                 }
                 val skipped = session.scanSucceeded()
@@ -213,14 +221,15 @@ object ThreadCpuSampler {
         private val threadReadFailures = ThreadCpuStats.FailureThrottle(IDLE_INFO_INTERVAL_MS)
         private val reportFailures = ThreadCpuStats.FailureThrottle(IDLE_INFO_INTERVAL_MS)
 
-        /** A post-baseline scan failed: INFO for the first, then once per heartbeat interval. */
-        fun scanFailed() {
+        /** A scan failed: INFO for the first, then once per heartbeat interval. */
+        fun scanFailed(note: String) {
             try {
                 if (scanFailures.onFailure(SystemClock.elapsedRealtime())) {
                     log.info(
-                        "$PREFIX unavailable: {} failures={} (keeping last good sample as baseline)",
+                        "$PREFIX unavailable: {} failures={} ({})",
                         lastFailure ?: "?",
-                        scanFailures.failures
+                        scanFailures.failures,
+                        note
                     )
                 }
             } catch (_: Throwable) {
@@ -232,7 +241,7 @@ object ThreadCpuSampler {
             val skipped = scanFailures.onSuccess()
             if (skipped > 0) {
                 try {
-                    log.info("$PREFIX recovered after {} failed scans; next sample spans them", skipped)
+                    log.info("$PREFIX recovered after {} failed scans", skipped)
                 } catch (_: Throwable) {
                 }
             }
@@ -338,8 +347,8 @@ object ThreadCpuSampler {
         }
 
         private fun logHotDetails(hot: List<ThreadCpuStats.ThreadDelta>, wallMs: Long) {
-            // Null when the stacks couldn't be taken: then "no Java match" would
-            // be a false "native thread" verdict, so the line says so instead.
+            // Set when the stacks couldn't be taken: then every thread would read
+            // as unmatched, so the line says the stacks failed instead.
             var stacksError: Throwable? = null
             val javaThreads: Map<Thread, Array<StackTraceElement>> = try {
                 Thread.getAllStackTraces()
@@ -362,8 +371,12 @@ object ThreadCpuSampler {
                     ThreadCpuStats.javaNameMatchesComm(it.key.name, t.name)
                 }
                 if (candidates.isEmpty()) {
+                    // No positive identity: native, unattached, or a Java thread
+                    // that exited/was renamed between the scan and the stacks.
                     log.warn(
-                        "$PREFIX hot tid={} name='{}' state={} cpu={}% wchan={} java=NONE (native/unattached thread)",
+                        "$PREFIX hot tid={} name='{}' state={} cpu={}% wchan={} " +
+                            "java=UNMATCHED (no live Java thread with this name; native, unattached, " +
+                            "or exited/renamed since the scan)",
                         t.tid, t.name, t.state, "%.1f".format(java.util.Locale.US, pct), wchan
                     )
                     continue
