@@ -241,6 +241,28 @@ class CrowdNodeApiAggregatorTest {
     }
 
     @Test
+    fun restoreStatus_fingerprintChangesDuringScan_doesNotCache() {
+        runBlocking {
+            localConfig.stub {
+                onBlocking { get(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS) } doReturn OnlineAccountStatus.None.ordinal
+            }
+            walletData.stub {
+                // Wallet A before the scan, replaced by wallet B while it runs
+                on { transactionSetFingerprint() }.doReturn(walletAFingerprint, walletBFingerprint)
+            }
+            val api = CrowdNodeApiAggregator(
+                webApi, blockchainApi, walletData, mock(), mock(),
+                localConfig, globalConfig, mock(), mock(), mock()
+            )
+            api.restoreStatus()
+
+            assertEquals(SignUpStatus.NotStarted, api.signUpStatus.value)
+            verify(blockchainApi).getFullSignUpTxSet()
+            verify(localConfig, never()).set(eq(CrowdNodeConfig.NO_SIGN_UP_SCAN_FINGERPRINT), any())
+        }
+    }
+
+    @Test
     fun restoreStatus_replacementWalletWithSameCount_rescans() {
         runBlocking {
             localConfig.stub {

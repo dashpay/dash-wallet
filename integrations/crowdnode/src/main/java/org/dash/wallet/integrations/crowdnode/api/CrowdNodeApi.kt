@@ -603,13 +603,15 @@ class CrowdNodeApiAggregator @Inject constructor(
      * the scanned transaction set is cached and the scan is skipped while the wallet's fingerprint
      * still matches: a wallet that never signed up would otherwise rescan its whole history each
      * time the status is restored. The fingerprint identifies the set of transactions itself, so a
-     * replaced or recovered wallet, or new transactions, change it and trigger a rescan.
+     * replaced or recovered wallet, or new transactions, change it and trigger a rescan. The result
+     * is cached only if the fingerprint is unchanged after the scan, so it describes the scanned set.
      * A possible sign up that CrowdNode didn't confirm isn't cached, so it is checked again.
      * The cache is only an optimization: failing to write it just means the next restore rescans.
      */
     private suspend fun tryRestoreSignUp(): Boolean {
-        // Captured before the scan: a transaction arriving during it changes the fingerprint,
-        // so the next restore rescans instead of trusting a result that didn't cover it.
+        // Captured before the scan and compared with a second read after it: the result is cached
+        // only if both match, so a wallet replacement or a transaction arriving during the scan
+        // never caches a result under a fingerprint of a transaction set the scan didn't cover.
         val fingerprint = walletDataProvider.transactionSetFingerprint()
 
         if (fingerprint.isNotEmpty() && config.get(CrowdNodeConfig.NO_SIGN_UP_SCAN_FINGERPRINT) == fingerprint) {
@@ -621,7 +623,13 @@ class CrowdNodeApiAggregator @Inject constructor(
             SignUpScanResult.Restored -> true
             SignUpScanResult.Unconfirmed -> false
             SignUpScanResult.NotFound -> {
-                cacheNoSignUpScan(fingerprint)
+                // An in-process replacement can't switch back to the same transaction set, so
+                // equal fingerprints before and after mean the scan covered that set.
+                if (walletDataProvider.transactionSetFingerprint() == fingerprint) {
+                    cacheNoSignUpScan(fingerprint)
+                } else {
+                    log.info("the transaction set changed during the CrowdNode sign up scan, not caching the result")
+                }
                 false
             }
         }
