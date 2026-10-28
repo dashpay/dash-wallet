@@ -95,6 +95,28 @@ ok = bool(need) and bool(tip) and (rec.get("base") or "") == need and (rec.get("
 print((rec.get("verdict") or "none") if ok else "stale")
 PY
 verdict() { python3 -c "$VERDICT_PY" "$@"; }
+# roster <file>: the enabled servers of a `codex mcp list --json` answer, one "name<TAB>transport" per line; exits 1
+# unless it is a list of entries each with a name (not blank: every enabled server prints a visible line, which the
+# read-back's emptiness check relies on; no tab, newline or carriage return: those are this listing's own delimiters,
+# and a name split by them would switch off a server that does not exist) and a boolean enabled. Both MCP probes read through it: an answer
+# that does not parse is no answer, and an unknown enabled state is not "off"
+read -r -d '' ROSTER_PY <<'PY'
+import json, sys
+r = json.load(open(sys.argv[1]))
+if not isinstance(r, list) or not all(isinstance(e, dict) and isinstance(e.get("name"), str) and e["name"].strip()
+                                      and not any(c in e["name"] for c in "\t\n\r")
+                                      and isinstance(e.get("enabled"), bool) for e in r):
+    sys.exit(1)
+print("\n".join(e["name"] + "\t" + str((e.get("transport") or {}).get("type") or "stdio") for e in r if e["enabled"]))
+PY
+roster() { python3 -c "$ROSTER_PY" "$@"; }
+# a review's own success: its fresh verdict, read back as the gate reads it. Stale (the base moved meanwhile) or none
+# is no verdict, so not 0
+passed() {   # <repo> <sha>; the base is fetched again first, as the push gate does: a review takes minutes, and a pass
+  # read against the base as it was when the review began would differ from the gate's answer. No fetch, no pass
+  refresh_base "$1" || { say "cannot fetch $(base_ref) to check the verdict against it: not a pass"; return 1; }
+  case "$(verdict "$@")" in clean|suggestions) return 0 ;; *) return 1 ;; esac
+}
 
 fetch_prompts() {
   mkdir -p "$PC"
@@ -155,16 +177,18 @@ review_locked() {
   mb=$(git -C "$repo" merge-base "$base" "$sha") || { say "no merge base of $sha and $base"; return 2; }
   mkdir -p "$VERDICTS"
   if [[ "$mb" == "$sha" ]]; then   # the commit is on the base: nothing of ours in the range (the record keeps that base)
-    printf '{"verdict": "clean", "counts": {}, "base": "%s", "base_tip": "%s", "base_ref": "%s", "model": "none: no commits over the base"}' \
-      "$mb" "$(git -C "$repo" rev-parse --verify -q "$base^{commit}")" "$base" > "$VERDICTS/.$sha.json.$$" && mv "$VERDICTS/.$sha.json.$$" "$VERDICTS/$sha.json"
-    say "${sha:0:10} has no commits over $base, nothing to review"; return 0
+    { printf '{"verdict": "clean", "counts": {}, "base": "%s", "base_tip": "%s", "base_ref": "%s", "model": "none: no commits over the base"}' \
+      "$mb" "$(git -C "$repo" rev-parse --verify -q "$base^{commit}")" "$base" > "$VERDICTS/.$sha.json.$$" && mv "$VERDICTS/.$sha.json.$$" "$VERDICTS/$sha.json"; } \
+      2>/dev/null || { rm -f "$VERDICTS/.$sha.json.$$" 2>/dev/null; say "cannot write $VERDICTS/$sha.json: not reviewed"; return 2; }
+    say "${sha:0:10} has no commits over $base, nothing to review"; passed "$repo" "$sha"; return
   fi
   # an older codex accepts the permission-profile settings below without applying them: full-disk reads again
   # probes run under waitfor into files, never in $(…): a command substitution is a foreground subshell, and bash
   # defers the cancellation trap until it returns — a stalled probe would keep the lock
   command -v codex >/dev/null || { say "the Codex CLI is not installed: npm i -g @openai/codex@latest (README.md, Setup)"; return 2; }
   local probe ver; probe=$(mktemp); CLEANUP_PROBE=$probe
-  waitfor codex --version > "$probe" 2>/dev/null; ver=$(grep -oE '[0-9]+\.[0-9]+\.[0-9]+' "$probe" | head -1)
+  waitfor codex --version > "$probe" 2>/dev/null || { say "codex --version failed: not reviewing"; return 2; }
+  ver=$(grep -oE '[0-9]+\.[0-9]+\.[0-9]+' "$probe" | head -1)
   [[ -n "$ver" ]] || { say "codex --version gave no version: not reviewing"; return 2; }
   if [[ "$(printf '%s\n' "$ver" "$MIN_CODEX" | sort -t. -k1,1n -k2,2n -k3,3n | head -1)" != "$MIN_CODEX" ]]; then
     say "codex-cli $ver is older than $MIN_CODEX, which ignores the permission profile this review relies on: npm i -g @openai/codex@latest"; return 2
@@ -208,8 +232,13 @@ $PC/project.md (dash-wallet rules), and for money, keys, identities, persistence
   # (its working directory: codex's -C does not move `mcp list`'s configuration context), as codex exec runs: a
   # trusted source checkout's own .codex/config.toml could mask a server there, or point an HTTP one at an attacker
   local mcp_off=() mcp_tab="" name
-  waitfor sh -c 'cd "$1" && shift && exec "$@"' sh "$wt/tree" codex mcp list --json > "$probe" 2>/dev/null
+  waitfor sh -c 'cd "$1" && shift && exec "$@"' sh "$wt/tree" codex mcp list --json > "$probe" 2>/dev/null \
+    || { say "codex mcp list failed, so the servers to switch off are unknown: not reviewing"; return 2; }
+  # parsed in a checked step (roster): a silent empty answer would leave every server on, and the read-back alone
+  # proves nothing when the first answer was garbage. Kept in $wt, which every exit path removes
   local transport
+  roster "$probe" > "$wt/roster" 2>/dev/null \
+    || { say "codex mcp list gave a roster that does not parse (or a server name with a tab, a newline or a carriage return): not reviewing"; return 2; }
   while IFS=$'\t' read -r name transport; do
     [[ -n "$name" ]] || continue
     # a complete entry, not `.enabled=false` alone: a server another layer provides (the desktop app's) is not in
@@ -220,21 +249,26 @@ $PC/project.md (dash-wallet rules), and for money, keys, identities, persistence
     # splits a dotted -c path on every dot; the table merges into the existing servers like the per-server form did
     if [[ "$transport" == stdio ]]; then mcp_tab+="${mcp_tab:+, }$(toml_str "$name") = { command = \"/bin/sh\", enabled = false }"
     else mcp_tab+="${mcp_tab:+, }$(toml_str "$name") = { url = \"http://127.0.0.1:9/\", enabled = false }"; fi
-  done < <(python3 -c 'import json,sys
-try: print("\n".join(e["name"] + "\t" + str((e.get("transport") or {}).get("type") or "stdio") for e in json.load(open(sys.argv[1])) if e.get("enabled")))
-except Exception: pass' "$probe")
+  done < "$wt/roster"
   [[ -n "$mcp_tab" ]] && mcp_off=(-c "mcp_servers={ $mcp_tab }")
-  waitfor sh -c 'cd "$1" && shift && exec "$@"' sh "$wt/tree" codex ${mcp_off[@]+"${mcp_off[@]}"} mcp list --json > "$probe" 2>/dev/null
-  if [[ -n "$(python3 -c 'import json,sys
-try: print("".join(e["name"] for e in json.load(open(sys.argv[1])) if e.get("enabled")))
-except Exception: print("?")' "$probe")" ]]; then say "an MCP server stays enabled for codex: not reviewing"; return 2; fi
+  waitfor sh -c 'cd "$1" && shift && exec "$@"' sh "$wt/tree" codex ${mcp_off[@]+"${mcp_off[@]}"} mcp list --json > "$probe" 2>/dev/null \
+    || { say "codex mcp list failed on the read-back: not reviewing"; return 2; }
+  roster "$probe" > "$wt/roster" 2>/dev/null || { say "codex mcp list read-back does not parse: not reviewing"; return 2; }
+  [[ -s "$wt/roster" && -n "$(tr -d '[:space:]' < "$wt/roster")" ]] && { say "an MCP server stays enabled for codex: not reviewing"; return 2; }
   # codex's other ways out of the sandbox: the implicit Apps connector (never in `mcp list`), browser and computer use,
-  # web search (a query can carry data out), lifecycle hooks. Off for the review, and read back: each must show false
+  # web search (a query can carry data out), lifecycle hooks. Off for the review, and read back: each feature must show
+  # false. web_search is a config value, not a feature: `features list` has no row for it, so it is set (on the command
+  # line, the highest-precedence layer) and not read back
   local feat_off=(-c features.apps=false -c features.browser_use=false -c features.browser_use_external=false \
     -c features.browser_use_full_cdp_access=false -c features.computer_use=false -c features.in_app_browser=false -c 'web_search="disabled"' \
     -c features.hooks=false)   # lifecycle hooks: run outside the sandbox, in the clone, from the user's trusted config
-  waitfor sh -c 'cd "$1" && shift && exec "$@"' sh "$wt/tree" codex "${feat_off[@]}" features list > "$probe" 2>/dev/null
-  if [[ "$(awk '$1 ~ /^(apps|browser_use|browser_use_external|browser_use_full_cdp_access|computer_use|in_app_browser|hooks)$/ && $NF == "false"' "$probe" | wc -l | tr -d ' ')" != 7 ]]; then
+  waitfor sh -c 'cd "$1" && shift && exec "$@"' sh "$wt/tree" codex "${feat_off[@]}" features list > "$probe" 2>/dev/null \
+    || { say "codex features list failed, so the capabilities' state is unknown: not reviewing"; return 2; }
+  # each of the seven exactly once, and off: a count of "false" rows alone passes seven copies of one of them
+  if ! awk 'BEGIN { split("apps browser_use browser_use_external browser_use_full_cdp_access computer_use in_app_browser hooks", w, " ")
+                    for (i in w) want[w[i]] = 1 }
+            $1 in want { if ($NF != "false" || ++seen[$1] > 1) bad = 1 }
+            END { for (k in want) if (seen[k] != 1) bad = 1; exit bad }' "$probe"; then
     say "a codex capability outside the sandbox (apps, browser or computer use, lifecycle hooks) does not read back as off: not reviewing"; return 2
   fi
   # the model's scratch: its own folder (TMPDIR below), not the shared temp dirs where other reviews keep their files
@@ -266,7 +300,7 @@ except Exception: print("?")' "$probe")" ]]; then say "an MCP server stays enabl
     # sandbox, whose reads cover the whole disk, ~/.codex/auth.json included
     # --ignore-rules: the user's execpolicy allow rules (~/.codex/rules) let a matching command run OUTSIDE the sandbox.
     # The user's config.toml does load (it may select a keyring login store); what it could open is closed above and
-    # read back in this same context: MCP servers off by name, apps/browser/computer use/web search off, environment
+    # read back in this same context: MCP servers off by name, apps/browser/computer use off (web search set off), environment
     # an allowlist. Started from inside the clone, the context the probes read.
     cd "$wt/tree" || exit 2
     exec ${tmo[@]+"${tmo[@]}"} codex exec --ignore-rules ${mcp_off[@]+"${mcp_off[@]}"} "${feat_off[@]}" -m "$MODEL" -c model_reasoning_effort="$EFFORT" -C "$wt/tree" -o "$out" \
@@ -314,8 +348,9 @@ import json, os, shutil, sys, tempfile, datetime
 path, line, mb, base, model, report, base_tip = sys.argv[1:8]
 try:
     c = json.loads(line)
-    assert isinstance(c, dict) and all(isinstance(c.get(k), int) and not isinstance(c.get(k), bool) and c[k] >= 0
-                                       for k in ("blocking", "suggestion", "nitpick"))
+    if not (isinstance(c, dict) and all(isinstance(c.get(k), int) and not isinstance(c.get(k), bool) and c[k] >= 0
+                                        for k in ("blocking", "suggestion", "nitpick"))):
+        raise ValueError("counts")   # not assert: PYTHONOPTIMIZE from the caller would strip it
 except Exception:
     print("pre-review: the review did not end with a valid counts line, so it counts as not reviewed", file=sys.stderr)
     sys.exit(1)
@@ -331,7 +366,7 @@ publish(path, lambda fh: json.dump({"verdict": v, "counts": c, "base": mb, "base
 print(f"pre-review: verdict {v} {c} (report: {path[:-5]}.md)", file=sys.stderr)
 PY
   rm -f "$out" "$log"
-  [[ "$(verdict "$repo" "$sha")" != blocking ]] || return 1
+  passed "$repo" "$sha"
 }
 
 if [[ "${1:-}" == --locked-review ]]; then   # review() runs this under the lock

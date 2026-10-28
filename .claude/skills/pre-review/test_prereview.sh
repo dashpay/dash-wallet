@@ -7,7 +7,7 @@ need() { "$@" || { echo "FAIL: setup: $*" >&2; exit 1; }; }
 P=${1:-"$(cd "$(dirname "$0")" && pwd)/prereview.sh"}; T=$(mktemp -d "${TMPDIR:-/tmp}/prtest.XXXXXX") || exit 1; export XDG_CACHE_HOME="$T/cache"; FAILS=0
 [[ -n "${KEEP:-}" ]] || trap 'chmod -R u+w "$T" 2>/dev/null; rm -rf "$T"' EXIT   # this run's folder only, writable again first (the chmod tests); KEEP=1 leaves it for a look
 # the cases set these themselves: an inherited API key would pass the logged-out case, a base or timeout would move others
-unset OPENAI_API_KEY CODEX_API_KEY PREREVIEW_BASE PREREVIEW_TIMEOUT PREREVIEW_MODEL FAKE_LOGIN_RC FAKE_VERSION FAKE_FEAT_STUBBORN FAKE_MCP FAKE_MCP_STUBBORN FAKE_REFRESH FAKE_LAST
+unset OPENAI_API_KEY CODEX_API_KEY PREREVIEW_BASE PREREVIEW_TIMEOUT PREREVIEW_MODEL FAKE_DURING FAKE_MCP_RC FAKE_FEAT_RC FAKE_FEAT_ROWS FAKE_VERSION_RC FAKE_MCP_FIRST FAKE_MCP_RB FAKE_MCP_RB_RC FAKE_LOGIN_RC FAKE_VERSION FAKE_FEAT_STUBBORN FAKE_MCP FAKE_MCP_STUBBORN FAKE_REFRESH FAKE_LAST
 # the caller's git configuration stays out too: a global core.hooksPath would make the fixture's --install and
 # --uninstall write to, and delete from, the caller's real hooks folder
 export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
@@ -20,14 +20,22 @@ unset GIT_CONFIG_COUNT GIT_CONFIG_PARAMETERS; for v in $(compgen -e | grep -E '^
 need mkdir -p "$T/bin"
 cat > "$T/bin/codex" <<'EOF'
 #!/usr/bin/env bash
-[[ "$1" == --version ]] && { echo "codex-cli ${FAKE_VERSION:-0.163.0}"; exit 0; }
+[[ "$1" == --version ]] && { echo "codex-cli ${FAKE_VERSION:-0.163.0}"; exit "${FAKE_VERSION_RC:-0}"; }
 [[ "$1" == login ]] && exit "${FAKE_LOGIN_RC:-0}"
 if [[ " $* " == *" features list "* ]]; then   # the six capabilities, each off when its -c features.<name>=false came
+  [[ -n "${FAKE_FEAT_ROWS:-}" ]] && { printf '%b' "$FAKE_FEAT_ROWS"; exit 0; }   # a listing given verbatim (malformed ones)
   for n in apps browser_use browser_use_external browser_use_full_cdp_access computer_use in_app_browser hooks; do
     if [[ -n "${FAKE_FEAT_STUBBORN:-}" || " $* " != *" features.$n=false "* ]]; then echo "$n stable true"; else echo "$n stable false"; fi
-  done; exit 0
+  done; exit "${FAKE_FEAT_RC:-0}"   # FAKE_FEAT_RC: a failing probe that still printed every row as off
 fi
 if [[ " $* " == *" mcp list "* ]]; then   # the effective servers (FAKE_MCP), each off when a -c mcp_servers.<name>.enabled=false came
+  [[ -n "${FAKE_MCP_RC:-}" ]] && { echo '[]'; exit "$FAKE_MCP_RC"; }   # a failing probe, even one that prints a list
+  # FAKE_MCP_FIRST: the first listing of a review answers this (exit 0); every later one (the read-back) answers
+  # FAKE_MCP_RB (default: an empty roster) with exit FAKE_MCP_RB_RC
+  if [[ -n "${FAKE_MCP_FIRST:-}" ]]; then
+    if [[ -e "${FAKE_CDIR}.mcpfirst" ]]; then printf '%s\n' "${FAKE_MCP_RB:-[]}"; exit "${FAKE_MCP_RB_RC:-0}"; fi
+    touch "${FAKE_CDIR}.mcpfirst"; printf '%s\n' "$FAKE_MCP_FIRST"; exit 0
+  fi
   printf '%s\n' "$@" > "${FAKE_CDIR}.mcpargs"; pwd -P > "${FAKE_CDIR}.mcpcwd"
   python3 -c '
 import json, sys
@@ -53,6 +61,7 @@ git -C "$cdir" rev-parse origin/master > "${FAKE_CDIR}.base" 2>/dev/null
 echo "${CODEX_HOME:-unset}" > "${FAKE_CDIR}.home"; cat "${CODEX_HOME:-/nonexistent}/auth.json" > "${FAKE_CDIR}.auth" 2>/dev/null
 [[ -e "${CODEX_HOME:-/nonexistent}/config.toml" ]] && echo yes > "${FAKE_CDIR}.cfg" || echo no > "${FAKE_CDIR}.cfg"
 [[ -n "${FAKE_REFRESH:-}" ]] && echo "$FAKE_REFRESH" >> "${CODEX_HOME}/auth.json"
+[[ -n "${FAKE_DURING:-}" ]] && eval "$FAKE_DURING"   # something else happening while the review runs
 printf 'finding text\n%s\n' "$FAKE_LAST" > "$out"
 EOF
 chmod +x "$T/bin/codex"; export PATH="$T/bin:$PATH" FAKE_CDIR="$T/cdir"
@@ -69,6 +78,24 @@ tty() {
   else script -q /dev/null "$@" < <(sleep 15); fi
 }
 ok() { if [[ "$2" == "$3" ]]; then echo "ok   $1"; else echo "FAIL $1: got '$2', want '$3'"; FAILS=$((FAILS+1)); fi; }
+# a stalling fake marks the point it stops at (READY) and stays there until RELEASE, or 30 s: tests signal only once
+# the operation they mean to interrupt has really begun, and no fake finishes early on a slow machine
+READY="$T/stall.ready" RELEASE="$T/stall.release"; export READY RELEASE
+STALL='touch "$READY"; i=0; while [[ ! -e "$RELEASE" ]] && (( i++ < 300 )); do sleep 0.1; done'
+stall_reset() { rm -f "$READY" "$RELEASE"; }
+await_ready() {   # <what>: up to 20 s for a fake to reach its stall point
+  local i=0; while [[ ! -e "$READY" ]]; do (( i++ < 200 )) || { echo "FAIL $1: the fake never reached its stall point"; FAILS=$((FAILS+1)); return 1; }; sleep 0.1; done
+}
+await_exit() {   # <pid> <what>: up to 10 s for a signalled review to exit (its stalled fake would hold on for 30 s)
+  # on a timeout: a FAIL, then release the stalled fake and wait the review out, so nothing after races its lock
+  local i=0; while kill -0 "$1" 2>/dev/null; do
+    (( i++ < 100 )) || { echo "FAIL $2: still running 10 s after the signal"; FAILS=$((FAILS+1)); touch "$RELEASE"; wait "$1" 2>/dev/null; return 1; }
+    sleep 0.1
+  done
+  wait "$1" 2>/dev/null; return 0
+}
+# chmod a-w blocks nothing for root (DAC bypass, e.g. in a container): the permission tests are skipped there
+unwritable() { chmod a-w "$1"; if ( : > "$1/.probe" ) 2>/dev/null; then rm -f "$1/.probe"; chmod u+w "$1"; return 1; fi; }
 
 # a fake upstream with master and release, and a clone whose origin URL looks like dash-wallet
 need git init -q --bare "$T/dash-wallet.git"
@@ -85,6 +112,8 @@ g checkout -q feat
 V() { PREREVIEW_VERDICTS="$XDG_CACHE_HOME/prereview" "$P" --status | sed -n 's/^HEAD [0-9a-f]*: //p'; }
 FAKE_LAST='{"blocking": null, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "null count → not reviewed (exit 2)" "$?" 2
 ok "  … and no verdict cached" "$(V)" none
+PYTHONOPTIMIZE=1 FAKE_LAST='{"blocking": null, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
+ok "  … also with PYTHONOPTIMIZE=1 from the caller" "$?:$(V)" 2:none
 FAKE_LAST='no counts at all' "$P" >/dev/null 2>&1; ok "missing counts line → exit 2" "$?" 2
 FAKE_LAST=$'{"blocking": 0, "suggestion": 0, "nitpick": 0}\nreview incomplete' "$P" >/dev/null 2>&1; ok "counts not on the last line → exit 2" "$?" 2
 FAKE_LAST='{"blocking": -1, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "negative count → exit 2" "$?" 2
@@ -103,9 +132,16 @@ FAKE_LAST='garbled' "$P" >/dev/null 2>&1; ok "a failed re-review drops the earli
 FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
 FAKE_LOGIN_RC=1 "$P" >/dev/null 2>&1; ok "a re-review with Codex logged out → exit 2" "$?" 2
 ok "  … and drops the earlier clean verdict too" "$(V)" none
-FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; chmod a-w "$XDG_CACHE_HOME/prereview"
-FAKE_LOGIN_RC=1 "$P" >/dev/null 2>&1; ok "unwritable cache folder: a failed re-review still empties the earlier record" "$?:$(V)" 2:none
-chmod u+w "$XDG_CACHE_HOME/prereview"
+FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
+if unwritable "$XDG_CACHE_HOME/prereview"; then
+  FAKE_LOGIN_RC=1 "$P" >/dev/null 2>&1; ok "unwritable cache folder: a failed re-review still empties the earlier record" "$?:$(V)" 2:none
+  chmod u+w "$XDG_CACHE_HOME/prereview"
+  # a commit already on the base needs no review, but its record must still be written for the gate to pass it
+  g checkout -q --detach origin/master; "$P" >/dev/null 2>&1; chmod a-w "$XDG_CACHE_HOME/prereview"
+  "$P" >/dev/null 2>&1; ok "a commit on the base, verdict folder unwritable → exit 2, not 0" "$?:$(V)" 2:none
+  chmod u+w "$XDG_CACHE_HOME/prereview"; "$P" >/dev/null 2>&1; ok "  … writable again → clean" "$?:$(V)" 0:clean
+  g checkout -q feat
+else echo "skip unwritable-cache cases: chmod does not block writes here (root?)"; fi
 FAKE_LOGIN_RC=1 CODEX_API_KEY=k-codex FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
 ok "logged out, CODEX_API_KEY set → reviewed with it" "$?:$(cat "$T/cdir.key")" 0:k-codex
 FAKE_LOGIN_RC=1 OPENAI_API_KEY=k-openai FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
@@ -127,6 +163,26 @@ ok "the user's MCP servers are switched off by name for the review" "$?:$(grep -
 FAKE_MCP="docs|http,loc" FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
 ok "  … an http server gets an entry of its own transport (a stdio one next to its url fails codex's config load)" "$?:$(grep -c '"docs" = { url = "http://127.0.0.1:9/", enabled = false }' "$T/cdir.args")" 0:1
 FAKE_MCP="stubborn" FAKE_MCP_STUBBORN=1 FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "  … one that stays enabled → not reviewed (exit 2), no verdict" "$?:$(V)" 2:none
+FAKE_MCP_RC=1 FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "  … codex mcp list fails (exit 1, even with a list printed) → not reviewed (exit 2)" "$?:$(V)" 2:none
+for bad in '{not json' '{"name": "fs", "enabled": true}' '[{"enabled": true}]' '[{"name": "fs", "enabled": null}]' '[{"name": " ", "enabled": true}]' '[{"name": "a\tb", "enabled": true}]' '[{"name": "a\nb", "enabled": true}]' '[{"name": "a\rb", "enabled": true}]'; do
+  rm -f "$T/cdir.mcpfirst"; FAKE_MCP_FIRST="$bad" FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
+  ok "  … a first roster that does not parse ($bad), the read-back empty → not reviewed (exit 2)" "$?:$(V)" 2:none
+done
+rm -f "$T/cdir.mcpfirst"; FAKE_MCP_FIRST='[]' FAKE_MCP_RB_RC=1 FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
+ok "  … the first listing fine, the read-back fails (exit 1, an empty roster printed) → not reviewed (exit 2)" "$?:$(V)" 2:none
+rm -f "$T/cdir.mcpfirst"; FAKE_MCP_FIRST='[]' FAKE_MCP_RB='[{"name": "fs", "enabled": null}]' FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
+ok "  … a read-back entry whose enabled state is unknown (null) counts as on → not reviewed (exit 2)" "$?:$(V)" 2:none
+for bad in '{}' '""' '[{"name": "fs"}]' '[{"name": " \t", "enabled": true, "transport": {"type": " "}}]'; do
+  rm -f "$T/cdir.mcpfirst"; FAKE_MCP_FIRST='[]' FAKE_MCP_RB="$bad" FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
+  ok "  … a read-back that does not parse as a roster ($bad) → not reviewed (exit 2)" "$?:$(V)" 2:none
+done
+FAKE_FEAT_RC=1 FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "  … codex features list fails (exit 1, every row printed as off) → not reviewed (exit 2)" "$?:$(V)" 2:none
+FAKE_VERSION_RC=1 FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "codex --version fails (exit 1, a version still printed) → not reviewed (exit 2)" "$?:$(V)" 2:none
+DUP=""; for k in 1 2 3 4 5 6 7; do DUP+="apps stable false\\n"; done
+FAKE_FEAT_ROWS="$DUP" FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "  … seven copies of one capability, the others missing → not reviewed (exit 2)" "$?:$(V)" 2:none
+ALL=""; for n in apps browser_use browser_use_external browser_use_full_cdp_access computer_use in_app_browser hooks; do ALL+="$n stable false\\n"; done
+FAKE_FEAT_ROWS="${ALL}apps stable false\\n" FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "  … all seven off but one listed twice → not reviewed (exit 2)" "$?:$(V)" 2:none
+FAKE_FEAT_ROWS="$ALL" FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "  … each of the seven exactly once and off → reviewed" "$?:$(V)" 0:clean
 FAKE_MCP="docs.internal|http,npm:@scope/seq.thinking" FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
 ok "  … names with . : @ / (accepted by codex) are switched off too, both transports" "$?:$(grep -c -e '"docs.internal" = { url = ' -e '"npm:@scope/seq.thinking" = { command = ' "$T/cdir.args")" 0:1
 FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
@@ -149,30 +205,38 @@ FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1;
 kill -9 $LIVE; wait $LIVE 2>/dev/null
 FAKE_LAST='{"blocking": 1, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "its holder was killed → the kernel released the lock, reviewed" "$?:$(V)" 1:blocking
 # the lock lives as long as the review: hold it from inside a running review (a slow fake codex), then try another
-printf '#!/usr/bin/env bash\n[[ "$1" == --version ]] && { echo codex-cli 0.163.0; exit 0; }\n[[ "$1" == login ]] && exit 0\n[[ " $* " == *" mcp list "* ]] && { echo "[]"; exit 0; }\n[[ " $* " == *" features list "* ]] && { for n in apps browser_use browser_use_external browser_use_full_cdp_access computer_use in_app_browser hooks; do echo "$n stable false"; done; exit 0; }\nsleep 4; while [[ $# -gt 0 ]]; do [[ "$1" == -o ]] && { echo "{\\"blocking\\": 0, \\"suggestion\\": 0, \\"nitpick\\": 0}" > "$2"; shift; }; shift; done\n' > "$T/bin/codex.slow"
+printf '#!/usr/bin/env bash\n[[ "$1" == --version ]] && { echo codex-cli 0.163.0; exit 0; }\n[[ "$1" == login ]] && exit 0\n[[ " $* " == *" mcp list "* ]] && { echo "[]"; exit 0; }\n[[ " $* " == *" features list "* ]] && { for n in apps browser_use browser_use_external browser_use_full_cdp_access computer_use in_app_browser hooks; do echo "$n stable false"; done; exit 0; }\n%s\nwhile [[ $# -gt 0 ]]; do [[ "$1" == -o ]] && { echo "{\\"blocking\\": 0, \\"suggestion\\": 0, \\"nitpick\\": 0}" > "$2"; shift; }; shift; done\n' "$STALL" > "$T/bin/codex.slow"
 chmod +x "$T/bin/codex.slow"; mkdir -p "$T/slow"; cp "$T/bin/codex.slow" "$T/slow/codex"
-PATH="$T/slow:$PATH" "$P" >/dev/null 2>&1 & SLOW=$!; sleep 1
+stall_reset; PATH="$T/slow:$PATH" "$P" >/dev/null 2>&1 & SLOW=$!; await_ready "a review inside codex"
 FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "a second review while the first is inside codex → exit 2" "$?" 2
-wait $SLOW; ok "  … the first one finishes and publishes" "$(V)" clean
+touch "$RELEASE"; wait $SLOW; ok "  … the first one finishes and publishes" "$(V)" clean
 # Ctrl-C signals the whole foreground process group: run the review in a group of its own and signal that
-set -m; PATH="$T/slow:$PATH" "$P" >/dev/null 2>&1 & SLOW=$!; set +m; sleep 2; kill -INT -- -$SLOW 2>/dev/null; wait $SLOW 2>/dev/null; sleep 1
+stall_reset; set -m; PATH="$T/slow:$PATH" "$P" >/dev/null 2>&1 & SLOW=$!; set +m; await_ready "Ctrl-C inside codex"
+kill -INT -- -$SLOW 2>/dev/null; wait $SLOW 2>/dev/null; sleep 1
 ok "a review interrupted inside codex leaves no folder behind" "$(leftovers)" 0
 ok "  … and no verdict (it was dropped when the review started)" "$(V)" none
-PATH="$T/slow:$PATH" "$P" >/dev/null 2>&1 & SLOW=$!; sleep 2; kill -TERM $SLOW 2>/dev/null; wait $SLOW 2>/dev/null; sleep 1
+stall_reset; PATH="$T/slow:$PATH" "$P" >/dev/null 2>&1 & SLOW=$!; await_ready "TERM inside codex"
+kill -TERM $SLOW 2>/dev/null; wait $SLOW 2>/dev/null; sleep 1
 ok "TERM to the script's own pid alone → the review stops too (no folder, no verdict)" "$(leftovers):$(V)" 0:none
 FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "  … and a new review starts at once (the lock is free)" "$?" 0
 # cancelled while a codex probe stalls (login status here): the probe must not keep the lock either
-need mkdir -p "$T/slowlogin"; printf '#!/usr/bin/env bash\n[[ "$1" == login ]] && { sleep 4; exit 0; }\nexec "%s/bin/codex" "$@"\n' "$T" > "$T/slowlogin/codex"; chmod +x "$T/slowlogin/codex"
-PATH="$T/slowlogin:$PATH" "$P" >/dev/null 2>&1 & SLOW=$!; sleep 2; kill -TERM $SLOW 2>/dev/null; sleep 0.5
-FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "TERM during a stalled codex probe → the review stops at once, the lock is free" "$?" 0; wait $SLOW 2>/dev/null
+need mkdir -p "$T/slowlogin"; printf '#!/usr/bin/env bash\n[[ "$1" == login ]] && { %s; exit 0; }\nexec "%s/bin/codex" "$@"\n' "$STALL" "$T" > "$T/slowlogin/codex"; chmod +x "$T/slowlogin/codex"
+stall_reset; PATH="$T/slowlogin:$PATH" "$P" >/dev/null 2>&1 & SLOW=$!; await_ready "a stalled login probe"; kill -TERM $SLOW 2>/dev/null
+if await_exit $SLOW "TERM during a stalled codex probe"; then   # a timeout is its FAIL; no replacement races the lock
+  FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "TERM during a stalled codex probe → the review stops at once, the lock is free" "$?" 0
+fi
 # cancelled while still fetching the base: the fetch must not keep the lock either
-REALGIT=$(command -v git); need mkdir -p "$T/slowgit"; printf '#!/usr/bin/env bash\n[[ " $* " == *" fetch "* ]] && sleep 4\nexec "%s" "$@"\n' "$REALGIT" > "$T/slowgit/git"; chmod +x "$T/slowgit/git"
-PATH="$T/slowgit:$PATH" "$P" >/dev/null 2>&1 & SLOW=$!; sleep 2; kill -TERM $SLOW 2>/dev/null; sleep 0.5
-FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "TERM during a stalled base fetch → the review stops at once, the lock is free" "$?" 0; wait $SLOW 2>/dev/null
+REALGIT=$(command -v git); need mkdir -p "$T/slowgit"; printf '#!/usr/bin/env bash\n[[ " $* " == *" fetch "* ]] && { %s; }\nexec "%s" "$@"\n' "$STALL" "$REALGIT" > "$T/slowgit/git"; chmod +x "$T/slowgit/git"
+stall_reset; PATH="$T/slowgit:$PATH" "$P" >/dev/null 2>&1 & SLOW=$!; await_ready "a stalled base fetch"; kill -TERM $SLOW 2>/dev/null
+if await_exit $SLOW "TERM during a stalled base fetch"; then   # a timeout is its FAIL; no replacement races the lock
+  FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "TERM during a stalled base fetch → the review stops at once, the lock is free" "$?" 0
+fi
 # a timeout that cannot kill the process group (or none at all): what codex leaves behind must not hold the lock
 need mkdir -p "$T/faketimeout"; printf '#!/bin/sh\nshift; exec "$@"\n' > "$T/faketimeout/timeout"; chmod +x "$T/faketimeout/timeout"
-PATH="$T/faketimeout:$T/slow:$PATH" "$P" >/dev/null 2>&1 & SLOW=$!; sleep 2; kill -TERM $SLOW 2>/dev/null; wait $SLOW 2>/dev/null; sleep 1
+stall_reset; PATH="$T/faketimeout:$T/slow:$PATH" "$P" >/dev/null 2>&1 & SLOW=$!; await_ready "a review under a weak timeout"
+kill -TERM $SLOW 2>/dev/null; wait $SLOW 2>/dev/null; sleep 1
 FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "  … same, with a timeout that does not kill the group: codex's leftover child holds no lock" "$?" 0
+touch "$RELEASE"   # let the stalled leftovers of the cancellation cases exit
 mkdir -p "$T/tmp dir"; echo keep > "$T/tmp"; ( cd "$T" && TMPDIR="$T/tmp dir" FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1 ) </dev/null
 cd "$T/app"; TMPDIR="$T/tmp dir" FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
 ok "TMPDIR with a space: cleanup removes only its own files" "$(cat "$T/tmp" 2>/dev/null):$(ls -A "$T/tmp dir" | wc -l | tr -d ' ')" keep:0
@@ -194,6 +258,26 @@ git push -q -f origin "$MASTER:master"; ok "  … master back → clean again" "
 ( cd "$T/seed" && g checkout -q master && echo m2 > m2 && g add m2 && g commit -qm m2 && git push -q origin master ) 2>/dev/null
 ok "origin/master moved independently (same merge base) → stale" "$(V)" stale
 git push -q -f origin "$MASTER:master"; ok "  … master back → clean again" "$(V)" clean
+# the base moves while the review runs (another --status fetched it): the fresh verdict is stale, which is not a pass
+FAKE_DURING="git -C '$T/app' push -q origin '$FIRST:master' && git -C '$T/app' fetch -q origin" \
+  FAKE_LAST='{"blocking": 1, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
+ok "the base moved during a blocking review → exit 1, not 0" "$?:$(V)" 1:stale
+git push -q -f origin "$MASTER:master"; git fetch -q origin
+# the base moves on origin only (nothing here fetches it) while a clean review runs: the pass is read against the base
+# as origin has it now, as the push gate reads it, so the run does not report 0 for a range the gate would refuse
+# (moved in origin's repository itself: a push from this clone would update its origin/master as a side effect)
+FAKE_DURING="git -C '$T/dash-wallet.git' update-ref refs/heads/master '$FIRST'" FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
+ok "the base moved on origin during a clean review → exit 1, not 0" "$?" 1
+git push -q -f origin "$MASTER:master"; git fetch -q origin
+# and when that last fetch fails, there is no pass to report
+need mkdir -p "$T/failgit"; printf '#!/usr/bin/env bash\nif [[ " $* " == *" fetch "* ]]; then n=$(cat "%s/ffetches" 2>/dev/null || echo 0); echo $((n+1)) > "%s/ffetches"; [[ "$n" -ge 1 ]] && exit 1; fi\nexec "%s" "$@"\n' "$T" "$T" "$(command -v git)" > "$T/failgit/git"; chmod +x "$T/failgit/git"
+rm -f "$T/ffetches"; PATH="$T/failgit:$PATH" FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
+ok "  … the fetch before the verdict read fails → exit 1, not 0" "$?" 1
+# the same for a commit already on the base: its record is written, then the base moves before the review returns
+need mkdir -p "$T/movegit"; printf '#!/usr/bin/env bash\n"%s" "$@"; rc=$?\n[[ " $* " == *" rev-parse --verify -q "*"^{commit}"* && ! -e "%s/moved" ]] && { touch "%s/moved"; "%s" -C "%s/dash-wallet.git" update-ref refs/heads/master "%s"; }\nexit $rc\n' "$(command -v git)" "$T" "$T" "$(command -v git)" "$T" "$FIRST" > "$T/movegit/git"; chmod +x "$T/movegit/git"
+g checkout -q --detach origin/master; PATH="$T/movegit:$PATH" "$P" >/dev/null 2>&1
+ok "a commit on the base, the base moves on origin right after its record is written → exit 1, not 0" "$?" 1
+git -C "$T/dash-wallet.git" update-ref refs/heads/master "$MASTER"; git fetch -q origin; g checkout -q two
 # the review clone must carry the base as origin has it, not this checkout's stale local master
 g checkout -q -b drift origin/master; echo d2 > d2; g add d2; g commit -qm d2; git push -q origin "$FIRST:master"
 FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
@@ -282,12 +366,13 @@ HOOK=$(git rev-parse --path-format=absolute --git-path hooks)/pre-push; Z=000000
 printf 'refs/heads/feat %s refs/heads/feat-race %s\nrefs/heads/other5 %s refs/heads/other5 %s\n' "$(git rev-parse feat)" "$Z" "$(git rev-parse other5)" "$Z" > "$T/race.refs"
 PATH="$T/racegit:$PATH" FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' tty bash -c "'$HOOK' origin '$T/dash-wallet.git' < '$T/race.refs'" > "$T/race.log" 2>&1
 # the refusal is read from the hook's own output: util-linux script(1) does not always hand the child's exit status on
-ok "the base moved during the push's own review → the earlier ref is rechecked, push refused" "$(grep -c 'the base moved while this push' "$T/race.log"):$(cat "$T/fetches" 2>/dev/null)" 1:3   # fetches: up front, the review's, the final check's
+ok "the base moved during the push's own review → the earlier ref is rechecked, push refused" "$(grep -c 'the base moved while this push' "$T/race.log"):$(cat "$T/fetches" 2>/dev/null)" 1:4   # fetches: up front, the review's, its verdict read's, the final check's
 g checkout -q other5; ok "  … the later ref itself was reviewed against the moved base" "$(V)" clean; g checkout -q feat
 # two unreviewed refs, cancelled during the first's review: the hook stops, the second is never started
 g checkout -q -b c1 origin/master; echo c1 > c1; g add c1; g commit -qm c1; g checkout -q -b c2 origin/master; echo c2 > c2; g add c2; g commit -qm c2; g checkout -q feat
 printf 'refs/heads/c1 %s refs/heads/c1 %s\nrefs/heads/c2 %s refs/heads/c2 %s\n' "$(git rev-parse c1)" "$Z" "$(git rev-parse c2)" "$Z" > "$T/cancel.refs"
-PATH="$T/slow:$PATH" tty bash -c "'$HOOK' origin '$T/dash-wallet.git' < '$T/cancel.refs'" > "$T/cancel.log" 2>&1 & HK=$!; sleep 2; pkill -TERM -f "$(printf '%s' "$HOOK origin" | sed 's/[][\\.*^$+?(){}|]/\\&/g')" 2>/dev/null; wait $HK 2>/dev/null; sleep 1
+stall_reset; PATH="$T/slow:$PATH" tty bash -c "'$HOOK' origin '$T/dash-wallet.git' < '$T/cancel.refs'" > "$T/cancel.log" 2>&1 & HK=$!
+await_ready "the hook's first review"; pkill -TERM -f "$(printf '%s' "$HOOK origin" | sed 's/[][\\.*^$+?(){}|]/\\&/g')" 2>/dev/null; wait $HK 2>/dev/null; sleep 1; touch "$RELEASE"
 g checkout -q c2; ok "cancelled during the first ref's review → the hook stops, the second ref is never reviewed" "$(V):$(grep -c 'cancelled: not pushing' "$T/cancel.log")" none:1; g checkout -q feat
 git -C "$T/dash-wallet.git" update-ref refs/heads/master "$MASTER"; FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
 cp "$P" "$T/moved.sh"; "$P" --uninstall >/dev/null 2>&1; "$T/moved.sh" --install >/dev/null 2>&1; mv "$T/moved.sh" "$T/gone.sh"
@@ -296,7 +381,10 @@ echo '#!/bin/sh' > .git/hooks/pre-push; "$P" --install >/dev/null 2>&1; ok "some
 grep -q 'prereview' .git/hooks/pre-push; ok "  … and leaves it alone" "$?" 1
 echo '#!/bin/sh' > .git/hooks/pre-push.keep; mv .git/hooks/pre-push.keep .git/hooks/pre-push; "$P" --uninstall >/dev/null 2>&1
 ok "uninstall leaves a foreign hook" "$(head -1 .git/hooks/pre-push)" '#!/bin/sh'
-rm -f .git/hooks/pre-push; chmod a-w .git/hooks; "$P" --install >/dev/null 2>&1; ok "unwritable hooks folder → install fails (exit 2)" "$?" 2
-chmod u+w .git/hooks; "$P" --install >/dev/null 2>&1; ok "  … writable again → installed" "$?" 0
-chmod a-w .git/hooks; "$P" --uninstall >/dev/null 2>&1; ok "unremovable hook → uninstall fails (exit 2)" "$?" 2; chmod u+w .git/hooks
+rm -f .git/hooks/pre-push
+if unwritable .git/hooks; then
+  "$P" --install >/dev/null 2>&1; ok "unwritable hooks folder → install fails (exit 2)" "$?" 2
+  chmod u+w .git/hooks; "$P" --install >/dev/null 2>&1; ok "  … writable again → installed" "$?" 0
+  chmod a-w .git/hooks; "$P" --uninstall >/dev/null 2>&1; ok "unremovable hook → uninstall fails (exit 2)" "$?" 2; chmod u+w .git/hooks
+else echo "skip unwritable-hooks cases: chmod does not block writes here (root?)"; "$P" --install >/dev/null 2>&1; fi
 echo "fails: $FAILS"; [[ -n "${KEEP:-}" ]] && echo "kept: $T"; exit $FAILS
