@@ -53,6 +53,7 @@ import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.money.Fiat
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.NotificationService
@@ -862,6 +863,33 @@ class ShieldedTransferViewModelTest {
         assertEquals(Dash.parse("0.75"), state.pendingWalletBalance)
         // Max/availableBalance draws from the confirmed figure only.
         assertEquals(Dash.parse("2.00"), state.availableBalance)
+    }
+
+    @Test
+    fun isMaxSpend_fiatMode_comparesTheRoundedFiatText_notTheLossyReparsedDash() {
+        // MO-1111 follow-up: in fiat mode, amount re-derives Dash by parsing amountText
+        // back through a 2-decimal fiat string (toPlainStringTwoDecimals), which almost
+        // never round-trips to exactly availableBalance when the rate needs more than 2
+        // decimals to convert exactly — the Max tap/currency toggle populate amountText
+        // with precisely that rounded string, so isMaxSpend must compare against it
+        // directly rather than the lossy re-derived Dash amount.
+        val rate = Fiat.parseFiat("USD", "232.745198") // does not round-trip at 2 decimals
+        val balance = Dash.parse("1.00")
+        val maxFiatText = balance.toFiatAt(rate)!!.toPlainStringTwoDecimals()
+
+        val afterMaxTap = ShieldedTransferUIState(
+            dashMode = false,
+            rate = rate,
+            shieldedBalance = balance,
+            direction = ShieldedTransferDirection.FromShielded,
+            amountText = maxFiatText
+        )
+        assertTrue(afterMaxTap.isMaxSpend)
+        // confirms the Dash-domain comparison alone would have missed it
+        assertFalse(afterMaxTap.amount == afterMaxTap.availableBalance)
+
+        val typedLess = afterMaxTap.copy(amountText = "1.00")
+        assertFalse(typedLess.isMaxSpend)
     }
 
     // ── "You will transfer ~" hint — always DASH, both directions (user

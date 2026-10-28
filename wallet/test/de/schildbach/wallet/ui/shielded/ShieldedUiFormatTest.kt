@@ -74,4 +74,13 @@ class ShieldedUiFormatTest {
             Locale.setDefault(originalLocale)
         }
     }
+
+    @Test
+    fun `fiat plain two-decimal string rounds down, never up`() {
+        // This text is re-parsed back into the spendable amount (onMaxClick feeds it the
+        // full balance), so rounding up would make the re-parsed amount exceed the balance
+        // it came from and falsely trip "insufficient funds" right after tapping Max.
+        assertEquals("30.33", Fiat.parseFiat("USD", "30.335").toPlainStringTwoDecimals())
+        assertEquals("30.33", Fiat.parseFiat("USD", "30.339").toPlainStringTwoDecimals())
+    }
 }

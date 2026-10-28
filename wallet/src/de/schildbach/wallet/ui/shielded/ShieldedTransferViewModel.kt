@@ -294,6 +294,23 @@ data class ShieldedTransferUIState(
         get() = amount.isGreaterThan(availableBalance)
 
     /**
+     * True when the entered amount is exactly the transferable balance — the "spend
+     * everything" intent [onConfirm] gives a fee-adjusted retry. In fiat mode, comparing
+     * [amount] to [availableBalance] directly would almost never match: both the Max button
+     * and currency-toggle populate [amountText] via [toPlainStringTwoDecimals], a 2-decimal
+     * fiat string, and re-deriving [amount] from that text loses whatever precision the fiat
+     * rate needed beyond 2 decimals — the exact case [onMaxClick] itself is supposed to
+     * express. Comparing [amountText] against the same rounded string the Max/toggle paths
+     * write avoids that lossy round trip entirely.
+     */
+    val isMaxSpend: Boolean
+        get() = if (dashMode) {
+            amount == availableBalance
+        } else {
+            amountText == availableBalance.toFiatAt(rate)?.toPlainStringTwoDecimals()
+        }
+
+    /**
      * Whether the "Insufficient funds" validation message may be SHOWN.
      *
      * [insufficientFunds] is a live amount-vs-balance comparison, so it stays
@@ -707,7 +724,7 @@ class ShieldedTransferViewModel @Inject constructor(
         // fee ToShielded), so the executor may retry ONCE with a
         // fee-adjusted amount instead of failing the Max flow — see
         // [ShieldedTransferExecutor.submit].
-        val isMaxSpend = state.amount == state.availableBalance
+        val isMaxSpend = state.isMaxSpend
         if (!transferExecutor.submit(state.direction, state.amount, isMaxSpend)) {
             log.warn("shielded transfer submit refused — an operation is already in flight")
         }
