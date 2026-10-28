@@ -169,15 +169,15 @@ class DashPayConnectUriTest {
         val q = "v=2&n=d&r=$r"
         rejects("dashpay://connect?$q#frag")
         rejects("dashpay://connect#frag?$q")
-        rejects("dashpay://user@connect?$q")
-        rejects("dashpay://user:pw@connect?$q")
-        rejects("dashpay://connect:8080?$q")
+        rejects("dashpay://user@connect?$q", "Invalid connection link")
+        rejects("dashpay://user:pw@connect?$q", "Invalid connection link")
+        rejects("dashpay://connect:8080?$q", "Invalid connection link")
         rejects("dashpay://connect/extra?$q")
         rejects("dashpay://connect//?$q")
         rejects("dashpay://connect/x/?$q")
         rejects("dashpay:///connect?$q", "Invalid connection link")
         rejects("dashpay:connect?$q")
-        rejects("dashpay://connect@evil.test?$q")
+        rejects("dashpay://connect@evil.test?$q", "Invalid connection link")
         rejects("dashpay://connect.evil.test?$q", DashConnectUri.NEEDS_NEWER_WALLET_ERROR)
     }
 

@@ -150,6 +150,9 @@ object DashConnectUri {
     fun parseConnectRequest(uri: String): DashKeyRequest {
         val verb = dashPayVerb(uri)
         if (verb.isNullOrEmpty() || verb == INVITE_VERB) throw DashConnectUriException("Invalid connection link")
+        // userinfo or a port makes a malformed link, not a verb a newer wallet would know
+        val authority = uri.substring(DASHPAY_PREFIX.length).takeWhile { it != '/' && it != '?' && it != '#' }
+        if ('@' in authority || ':' in authority) throw DashConnectUriException("Invalid connection link")
         if (verb != CONNECT_VERB) throw DashConnectUriException(NEEDS_NEWER_WALLET_ERROR)
         if (uri.toByteArray(Charsets.UTF_8).size > MAX_CONNECT_URI_BYTES) {
             throw DashConnectUriException("Connection QR is too large")
