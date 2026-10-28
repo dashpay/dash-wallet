@@ -477,10 +477,60 @@ class SdkTxDetailTest {
         val sdkService = mockk<DashSdkService> { every { walletManagerOrNull() } returns manager }
         val db = mockk<DashDatabase>()
 
-        val (accountIds, addresses) = runBlocking { foreignContactTxoExclusion(sdkService, db) }
+        val exclusion = runBlocking { foreignContactTxoExclusion(sdkService, db) }
 
-        assertTrue(accountIds.isEmpty())
-        assertTrue(addresses.isEmpty())
+        // Unknown, not "nothing to exclude": a caller that read this as an empty
+        // exclusion would wrongly count a contact's own output as ours.
+        assertNull(exclusion)
+    }
+
+    @Test
+    fun `load withholds the recipient list rather than guess when ownership is unknown`() {
+        // Same ambiguous-wallet state as above, but end-to-end through load():
+        // an OUTGOING send must show no "Sent to" list rather than risk the
+        // entirely-self fallback showing a contact's output as ours.
+        val manager = mockk<org.dashfoundation.dashsdk.wallet.PlatformWalletManager> {
+            every { wallets } returns MutableStateFlow(
+                mapOf("01".repeat(32) to mockk(relaxed = true), "02".repeat(32) to mockk(relaxed = true))
+            )
+        }
+        val entity = mockk<TransactionEntity> {
+            every { txid } returns decoded.txid
+            every { transactionData } returns rawTxBytes
+            every { netAmount } returns -70_247L
+            every { fee } returns 247L
+            every { context } returns 1
+            every { direction } returns 1
+            every { firstSeen } returns 1_770_000_000L
+            every { blockTimestamp } returns 0
+        }
+        val db = mockk<DashDatabase>(relaxed = true)
+        every { db.transactionDao() } returns mockk { coEvery { getByTxid(any()) } returns entity }
+        val sdkService = mockk<DashSdkService> {
+            coEvery { ensureStarted() } returns Unit
+            every { databaseOrNull() } returns db
+            every { walletManagerOrNull() } returns manager
+        }
+        val displayCacheDao = mockk<de.schildbach.wallet.database.dao.TxDisplayCacheDao> {
+            coEvery { getEntriesByIds(any()) } returns emptyList()
+        }
+
+        mockkObject(TransactionDecoder)
+        try {
+            every { TransactionDecoder.decode(any(), any()) } returns decoded
+            val detail = requireNotNull(
+                runBlocking {
+                    SdkTxDetailProvider(sdkService, displayCacheDao, mockk(relaxed = true)) { _, _ -> null }
+                        .load(decoded.txidDisplayHex)
+                }
+            )
+            assertTrue(
+                "ownership unknown must withhold the recipient list, not fall back to all addresses",
+                detail.outputAddresses.isEmpty()
+            )
+        } finally {
+            unmockkObject(TransactionDecoder)
+        }
     }
 
     @Test

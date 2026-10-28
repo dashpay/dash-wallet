@@ -164,7 +164,16 @@ internal fun buildSdkTxDetail(
     inputTxoValues: List<Long?>,
     // Platform-funding role when this internal move is an identified asset lock
     // (identity upgrade / top-up / invite), else null — see [SdkTxDetail.assetLockKind].
-    assetLockKind: AssetLockKind? = null
+    assetLockKind: AssetLockKind? = null,
+    // True when the caller could not resolve the foreign-contact TXO exclusion
+    // (ambiguous/unbound SDK wallet, or the account/address read failed) — so
+    // [myOutputAddresses] may be missing a contact's foreign output. Unknown
+    // must not be read as "nothing to exclude" (the same principle the project
+    // already applies to amounts): an OUTGOING send withholds its recipient
+    // list rather than risk showing the contact's own output as ours and
+    // falling back to "entirely self", the exact bug this fixes for a known,
+    // recurring wallet state.
+    ownershipUnknown: Boolean = false
 ): SdkTxDetail {
     val outputs = decoded?.outputs.orEmpty()
 
@@ -193,7 +202,7 @@ internal fun buildSdkTxDetail(
                 it.address == null && it.scriptPubkey.firstOrNull() != OP_RETURN
             }
             when {
-                hasUnresolvedPaymentOutput -> emptyList()
+                hasUnresolvedPaymentOutput || ownershipUnknown -> emptyList()
                 external.isNotEmpty() -> external
                 else -> allOutputAddresses
             }
@@ -364,20 +373,23 @@ internal fun txoOutpoint(wireTxid: ByteArray, vout: Int): ByteArray =
  * `txoIsForeignSql`). [load]'s `myOutputAddresses` needs the same exclusion
  * [SdkTxContactResolver.signedNetsFor] already applies to its TXO sums, so a
  * contact's mirrored TXO (persisted so an outgoing payment is displayable) is
- * never counted as this wallet's own output. Empty — not a crash — when the
- * wallet isn't resolvable or the read fails; the caller then falls back to
- * its pre-existing, unfiltered behavior.
+ * never counted as this wallet's own output.
+ *
+ * Null — not a crash — when the wallet isn't resolvable or the read fails:
+ * callers must treat that as UNKNOWN, not "nothing to exclude" ([load] then
+ * withholds the recipient list rather than risk showing a contact's own
+ * output as ours).
  */
 internal suspend fun foreignContactTxoExclusion(
     sdkService: DashSdkService,
     db: DashDatabase
-): Pair<Set<Long>, Set<String>> = try {
+): Pair<Set<Long>, Set<String>>? = try {
     val loadedWalletIds = sdkService.walletManagerOrNull()?.wallets?.value?.keys ?: emptySet()
     val walletId = loadedWalletIds.singleOrNull()?.let(::walletIdFromHex)
-        ?: return emptySet<Long>() to emptySet<String>().also {
+        ?: return null.also {
             LoggerFactory.getLogger(SdkTxDetailProvider::class.java).warn(
                 "foreign-contact TXO exclusion skipped: cannot pick the bound SDK wallet " +
-                    "({} loaded — post-restore orphan not pruned yet?); myOutputAddresses left unfiltered",
+                    "({} loaded — post-restore orphan not pruned yet?); ownership left unknown",
                 loadedWalletIds.size
             )
         }
@@ -395,8 +407,8 @@ internal suspend fun foreignContactTxoExclusion(
     throw e
 } catch (t: Throwable) {
     LoggerFactory.getLogger(SdkTxDetailProvider::class.java)
-        .warn("foreign-contact TXO exclusion unavailable; myOutputAddresses left unfiltered", t)
-    emptySet<Long>() to emptySet<String>()
+        .warn("foreign-contact TXO exclusion unavailable; ownership left unknown", t)
+    null
 }
 
 // ── The provider ──────────────────────────────────────────────────────
@@ -497,17 +509,23 @@ class SdkTxDetailProvider internal constructor(
 
         val txoDao = db.txoDao()
         val myOutputAddresses = mutableSetOf<String>()
+        var ownershipUnknown = false
         if (!decoded?.outputs.isNullOrEmpty()) {
-            val (externalAccountIds, externalAddresses) = foreignContactTxoExclusion(sdkService, db)
-            decoded?.outputs?.forEachIndexed { index, _ ->
-                val txo = txoDao.getByOutpoint(txoOutpoint(wireTxid, index)) ?: return@forEachIndexed
-                // Mirrors SdkTxContactResolver.signedNetsFor's NULL-accountId classification:
-                // a friendship-send TXO persists with accountId NULL, so coreAddressId (the
-                // core_addresses PK, always populated) is the authoritative fallback — address
-                // alone misses it whenever the TXO's own address column doesn't match.
-                val isForeign = (txo.accountId != null && txo.accountId in externalAccountIds) ||
-                    (txo.accountId == null && (txo.coreAddressId ?: txo.address) in externalAddresses)
-                if (!isForeign) myOutputAddresses += txo.address
+            val exclusion = foreignContactTxoExclusion(sdkService, db)
+            if (exclusion == null) {
+                ownershipUnknown = true
+            } else {
+                val (externalAccountIds, externalAddresses) = exclusion
+                decoded?.outputs?.forEachIndexed { index, _ ->
+                    val txo = txoDao.getByOutpoint(txoOutpoint(wireTxid, index)) ?: return@forEachIndexed
+                    // Mirrors SdkTxContactResolver.signedNetsFor's NULL-accountId classification:
+                    // a friendship-send TXO persists with accountId NULL, so coreAddressId (the
+                    // core_addresses PK, always populated) is the authoritative fallback — address
+                    // alone misses it whenever the TXO's own address column doesn't match.
+                    val isForeign = (txo.accountId != null && txo.accountId in externalAccountIds) ||
+                        (txo.accountId == null && (txo.coreAddressId ?: txo.address) in externalAddresses)
+                    if (!isForeign) myOutputAddresses += txo.address
+                }
             }
         }
         val inputTxos = decoded?.inputs.orEmpty().map { input ->
@@ -535,7 +553,8 @@ class SdkTxDetailProvider internal constructor(
             myOutputAddresses = myOutputAddresses,
             inputTxoAddresses = inputTxos.map { it?.address },
             inputTxoValues = inputTxos.map { it?.amount },
-            assetLockKind = assetLockKind
+            assetLockKind = assetLockKind,
+            ownershipUnknown = ownershipUnknown
         )
     }
 
