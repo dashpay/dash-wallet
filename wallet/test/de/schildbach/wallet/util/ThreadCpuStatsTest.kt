@@ -152,6 +152,17 @@ class ThreadCpuStatsTest {
     }
 
     @Test
+    fun `hot process whose excess is unattributed dumps no known thread`() {
+        // A thread that lived and died within the interval burnt the CPU: "a" is idle.
+        val prev = snap(0, 0, stat(1, "a", 0))
+        val curr = snap(60_000, 6000, stat(1, "a", 10))
+        val r = ThreadCpuStats.diff(prev, curr)
+        assertEquals(5990L, r.unattributedTicks)
+        assertEquals(Level.WARN, ThreadCpuStats.levelFor(r, clkTck, 60_000, null, 600_000, minute))
+        assertTrue(ThreadCpuStats.hotThreads(r, clkTck).isEmpty())
+    }
+
+    @Test
     fun `cool process has no hot threads`() {
         val prev = snap(0, 0, stat(1, "a", 0))
         val curr = snap(60_000, 600, stat(1, "a", 600))
@@ -272,8 +283,8 @@ class ThreadCpuStatsTest {
         assertEquals(1, r.noBaseline)
         // The process delta is exact; the missed thread's share lands in unattributed.
         assertEquals(9_390L, r.unattributedTicks)
-        // Process is hot, but the no-baseline thread is never picked for a dump.
-        assertEquals(listOf(1), ThreadCpuStats.hotThreads(r, clkTck).map { it.tid })
+        // Process is hot, but neither the no-baseline thread nor the idle known one is dumped.
+        assertTrue(ThreadCpuStats.hotThreads(r, clkTck).isEmpty())
         assertEquals(
             "proc=156.7% cpu=94000ms wall=60.0s up=60.0s scan=0ms thr=2 top=[1 main S 100ms] " +
                 "unattributed=93900ms noBaseline=1",
@@ -418,6 +429,17 @@ class ThreadCpuStatsTest {
     }
 
     @Test
+    fun `expected span includes the time failed scans took`() {
+        val r = ThreadCpuStats.diff(snap(0, 0, stat(1, "a", 0)), snap(5 * minute, 50, stat(1, "a", 50)))
+        // One failed scan that stalled for three minutes: no freeze, just a slow read.
+        val expected = ThreadCpuStats.expectedWallMs(r, minute, 1, 3 * minute)
+        assertEquals(5 * minute, expected)
+        assertFalse(ThreadCpuStats.isGap(r.wallMs, expected))
+        // Without its duration the same span would read as a freeze.
+        assertTrue(ThreadCpuStats.isGap(r.wallMs, ThreadCpuStats.expectedWallMs(r, minute, 1)))
+    }
+
+    @Test
     fun `a genuine freeze is still a GAP after a slow baseline`() {
         val frozen = ThreadCpuStats.diff(
             snap(0, 0, stat(1, "a", 0), scanMs = minute),
@@ -447,6 +469,29 @@ class ThreadCpuStatsTest {
         assertEquals(Level.DEBUG, ThreadCpuStats.levelFor(cleanIdle, clkTck, 300_000, 0, tenMin, minute))
         // The same 10-minute span is no GAP when it was expected to cover that many intervals.
         assertEquals(Level.DEBUG, ThreadCpuStats.levelFor(idleGap, clkTck, 300_000, 0, tenMin, 10 * minute))
+    }
+
+    // ── startup line and hot details ──────────────────────────────────
+
+    @Test
+    fun `an incomplete baseline is flagged on the startup line`() {
+        assertEquals("", ThreadCpuStats.baselineNote(snap(0, 0, stat(1, "a", 0))))
+        assertEquals(
+            " INCOMPLETE_BASELINE readErr=2 badStat=1",
+            ThreadCpuStats.baselineNote(Snapshot(0, 0, 0, emptyMap(), 0, readErrors = 2, badStats = 1))
+        )
+        assertEquals(
+            " INCOMPLETE_BASELINE TASK_LIST_FAILED",
+            ThreadCpuStats.baselineNote(Snapshot(0, 0, 0, emptyMap(), 0, listFailed = true))
+        )
+    }
+
+    @Test
+    fun `wchan is unknown when empty, running when zero, else the symbol`() {
+        assertEquals("?", ThreadCpuStats.formatWchan(null))
+        assertEquals("?", ThreadCpuStats.formatWchan(" \n"))
+        assertEquals("running", ThreadCpuStats.formatWchan("0"))
+        assertEquals("futex_wait_queue", ThreadCpuStats.formatWchan("futex_wait_queue\n"))
     }
 
     // ── failure rate limiting ──────────────────────────────────────────

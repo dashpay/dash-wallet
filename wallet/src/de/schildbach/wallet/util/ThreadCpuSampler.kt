@@ -91,7 +91,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  *  - **Stops promptly.** Returning to the foreground cancels the session; a
  *    scan in progress checks for cancellation before each thread and is
  *    discarded rather than logged, and a hot sample's details check before
- *    the stack dump and before each thread's wchan/stack.
+ *    the stack dump, and before and after each thread's wchan read.
  *  - **Not at launch.** A session waits one interval before its baseline, so
  *    the `false` the monitor holds until the first activity starts doesn't
  *    cost a normal foreground launch a /proc scan.
@@ -179,28 +179,43 @@ object ThreadCpuSampler {
             currentCoroutineContext().ensureActive()
             session.scanSucceeded()
             log.info(
-                "$PREFIX started (app not in foreground) threads={} interval={}s clkTck={}",
+                "$PREFIX started (app not in foreground) threads={} interval={}s clkTck={}{}",
                 baseline.threads.size,
                 SAMPLE_INTERVAL_MS / 1000,
-                session.clkTck
+                session.clkTck,
+                ThreadCpuStats.baselineNote(baseline)
             )
             announced = true
             var prev: Snapshot = baseline
-            var lastInfoMs: Long? = null
+            // Scans since `prev` that did not become the baseline, and the wall
+            // time they took: the next interval spans them (see expectedWallMs).
+            var failedScans = 0
+            var failedScanMs = 0L
             while (true) {
                 delay(SAMPLE_INTERVAL_MS)
+                val scanStart = SystemClock.elapsedRealtime()
                 val curr = session.snapshot()
                 // A scan that finished just as the app came forward is stale: drop it.
                 currentCoroutineContext().ensureActive()
                 if (curr == null) {
                     // `prev` stays the baseline: the next good sample spans the gap.
+                    failedScans++
+                    failedScanMs += SystemClock.elapsedRealtime() - scanStart
                     session.scanFailed("keeping last good sample as baseline")
                     continue
                 }
-                val skipped = session.scanSucceeded()
+                session.scanSucceeded()
                 samples++
-                lastInfoMs = session.report(prev, curr, lastInfoMs, skipped)
-                prev = curr
+                if (session.report(prev, curr, failedScans, failedScanMs)) {
+                    prev = curr
+                    failedScans = 0
+                    failedScanMs = 0L
+                } else {
+                    // No summary line for this interval: keep `prev` so the next
+                    // sample covers it, and count `curr` like a failed scan.
+                    failedScans++
+                    failedScanMs += curr.scanMs
+                }
             }
         } finally {
             // Cancellation (foreground) lands here; plain non-suspending logging is fine.
@@ -231,6 +246,9 @@ object ThreadCpuSampler {
         private val threadReadFailures = ThreadCpuStats.FailureThrottle(IDLE_INFO_INTERVAL_MS)
         private val reportFailures = ThreadCpuStats.FailureThrottle(IDLE_INFO_INTERVAL_MS)
 
+        /** When the last INFO-or-above sample line was logged (the heartbeat clock). */
+        private var lastInfoMs: Long? = null
+
         /** A scan failed: INFO for the first, then once per heartbeat interval. */
         fun scanFailed(note: String) {
             try {
@@ -246,8 +264,8 @@ object ThreadCpuSampler {
             }
         }
 
-        /** A scan succeeded; returns how many failed scans it ends (logged at INFO if any). */
-        fun scanSucceeded(): Int {
+        /** A scan succeeded; logs at INFO how many failed scans it ends, if any. */
+        fun scanSucceeded() {
             val skipped = scanFailures.onSuccess()
             if (skipped > 0) {
                 try {
@@ -255,7 +273,6 @@ object ThreadCpuSampler {
                 } catch (_: Throwable) {
                 }
             }
-            return skipped
         }
 
         /**
@@ -315,15 +332,20 @@ object ThreadCpuSampler {
         }
 
         /**
-         * Logs one interval; returns the updated last-INFO time. [failedScans]
-         * is how many scans failed since [prev] (the interval spans that many
-         * more sleeps). Suspends only to stop a hot sample's details on
-         * cancellation, so a stale dump never follows a return to the foreground.
+         * Logs one interval. [failedScans] is how many scans since [prev] did
+         * not become the baseline, and [failedScanMs] the wall time they took
+         * (the interval spans that many more sleeps and that much reading).
+         * Returns whether the summary line was logged: if not, the caller keeps
+         * [prev] so the interval isn't lost. Suspends only to stop a hot
+         * sample's details on cancellation, so a stale dump never follows a
+         * return to the foreground.
          */
-        suspend fun report(prev: Snapshot, curr: Snapshot, lastInfoMs: Long?, failedScans: Int): Long? {
-            return try {
+        suspend fun report(prev: Snapshot, curr: Snapshot, failedScans: Int, failedScanMs: Long): Boolean {
+            var summaryLogged = false
+            try {
                 val report = ThreadCpuStats.diff(prev, curr)
-                val expectedWallMs = ThreadCpuStats.expectedWallMs(report, SAMPLE_INTERVAL_MS, failedScans)
+                val expectedWallMs =
+                    ThreadCpuStats.expectedWallMs(report, SAMPLE_INTERVAL_MS, failedScans, failedScanMs)
                 val now = curr.elapsedRealtimeMs
                 val level =
                     ThreadCpuStats.levelFor(report, clkTck, now, lastInfoMs, IDLE_INFO_INTERVAL_MS, expectedWallMs)
@@ -332,20 +354,23 @@ object ThreadCpuSampler {
                 when (level) {
                     Level.WARN -> {
                         log.warn("$line HOT")
+                        summaryLogged = true
+                        lastInfoMs = now
                         ThreadCpuStats.hotThreads(report, clkTck)
                             .take(MAX_DETAILED_THREADS)
                             .let { if (it.isNotEmpty()) logHotDetails(it, report.wallMs) }
-                        now
                     }
                     Level.INFO -> {
                         log.info(line)
-                        now
+                        summaryLogged = true
+                        lastInfoMs = now
                     }
                     Level.DEBUG -> {
                         log.debug(line)
-                        lastInfoMs
+                        summaryLogged = true
                     }
-                }.also { reportFailures.onSuccess() }
+                }
+                reportFailures.onSuccess()
             } catch (e: CancellationException) {
                 throw e
             } catch (t: Throwable) {
@@ -355,8 +380,8 @@ object ThreadCpuSampler {
                     }
                 } catch (_: Throwable) {
                 }
-                lastInfoMs
             }
+            return summaryLogged
         }
 
         private suspend fun logHotDetails(hot: List<ThreadCpuStats.ThreadDelta>, wallMs: Long) {
@@ -374,8 +399,9 @@ object ThreadCpuSampler {
             for (t in hot) {
                 ctx.ensureActive()
                 val pct = ThreadCpuStats.cpuPercent(t.deltaTicks, clkTck, wallMs)
-                val wchan = readFile("/proc/self/task/${t.tid}/wchan")?.trim()
-                    ?.takeIf { it.isNotEmpty() && it != "0" } ?: "?"
+                val wchan = ThreadCpuStats.formatWchan(readFile("/proc/self/task/${t.tid}/wchan"))
+                // The read can outlast a return to the foreground: no stale WARN.
+                ctx.ensureActive()
                 if (stacksError != null) {
                     log.warn(
                         "$PREFIX hot tid={} name='{}' state={} cpu={}% wchan={} java=UNKNOWN (stacks failed: {})",
@@ -438,7 +464,8 @@ object ThreadCpuSampler {
      */
     private fun logQuietly(what: String, t: Throwable) {
         try {
-            log.info("$PREFIX {}: {}", what, t.toString())
+            // The trailing Throwable puts its stack trace in wallet.log.
+            log.info("$PREFIX {}: {}", what, t.toString(), t)
         } catch (_: Throwable) {
         }
     }

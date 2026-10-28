@@ -329,22 +329,47 @@ object ThreadCpuStats {
      * its scan START, so the span runs from the start of the baseline scan to
      * the start of this one: the baseline's own scan time
      * ([IntervalReport.prevScanMs]) plus one [intervalMs] sleep, plus one more
-     * per failed scan in between ([failedScans]; those kept the older baseline).
-     * A failed scan's own duration is not measured and not added: it fails at
-     * the first read, and [GAP_FACTOR] leaves ample slack for it.
+     * per failed scan in between ([failedScans]; those kept the older baseline),
+     * plus the wall time those failed scans took ([failedScanMs]), so a slow
+     * failed read is not mistaken for a freeze.
      */
-    fun expectedWallMs(report: IntervalReport, intervalMs: Long, failedScans: Int): Long =
-        report.prevScanMs.coerceAtLeast(0) + intervalMs * (1 + failedScans.coerceAtLeast(0))
+    fun expectedWallMs(report: IntervalReport, intervalMs: Long, failedScans: Int, failedScanMs: Long = 0): Long =
+        report.prevScanMs.coerceAtLeast(0) + intervalMs * (1 + failedScans.coerceAtLeast(0)) +
+            failedScanMs.coerceAtLeast(0)
 
     /**
      * The threads that get a detailed dump (wchan + Java stack) on a hot
      * sample: every thread itself over the threshold, or — if the process is
-     * hot only because several threads share the load — the busiest one.
+     * hot only because several threads share the load — the busiest one. When
+     * the known threads together are not hot, the excess is unattributed (a
+     * missed or exited thread) and no known thread is dumped in its place.
      */
     fun hotThreads(report: IntervalReport, clkTck: Long, thresholdPct: Double = HOT_PERCENT_OF_ONE_CORE): List<ThreadDelta> {
         if (!isHot(report.processDeltaTicks, clkTck, report.wallMs, thresholdPct)) return emptyList()
         val over = report.ranked.filter { isHot(it.deltaTicks, clkTck, report.wallMs, thresholdPct) }
-        return over.ifEmpty { report.ranked.take(1) }
+        if (over.isNotEmpty()) return over
+        val attributed = report.processDeltaTicks - report.unattributedTicks
+        return if (isHot(attributed, clkTck, report.wallMs, thresholdPct)) report.ranked.take(1) else emptyList()
+    }
+
+    /**
+     * Suffix for the session's startup line when its baseline scan had a blind
+     * spot: the first interval's `noBaseline` covers only missed threads still
+     * alive at the next scan, so one that exits in between would leave that
+     * sample looking clean. Empty for a complete baseline.
+     */
+    fun baselineNote(baseline: Snapshot): String =
+        if (baseline.isComplete) {
+            ""
+        } else {
+            " INCOMPLETE_BASELINE" + blindSpots(baseline.readErrors, baseline.badStats, baseline.listFailed)
+        }
+
+    /** The kernel wait channel for display: `?` when unknown, `running` for `0` (on a CPU). */
+    fun formatWchan(raw: String?): String = when (val w = raw?.trim()) {
+        null, "" -> "?"
+        "0" -> "running"
+        else -> w
     }
 
     /**
@@ -426,11 +451,17 @@ object ThreadCpuStats {
             sb.append(" unattributed=").append(ticksToMs(report.unattributedTicks, clkTck)).append("ms")
         }
         if (report.noBaseline > 0) sb.append(" noBaseline=").append(report.noBaseline)
-        if (report.readErrors > 0) sb.append(" readErr=").append(report.readErrors)
-        if (report.badStats > 0) sb.append(" badStat=").append(report.badStats)
-        if (report.listFailed) sb.append(" TASK_LIST_FAILED")
+        sb.append(blindSpots(report.readErrors, report.badStats, report.listFailed))
         if (isSlowScan(report.scanMs)) sb.append(" SLOW_SCAN")
         if (isSlowScan(report.prevScanMs)) sb.append(" SLOW_BASELINE(").append(report.prevScanMs).append("ms)")
+        return sb.toString()
+    }
+
+    private fun blindSpots(readErrors: Int, badStats: Int, listFailed: Boolean): String {
+        val sb = StringBuilder()
+        if (readErrors > 0) sb.append(" readErr=").append(readErrors)
+        if (badStats > 0) sb.append(" badStat=").append(badStats)
+        if (listFailed) sb.append(" TASK_LIST_FAILED")
         return sb.toString()
     }
 
