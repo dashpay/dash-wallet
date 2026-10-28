@@ -23,12 +23,15 @@ import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.BaseConfig
+import org.slf4j.LoggerFactory
+import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -38,6 +41,8 @@ open class CrowdNodeConfig @Inject constructor(
     walletDataProvider: WalletDataProvider
 ) : BaseConfig(context, PREFERENCES_NAME, walletDataProvider) {
     companion object {
+        private val log = LoggerFactory.getLogger(CrowdNodeConfig::class.java)
+
         const val PREFERENCES_NAME = "crowdnode"
 
         val INFO_SHOWN = booleanPreferencesKey("info_shown")
@@ -61,6 +66,15 @@ open class CrowdNodeConfig @Inject constructor(
     }
 
     private val configScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val walletReplacements = AtomicInteger()
+
+    /**
+     * Bumped by [onWalletReplaced]. A [NO_SIGN_UP_SCAN_TX_COUNT] scan captures it before it starts
+     * and only caches its result if it is unchanged, so a scan of the old wallet that finishes after
+     * the replacement can't re-cache a count that now describes the new wallet.
+     */
+    open val walletGeneration: Int
+        get() = walletReplacements.get()
 
     /**
      * Forgets [NO_SIGN_UP_SCAN_TX_COUNT] when a created or restored wallet replaces the current one
@@ -69,6 +83,15 @@ open class CrowdNodeConfig @Inject constructor(
      * call from the main thread.
      */
     fun onWalletReplaced() {
-        configScope.launch { remove(NO_SIGN_UP_SCAN_TX_COUNT) }
+        walletReplacements.incrementAndGet()
+        configScope.launch {
+            try {
+                remove(NO_SIGN_UP_SCAN_TX_COUNT)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                log.warn("failed to clear the CrowdNode no-sign-up scan cache", e)
+            }
+        }
     }
 }

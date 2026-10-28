@@ -46,6 +46,7 @@ import org.bitcoinj.params.TestNet3Params
 import org.bitcoinj.script.Script
 import org.bitcoinj.wallet.WalletTransaction
 import org.dash.wallet.common.transactions.TxInfo
+import org.dash.wallet.common.transactions.filters.TransactionFilter
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -204,6 +205,56 @@ class WalletDataAdapterSeamRoutingTest {
         source.snapshots.value = snapshot(record(context = 3))
         runCurrent()
         assertEquals(listOf(sdkTx.txId.toString()), collected.map { it.txId })
+    }
+
+    private fun txIdFilter(txId: Sha256Hash) = object : TransactionFilter {
+        override fun matches(tx: TxInfo) = tx.txId == txId.toString()
+    }
+
+    @Test
+    fun preCutover_getTransactionsReturnsOnlyFilterMatches() = runTest {
+        val state = MutableStateFlow<String?>("DUAL_RUNNING")
+        val service = seamService(FakeSource(), state, backgroundScope)
+        service.start()
+        runCurrent()
+
+        val adapter = WalletDataAdapter(mockWalletData(listOf(sdkTx, dashjOnlyTx)), { service }, SeamOutputLockRegistry())
+
+        assertEquals(
+            listOf(dashjOnlyTx.txId.toString()),
+            adapter.getTransactions(txIdFilter(dashjOnlyTx.txId)).map { it.txId }
+        )
+        // Any filter matching is enough, and order follows the wallet's.
+        assertEquals(
+            listOf(sdkTx.txId.toString(), dashjOnlyTx.txId.toString()),
+            adapter.getTransactions(txIdFilter(dashjOnlyTx.txId), txIdFilter(sdkTx.txId)).map { it.txId }
+        )
+        assertEquals(2, adapter.getTransactions().size)
+    }
+
+    @Test
+    fun postCutover_getTransactionsFiltersSdkAndHeldDashjTransactions() = runTest {
+        val state = MutableStateFlow<String?>("CUT_OVER")
+        val source = FakeSource(MutableStateFlow(snapshot(record(context = 1))))
+        val service = seamService(source, state, backgroundScope)
+        service.start()
+        runCurrent()
+
+        val adapter = WalletDataAdapter(mockWalletData(listOf(sdkTx, dashjOnlyTx)), { service }, SeamOutputLockRegistry())
+
+        val sdkMatch = adapter.getTransactions(txIdFilter(sdkTx.txId))
+        assertEquals(listOf(sdkTx.txId.toString()), sdkMatch.map { it.txId })
+        // Still the SDK-fed TxInfo, not the held dashj copy of the same txid.
+        assertNull(sdkMatch.single().raw)
+        assertEquals(
+            listOf(dashjOnlyTx.txId.toString()),
+            adapter.getTransactions(txIdFilter(dashjOnlyTx.txId)).map { it.txId }
+        )
+        // SDK matches come before held-dashj matches.
+        assertEquals(
+            listOf(sdkTx.txId.toString(), dashjOnlyTx.txId.toString()),
+            adapter.getTransactions(txIdFilter(dashjOnlyTx.txId), txIdFilter(sdkTx.txId)).map { it.txId }
+        )
     }
 
     @Test

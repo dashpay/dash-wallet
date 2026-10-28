@@ -603,8 +603,10 @@ class CrowdNodeApiAggregator @Inject constructor(
      * transaction count is cached and the scan is skipped until it changes: a wallet that never
      * signed up would otherwise rescan its whole history each time the status is restored.
      * A possible sign up that CrowdNode didn't confirm isn't cached, so it is checked again.
+     * The cache is only an optimization: failing to write it just means the next restore rescans.
      */
     private suspend fun tryRestoreSignUp(): Boolean {
+        val walletGeneration = config.walletGeneration
         val txCount = walletDataProvider.transactionCount()
 
         if (config.get(CrowdNodeConfig.NO_SIGN_UP_SCAN_TX_COUNT) == txCount) {
@@ -616,9 +618,30 @@ class CrowdNodeApiAggregator @Inject constructor(
             SignUpScanResult.Restored -> true
             SignUpScanResult.Unconfirmed -> false
             SignUpScanResult.NotFound -> {
-                config.set(CrowdNodeConfig.NO_SIGN_UP_SCAN_TX_COUNT, txCount)
+                cacheNoSignUpScan(txCount, walletGeneration)
                 false
             }
+        }
+    }
+
+    private suspend fun cacheNoSignUpScan(txCount: Int, walletGeneration: Int) {
+        if (config.walletGeneration != walletGeneration) {
+            log.info("wallet was replaced during the CrowdNode sign up scan, not caching the result")
+            return
+        }
+
+        try {
+            config.set(CrowdNodeConfig.NO_SIGN_UP_SCAN_TX_COUNT, txCount)
+
+            // A replacement between the check above and this write may have cleared the cache
+            // before the write landed, so undo it. Any later replacement clears it itself.
+            if (config.walletGeneration != walletGeneration) {
+                config.remove(CrowdNodeConfig.NO_SIGN_UP_SCAN_TX_COUNT)
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("failed to cache the CrowdNode no-sign-up scan result", e)
         }
     }
 
