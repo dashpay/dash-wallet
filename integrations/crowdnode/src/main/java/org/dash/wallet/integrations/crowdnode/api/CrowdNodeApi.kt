@@ -596,10 +596,13 @@ class CrowdNodeApiAggregator @Inject constructor(
         return true
     }
 
+    private enum class SignUpScanResult { Restored, Unconfirmed, NotFound }
+
     /**
      * Scans every wallet transaction for a CrowdNode sign up. When none is found, the wallet's
      * transaction count is cached and the scan is skipped until it changes: a wallet that never
      * signed up would otherwise rescan its whole history each time the status is restored.
+     * A possible sign up that CrowdNode didn't confirm isn't cached, so it is checked again.
      */
     private suspend fun tryRestoreSignUp(): Boolean {
         val txCount = walletDataProvider.transactionCount()
@@ -609,20 +612,22 @@ class CrowdNodeApiAggregator @Inject constructor(
             return false
         }
 
-        if (tryRestoreSignUpFromTransactions()) {
-            return true
+        return when (tryRestoreSignUpFromTransactions()) {
+            SignUpScanResult.Restored -> true
+            SignUpScanResult.Unconfirmed -> false
+            SignUpScanResult.NotFound -> {
+                config.set(CrowdNodeConfig.NO_SIGN_UP_SCAN_TX_COUNT, txCount)
+                false
+            }
         }
-
-        config.set(CrowdNodeConfig.NO_SIGN_UP_SCAN_TX_COUNT, txCount)
-        return false
     }
 
-    private suspend fun tryRestoreSignUpFromTransactions(): Boolean {
+    private suspend fun tryRestoreSignUpFromTransactions(): SignUpScanResult {
         val fullSignUpSet = blockchainApi.getFullSignUpTxSet()
         fullSignUpSet?.let { set ->
             if (set.welcomeToApiResponse != null) {
                 setFinished(set.welcomeToApiResponse!!.toAddress)
-                return true
+                return SignUpScanResult.Restored
             }
 
             if (set.possibleWelcomeToApiResponse != null) {
@@ -634,13 +639,13 @@ class CrowdNodeApiAggregator @Inject constructor(
                     webApi.fromCrowdNode(address, transaction) != false
                 ) {
                     setFinished(address)
-                    return true
+                    return SignUpScanResult.Restored
                 }
             }
 
             if (set.acceptTermsResponse != null) {
                 setAcceptingTerms(set.acceptTermsResponse!!.toAddress)
-                return true
+                return SignUpScanResult.Restored
             }
 
             if (set.possibleAcceptTermsResponse != null) {
@@ -652,12 +657,16 @@ class CrowdNodeApiAggregator @Inject constructor(
                     webApi.fromCrowdNode(address, transaction) != false
                 ) {
                     setAcceptingTerms(address)
-                    return true
+                    return SignUpScanResult.Restored
                 }
+            }
+
+            if (set.possibleWelcomeToApiResponse != null || set.possibleAcceptTermsResponse != null) {
+                return SignUpScanResult.Unconfirmed
             }
         }
 
-        return false
+        return SignUpScanResult.NotFound
     }
 
     private suspend fun markAccountAddressWithTaxCategory() {

@@ -34,6 +34,7 @@ import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
 import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
 import org.dash.wallet.integrations.crowdnode.transactions.CrowdNodeWelcomeToApiResponse
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
+import org.dash.wallet.integrations.crowdnode.transactions.PossibleWelcomeResponse
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig
 import org.junit.Before
 import org.junit.Test
@@ -229,6 +230,45 @@ class CrowdNodeApiAggregatorTest {
 
             verify(blockchainApi).getFullSignUpTxSet()
             verify(localConfig).set(CrowdNodeConfig.NO_SIGN_UP_SCAN_TX_COUNT, 33308)
+        }
+    }
+
+    @Test
+    fun restoreStatus_possibleSignUpUnconfirmed_doesNotCacheAndRestoresLater() {
+        runBlocking {
+            localConfig.stub {
+                onBlocking { get(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS) } doReturn OnlineAccountStatus.None.ordinal
+            }
+            walletData.stub {
+                on { transactionCount() } doReturn 33307
+            }
+            val possibleWelcome = PossibleWelcomeResponse(null)
+            assertTrue(possibleWelcome.matches(welcomeResponseTx.toTxInfo()))
+            val mockFullSet = mock<FullCrowdNodeSignUpTxSet> {
+                on { possibleWelcomeToApiResponse } doReturn possibleWelcome
+            }
+            blockchainApi.stub {
+                on { getFullSignUpTxSet() } doReturn mockFullSet
+            }
+            // CrowdNode's index is behind the chain at first, then catches up
+            webApi.stub {
+                onBlocking { fromCrowdNode(any(), any()) }.doReturn(false, true)
+            }
+            val api = CrowdNodeApiAggregator(
+                webApi, blockchainApi, walletData, mock(), mock(),
+                localConfig, globalConfig, mock(), mock(), mock()
+            )
+
+            api.restoreStatus()
+
+            assertEquals(SignUpStatus.NotStarted, api.signUpStatus.value)
+            verify(localConfig, never()).set(eq(CrowdNodeConfig.NO_SIGN_UP_SCAN_TX_COUNT), any())
+
+            api.restoreStatus()
+
+            assertEquals(SignUpStatus.Finished, api.signUpStatus.value)
+            verify(blockchainApi, times(2)).getFullSignUpTxSet()
+            verify(localConfig, never()).set(eq(CrowdNodeConfig.NO_SIGN_UP_SCAN_TX_COUNT), any())
         }
     }
 
