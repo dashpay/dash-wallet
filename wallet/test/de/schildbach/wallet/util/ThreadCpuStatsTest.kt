@@ -355,6 +355,17 @@ class ThreadCpuStatsTest {
     }
 
     @Test
+    fun `an idle sample with threads missing a baseline logs at INFO`() {
+        val prev = Snapshot(0, 0, 0, mapOf(1 to stat(1, "a", 0)), 0, readErrors = 1)
+        val curr = snap(60_000, 50, stat(1, "a", 40), stat(2, "missed", 10))
+        val r = ThreadCpuStats.diff(prev, curr)
+        assertEquals(1, r.noBaseline)
+        assertTrue(ThreadCpuStats.isIdle(r.processDeltaTicks, clkTck, r.wallMs))
+        assertTrue(ThreadCpuStats.hasScanDiagnostics(r))
+        assertEquals(Level.INFO, ThreadCpuStats.levelFor(r, clkTck, 300_000, 0, tenMin, minute))
+    }
+
+    @Test
     fun `a hot sample with scan diagnostics stays WARN`() {
         val prev = snap(0, 0, stat(1, "a", 0))
         val curr = Snapshot(
@@ -376,6 +387,48 @@ class ThreadCpuStatsTest {
         assertFalse(ThreadCpuStats.isGap(3 * minute + 500, 2 * minute))
         assertTrue(ThreadCpuStats.isGap(5 * minute, 2 * minute))
         assertFalse(ThreadCpuStats.isGap(Long.MAX_VALUE, 0))
+    }
+
+    @Test
+    fun `expected span includes the baseline scan time and each failed scan`() {
+        // Timed scan-start to scan-start: a 60 s baseline scan + a 60 s sleep.
+        val afterSlowBaseline = ThreadCpuStats.diff(
+            snap(0, 0, stat(1, "a", 0), scanMs = minute),
+            snap(2 * minute + 500, 50, stat(1, "a", 50))
+        )
+        val expected = ThreadCpuStats.expectedWallMs(afterSlowBaseline, minute, 0)
+        assertEquals(2 * minute, expected)
+        assertFalse(ThreadCpuStats.isGap(afterSlowBaseline.wallMs, expected))
+        // Without the scan time the same span would read as a freeze.
+        assertTrue(ThreadCpuStats.isGap(afterSlowBaseline.wallMs, minute))
+        // No GAP lift (SLOW_BASELINE, which lifts it anyway, removed to isolate GAP).
+        assertEquals(
+            Level.DEBUG,
+            ThreadCpuStats.levelFor(
+                afterSlowBaseline.copy(prevScanMs = 0),
+                clkTck,
+                300_000,
+                0,
+                tenMin,
+                expected
+            )
+        )
+        // Two failed scans in between add two sleeps.
+        assertEquals(3 * minute + 200, ThreadCpuStats.expectedWallMs(afterSlowBaseline.copy(prevScanMs = 200), minute, 2))
+    }
+
+    @Test
+    fun `a genuine freeze is still a GAP after a slow baseline`() {
+        val frozen = ThreadCpuStats.diff(
+            snap(0, 0, stat(1, "a", 0), scanMs = minute),
+            snap(10 * minute, 50, stat(1, "a", 50))
+        )
+        val expected = ThreadCpuStats.expectedWallMs(frozen, minute, 0)
+        assertTrue(ThreadCpuStats.isGap(frozen.wallMs, expected))
+        assertEquals(Level.INFO, ThreadCpuStats.levelFor(frozen, clkTck, 300_000, 0, tenMin, expected))
+        // A fast baseline keeps the plain one-interval expectation.
+        val fast = ThreadCpuStats.diff(snap(0, 0, stat(1, "a", 0), scanMs = 12), snap(minute, 50, stat(1, "a", 50)))
+        assertEquals(minute + 12, ThreadCpuStats.expectedWallMs(fast, minute, 0))
     }
 
     @Test

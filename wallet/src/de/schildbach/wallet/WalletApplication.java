@@ -507,11 +507,6 @@ public class WalletApplication extends MultiDexApplication
         // thread. A reaped process leaves NOTHING in its own log; this is the only
         // record of it that reaches the support report.
         ProcessExitReasons.logRecentExits(this);
-        // WHICH THREAD burns CPU while the app is in the background (QA saw
-        // EXCESSIVE_RESOURCE_USAGE kills of the cached process with an empty
-        // log). Non-prod only; samples /proc every minute while no activity
-        // is visible, never keeps the process alive. See ThreadCpuSampler.
-        ThreadCpuSampler.start();
         runStartupStage(StartupBreadcrumbs.STAGE_FIREBASE_INITIALIZED, "FIREBASE_INITIALIZED", () -> {
             FirebaseApp.initializeApp(this);
             if (FirebaseApp.getApps(this).isEmpty()) {
@@ -543,6 +538,14 @@ public class WalletApplication extends MultiDexApplication
         autoLogout = new AutoLogout(config);
         autoLogout.registerDeviceInteractiveReceiver(this);
         registerActivityLifecycleCallbacks(new WalletActivityTracker(this, config, autoLogout, restartService));
+        // WHICH THREAD burns CPU while the app is in the background (QA saw
+        // EXCESSIVE_RESOURCE_USAGE kills of the cached process with an empty
+        // log). Non-prod only; samples /proc every minute while no activity
+        // is visible, never keeps the process alive. See ThreadCpuSampler.
+        // Started once the tracker that feeds AppForegroundMonitor is
+        // registered; the sampler itself waits an interval before its first
+        // scan, since the monitor reads "background" until an activity starts.
+        ThreadCpuSampler.start();
         // A background start's deferred wallet load must be finished before
         // ANY activity is created (review, 2026-09-30). UI lifecycle code reads
         // the wallet synchronously (fragments' onAttach, view models); blocked

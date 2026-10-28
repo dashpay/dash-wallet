@@ -318,12 +318,23 @@ object ThreadCpuStats {
 
     /**
      * Whether an interval's wall span shows the process was frozen or the
-     * device asleep. [expectedIntervalMs] is what the span should have been:
-     * the sample interval times the number of intervals it covers (more than
-     * one when failed scans in between kept the older baseline).
+     * device asleep. [expectedIntervalMs] is what the span should have been
+     * (see [expectedWallMs]).
      */
     fun isGap(wallMs: Long, expectedIntervalMs: Long): Boolean =
         expectedIntervalMs > 0 && wallMs > GAP_FACTOR * expectedIntervalMs
+
+    /**
+     * The wall span [report] should have, for [isGap]. A snapshot is timed at
+     * its scan START, so the span runs from the start of the baseline scan to
+     * the start of this one: the baseline's own scan time
+     * ([IntervalReport.prevScanMs]) plus one [intervalMs] sleep, plus one more
+     * per failed scan in between ([failedScans]; those kept the older baseline).
+     * A failed scan's own duration is not measured and not added: it fails at
+     * the first read, and [GAP_FACTOR] leaves ample slack for it.
+     */
+    fun expectedWallMs(report: IntervalReport, intervalMs: Long, failedScans: Int): Long =
+        report.prevScanMs.coerceAtLeast(0) + intervalMs * (1 + failedScans.coerceAtLeast(0))
 
     /**
      * The threads that get a detailed dump (wchan + Java stack) on a hot
@@ -339,11 +350,12 @@ object ThreadCpuStats {
     /**
      * Whether the CURRENT scan had a blind spot or was too slow to be
      * consistent (`readErr`, `badStat`, `TASK_LIST_FAILED`, `SLOW_SCAN`), or
-     * the PREVIOUS scan, this interval's baseline, was too slow (`SLOW_BASELINE`).
+     * the PREVIOUS scan, this interval's baseline, was too slow (`SLOW_BASELINE`)
+     * or incomplete, leaving live threads without a baseline (`noBaseline`).
      */
     fun hasScanDiagnostics(report: IntervalReport): Boolean =
         report.readErrors > 0 || report.badStats > 0 || report.listFailed || isSlowScan(report.scanMs) ||
-            isSlowScan(report.prevScanMs)
+            isSlowScan(report.prevScanMs) || report.noBaseline > 0
 
     enum class Level { DEBUG, INFO, WARN }
 

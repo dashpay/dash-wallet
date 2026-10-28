@@ -90,7 +90,11 @@ import java.util.concurrent.atomic.AtomicBoolean
  *    etc., see [ThreadCpuStats.formatLine]) so a blind scan is visible.
  *  - **Stops promptly.** Returning to the foreground cancels the session; a
  *    scan in progress checks for cancellation before each thread and is
- *    discarded rather than logged.
+ *    discarded rather than logged, and a hot sample's details check before
+ *    the stack dump and before each thread's wchan/stack.
+ *  - **Not at launch.** A session waits one interval before its baseline, so
+ *    the `false` the monitor holds until the first activity starts doesn't
+ *    cost a normal foreground launch a /proc scan.
  *  - **Testnet/QA only.** Enabled for every flavor except `prod` (the same
  *    predicate as `Constants.IS_PROD_BUILD`, checked via [BuildConfig.FLAVOR]
  *    directly so starting it early in `Application.onCreate` does not force
@@ -156,6 +160,12 @@ object ThreadCpuSampler {
         var announced = false
         var samples = 0
         try {
+            // Grace before the baseline: AppForegroundMonitor starts out false and
+            // only turns true when the first activity starts, after
+            // Application.onCreate. On a normal foreground launch that cancels
+            // this session here, before any /proc scan; a real background period
+            // just takes its baseline one interval later.
+            delay(SAMPLE_INTERVAL_MS)
             val session = Session()
             // A failed baseline is retried each interval: foreground state won't
             // re-emit, so returning here would end sampling for this whole period.
@@ -189,7 +199,7 @@ object ThreadCpuSampler {
                 }
                 val skipped = session.scanSucceeded()
                 samples++
-                lastInfoMs = session.report(prev, curr, lastInfoMs, SAMPLE_INTERVAL_MS * (1 + skipped))
+                lastInfoMs = session.report(prev, curr, lastInfoMs, skipped)
                 prev = curr
             }
         } finally {
@@ -305,12 +315,15 @@ object ThreadCpuSampler {
         }
 
         /**
-         * Logs one interval; returns the updated last-INFO time. [expectedWallMs]
-         * is the span the interval should have (longer after failed scans).
+         * Logs one interval; returns the updated last-INFO time. [failedScans]
+         * is how many scans failed since [prev] (the interval spans that many
+         * more sleeps). Suspends only to stop a hot sample's details on
+         * cancellation, so a stale dump never follows a return to the foreground.
          */
-        fun report(prev: Snapshot, curr: Snapshot, lastInfoMs: Long?, expectedWallMs: Long): Long? {
+        suspend fun report(prev: Snapshot, curr: Snapshot, lastInfoMs: Long?, failedScans: Int): Long? {
             return try {
                 val report = ThreadCpuStats.diff(prev, curr)
+                val expectedWallMs = ThreadCpuStats.expectedWallMs(report, SAMPLE_INTERVAL_MS, failedScans)
                 val now = curr.elapsedRealtimeMs
                 val level =
                     ThreadCpuStats.levelFor(report, clkTck, now, lastInfoMs, IDLE_INFO_INTERVAL_MS, expectedWallMs)
@@ -346,7 +359,9 @@ object ThreadCpuSampler {
             }
         }
 
-        private fun logHotDetails(hot: List<ThreadCpuStats.ThreadDelta>, wallMs: Long) {
+        private suspend fun logHotDetails(hot: List<ThreadCpuStats.ThreadDelta>, wallMs: Long) {
+            val ctx = currentCoroutineContext()
+            ctx.ensureActive()
             // Set when the stacks couldn't be taken: then every thread would read
             // as unmatched, so the line says the stacks failed instead.
             var stacksError: Throwable? = null
@@ -357,6 +372,7 @@ object ThreadCpuSampler {
                 emptyMap()
             }
             for (t in hot) {
+                ctx.ensureActive()
                 val pct = ThreadCpuStats.cpuPercent(t.deltaTicks, clkTck, wallMs)
                 val wchan = readFile("/proc/self/task/${t.tid}/wchan")?.trim()
                     ?.takeIf { it.isNotEmpty() && it != "0" } ?: "?"
