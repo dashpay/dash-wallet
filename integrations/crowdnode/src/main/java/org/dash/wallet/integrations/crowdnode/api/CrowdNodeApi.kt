@@ -599,23 +599,21 @@ class CrowdNodeApiAggregator @Inject constructor(
     private enum class SignUpScanResult { Restored, Unconfirmed, NotFound }
 
     /**
-     * Scans every wallet transaction for a CrowdNode sign up. When none is found, the wallet's
-     * transaction count is cached and the scan is skipped until it changes: a wallet that never
-     * signed up would otherwise rescan its whole history each time the status is restored.
+     * Scans every wallet transaction for a CrowdNode sign up. When none is found, the fingerprint of
+     * the scanned transaction set is cached and the scan is skipped while the wallet's fingerprint
+     * still matches: a wallet that never signed up would otherwise rescan its whole history each
+     * time the status is restored. The fingerprint identifies the set of transactions itself, so a
+     * replaced or recovered wallet, or new transactions, change it and trigger a rescan.
      * A possible sign up that CrowdNode didn't confirm isn't cached, so it is checked again.
-     * The cache is only an optimization: failing to write it just means the next restore rescans,
-     * and it is ignored while a wallet replacement's clear of it is pending (each restore retries it).
+     * The cache is only an optimization: failing to write it just means the next restore rescans.
      */
     private suspend fun tryRestoreSignUp(): Boolean {
-        val walletGeneration = config.walletGeneration
-        val txCount = walletDataProvider.transactionCount()
+        // Captured before the scan: a transaction arriving during it changes the fingerprint,
+        // so the next restore rescans instead of trusting a result that didn't cover it.
+        val fingerprint = walletDataProvider.transactionSetFingerprint()
 
-        if (config.isNoSignUpScanClearPending) {
-            // Scan regardless: the cache is either gone now or still the old wallet's
-            config.retryPendingNoSignUpScanClear()
-            log.info("the wallet was replaced and the no-sign-up scan cache isn't cleared yet, ignoring it")
-        } else if (config.get(CrowdNodeConfig.NO_SIGN_UP_SCAN_TX_COUNT) == txCount) {
-            log.info("no CrowdNode sign up found in the last scan of $txCount transactions, skipping the scan")
+        if (fingerprint.isNotEmpty() && config.get(CrowdNodeConfig.NO_SIGN_UP_SCAN_FINGERPRINT) == fingerprint) {
+            log.info("no CrowdNode sign up found in the last scan of this transaction set, skipping the scan")
             return false
         }
 
@@ -623,26 +621,19 @@ class CrowdNodeApiAggregator @Inject constructor(
             SignUpScanResult.Restored -> true
             SignUpScanResult.Unconfirmed -> false
             SignUpScanResult.NotFound -> {
-                cacheNoSignUpScan(txCount, walletGeneration)
+                cacheNoSignUpScan(fingerprint)
                 false
             }
         }
     }
 
-    private suspend fun cacheNoSignUpScan(txCount: Int, walletGeneration: Int) {
-        if (config.walletGeneration != walletGeneration) {
-            log.info("wallet was replaced during the CrowdNode sign up scan, not caching the result")
+    private suspend fun cacheNoSignUpScan(fingerprint: String) {
+        if (fingerprint.isEmpty()) {
             return
         }
 
         try {
-            config.set(CrowdNodeConfig.NO_SIGN_UP_SCAN_TX_COUNT, txCount)
-
-            // A replacement between the check above and this write may have cleared the cache
-            // before the write landed, so undo it. Any later replacement clears it itself.
-            if (config.walletGeneration != walletGeneration) {
-                config.remove(CrowdNodeConfig.NO_SIGN_UP_SCAN_TX_COUNT)
-            }
+            config.set(CrowdNodeConfig.NO_SIGN_UP_SCAN_FINGERPRINT, fingerprint)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {

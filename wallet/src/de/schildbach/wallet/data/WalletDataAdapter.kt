@@ -159,7 +159,7 @@ class WalletDataAdapter @Inject constructor(
         }
     }
 
-    override fun transactionCount(): Int = walletData.transactionCount()
+    override fun transactionSetFingerprint(): String = walletData.transactionSetFingerprint()
 
     override fun wrapAllTransactions(vararg wrappers: TransactionWrapperFactory): Collection<TransactionWrapper> {
         return walletData.wrapAllTransactions(*wrappers)

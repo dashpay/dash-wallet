@@ -88,8 +88,14 @@ interface WalletDataProvider {
 
     fun getTransactions(vararg filters: TransactionFilter): Collection<TxInfo>
 
-    /** The number of wallet transactions, including dead ones, i.e. those [wrapAllTransactions] goes over. */
-    fun transactionCount(): Int
+    /**
+     * A fingerprint of the set of wallet transaction ids, dead ones included, i.e. the transactions
+     * [wrapAllTransactions] goes over. Equal fingerprints mean the same set of transactions (whatever
+     * their order, and across wallet objects and restarts), so a result computed over that set is still
+     * valid; any added, removed or different transaction changes it. Empty when there is no wallet,
+     * which never equals the fingerprint of a real wallet.
+     */
+    fun transactionSetFingerprint(): String
 
     fun wrapAllTransactions(vararg wrappers: TransactionWrapperFactory): Collection<TransactionWrapper>
 

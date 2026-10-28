@@ -1219,7 +1219,7 @@ class SecurityGuardMultiThreadingTest {
                             TODO("Not yet implemented")
                         }
 
-                        override fun transactionCount(): Int {
+                        override fun transactionSetFingerprint(): String {
                             TODO("Not yet implemented")
                         }
 

@@ -87,6 +87,7 @@ import org.conscrypt.Conscrypt;
 import org.dash.wallet.common.AutoLogoutTimerHandler;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.InteractionAwareActivity;
+import de.schildbach.wallet.data.TransactionSetFingerprint;
 import de.schildbach.wallet.data.WalletData;
 import org.dash.wallet.common.data.OnboardingState;
 import org.dash.wallet.common.data.WalletUIConfig;
@@ -1121,10 +1122,6 @@ public class WalletApplication extends MultiDexApplication
         // what the previous wallet file held durably is not in this one.
         reportWalletChangedToContactPayments();
         walletStateFlow.setValue(newWallet);
-        // Configs survive a replacement that isn't a wipe (e.g. restoring from
-        // the recovery phrase); CrowdNode's no-sign-up scan cache describes the
-        // previous wallet's transactions, so drop it.
-        crowdNodeConfig.onWalletReplaced();
         // TODO: move to a wallet creation class
         if (!wallet.hasKeyChain(Constants.BIP44_PATH)) {
             wallet.addKeyChain(Constants.BIP44_PATH);
@@ -3613,9 +3610,10 @@ public class WalletApplication extends MultiDexApplication
     }
 
     @Override
-    public int transactionCount() {
+    @NonNull
+    public String transactionSetFingerprint() {
         awaitDeferredWalletLoad();
-        return wallet != null ? wallet.getTransactionCount(true) : 0;
+        return TransactionSetFingerprint.of(wallet);
     }
 
     @NonNull

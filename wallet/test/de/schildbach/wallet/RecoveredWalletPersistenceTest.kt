@@ -1135,7 +1135,6 @@ class RecoveredWalletPersistenceTest {
     private fun setupCapableApp(): WalletApplication {
         setField("config", mockk<org.dash.wallet.common.Configuration>(relaxed = true))
         setField("cutoverCoordinator", mockk<CutoverCoordinator>(relaxed = true))
-        setField("crowdNodeConfig", mockk<org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig>(relaxed = true))
         val setupApp = backupWritingApp()
         every { setupApp.finalizeInitialization() } returns Unit
         return setupApp
