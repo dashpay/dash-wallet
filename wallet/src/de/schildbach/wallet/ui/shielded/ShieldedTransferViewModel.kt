@@ -295,19 +295,22 @@ data class ShieldedTransferUIState(
 
     /**
      * True when the entered amount is exactly the transferable balance — the "spend
-     * everything" intent [onConfirm] gives a fee-adjusted retry. In fiat mode this compares
-     * the parsed FIAT values rather than re-deriving [amount] back to Dash: the dashj
-     * `ExchangeRate` math behind [toFiatAt]/[toDashAt] truncates on both legs, so round-tripping
-     * a non-round balance through Dash→fiat→Dash can land a duff short of [availableBalance]
-     * even though [amountText] itself ([onMaxClick]) is an exact, lossless fiat string — a
-     * single forward Dash→fiat conversion on each side has no such round trip to lose a duff to.
+     * everything" intent [onConfirm] gives a fee-adjusted retry. In fiat mode this ALSO
+     * recognizes an exact match of the parsed FIAT values, not just [amount] == [availableBalance]:
+     * the dashj `ExchangeRate` math behind [toFiatAt]/[toDashAt] truncates on both legs, so
+     * round-tripping a non-round balance through Dash→fiat→Dash (what [onMaxClick] produces, via
+     * the exact [Fiat.toKeypadString]) can land a duff short of [availableBalance] even though no
+     * precision was lost converting TO fiat. The plain Dash comparison still has to stay as an
+     * alternative, not a replacement: a manually typed fiat amount can independently truncate down
+     * to exactly [availableBalance] in Dash (fiatToCoin's own truncation) while its OWN fiat value
+     * differs from the balance's rounded fiat value — the fiat comparison alone misses that case.
      */
     val isMaxSpend: Boolean
-        get() = if (dashMode) {
-            amount == availableBalance
-        } else {
+        get() {
+            if (amount == availableBalance) return true
+            if (dashMode) return false
             val typedFiat = parseDecimalOrNull(amountText)?.toFiat(fiatCode)
-            typedFiat != null && typedFiat == availableBalance.toFiatAt(rate)
+            return typedFiat != null && typedFiat == availableBalance.toFiatAt(rate)
         }
 
     /**
