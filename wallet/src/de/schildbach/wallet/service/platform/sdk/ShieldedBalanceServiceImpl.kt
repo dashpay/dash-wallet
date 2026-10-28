@@ -1332,8 +1332,28 @@ class ShieldedBalanceServiceImpl internal constructor(
             return false
         }
         if (!retryFailedNativeStopLocked(generation)) return false
+        // The retry suspends in the native stop (up to the SDK's quiesce
+        // budget), long enough for a stop() to time out on the lock and tear
+        // the Kotlin side down (pre-review, 2026-10-27). Whether the retry
+        // succeeded or not, nothing is left running for this pass to own:
+        // a success cleared the stale ownership, and a failure returned above
+        // with it retained for the next stop/bring-up (and for the owed-stop
+        // drain on release, which stops only owners older than the debt). So
+        // declining here needs no cleanup — but going on would enter the
+        // native bind, which can park indefinitely (plan §37.2), after the
+        // teardown it was abandoned by.
+        if (superseded()) {
+            log.info("shielded bring-up abandoned after retrying the failed stop: a stop() arrived meanwhile")
+            return false
+        }
 
         source.configureShielded(shieldedDbPath())
+        // configureShielded() suspends in a native call too; the bind after
+        // it is the step that can park, so the fence runs before it.
+        if (superseded()) {
+            log.info("shielded bring-up abandoned before the bind: a stop() arrived during the native configure")
+            return false
+        }
         source.bindShielded(walletId, listOf(DEFAULT_SHIELDED_ACCOUNT))
         if (superseded()) {
             log.warn(

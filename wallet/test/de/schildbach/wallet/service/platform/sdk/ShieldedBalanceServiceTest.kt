@@ -1072,6 +1072,54 @@ class ShieldedBalanceServiceTest {
         assertEquals(0, source.startsWhileLatched)
     }
 
+    /**
+     * Pre-review, 2026-10-27: the bring-up's retry of a failed native stop
+     * suspends (up to the SDK's quiesce budget). A stop() that times out on the
+     * lock meanwhile tears the Kotlin side down; when the retry then SUCCEEDS,
+     * the abandoned bring-up used to go on into configure and the native bind —
+     * which can park indefinitely (plan §37.2) — after that teardown. It must
+     * re-check for a stop right after the retry and decline without touching
+     * the SDK again; the next trigger then brings up normally.
+     */
+    @Test
+    fun bringUp_supersededDuringTheStopRetry_declinesBeforeTheBind_andTheNextTriggerRecovers() = runBlocking {
+        val retryGate = CompletableDeferred<Unit>()
+        var stops = 0
+        val source = readySource().apply {
+            stopTimeoutsRemaining = 1
+            onStopSuspend = { if (++stops == 2) retryGate.await() }
+        }
+        val service = service(source, stopLockTimeoutMs = 200)
+        assertTrue(service.ensureShieldedReady())
+        service.stop() // fails in the quiesce: the stale ownership stays
+        assertTrue(source.quiesceLatched)
+
+        // The next bring-up retries that stop and is parked inside it.
+        val bringUp = async(Dispatchers.Default) { service.ensureShieldedReady() }
+        withTimeout(5_000) { while (source.stopCalls < 2) delay(10) }
+        assertTrue("the bring-up is parked inside the stop retry", bringUp.isActive)
+
+        val startedNs = System.nanoTime()
+        withTimeout(5_000) { service.stop() }
+        val elapsedMs = (System.nanoTime() - startedNs) / 1_000_000
+        assertTrue("stop() returned in ${elapsedMs}ms, within its bound", elapsedMs < 4_000)
+        assertEquals("the fallback cannot reach the loop", 2, source.stopCalls)
+        assertEquals(ShieldedSyncStatus.NOT_READY, service.shieldedSyncStatus.value)
+        source.events.clear()
+
+        retryGate.complete(Unit) // the retry succeeds into a superseded bring-up
+        assertFalse("superseded: not ready", bringUp.await())
+        assertEquals("no configure, bind, start or extra stop after the retry", emptyList<String>(), source.events)
+        assertFalse("the retry cleared the latch", source.quiesceLatched)
+        assertEquals(ShieldedSyncStatus.NOT_READY, service.shieldedSyncStatus.value)
+
+        assertTrue("the next trigger brings up normally", service.ensureShieldedReady())
+        assertEquals("…without stopping anything again", 2, source.stopCalls)
+        assertEquals(2, source.bindCalls)
+        assertEquals(2, source.startCalls)
+        assertEquals(0, source.startsWhileLatched)
+    }
+
     /** Regression: after a stop that succeeded, the next bring-up issues no extra native stop. */
     @Test
     fun bringUp_afterASuccessfulStop_issuesNoExtraNativeStop() = runBlocking {
