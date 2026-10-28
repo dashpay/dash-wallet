@@ -67,6 +67,7 @@ open class CrowdNodeConfig @Inject constructor(
 
     private val configScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val walletReplacements = AtomicInteger()
+    private val pendingScanCacheClears = AtomicInteger()
 
     /**
      * Bumped by [onWalletReplaced]. A [NO_SIGN_UP_SCAN_TX_COUNT] scan captures it before it starts
@@ -77,16 +78,27 @@ open class CrowdNodeConfig @Inject constructor(
         get() = walletReplacements.get()
 
     /**
+     * True from [onWalletReplaced] until its removal of [NO_SIGN_UP_SCAN_TX_COUNT] lands, so a reader
+     * doesn't trust the old wallet's count in the meantime. Counts outstanding removals, so an older
+     * one finishing doesn't clear it for a newer replacement. A failed removal leaves it set for the
+     * rest of the process: the cache is then simply not trusted.
+     */
+    open val isNoSignUpScanClearPending: Boolean
+        get() = pendingScanCacheClears.get() > 0
+
+    /**
      * Forgets [NO_SIGN_UP_SCAN_TX_COUNT] when a created or restored wallet replaces the current one
      * without a wipe: the cached count describes the old wallet's transactions, and a replacement
      * with the same count would otherwise skip the sign-up scan. Fire-and-forget, so it is safe to
-     * call from the main thread.
+     * call from the main thread; [isNoSignUpScanClearPending] covers the window until it lands.
      */
     fun onWalletReplaced() {
         walletReplacements.incrementAndGet()
+        pendingScanCacheClears.incrementAndGet()
         configScope.launch {
             try {
                 remove(NO_SIGN_UP_SCAN_TX_COUNT)
+                pendingScanCacheClears.decrementAndGet()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

@@ -214,6 +214,29 @@ class CrowdNodeApiAggregatorTest {
     }
 
     @Test
+    fun restoreStatus_cacheClearPending_rescans() {
+        runBlocking {
+            localConfig.stub {
+                onBlocking { get(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS) } doReturn OnlineAccountStatus.None.ordinal
+                // The old wallet's count, not yet removed after a wallet replacement
+                onBlocking { get(CrowdNodeConfig.NO_SIGN_UP_SCAN_TX_COUNT) } doReturn 33307
+                on { isNoSignUpScanClearPending } doReturn true
+            }
+            walletData.stub {
+                on { transactionCount() } doReturn 33307
+            }
+            val api = CrowdNodeApiAggregator(
+                webApi, blockchainApi, walletData, mock(), mock(),
+                localConfig, globalConfig, mock(), mock(), mock()
+            )
+            api.restoreStatus()
+
+            assertEquals(SignUpStatus.NotStarted, api.signUpStatus.value)
+            verify(blockchainApi).getFullSignUpTxSet()
+        }
+    }
+
+    @Test
     fun restoreStatus_transactionCountChanged_rescans() {
         runBlocking {
             localConfig.stub {
