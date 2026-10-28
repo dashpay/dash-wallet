@@ -97,7 +97,7 @@ class ConnectionsFragment : Fragment() {
                         onConnectionToggle = { connection, enabled ->
                             // The switch is only ON for active connections; moving it OFF disconnects
                             // directly (no confirmation dialog — the toggle itself is the action).
-                            if (!enabled) {
+                            if (!enabled && viewModel.isWalletUnlocked && viewModel.canUseConnections) {
                                 viewModel.disconnect(connection)
                             }
                         }
