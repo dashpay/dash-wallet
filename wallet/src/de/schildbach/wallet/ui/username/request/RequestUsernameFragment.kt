@@ -17,9 +17,11 @@ import com.google.android.material.textfield.TextInputLayout
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import org.dash.wallet.common.services.AuthenticationManager
+import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet.database.entity.UsernameRequest
+import de.schildbach.wallet.service.platform.sdk.SdkTransparentUsernameCreation
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.username.CreateUsernameActions
 import de.schildbach.wallet.ui.username.UsernameType
@@ -70,16 +72,7 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
         
         // Get username type from arguments if provided. Consider error states
         usernameType = if (dashPayViewModel.createUsernameArgs?.actions == CreateUsernameActions.REUSE_TRANSACTION) {
-            val identityData = requestUserNameViewModel.identity
-            if (identityData != null && identityData.creationError) {
-                when {
-                    identityData.usernameSecondary != null && identityData.creationState == IdentityCreationState.USERNAME_REGISTERING -> UsernameType.Secondary
-                    identityData.creationState == IdentityCreationState.USERNAME_REGISTERING -> UsernameType.Primary
-                    else -> args.usernameType
-                }
-            } else {
-                args.usernameType
-            }
+            reuseUsernameType(requestUserNameViewModel.identity, args.usernameType)
         } else {
             args.usernameType
         }
@@ -741,4 +734,21 @@ internal fun Fragment.finishUsernameCreationToCompletionRoute(
         startActivity(MainActivity.createIntent(requireContext(), R.id.walletFragment))
     }
     requireActivity().finish()
+}
+
+/**
+ * Which name a REUSE_TRANSACTION entry asks for, given the record it reuses. A failed name-only
+ * retry ([SdkTransparentUsernameCreation.NAME_ONLY_RETRY_ERROR]) always replaces the primary, even
+ * when the identity keeps a registered secondary: it is checked before the older heuristic, which
+ * reads "a secondary at USERNAME_REGISTERING with an error" as a failed secondary.
+ */
+internal fun reuseUsernameType(identityData: BlockchainIdentityData?, fallback: UsernameType): UsernameType {
+    if (identityData == null || !identityData.creationError) return fallback
+    return when {
+        SdkTransparentUsernameCreation.isNameOnlyRetryError(identityData.creationStateErrorMessage) -> UsernameType.Primary
+        identityData.usernameSecondary != null &&
+            identityData.creationState == IdentityCreationState.USERNAME_REGISTERING -> UsernameType.Secondary
+        identityData.creationState == IdentityCreationState.USERNAME_REGISTERING -> UsernameType.Primary
+        else -> fallback
+    }
 }

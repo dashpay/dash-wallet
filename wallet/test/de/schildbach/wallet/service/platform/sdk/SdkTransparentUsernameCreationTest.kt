@@ -22,8 +22,11 @@ import de.schildbach.wallet.database.entity.IdentityCreationState
 import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.coVerifyOrder
 import io.mockk.just
+import io.mockk.every
 import io.mockk.mockk
+import io.mockk.spyk
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -31,6 +34,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
@@ -651,95 +655,569 @@ class SdkTransparentUsernameCreationTest {
         coVerify(exactly = 0) { source.registerWithWalletFunding(any(), any(), any(), any(), any()) }
     }
 
-    // ── name-only retry for an existing identity (review 4299080469) ─────
+    // ── name-only retry for an existing identity ─────────────────────────
 
-    @Test
-    fun `a name-only retry keeps the existing identity and never funds a new one`() = runTest {
-        // The identity is registered on chain; only its name step failed. Retrying with a new name
-        // must re-drive ONLY the DPNS step for THAT identity: no reset to NONE, no asset lock.
-        val source = source(lockAfterFailure = null)
-        val nameContexts = mutableListOf<List<Any?>>()
-        val handedOff = mutableListOf<String>()
+    private class RetryRun {
+        var accepted = false
         val states = mutableListOf<Pair<IdentityCreationState, String?>>()
-        val retry = SdkTransparentUsernameCreation(
+        val handedOff = mutableListOf<String>()
+        val nameContexts = mutableListOf<List<Any?>>()
+        val uncaught = mutableListOf<Throwable>()
+    }
+
+    /**
+     * A name-only retry for the existing identity, run on an app-like scope (no exception handler
+     * of its own: anything escaping is collected in [RetryRun.uncaught]).
+     */
+    private suspend fun TestScope.retry(
+        source: TransparentUsernameSource,
+        username: String,
+        secondary: String?,
+        nameAlreadyTaken: suspend (String, String) -> Boolean = { _, _ -> false },
+        persistNameContext: (suspend (String, String, String?, Boolean) -> Unit)? = null,
+        handOffToLegacy: ((String) -> Unit)? = null,
+        run: RetryRun = RetryRun()
+    ): RetryRun {
+        val appScope = CoroutineScope(
+            kotlinx.coroutines.SupervisorJob() +
+                kotlinx.coroutines.test.StandardTestDispatcher(testScheduler) +
+                kotlinx.coroutines.CoroutineExceptionHandler { _, e -> run.uncaught += e }
+        )
+        val creation = SdkTransparentUsernameCreation(
             source = source,
             cutoverCommitted = { true },
             feeDuffs = { feeDuffs },
-            handOffToLegacy = { handedOff += it },
-            driveCreationState = { state, error -> states += state to error },
-            persistNameContext = { id, name, secondary, restoring -> nameContexts += listOf(id, name, secondary, restoring) },
-            executorScope = this,
+            handOffToLegacy = handOffToLegacy ?: { run.handedOff += it },
+            driveCreationState = { state, error -> run.states += state to error },
+            persistNameContext = persistNameContext ?: { id, name, second, restoring ->
+                run.nameContexts += listOf(id, name, second, restoring)
+            },
+            executorScope = appScope,
+            nameAlreadyTaken = nameAlreadyTaken,
             fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
-        )
-
-        assertTrue("accepted", retry.retryNameForExistingIdentity(identityIdBase58, "alice3", "alice3x"))
+        ).also { it.ioDispatcher = kotlinx.coroutines.test.StandardTestDispatcher(testScheduler) }
+        run.accepted = creation.retryNameForExistingIdentity(identityIdBase58, username, secondary)
         advanceUntilIdle()
+        return run
+    }
 
-        assertEquals(listOf(listOf(identityIdBase58, "alice3", "alice3x", true)), nameContexts)
-        assertEquals("the name step, error cleared", listOf(IdentityCreationState.USERNAME_REGISTERING to null), states)
-        assertEquals("the same identity goes to the name-only recovery", listOf(identityIdBase58), handedOff)
+    private fun neverFunded(source: TransparentUsernameSource) {
         coVerify(exactly = 0) { source.registerWithWalletFunding(any(), any(), any(), any(), any()) }
         coVerify(exactly = 0) { source.resumeRegistrationFromAssetLock(any(), any(), any(), any()) }
         coVerify(exactly = 0) { source.previewRegistrationKeySet(any(), any(), any()) }
     }
 
-    // ── failures inside the application-scoped name retry (review 4302041841) ──
+    @Test
+    fun `a name-only retry registers the replacement primary for the existing identity`() = runTest {
+        // the identity owns a registered secondary; the lost name is replaced by "alice3", which
+        // becomes the primary while the secondary stays as it is (no secondary in this request)
+        val source = source(lockAfterFailure = null)
+        coEvery { source.registerDpnsName(walletIdHex, identityId, "alice3") } returns "alice3.dash"
 
-    /** Runs [retry] on an app-like scope and returns whatever escaped it uncaught. */
-    private fun TestScope.uncaughtFrom(
-        persistNameContext: suspend (String, String, String?, Boolean) -> Unit = { _, _, _, _ -> },
-        handOffToLegacy: (String) -> Unit = {},
-        states: MutableList<Pair<IdentityCreationState, String?>>
-    ): List<Throwable> {
-        val uncaught = mutableListOf<Throwable>()
-        val appScope = CoroutineScope(
-            kotlinx.coroutines.SupervisorJob() +
-                kotlinx.coroutines.test.StandardTestDispatcher(testScheduler) +
-                kotlinx.coroutines.CoroutineExceptionHandler { _, e -> uncaught += e }
+        val run = retry(source, "alice3", null)
+
+        assertTrue("nothing escapes: ${run.uncaught}", run.uncaught.isEmpty())
+        coVerify(exactly = 1) { source.registerDpnsName(walletIdHex, identityId, "alice3") }
+        assertEquals(
+            "registered like the create path's primary, then DONE for a non-contested name",
+            listOf(
+                IdentityCreationState.PREORDER_REGISTERING,
+                IdentityCreationState.USERNAME_REGISTERING,
+                IdentityCreationState.USERNAME_REGISTERED,
+                IdentityCreationState.DONE
+            ),
+            run.states.map { it.first }
         )
-        val retry = SdkTransparentUsernameCreation(
-            source = source(lockAfterFailure = null),
+        assertTrue("no error left behind: ${run.states}", run.states.all { it.second == null })
+        assertEquals("the record's secondary is left alone", listOf(identityIdBase58, "alice3", null, false), run.nameContexts.first())
+        assertEquals("handed to recovery, like the create path", listOf(identityIdBase58), run.handedOff)
+        neverFunded(source)
+    }
+
+    @Test
+    fun `a newly requested secondary is registered once the replacement primary is confirmed`() = runTest {
+        val source = source(lockAfterFailure = null)
+        coEvery { source.registerDpnsName(walletIdHex, identityId, "alice3") } returns "alice3.dash"
+        coEvery { source.registerDpnsName(walletIdHex, identityId, "alice4") } returns "alice4.dash"
+
+        val run = retry(source, "alice3", "alice4")
+
+        coVerifyOrder {
+            source.registerDpnsName(walletIdHex, identityId, "alice3")
+            source.registerDpnsName(walletIdHex, identityId, "alice4")
+        }
+        assertTrue(
+            "the secondary's own states: ${run.states}",
+            run.states.map { it.first }.containsAll(
+                listOf(
+                    IdentityCreationState.PREORDER_SECONDARY_REGISTERING,
+                    IdentityCreationState.USERNAME_SECONDARY_REGISTERING,
+                    IdentityCreationState.USERNAME_SECONDARY_REGISTERED
+                )
+            )
+        )
+        assertEquals(listOf(identityIdBase58), run.handedOff)
+        neverFunded(source)
+    }
+
+    @Test
+    fun `a label the identity already owns is not submitted again`() = runTest {
+        // an earlier Ambiguous attempt landed: the name is on chain already
+        val source = source(lockAfterFailure = null)
+
+        val run = retry(source, "alice3", null, nameAlreadyTaken = { _, label -> label == "alice3" })
+
+        coVerify(exactly = 0) { source.registerDpnsName(any(), any(), "alice3") }
+        assertEquals(IdentityCreationState.DONE, run.states.last().first)
+        assertEquals(listOf(identityIdBase58), run.handedOff)
+    }
+
+    @Test
+    fun `an unreadable owned-names lookup refuses the retry before accepting it, touching nothing`() = runTest {
+        // fail closed, and synchronously: the screen shows its error; the record is not touched,
+        // so no stamped error can send a later "Try again" down the legacy path
+        val source = source(lockAfterFailure = null)
+
+        val run = retry(
+            source,
+            "alice3",
+            null,
+            nameAlreadyTaken = { _, _ -> throw java.io.IOException("DAPI unreachable") }
+        )
+
+        assertFalse("refused", run.accepted)
+        assertTrue("nothing escapes: ${run.uncaught}", run.uncaught.isEmpty())
+        assertTrue("no state touched: ${run.states}", run.states.isEmpty())
+        assertTrue("no name context written: ${run.nameContexts}", run.nameContexts.isEmpty())
+        coVerify(exactly = 0) { source.registerDpnsName(any(), any(), any()) }
+        neverFunded(source)
+    }
+
+    @Test
+    fun `the wallet-id read and the name-ownership checks run on the io dispatcher, not the caller's`() = runTest {
+        // the caller is a viewModelScope (Main): the SDK cold start and the platform queries
+        // must not run there
+        val source = source(lockAfterFailure = null)
+        coEvery { source.registerDpnsName(walletIdHex, identityId, any()) } returns "alice3.dash"
+        val io = java.util.concurrent.Executors.newSingleThreadExecutor { Thread(it, "test-io") }
+        val ioDispatcher = io.asCoroutineDispatcher()
+        val checkedOn = mutableListOf<String>()
+        val walletIdReadOn = mutableListOf<String>()
+        coEvery { source.boundWalletIdOrNull() } answers {
+            synchronized(walletIdReadOn) { walletIdReadOn += Thread.currentThread().name }
+            walletIdHex
+        }
+        val appScope = CoroutineScope(
+            kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.test.StandardTestDispatcher(testScheduler)
+        )
+        val creation = SdkTransparentUsernameCreation(
+            source = source,
             cutoverCommitted = { true },
             feeDuffs = { feeDuffs },
-            handOffToLegacy = handOffToLegacy,
-            driveCreationState = { state, error -> states += state to error },
-            persistNameContext = persistNameContext,
+            handOffToLegacy = {},
+            driveCreationState = { _, _ -> },
+            persistNameContext = { _, _, _, _ -> },
+            executorScope = appScope,
+            nameAlreadyTaken = { _, _ ->
+                synchronized(checkedOn) { checkedOn += Thread.currentThread().name }
+                false
+            },
+            fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
+        ).also { it.ioDispatcher = ioDispatcher }
+
+        try {
+            assertTrue(creation.retryNameForExistingIdentity(identityIdBase58, "alice3", "alice4"))
+            assertEquals(listOf("test-io", "test-io"), synchronized(checkedOn) { checkedOn.toList() })
+            // the launched retry may read it again on its own scope; the pre-accept read is first
+            assertEquals("test-io", synchronized(walletIdReadOn) { walletIdReadOn.firstOrNull() })
+        } finally {
+            appScope.cancel()
+            io.shutdown()
+        }
+    }
+
+    @Test
+    fun `a second retry, or a creation, while a name-only retry runs is refused`() = runTest {
+        // B2: a double tap must not register the same label twice (a contested prefund twice)
+        val source = source(lockAfterFailure = null)
+        coEvery { source.registerDpnsName(walletIdHex, identityId, "alice3") } returns "alice3.dash"
+        val gate = CompletableDeferred<Unit>()
+        val appScope = CoroutineScope(
+            kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.test.StandardTestDispatcher(testScheduler)
+        )
+        val creation = SdkTransparentUsernameCreation(
+            source = source,
+            cutoverCommitted = { true },
+            feeDuffs = { feeDuffs },
+            handOffToLegacy = {},
+            driveCreationState = { _, _ -> },
+            // the first run is still writing its name context
+            persistNameContext = { _, _, _, _ -> gate.await() },
             executorScope = appScope,
             fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
-        )
-        assertTrue("accepted", retry.retryNameForExistingIdentity(identityIdBase58, "alice3", null))
+        ).also { it.ioDispatcher = kotlinx.coroutines.test.StandardTestDispatcher(testScheduler) }
+
+        assertTrue("the first retry is accepted", creation.retryNameForExistingIdentity(identityIdBase58, "alice3", null))
         advanceUntilIdle()
-        return uncaught
+        assertFalse("a second retry is refused", creation.retryNameForExistingIdentity(identityIdBase58, "alice3", null))
+        assertFalse("a creation is refused", creation.submit("bob5"))
+
+        gate.complete(Unit)
+        advanceUntilIdle()
+        coVerify(exactly = 1) { source.registerDpnsName(walletIdHex, identityId, "alice3") }
+        assertTrue(
+            "free again once the run is over",
+            creation.retryNameForExistingIdentity(identityIdBase58, "alice3", null)
+        )
+        appScope.cancel()
+    }
+
+    /** A fence a wipe raises inside [WalletSecretWriteFence.track] (before or after the real call). */
+    private fun fenceRaisedOnTrack(afterTrack: Boolean, armed: () -> Boolean): WalletSecretWriteFence {
+        val fence = spyk(WalletSecretWriteFence())
+        every { fence.track(any()) } answers {
+            if (armed() && !afterTrack) fence.raise()
+            callOriginal()
+            if (armed() && afterTrack) fence.raise()
+        }
+        return fence
     }
 
     @Test
-    fun `a failed name-context write records a retryable error instead of crashing`() = runTest {
-        val states = mutableListOf<Pair<IdentityCreationState, String?>>()
+    fun `a wipe raising the fence while the name-only retry is tracked refuses it and frees the slot`() = runTest {
+        for (afterTrack in listOf(false, true)) {
+            val source = source(lockAfterFailure = null)
+            coEvery { source.registerDpnsName(walletIdHex, identityId, "alice3") } returns "alice3.dash"
+            var armed = true
+            val fence = fenceRaisedOnTrack(afterTrack) { armed }
+            val appScope = CoroutineScope(
+                kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.test.StandardTestDispatcher(testScheduler)
+            )
+            val persisted = mutableListOf<String>()
+            val creation = SdkTransparentUsernameCreation(
+                source = source,
+                cutoverCommitted = { true },
+                feeDuffs = { feeDuffs },
+                handOffToLegacy = {},
+                driveCreationState = { _, _ -> },
+                persistNameContext = { _, name, _, _ -> persisted += name },
+                executorScope = appScope,
+                secretWriteFence = fence,
+                fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
+            ).also { it.ioDispatcher = kotlinx.coroutines.test.StandardTestDispatcher(testScheduler) }
 
-        val uncaught = uncaughtFrom(
+            assertFalse(
+                "refused, not reported as started (afterTrack=$afterTrack)",
+                creation.retryNameForExistingIdentity(identityIdBase58, "alice3", null)
+            )
+            advanceUntilIdle()
+            assertTrue("the cancelled run never ran", persisted.isEmpty())
+            coVerify(exactly = 0) { source.registerDpnsName(any(), any(), any()) }
+
+            // the single-flight slot is free: once the wipe completes, the next retry is accepted
+            armed = false
+            fence.lower()
+            assertTrue(
+                "slot released (afterTrack=$afterTrack)",
+                creation.retryNameForExistingIdentity(identityIdBase58, "alice3", null)
+            )
+            advanceUntilIdle()
+            coVerify(exactly = 1) { source.registerDpnsName(walletIdHex, identityId, "alice3") }
+            appScope.cancel()
+        }
+    }
+
+    @Test
+    fun `a wipe raising the fence while a creation is tracked refuses it and frees the slot`() = runTest {
+        for (afterTrack in listOf(false, true)) {
+            var armed = true
+            val fence = fenceRaisedOnTrack(afterTrack) { armed }
+            val appScope = CoroutineScope(
+                kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.test.StandardTestDispatcher(testScheduler)
+            )
+            val creation = creation(source(lockAfterFailure = null), fence, executorScope = appScope)
+
+            assertFalse("refused, not reported as started (afterTrack=$afterTrack)", creation.submit(label))
+            assertEquals(ShieldedUsernameSubmitState.Idle, creation.submitState.value)
+
+            armed = false
+            fence.lower()
+            assertTrue("slot released (afterTrack=$afterTrack)", creation.submit(label))
+            appScope.cancel()
+        }
+    }
+
+    @Test
+    fun `a wipe between the track and the start refuses the name-only retry and frees the slot once`() = runTest {
+        val source = source(lockAfterFailure = null)
+        coEvery { source.registerDpnsName(walletIdHex, identityId, "alice3") } returns "alice3.dash"
+        val fence = WalletSecretWriteFence()
+        val appScope = CoroutineScope(
+            kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.test.StandardTestDispatcher(testScheduler)
+        )
+        val gate = CompletableDeferred<Unit>()
+        var persistCalls = 0
+        val creation = SdkTransparentUsernameCreation(
+            source = source,
+            cutoverCommitted = { true },
+            feeDuffs = { feeDuffs },
+            handOffToLegacy = {},
+            driveCreationState = { _, _ -> },
+            // the second (accepted) run holds the slot until the gate opens
+            persistNameContext = { _, _, _, _ ->
+                persistCalls++
+                gate.await()
+            },
+            executorScope = appScope,
+            secretWriteFence = fence,
+            fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
+        ).also { it.ioDispatcher = kotlinx.coroutines.test.StandardTestDispatcher(testScheduler) }
+        // the wipe starts after the job passed the fence check and before it is started
+        creation.beforeStartForTest = { runBlocking { assertTrue(fence.raiseAndQuiesce(1_000L)) } }
+
+        assertFalse("refused, not reported as started", creation.retryNameForExistingIdentity(identityIdBase58, "alice3", null))
+        advanceUntilIdle()
+        assertEquals("the cancelled run never ran", 0, persistCalls)
+
+        creation.beforeStartForTest = {}
+        fence.lower()
+        assertTrue("slot released", creation.retryNameForExistingIdentity(identityIdBase58, "alice3", null))
+        advanceUntilIdle()
+        assertFalse(
+            "the refused run's release did not free the running retry's slot",
+            creation.retryNameForExistingIdentity(identityIdBase58, "alice3", null)
+        )
+        assertFalse("nor a creation's", creation.submit(label))
+
+        gate.complete(Unit)
+        advanceUntilIdle()
+        coVerify(exactly = 1) { source.registerDpnsName(walletIdHex, identityId, "alice3") }
+        appScope.cancel()
+    }
+
+    @Test
+    fun `a wipe between the track and the start refuses a creation and frees the slot`() = runTest {
+        val fence = WalletSecretWriteFence()
+        val appScope = CoroutineScope(
+            kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.test.StandardTestDispatcher(testScheduler)
+        )
+        val source = source(lockAfterFailure = null)
+        val creation = creation(source, fence, executorScope = appScope)
+        creation.beforeStartForTest = { runBlocking { assertTrue(fence.raiseAndQuiesce(1_000L)) } }
+
+        assertFalse("refused, not reported as started", creation.submit(label))
+        advanceUntilIdle()
+        assertEquals(ShieldedUsernameSubmitState.Idle, creation.submitState.value)
+        neverFunded(source)
+
+        creation.beforeStartForTest = {}
+        fence.lower()
+        assertTrue("slot released", creation.submit(label))
+        appScope.cancel()
+    }
+
+    @Test
+    fun `a name that became the identity's after the preflight is not submitted`() = runTest {
+        // the preflight read it as free; by the time it is registered an earlier Ambiguous attempt
+        // has landed, so the re-check right before the submission skips it
+        val source = source(lockAfterFailure = null)
+        var reads = 0
+        val run = retry(source, "alice3", null, nameAlreadyTaken = { _, _ -> reads++ > 0 })
+
+        assertTrue(run.accepted)
+        assertEquals("the preflight and the re-check", 2, reads)
+        coVerify(exactly = 0) { source.registerDpnsName(any(), any(), any()) }
+        assertEquals(IdentityCreationState.DONE, run.states.last().first)
+        assertTrue("no error: ${run.states}", run.states.all { it.second == null })
+        assertEquals(listOf(identityIdBase58), run.handedOff)
+        neverFunded(source)
+    }
+
+    @Test
+    fun `an unreadable re-check fails closed without registering the name`() = runTest {
+        val source = source(lockAfterFailure = null)
+        var reads = 0
+        val run = retry(
+            source,
+            "alice3",
+            null,
+            nameAlreadyTaken = { _, _ -> if (reads++ == 0) false else throw java.io.IOException("DAPI unreachable") }
+        )
+
+        assertTrue("accepted on the preflight", run.accepted)
+        assertTrue("nothing escapes: ${run.uncaught}", run.uncaught.isEmpty())
+        coVerify(exactly = 0) { source.registerDpnsName(any(), any(), any()) }
+        val error = run.states.last().second
+        assertTrue("stamped for the name-only route: $error", SdkTransparentUsernameCreation.isNameOnlyRetryError(error))
+        assertTrue("nothing handed off", run.handedOff.isEmpty())
+        neverFunded(source)
+    }
+
+    @Test
+    fun `a failed replacement stays on the name-only route and a tile retry registers it`() = runTest {
+        // review 4301924854: the failure used to set restoring, which sent the tile retry and the
+        // background discovery into the restore worker; that dropped the replacement
+        val source = source(lockAfterFailure = null)
+        coEvery { source.registerDpnsName(walletIdHex, identityId, "alice3") } throws
+            DashSdkError.InvalidParameter("domain document rejected")
+
+        val failed = retry(source, "alice3", null)
+
+        assertTrue(failed.accepted)
+        assertTrue("never routed to the restore worker: ${failed.nameContexts}", failed.nameContexts.all { it[3] == false })
+        assertTrue("nothing handed off", failed.handedOff.isEmpty())
+        val error = failed.states.last().second
+        assertTrue("an error the tile sends back to the name-only retry: $error", SdkTransparentUsernameCreation.isNameOnlyRetryError(error))
+
+        // the tile's retry re-enters the name-only retry with the persisted labels
+        coEvery { source.registerDpnsName(walletIdHex, identityId, "alice3") } returns "alice3.dash"
+        val retried = retry(source, "alice3", null)
+
+        assertTrue(retried.accepted)
+        assertEquals(IdentityCreationState.DONE, retried.states.last().first)
+        assertEquals(listOf(identityIdBase58), retried.handedOff)
+        neverFunded(source)
+    }
+
+    @Test
+    fun `an ambiguous replacement is retried by the tile without being submitted again once it landed`() = runTest {
+        val source = source(lockAfterFailure = null)
+        coEvery { source.registerDpnsName(walletIdHex, identityId, "alice3") } throws RuntimeException("timeout")
+
+        val ambiguous = retry(source, "alice3", null)
+
+        assertTrue(
+            "the unknown outcome is stamped for the name-only route: ${ambiguous.states}",
+            SdkTransparentUsernameCreation.isNameOnlyRetryError(ambiguous.states.last().second)
+        )
+        assertTrue(ambiguous.nameContexts.all { it[3] == false })
+
+        // it had landed: the re-entry finds it owned and does not submit it again
+        val retried = retry(source, "alice3", null, nameAlreadyTaken = { _, label -> label == "alice3" })
+
+        coVerify(exactly = 1) { source.registerDpnsName(walletIdHex, identityId, "alice3") }
+        assertEquals(IdentityCreationState.DONE, retried.states.last().first)
+        assertEquals(listOf(identityIdBase58), retried.handedOff)
+    }
+
+    // ── per-identity DPNS lock ───────────────────────────────────────────
+
+    /** A source whose registerDpnsName blocks on [gate], then records the label as owned. */
+    private fun gatedSource(gate: CompletableDeferred<Unit>, owned: MutableSet<String>) =
+        source(lockAfterFailure = null).also { source ->
+            coEvery { source.identityCreditBalance(identityIdBase58) } returns null
+            coEvery { source.registerDpnsName(walletIdHex, identityId, any()) } coAnswers {
+                gate.await()
+                val name = thirdArg<String>()
+                owned += name
+                "$name.dash"
+            }
+        }
+
+    @Test
+    fun `two concurrent registrations of one name for one identity submit it once`() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        val owned = mutableSetOf<String>()
+        val source = gatedSource(gate, owned)
+        val creation = SdkTransparentUsernameCreation(
+            source = source,
+            cutoverCommitted = { true },
+            feeDuffs = { feeDuffs },
+            handOffToLegacy = {},
+            nameAlreadyTaken = { id, name -> id == identityIdBase58 && name in owned },
+            fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
+        ).also { it.ioDispatcher = kotlinx.coroutines.test.StandardTestDispatcher(testScheduler) }
+
+        val first = async { creation.registerDpnsNameForExistingIdentity(identityIdBase58, "alice3") }
+        val second = async { creation.registerDpnsNameForExistingIdentity(identityIdBase58, "alice3") }
+        advanceUntilIdle()
+        // the first is submitting under the lock; the second waits for it, not yet re-checked
+        coVerify(exactly = 1) { source.registerDpnsName(walletIdHex, identityId, "alice3") }
+        assertFalse(second.isCompleted)
+
+        gate.complete(Unit)
+
+        assertEquals(SdkWriteResult.Broadcast("alice3.dash"), first.await())
+        assertEquals(
+            "the second re-checks under the lock, finds the name owned and skips it",
+            SdkWriteResult.Broadcast("alice3.dash"),
+            second.await()
+        )
+        coVerify(exactly = 1) { source.registerDpnsName(walletIdHex, identityId, "alice3") }
+    }
+
+    @Test
+    fun `a name-only retry waiting on another registration of its name does not submit it`() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        val owned = mutableSetOf<String>()
+        val source = gatedSource(gate, owned)
+        val states = mutableListOf<IdentityCreationState>()
+        val appScope = CoroutineScope(SupervisorJob() + kotlinx.coroutines.test.StandardTestDispatcher(testScheduler))
+        val creation = SdkTransparentUsernameCreation(
+            source = source,
+            cutoverCommitted = { true },
+            feeDuffs = { feeDuffs },
+            handOffToLegacy = {},
+            driveCreationState = { state, _ -> states += state },
+            executorScope = appScope,
+            nameAlreadyTaken = { id, name -> id == identityIdBase58 && name in owned },
+            fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
+        ).also { it.ioDispatcher = kotlinx.coroutines.test.StandardTestDispatcher(testScheduler) }
+
+        // e.g. the restore worker re-driving the same name for the same identity
+        val worker = async { creation.registerDpnsNameForExistingIdentity(identityIdBase58, "alice3") }
+        advanceUntilIdle()
+        // its preflight ran before the worker's name landed, so it accepts
+        assertTrue(creation.retryNameForExistingIdentity(identityIdBase58, "alice3", null))
+        advanceUntilIdle()
+        coVerify(exactly = 1) { source.registerDpnsName(walletIdHex, identityId, "alice3") }
+
+        gate.complete(Unit)
+        assertEquals(SdkWriteResult.Broadcast("alice3.dash"), worker.await())
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { source.registerDpnsName(walletIdHex, identityId, "alice3") }
+        assertEquals(
+            "the retry re-checked under the lock and counted the name as registered",
+            IdentityCreationState.DONE,
+            states.last()
+        )
+        appScope.cancel()
+    }
+
+    @Test
+    fun `a failure inside the accepted run is stamped for the name-only route`() = runTest {
+        val source = source(lockAfterFailure = null)
+        val run = RetryRun()
+
+        retry(
+            source,
+            "alice3",
+            null,
             persistNameContext = { _, _, _, _ -> throw java.io.IOException("datastore write failed") },
-            states = states
+            run = run
         )
 
-        assertTrue("nothing escapes the app-scoped launch: $uncaught", uncaught.isEmpty())
-        val (state, error) = states.last()
-        assertEquals(IdentityCreationState.USERNAME_REGISTERING, state)
-        assertTrue("a retryable error the retry card shows: $error", error?.contains("retryable") == true)
+        assertTrue("nothing escapes: ${run.uncaught}", run.uncaught.isEmpty())
+        val error = run.states.last().second
+        assertTrue("the tile's Try again goes back to the name-only retry: $error", SdkTransparentUsernameCreation.isNameOnlyRetryError(error))
     }
 
     @Test
-    fun `a failed worker handoff records a retryable error instead of crashing`() = runTest {
-        val states = mutableListOf<Pair<IdentityCreationState, String?>>()
+    fun `a failed recovery handoff after the name registered neither crashes nor stamps an error`() = runTest {
+        // the name is on chain; the handoff is best effort, as on the create path
+        val source = source(lockAfterFailure = null)
+        coEvery { source.registerDpnsName(walletIdHex, identityId, "alice3") } returns "alice3.dash"
 
-        val uncaught = uncaughtFrom(
-            handOffToLegacy = { throw IllegalStateException("WorkManager not initialised") },
-            states = states
+        val run = retry(
+            source,
+            "alice3",
+            null,
+            handOffToLegacy = { throw IllegalStateException("WorkManager not initialised") }
         )
 
-        assertTrue("nothing escapes the app-scoped launch: $uncaught", uncaught.isEmpty())
-        val (state, error) = states.last()
-        assertEquals(IdentityCreationState.USERNAME_REGISTERING, state)
-        assertTrue("a retryable error the retry card shows: $error", error?.contains("retryable") == true)
+        assertTrue("nothing escapes the app-scoped launch: ${run.uncaught}", run.uncaught.isEmpty())
+        assertEquals(IdentityCreationState.DONE to null, run.states.last())
     }
 
     // --- MO-1069: protocol-gated funding amount ---

@@ -46,9 +46,11 @@ import androidx.paging.LoadState
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.data.InvitationValidationState
 import de.schildbach.wallet.service.platform.IdentityRepository
+import de.schildbach.wallet.service.platform.sdk.SdkTransparentUsernameCreation
 import de.schildbach.wallet.service.platform.work.RestoreIdentityOperation
 import de.schildbach.wallet.ui.InviteHandlerViewModel
 import de.schildbach.wallet.ui.PendingInvitation
@@ -121,6 +123,9 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
     private lateinit var header: HistoryHeaderAdapter
     @Inject
     lateinit var identityRepository: IdentityRepository
+
+    @Inject
+    lateinit var transparentUsernameCreation: SdkTransparentUsernameCreation
 
     @Inject
     lateinit var identityCreationStatus: IdentityCreationStatusHolder
@@ -717,12 +722,21 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
     private fun retryIdentityCreation(header: HistoryHeaderAdapter) {
         viewModel.blockchainIdentity.value?.let { blockchainIdentityData ->
             viewModel.logEvent(AnalyticsConstants.UsersContacts.CREATE_USERNAME_TRYAGAIN)
+            val route = identityRetryRoute(
+                blockchainIdentityData.creationStateErrorMessage,
+                blockchainIdentityData.restoring,
+                blockchainIdentityData.usingInvite
+            )
             // check to see if restoring or if an invite was used
-            if (blockchainIdentityData.restoring) {
+            if (route == IdentityRetryRoute.NEW_NAME) {
+                startActivity(CreateUsernameActivity.createIntentReuseTransaction(requireActivity(), blockchainIdentityData))
+            } else if (route == IdentityRetryRoute.NAME_ONLY) {
+                retryNameOnly(blockchainIdentityData)
+            } else if (route == IdentityRetryRoute.RESTORE) {
                 RestoreIdentityOperation(requireActivity().application)
                     .create(blockchainIdentityData.userId!!, true)
                     .enqueue()
-            } else if (!blockchainIdentityData.usingInvite) {
+            } else if (route == IdentityRetryRoute.LEGACY) {
                 requireActivity().startService(
                     CreateIdentityService.createIntentForRetry(
                         requireActivity(),
@@ -749,11 +763,49 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         }
     }
 
+    /**
+     * Sends a name-only retry's error back into the name-only retry with the requested names on
+     * record, after the cutover: never the restore worker, which would drop the replacement, nor
+     * CreateIdentityService, which would reset the identity and fund it again. A name that did
+     * land meanwhile is not submitted again there.
+     */
+    private fun retryNameOnly(blockchainIdentityData: BlockchainIdentityData) {
+        val identityId = blockchainIdentityData.userId
+        val username = blockchainIdentityData.username
+        viewLifecycleOwner.lifecycleScope.launch {
+            val accepted = identityId != null && username != null &&
+                transparentUsernameCreation.retryNameForExistingIdentity(
+                    identityId,
+                    username,
+                    blockchainIdentityData.usernameSecondary
+                )
+            if (!accepted && isAdded) {
+                Toast.makeText(
+                    requireContext(),
+                    blockchainIdentityData.creationStateErrorMessage,
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
+
     private fun openIdentityCreation() {
         viewModel.blockchainIdentity.value?.let { blockchainIdentityData ->
             if (blockchainIdentityData.creationStateErrorMessage != null) {
-                // are we restoring?
-                if (blockchainIdentityData.restoring) {
+                val route = identityRetryRoute(
+                    blockchainIdentityData.creationStateErrorMessage,
+                    blockchainIdentityData.restoring,
+                    blockchainIdentityData.usingInvite
+                )
+                if (route == IdentityRetryRoute.NEW_NAME) {
+                    // same as the Try again action: the name was lost, the user picks a new one
+                    startActivity(
+                        CreateUsernameActivity.createIntentReuseTransaction(requireActivity(), blockchainIdentityData)
+                    )
+                } else if (route == IdentityRetryRoute.NAME_ONLY) {
+                    retryNameOnly(blockchainIdentityData)
+                } else if (blockchainIdentityData.restoring) {
+                    // are we restoring?
                     RestoreIdentityOperation(requireActivity().application)
                         .create(blockchainIdentityData.userId!!, true)
                         .enqueue()
@@ -817,3 +869,35 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         viewModel.joinDashPay()
     }
 }
+
+/** Where the home tile's retry sends an identity whose creation stopped with an error. */
+internal enum class IdentityRetryRoute { NEW_NAME, NAME_ONLY, RESTORE, LEGACY, INVITE }
+
+/** The route for [retryIdentityCreation] on the home tile. Pure, host-testable. */
+internal fun identityRetryRoute(
+    creationStateErrorMessage: String?,
+    restoring: Boolean,
+    usingInvite: Boolean
+): IdentityRetryRoute = when {
+    // the name is taken by someone else: retrying the same name cannot help, ask for a new one
+    SdkTransparentUsernameCreation.isNameOnlyRetryError(creationStateErrorMessage) &&
+        needsNewName(creationStateErrorMessage) -> IdentityRetryRoute.NEW_NAME
+    SdkTransparentUsernameCreation.isNameOnlyRetryError(creationStateErrorMessage) -> IdentityRetryRoute.NAME_ONLY
+    restoring -> IdentityRetryRoute.RESTORE
+    !usingInvite -> IdentityRetryRoute.LEGACY
+    else -> IdentityRetryRoute.INVITE
+}
+
+/**
+ * The failure says the requested name is taken (a duplicate, or a contest it is not part of):
+ * the user has to pick another name. Shared by the home tile's routing and the More screen;
+ * "primary username was lost" is the pre-11.10.52 wrapper-adoption clobber (S22).
+ */
+internal fun needsNewName(errorMessage: String?): Boolean = errorMessage != null && (
+    errorMessage.contains("Document transitions with duplicate unique properties") ||
+        errorMessage.contains("DuplicateUniqueIndexError") ||
+        errorMessage.contains("primary username was lost") ||
+        errorMessage.contains("Document Contest for vote_poll ContestedDocumentResourceVotePoll") ||
+        errorMessage.contains(Regex("does not have .* as a contender")) ||
+        errorMessage.contains("missing domain document for ")
+    )

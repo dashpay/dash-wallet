@@ -45,6 +45,7 @@ import org.dashj.platform.dpp.voting.ContestedDocumentVotePollWinnerInfo
 import java.util.Optional
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.IdentityCreationStatusHolder
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.username.UsernameType
@@ -54,6 +55,8 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
+import io.mockk.mockkObject
+import io.mockk.unmockkObject
 import io.mockk.verify
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.viewModelScope
@@ -262,15 +265,6 @@ class RequestUserNameViewModelTest {
      * and `runTest` completes; [tearDown] then still runs the full
      * lifecycle clear + join.
      */
-    /** Waits (in real time) for [condition]; the routing under test may hop dispatchers. */
-    private fun awaitCondition(timeoutMs: Long = 5_000, condition: () -> Boolean) {
-        val deadline = System.currentTimeMillis() + timeoutMs
-        while (!condition()) {
-            check(System.currentTimeMillis() < deadline) { "timed out waiting for the condition" }
-            Thread.sleep(10)
-        }
-    }
-
     private fun runVmTest(testBody: suspend TestScope.() -> Unit) = runTest(dispatcher) {
         try {
             testBody()
@@ -406,26 +400,26 @@ class RequestUserNameViewModelTest {
     }
 
     @Test
-    fun submit_afterTheCutover_retriesOnlyTheNameOfAnIdentityAlreadyRegistered() = runVmTest {
-        // Review 4299080469: the identity exists on chain and only its DPNS name was rejected.
-        // CreateIdentityService's reuse path would reset it to NONE and start fresh legacy
-        // funding, which post-cutover has no dashj asset lock to find.
+    fun submit_afterTheCutover_lostVoteWithASecondary_retriesOnlyTheName() = runVmTest {
+        // An SDK-created identity whose contested primary lost while its instant secondary
+        // registered: the replacement is registered for THIS identity, never funded again.
         coEvery { transparentUsernameCreation.isCutoverCommitted() } returns true
-        every { transparentUsernameCreation.retryNameForExistingIdentity(any(), any(), any()) } returns true
+        coEvery { transparentUsernameCreation.retryNameForExistingIdentity(any(), any(), any()) } returns true
         val viewModel = viewModel()
         viewModel.requestedUserName = "alice3"
         viewModel.identity = BlockchainIdentityData(
-            IdentityCreationState.USERNAME_REGISTERING,
-            "username registration did not complete (retryable): domain document rejected",
-            "alice2",
+            IdentityCreationState.VOTING,
             null,
+            "alice2",
+            "alice2instant",
             "6XqBkTZTUnDMcgGvKzs5NRotZbAMBjKhJ4bQzKzXcCwr",
-            false
+            false,
+            usernameRequested = UsernameRequestStatus.LOST_VOTE
         )
 
         viewModel.submit()
 
-        verify(exactly = 1, timeout = 5_000) {
+        coVerify(exactly = 1, timeout = 5_000) {
             transparentUsernameCreation.retryNameForExistingIdentity(
                 "6XqBkTZTUnDMcgGvKzs5NRotZbAMBjKhJ4bQzKzXcCwr",
                 "alice3",
@@ -437,10 +431,10 @@ class RequestUserNameViewModelTest {
     }
 
     @Test
-    fun submit_withTheCutoverStateUnknown_neverResetsARegisteredIdentity() = runVmTest {
-        // Review 4299080469 (reopened): the lenient read turns an unreadable state into "not
-        // committed", which sent a registered SDK identity down the legacy reuse path - reset to
-        // NONE, fresh legacy funding. Unknown must refuse, touching nothing.
+    fun submit_withTheCutoverStateUnknown_refusesWithoutResettingTheIdentity() = runVmTest {
+        // The lenient read turns an unreadable state into "not committed", which sent a
+        // registered SDK identity down the legacy reuse path (reset to NONE, fresh legacy
+        // funding). Unknown must refuse, starting and resetting nothing.
         coEvery { transparentUsernameCreation.isCutoverCommitted() } returns false
         coEvery { transparentUsernameCreation.cutoverStateOrUnknown() } returns null
         val viewModel = viewModel()
@@ -457,12 +451,12 @@ class RequestUserNameViewModelTest {
 
         viewModel.submit()
 
-        awaitCondition { viewModel.uiState.value.usernameSubmittedError }
+        awaitReal("the error state") { viewModel.uiState.value.usernameSubmittedError }
         verify(exactly = 0) { walletApplication.startService(any()) }
-        verify(exactly = 0) { transparentUsernameCreation.retryNameForExistingIdentity(any(), any(), any()) }
+        coVerify(exactly = 0) { transparentUsernameCreation.retryNameForExistingIdentity(any(), any(), any()) }
         verify(exactly = 0) { transparentUsernameCreation.submit(any(), any()) }
         assertEquals("nothing reset", registered, viewModel.identity)
-        assertEquals(false, viewModel.uiState.value.usernameRequestSubmitting)
+        coVerify(exactly = 0) { identityConfig.set(BlockchainIdentityConfig.USERNAME, any()) }
     }
 
     @Test
@@ -474,19 +468,22 @@ class RequestUserNameViewModelTest {
 
         viewModel.submit()
 
-        awaitCondition { viewModel.uiState.value.usernameSubmittedError }
+        awaitReal("the error state") { viewModel.uiState.value.usernameSubmittedError }
         verify(exactly = 0) { walletApplication.startService(any()) }
         verify(exactly = 0) { transparentUsernameCreation.submit(any(), any()) }
+        coVerify(exactly = 0) { identityConfig.set(BlockchainIdentityConfig.USERNAME, any()) }
     }
 
     @Test
-    fun submit_beforeTheCutover_keepsTheLegacyReusePath() = runVmTest {
-        // master's case (#1567): a dashj-created identity reuses its dashj funding transaction
+    fun submit_aRefusedNameOnlyRetry_leavesTheRequestedNameUnchanged() = runVmTest {
+        // a refusal (wipe, no scope, an unreadable ownership read) changes nothing
+        coEvery { transparentUsernameCreation.isCutoverCommitted() } returns true
+        coEvery { transparentUsernameCreation.retryNameForExistingIdentity(any(), any(), any()) } returns false
         val viewModel = viewModel()
         viewModel.requestedUserName = "alice3"
         viewModel.identity = BlockchainIdentityData(
             IdentityCreationState.USERNAME_REGISTERING,
-            "missing domain document for alice2",
+            "username registration did not complete (retryable): domain document rejected",
             "alice2",
             null,
             "6XqBkTZTUnDMcgGvKzs5NRotZbAMBjKhJ4bQzKzXcCwr",
@@ -495,8 +492,210 @@ class RequestUserNameViewModelTest {
 
         viewModel.submit()
 
+        awaitReal("the error state") { viewModel.uiState.value.usernameSubmittedError }
+        coVerify(exactly = 0) { identityConfig.set(BlockchainIdentityConfig.USERNAME, any()) }
+        verify(exactly = 0) { walletApplication.startService(any()) }
+    }
+
+    @Test
+    fun submit_afterTheCutover_aReuseRecordWithNoIdentityId_isRefusedNotSentToLegacyCreation() = runVmTest {
+        // The legacy reuse path resets the record and can fund a new identity: after the cutover
+        // a reuse submission without an identity id must refuse, never fall through to it.
+        coEvery { transparentUsernameCreation.isCutoverCommitted() } returns true
+        val viewModel = viewModel()
+        viewModel.requestedUserName = "alice3"
+        val locked = BlockchainIdentityData(
+            IdentityCreationState.VOTING,
+            null,
+            "alice2",
+            null,
+            null,
+            false,
+            usernameRequested = UsernameRequestStatus.LOCKED
+        )
+        viewModel.identity = locked
+
+        viewModel.submit()
+
+        awaitReal("the error state") { viewModel.uiState.value.usernameSubmittedError }
+        assertEquals(false, viewModel.uiState.value.usernameRequestSubmitting)
+        verify(exactly = 0) { walletApplication.startService(any()) }
+        coVerify(exactly = 0) { transparentUsernameCreation.retryNameForExistingIdentity(any(), any(), any()) }
+        verify(exactly = 0) { transparentUsernameCreation.submit(any(), any()) }
+        coVerify(exactly = 0) { identityConfig.set(BlockchainIdentityConfig.USERNAME, any()) }
+        assertEquals("nothing reset", locked, viewModel.identity)
+    }
+
+    @Test
+    fun submit_anAcceptedNameOnlyRetry_stillPublishesSubmittingWhenTheConfigWriteFails() = runVmTest {
+        // The retry already runs on the application scope; a failed config write must not leave
+        // the screen without the submitting state that closes it.
+        coEvery { transparentUsernameCreation.isCutoverCommitted() } returns true
+        coEvery { transparentUsernameCreation.retryNameForExistingIdentity(any(), any(), any()) } returns true
+        coEvery { identityConfig.set(BlockchainIdentityConfig.USERNAME, any()) } throws
+            java.io.IOException("datastore write failed")
+        val viewModel = viewModel()
+        viewModel.requestedUserName = "alice3"
+        viewModel.identity = BlockchainIdentityData(
+            IdentityCreationState.VOTING,
+            null,
+            "alice2",
+            null,
+            "6XqBkTZTUnDMcgGvKzs5NRotZbAMBjKhJ4bQzKzXcCwr",
+            false,
+            usernameRequested = UsernameRequestStatus.LOST_VOTE
+        )
+
+        viewModel.submit()
+
+        awaitReal("the submitting state") { viewModel.uiState.value.usernameRequestSubmitting }
+        assertEquals(false, viewModel.uiState.value.usernameSubmittedError)
+        verify(exactly = 0) { walletApplication.startService(any()) }
+    }
+
+    @Test
+    fun submit_aNameOnlyRetryWithNoRequestedName_isRefused() = runVmTest {
+        coEvery { transparentUsernameCreation.isCutoverCommitted() } returns true
+        coEvery { transparentUsernameCreation.cutoverStateOrUnknown() } returns true
+        val viewModel = viewModel()
+        viewModel.requestedUserName = null
+        viewModel.identity = BlockchainIdentityData(
+            IdentityCreationState.USERNAME_REGISTERING,
+            "username registration did not complete (retryable): domain document rejected",
+            "alice2",
+            null,
+            "6XqBkTZTUnDMcgGvKzs5NRotZbAMBjKhJ4bQzKzXcCwr",
+            false
+        )
+
+        viewModel.submit()
+
+        awaitReal("the error state") { viewModel.uiState.value.usernameSubmittedError }
+        coVerify(exactly = 0) { transparentUsernameCreation.retryNameForExistingIdentity(any(), any(), any()) }
+        coVerify(exactly = 0) { identityConfig.set(BlockchainIdentityConfig.USERNAME, any()) }
+        verify(exactly = 0) { walletApplication.startService(any()) }
+    }
+
+    @Test
+    fun submit_beforeTheCutover_aRejectedNameRecord_takesMastersReusePath() = runVmTest {
+        // before the cutover master's rule stands (#1567): a registered identity whose name step
+        // failed reuses its dashj funding through the legacy path
+        mockkObject(CreateIdentityService.Companion)
+        try {
+            val viewModel = viewModel()
+            viewModel.requestedUserName = "alice3"
+            viewModel.identity = BlockchainIdentityData(
+                IdentityCreationState.USERNAME_REGISTERING,
+                "missing domain document for alice2",
+                "alice2",
+                null,
+                "6XqBkTZTUnDMcgGvKzs5NRotZbAMBjKhJ4bQzKzXcCwr",
+                false
+            )
+
+            viewModel.submit()
+
+            verify(exactly = 1, timeout = 5_000) { walletApplication.startService(any()) }
+            verify(exactly = 1) { CreateIdentityService.createIntentForNewUsername(any(), "alice3", any()) }
+            verify(exactly = 0) { CreateIdentityService.createIntent(any(), any(), any()) }
+            coVerify(exactly = 0) { transparentUsernameCreation.retryNameForExistingIdentity(any(), any(), any()) }
+        } finally {
+            unmockkObject(CreateIdentityService.Companion)
+        }
+    }
+
+    @Test
+    fun submit_afterTheCutover_nameRejectedAfterRegistration_retriesOnlyTheName() = runVmTest {
+        coEvery { transparentUsernameCreation.isCutoverCommitted() } returns true
+        coEvery { transparentUsernameCreation.retryNameForExistingIdentity(any(), any(), any()) } returns true
+        val viewModel = viewModel()
+        viewModel.requestedUserName = "alice3"
+        viewModel.identity = BlockchainIdentityData(
+            IdentityCreationState.USERNAME_REGISTERING,
+            "username registration did not complete (retryable): domain document rejected",
+            "alice2",
+            null,
+            "6XqBkTZTUnDMcgGvKzs5NRotZbAMBjKhJ4bQzKzXcCwr",
+            false
+        )
+
+        viewModel.submit()
+
+        coVerify(exactly = 1, timeout = 5_000) {
+            transparentUsernameCreation.retryNameForExistingIdentity("6XqBkTZTUnDMcgGvKzs5NRotZbAMBjKhJ4bQzKzXcCwr", "alice3", null)
+        }
+        verify(exactly = 0) { walletApplication.startService(any()) }
+    }
+
+    @Test
+    fun submit_afterTheCutover_aFailedNameOnlyRetry_retriesOnlyTheNameWhateverTheRecordedState() = runVmTest {
+        // A failed name-only retry's own error keeps the replacement on the name-only route: picking
+        // another name must never fall through to the legacy path, which can fund a new identity.
+        // The state check alone is not relied on for it.
+        coEvery { transparentUsernameCreation.isCutoverCommitted() } returns true
+        coEvery { transparentUsernameCreation.cutoverStateOrUnknown() } returns true
+        coEvery { transparentUsernameCreation.retryNameForExistingIdentity(any(), any(), any()) } returns true
+        val viewModel = viewModel()
+        viewModel.requestedUserName = "alice4"
+        viewModel.identity = BlockchainIdentityData(
+            IdentityCreationState.IDENTITY_REGISTERING,
+            "${SdkTransparentUsernameCreation.NAME_ONLY_RETRY_ERROR}: NOT_REGISTERED",
+            "alice3",
+            "alice2instant",
+            "6XqBkTZTUnDMcgGvKzs5NRotZbAMBjKhJ4bQzKzXcCwr",
+            false
+        )
+
+        viewModel.submit()
+
+        coVerify(exactly = 1, timeout = 5_000) {
+            transparentUsernameCreation.retryNameForExistingIdentity("6XqBkTZTUnDMcgGvKzs5NRotZbAMBjKhJ4bQzKzXcCwr", "alice4", null)
+        }
+        verify(exactly = 0) { walletApplication.startService(any()) }
+        verify(exactly = 0) { transparentUsernameCreation.submit(any(), any()) }
+    }
+
+    @Test
+    fun submit_afterTheCutover_aFailedNameOnlyRetryWithNoIdentityId_isRefused() = runVmTest {
+        coEvery { transparentUsernameCreation.isCutoverCommitted() } returns true
+        coEvery { transparentUsernameCreation.cutoverStateOrUnknown() } returns true
+        val viewModel = viewModel()
+        viewModel.requestedUserName = "alice4"
+        viewModel.identity = BlockchainIdentityData(
+            IdentityCreationState.USERNAME_REGISTERING,
+            "${SdkTransparentUsernameCreation.NAME_ONLY_RETRY_ERROR}: NOT_REGISTERED",
+            "alice3",
+            null,
+            null,
+            false
+        )
+
+        viewModel.submit()
+
+        awaitReal("the error state") { viewModel.uiState.value.usernameSubmittedError }
+        coVerify(exactly = 0) { transparentUsernameCreation.retryNameForExistingIdentity(any(), any(), any()) }
+        verify(exactly = 0) { walletApplication.startService(any()) }
+        verify(exactly = 0) { transparentUsernameCreation.submit(any(), any()) }
+    }
+
+    @Test
+    fun submit_beforeTheCutover_lostVote_keepsTheLegacyReusePath() = runVmTest {
+        val viewModel = viewModel()
+        viewModel.requestedUserName = "alice3"
+        viewModel.identity = BlockchainIdentityData(
+            IdentityCreationState.VOTING,
+            null,
+            "alice2",
+            null,
+            "6XqBkTZTUnDMcgGvKzs5NRotZbAMBjKhJ4bQzKzXcCwr",
+            false,
+            usernameRequested = UsernameRequestStatus.LOST_VOTE
+        )
+
+        viewModel.submit()
+
         verify(exactly = 1, timeout = 5_000) { walletApplication.startService(any()) }
-        verify(exactly = 0) { transparentUsernameCreation.retryNameForExistingIdentity(any(), any(), any()) }
+        coVerify(exactly = 0) { transparentUsernameCreation.retryNameForExistingIdentity(any(), any(), any()) }
     }
 
     @Test
@@ -537,6 +736,7 @@ class RequestUserNameViewModelTest {
             awaitReal("the worker handoff") { handedOff.isNotEmpty() }
             assertEquals(listOf("6XqBkTZTUnDMcgGvKzs5NRotZbAMBjKhJ4bQzKzXcCwr"), handedOff.toList())
         } finally {
+            gate.complete(Unit)
             appScope.cancel()
         }
     }
