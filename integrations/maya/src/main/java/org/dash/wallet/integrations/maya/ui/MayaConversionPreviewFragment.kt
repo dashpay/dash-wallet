@@ -28,10 +28,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.LockScreenBroadcaster
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.components.DashWalletTheme
@@ -69,6 +73,7 @@ class MayaConversionPreviewFragment : Fragment() {
         // use a conservative 10 seconds until real numbers are provided.
         private const val MAYA_QUOTE_EXPIRY_MS = 10_000L
         private const val NEAR_QUOTE_EXPIRY_MS = 10_000L
+        private const val OUTCOME_UNKNOWN_DIALOG_TAG = "payment_outcome_unknown"
     }
 
     private val viewModel by viewModels<MayaConversionPreviewViewModel>()
@@ -237,19 +242,11 @@ class MayaConversionPreviewFragment : Fragment() {
 
         observeNavigationCallBack()
 
-        viewModel.onPaymentOutcomeUnknown.observe(viewLifecycleOwner) {
-            // May have been sent: no retry, leave the flow for home and its history.
-            AdaptiveDialog.create(
-                R.drawable.ic_warning,
-                getString(R.string.payment_submission_pending_title),
-                getString(R.string.payment_outcome_unknown_message),
-                getString(R.string.button_close)
-            ).show(requireActivity()) {
-                if (isAdded) {
-                    val navController = findNavController()
-                    navController.popBackStack(navController.graph.startDestinationId, false)
-                }
-            }
+        // Rendered from the view model's terminal state, once per view, so a recreated screen
+        // still blocks Confirm and shows the warning.
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.paymentOutcomeUnknown.first { it }
+            showPaymentOutcomeUnknown()
         }
 
         viewModel.onInsufficientMoneyCallback.observe(viewLifecycleOwner) {
@@ -289,7 +286,33 @@ class MayaConversionPreviewFragment : Fragment() {
         }
     }
 
+    /**
+     * The deposit may have gone out: Confirm stays disabled and the warning's Close leaves the
+     * flow for home and its history. A dialog restored after recreation has lost its close
+     * action, so it is replaced.
+     */
+    private fun showPaymentOutcomeUnknown() {
+        countDownTimer?.cancel()
+        uiState = uiState.copy(isConfirmBlocked = true)
+        (requireActivity().supportFragmentManager.findFragmentByTag(OUTCOME_UNKNOWN_DIALOG_TAG) as? DialogFragment)
+            ?.dismissAllowingStateLoss()
+        AdaptiveDialog.create(
+            R.drawable.ic_warning,
+            getString(R.string.payment_submission_pending_title),
+            getString(R.string.payment_outcome_unknown_message),
+            getString(R.string.button_close)
+        ).show(requireActivity(), OUTCOME_UNKNOWN_DIALOG_TAG) {
+            if (isAdded) {
+                val navController = findNavController()
+                navController.popBackStack(navController.graph.startDestinationId, false)
+            }
+        }
+    }
+
     private fun onConfirmClick() {
+        if (viewModel.paymentOutcomeUnknown.value) {
+            return
+        }
         countDownTimer?.cancel()
         if (isRefreshing) {
             getNewCommitOrder()

@@ -44,6 +44,7 @@ open class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() 
     constructor() : this(R.layout.dialog_adaptive)
 
     companion object {
+        private const val DEFAULT_TAG = "adaptive_dialog"
         const val ICON_RES_ARG = "icon_res"
         const val TITLE_ARG = "title"
         const val MESSAGE_ARG = "message"
@@ -260,9 +261,17 @@ open class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() 
     }
 
     fun show(activity: FragmentActivity, onResult: ((Boolean?) -> Unit)? = null) {
+        show(activity, DEFAULT_TAG, onResult)
+    }
+
+    /**
+     * Shows the dialog under [tag], so a screen can find and replace its own dialog after a
+     * recreation, when the restored instance has lost [onResult].
+     */
+    fun show(activity: FragmentActivity, tag: String, onResult: ((Boolean?) -> Unit)?) {
         activity.lifecycleScope.launchWhenResumed {
             onResultListener = onResult
-            show(activity.supportFragmentManager, "adaptive_dialog")
+            show(activity.supportFragmentManager, tag)
         }
     }
 

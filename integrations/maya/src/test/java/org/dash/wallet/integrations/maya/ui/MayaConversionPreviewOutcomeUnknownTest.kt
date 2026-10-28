@@ -34,11 +34,14 @@ import org.dash.wallet.integrations.maya.model.Amount
 import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 
 /**
@@ -61,10 +64,23 @@ class MayaConversionPreviewOutcomeUnknownTest {
         Dispatchers.resetMain()
     }
 
-    @Test
-    fun commitOutcomeUnknown_raisesOutcomeUnknown_neverAConversionError() = runTest {
-        val order = SwapTradeUIModel(Amount(), false, "vaultAddress", "destinationAddress")
-        val swapProvider = mock<SwapProvider>()
+    private val swapProvider = mock<SwapProvider>()
+    private val networkState = mock<NetworkStateInt>()
+    private val order = SwapTradeUIModel(Amount(), false, "vaultAddress", "destinationAddress")
+
+    private fun viewModel(savedState: SavedStateHandle) = MayaConversionPreviewViewModel(
+        swapProvider,
+        mock(),
+        mock(),
+        mock(),
+        networkState,
+        mock(),
+        mock(),
+        savedState
+    )
+
+    private suspend fun stubOutcomeUnknown() {
+        whenever(networkState.isConnected).thenReturn(MutableStateFlow(true))
         whenever(swapProvider.commitSwapTransaction(any(), any())).thenReturn(
             ResponseResource.Failure(
                 PaymentSubmissionPendingException("unknown", IllegalStateException("timeout")),
@@ -73,26 +89,37 @@ class MayaConversionPreviewOutcomeUnknownTest {
                 null
             )
         )
-        val networkState = mock<NetworkStateInt>()
-        whenever(networkState.isConnected).thenReturn(MutableStateFlow(true))
-        val viewModel = MayaConversionPreviewViewModel(
-            swapProvider,
-            mock(),
-            mock(),
-            mock(),
-            networkState,
-            mock(),
-            mock(),
-            SavedStateHandle(mapOf("swap_trade_order" to order))
-        )
-        var outcomeUnknownEvents = 0
+    }
+
+    @Test
+    fun commitOutcomeUnknown_isTerminal_neverAConversionError_andRefusesASecondCommit() = runTest {
+        stubOutcomeUnknown()
+        val viewModel = viewModel(SavedStateHandle(mapOf("swap_trade_order" to order)))
         var failureEvents = 0
-        viewModel.onPaymentOutcomeUnknown.observeForever { outcomeUnknownEvents++ }
         viewModel.commitSwapTradeFailureState.observeForever { failureEvents++ }
 
         viewModel.commitSwapTrade("trade").join()
 
-        assertEquals(1, outcomeUnknownEvents)
+        assertTrue(viewModel.paymentOutcomeUnknown.value)
         assertEquals(0, failureEvents)
+
+        // Confirm again on the same screen: refused before anything is committed or sent.
+        viewModel.commitSwapTrade("trade").join()
+
+        verify(swapProvider, times(1)).commitSwapTransaction(any(), any())
+    }
+
+    @Test
+    fun commitOutcomeUnknown_survivesRestore_andStillRefusesACommit() = runTest {
+        stubOutcomeUnknown()
+        val savedState = SavedStateHandle(mapOf("swap_trade_order" to order))
+        viewModel(savedState).commitSwapTrade("trade").join()
+
+        // A new view model over the saved state, as after the process was killed and restored.
+        val restored = viewModel(SavedStateHandle(savedState.keys().associateWith { savedState.get<Any>(it) }))
+        assertTrue(restored.paymentOutcomeUnknown.value)
+        restored.commitSwapTrade("trade").join()
+
+        verify(swapProvider, times(1)).commitSwapTransaction(any(), any())
     }
 }

@@ -18,7 +18,9 @@
 package org.dash.wallet.integrations.coinbase
 
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
+import androidx.lifecycle.SavedStateHandle
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -44,6 +46,7 @@ import org.dash.wallet.integrations.coinbase.viewmodels.SendDashResponseState
 import org.dash.wallet.integrations.coinbase.viewmodels.TransferDashViewModel
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -108,31 +111,56 @@ class PaymentOutcomeUnknownTest {
     }
 
     @Test
-    fun sellDash_outcomeUnknown_raisesOutcomeUnknown_neverFailureNorSuccess() = runTest {
+    fun sellDash_outcomeUnknown_isTerminal_neverFailureNorSuccess_andRefusesASecondCommit() = runTest {
         coEvery { coinBaseRepository.commitSwapTrade(any()) } returns
             ResponseResource.Success(SwapTradeUIModel(swapTradeId = "trade", inputCurrency = Constants.DASH_CURRENCY))
         coEvery { coinBaseRepository.createAddress() } returns ResponseResource.Success("XcoinbaseDepositAddress")
-        val viewModel = CoinbaseConversionPreviewViewModel(
-            coinBaseRepository,
-            walletDataProvider,
-            sendPaymentService,
-            mockk(relaxed = true),
-            networkState,
-            mockk(relaxed = true)
-        )
-        var outcomeUnknownEvents = 0
+        val savedState = SavedStateHandle()
+        val viewModel = previewViewModel(savedState)
         var failureEvents = 0
         var successEvents = 0
-        viewModel.onPaymentOutcomeUnknown.observeForever { outcomeUnknownEvents++ }
         viewModel.onFailure.observeForever { failureEvents++ }
         viewModel.sellSwapSuccessState.observeForever { successEvents++ }
 
         viewModel.commitSwapTrade("trade", Constants.DASH_CURRENCY, "0.01").join()
 
-        assertEquals(1, outcomeUnknownEvents)
+        assertTrue(viewModel.paymentOutcomeUnknown.value)
         assertEquals(0, failureEvents)
         assertEquals(0, successEvents)
+
+        // Confirm again on the same screen: refused before any commit or send.
+        viewModel.commitSwapTrade("trade", Constants.DASH_CURRENCY, "0.01").join()
+
+        coVerify(exactly = 1) { coinBaseRepository.commitSwapTrade(any()) }
+        coVerify(exactly = 1) { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any()) }
     }
+
+    @Test
+    fun sellDash_outcomeUnknown_survivesRestore_andStillRefusesACommit() = runTest {
+        coEvery { coinBaseRepository.commitSwapTrade(any()) } returns
+            ResponseResource.Success(SwapTradeUIModel(swapTradeId = "trade", inputCurrency = Constants.DASH_CURRENCY))
+        coEvery { coinBaseRepository.createAddress() } returns ResponseResource.Success("XcoinbaseDepositAddress")
+        val savedState = SavedStateHandle()
+        previewViewModel(savedState).commitSwapTrade("trade", Constants.DASH_CURRENCY, "0.01").join()
+
+        // A new view model over the saved state, as after the process was killed and restored.
+        val restored = previewViewModel(SavedStateHandle(savedState.keys().associateWith { savedState.get<Any>(it) }))
+        assertTrue(restored.paymentOutcomeUnknown.value)
+        restored.commitSwapTrade("trade", Constants.DASH_CURRENCY, "0.01").join()
+
+        coVerify(exactly = 1) { coinBaseRepository.commitSwapTrade(any()) }
+        coVerify(exactly = 1) { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any()) }
+    }
+
+    private fun previewViewModel(savedState: SavedStateHandle) = CoinbaseConversionPreviewViewModel(
+        coinBaseRepository,
+        walletDataProvider,
+        sendPaymentService,
+        mockk(relaxed = true),
+        networkState,
+        mockk(relaxed = true),
+        savedState
+    )
 
     private fun <T> failure(): ResponseResource<T> =
         ResponseResource.Failure(IllegalStateException("offline"), false, 0, null)

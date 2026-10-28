@@ -18,6 +18,7 @@ package org.dash.wallet.integrations.coinbase.viewmodels
 
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.freshReceiveAddressStringOffMain
@@ -48,8 +49,13 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
     private val sendPaymentService: SendPaymentService,
     private val analyticsService: AnalyticsService,
     networkState: NetworkStateInt,
-    private val transactionMetadataProvider: TransactionMetadataProvider
+    private val transactionMetadataProvider: TransactionMetadataProvider,
+    private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
+    companion object {
+        private const val KEY_PAYMENT_OUTCOME_UNKNOWN = "payment_outcome_unknown"
+    }
+
     private val _showLoading: MutableLiveData<Boolean> = MutableLiveData()
     val showLoading: LiveData<Boolean>
         get() = _showLoading
@@ -72,12 +78,21 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
     val onFailure = SingleLiveEvent<String?>()
     val onInsufficientMoneyCallback = SingleLiveEvent<Unit>()
 
-    /** The sale's Dash send may have gone out; the screen must not offer a retry. */
-    val onPaymentOutcomeUnknown = SingleLiveEvent<Unit>()
+    /**
+     * True once the sale's Dash send may have gone out with its outcome unknown. Terminal: no
+     * further commit is accepted, and it is kept in [savedStateHandle] so a recreated screen (or
+     * process) still shows the warning instead of a Confirm button that could pay twice.
+     */
+    val paymentOutcomeUnknown: StateFlow<Boolean> =
+        savedStateHandle.getStateFlow(KEY_PAYMENT_OUTCOME_UNKNOWN, false)
 
     var isFirstTime = true
 
     fun commitSwapTrade(tradeId: String, inputCurrency: String, inputAmount: String) = viewModelScope.launch {
+        if (paymentOutcomeUnknown.value) {
+            // An earlier send may have gone out: never commit (and send) again from this screen.
+            return@launch
+        }
         // The wallet the user confirmed on, before the address and trade calls below wait (review
         // 4304575003): a DASH sale is refused, with nothing sent, if a wipe replaces it meanwhile.
         val session = sendPaymentService.currentWalletSession()
@@ -231,7 +246,7 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
     }
 
     /**
-     * Returns true when the send's outcome is unknown ([onPaymentOutcomeUnknown] was raised),
+     * Returns true when the send's outcome is unknown ([paymentOutcomeUnknown] was set),
      * so the caller must not report the sale as successful either.
      */
     private suspend fun sendDashToCoinbase(coin: Dash, addressInfo: String, session: WalletSession?): Boolean {
@@ -244,7 +259,7 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
             )
             false
         } catch (x: PaymentSubmissionPendingException) {
-            onPaymentOutcomeUnknown.call()
+            savedStateHandle[KEY_PAYMENT_OUTCOME_UNKNOWN] = true
             x.printStackTrace()
             true
         } catch (x: Exception) {

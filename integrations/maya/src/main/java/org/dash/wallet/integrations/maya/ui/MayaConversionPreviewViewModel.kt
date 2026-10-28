@@ -67,6 +67,7 @@ class MayaConversionPreviewViewModel @Inject constructor(
         private const val IS_LOCK_TIMEOUT_MS = 10_000L
         private const val KEY_ORDER = "swap_trade_order"
         private const val KEY_QUOTE_CREATED_AT = "quote_created_at"
+        private const val KEY_PAYMENT_OUTCOME_UNKNOWN = "payment_outcome_unknown"
     }
 
     /**
@@ -115,8 +116,13 @@ class MayaConversionPreviewViewModel @Inject constructor(
 
     val onInsufficientMoneyCallback = SingleLiveEvent<Unit>()
 
-    /** The deposit may have gone out; the screen must not offer a retry. */
-    val onPaymentOutcomeUnknown = SingleLiveEvent<Unit>()
+    /**
+     * True once the deposit may have gone out with its outcome unknown. Terminal: no further
+     * commit is accepted, and it is kept in [savedStateHandle] so a recreated screen (or process)
+     * still shows the warning instead of a Confirm button that could pay twice.
+     */
+    val paymentOutcomeUnknown: StateFlow<Boolean> =
+        savedStateHandle.getStateFlow(KEY_PAYMENT_OUTCOME_UNKNOWN, false)
 
     /**
      * The deposit was refused before anything was built: an earlier payment's outcome is still
@@ -126,6 +132,10 @@ class MayaConversionPreviewViewModel @Inject constructor(
     val onPaymentStillConfirmingCallback = SingleLiveEvent<Unit>()
 
     fun commitSwapTrade(tradeId: String) = viewModelScope.launch {
+        if (paymentOutcomeUnknown.value) {
+            // An earlier deposit may have gone out: never commit (and send) again from this screen.
+            return@launch
+        }
         analyticsService.logEvent(AnalyticsConstants.Coinbase.CONVERT_QUOTE_CONFIRM, mapOf())
         val inputCurrency = swapTradeUIModel.amount.dashCode
         val inputAmount = swapTradeUIModel.amount.dash
@@ -224,7 +234,7 @@ class MayaConversionPreviewViewModel @Inject constructor(
                     return@launch
                 }
                 if (result.throwable is PaymentSubmissionPendingException) {
-                    onPaymentOutcomeUnknown.call()
+                    savedStateHandle[KEY_PAYMENT_OUTCOME_UNKNOWN] = true
                     return@launch
                 }
                 if (result.throwable is PaymentStillConfirmingException) {
