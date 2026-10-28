@@ -50,6 +50,7 @@ import de.schildbach.wallet.ui.transactions.TransactionRowView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -72,6 +73,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.wallet.WalletEx
@@ -908,11 +910,17 @@ class TxDisplayCacheService @Inject constructor(
                     t1 - t0, t2 - t1, t3 - t2, t3 - t0
                 )
 
-                persistGroupCache(wrapped)
-                updateDisplayCache(wrapped.toList(), filter.direction.toFilterFlag())
-
+                // Must-complete once wrappedTransactionList (above) is visible: a filter change
+                // can cancel the governing flatMapLatest job at any later suspension point, and
+                // cancellation does not undo synchronous code that already ran. Without this,
+                // a cancelled write leaves Room (and _txDataSource/_transactionsLoaded) stuck
+                // behind a rebuild that never finished, with no later self-heal.
+                withContext(NonCancellable) {
+                    persistGroupCache(wrapped)
+                    updateDisplayCache(wrapped.toList(), filter.direction.toFilterFlag())
+                    _transactionsLoaded.value = true
+                }
                 _isBuildingCache.value = false
-                _transactionsLoaded.value = true
 
                 log.info("STARTUP rebuildWrappedList DONE (_transactionsLoaded=true) at {}", System.currentTimeMillis())
                 serviceScope.launch { resolveAllContacts() }
