@@ -23,8 +23,15 @@ import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.BaseConfig
+import org.slf4j.LoggerFactory
+import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -34,6 +41,8 @@ open class CrowdNodeConfig @Inject constructor(
     walletDataProvider: WalletDataProvider
 ) : BaseConfig(context, PREFERENCES_NAME, walletDataProvider) {
     companion object {
+        private val log = LoggerFactory.getLogger(CrowdNodeConfig::class.java)
+
         const val PREFERENCES_NAME = "crowdnode"
 
         val INFO_SHOWN = booleanPreferencesKey("info_shown")
@@ -41,6 +50,9 @@ open class CrowdNodeConfig @Inject constructor(
         val CONFIRMATION_DIALOG_SHOWN = booleanPreferencesKey("confirmation_dialog_shown")
         val BACKGROUND_ERROR = stringPreferencesKey("error")
         val SIGN_UP_FINISHED = booleanPreferencesKey("sign_up_finished")
+
+        // Wallet transaction count at the last full scan that found no sign up
+        val NO_SIGN_UP_SCAN_TX_COUNT = intPreferencesKey("no_sign_up_scan_tx_count")
         val ONLINE_ACCOUNT_STATUS = intPreferencesKey("online_account_status")
         val LAST_BALANCE = longPreferencesKey("last_balance")
         val SIGNED_EMAIL_MESSAGE_ID = intPreferencesKey("signed_email_message_id")
@@ -51,5 +63,47 @@ open class CrowdNodeConfig @Inject constructor(
         val LAST_WITHDRAWAL_BLOCK = intPreferencesKey("last_withdrawal_block")
         val FEE_PERCENTAGE = doublePreferencesKey("fee_double")
         val LAST_FEE_REQUEST = longPreferencesKey("last_fee_request")
+    }
+
+    private val configScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val walletReplacements = AtomicInteger()
+    private val pendingScanCacheClears = AtomicInteger()
+
+    /**
+     * Bumped by [onWalletReplaced]. A [NO_SIGN_UP_SCAN_TX_COUNT] scan captures it before it starts
+     * and only caches its result if it is unchanged, so a scan of the old wallet that finishes after
+     * the replacement can't re-cache a count that now describes the new wallet.
+     */
+    open val walletGeneration: Int
+        get() = walletReplacements.get()
+
+    /**
+     * True from [onWalletReplaced] until its removal of [NO_SIGN_UP_SCAN_TX_COUNT] lands, so a reader
+     * doesn't trust the old wallet's count in the meantime. Counts outstanding removals, so an older
+     * one finishing doesn't clear it for a newer replacement. A failed removal leaves it set for the
+     * rest of the process: the cache is then simply not trusted.
+     */
+    open val isNoSignUpScanClearPending: Boolean
+        get() = pendingScanCacheClears.get() > 0
+
+    /**
+     * Forgets [NO_SIGN_UP_SCAN_TX_COUNT] when a created or restored wallet replaces the current one
+     * without a wipe: the cached count describes the old wallet's transactions, and a replacement
+     * with the same count would otherwise skip the sign-up scan. Fire-and-forget, so it is safe to
+     * call from the main thread; [isNoSignUpScanClearPending] covers the window until it lands.
+     */
+    fun onWalletReplaced() {
+        walletReplacements.incrementAndGet()
+        pendingScanCacheClears.incrementAndGet()
+        configScope.launch {
+            try {
+                remove(NO_SIGN_UP_SCAN_TX_COUNT)
+                pendingScanCacheClears.decrementAndGet()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                log.warn("failed to clear the CrowdNode no-sign-up scan cache", e)
+            }
+        }
     }
 }

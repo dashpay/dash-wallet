@@ -26,11 +26,18 @@ import org.dash.wallet.common.transactions.TransactionWrapperFactory
 import org.dash.wallet.common.transactions.TxInfo
 
 object TransactionWrapperHelper {
+    /**
+     * Groups [transactions] into the wrappers produced by [wrapperFactories]. Transactions no
+     * factory claims get a single-transaction wrapper each, unless [includeUnwrapped] is false:
+     * then they are dropped as soon as they are checked, so only the matched transactions are
+     * kept in memory (a large wallet can hold tens of thousands of transactions).
+     */
     fun wrapTransactions(
         transactions: Set<Transaction?>,
         bag: TransactionBag,
         params: NetworkParameters,
-        vararg wrapperFactories: TransactionWrapperFactory
+        vararg wrapperFactories: TransactionWrapperFactory,
+        includeUnwrapped: Boolean = true
     ): Collection<TransactionWrapper> {
         wrapperFactories.sortByDescending { it.averageTransactions }
         val wrappedTransactions = ArrayList<TransactionWrapper>()
@@ -54,7 +61,7 @@ object TransactionWrapperHelper {
                 }
             }
 
-            if (!added) {
+            if (!added && includeUnwrapped) {
                 val anonWrapper: TransactionWrapper = object : TransactionWrapper {
                     override val id: String = transaction.txId.toStringBase58()
                     override val transactions = hashMapOf(txInfo.txId to txInfo)

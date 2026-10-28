@@ -135,27 +135,38 @@ class WalletDataAdapter @Inject constructor(
     }
 
     override fun getTransactions(vararg filters: TransactionFilter): Collection<TxInfo> {
+        // Filter each TxInfo as it is converted so only the matches are retained: converting
+        // the whole wallet into a list first keeps every TxInfo alive at once.
+        val matches: (TxInfo) -> Boolean = { tx -> filters.isEmpty() || filters.any { it.matches(tx) } }
         val sdkTxs = txSeamService.sdkTxInfosOrNull()
-        val all: Collection<TxInfo> = if (sdkTxs != null) {
+        return if (sdkTxs != null) {
             // Post-cutover: the SDK-fed set, plus (dedup'd by txid) any held-dashj-wallet
             // transactions the SDK store never learned — history must never shrink across
             // the cutover. The SDK map is a LAZY store-backed view, so enumerate it ONCE
             // and dedup against a local id set instead of a per-dashj-tx containsKey probe.
             val sdkValues = sdkTxs.values.toList()
             val sdkIds = sdkValues.mapTo(HashSet()) { it.txId }
-            val dashjOnly = walletData.getTransactions()
+            val dashjOnly = walletData.getTransactions().asSequence()
                 .filter { it.txId.toString() !in sdkIds }
                 .map { it.toTxInfo(walletData.transactionBag, walletData.networkParameters) }
-            sdkValues + dashjOnly
+                .filter(matches)
+            sdkValues.filter(matches) + dashjOnly
         } else {
-            walletData.getTransactions()
+            walletData.getTransactions().asSequence()
                 .map { it.toTxInfo(walletData.transactionBag, walletData.networkParameters) }
+                .filter(matches)
+                .toList()
         }
-        return all.filter { tx -> filters.isEmpty() || filters.any { it.matches(tx) } }
     }
+
+    override fun transactionCount(): Int = walletData.transactionCount()
 
     override fun wrapAllTransactions(vararg wrappers: TransactionWrapperFactory): Collection<TransactionWrapper> {
         return walletData.wrapAllTransactions(*wrappers)
+    }
+
+    override fun wrapMatchingTransactions(vararg wrappers: TransactionWrapperFactory): Collection<TransactionWrapper> {
+        return walletData.wrapMatchingTransactions(*wrappers)
     }
 
     override fun attachOnWalletWipedListener(listener: suspend () -> Unit) =

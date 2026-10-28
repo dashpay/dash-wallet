@@ -1121,6 +1121,10 @@ public class WalletApplication extends MultiDexApplication
         // what the previous wallet file held durably is not in this one.
         reportWalletChangedToContactPayments();
         walletStateFlow.setValue(newWallet);
+        // Configs survive a replacement that isn't a wipe (e.g. restoring from
+        // the recovery phrase); CrowdNode's no-sign-up scan cache describes the
+        // previous wallet's transactions, so drop it.
+        crowdNodeConfig.onWalletReplaced();
         // TODO: move to a wallet creation class
         if (!wallet.hasKeyChain(Constants.BIP44_PATH)) {
             wallet.addKeyChain(Constants.BIP44_PATH);
@@ -3608,6 +3612,12 @@ public class WalletApplication extends MultiDexApplication
         return filteredTransactions;
     }
 
+    @Override
+    public int transactionCount() {
+        awaitDeferredWalletLoad();
+        return wallet != null ? wallet.getTransactionCount(true) : 0;
+    }
+
     @NonNull
     @Override
     public Collection<TransactionWrapper> wrapAllTransactions(@NonNull TransactionWrapperFactory... wrapperFactories) {
@@ -3617,7 +3627,22 @@ public class WalletApplication extends MultiDexApplication
                 wallet.getTransactions(true),
                 wallet,
                 Constants.NETWORK_PARAMETERS,
-                wrapperFactories
+                wrapperFactories,
+                true
+        );
+    }
+
+    @NonNull
+    @Override
+    public Collection<TransactionWrapper> wrapMatchingTransactions(@NonNull TransactionWrapperFactory... wrapperFactories) {
+        awaitDeferredWalletLoad();
+        org.bitcoinj.core.Context.propagate(Constants.CONTEXT);
+        return TransactionWrapperHelper.INSTANCE.wrapTransactions(
+                wallet.getTransactions(true),
+                wallet,
+                Constants.NETWORK_PARAMETERS,
+                wrapperFactories,
+                false
         );
     }
 

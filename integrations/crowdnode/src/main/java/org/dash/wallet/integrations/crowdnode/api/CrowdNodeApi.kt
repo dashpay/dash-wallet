@@ -596,12 +596,64 @@ class CrowdNodeApiAggregator @Inject constructor(
         return true
     }
 
+    private enum class SignUpScanResult { Restored, Unconfirmed, NotFound }
+
+    /**
+     * Scans every wallet transaction for a CrowdNode sign up. When none is found, the wallet's
+     * transaction count is cached and the scan is skipped until it changes: a wallet that never
+     * signed up would otherwise rescan its whole history each time the status is restored.
+     * A possible sign up that CrowdNode didn't confirm isn't cached, so it is checked again.
+     * The cache is only an optimization: failing to write it just means the next restore rescans,
+     * and it is ignored while a wallet replacement's clear of it is pending.
+     */
     private suspend fun tryRestoreSignUp(): Boolean {
+        val walletGeneration = config.walletGeneration
+        val txCount = walletDataProvider.transactionCount()
+
+        if (config.isNoSignUpScanClearPending) {
+            log.info("the wallet was replaced and the no-sign-up scan cache isn't cleared yet, ignoring it")
+        } else if (config.get(CrowdNodeConfig.NO_SIGN_UP_SCAN_TX_COUNT) == txCount) {
+            log.info("no CrowdNode sign up found in the last scan of $txCount transactions, skipping the scan")
+            return false
+        }
+
+        return when (tryRestoreSignUpFromTransactions()) {
+            SignUpScanResult.Restored -> true
+            SignUpScanResult.Unconfirmed -> false
+            SignUpScanResult.NotFound -> {
+                cacheNoSignUpScan(txCount, walletGeneration)
+                false
+            }
+        }
+    }
+
+    private suspend fun cacheNoSignUpScan(txCount: Int, walletGeneration: Int) {
+        if (config.walletGeneration != walletGeneration) {
+            log.info("wallet was replaced during the CrowdNode sign up scan, not caching the result")
+            return
+        }
+
+        try {
+            config.set(CrowdNodeConfig.NO_SIGN_UP_SCAN_TX_COUNT, txCount)
+
+            // A replacement between the check above and this write may have cleared the cache
+            // before the write landed, so undo it. Any later replacement clears it itself.
+            if (config.walletGeneration != walletGeneration) {
+                config.remove(CrowdNodeConfig.NO_SIGN_UP_SCAN_TX_COUNT)
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("failed to cache the CrowdNode no-sign-up scan result", e)
+        }
+    }
+
+    private suspend fun tryRestoreSignUpFromTransactions(): SignUpScanResult {
         val fullSignUpSet = blockchainApi.getFullSignUpTxSet()
         fullSignUpSet?.let { set ->
             if (set.welcomeToApiResponse != null) {
                 setFinished(set.welcomeToApiResponse!!.toAddress)
-                return true
+                return SignUpScanResult.Restored
             }
 
             if (set.possibleWelcomeToApiResponse != null) {
@@ -613,13 +665,13 @@ class CrowdNodeApiAggregator @Inject constructor(
                     webApi.fromCrowdNode(address, transaction) != false
                 ) {
                     setFinished(address)
-                    return true
+                    return SignUpScanResult.Restored
                 }
             }
 
             if (set.acceptTermsResponse != null) {
                 setAcceptingTerms(set.acceptTermsResponse!!.toAddress)
-                return true
+                return SignUpScanResult.Restored
             }
 
             if (set.possibleAcceptTermsResponse != null) {
@@ -631,12 +683,16 @@ class CrowdNodeApiAggregator @Inject constructor(
                     webApi.fromCrowdNode(address, transaction) != false
                 ) {
                     setAcceptingTerms(address)
-                    return true
+                    return SignUpScanResult.Restored
                 }
+            }
+
+            if (set.possibleWelcomeToApiResponse != null || set.possibleAcceptTermsResponse != null) {
+                return SignUpScanResult.Unconfirmed
             }
         }
 
-        return false
+        return SignUpScanResult.NotFound
     }
 
     private suspend fun markAccountAddressWithTaxCategory() {
