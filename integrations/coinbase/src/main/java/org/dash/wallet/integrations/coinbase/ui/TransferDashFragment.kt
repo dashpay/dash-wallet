@@ -390,6 +390,10 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
     }
 
     private fun setTransactionState(responseState: SendDashResponseState) {
+        if (responseState is SendDashResponseState.OutcomeUnknownState) {
+            showOutcomeUnknownDialog()
+            return
+        }
         val pair: Pair<CoinBaseResultDialog.Type, String?> = when(responseState){
             is SendDashResponseState.SuccessState -> {
                 Pair(if (responseState.isTransactionPending) CoinBaseResultDialog.Type.TRANSFER_DASH_SUCCESS else CoinBaseResultDialog.Type.TRANSFER_DASH_ERROR, null)
@@ -425,6 +429,24 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
         }
 
         transactionStateDialog.showNow(parentFragmentManager, "TransactionStateDialog")
+    }
+
+    /**
+     * The transfer may already be on the network, so there is no retry: closing leaves the
+     * flow for home, where the transaction history shows whether it went out.
+     */
+    private fun showOutcomeUnknownDialog() {
+        AdaptiveDialog.create(
+            R.drawable.ic_warning,
+            getString(R.string.payment_submission_pending_title),
+            getString(R.string.payment_outcome_unknown_message),
+            getString(R.string.close)
+        ).show(requireActivity()) {
+            if (isAdded) {
+                val navController = findNavController()
+                navController.popBackStack(navController.graph.startDestinationId, false)
+            }
+        }
     }
 
     @SuppressLint("SetTextI18n")

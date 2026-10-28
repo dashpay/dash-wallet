@@ -30,16 +30,15 @@ class LeftoverBalanceException(val missing: Dash, message: String) : Insufficien
 class DirectPayException(message: String) : Exception(message)
 
 /**
- * Thrown when a BIP70 payment was submitted but the merchant's response was lost, so the
- * transaction may or may not have been broadcast. The transaction's inputs stay locked while
- * the wallet keeps checking the network in the background; once the transaction is seen it is
- * committed as sent, and if it never appears the inputs are released.
+ * Thrown when a payment was submitted but its outcome is unknown: the transaction may or may
+ * not have been broadcast. Callers must not treat it as a failure and must not offer a retry,
+ * since a new send could pay twice; tell the user the payment may have been sent instead.
  *
- * Open so the wallet module can say more precisely what is unknown (an acknowledged payment
- * whose local record could not be written yet), while every caller that must keep the order
- * and withhold a retry still catches this one type.
+ * Open so each sender can say more precisely what is unknown. Subclasses and the APIs that
+ * throw them document their own recovery (what stays reserved, and for how long).
  *
- * @property txId the transaction id, as hex
+ * @property txId the transaction id, as hex, or a sentinel documented by the subclass when the
+ *   sender has no txid
  */
 open class PaymentSubmissionPendingException(
     val txId: String,
@@ -163,7 +162,11 @@ interface SendPaymentService {
      *   still recoverable: after this point the transaction may reach the payee even if this
      *   process dies.
      * @throws PaymentSubmissionPendingException if the payment may have been sent but its outcome
-     *   is not known yet
+     *   is not known yet, e.g. the merchant's response was lost. The transaction's inputs stay
+     *   locked while the wallet keeps checking the network in the background; once the
+     *   transaction is seen it is committed as sent, and if it never appears the inputs are
+     *   released. A subclass may say more precisely what is unknown, such as an acknowledged
+     *   payment whose local record could not be written yet.
      */
     suspend fun payWithDashUrl(
         dashUri: String,

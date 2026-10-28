@@ -16,6 +16,7 @@
  */
 package de.schildbach.wallet.ui.send
 
+import de.schildbach.wallet.payments.SdkSendOutcomeUnknownException
 import de.schildbach.wallet.payments.SendEngineNotSyncedException
 import de.schildbach.wallet.payments.SendNotSdkRoutableException
 import de.schildbach.wallet.payments.SendSignerLockedException
@@ -26,6 +27,7 @@ import de.schildbach.wallet.service.platform.sdk.ContactPaymentTarget
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.ECKey
 import org.bitcoinj.params.TestNet3Params
+import org.dash.wallet.common.services.PaymentSubmissionPendingException
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -92,6 +94,27 @@ class SendFailureClassificationTest {
         assertEquals(
             SendFailureKind.CONTACT_PAYMENT_NOT_RECORDED,
             classifySendFailure(ContactPaymentNotRecordableException(payment))
+        )
+    }
+
+    @Test
+    fun paymentSubmissionPending_mapsToOutcomeUnknown_neverAPlainFailure() {
+        // The payment may have been sent: the copy must say so and must not
+        // invite another send (a retry may pick different inputs and pay twice).
+        assertEquals(
+            SendFailureKind.OUTCOME_UNKNOWN,
+            classifySendFailure(PaymentSubmissionPendingException("ab".repeat(32), null))
+        )
+    }
+
+    @Test
+    fun ambiguousSdkSend_mapsToOutcomeUnknown_evenWhenItsCauseIsAnIllegalState() {
+        // An ordinary SDK send whose broadcast outcome is unknown: its cause is
+        // often an IllegalStateException, which alone would read as a generic,
+        // retryable failure.
+        assertEquals(
+            SendFailureKind.OUTCOME_UNKNOWN,
+            classifySendFailure(SdkSendOutcomeUnknownException(IllegalStateException("timeout")))
         )
     }
 

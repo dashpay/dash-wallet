@@ -30,6 +30,7 @@ import org.dash.wallet.common.currentReceiveAddressStringOffMain
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.money.FiatValue
 import org.dash.wallet.common.services.InsufficientFundsException
+import org.dash.wallet.common.services.PaymentSubmissionPendingException
 import org.dash.wallet.common.services.ReceiveAddressUnavailableException
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.WalletSession
@@ -1063,6 +1064,11 @@ class SwapKitApiAggregator @Inject constructor(
             ResponseResource.Success(swapTradeUIModel)
         } catch (e: InsufficientFundsException) {
             ResponseResource.Failure(e, false, 0, e.message)
+        } catch (e: PaymentSubmissionPendingException) {
+            // The deposit may be on the network. Keep the exception as the throwable so the
+            // preview screen reports "may have been sent" and withholds a retry.
+            log.error("swapkit deposit outcome unknown; it may have been sent, NOT retryable", e)
+            ResponseResource.Failure(e, false, 0, null)
         } catch (e: Exception) {
             log.error("failed to build/send swapkit deposit transaction", e)
             ResponseResource.Failure(e, false, 0, e.message)

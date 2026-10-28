@@ -254,6 +254,11 @@ class TransferDashViewModel @Inject constructor(
         } catch (e: Exception) {
             when {
                 e.isLeftoverBalanceWarning -> throw e
+                // May have been sent: never reported as a failure, which offers a retry.
+                e is PaymentSubmissionPendingException -> {
+                    e.printStackTrace()
+                    SendDashResponseState.OutcomeUnknownState
+                }
                 e.isInsufficientMoney -> {
                     e.printStackTrace()
                     SendDashResponseState.InsufficientMoneyState
@@ -369,6 +374,9 @@ sealed class SendDashResponseState {
     object InsufficientMoneyState: SendDashResponseState()
     data class FailureState(val failureMessage: String): SendDashResponseState()
     object UnknownFailureState: SendDashResponseState()
+
+    /** The send may have gone out ([PaymentSubmissionPendingException]); must not be retried. */
+    object OutcomeUnknownState: SendDashResponseState()
 }
 
 data class NetworkFeeExceptionState(
