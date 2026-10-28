@@ -626,7 +626,7 @@ class ShieldedTransferViewModel @Inject constructor(
         val text = if (state.dashMode) {
             max.toKeypadString()
         } else {
-            max.toFiatAt(state.rate)?.toPlainString() ?: return
+            max.toFiatAt(state.rate)?.toPlainStringTwoDecimals() ?: return
         }
         _uiState.value = state.copy(amountText = text)
         transferExecutor.clearRetryableResult()
@@ -640,7 +640,7 @@ class ShieldedTransferViewModel @Inject constructor(
         val text = when {
             amount.isZero -> "0"
             dashMode -> amount.toKeypadString()
-            else -> amount.toFiatAt(state.rate)?.toPlainString() ?: "0"
+            else -> amount.toFiatAt(state.rate)?.toPlainStringTwoDecimals() ?: "0"
         }
         _uiState.value = state.copy(dashMode = dashMode, amountText = text)
     }

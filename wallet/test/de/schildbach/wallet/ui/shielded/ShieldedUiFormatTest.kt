@@ -58,4 +58,20 @@ class ShieldedUiFormatTest {
             Locale.setDefault(originalLocale)
         }
     }
+
+    @Test
+    fun `fiat plain two-decimal string rounds and keeps a dot separator`() {
+        // MO-1111 follow-up: the editable keypad field also showed raw conversion
+        // precision when switching into fiat mode. Unlike toDisplayNoCode, this format
+        // never calls withLocale(), so it must stay "." regardless of default locale.
+        val originalLocale = Locale.getDefault()
+        Locale.setDefault(Locale.GERMANY)
+        try {
+            assertEquals("232.74", Fiat.parseFiat("USD", "232.7405").toPlainStringTwoDecimals())
+            assertEquals("0.93", Fiat.parseFiat("USD", "0.93").toPlainStringTwoDecimals())
+            assertEquals("5.00", Fiat.parseFiat("USD", "5").toPlainStringTwoDecimals())
+        } finally {
+            Locale.setDefault(originalLocale)
+        }
+    }
 }

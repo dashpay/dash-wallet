@@ -180,6 +180,16 @@ fun Fiat.toDisplay(): String = toFormattedString()
  */
 fun Fiat.toDisplayNoCode(): String = toFormattedStringNoCode()
 
+private val FIAT_PLAIN_TWO_DECIMALS_FORMAT: MonetaryFormat = MonetaryFormat.FIAT.optionalDecimals().noCode()
+
+/**
+ * "232.74"-style plain string, capped at two decimals, with the same locale-neutral `.`
+ * separator as [Fiat.toPlainString] (this format never calls `.withLocale()`) — for the
+ * editable keypad field, which re-parses this text with a hardcoded `.` separator in
+ * `processAmountKeyInput()`. Unlike [toDisplayNoCode], safe to feed back into that parser.
+ */
+fun Fiat.toPlainStringTwoDecimals(): String = FIAT_PLAIN_TWO_DECIMALS_FORMAT.format(this).toString()
+
 /** Ellipsized middle of a long address for one-line display. */
 fun String.ellipsizeAddress(head: Int = 10, tail: Int = 6): String =
     if (length <= head + tail + 1) this else "${take(head)}…${takeLast(tail)}"

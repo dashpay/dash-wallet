@@ -187,7 +187,7 @@ class ShieldedSendViewModel @Inject constructor(
         val text = if (state.dashMode) {
             state.shieldedBalance.toKeypadString()
         } else {
-            state.shieldedBalance.toFiatAt(state.rate)?.toPlainString() ?: return
+            state.shieldedBalance.toFiatAt(state.rate)?.toPlainStringTwoDecimals() ?: return
         }
         _uiState.value = state.copy(amountText = text, submitState = ShieldedSubmitState.Idle)
     }
@@ -199,7 +199,7 @@ class ShieldedSendViewModel @Inject constructor(
         val text = when {
             amount.isZero -> "0"
             dashMode -> amount.toKeypadString()
-            else -> amount.toFiatAt(state.rate)?.toPlainString() ?: "0"
+            else -> amount.toFiatAt(state.rate)?.toPlainStringTwoDecimals() ?: "0"
         }
         _uiState.value = state.copy(dashMode = dashMode, amountText = text)
     }
