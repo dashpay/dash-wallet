@@ -324,10 +324,17 @@ class TxDisplayCacheService @Inject constructor(
                 } else {
                     log.info("direction changed to {} — switching filter flag only", direction)
                     // _liveFilterFlag drives transactions' own flatMapLatest, which rebuilds the
-                    // Pager with this flag — no need to also touch _txDataSource (RoomLive is a
-                    // singleton object; re-assigning it is conflated away by the StateFlow) or to
-                    // invalidate the old PagingSource by hand.
+                    // Pager with this flag — no need to invalidate the old PagingSource by hand.
+                    // wrappedTransactionList.isEmpty() being false does NOT guarantee _txDataSource
+                    // already reached RoomLive: a filter change can race a still-suspended
+                    // rebuildWrappedList (wrappedTransactionList is set synchronously before the
+                    // suspending Room writes that lead to RoomLive) and cancel it via
+                    // flatMapLatest, stranding _txDataSource at Empty forever. Re-assert RoomLive
+                    // here so a cancelled rebuild can't leave the live transition stuck.
                     _liveFilterFlag.value = filter.direction.toFilterFlag()
+                    if (_txDataSource.value !is TxDataSource.RoomLive) {
+                        _txDataSource.value = TxDataSource.RoomLive
+                    }
                 }
                 val allFilter = TxDirectionFilter(TxFilterType.ALL, wallet)
                 walletData.observeTransactions(true, allFilter)
