@@ -127,10 +127,19 @@ object TransactionUtils {
      * bech32 witness-program output — the pinned SDK encodes those, not as
      * base58); a decode failure is treated the same as an empty list rather
      * than propagating, since crashing the details sheet is worse than
-     * falling back to the dashj-derived resolution.
+     * falling back to the dashj-derived resolution. [getToAddressOfSent] is
+     * only used as that fallback when there is NO override at all (a plain
+     * dashj-tracked tx, where its `isMine(bag)` check is trustworthy) —
+     * when an override IS present but unusable, `bag` is the very wallet
+     * the override exists to correct for (see class doc), so its
+     * `isMine(bag)` can reproduce MO-1108's own bug (the change output
+     * misread as a second recipient); no recipient list is shown instead,
+     * consistent with the SDK-only detail's own unresolved-output handling
+     * (`SdkTxDetailProvider.buildSdkTxDetail`'s `hasUnresolvedPaymentOutput`).
      */
     fun getSentToAddressesForDetail(tx: Transaction, bag: TransactionBag, sdkOverride: SdkTxDetail?): List<Address> {
-        val overrideAddresses = sdkOverride?.takeIf { !it.decodeFailed }?.outputAddresses?.takeIf { it.isNotEmpty() }
+        if (sdkOverride == null) return getToAddressOfSent(tx, bag)
+        val overrideAddresses = sdkOverride.takeIf { !it.decodeFailed }?.outputAddresses?.takeIf { it.isNotEmpty() }
         val decoded = overrideAddresses?.let { addresses ->
             try {
                 addresses.map { Address.fromBase58(tx.params, it) }
@@ -138,7 +147,7 @@ object TransactionUtils {
                 null
             }
         }
-        return decoded ?: getToAddressOfSent(tx, bag)
+        return decoded ?: emptyList()
     }
 
     /**

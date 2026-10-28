@@ -372,8 +372,15 @@ internal suspend fun foreignContactTxoExclusion(
     sdkService: DashSdkService,
     db: DashDatabase
 ): Pair<Set<Long>, Set<String>> = try {
-    val walletId = sdkService.walletManagerOrNull()?.wallets?.value?.keys?.singleOrNull()?.let(::walletIdFromHex)
-        ?: return emptySet<Long>() to emptySet<String>()
+    val loadedWalletIds = sdkService.walletManagerOrNull()?.wallets?.value?.keys ?: emptySet()
+    val walletId = loadedWalletIds.singleOrNull()?.let(::walletIdFromHex)
+        ?: return emptySet<Long>() to emptySet<String>().also {
+            LoggerFactory.getLogger(SdkTxDetailProvider::class.java).warn(
+                "foreign-contact TXO exclusion skipped: cannot pick the bound SDK wallet " +
+                    "({} loaded — post-restore orphan not pruned yet?); myOutputAddresses left unfiltered",
+                loadedWalletIds.size
+            )
+        }
     val externalAccountIds = db.accountDao()
         .observeByWalletAndType(walletId, SdkTxContactResolver.ACCOUNT_TYPE_DASHPAY_EXTERNAL)
         .first()
@@ -494,8 +501,12 @@ class SdkTxDetailProvider internal constructor(
             val (externalAccountIds, externalAddresses) = foreignContactTxoExclusion(sdkService, db)
             decoded?.outputs?.forEachIndexed { index, _ ->
                 val txo = txoDao.getByOutpoint(txoOutpoint(wireTxid, index)) ?: return@forEachIndexed
+                // Mirrors SdkTxContactResolver.signedNetsFor's NULL-accountId classification:
+                // a friendship-send TXO persists with accountId NULL, so coreAddressId (the
+                // core_addresses PK, always populated) is the authoritative fallback — address
+                // alone misses it whenever the TXO's own address column doesn't match.
                 val isForeign = (txo.accountId != null && txo.accountId in externalAccountIds) ||
-                    (txo.accountId == null && txo.address in externalAddresses)
+                    (txo.accountId == null && (txo.coreAddressId ?: txo.address) in externalAddresses)
                 if (!isForeign) myOutputAddresses += txo.address
             }
         }

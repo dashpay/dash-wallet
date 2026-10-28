@@ -126,45 +126,63 @@ class DashjTransactionUtilsTest {
     }
 
     @Test
-    fun `an empty override address list is not trusted either so it falls back to the dashj list`() {
+    fun `an empty override address list is not trusted so no recipient is shown`() {
         // A successfully decoded override can still come back with no resolved
         // addresses (e.g. a bare P2PK recipient — the SDK's address decoder has
-        // no arm for it; see SdkTxDetailProvider.buildSdkTxDetail). Empty must
-        // not be read as "no recipient": the payee still needs to be shown, via
-        // the dashj-derived fallback, which does resolve P2PK.
+        // no arm for it; see SdkTxDetailProvider.buildSdkTxDetail). The override's
+        // presence means `bag` cannot be trusted for this send (see class doc), so
+        // an empty override must not fall back to `bag`'s isMine check either —
+        // that would reproduce MO-1108 whenever `bag` also misreads the change
+        // output (the next test). No recipient is shown instead.
         val tx = sendWithChange()
         val bag = bagMock(myAddresses = listOf(changeAddress))
         val override = sentOverride(feeDuffs = 226L, outputAddresses = emptyList())
 
         val addresses = TransactionUtils.getSentToAddressesForDetail(tx, bag, override)
 
-        assertEquals(listOf(payeeAddress), addresses)
+        assertEquals(emptyList<Address>(), addresses)
     }
 
     @Test
-    fun `a failed decode has no addresses to trust so it falls back to the dashj list`() {
+    fun `an unusable override never falls back to isMine, even when isMine would misread the change output`() {
+        // Reproduces MO-1108 for the override-present-but-unusable branch: `bag`
+        // is the same held wallet the override exists to correct for, so trusting
+        // its isMine check here would show the change address as a second
+        // recipient again. No recipient is shown instead.
+        val tx = sendWithChange()
+        val bag = bagMock(myAddresses = emptyList()) // dashj recognizes nothing of this tx
+        val override = sentOverride(feeDuffs = 226L, outputAddresses = emptyList())
+
+        val addresses = TransactionUtils.getSentToAddressesForDetail(tx, bag, override)
+
+        assertEquals(emptyList<Address>(), addresses)
+    }
+
+    @Test
+    fun `a failed decode has no addresses to trust so no recipient is shown`() {
         val tx = sendWithChange()
         val bag = bagMock(myAddresses = listOf(changeAddress))
         val override = sentOverride(feeDuffs = 226L, outputAddresses = emptyList(), decodeFailed = true)
 
         val addresses = TransactionUtils.getSentToAddressesForDetail(tx, bag, override)
 
-        assertEquals(listOf(payeeAddress), addresses)
+        assertEquals(emptyList<Address>(), addresses)
     }
 
     @Test
-    fun `an override address dashj's base58 decoder rejects falls back to the dashj list instead of crashing`() {
+    fun `an override address dashj's base58 decoder rejects degrades to no recipient instead of crashing`() {
         // The pinned SDK encodes a witness-program output as bech32, never base58
         // (verified against the SDK's own address-encoding source). dashj's
         // Address.fromBase58 throws AddressFormatException on such a string; that
-        // must degrade to the dashj-derived fallback, not crash the details sheet.
+        // must degrade to no recipient, not crash the details sheet and not fall
+        // back to `bag`'s untrusted isMine check.
         val tx = sendWithChange()
         val bag = bagMock(myAddresses = listOf(changeAddress))
         val override = sentOverride(feeDuffs = 226L, outputAddresses = listOf("ds1qnotbase58witnessprogram"))
 
         val addresses = TransactionUtils.getSentToAddressesForDetail(tx, bag, override)
 
-        assertEquals(listOf(payeeAddress), addresses)
+        assertEquals(emptyList<Address>(), addresses)
     }
 
     // ── getFeeForDetail ───────────────────────────────────────────────
