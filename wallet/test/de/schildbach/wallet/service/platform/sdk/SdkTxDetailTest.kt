@@ -247,6 +247,39 @@ class SdkTxDetailTest {
         )
     }
 
+    @Test
+    fun `one resolved and one unresolved external recipient never shows only the resolved one`() {
+        // Two external recipients — one standard, one P2PK-like (no decoded address) —
+        // plus change. A naive `external.isNotEmpty()` check short-circuits on the
+        // resolved recipient before the unresolved one is ever noticed, silently
+        // dropping it. Both must be treated as unresolved (emptyList, so the caller's
+        // dashj-derived fallback — which does resolve P2PK — is used) rather than
+        // presenting the resolved address as if it were the only recipient.
+        val mixed = DecodedTransaction(
+            txid = decoded.txid,
+            inputs = decoded.inputs,
+            outputs = listOf(
+                decoded.outputs[0], // recipientAddress — resolves fine, external
+                DecodedTransaction.Output(null, 1_000L, decoded.outputs[0].scriptPubkey), // 2nd external, unresolved
+                decoded.outputs[1], // change — decodes fine, ours
+                decoded.outputs[2] // OP_RETURN
+            )
+        )
+
+        val detail = buildSdkTxDetail(
+            record = record(netAmountDuffs = -71_247, directionCode = 1),
+            decoded = mixed,
+            myOutputAddresses = setOf(changeAddress),
+            inputTxoAddresses = listOf(null),
+            inputTxoValues = listOf(null)
+        )
+
+        assertTrue(
+            "a partially-resolved recipient list must not be shown as if it were complete",
+            detail.outputAddresses.isEmpty()
+        )
+    }
+
     // ── Incoming receive ──────────────────────────────────────────────
 
     @Test

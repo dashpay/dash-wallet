@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.bitcoinj.core.Address
+import org.bitcoinj.core.AddressFormatException
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
@@ -121,11 +122,23 @@ object TransactionUtils {
      * recipient address at all (e.g. a bare P2PK output; see
      * [SdkTxDetail.outputAddresses]), not that there is none, so
      * [getToAddressOfSent]'s dashj-derived address resolution (which does
-     * handle P2PK) is used instead.
+     * handle P2PK) is used instead. The override's addresses can also be
+     * encoded in a scheme dashj's base58 decoder rejects outright (e.g. a
+     * bech32 witness-program output — the pinned SDK encodes those, not as
+     * base58); a decode failure is treated the same as an empty list rather
+     * than propagating, since crashing the details sheet is worse than
+     * falling back to the dashj-derived resolution.
      */
     fun getSentToAddressesForDetail(tx: Transaction, bag: TransactionBag, sdkOverride: SdkTxDetail?): List<Address> {
         val overrideAddresses = sdkOverride?.takeIf { !it.decodeFailed }?.outputAddresses?.takeIf { it.isNotEmpty() }
-        return overrideAddresses?.map { Address.fromBase58(tx.params, it) } ?: getToAddressOfSent(tx, bag)
+        val decoded = overrideAddresses?.let { addresses ->
+            try {
+                addresses.map { Address.fromBase58(tx.params, it) }
+            } catch (x: AddressFormatException) {
+                null
+            }
+        }
+        return decoded ?: getToAddressOfSent(tx, bag)
     }
 
     /**

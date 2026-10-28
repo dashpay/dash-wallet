@@ -152,6 +152,21 @@ class DashjTransactionUtilsTest {
         assertEquals(listOf(payeeAddress), addresses)
     }
 
+    @Test
+    fun `an override address dashj's base58 decoder rejects falls back to the dashj list instead of crashing`() {
+        // The pinned SDK encodes a witness-program output as bech32, never base58
+        // (verified against the SDK's own address-encoding source). dashj's
+        // Address.fromBase58 throws AddressFormatException on such a string; that
+        // must degrade to the dashj-derived fallback, not crash the details sheet.
+        val tx = sendWithChange()
+        val bag = bagMock(myAddresses = listOf(changeAddress))
+        val override = sentOverride(feeDuffs = 226L, outputAddresses = listOf("ds1qnotbase58witnessprogram"))
+
+        val addresses = TransactionUtils.getSentToAddressesForDetail(tx, bag, override)
+
+        assertEquals(listOf(payeeAddress), addresses)
+    }
+
     // ── getFeeForDetail ───────────────────────────────────────────────
 
     @Test

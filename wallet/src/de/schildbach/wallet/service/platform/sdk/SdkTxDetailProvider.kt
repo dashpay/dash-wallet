@@ -22,6 +22,7 @@ import de.schildbach.wallet.database.dao.TxDisplayCacheDao
 import de.schildbach.wallet.database.entity.TxDisplayCacheEntry
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import org.dash.wallet.common.data.TxId
 import org.dash.wallet.common.data.entity.TransactionMetadata
@@ -178,19 +179,22 @@ internal fun buildSdkTxDetail(
             // display dashj's "moved internally to" list produces. But a
             // non-standard PAYMENT output (e.g. P2PK — Address::from_script
             // has no P2PK arm, so its address comes back null and is dropped
-            // by mapNotNull above) must not be mistaken for "entirely self":
-            // an empty `external` then means "recipient unresolved", not "no
-            // recipient", so the caller's own (dashj-derived) fallback is
-            // preferred over silently presenting the change address as if it
-            // were the payee. OP_RETURN outputs are excluded from that check —
-            // they are known data-only outputs, not unresolved recipients.
+            // by mapNotNull above) must not be mistaken for "entirely self",
+            // even when SOME OTHER output did resolve: a partially-resolved
+            // `external` is just as unsafe to present as an empty one, since
+            // the unresolved recipient would be silently dropped rather than
+            // shown via the caller's dashj-derived fallback (which does
+            // resolve P2PK) — so the unresolved check is checked first and
+            // wins regardless of `external`'s size. OP_RETURN outputs are
+            // excluded from that check — they are known data-only outputs,
+            // not unresolved recipients.
             val external = allOutputAddresses.filter { it !in myOutputAddresses }
             val hasUnresolvedPaymentOutput = outputs.any {
                 it.address == null && it.scriptPubkey.firstOrNull() != OP_RETURN
             }
             when {
-                external.isNotEmpty() -> external
                 hasUnresolvedPaymentOutput -> emptyList()
+                external.isNotEmpty() -> external
                 else -> allOutputAddresses
             }
         }
@@ -353,6 +357,41 @@ internal fun txoOutpoint(wireTxid: ByteArray, vout: Int): ByteArray =
         ((vout ushr 24) and 0xFF).toByte()
     )
 
+/**
+ * Account ids and addresses of this wallet's watch-only DIP-15 external
+ * friendship accounts — the contact's own funds, never ours (see
+ * [SdkTxContactResolver.ACCOUNT_TYPE_DASHPAY_EXTERNAL]'s KDoc and
+ * `txoIsForeignSql`). [load]'s `myOutputAddresses` needs the same exclusion
+ * [SdkTxContactResolver.signedNetsFor] already applies to its TXO sums, so a
+ * contact's mirrored TXO (persisted so an outgoing payment is displayable) is
+ * never counted as this wallet's own output. Empty — not a crash — when the
+ * wallet isn't resolvable or the read fails; the caller then falls back to
+ * its pre-existing, unfiltered behavior.
+ */
+internal suspend fun foreignContactTxoExclusion(
+    sdkService: DashSdkService,
+    db: DashDatabase
+): Pair<Set<Long>, Set<String>> = try {
+    val walletId = sdkService.walletManagerOrNull()?.wallets?.value?.keys?.singleOrNull()?.let(::walletIdFromHex)
+        ?: return emptySet<Long>() to emptySet<String>()
+    val externalAccountIds = db.accountDao()
+        .observeByWalletAndType(walletId, SdkTxContactResolver.ACCOUNT_TYPE_DASHPAY_EXTERNAL)
+        .first()
+        .map { it.id }
+        .toSet()
+    val externalAddresses = HashSet<String>()
+    for (accountId in externalAccountIds) {
+        db.coreAddressDao().observeByAccount(accountId).first().mapTo(externalAddresses) { it.address }
+    }
+    externalAccountIds to externalAddresses
+} catch (e: CancellationException) {
+    throw e
+} catch (t: Throwable) {
+    LoggerFactory.getLogger(SdkTxDetailProvider::class.java)
+        .warn("foreign-contact TXO exclusion unavailable; myOutputAddresses left unfiltered", t)
+    emptySet<Long>() to emptySet<String>()
+}
+
 // ── The provider ──────────────────────────────────────────────────────
 
 /**
@@ -451,8 +490,14 @@ class SdkTxDetailProvider internal constructor(
 
         val txoDao = db.txoDao()
         val myOutputAddresses = mutableSetOf<String>()
-        decoded?.outputs?.forEachIndexed { index, _ ->
-            txoDao.getByOutpoint(txoOutpoint(wireTxid, index))?.let { myOutputAddresses += it.address }
+        if (!decoded?.outputs.isNullOrEmpty()) {
+            val (externalAccountIds, externalAddresses) = foreignContactTxoExclusion(sdkService, db)
+            decoded?.outputs?.forEachIndexed { index, _ ->
+                val txo = txoDao.getByOutpoint(txoOutpoint(wireTxid, index)) ?: return@forEachIndexed
+                val isForeign = (txo.accountId != null && txo.accountId in externalAccountIds) ||
+                    (txo.accountId == null && txo.address in externalAddresses)
+                if (!isForeign) myOutputAddresses += txo.address
+            }
         }
         val inputTxos = decoded?.inputs.orEmpty().map { input ->
             txoDao.getByOutpoint(txoOutpoint(input.prevTxid, input.prevVout))
