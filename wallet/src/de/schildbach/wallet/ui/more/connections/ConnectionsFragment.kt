@@ -153,7 +153,8 @@ class ConnectionsFragment : Fragment() {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
                 val lockState = host?.walletLocked ?: kotlinx.coroutines.flow.MutableStateFlow(true)
                 combine(viewModel.uiState, lockState) { state, locked -> state to locked }.collect { (state, locked) ->
-                    if (locked || !viewModel.isWalletUnlocked || state.recordsStatus == ConnectionRecordsStatus.UNAVAILABLE) {
+                    if (locked || !viewModel.isWalletUnlocked || state.recordsStatus == ConnectionRecordsStatus.UNAVAILABLE ||
+                        state.recordsStatus == ConnectionRecordsStatus.NO_IDENTITY) {
                         listOf(APPROVAL_DIALOG, PURCHASE_DIALOG).forEach { tag ->
                             (childFragmentManager.findFragmentByTag(tag) as? androidx.fragment.app.DialogFragment)?.let {
                                 it.dialog?.hide()

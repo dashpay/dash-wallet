@@ -456,3 +456,28 @@ wrong DashJ JAR checksum in the common module's compile classpath before compila
 the approved checksum was restored and the positive builds passed. An isolated
 Gradle probe also accepted the authentic publication and rejected a wrong checksum.
 No live-device, funded-network or signed-release test is claimed.
+
+### Confirmed No Identity
+
+Tools and Connections now share a strict local availability check. Only successful
+identity initialization, no in-memory identity, readable empty identity preferences
+(or just creation state NONE), and readable empty grant/legacy/purchase stores can
+establish NO_IDENTITY. Any remaining identity metadata or retained audit keeps the
+management path available. I/O errors, malformed data, pending initialization and
+missing wallets never establish absence. Ordinary BaseConfig empty-on-I/O fallback
+is not used for these checks.
+
+Tools hides Connections only for confirmed absence and rechecks on resume. A direct
+link or already-open screen instead shows "Create a username to connect apps."
+without Scan or Retry. Saved audits with a missing identity still receive the
+existing unavailable/recovery state, and explicit Retry can reload that identity.
+No identity registration, native request, signing or grant deletion is introduced.
+
+Real DataStore regressions cover empty files, I/O failures, malformed JSON/state,
+incomplete registration, and each audit type. Tools tests cover visibility and
+resume refresh; a rendered Fragment test verifies the no-identity prompt has no
+Scan or Retry. The run passed 688 tests with 104 conditional skips and no failures
+across devnet, testnet and production; both debug APK builds and ktlintCheck passed.
+After disk exhaustion interrupted a subsequent build, only regenerable compilation
+caches were cleared; the final run used a fresh in-process compiler and passed.
+The separate reported token-purchase replay-fence issue is not changed by this fix.

@@ -38,6 +38,11 @@ class ConnectionsViewModelTest {
     private val applicationScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + dispatcher)
     private val repository = mockk<DashConnectRepository>(relaxed = true)
     private val identities = mockk<IdentityRepository>(relaxed = true)
+    private val identityConfig = mockk<de.schildbach.wallet.database.entity.BlockchainIdentityConfig>(relaxed = true)
+    private val auditConfig = mockk<DashConnectConfig>(relaxed = true)
+    private val walletData = mockk<org.dash.wallet.common.WalletDataProvider>(relaxed = true)
+    private fun availability(owner: IdentityRepository = identities) =
+        ConnectIdentityAvailability(owner, identityConfig, auditConfig, walletData)
     private lateinit var model: ConnectionsViewModel
     private var originalSupportsPlatform = false
     private val vector = JsonParser.parseReader(javaClass.getResourceAsStream("/app-connect-vectors.json")!!.reader()).asJsonObject
@@ -59,13 +64,16 @@ class ConnectionsViewModelTest {
         every { identities.blockchainIdentity } returns null
         every { identities.blockchainIdentityFlow } returns MutableStateFlow(null)
         every { identities.initializationResult } returns MutableStateFlow(Result.success(Unit))
+        every { identityConfig.observeIdentityPresence() } returns MutableStateFlow(true)
+        every { auditConfig.observeHasRecords() } returns MutableStateFlow(false)
+        every { walletData.wallet } returns mockk(relaxed = true)
         coEvery { repository.parseQr(any()) } returns DashConnectQr(request)
         coEvery { repository.prepareLogin(any()) } returns plan
         coEvery { repository.resolveWalletUsername() } returns "Alice"
         coEvery { repository.resolveAppDisplay(any(), any()) } returns AppDisplay("App", "example.org")
         coEvery { repository.approvePreparedLogin(any(), any()) } throws IllegalStateException("Confirmation uncertain")
         coEvery { repository.revokePreparedLogin(any(), any()) } returns Unit
-        model = ConnectionsViewModel(repository, identities, applicationScope)
+        model = ConnectionsViewModel(repository, identities, applicationScope, availability())
         model.bindWalletUnlockCheck { true }
         model.onForegroundChanged(true)
     }
@@ -82,7 +90,7 @@ class ConnectionsViewModelTest {
         Constants.SUPPORTS_PLATFORM = false
         every { identities.initializationResult } returns MutableStateFlow<Result<Unit>?>(null)
         clearMocks(identities, answers = false)
-        model = ConnectionsViewModel(repository, identities, applicationScope)
+        model = ConnectionsViewModel(repository, identities, applicationScope, availability())
         model.bindWalletUnlockCheck { true }
         model.onForegroundChanged(true)
         val uri = if (purchase) "dash-st:2?n=d&v=1" else vector.getAsJsonObject("request")["uri"].asString
@@ -130,7 +138,7 @@ class ConnectionsViewModelTest {
                 }
             }
         }
-        model = ConnectionsViewModel(repository, identities, applicationScope)
+        model = ConnectionsViewModel(repository, identities, applicationScope, availability())
         dispatcher.scheduler.runCurrent()
         assertEquals(ConnectionStatus.ACTIVE, model.uiState.value.connections.single().status)
         status = ConnectionStatus.APPROVED
@@ -413,6 +421,41 @@ class ConnectionsViewModelTest {
         assertTrue(model.uiState.value.connections.isEmpty())
     }
 
+    @Test fun `confirmed fresh wallet has its own state and cannot prepare scanned or URL requests`() {
+        every { identityConfig.observeIdentityPresence() } returns MutableStateFlow(false)
+        model.refreshConnections()
+        dispatcher.scheduler.runCurrent()
+        assertEquals(ConnectionRecordsStatus.NO_IDENTITY, model.uiState.value.recordsStatus)
+        assertFalse(model.canUseConnections)
+        assertTrue(model.uiState.value.connections.isEmpty())
+        for (url in listOf(false, true)) {
+            if (url) model.onUrlOpened("dash-key:test") else model.onQrScanned("dash-key:test")
+            dispatcher.scheduler.runCurrent()
+            assertEquals("Create a username to connect apps.",
+                (model.scanOutcome.value as ConnectionsViewModel.ScanOutcome.Error).message)
+            model.resetScanOutcome()
+        }
+        verify(exactly = 0) { repository.observeConnections() }
+        coVerify(exactly = 0) { repository.prepareLogin(any()) }
+    }
+
+    @Test fun `saved audits without an identity remain unavailable rather than confirmed empty`() {
+        every { identityConfig.observeIdentityPresence() } returns MutableStateFlow(false)
+        every { auditConfig.observeHasRecords() } returns MutableStateFlow(true)
+        every { repository.observeConnections() } returns kotlinx.coroutines.flow.flow { error("Identity unavailable") }
+        model.refreshConnections()
+        dispatcher.scheduler.runCurrent()
+        assertEquals(ConnectionRecordsStatus.UNAVAILABLE, model.uiState.value.recordsStatus)
+        assertFalse(model.canUseConnections)
+    }
+
+    @Test fun `unreadable strict identity snapshot preserves retryable unavailable state`() {
+        every { identityConfig.observeIdentityPresence() } returns kotlinx.coroutines.flow.flow { throw java.io.IOException("Read failed") }
+        model.refreshConnections()
+        dispatcher.scheduler.runCurrent()
+        assertEquals(ConnectionRecordsStatus.UNAVAILABLE, model.uiState.value.recordsStatus)
+    }
+
     @Test fun `explicit Retry reloads cached successful missing identity and coalesces repeated taps`() {
         val initialized = MutableStateFlow<Result<Unit>?>(Result.success(Unit))
         val identity = MutableStateFlow<org.dashj.platform.dashpay.BlockchainIdentity?>(null)
@@ -512,7 +555,7 @@ class ConnectionsViewModelTest {
             check(owner.blockchainIdentity != null) { "Identity unavailable" }
             emit(listOf(connection))
         }
-        model = ConnectionsViewModel(repository, owner, applicationScope)
+        model = ConnectionsViewModel(repository, owner, applicationScope, availability(owner))
         dispatcher.scheduler.runCurrent()
         assertEquals(ConnectionRecordsStatus.LOADING, model.uiState.value.recordsStatus)
         loading.cancel()
@@ -560,7 +603,7 @@ class ConnectionsViewModelTest {
             check(owner.blockchainIdentity!!.uniqueIdentifier == groupId)
             emit(listOf(connection))
         }
-        model = ConnectionsViewModel(repository, owner, applicationScope)
+        model = ConnectionsViewModel(repository, owner, applicationScope, availability(owner))
         dispatcher.scheduler.runCurrent()
         assertEquals(ConnectionRecordsStatus.UNAVAILABLE, model.uiState.value.recordsStatus)
         model.retryConnections()
@@ -679,7 +722,7 @@ class ConnectionsViewModelTest {
         every { config.observeGrants() } returns records
         every { config.observeConnections() } returns MutableStateFlow(emptyList())
         identityFlow.value = null
-        model = ConnectionsViewModel(PlatformDashConnectRepository(platform, wallet, identities, config), identities, applicationScope)
+        model = ConnectionsViewModel(PlatformDashConnectRepository(platform, wallet, identities, config), identities, applicationScope, availability())
         dispatcher.scheduler.runCurrent()
         assertEquals(ConnectionRecordsStatus.LOADING, model.uiState.value.recordsStatus)
         initialized.value = Result.failure(IllegalStateException("Identity initialization failed"))
@@ -902,7 +945,7 @@ class ConnectionsViewModelTest {
 
     @Test fun `approval fails closed without a bound unlocked wallet`() {
         model.viewModelScope.cancel()
-        model = ConnectionsViewModel(repository, identities, applicationScope)
+        model = ConnectionsViewModel(repository, identities, applicationScope, availability())
         scan(openedFromUrl = true)
         model.approvePendingRequest()
         dispatcher.scheduler.advanceUntilIdle()
@@ -999,7 +1042,7 @@ class ConnectionsViewModelTest {
         ShadowChoreographer.setPaused(true)
         // Use a fresh model so the two pending request kinds cannot block each other.
         model.viewModelScope.cancel()
-        model = ConnectionsViewModel(repository, identities, applicationScope)
+        model = ConnectionsViewModel(repository, identities, applicationScope, availability())
         var unlocked = !restoredWhileLocked
         model.onForegroundChanged(true)
         model.bindWalletUnlockCheck { unlocked }
@@ -1294,6 +1337,8 @@ class ConnectionsViewModelTest {
 
     @Test fun `fragment rendered Retry recovers the same model used by connection actions`() {
         ShadowChoreographer.setPaused(false)
+        val persistedIdentity = MutableStateFlow(true)
+        every { identityConfig.observeIdentityPresence() } returns persistedIdentity
         val connection = DAppConnection("saved", "Saved app", "", ConnectionStatus.ACTIVE, 1)
         var available = false
         every { repository.observeConnections() } returns kotlinx.coroutines.flow.flow {
@@ -1348,6 +1393,16 @@ class ConnectionsViewModelTest {
             })
             coEvery { repository.connectionDetails(connection.id, connection.scope) } returns "Same owner"
             assertEquals("Same owner", kotlinx.coroutines.runBlocking { model.connectionDetails(connection) })
+            persistedIdentity.value = false
+            dispatcher.scheduler.runCurrent()
+            assertEquals(ConnectionRecordsStatus.NO_IDENTITY, model.uiState.value.recordsStatus)
+            render()
+            val shown = nodes(owner.rootSemanticsNode).filter {
+                it.config.contains(androidx.compose.ui.semantics.SemanticsProperties.Text)
+            }.flatMap { it.config[androidx.compose.ui.semantics.SemanticsProperties.Text].map { text -> text.text } }
+            assertTrue(shown.contains(activity.getString(de.schildbach.wallet_test.R.string.dash_connect_identity_required)))
+            assertFalse(shown.contains(retryText))
+            assertFalse(shown.contains(activity.getString(de.schildbach.wallet_test.R.string.dash_connect_scan_qr)))
         } finally {
             view.disposeComposition()
             controller.pause().stop().destroy()

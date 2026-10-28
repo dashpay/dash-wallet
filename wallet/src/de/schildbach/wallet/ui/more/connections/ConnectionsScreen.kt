@@ -118,6 +118,12 @@ private fun ConnectionsScreenContent(
             Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = colors.dashBlue)
             }
+        } else if (uiState.recordsStatus == ConnectionRecordsStatus.NO_IDENTITY) {
+            Box(Modifier.weight(1f).fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) {
+                Text(stringResource(R.string.dash_connect_identity_required),
+                    style = MyTheme.Typography.TitleMediumSemibold, color = colors.textPrimary,
+                    textAlign = TextAlign.Center)
+            }
         } else if (uiState.recordsStatus == ConnectionRecordsStatus.UNAVAILABLE) {
             Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(40.dp),
                 verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {

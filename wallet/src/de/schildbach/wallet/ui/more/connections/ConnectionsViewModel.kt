@@ -46,7 +46,7 @@ import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.core.Base58
 import javax.inject.Inject
 
-enum class ConnectionRecordsStatus { LOADING, READY, UNAVAILABLE }
+enum class ConnectionRecordsStatus { LOADING, READY, UNAVAILABLE, NO_IDENTITY }
 
 data class ConnectionsUIState(
     val connections: List<DAppConnection> = emptyList(),
@@ -67,7 +67,8 @@ data class ConnectionsUIState(
 class ConnectionsViewModel @Inject constructor(
     private val repository: DashConnectRepository,
     private val identityRepository: IdentityRepository,
-    private val applicationScope: CoroutineScope
+    private val applicationScope: CoroutineScope,
+    private val identityAvailability: ConnectIdentityAvailability
 ) : ViewModel() {
 
     companion object {
@@ -128,6 +129,7 @@ class ConnectionsViewModel @Inject constructor(
     internal val canUseConnections: Boolean get() = _uiState.value.recordsStatus == ConnectionRecordsStatus.READY
 
     private fun requireConnectionRecords() {
+        check(_uiState.value.recordsStatus != ConnectionRecordsStatus.NO_IDENTITY) { "Create a username to connect apps." }
         check(canUseConnections) { "Connection records are unavailable. Retry loading them before continuing. No access has been revoked." }
     }
 
@@ -201,14 +203,22 @@ class ConnectionsViewModel @Inject constructor(
             return
         }
         connectionsJob = viewModelScope.launch {
-            combine(identityRepository.initializationResult, identityRepository.blockchainIdentityFlow) {
-                result, _ -> result
-            }.collectLatest { result ->
+            identityAvailability.observe().collectLatest { availability ->
                 kotlin.coroutines.coroutineContext.ensureActive()
                 _uiState.update { it.copy(recordsStatus = ConnectionRecordsStatus.LOADING, connections = emptyList()) }
-                if (result == null) return@collectLatest
+                when (availability) {
+                    ConnectIdentityStatus.LOADING -> return@collectLatest
+                    ConnectIdentityStatus.NO_IDENTITY -> {
+                        _uiState.update { it.copy(recordsStatus = ConnectionRecordsStatus.NO_IDENTITY) }
+                        return@collectLatest
+                    }
+                    ConnectIdentityStatus.UNAVAILABLE -> {
+                        _uiState.update { it.copy(recordsStatus = ConnectionRecordsStatus.UNAVAILABLE) }
+                        return@collectLatest
+                    }
+                    ConnectIdentityStatus.AVAILABLE -> Unit
+                }
                 try {
-                    result.getOrThrow()
                     // Keep rows and availability in this cancellable observation, not separate buffered consumers.
                     repository.observeConnections().collect { connections ->
                         kotlin.coroutines.coroutineContext.ensureActive()

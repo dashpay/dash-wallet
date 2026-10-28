@@ -55,7 +55,7 @@ class DisabledConnectRequestTest {
             if (!Constants.IS_PROD_BUILD && networkId != NetworkParameters.ID_MAINNET) continue
             ReflectionHelpers.setField(network, "id", networkId)
             model?.viewModelScope?.cancel()
-            val current = ConnectionsViewModel(repository, identities, applicationScope)
+            val current = ConnectionsViewModel(repository, identities, applicationScope, mockk(relaxed = true))
             model = current
             current.bindWalletUnlockCheck { true }
             val uri = if (purchase) "dash-st:2?n=d&v=1" else "dash-key:2?n=d&v=2"

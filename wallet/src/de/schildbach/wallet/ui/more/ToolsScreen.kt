@@ -192,7 +192,7 @@ private fun ToolsScreenContent(
                     action = onCsvExportClick
                 )
 
-                if (Constants.SUPPORTS_PLATFORM && Constants.SUPPORTS_CONNECT) {
+                if (Constants.SUPPORTS_PLATFORM && Constants.SUPPORTS_CONNECT && uiState.showConnections) {
                     // Connections (DashConnect)
                     MenuItem(
                         title = stringResource(R.string.dash_connect_connections_title),

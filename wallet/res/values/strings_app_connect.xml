@@ -27,4 +27,5 @@
     <string name="dash_st_purchase_warning">This request spends Platform credits. The link does not prove which app sent it. Token names are supplied by the contract owner.</string>
     <string name="dash_st_purchase_approve">Approve purchase</string>
     <string name="dash_st_purchase_submitted">Purchase submitted. Check your token and credit balances for the final result. This request cannot be submitted again.</string>
+    <string name="dash_connect_identity_required">Create a username to connect apps.</string>
 </resources>

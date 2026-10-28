@@ -102,6 +102,14 @@ open class DashConnectConfig @Inject constructor(
     // BaseConfig's empty-preferences fallback for ordinary settings.
     suspend fun getGrants(): List<JSONObject> = observeGrants().first()
 
+    /** A single strict snapshot includes retained audits and legacy rows, regardless of scope. */
+    fun observeHasRecords(): Flow<Boolean> = configContext.dataStore.data.map { preferences ->
+        val grants = decodeGrants(preferences[GRANTS])
+        val connections = JSONArray(preferences[CONNECTIONS] ?: "[]")
+        val purchases = JSONArray(preferences[PURCHASES] ?: "[]")
+        grants.isNotEmpty() || connections.length() > 0 || purchases.length() > 0
+    }
+
     fun observeGrants(): Flow<List<JSONObject>> = configContext.dataStore.data.map { preferences ->
         decodeGrants(preferences[GRANTS])
     }
