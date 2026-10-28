@@ -127,8 +127,8 @@ object TransactionUtils {
      * bech32 witness-program output — the pinned SDK encodes those, not as
      * base58); a decode failure is treated the same as an empty list rather
      * than propagating, since crashing the details sheet is worse than
-     * falling back to the dashj-derived resolution. [getToAddressOfSent] is
-     * only used as that fallback when there is NO override at all (a plain
+     * showing no recipient. [getToAddressOfSent] is
+     * only used as a fallback when there is NO override at all (a plain
      * dashj-tracked tx, where its `isMine(bag)` check is trustworthy) —
      * when an override IS present but unusable, `bag` is the very wallet
      * the override exists to correct for (see class doc), so its
