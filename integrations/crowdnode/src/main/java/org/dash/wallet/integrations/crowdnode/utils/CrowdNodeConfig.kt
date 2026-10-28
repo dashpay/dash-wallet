@@ -23,6 +23,10 @@ import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.BaseConfig
 import javax.inject.Inject
@@ -54,5 +58,17 @@ open class CrowdNodeConfig @Inject constructor(
         val LAST_WITHDRAWAL_BLOCK = intPreferencesKey("last_withdrawal_block")
         val FEE_PERCENTAGE = doublePreferencesKey("fee_double")
         val LAST_FEE_REQUEST = longPreferencesKey("last_fee_request")
+    }
+
+    private val configScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    /**
+     * Forgets [NO_SIGN_UP_SCAN_TX_COUNT] when a created or restored wallet replaces the current one
+     * without a wipe: the cached count describes the old wallet's transactions, and a replacement
+     * with the same count would otherwise skip the sign-up scan. Fire-and-forget, so it is safe to
+     * call from the main thread.
+     */
+    fun onWalletReplaced() {
+        configScope.launch { remove(NO_SIGN_UP_SCAN_TX_COUNT) }
     }
 }

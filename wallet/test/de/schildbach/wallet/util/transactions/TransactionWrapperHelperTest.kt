@@ -77,7 +77,10 @@ class TransactionWrapperHelperTest {
         receivedTx.inputs[0].connect(receivedConnectedTx.outputs[0])
     }
 
-    private fun wrapSignUpTransactions(includeUnwrapped: Boolean): Pair<Collection<TransactionWrapper>, TransactionWrapper> {
+    private fun wrapSignUpTransactions(
+        includeUnwrapped: Boolean,
+        includeSignUp: Boolean = true
+    ): Pair<Collection<TransactionWrapper>, TransactionWrapper> {
         val wallet = mockk<Wallet>()
         every { wallet.context } returns Context(networkParams)
 
@@ -87,15 +90,20 @@ class TransactionWrapperHelperTest {
         val connectedTx = Transaction(networkParams, Utils.HEX.decode(connectedTxData))
         someTx.inputs[0].connect(connectedTx.outputs[0])
 
-        val allTransactions = setOf(
-            someTx,
-            signUpRequestTx,
-            acceptTermsResponseTx,
-            acceptTermsRequestTx,
-            welcomeResponseTx,
-            topUpTx,
-            receivedTx
-        )
+        val allTransactions = if (includeSignUp) {
+            setOf(
+                someTx,
+                signUpRequestTx,
+                acceptTermsResponseTx,
+                acceptTermsRequestTx,
+                welcomeResponseTx,
+                topUpTx,
+                receivedTx
+            )
+        } else {
+            // Neither is part of the sign-up, so the factory claims nothing
+            setOf(someTx, receivedTx)
+        }
 
         val hash1 = Utils.HEX.decode("28fd6a3abc9633389c146b44f59243ac1ec3caac")
         val hash2 = Utils.HEX.decode("8b6743bde3b5b5778220891e8572d2475c1c9e0d")
@@ -137,5 +145,16 @@ class TransactionWrapperHelperTest {
 
         assertEquals("Must have only the CrowdNode wrapper:", listOf(crowdNodeWrapper), wrappedTransactions.toList())
         assertEquals("CrowdNode wrapper must have 5 transactions", 5, crowdNodeWrapper.transactions.size)
+    }
+
+    @Test
+    fun wrapTransactions_withoutUnwrapped_noFactoryMatches_returnsEmpty() {
+        val (wrappedTransactions, crowdNodeWrapper) = wrapSignUpTransactions(
+            includeUnwrapped = false,
+            includeSignUp = false
+        )
+
+        assertEquals("Must have no wrappers:", 0, wrappedTransactions.size)
+        assertEquals("CrowdNode wrapper must have no transactions", 0, crowdNodeWrapper.transactions.size)
     }
 }

@@ -1121,6 +1121,10 @@ public class WalletApplication extends MultiDexApplication
         // what the previous wallet file held durably is not in this one.
         reportWalletChangedToContactPayments();
         walletStateFlow.setValue(newWallet);
+        // Configs survive a replacement that isn't a wipe (e.g. restoring from
+        // the recovery phrase); CrowdNode's no-sign-up scan cache describes the
+        // previous wallet's transactions, so drop it.
+        crowdNodeConfig.onWalletReplaced();
         // TODO: move to a wallet creation class
         if (!wallet.hasKeyChain(Constants.BIP44_PATH)) {
             wallet.addKeyChain(Constants.BIP44_PATH);
