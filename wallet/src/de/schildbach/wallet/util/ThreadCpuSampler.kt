@@ -17,6 +17,8 @@
 
 package de.schildbach.wallet.util
 
+import android.os.Looper
+import android.os.Process
 import android.os.SystemClock
 import android.system.Os
 import android.system.OsConstants
@@ -396,6 +398,13 @@ object ThreadCpuSampler {
                 stacksError = t
                 emptyMap()
             }
+            // The main thread's comm is the process name, so it is found by tid == pid.
+            val pid = Process.myPid()
+            val mainThread: Thread? = try {
+                Looper.getMainLooper()?.thread
+            } catch (_: Throwable) {
+                null
+            }
             for (t in hot) {
                 ctx.ensureActive()
                 val pct = ThreadCpuStats.cpuPercent(t.deltaTicks, clkTck, wallMs)
@@ -409,9 +418,8 @@ object ThreadCpuSampler {
                     )
                     continue
                 }
-                val candidates = javaThreads.entries.filter {
-                    ThreadCpuStats.javaNameMatchesComm(it.key.name, t.name)
-                }
+                val candidates =
+                    ThreadCpuStats.javaCandidates(t.tid, t.name, pid, mainThread, javaThreads.keys) { it.name }
                 if (candidates.isEmpty()) {
                     // No positive identity: native, unattached, or a Java thread
                     // that exited/was renamed between the scan and the stacks.
@@ -425,14 +433,15 @@ object ThreadCpuSampler {
                 }
                 // Same-named Java threads (pools) can't be told apart by tid from
                 // Java; prefer one that is RUNNABLE, since a CPU-burner usually is.
-                val pick = candidates.firstOrNull { it.key.state == Thread.State.RUNNABLE } ?: candidates.first()
+                val pick = candidates.firstOrNull { it.state == Thread.State.RUNNABLE } ?: candidates.first()
+                val frames = javaThreads[pick].orEmpty()
                 val stack = StringBuilder()
-                pick.value.take(MAX_STACK_FRAMES).forEach { stack.append("\n    at ").append(it) }
-                if (pick.value.size > MAX_STACK_FRAMES) stack.append("\n    ...")
+                frames.take(MAX_STACK_FRAMES).forEach { stack.append("\n    at ").append(it) }
+                if (frames.size > MAX_STACK_FRAMES) stack.append("\n    ...")
                 log.warn(
                     "$PREFIX hot tid={} name='{}' state={} cpu={}% wchan={} java='{}' ({} of {} same-name, javaState={}){}",
                     t.tid, t.name, t.state, "%.1f".format(java.util.Locale.US, pct), wchan,
-                    pick.key.name, candidates.indexOf(pick) + 1, candidates.size, pick.key.state, stack
+                    pick.name, candidates.indexOf(pick) + 1, candidates.size, pick.state, stack
                 )
             }
         }

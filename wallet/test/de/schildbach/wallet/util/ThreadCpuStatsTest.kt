@@ -494,6 +494,27 @@ class ThreadCpuStatsTest {
         assertEquals("futex_wait_queue", ThreadCpuStats.formatWchan("futex_wait_queue\n"))
     }
 
+    @Test
+    fun `the main thread is matched by tid == pid, not by its comm`() {
+        val threads = listOf("main", "DefaultDispatcher-worker-1", "wallet_test")
+        // Main thread: comm is the truncated process name; Java name is "main".
+        assertEquals(
+            listOf("main"),
+            ThreadCpuStats.javaCandidates(100, "darkcoin.wallet", 100, "main", threads) { it }
+        )
+        // Any other tid keeps name matching, even if its comm equals a Java name.
+        assertEquals(
+            listOf("DefaultDispatcher-worker-1"),
+            ThreadCpuStats.javaCandidates(101, "DefaultDispatch", 100, "main", threads) { it }
+        )
+        assertTrue(ThreadCpuStats.javaCandidates(102, "tokio-rt", 100, "main", threads) { it }.isEmpty())
+        // Without a main thread to match, the pid falls back to name matching.
+        assertEquals(
+            listOf("wallet_test"),
+            ThreadCpuStats.javaCandidates(100, "wallet_test", 100, null, threads) { it }
+        )
+    }
+
     // ── failure rate limiting ──────────────────────────────────────────
 
     @Test

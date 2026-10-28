@@ -501,4 +501,23 @@ object ThreadCpuStats {
 
     /** Whether a Java thread name could be the /proc comm [comm] (see [commForJavaName]). */
     fun javaNameMatchesComm(javaName: String, comm: String): Boolean = commForJavaName(javaName) == comm
+
+    /**
+     * The Java threads in [threads] that could be the /proc thread [tid] with
+     * comm [comm]. The main thread's tid is the [pid] and its comm is the
+     * (truncated) process name, not its Java name `main`, so it is matched by
+     * identity with [mainThread] instead; every other thread by name.
+     */
+    fun <T> javaCandidates(
+        tid: Int,
+        comm: String,
+        pid: Int,
+        mainThread: T?,
+        threads: Collection<T>,
+        nameOf: (T) -> String
+    ): List<T> = if (tid == pid && mainThread != null) {
+        threads.filter { it == mainThread }
+    } else {
+        threads.filter { javaNameMatchesComm(nameOf(it), comm) }
+    }
 }
