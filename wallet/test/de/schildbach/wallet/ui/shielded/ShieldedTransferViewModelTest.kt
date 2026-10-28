@@ -866,16 +866,17 @@ class ShieldedTransferViewModelTest {
     }
 
     @Test
-    fun isMaxSpend_fiatMode_maxTapRoundTripsExactly() {
-        // MO-1111 pre-review follow-up: onMaxClick must write a lossless fiat string
-        // (Fiat.toPlainString()), not a rounded one, so that amount re-derived from
-        // amountText round-trips back to exactly availableBalance even when the rate
-        // needs more than two decimals to convert exactly — otherwise the plain
-        // amount == availableBalance comparison below misses a true Max tap, and a
-        // Max-tap submission silently sends less than the full balance.
-        val rate = Fiat.parseFiat("USD", "232.745198") // does not round-trip at 2 decimals
-        val balance = Dash.parse("1.00")
-        val maxFiatText = balance.toFiatAt(rate)!!.toPlainString()
+    fun isMaxSpend_fiatMode_recognizesMaxTapDespiteCoinFiatRoundTripTruncation() {
+        // MO-1111 pre-review follow-up: dashj's ExchangeRate (coinToFiat/fiatToCoin) truncates
+        // on BOTH legs, so round-tripping a non-round balance Dash -> fiat -> Dash can land a
+        // duff short of the original even though onMaxClick writes an exact, lossless fiat
+        // string (Fiat.toKeypadString()) — reproduced below: 2.34567891 DASH at $100.0099/DASH
+        // round-trips to 234567890 duffs, one short of the original 234567891. isMaxSpend must
+        // therefore compare the parsed FIAT values (one forward conversion on each side, no
+        // round trip) rather than the re-derived DASH amount.
+        val rate = Fiat.parseFiat("USD", "100.0099")
+        val balance = Dash.parse("2.34567891")
+        val maxFiatText = balance.toFiatAt(rate)!!.toKeypadString()
 
         val afterMaxTap = ShieldedTransferUIState(
             dashMode = false,
@@ -884,7 +885,8 @@ class ShieldedTransferViewModelTest {
             direction = ShieldedTransferDirection.FromShielded,
             amountText = maxFiatText
         )
-        assertEquals(afterMaxTap.availableBalance, afterMaxTap.amount)
+        // demonstrates why isMaxSpend must not compare amount == availableBalance in fiat mode
+        assertFalse(afterMaxTap.amount == afterMaxTap.availableBalance)
         assertTrue(afterMaxTap.isMaxSpend)
         assertFalse(afterMaxTap.insufficientFunds)
 

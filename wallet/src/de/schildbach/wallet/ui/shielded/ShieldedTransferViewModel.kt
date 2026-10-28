@@ -295,10 +295,20 @@ data class ShieldedTransferUIState(
 
     /**
      * True when the entered amount is exactly the transferable balance — the "spend
-     * everything" intent [onConfirm] gives a fee-adjusted retry.
+     * everything" intent [onConfirm] gives a fee-adjusted retry. In fiat mode this compares
+     * the parsed FIAT values rather than re-deriving [amount] back to Dash: the dashj
+     * `ExchangeRate` math behind [toFiatAt]/[toDashAt] truncates on both legs, so round-tripping
+     * a non-round balance through Dash→fiat→Dash can land a duff short of [availableBalance]
+     * even though [amountText] itself ([onMaxClick]) is an exact, lossless fiat string — a
+     * single forward Dash→fiat conversion on each side has no such round trip to lose a duff to.
      */
     val isMaxSpend: Boolean
-        get() = amount == availableBalance
+        get() = if (dashMode) {
+            amount == availableBalance
+        } else {
+            val typedFiat = parseDecimalOrNull(amountText)?.toFiat(fiatCode)
+            typedFiat != null && typedFiat == availableBalance.toFiatAt(rate)
+        }
 
     /**
      * Whether the "Insufficient funds" validation message may be SHOWN.
@@ -633,7 +643,7 @@ class ShieldedTransferViewModel @Inject constructor(
         val text = if (state.dashMode) {
             max.toKeypadString()
         } else {
-            max.toFiatAt(state.rate)?.toPlainString() ?: return
+            max.toFiatAt(state.rate)?.toKeypadString() ?: return
         }
         _uiState.value = state.copy(amountText = text)
         transferExecutor.clearRetryableResult()
@@ -647,7 +657,7 @@ class ShieldedTransferViewModel @Inject constructor(
         val text = when {
             amount.isZero -> "0"
             dashMode -> amount.toKeypadString()
-            else -> amount.toFiatAt(state.rate)?.toPlainString() ?: "0"
+            else -> amount.toFiatAt(state.rate)?.toKeypadString() ?: "0"
         }
         _uiState.value = state.copy(dashMode = dashMode, amountText = text)
     }

@@ -21,6 +21,7 @@ import org.bitcoinj.core.Coin
 import org.dash.wallet.common.money.Fiat
 import org.dash.wallet.common.money.MonetaryFormat
 import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.common.util.toFormattedString
 import org.dash.wallet.common.util.toFormattedStringNoCode
 import java.math.BigDecimal
@@ -179,6 +180,20 @@ fun Fiat.toDisplay(): String = toFormattedString()
  * amount-entry secondary line, which renders its own currency symbol separately.
  */
 fun Fiat.toDisplayNoCode(): String = toFormattedStringNoCode()
+
+/**
+ * Plain decimal string with trailing zeros trimmed, up to [Fiat.SMALLEST_UNIT_EXPONENT] (8)
+ * decimals — for the editable keypad field (Max tap / currency toggle), which is also the only
+ * source [ShieldedSendViewModel]/[ShieldedTransferViewModel] re-derive the spendable amount from.
+ * Unlike [Fiat.toPlainString] (dash-wallet's own, capped at 4 decimals, `HALF_UP`-rounded — fine
+ * for read-only display but not for a value that gets re-parsed), this round-trips exactly: a
+ * `coinToFiat` conversion routinely needs more than 4 decimals to represent exactly, and rounding
+ * that away before re-parsing it back can land the derived Dash amount off by tens of duffs.
+ */
+fun Fiat.toKeypadString(): String {
+    if (isZero) return "0"
+    return toBigDecimal().stripTrailingZeros().toPlainString()
+}
 
 /** Ellipsized middle of a long address for one-line display. */
 fun String.ellipsizeAddress(head: Int = 10, tail: Int = 6): String =

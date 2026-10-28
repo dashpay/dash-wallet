@@ -58,4 +58,25 @@ class ShieldedUiFormatTest {
             Locale.setDefault(originalLocale)
         }
     }
+
+    @Test
+    fun `fiat keypad string round-trips exactly, unlike the four-decimal plain string`() {
+        // MO-1111 pre-review follow-up: Fiat.toPlainString() (dash-wallet's own) caps at four
+        // decimals, HALF_UP-rounded — fine for display, but onMaxClick/onCurrencySelected feed
+        // this text back into the spendable amount, so a rate/balance combination needing more
+        // than 4 decimals to convert exactly silently shifts the re-parsed amount. Reproduced:
+        // 1 DASH at $232.745151/DASH needs 6 decimals; toPlainString() rounds it to "232.7452",
+        // which re-parses ~21 duffs too high (enough to false-trip insufficient funds right after
+        // a Max tap). toKeypadString() must preserve all of it instead.
+        val rate = Fiat.parseFiat("USD", "232.745151")
+        val balance = Dash.parse("1.00")
+        val exact = balance.toFiatAt(rate)!!
+
+        assertEquals("232.745151", exact.toKeypadString())
+        assertEquals("232.7452", exact.toPlainString()) // the lossy display-only format, for contrast
+        assertEquals(balance, Fiat.parseFiat("USD", exact.toKeypadString()).toDashAt(rate))
+
+        assertEquals("5", Fiat.parseFiat("USD", "5").toKeypadString())
+        assertEquals("0.93", Fiat.parseFiat("USD", "0.93").toKeypadString())
+    }
 }
