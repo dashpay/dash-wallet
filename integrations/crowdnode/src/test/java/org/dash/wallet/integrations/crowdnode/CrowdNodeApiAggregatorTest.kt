@@ -324,8 +324,40 @@ class CrowdNodeApiAggregatorTest {
 
             assertEquals(SignUpStatus.NotStarted, api.signUpStatus.value)
             verify(localConfig).set(CrowdNodeConfig.NO_SIGN_UP_SCAN_TX_COUNT, 33307)
-            // The rest of the restore still ran
+            // The failed write didn't abort the restore: it went on to read the saved online status
             verify(localConfig).get(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS)
+        }
+    }
+
+    @Test
+    fun restoreStatus_cacheWriteFails_stillRestoresLinkedOnlineAccount() {
+        runBlocking {
+            localConfig.stub {
+                onBlocking { get(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS) } doReturn OnlineAccountStatus.Linking.ordinal
+                onBlocking { set(eq(CrowdNodeConfig.NO_SIGN_UP_SCAN_TX_COUNT), any()) } doAnswer {
+                    throw IOException("No space left on device")
+                }
+            }
+            walletData.stub {
+                on { transactionCount() } doReturn 33307
+            }
+            val primaryAddress = "yd9CUc7wvATUS3GfdmcAhRZhG7719jhNf9"
+            webApi.stub {
+                onBlocking { isApiAddressInUse("yihMSMoesHX1JhbntTiV5Nptf5NLrmFMCu") } doReturn
+                    Pair(true, primaryAddress)
+            }
+            val api = CrowdNodeApiAggregator(
+                webApi, blockchainApi, walletData, mock(), mock(),
+                localConfig, globalConfig, mock(), mock(), mock()
+            )
+            api.restoreStatus()
+
+            verify(localConfig).set(CrowdNodeConfig.NO_SIGN_UP_SCAN_TX_COUNT, 33307)
+            // The saved Linking account at the saved address was checked and moved on to Validating
+            verify(webApi).isApiAddressInUse("yihMSMoesHX1JhbntTiV5Nptf5NLrmFMCu")
+            assertEquals(OnlineAccountStatus.Validating, api.onlineAccountStatus.value)
+            assertEquals("yihMSMoesHX1JhbntTiV5Nptf5NLrmFMCu", api.accountAddress)
+            assertEquals(primaryAddress, api.primaryAddress)
         }
     }
 

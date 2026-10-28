@@ -258,6 +258,33 @@ class WalletDataAdapterSeamRoutingTest {
     }
 
     @Test
+    fun postCutover_filterRejectingSdkCopyDoesNotFallBackToHeldDashjCopy() = runTest {
+        val state = MutableStateFlow<String?>("CUT_OVER")
+        val source = FakeSource(MutableStateFlow(snapshot(record(context = 1))))
+        val service = seamService(source, state, backgroundScope)
+        service.start()
+        runCurrent()
+
+        // Only dashj-converted TxInfo carries a raw handle; the SDK-fed copy has none.
+        val hasRaw = object : TransactionFilter {
+            override fun matches(tx: TxInfo) = tx.raw != null
+        }
+
+        // The held dashj wallet holds the same txid the SDK serves. The filter rejects the
+        // SDK copy, and the held dashj copy must not take its place.
+        val sameTxidAdapter = WalletDataAdapter(mockWalletData(listOf(sdkTx)), { service }, SeamOutputLockRegistry())
+        assertTrue(sameTxidAdapter.getTransactions(hasRaw).isEmpty())
+
+        // A held-dashj-only tx is still filtered in alongside it.
+        val adapter = WalletDataAdapter(
+            mockWalletData(listOf(sdkTx, dashjOnlyTx)),
+            { service },
+            SeamOutputLockRegistry()
+        )
+        assertEquals(listOf(dashjOnlyTx.txId.toString()), adapter.getTransactions(hasRaw).map { it.txId })
+    }
+
+    @Test
     fun rollback_routesLiveObservationBackToDashj() = runTest {
         val state = MutableStateFlow<String?>("CUT_OVER")
         val source = FakeSource(MutableStateFlow(snapshot(record(context = 1))))
