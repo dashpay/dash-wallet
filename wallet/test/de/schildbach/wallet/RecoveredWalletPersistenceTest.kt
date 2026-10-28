@@ -15,6 +15,7 @@ import io.mockk.spyk
 import io.mockk.mockk
 import io.mockk.verify
 import de.schildbach.wallet.service.WalletFactory
+import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig
 import org.bitcoinj.core.Context
 import de.schildbach.wallet.service.platform.sdk.CutoverCoordinator
 import org.bitcoinj.script.Script
@@ -68,6 +69,9 @@ class RecoveredWalletPersistenceTest {
         setField("wallet", recovered)
         // As if loaded from the primary: the wallet whose backup may be written.
         setField("committedWallet", recovered)
+        // This class builds WalletApplication by hand, so every @Inject field is
+        // null. setWallet() dereferences crowdNodeConfig (#1653), so stub it.
+        setField("crowdNodeConfig", mockk<CrowdNodeConfig>(relaxed = true))
     }
 
     @Test
