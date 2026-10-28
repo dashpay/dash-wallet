@@ -214,7 +214,7 @@ class CrowdNodeApiAggregatorTest {
     }
 
     @Test
-    fun restoreStatus_cacheClearPending_rescans() {
+    fun restoreStatus_cacheClearPending_retriesClearAndRescans() {
         runBlocking {
             localConfig.stub {
                 onBlocking { get(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS) } doReturn OnlineAccountStatus.None.ordinal
@@ -232,7 +232,11 @@ class CrowdNodeApiAggregatorTest {
             api.restoreStatus()
 
             assertEquals(SignUpStatus.NotStarted, api.signUpStatus.value)
-            verify(blockchainApi).getFullSignUpTxSet()
+            inOrder(localConfig, blockchainApi) {
+                verify(localConfig).retryPendingNoSignUpScanClear()
+                verify(blockchainApi).getFullSignUpTxSet()
+            }
+            verify(localConfig, never()).get(CrowdNodeConfig.NO_SIGN_UP_SCAN_TX_COUNT)
         }
     }
 

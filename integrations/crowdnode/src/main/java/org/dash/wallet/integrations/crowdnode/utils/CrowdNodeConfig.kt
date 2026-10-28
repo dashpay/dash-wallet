@@ -27,6 +27,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.BaseConfig
@@ -67,7 +68,7 @@ open class CrowdNodeConfig @Inject constructor(
 
     private val configScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val walletReplacements = AtomicInteger()
-    private val pendingScanCacheClears = AtomicInteger()
+    private val scanCacheClearedThrough = AtomicInteger()
 
     /**
      * Bumped by [onWalletReplaced]. A [NO_SIGN_UP_SCAN_TX_COUNT] scan captures it before it starts
@@ -78,32 +79,103 @@ open class CrowdNodeConfig @Inject constructor(
         get() = walletReplacements.get()
 
     /**
-     * True from [onWalletReplaced] until its removal of [NO_SIGN_UP_SCAN_TX_COUNT] lands, so a reader
-     * doesn't trust the old wallet's count in the meantime. Counts outstanding removals, so an older
-     * one finishing doesn't clear it for a newer replacement. A failed removal leaves it set for the
-     * rest of the process: the cache is then simply not trusted.
+     * True from [onWalletReplaced] until a removal of [NO_SIGN_UP_SCAN_TX_COUNT] that started after
+     * the latest replacement lands, so a reader doesn't trust the old wallet's count meanwhile.
      */
     open val isNoSignUpScanClearPending: Boolean
-        get() = pendingScanCacheClears.get() > 0
+        get() = scanCacheClearedThrough.get() < walletReplacements.get()
 
     /**
      * Forgets [NO_SIGN_UP_SCAN_TX_COUNT] when a created or restored wallet replaces the current one
      * without a wipe: the cached count describes the old wallet's transactions, and a replacement
      * with the same count would otherwise skip the sign-up scan. Fire-and-forget, so it is safe to
      * call from the main thread; [isNoSignUpScanClearPending] covers the window until it lands.
+     * A failed removal is retried a few times with backoff, then by [retryPendingNoSignUpScanClear].
      */
     fun onWalletReplaced() {
         walletReplacements.incrementAndGet()
-        pendingScanCacheClears.incrementAndGet()
         configScope.launch {
-            try {
-                remove(NO_SIGN_UP_SCAN_TX_COUNT)
-                pendingScanCacheClears.decrementAndGet()
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                log.warn("failed to clear the CrowdNode no-sign-up scan cache", e)
+            val cleared = retryWithBackoff(
+                CLEAR_ATTEMPTS,
+                CLEAR_INITIAL_DELAY_MILLIS,
+                CLEAR_MAX_DELAY_MILLIS,
+                onFailure = { attempt, e ->
+                    if (attempt == 1 || attempt == CLEAR_ATTEMPTS) {
+                        log.warn("failed to clear the CrowdNode no-sign-up scan cache (attempt $attempt)", e)
+                    }
+                }
+            ) {
+                if (isNoSignUpScanClearPending) {
+                    clearNoSignUpScan()
+                }
+            }
+
+            if (!cleared) {
+                log.warn("giving up clearing the CrowdNode no-sign-up scan cache until the next restore")
             }
         }
     }
+
+    /** Retries the removal while [isNoSignUpScanClearPending]; a failure just leaves it pending. */
+    open suspend fun retryPendingNoSignUpScanClear() {
+        if (!isNoSignUpScanClearPending) {
+            return
+        }
+
+        try {
+            clearNoSignUpScan()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("failed to clear the CrowdNode no-sign-up scan cache", e)
+        }
+    }
+
+    /**
+     * The removal is idempotent and covers every replacement counted before it started, so on
+     * success the pending state is cleared through the generation read beforehand. Taking the max
+     * keeps a slower, older removal from moving it back.
+     */
+    private suspend fun clearNoSignUpScan() {
+        val generation = walletReplacements.get()
+        remove(NO_SIGN_UP_SCAN_TX_COUNT)
+        scanCacheClearedThrough.accumulateAndGet(generation, ::maxOf)
+    }
+}
+
+private const val CLEAR_ATTEMPTS = 6
+private const val CLEAR_INITIAL_DELAY_MILLIS = 1_000L
+private const val CLEAR_MAX_DELAY_MILLIS = 30_000L
+
+/**
+ * Runs [block] up to [maxAttempts] times until it completes without throwing, waiting
+ * [initialDelayMillis] after the first failure and doubling up to [maxDelayMillis]. Cancellation
+ * propagates. Returns whether an attempt succeeded.
+ */
+internal suspend fun retryWithBackoff(
+    maxAttempts: Int,
+    initialDelayMillis: Long,
+    maxDelayMillis: Long,
+    onFailure: (attempt: Int, e: Exception) -> Unit = { _, _ -> },
+    block: suspend () -> Unit
+): Boolean {
+    var delayMillis = initialDelayMillis
+
+    for (attempt in 1..maxAttempts) {
+        try {
+            block()
+            return true
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            onFailure(attempt, e)
+        }
+
+        if (attempt < maxAttempts) {
+            delay(delayMillis)
+            delayMillis = minOf(delayMillis * 2, maxDelayMillis)
+        }
+    }
+
+    return false
 }
