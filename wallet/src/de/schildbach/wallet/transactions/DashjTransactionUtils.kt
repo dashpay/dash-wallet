@@ -19,6 +19,7 @@
 
 package de.schildbach.wallet.transactions
 
+import de.schildbach.wallet.service.platform.sdk.SdkTxDetail
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filter
@@ -27,6 +28,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.bitcoinj.core.Address
+import org.bitcoinj.core.AddressFormatException
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
@@ -107,6 +109,55 @@ object TransactionUtils {
 
         return result
     }
+
+    /**
+     * Bug A: "Sent to" addresses for the transaction-details sheet of a
+     * dashj-held, SDK-authored send. The held dashj wallet doesn't recognize
+     * such a send's own change output as "mine" ([getToAddressOfSent]'s
+     * `isMine(bag)` check is false for it too), so it would otherwise list
+     * that change address as a second recipient. [sdkOverride], when present
+     * and successfully decoded, carries the SDK's own change-filtered output
+     * addresses (derived from its TXO ownership records) and is preferred —
+     * except when it comes back empty: that means the SDK couldn't resolve a
+     * recipient address at all (e.g. a bare P2PK output; see
+     * [SdkTxDetail.outputAddresses]), not that there is none, so
+     * [getToAddressOfSent]'s dashj-derived address resolution (which does
+     * handle P2PK) is used instead. The override's addresses can also be
+     * encoded in a scheme dashj's base58 decoder rejects outright (e.g. a
+     * bech32 witness-program output — the pinned SDK encodes those, not as
+     * base58); a decode failure is treated the same as an empty list rather
+     * than propagating, since crashing the details sheet is worse than
+     * showing no recipient. [getToAddressOfSent] is
+     * only used as a fallback when there is NO override at all (a plain
+     * dashj-tracked tx, where its `isMine(bag)` check is trustworthy) —
+     * when an override IS present but unusable, `bag` is the very wallet
+     * the override exists to correct for (see class doc), so its
+     * `isMine(bag)` can reproduce MO-1108's own bug (the change output
+     * misread as a second recipient); no recipient list is shown instead,
+     * consistent with the SDK-only detail's own unresolved-output handling
+     * (`SdkTxDetailProvider.buildSdkTxDetail`'s `hasUnresolvedPaymentOutput`).
+     */
+    fun getSentToAddressesForDetail(tx: Transaction, bag: TransactionBag, sdkOverride: SdkTxDetail?): List<Address> {
+        if (sdkOverride == null) return getToAddressOfSent(tx, bag)
+        val overrideAddresses = sdkOverride.takeIf { !it.decodeFailed }?.outputAddresses?.takeIf { it.isNotEmpty() }
+        val decoded = overrideAddresses?.let { addresses ->
+            try {
+                addresses.map { Address.fromBase58(tx.params, it) }
+            } catch (x: AddressFormatException) {
+                null
+            }
+        }
+        return decoded ?: emptyList()
+    }
+
+    /**
+     * Bug A: the fee shown on the transaction-details sheet. `tx.fee` is null
+     * for a dashj-held, SDK-authored send whose inputs the held wallet can't
+     * fully connect (it never tracked the spent outputs) — [sdkOverride]'s
+     * SDK-recorded/derived fee is preferred when present.
+     */
+    fun getFeeForDetail(tx: Transaction, sdkOverride: SdkTxDetail?): Coin? =
+        sdkOverride?.feeDuffs?.let { Coin.valueOf(it) } ?: tx.fee
 
     /** get OP_RETURNS of sent tx's */
     fun getOpReturnsOfSent(

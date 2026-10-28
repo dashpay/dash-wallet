@@ -24,6 +24,8 @@ import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
 import java.util.Date
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
@@ -218,6 +220,68 @@ class SdkTxDetailTest {
         assertEquals(listOf(recipientAddress, changeAddress), detail.outputAddresses)
     }
 
+    @Test
+    fun `outgoing send with an unresolved recipient output never falls back to the change address`() {
+        // Stands in for a P2PK (or other non-standard) recipient output:
+        // Address::from_script has no arm for it, so transaction_decode
+        // returns no address for that output — not OP_RETURN, just unresolved.
+        val unresolved = DecodedTransaction(
+            txid = decoded.txid,
+            inputs = decoded.inputs,
+            outputs = listOf(
+                DecodedTransaction.Output(null, decoded.outputs[0].valueDuffs, decoded.outputs[0].scriptPubkey),
+                decoded.outputs[1], // change — decodes fine
+                decoded.outputs[2] // OP_RETURN
+            )
+        )
+
+        val detail = buildSdkTxDetail(
+            record = record(netAmountDuffs = -70_247, directionCode = 1),
+            decoded = unresolved,
+            myOutputAddresses = setOf(changeAddress),
+            inputTxoAddresses = listOf(null),
+            inputTxoValues = listOf(null)
+        )
+
+        assertTrue(
+            "an unresolved recipient must not be mistaken for an entirely-self move",
+            detail.outputAddresses.isEmpty()
+        )
+    }
+
+    @Test
+    fun `one resolved and one unresolved external recipient never shows only the resolved one`() {
+        // Two external recipients — one standard, one P2PK-like (no decoded address) —
+        // plus change. A naive `external.isNotEmpty()` check short-circuits on the
+        // resolved recipient before the unresolved one is ever noticed, silently
+        // dropping it. Both must be treated as unresolved (emptyList, so the caller's
+        // dashj-derived fallback — which does resolve P2PK — is used) rather than
+        // presenting the resolved address as if it were the only recipient.
+        val mixed = DecodedTransaction(
+            txid = decoded.txid,
+            inputs = decoded.inputs,
+            outputs = listOf(
+                decoded.outputs[0], // recipientAddress — resolves fine, external
+                DecodedTransaction.Output(null, 1_000L, decoded.outputs[0].scriptPubkey), // 2nd external, unresolved
+                decoded.outputs[1], // change — decodes fine, ours
+                decoded.outputs[2] // OP_RETURN
+            )
+        )
+
+        val detail = buildSdkTxDetail(
+            record = record(netAmountDuffs = -71_247, directionCode = 1),
+            decoded = mixed,
+            myOutputAddresses = setOf(changeAddress),
+            inputTxoAddresses = listOf(null),
+            inputTxoValues = listOf(null)
+        )
+
+        assertTrue(
+            "a partially-resolved recipient list must not be shown as if it were complete",
+            detail.outputAddresses.isEmpty()
+        )
+    }
+
     // ── Incoming receive ──────────────────────────────────────────────
 
     @Test
@@ -392,6 +456,177 @@ class SdkTxDetailTest {
             assertTrue(detail.outputAddresses.isEmpty())
             assertTrue(detail.inputAddresses.isEmpty())
             assertFalse(detail.hasOpReturn)
+        } finally {
+            unmockkObject(TransactionDecoder)
+        }
+    }
+
+    // ── Foreign-contact TXO exclusion (MO-1108 round-3 regression) ────
+
+    @Test
+    fun `foreignContactTxoExclusion degrades without crashing when more than one SDK wallet is loaded`() {
+        // A post-restore orphan not yet pruned: more than one wallet id is loaded,
+        // so singleOrNull() can't pick one — the same state
+        // SdkTxContactResolver.foreignExclusionContext already handles by degrading
+        // (with a log line). Must never crash and must still degrade cleanly here.
+        val manager = mockk<org.dashfoundation.dashsdk.wallet.PlatformWalletManager> {
+            every { wallets } returns MutableStateFlow(
+                mapOf("01".repeat(32) to mockk(relaxed = true), "02".repeat(32) to mockk(relaxed = true))
+            )
+        }
+        val sdkService = mockk<DashSdkService> { every { walletManagerOrNull() } returns manager }
+        val db = mockk<DashDatabase>()
+
+        val exclusion = runBlocking { foreignContactTxoExclusion(sdkService, db) }
+
+        // Unknown, not "nothing to exclude": a caller that read this as an empty
+        // exclusion would wrongly count a contact's own output as ours.
+        assertNull(exclusion)
+    }
+
+    @Test
+    fun `load withholds the recipient list rather than guess when ownership is unknown`() {
+        // Same ambiguous-wallet state as above, but end-to-end through load():
+        // an OUTGOING send must show no "Sent to" list rather than risk the
+        // entirely-self fallback showing a contact's output as ours.
+        val manager = mockk<org.dashfoundation.dashsdk.wallet.PlatformWalletManager> {
+            every { wallets } returns MutableStateFlow(
+                mapOf("01".repeat(32) to mockk(relaxed = true), "02".repeat(32) to mockk(relaxed = true))
+            )
+        }
+        val entity = mockk<TransactionEntity> {
+            every { txid } returns decoded.txid
+            every { transactionData } returns rawTxBytes
+            every { netAmount } returns -70_247L
+            every { fee } returns 247L
+            every { context } returns 1
+            every { direction } returns 1
+            every { firstSeen } returns 1_770_000_000L
+            every { blockTimestamp } returns 0
+        }
+        val db = mockk<DashDatabase>(relaxed = true)
+        every { db.transactionDao() } returns mockk { coEvery { getByTxid(any()) } returns entity }
+        val sdkService = mockk<DashSdkService> {
+            coEvery { ensureStarted() } returns Unit
+            every { databaseOrNull() } returns db
+            every { walletManagerOrNull() } returns manager
+        }
+        val displayCacheDao = mockk<de.schildbach.wallet.database.dao.TxDisplayCacheDao> {
+            coEvery { getEntriesByIds(any()) } returns emptyList()
+        }
+
+        mockkObject(TransactionDecoder)
+        try {
+            every { TransactionDecoder.decode(any(), any()) } returns decoded
+            val detail = requireNotNull(
+                runBlocking {
+                    SdkTxDetailProvider(sdkService, displayCacheDao, mockk(relaxed = true)) { _, _ -> null }
+                        .load(decoded.txidDisplayHex)
+                }
+            )
+            assertTrue(
+                "ownership unknown must withhold the recipient list, not fall back to all addresses",
+                detail.outputAddresses.isEmpty()
+            )
+        } finally {
+            unmockkObject(TransactionDecoder)
+        }
+    }
+
+    @Test
+    fun `a null-accountId foreign TXO is still excluded from myOutputAddresses via its coreAddressId`() {
+        // SdkTxContactResolver.signedNetsFor's NULL-accountId classification: a
+        // friendship-send TXO persists with accountId NULL, so coreAddressId (the
+        // core_addresses PK, always populated) is the only way to recognize it as
+        // the contact's. load() must apply the same classification, or the
+        // contact's own output is wrongly counted as ours, external filters to
+        // empty, and the entirely-self fallback shows it as a second recipient
+        // (finding 2, reopened).
+        val walletIdHex = "01".repeat(32)
+        val contactAccountId = 13L
+        val contactCoreAddressId = "contact-core-address-id"
+
+        val manager = mockk<org.dashfoundation.dashsdk.wallet.PlatformWalletManager> {
+            every { wallets } returns MutableStateFlow(mapOf(walletIdHex to mockk(relaxed = true)))
+        }
+        val entity = mockk<TransactionEntity> {
+            every { txid } returns decoded.txid
+            every { transactionData } returns rawTxBytes
+            every { netAmount } returns -70_247L
+            every { fee } returns 247L
+            every { context } returns 1
+            every { direction } returns 1
+            every { firstSeen } returns 1_770_000_000L
+            every { blockTimestamp } returns 0
+        }
+        // Output 0 (recipientAddress): the DashPay contact's own watch-only
+        // output, persisted with accountId NULL — coreAddressId is the only signal.
+        val contactTxo = mockk<org.dashfoundation.dashsdk.persistence.entities.TxoEntity> {
+            every { accountId } returns null
+            every { coreAddressId } returns contactCoreAddressId
+            every { address } returns recipientAddress
+        }
+        // Output 1 (changeAddress): this wallet's own change.
+        val ourTxo = mockk<org.dashfoundation.dashsdk.persistence.entities.TxoEntity> {
+            every { accountId } returns null
+            every { coreAddressId } returns null
+            every { address } returns changeAddress
+        }
+        val outpointToTxo = mapOf(
+            org.bitcoinj.core.Utils.HEX.encode(txoOutpoint(decoded.txid, 0)) to contactTxo,
+            org.bitcoinj.core.Utils.HEX.encode(txoOutpoint(decoded.txid, 1)) to ourTxo
+        )
+        val db = mockk<DashDatabase>(relaxed = true)
+        every { db.transactionDao() } returns mockk { coEvery { getByTxid(any()) } returns entity }
+        // ByteArray's equals() is reference-based, so outpoints can't be matched
+        // as literal `coEvery` arguments — dispatch on content inside `answers`
+        // (same convention as CoinJoinConsolidationTest's txoDao mocks).
+        coEvery { db.txoDao().getByOutpoint(any()) } answers {
+            outpointToTxo[org.bitcoinj.core.Utils.HEX.encode(firstArg<ByteArray>())]
+        }
+        val externalAccountType = SdkTxContactResolver.ACCOUNT_TYPE_DASHPAY_EXTERNAL
+        every { db.accountDao().observeByWalletAndType(any(), externalAccountType) } returns
+            flowOf(
+                listOf(
+                    org.dashfoundation.dashsdk.persistence.entities.AccountEntity(
+                        id = contactAccountId,
+                        walletId = ByteArray(32),
+                        accountType = externalAccountType,
+                        accountIndex = 0,
+                        accountTypeName = "DashpayExternalAccount"
+                    )
+                )
+            )
+        every { db.coreAddressDao().observeByAccount(contactAccountId) } returns flowOf(
+            listOf(
+                org.dashfoundation.dashsdk.persistence.entities.CoreAddressEntity(
+                    contactCoreAddressId,
+                    poolTypeTag = 0,
+                    addressIndex = 0,
+                    derivationPath = "",
+                    accountId = contactAccountId
+                )
+            )
+        )
+        val sdkService = mockk<DashSdkService> {
+            coEvery { ensureStarted() } returns Unit
+            every { databaseOrNull() } returns db
+            every { walletManagerOrNull() } returns manager
+        }
+        val displayCacheDao = mockk<de.schildbach.wallet.database.dao.TxDisplayCacheDao> {
+            coEvery { getEntriesByIds(any()) } returns emptyList()
+        }
+
+        mockkObject(TransactionDecoder)
+        try {
+            every { TransactionDecoder.decode(any(), any()) } returns decoded
+            val detail = requireNotNull(
+                runBlocking {
+                    SdkTxDetailProvider(sdkService, displayCacheDao, mockk(relaxed = true)) { _, _ -> null }
+                        .load(decoded.txidDisplayHex)
+                }
+            )
+            assertEquals(listOf(recipientAddress), detail.outputAddresses)
         } finally {
             unmockkObject(TransactionDecoder)
         }

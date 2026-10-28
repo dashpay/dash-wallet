@@ -91,12 +91,16 @@ class TransactionResultViewBinder(
     private var sdkDetail: SdkTxDetail? = null
 
     /**
-     * Bug A: a direction/amount override for a dashj-held transaction whose
-     * frozen post-cutover wallet reads `getValue(wallet) == 0` (an SDK-authored
-     * send). Unlike [sdkDetail] (which means "no dashj tx at all" and drives the
-     * whole [bindSdkDetail] rendering), this only corrects [bind]'s direction and
-     * net amount — the rest of the dashj-driven sheet is unchanged. Null except
-     * for that post-cutover case.
+     * Bug A: a direction/amount/fee/address override for a dashj-held transaction
+     * whose frozen post-cutover wallet reads `getValue(wallet) == 0` (an
+     * SDK-authored send). The held wallet doesn't recognize the SDK send's own
+     * outputs either, so `output.isMine(wallet)` is false for the change output
+     * too — [bind] also prefers this override's [SdkTxDetail.outputAddresses]
+     * (already change-filtered) and [SdkTxDetail.feeDuffs] over the dashj-derived
+     * equivalents when present. Unlike [sdkDetail] (which means "no dashj tx at
+     * all" and drives the whole [bindSdkDetail] rendering), this only corrects
+     * [bind]'s derived fields — the rest of the dashj-driven sheet is unchanged.
+     * Null except for that post-cutover case.
      */
     private var sdkOverride: SdkTxDetail? = null
     private var isError = false
@@ -163,7 +167,7 @@ class TransactionResultViewBinder(
                 tx.allOutputAddresses
             } else {
                 binding.outputAddressesLabel.setText(R.string.transaction_details_sent_to)
-                TransactionUtils.getToAddressOfSent(tx, wallet)
+                TransactionUtils.getSentToAddressesForDetail(tx, wallet, sdkOverride)
             }
             outputAssetLocks = TransactionUtils.getOpReturnsOfSent(tx, wallet)
         } else {
@@ -231,9 +235,10 @@ class TransactionResultViewBinder(
             binding.dashAmount.setAmount(value)
         }
 
-        if (isFeeAvailable(tx.fee)) {
+        val fee = TransactionUtils.getFeeForDetail(tx, sdkOverride)
+        if (isFeeAvailable(fee)) {
             binding.transactionFee.setFormat(dashFormat)
-            binding.transactionFee.setAmount(tx.fee)
+            binding.transactionFee.setAmount(fee)
         }
 
         binding.transactionDateAndTime.text = DateUtils.formatDateTime(
@@ -588,7 +593,7 @@ class TransactionResultViewBinder(
                 binding.transactionAmountSignal.isVisible = true
                 binding.transactionAmountSignal.text = "+"
             }
-            binding.feeContainer.isVisible = isFeeAvailable(tx.fee)
+            binding.feeContainer.isVisible = isFeeAvailable(TransactionUtils.getFeeForDetail(tx, sdkOverride))
         }
     }
 
