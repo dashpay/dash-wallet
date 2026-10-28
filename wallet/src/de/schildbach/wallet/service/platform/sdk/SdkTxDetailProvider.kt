@@ -513,19 +513,22 @@ class SdkTxDetailProvider internal constructor(
         if (!decoded?.outputs.isNullOrEmpty()) {
             val exclusion = foreignContactTxoExclusion(sdkService, db)
             if (exclusion == null) {
+                // OUTGOING still withholds (ownershipUnknown is fail-closed there), but
+                // the raw walk below must still run with no exclusion so INCOMING keeps
+                // attributing outputs from the persisted TXO rows — see foreignContactTxoExclusion's
+                // own KDoc: null means "exclusion unavailable", not "skip the walk".
                 ownershipUnknown = true
-            } else {
-                val (externalAccountIds, externalAddresses) = exclusion
-                decoded?.outputs?.forEachIndexed { index, _ ->
-                    val txo = txoDao.getByOutpoint(txoOutpoint(wireTxid, index)) ?: return@forEachIndexed
-                    // Mirrors SdkTxContactResolver.signedNetsFor's NULL-accountId classification:
-                    // a friendship-send TXO persists with accountId NULL, so coreAddressId (the
-                    // core_addresses PK, always populated) is the authoritative fallback — address
-                    // alone misses it whenever the TXO's own address column doesn't match.
-                    val isForeign = (txo.accountId != null && txo.accountId in externalAccountIds) ||
-                        (txo.accountId == null && (txo.coreAddressId ?: txo.address) in externalAddresses)
-                    if (!isForeign) myOutputAddresses += txo.address
-                }
+            }
+            val (externalAccountIds, externalAddresses) = exclusion ?: (emptySet<Long>() to emptySet<String>())
+            decoded?.outputs?.forEachIndexed { index, _ ->
+                val txo = txoDao.getByOutpoint(txoOutpoint(wireTxid, index)) ?: return@forEachIndexed
+                // Mirrors SdkTxContactResolver.signedNetsFor's NULL-accountId classification:
+                // a friendship-send TXO persists with accountId NULL, so coreAddressId (the
+                // core_addresses PK, always populated) is the authoritative fallback — address
+                // alone misses it whenever the TXO's own address column doesn't match.
+                val isForeign = (txo.accountId != null && txo.accountId in externalAccountIds) ||
+                    (txo.accountId == null && (txo.coreAddressId ?: txo.address) in externalAddresses)
+                if (!isForeign) myOutputAddresses += txo.address
             }
         }
         val inputTxos = decoded?.inputs.orEmpty().map { input ->

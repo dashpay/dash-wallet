@@ -534,6 +534,88 @@ class SdkTxDetailTest {
     }
 
     @Test
+    fun `load still attributes outputs via the raw TXO walk when ownership is unknown`() {
+        // Same ambiguous-wallet state as the test above (more than one SDK
+        // wallet loaded, so foreignContactTxoExclusion returns null), but with
+        // real TXO rows for both outputs: the walk must still run with no
+        // exclusion so INCOMING keeps attributing its received addresses from
+        // the persisted TXO rows, while OUTGOING stays fail-closed via
+        // ownershipUnknown regardless of what the walk found.
+        val manager = mockk<org.dashfoundation.dashsdk.wallet.PlatformWalletManager> {
+            every { wallets } returns MutableStateFlow(
+                mapOf("01".repeat(32) to mockk(relaxed = true), "02".repeat(32) to mockk(relaxed = true))
+            )
+        }
+        val recipientTxo = mockk<org.dashfoundation.dashsdk.persistence.entities.TxoEntity> {
+            every { accountId } returns null
+            every { coreAddressId } returns null
+            every { address } returns recipientAddress
+        }
+        val changeTxo = mockk<org.dashfoundation.dashsdk.persistence.entities.TxoEntity> {
+            every { accountId } returns null
+            every { coreAddressId } returns null
+            every { address } returns changeAddress
+        }
+        val outpointToTxo = mapOf(
+            org.bitcoinj.core.Utils.HEX.encode(txoOutpoint(decoded.txid, 0)) to recipientTxo,
+            org.bitcoinj.core.Utils.HEX.encode(txoOutpoint(decoded.txid, 1)) to changeTxo
+        )
+        val displayCacheDao = mockk<de.schildbach.wallet.database.dao.TxDisplayCacheDao> {
+            coEvery { getEntriesByIds(any()) } returns emptyList()
+        }
+
+        fun loadWithDirection(directionCode: Int) = run {
+            val entity = mockk<TransactionEntity> {
+                every { txid } returns decoded.txid
+                every { transactionData } returns rawTxBytes
+                every { netAmount } returns -70_247L
+                every { fee } returns 247L
+                every { context } returns 1
+                every { direction } returns directionCode
+                every { firstSeen } returns 1_770_000_000L
+                every { blockTimestamp } returns 0
+            }
+            val db = mockk<DashDatabase>(relaxed = true)
+            every { db.transactionDao() } returns mockk { coEvery { getByTxid(any()) } returns entity }
+            coEvery { db.txoDao().getByOutpoint(any()) } answers {
+                outpointToTxo[org.bitcoinj.core.Utils.HEX.encode(firstArg<ByteArray>())]
+            }
+            val sdkService = mockk<DashSdkService> {
+                coEvery { ensureStarted() } returns Unit
+                every { databaseOrNull() } returns db
+                every { walletManagerOrNull() } returns manager
+            }
+            requireNotNull(
+                runBlocking {
+                    SdkTxDetailProvider(sdkService, displayCacheDao, mockk(relaxed = true)) { _, _ -> null }
+                        .load(decoded.txidDisplayHex)
+                }
+            )
+        }
+
+        mockkObject(TransactionDecoder)
+        try {
+            every { TransactionDecoder.decode(any(), any()) } returns decoded
+
+            val incoming = loadWithDirection(0)
+            assertEquals(
+                "INCOMING must still attribute provably-ours outputs even when the " +
+                    "foreign-contact exclusion is unavailable",
+                listOf(recipientAddress, changeAddress),
+                incoming.outputAddresses
+            )
+
+            val outgoing = loadWithDirection(1)
+            assertTrue(
+                "OUTGOING must stay fail-closed on ownershipUnknown regardless of what the walk found",
+                outgoing.outputAddresses.isEmpty()
+            )
+        } finally {
+            unmockkObject(TransactionDecoder)
+        }
+    }
+
+    @Test
     fun `a null-accountId foreign TXO is still excluded from myOutputAddresses via its coreAddressId`() {
         // SdkTxContactResolver.signedNetsFor's NULL-accountId classification: a
         // friendship-send TXO persists with accountId NULL, so coreAddressId (the

@@ -120,9 +120,9 @@ object TransactionUtils {
      * addresses (derived from its TXO ownership records) and is preferred —
      * except when it comes back empty: that means the SDK couldn't resolve a
      * recipient address at all (e.g. a bare P2PK output; see
-     * [SdkTxDetail.outputAddresses]), not that there is none, so
-     * [getToAddressOfSent]'s dashj-derived address resolution (which does
-     * handle P2PK) is used instead. The override's addresses can also be
+     * [SdkTxDetail.outputAddresses]), not that there is none, so the
+     * recipient list is withheld rather than falling back to
+     * [getToAddressOfSent] (see below). The override's addresses can also be
      * encoded in a scheme dashj's base58 decoder rejects outright (e.g. a
      * bech32 witness-program output — the pinned SDK encodes those, not as
      * base58); a decode failure is treated the same as an empty list rather
