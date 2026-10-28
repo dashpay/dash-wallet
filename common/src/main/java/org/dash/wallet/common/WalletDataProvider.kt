@@ -89,11 +89,14 @@ interface WalletDataProvider {
     fun getTransactions(vararg filters: TransactionFilter): Collection<TxInfo>
 
     /**
-     * A fingerprint of the set of wallet transaction ids, dead ones included, i.e. the transactions
-     * [wrapAllTransactions] goes over. Equal fingerprints mean the same set of transactions (whatever
-     * their order, and across wallet objects and restarts), so a result computed over that set is still
-     * valid; any added, removed or different transaction changes it. Empty when there is no wallet,
-     * which never equals the fingerprint of a real wallet.
+     * A fingerprint of the wallet's keys and of its set of transaction ids, dead ones included, i.e.
+     * the transactions [wrapAllTransactions] goes over. The keys are identified by public data only
+     * (the active key chains' watching keys and the imported keys' public keys), because how a
+     * transaction is classified (mine, sent, received) depends on them. Equal fingerprints mean the
+     * same keys and the same set of transactions (whatever their order, and across wallet objects and
+     * restarts), so a result computed by classifying that set is still valid; a different wallet,
+     * even with the same transactions, and any added, removed or different transaction change it.
+     * Empty when there is no wallet, which never equals the fingerprint of a real wallet.
      */
     fun transactionSetFingerprint(): String
 

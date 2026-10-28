@@ -600,11 +600,13 @@ class CrowdNodeApiAggregator @Inject constructor(
 
     /**
      * Scans every wallet transaction for a CrowdNode sign up. When none is found, the fingerprint of
-     * the scanned transaction set is cached and the scan is skipped while the wallet's fingerprint
+     * the wallet's keys and scanned transaction set is cached and the scan is skipped while the wallet's fingerprint
      * still matches: a wallet that never signed up would otherwise rescan its whole history each
-     * time the status is restored. The fingerprint identifies the set of transactions itself, so a
-     * replaced or recovered wallet, or new transactions, change it and trigger a rescan. The result
-     * is cached only if the fingerprint is unchanged after the scan, so it describes the scanned set.
+     * time the status is restored. The fingerprint identifies the wallet's keys and its set of
+     * transactions, since the scan classifies each transaction against those keys, so a different
+     * wallet (even one with the same transactions) or new transactions change it and trigger a
+     * rescan. The result is cached only if the fingerprint is unchanged after the scan, so it
+     * describes the scanned set.
      * A possible sign up that CrowdNode didn't confirm isn't cached, so it is checked again.
      * The cache is only an optimization: failing to write it just means the next restore rescans.
      */
