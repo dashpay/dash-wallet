@@ -238,7 +238,7 @@ $PC/project.md (dash-wallet rules), and for money, keys, identities, persistence
   # proves nothing when the first answer was garbage. Kept in $wt, which every exit path removes
   local transport
   roster "$probe" > "$wt/roster" 2>/dev/null \
-    || { say "codex mcp list gave a roster that does not parse (or a server name with a tab or a newline): not reviewing"; return 2; }
+    || { say "codex mcp list gave a roster that does not parse (or a server name with a tab, a newline or a carriage return): not reviewing"; return 2; }
   while IFS=$'\t' read -r name transport; do
     [[ -n "$name" ]] || continue
     # a complete entry, not `.enabled=false` alone: a server another layer provides (the desktop app's) is not in

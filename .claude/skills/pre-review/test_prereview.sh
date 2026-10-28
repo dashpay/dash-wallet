@@ -164,7 +164,7 @@ FAKE_MCP="docs|http,loc" FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 
 ok "  … an http server gets an entry of its own transport (a stdio one next to its url fails codex's config load)" "$?:$(grep -c '"docs" = { url = "http://127.0.0.1:9/", enabled = false }' "$T/cdir.args")" 0:1
 FAKE_MCP="stubborn" FAKE_MCP_STUBBORN=1 FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "  … one that stays enabled → not reviewed (exit 2), no verdict" "$?:$(V)" 2:none
 FAKE_MCP_RC=1 FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1; ok "  … codex mcp list fails (exit 1, even with a list printed) → not reviewed (exit 2)" "$?:$(V)" 2:none
-for bad in '{not json' '{"name": "fs", "enabled": true}' '[{"enabled": true}]' '[{"name": "fs", "enabled": null}]' '[{"name": " ", "enabled": true}]' '[{"name": "a\tb", "enabled": true}]' '[{"name": "a\nb", "enabled": true}]'; do
+for bad in '{not json' '{"name": "fs", "enabled": true}' '[{"enabled": true}]' '[{"name": "fs", "enabled": null}]' '[{"name": " ", "enabled": true}]' '[{"name": "a\tb", "enabled": true}]' '[{"name": "a\nb", "enabled": true}]' '[{"name": "a\rb", "enabled": true}]'; do
   rm -f "$T/cdir.mcpfirst"; FAKE_MCP_FIRST="$bad" FAKE_LAST='{"blocking": 0, "suggestion": 0, "nitpick": 0}' "$P" >/dev/null 2>&1
   ok "  … a first roster that does not parse ($bad), the read-back empty → not reviewed (exit 2)" "$?:$(V)" 2:none
 done
