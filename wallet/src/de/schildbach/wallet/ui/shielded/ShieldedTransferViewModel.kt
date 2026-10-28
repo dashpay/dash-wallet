@@ -300,14 +300,19 @@ data class ShieldedTransferUIState(
      * and currency-toggle populate [amountText] via [toPlainStringTwoDecimals], a 2-decimal
      * fiat string, and re-deriving [amount] from that text loses whatever precision the fiat
      * rate needed beyond 2 decimals — the exact case [onMaxClick] itself is supposed to
-     * express. Comparing [amountText] against the same rounded string the Max/toggle paths
-     * write avoids that lossy round trip entirely.
+     * express. Comparing the parsed FIAT VALUES (not the raw strings) against the balance's
+     * own rounded fiat value avoids both that lossy round trip and false negatives from
+     * equivalent spellings the keypad allows ("100" vs the formatter's "100.00").
      */
     val isMaxSpend: Boolean
         get() = if (dashMode) {
             amount == availableBalance
         } else {
-            amountText == availableBalance.toFiatAt(rate)?.toPlainStringTwoDecimals()
+            val typedFiat = parseDecimalOrNull(amountText)?.toFiat(fiatCode)
+            val maxFiat = availableBalance.toFiatAt(rate)?.toPlainStringTwoDecimals()?.let {
+                Fiat.parseFiat(fiatCode, it)
+            }
+            typedFiat != null && typedFiat == maxFiat
         }
 
     /**

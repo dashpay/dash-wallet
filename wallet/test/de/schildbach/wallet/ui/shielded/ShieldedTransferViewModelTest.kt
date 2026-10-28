@@ -892,6 +892,23 @@ class ShieldedTransferViewModelTest {
         assertFalse(typedLess.isMaxSpend)
     }
 
+    @Test
+    fun isMaxSpend_fiatMode_recognizesAnEquivalentlySpelledTypedAmount() {
+        // The keypad lets the user type "100" (no decimals) for a balance whose fiat
+        // value formats as "100.00" — comparing raw strings would miss this exact-max
+        // entry entirely, so isMaxSpend must compare the parsed fiat VALUES instead.
+        val rate = Fiat.parseFiat("USD", "100") // 1 DASH == exactly $100, no rounding
+        val balance = Dash.parse("1.00")
+        val typedWithoutDecimals = ShieldedTransferUIState(
+            dashMode = false,
+            rate = rate,
+            shieldedBalance = balance,
+            direction = ShieldedTransferDirection.FromShielded,
+            amountText = "100"
+        )
+        assertTrue(typedWithoutDecimals.isMaxSpend)
+    }
+
     // ── "You will transfer ~" hint — always DASH, both directions (user
     // decision 2026-07-14, superseding the Figma credits denomination) ──
 
