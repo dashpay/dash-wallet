@@ -261,9 +261,10 @@ internal fun needsFeeRecovery(record: L1TxUiRecord): Boolean =
 
 /**
  * Rust `TransactionType` discriminant for a classic (Standard) transaction —
- * the ONLY kind [reattributeIncomingRecord] is applied to. Special kinds
- * (asset lock/unlock, provider registrations, coinbase) keep their stored
- * record untouched: their display shape is owned by the asset-lock kind
+ * the main kind [reattributeIncomingRecord] is applied to; asset locks are
+ * admitted only in their known-bad shapes ([TX_TYPE_KIND_ASSET_LOCK]). Other
+ * special kinds (asset unlock, provider registrations, coinbase) keep their
+ * stored record untouched: their display shape is owned by the asset-lock kind
  * resolver / special-kind paths, and `0xFF` (the not-yet-populated sentinel)
  * could be any of them.
  */
@@ -278,9 +279,10 @@ internal const val TX_TYPE_KIND_COINJOIN = 1
 
 /**
  * Rust `TransactionType` discriminant for an AssetLock (credit-funding)
- * transaction — admitted to reattribution ONLY in its known-bad
- * INTERNAL/net-0 persisted shape (dashpay/platform#4412); every other
- * special kind stays excluded per the note above.
+ * transaction — admitted to reattribution ONLY in its known-bad persisted
+ * shapes: INTERNAL/net-0 (dashpay/platform#4412), and INCOMING with spent
+ * evidence (a replayed block recorded it as its change alone, D-SDK-06);
+ * every other special kind stays excluded per the note above.
  */
 internal const val TX_TYPE_KIND_ASSET_LOCK = 6
 
@@ -663,8 +665,8 @@ internal class SdkTxStoreWalker(
 
     /**
      * Apply [reattributeIncomingRecord] to the rows whose stored shape is
-     * impossible (a Standard tx recorded INCOMING that spent the wallet's own
-     * TXOs). Costs nothing when no row is flagged; a flagged set pays one
+     * impossible (a Standard or AssetLock tx recorded INCOMING that spent the
+     * wallet's own TXOs, or a Standard INTERNAL one with a positive net). Costs nothing when no row is flagged; a flagged set pays one
      * chunked funded-split aggregate plus (for the net<0 subset only) one
      * chunked payload fetch (internal-vs-send discrimination and fee recovery
      * need the tx's real shape — see [TxPayloadFacts]).
@@ -891,6 +893,25 @@ internal class SdkTxStoreWalker(
                         it.record.netAmountDuffs == 0L &&
                         it.spentOwnedDuffs > 0L
                     ) ||
+                // Rows a replayed block re-recorded with its change alone
+                // (D-SDK-06): a rescan resumed after a process death records
+                // a spend whose coin was funded below the rescan as an
+                // incoming payment of its change, because the engine reloaded
+                // without that coin. Both shapes are impossible for a correct
+                // row — an incoming tx never spends our coins, and an internal
+                // move never gains value — so a correct store never matches
+                // and the corrected row (OUTGOING / net <= 0) never re-flags.
+                (
+                    it.typeKind == TX_TYPE_KIND_ASSET_LOCK &&
+                        it.record.direction == L1TxUiDirection.INCOMING &&
+                        it.spentOwnedDuffs > 0L
+                    ) ||
+                (
+                    it.typeKind == TX_TYPE_KIND_STANDARD &&
+                        it.record.direction == L1TxUiDirection.INTERNAL &&
+                        it.record.netAmountDuffs > 0L &&
+                        it.spentOwnedDuffs > 0L
+                    ) ||
                 // CoinJoin rounds persisted "income-only" (rust-dashcore#979
                 // shape — see [recomputeCoinJoinRecordNet]). Flagged on the
                 // STRUCTURAL condition (kind + direction + confirmed spent
@@ -1001,10 +1022,18 @@ internal class SdkTxStoreWalker(
             val args = ArrayList<Any?>(1 + chunk.size)
             args.add(walletId)
             args.addAll(chunk)
+            // A contact's watch-only (DIP-15 external) address is left out too:
+            // the store does not mirror outputs paid to it (0 rows on 94 such
+            // addresses in both 2026-10-28 restore stores), so counting it as
+            // "known" deferred every payment to a contact forever. A row for it,
+            // where a store does write one, is foreign and never moves the
+            // owned net, so its absence cannot make the recompute wrong.
             rawQuery(
                 "SELECT ca.address FROM core_addresses ca " +
                     "JOIN accounts a ON a.id = ca.accountId " +
-                    "WHERE a.walletId = ? AND ca.address IN ($placeholders)",
+                    "WHERE a.walletId = ? " +
+                    "AND a.accountType != ${SdkTxContactResolver.ACCOUNT_TYPE_DASHPAY_EXTERNAL} " +
+                    "AND ca.address IN ($placeholders)",
                 args.toTypedArray()
             ) { c -> while (c.moveToNext()) knownWalletAddresses += c.getString(0) }
         }
