@@ -175,6 +175,36 @@ object ThreadCpuStats {
     }
 
     /**
+     * Rate limit for a failure that can recur every interval (an unreadable
+     * `/proc/self/stat`, a report that throws): the first failure since the
+     * last success is logged, then at most one per [repeatMs], so a persistent
+     * failure stays visible without a line per interval. Not thread-safe.
+     */
+    class FailureThrottle(private val repeatMs: Long) {
+        /** Failures since the last [onSuccess]. */
+        var failures = 0
+            private set
+        private var lastLoggedMs: Long? = null
+
+        /** Counts a failure at [nowMs]; true when this one should be logged. */
+        fun onFailure(nowMs: Long): Boolean {
+            failures++
+            val last = lastLoggedMs
+            if (last != null && nowMs - last < repeatMs) return false
+            lastLoggedMs = nowMs
+            return true
+        }
+
+        /** Ends a failure run; returns how many failures it ended (0 if none). */
+        fun onSuccess(): Int {
+            val ended = failures
+            failures = 0
+            lastLoggedMs = null
+            return ended
+        }
+    }
+
+    /**
      * Whether a /proc read failed because the thread exited between listing and
      * reading — normal churn, not a blind spot. Android reports that as
      * `open failed: ENOENT` (or ESRCH on a read racing the exit); the JVM as
@@ -278,6 +308,18 @@ object ThreadCpuStats {
 
     fun isSlowScan(scanMs: Long): Boolean = scanMs > SLOW_SCAN_MS
 
+    /** A wall span above this many expected intervals is flagged as a freeze/sleep (`GAP`). */
+    const val GAP_FACTOR = 2
+
+    /**
+     * Whether an interval's wall span shows the process was frozen or the
+     * device asleep. [expectedIntervalMs] is what the span should have been:
+     * the sample interval times the number of intervals it covers (more than
+     * one when failed scans in between kept the older baseline).
+     */
+    fun isGap(wallMs: Long, expectedIntervalMs: Long): Boolean =
+        expectedIntervalMs > 0 && wallMs > GAP_FACTOR * expectedIntervalMs
+
     /**
      * The threads that get a detailed dump (wchan + Java stack) on a hot
      * sample: every thread itself over the threshold, or — if the process is
@@ -300,21 +342,24 @@ object ThreadCpuStats {
 
     /**
      * Hot → WARN every time. Active (between idle and hot) → INFO. A sample
-     * with [hasScanDiagnostics] → at least INFO, so a degraded scan is never
-     * filtered out by the INFO root logger. Idle → INFO at most once per
-     * [idleInfoIntervalMs] (so a quiet log still shows the sampler alive),
-     * DEBUG otherwise. Thread churn alone does not lift an idle sample.
+     * with [hasScanDiagnostics] or an [isGap] span → at least INFO, so neither
+     * a degraded scan nor a freeze is filtered out by the INFO root logger.
+     * Idle → INFO at most once per [idleInfoIntervalMs] (so a quiet log still
+     * shows the sampler alive), DEBUG otherwise. Thread churn alone does not
+     * lift an idle sample.
      */
     fun levelFor(
         report: IntervalReport,
         clkTck: Long,
         nowMs: Long,
         lastInfoMs: Long?,
-        idleInfoIntervalMs: Long
+        idleInfoIntervalMs: Long,
+        expectedIntervalMs: Long
     ): Level = when {
         isHot(report.processDeltaTicks, clkTck, report.wallMs) -> Level.WARN
         !isIdle(report.processDeltaTicks, clkTck, report.wallMs) -> Level.INFO
         hasScanDiagnostics(report) -> Level.INFO
+        isGap(report.wallMs, expectedIntervalMs) -> Level.INFO
         lastInfoMs == null || nowMs - lastInfoMs >= idleInfoIntervalMs -> Level.INFO
         else -> Level.DEBUG
     }

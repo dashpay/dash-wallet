@@ -73,8 +73,14 @@ import java.util.concurrent.atomic.AtomicBoolean
  *    `Thread.getAllStackTraces()` runs only on a hot interval.
  *  - **Quiet when idle.** Idle intervals log at DEBUG, with one INFO line at
  *    most every [IDLE_INFO_INTERVAL_MS] as a heartbeat. An idle sample whose
- *    scan was degraded (`readErr=` etc.) is still INFO, and like any INFO
- *    line it restarts the heartbeat clock.
+ *    scan was degraded (`readErr=` etc.) or whose span shows a freeze (`GAP`)
+ *    is still INFO, and like any INFO line it restarts the heartbeat clock.
+ *  - **Every signal reaches wallet.log.** The root logger is INFO, so nothing
+ *    the sampler exists to surface is logged at DEBUG: only clean idle samples
+ *    between heartbeats are. A failure that could repeat every interval (an
+ *    unreadable `/proc/self/stat`, a report that throws) is INFO but rate
+ *    limited by [ThreadCpuStats.FailureThrottle]: the first, then one per
+ *    [IDLE_INFO_INTERVAL_MS], and a `recovered` line with the count after.
  *  - **Never throws into the app.** Every read and every log path is guarded,
  *    and the scope's [CoroutineExceptionHandler] catches anything that still
  *    escapes; a thread vanishing mid-scan is normal and just skipped. Reads
@@ -97,9 +103,6 @@ object ThreadCpuSampler {
     const val PREFIX = "CPU SAMPLE"
     const val SAMPLE_INTERVAL_MS = 60_000L
     const val IDLE_INFO_INTERVAL_MS = 10 * 60_000L
-
-    /** Wall gap above this many intervals is flagged as a freeze/sleep. */
-    private const val GAP_FACTOR = 2
 
     /** Hot threads that get a wchan + Java stack dump per interval. */
     private const val MAX_DETAILED_THREADS = 3
@@ -154,7 +157,7 @@ object ThreadCpuSampler {
             val session = Session()
             val baseline = session.snapshot()
             if (baseline == null) {
-                log.info("$PREFIX unavailable: /proc/self not readable")
+                log.info("$PREFIX unavailable: {}", session.lastFailure ?: "/proc/self not readable")
                 return
             }
             log.info(
@@ -168,11 +171,17 @@ object ThreadCpuSampler {
             var lastInfoMs: Long? = null
             while (true) {
                 delay(SAMPLE_INTERVAL_MS)
-                val curr = session.snapshot() ?: continue
+                val curr = session.snapshot()
                 // A scan that finished just as the app came forward is stale: drop it.
                 currentCoroutineContext().ensureActive()
+                if (curr == null) {
+                    // `prev` stays the baseline: the next good sample spans the gap.
+                    session.scanFailed()
+                    continue
+                }
+                val skipped = session.scanSucceeded()
                 samples++
-                lastInfoMs = session.report(prev, curr, lastInfoMs)
+                lastInfoMs = session.report(prev, curr, lastInfoMs, SAMPLE_INTERVAL_MS * (1 + skipped))
                 prev = curr
             }
         } finally {
@@ -196,12 +205,47 @@ object ThreadCpuSampler {
         private val buffer = ByteArray(STAT_BUFFER_BYTES)
         private val taskDir = File("/proc/self/task")
 
+        /** Why the last [snapshot] returned null; logged by the caller. */
+        var lastFailure: String? = null
+            private set
+
+        private val scanFailures = ThreadCpuStats.FailureThrottle(IDLE_INFO_INTERVAL_MS)
+        private val threadReadFailures = ThreadCpuStats.FailureThrottle(IDLE_INFO_INTERVAL_MS)
+        private val reportFailures = ThreadCpuStats.FailureThrottle(IDLE_INFO_INTERVAL_MS)
+
+        /** A post-baseline scan failed: INFO for the first, then once per heartbeat interval. */
+        fun scanFailed() {
+            try {
+                if (scanFailures.onFailure(SystemClock.elapsedRealtime())) {
+                    log.info(
+                        "$PREFIX unavailable: {} failures={} (keeping last good sample as baseline)",
+                        lastFailure ?: "?",
+                        scanFailures.failures
+                    )
+                }
+            } catch (_: Throwable) {
+            }
+        }
+
+        /** A scan succeeded; returns how many failed scans it ends (logged at INFO if any). */
+        fun scanSucceeded(): Int {
+            val skipped = scanFailures.onSuccess()
+            if (skipped > 0) {
+                try {
+                    log.info("$PREFIX recovered after {} failed scans; next sample spans them", skipped)
+                } catch (_: Throwable) {
+                }
+            }
+            return skipped
+        }
+
         /**
-         * Reads the process and every thread; null if the process line itself is
-         * unreadable. Throws [CancellationException] if cancelled mid-scan, so a
-         * partial scan is never reported.
+         * Reads the process and every thread; null (with [lastFailure] set) if
+         * the process line itself is unreadable. Throws [CancellationException]
+         * if cancelled mid-scan, so a partial scan is never reported.
          */
         suspend fun snapshot(): Snapshot? = try {
+            lastFailure = null
             val wall = SystemClock.elapsedRealtime()
             val up = SystemClock.uptimeMillis()
             val tally = ScanTally()
@@ -209,7 +253,7 @@ object ThreadCpuSampler {
             val process = processLine?.let(ThreadCpuStats::parseStatLine)
             if (process == null) {
                 val why = tally.firstError?.toString() ?: if (processLine == null) "unreadable" else "unparsable"
-                logQuietly("/proc/self/stat $why")
+                lastFailure = "/proc/self/stat $why"
                 null
             } else {
                 // list() returns null (or throws) when the dir can't be read: that's
@@ -234,24 +278,34 @@ object ThreadCpuSampler {
                 }
                 // `wall` was taken just before the first read, so this spans every read.
                 val scanMs = SystemClock.elapsedRealtime() - wall
-                // One log per scan at most, not one per unreadable thread.
-                tally.firstError?.let { logQuietly("unreadable thread stats (first error)", it) }
+                // The counts are on the sample line (INFO); the cause goes out with
+                // it, but rate limited, since an EACCES would recur every scan.
+                val firstError = tally.firstError
+                if (firstError == null) {
+                    threadReadFailures.onSuccess()
+                } else if (threadReadFailures.onFailure(wall)) {
+                    logQuietly("unreadable thread stats (first error)", firstError)
+                }
                 Snapshot(wall, up, process.ticks, threads, scanMs, tally.readErrors, tally.badStats, tally.listFailed)
             }
         } catch (e: CancellationException) {
             throw e
         } catch (t: Throwable) {
-            logQuietly("snapshot failed", t)
+            lastFailure = "snapshot failed: $t"
             null
         }
 
-        /** Logs one interval; returns the updated last-INFO time. */
-        fun report(prev: Snapshot, curr: Snapshot, lastInfoMs: Long?): Long? {
+        /**
+         * Logs one interval; returns the updated last-INFO time. [expectedWallMs]
+         * is the span the interval should have (longer after failed scans).
+         */
+        fun report(prev: Snapshot, curr: Snapshot, lastInfoMs: Long?, expectedWallMs: Long): Long? {
             return try {
                 val report = ThreadCpuStats.diff(prev, curr)
                 val now = curr.elapsedRealtimeMs
-                val level = ThreadCpuStats.levelFor(report, clkTck, now, lastInfoMs, IDLE_INFO_INTERVAL_MS)
-                val gap = if (report.wallMs > GAP_FACTOR * SAMPLE_INTERVAL_MS) " GAP(frozen/asleep)" else ""
+                val level =
+                    ThreadCpuStats.levelFor(report, clkTck, now, lastInfoMs, IDLE_INFO_INTERVAL_MS, expectedWallMs)
+                val gap = if (ThreadCpuStats.isGap(report.wallMs, expectedWallMs)) " GAP(frozen/asleep)" else ""
                 val line = "$PREFIX ${ThreadCpuStats.formatLine(report, clkTck)}$gap"
                 when (level) {
                     Level.WARN -> {
@@ -269,25 +323,41 @@ object ThreadCpuSampler {
                         log.debug(line)
                         lastInfoMs
                     }
-                }
+                }.also { reportFailures.onSuccess() }
             } catch (e: CancellationException) {
                 throw e
             } catch (t: Throwable) {
-                logQuietly("report failed", t)
+                try {
+                    if (reportFailures.onFailure(SystemClock.elapsedRealtime())) {
+                        logQuietly("report failed (failures=${reportFailures.failures})", t)
+                    }
+                } catch (_: Throwable) {
+                }
                 lastInfoMs
             }
         }
 
         private fun logHotDetails(hot: List<ThreadCpuStats.ThreadDelta>, wallMs: Long) {
+            // Null when the stacks couldn't be taken: then "no Java match" would
+            // be a false "native thread" verdict, so the line says so instead.
+            var stacksError: Throwable? = null
             val javaThreads: Map<Thread, Array<StackTraceElement>> = try {
                 Thread.getAllStackTraces()
             } catch (t: Throwable) {
+                stacksError = t
                 emptyMap()
             }
             for (t in hot) {
                 val pct = ThreadCpuStats.cpuPercent(t.deltaTicks, clkTck, wallMs)
                 val wchan = readFile("/proc/self/task/${t.tid}/wchan")?.trim()
                     ?.takeIf { it.isNotEmpty() && it != "0" } ?: "?"
+                if (stacksError != null) {
+                    log.warn(
+                        "$PREFIX hot tid={} name='{}' state={} cpu={}% wchan={} java=UNKNOWN (stacks failed: {})",
+                        t.tid, t.name, t.state, "%.1f".format(java.util.Locale.US, pct), wchan, stacksError.toString()
+                    )
+                    continue
+                }
                 val candidates = javaThreads.entries.filter {
                     ThreadCpuStats.javaNameMatchesComm(it.key.name, t.name)
                 }
@@ -332,16 +402,14 @@ object ThreadCpuSampler {
         }
     }
 
+    /**
+     * INFO, never DEBUG: the root logger is INFO, and every caller is a failure
+     * the log must show. Callers that could fire every interval rate-limit
+     * through [ThreadCpuStats.FailureThrottle] first.
+     */
     private fun logQuietly(what: String, t: Throwable) {
         try {
-            log.debug("$PREFIX {}: {}", what, t.toString())
-        } catch (_: Throwable) {
-        }
-    }
-
-    private fun logQuietly(what: String) {
-        try {
-            log.debug("$PREFIX {}", what)
+            log.info("$PREFIX {}: {}", what, t.toString())
         } catch (_: Throwable) {
         }
     }

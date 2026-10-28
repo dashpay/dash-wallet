@@ -30,6 +30,9 @@ class ThreadCpuStatsTest {
 
     private val clkTck = 100L
 
+    /** The sample interval: the span a normal interval is expected to have. */
+    private val minute = 60_000L
+
     /** A realistic stat line: fields 14/15 utime/stime, 22 starttime. */
     private fun statLine(tid: Int, comm: String, state: Char, utime: Long, stime: Long, start: Long = 5000): String =
         "$tid ($comm) $state 1000 1000 0 0 -1 4210752 1200 0 0 0 $utime $stime 0 0 20 0 42 0 $start " +
@@ -137,7 +140,7 @@ class ThreadCpuStatsTest {
         val curr = snap(60_000, 12_000, stat(1, "a", 6000), stat(2, "b", 5800), stat(3, "c", 200))
         val r = ThreadCpuStats.diff(prev, curr)
         assertEquals(listOf(1, 2), ThreadCpuStats.hotThreads(r, clkTck).map { it.tid })
-        assertEquals(Level.WARN, ThreadCpuStats.levelFor(r, clkTck, 60_000, null, 600_000))
+        assertEquals(Level.WARN, ThreadCpuStats.levelFor(r, clkTck, 60_000, null, 600_000, minute))
     }
 
     @Test
@@ -160,11 +163,11 @@ class ThreadCpuStatsTest {
         val prev = snap(0, 0, stat(1, "a", 0))
         val idle = ThreadCpuStats.diff(prev, snap(60_000, 50, stat(1, "a", 50))) // ~0.8%
         val tenMin = 600_000L
-        assertEquals(Level.INFO, ThreadCpuStats.levelFor(idle, clkTck, 60_000, null, tenMin))
-        assertEquals(Level.DEBUG, ThreadCpuStats.levelFor(idle, clkTck, 300_000, 0, tenMin))
-        assertEquals(Level.INFO, ThreadCpuStats.levelFor(idle, clkTck, 600_000, 0, tenMin))
+        assertEquals(Level.INFO, ThreadCpuStats.levelFor(idle, clkTck, 60_000, null, tenMin, minute))
+        assertEquals(Level.DEBUG, ThreadCpuStats.levelFor(idle, clkTck, 300_000, 0, tenMin, minute))
+        assertEquals(Level.INFO, ThreadCpuStats.levelFor(idle, clkTck, 600_000, 0, tenMin, minute))
         val active = ThreadCpuStats.diff(prev, snap(60_000, 600, stat(1, "a", 600))) // 10%
-        assertEquals(Level.INFO, ThreadCpuStats.levelFor(active, clkTck, 120_000, 60_000, tenMin))
+        assertEquals(Level.INFO, ThreadCpuStats.levelFor(active, clkTck, 120_000, 60_000, tenMin, minute))
     }
 
     // ── formatting / name matching ────────────────────────────────────
@@ -306,7 +309,7 @@ class ThreadCpuStatsTest {
     @Test
     fun `a clean idle sample is unchanged, one with any scan diagnostic logs at INFO`() {
         assertFalse(ThreadCpuStats.hasScanDiagnostics(idleReport()))
-        assertEquals(Level.DEBUG, ThreadCpuStats.levelFor(idleReport(), clkTck, 300_000, 0, tenMin))
+        assertEquals(Level.DEBUG, ThreadCpuStats.levelFor(idleReport(), clkTck, 300_000, 0, tenMin, minute))
         val degraded = listOf(
             idleReport(readErrors = 1),
             idleReport(badStats = 1),
@@ -315,7 +318,7 @@ class ThreadCpuStatsTest {
         )
         for (r in degraded) {
             assertTrue(ThreadCpuStats.hasScanDiagnostics(r))
-            assertEquals(Level.INFO, ThreadCpuStats.levelFor(r, clkTck, 300_000, 0, tenMin))
+            assertEquals(Level.INFO, ThreadCpuStats.levelFor(r, clkTck, 300_000, 0, tenMin, minute))
         }
     }
 
@@ -328,7 +331,63 @@ class ThreadCpuStatsTest {
         )
         val r = ThreadCpuStats.diff(prev, curr)
         assertTrue(ThreadCpuStats.hasScanDiagnostics(r))
-        assertEquals(Level.WARN, ThreadCpuStats.levelFor(r, clkTck, 300_000, 0, tenMin))
+        assertEquals(Level.WARN, ThreadCpuStats.levelFor(r, clkTck, 300_000, 0, tenMin, minute))
+    }
+
+    // ── GAP (frozen/asleep) lifts the level ───────────────────────────
+
+    @Test
+    fun `gap is a wall span over GAP_FACTOR expected intervals`() {
+        assertFalse(ThreadCpuStats.isGap(ThreadCpuStats.GAP_FACTOR * minute, minute))
+        assertTrue(ThreadCpuStats.isGap(ThreadCpuStats.GAP_FACTOR * minute + 1, minute))
+        // After failed scans the span is expected to cover several intervals.
+        assertFalse(ThreadCpuStats.isGap(3 * minute + 500, 2 * minute))
+        assertTrue(ThreadCpuStats.isGap(5 * minute, 2 * minute))
+        assertFalse(ThreadCpuStats.isGap(Long.MAX_VALUE, 0))
+    }
+
+    @Test
+    fun `an idle GAP sample logs INFO between heartbeats, a hot one stays WARN, clean idle stays DEBUG`() {
+        val prev = snap(0, 0, stat(1, "a", 0))
+        // 10 minutes of wall, ~0.1% of a core: idle, but frozen/asleep for most of it.
+        val idleGap = ThreadCpuStats.diff(prev, snap(10 * minute, 50, stat(1, "a", 50)))
+        assertTrue(ThreadCpuStats.isGap(idleGap.wallMs, minute))
+        assertFalse(ThreadCpuStats.hasScanDiagnostics(idleGap))
+        assertEquals(Level.INFO, ThreadCpuStats.levelFor(idleGap, clkTck, 300_000, 0, tenMin, minute))
+
+        val hotGap = ThreadCpuStats.diff(prev, snap(10 * minute, 60_000, stat(1, "a", 60_000))) // 100%
+        assertEquals(Level.WARN, ThreadCpuStats.levelFor(hotGap, clkTck, 300_000, 0, tenMin, minute))
+
+        val cleanIdle = ThreadCpuStats.diff(prev, snap(minute, 50, stat(1, "a", 50)))
+        assertEquals(Level.DEBUG, ThreadCpuStats.levelFor(cleanIdle, clkTck, 300_000, 0, tenMin, minute))
+        // The same 10-minute span is no GAP when it was expected to cover that many intervals.
+        assertEquals(Level.DEBUG, ThreadCpuStats.levelFor(idleGap, clkTck, 300_000, 0, tenMin, 10 * minute))
+    }
+
+    // ── failure rate limiting ──────────────────────────────────────────
+
+    @Test
+    fun `failure throttle logs the first failure, then once per repeat interval`() {
+        val throttle = ThreadCpuStats.FailureThrottle(tenMin)
+        assertTrue(throttle.onFailure(0))
+        assertFalse(throttle.onFailure(minute))
+        assertFalse(throttle.onFailure(tenMin - 1))
+        assertTrue(throttle.onFailure(tenMin))
+        assertFalse(throttle.onFailure(tenMin + minute))
+        assertEquals(5, throttle.failures)
+    }
+
+    @Test
+    fun `failure throttle success reports the run length and re-arms`() {
+        val throttle = ThreadCpuStats.FailureThrottle(tenMin)
+        assertEquals(0, throttle.onSuccess())
+        throttle.onFailure(0)
+        throttle.onFailure(minute)
+        assertEquals(2, throttle.onSuccess())
+        assertEquals(0, throttle.failures)
+        assertEquals(0, throttle.onSuccess())
+        // A new failure right after recovery is logged again.
+        assertTrue(throttle.onFailure(2 * minute))
     }
 
     @Test
