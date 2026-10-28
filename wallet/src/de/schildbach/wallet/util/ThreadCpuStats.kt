@@ -93,6 +93,9 @@ object ThreadCpuStats {
      *   snapshot: their start-of-interval ticks are unknown, so they are in
      *   neither [ranked] nor [created], and their CPU is in [unattributedTicks].
      * @param scanMs how long the CURRENT snapshot took to read (see [Snapshot.scanMs]).
+     * @param prevScanMs how long the PREVIOUS snapshot (this interval's
+     *   baseline) took to read: a slow baseline skews the deltas just as a
+     *   slow current scan does.
      * @param readErrors / [badStats] / [listFailed] the CURRENT snapshot's
      *   blind spots (see [Snapshot]): threads it could not see for a reason
      *   other than having exited, so [threadCount] and [unattributedTicks]
@@ -111,7 +114,8 @@ object ThreadCpuStats {
         val readErrors: Int = 0,
         val badStats: Int = 0,
         val listFailed: Boolean = false,
-        val noBaseline: Int = 0
+        val noBaseline: Int = 0,
+        val prevScanMs: Long = 0
     )
 
     /**
@@ -290,7 +294,8 @@ object ThreadCpuStats {
             readErrors = curr.readErrors,
             badStats = curr.badStats,
             listFailed = curr.listFailed,
-            noBaseline = noBaseline
+            noBaseline = noBaseline,
+            prevScanMs = prev.scanMs
         )
     }
 
@@ -333,10 +338,12 @@ object ThreadCpuStats {
 
     /**
      * Whether the CURRENT scan had a blind spot or was too slow to be
-     * consistent (`readErr`, `badStat`, `TASK_LIST_FAILED`, `SLOW_SCAN`).
+     * consistent (`readErr`, `badStat`, `TASK_LIST_FAILED`, `SLOW_SCAN`), or
+     * the PREVIOUS scan, this interval's baseline, was too slow (`SLOW_BASELINE`).
      */
     fun hasScanDiagnostics(report: IntervalReport): Boolean =
-        report.readErrors > 0 || report.badStats > 0 || report.listFailed || isSlowScan(report.scanMs)
+        report.readErrors > 0 || report.badStats > 0 || report.listFailed || isSlowScan(report.scanMs) ||
+            isSlowScan(report.prevScanMs)
 
     enum class Level { DEBUG, INFO, WARN }
 
@@ -372,7 +379,9 @@ object ThreadCpuStats {
      * a wall gap far beyond the interval with `up` keeping pace means the
      * process was frozen while the device was awake. `scan` is how long the
      * current snapshot took to read; past [SLOW_SCAN_MS] the line ends in
-     * ` SLOW_SCAN` and its per-thread numbers are not consistent with `proc`.
+     * ` SLOW_SCAN` and its per-thread numbers are not consistent with `proc`;
+     * likewise ` SLOW_BASELINE(<n>ms)` when the PREVIOUS scan (the interval's
+     * baseline) took that long, since it skews the deltas the same way.
      * Blind spots appear only when nonzero: `readErr=<n>` (thread stats that
      * could not be read, other than exited threads), `badStat=<n>` (stat
      * lines the parser rejected) and ` TASK_LIST_FAILED` (no thread was seen).
@@ -409,6 +418,7 @@ object ThreadCpuStats {
         if (report.badStats > 0) sb.append(" badStat=").append(report.badStats)
         if (report.listFailed) sb.append(" TASK_LIST_FAILED")
         if (isSlowScan(report.scanMs)) sb.append(" SLOW_SCAN")
+        if (isSlowScan(report.prevScanMs)) sb.append(" SLOW_BASELINE(").append(report.prevScanMs).append("ms)")
         return sb.toString()
     }
 

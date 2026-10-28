@@ -187,7 +187,7 @@ class ThreadCpuStatsTest {
 
     @Test
     fun `a scan slower than the threshold is flagged SLOW_SCAN`() {
-        val prev = snap(0, 0, stat(1, "main", 0), scanMs = 60_000) // only the CURRENT scan counts
+        val prev = snap(0, 0, stat(1, "main", 0), scanMs = ThreadCpuStats.SLOW_SCAN_MS) // a fast-enough baseline
         fun line(scanMs: Long) =
             ThreadCpuStats.formatLine(ThreadCpuStats.diff(prev, snap(60_000, 100, stat(1, "main", 100), scanMs = scanMs)), clkTck)
         assertEquals("proc=1.7% cpu=1000ms wall=60.0s up=60.0s scan=5000ms thr=1 top=[1 main S 1000ms]", line(5_000))
@@ -197,6 +197,38 @@ class ThreadCpuStatsTest {
         )
         assertFalse(ThreadCpuStats.isSlowScan(ThreadCpuStats.SLOW_SCAN_MS))
         assertTrue(ThreadCpuStats.isSlowScan(ThreadCpuStats.SLOW_SCAN_MS + 1))
+    }
+
+    @Test
+    fun `an interval whose baseline scan was slow is flagged SLOW_BASELINE and logs at INFO`() {
+        // The baseline read the process total at t=0 but the threads ~60 s later.
+        val prev = snap(0, 0, stat(1, "w1", 6_000), stat(2, "w2", 6_000), scanMs = 60_000)
+        val curr = snap(120_000, 12_000, stat(1, "w1", 6_000), stat(2, "w2", 6_000), scanMs = 10)
+        val r = ThreadCpuStats.diff(prev, curr)
+        assertEquals(60_000L, r.prevScanMs)
+        assertEquals(
+            "proc=100.0% cpu=120000ms wall=120.0s up=120.0s scan=10ms thr=2 top=[] " +
+                "unattributed=120000ms SLOW_BASELINE(60000ms)",
+            ThreadCpuStats.formatLine(r, clkTck)
+        )
+        assertTrue(ThreadCpuStats.hasScanDiagnostics(r))
+
+        // Idle but with a slow baseline: INFO between heartbeats, not DEBUG.
+        val idle = ThreadCpuStats.diff(
+            snap(0, 0, stat(1, "a", 0), scanMs = ThreadCpuStats.SLOW_SCAN_MS + 1),
+            snap(minute, 50, stat(1, "a", 50))
+        )
+        assertTrue(ThreadCpuStats.formatLine(idle, clkTck).endsWith(" SLOW_BASELINE(5001ms)"))
+        assertEquals(Level.INFO, ThreadCpuStats.levelFor(idle, clkTck, 300_000, 0, tenMin, minute))
+    }
+
+    @Test
+    fun `a fast baseline scan adds no marker`() {
+        val prev = snap(0, 0, stat(1, "a", 0), scanMs = ThreadCpuStats.SLOW_SCAN_MS)
+        val r = ThreadCpuStats.diff(prev, snap(minute, 50, stat(1, "a", 50)))
+        assertFalse(ThreadCpuStats.formatLine(r, clkTck).contains("SLOW_BASELINE"))
+        assertFalse(ThreadCpuStats.hasScanDiagnostics(r))
+        assertEquals(Level.DEBUG, ThreadCpuStats.levelFor(r, clkTck, 300_000, 0, tenMin, minute))
     }
 
     // ── blind spots (unreadable / rejected thread stats) ─────────────
