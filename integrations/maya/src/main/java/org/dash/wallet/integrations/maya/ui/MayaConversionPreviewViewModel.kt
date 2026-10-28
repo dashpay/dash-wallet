@@ -18,6 +18,7 @@ package org.dash.wallet.integrations.maya.ui
 
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -49,6 +50,7 @@ import org.dash.wallet.integrations.maya.ui.convert_currency.model.SendTransacti
 import org.dash.wallet.integrations.maya.utils.MayaConstants
 import org.dash.wallet.integrations.maya.utils.SwapBackend
 import org.slf4j.LoggerFactory
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 
 @HiltViewModel
@@ -131,11 +133,26 @@ class MayaConversionPreviewViewModel @Inject constructor(
      */
     val onPaymentStillConfirmingCallback = SingleLiveEvent<Unit>()
 
-    fun commitSwapTrade(tradeId: String) = viewModelScope.launch {
-        if (paymentOutcomeUnknown.value) {
-            // An earlier deposit may have gone out: never commit (and send) again from this screen.
-            return@launch
+    /** Held while one commit (and its deposit) is in progress (see [commitSwapTrade]). */
+    private val commitInFlight = AtomicBoolean(false)
+
+    fun commitSwapTrade(tradeId: String): Job {
+        // Claimed synchronously, before launching, so two rapid Confirms cannot both commit and
+        // deposit. Refused for good once an earlier deposit may have gone out.
+        if (paymentOutcomeUnknown.value || !commitInFlight.compareAndSet(false, true)) {
+            return Job().apply { complete() }
         }
+        return viewModelScope.launch {
+            try {
+                commitAndDeposit(tradeId)
+            } finally {
+                // An unknown outcome has already set the terminal flag, which keeps refusing.
+                commitInFlight.set(false)
+            }
+        }
+    }
+
+    private suspend fun commitAndDeposit(tradeId: String) {
         analyticsService.logEvent(AnalyticsConstants.Coinbase.CONVERT_QUOTE_CONFIRM, mapOf())
         val inputCurrency = swapTradeUIModel.amount.dashCode
         val inputAmount = swapTradeUIModel.amount.dash
@@ -231,15 +248,15 @@ class MayaConversionPreviewViewModel @Inject constructor(
                 _showLoading.value = false
                 if (result.throwable is InsufficientFundsException) {
                     onInsufficientMoneyCallback.call()
-                    return@launch
+                    return
                 }
                 if (result.throwable is PaymentSubmissionPendingException) {
                     savedStateHandle[KEY_PAYMENT_OUTCOME_UNKNOWN] = true
-                    return@launch
+                    return
                 }
                 if (result.throwable is PaymentStillConfirmingException) {
                     onPaymentStillConfirmingCallback.call()
-                    return@launch
+                    return
                 }
                 val error = result.errorBody
                 if (error.isNullOrEmpty()) {

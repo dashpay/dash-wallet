@@ -26,11 +26,13 @@ import androidx.activity.addCallback
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
+import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.commit
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.money.MoneyFormat
@@ -62,6 +64,7 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
 
     companion object {
         private val log = LoggerFactory.getLogger(TransferDashFragment::class.java)
+        private const val OUTCOME_UNKNOWN_DIALOG_TAG = "payment_outcome_unknown"
         fun newInstance() = TransferDashFragment()
     }
 
@@ -114,6 +117,10 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
         }
 
         enterAmountToTransferViewModel.onContinueTransferEvent.observe(viewLifecycleOwner){
+            if (transferDashViewModel.paymentOutcomeUnknown.value) {
+                // An earlier transfer may have gone out: no further transfer from this screen.
+                return@observe
+            }
             lifecycleScope.launch {
                 dashValue = it.second
                 if (binding.transferView.walletToCoinbase) {
@@ -274,6 +281,9 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
             val isEmptyWallet = enterAmountToTransferViewModel.isMaxAmountSelected &&
                     binding.transferView.walletToCoinbase
 
+            if (transferDashViewModel.paymentOutcomeUnknown.value) {
+                return@observe
+            }
             lifecycleScope.launch {
                 val details = transferDashViewModel.estimateNetworkFee(dashValue, emptyWallet = isEmptyWallet)
                 details?.amountToSend?.toPlainString()?.let { amountStr ->
@@ -340,12 +350,20 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
                 findNavController().popBackStack()
             }
         }
+
+        // Rendered from the view model's terminal state, once per view, so a recreated screen
+        // still blocks Continue and shows the warning.
+        viewLifecycleOwner.lifecycleScope.launch {
+            transferDashViewModel.paymentOutcomeUnknown.first { it }
+            showPaymentOutcomeUnknown()
+        }
     }
 
     private fun setIsSyncing(isSyncing: Boolean) {
         binding.transferView.setSyncing(isSyncing)
         binding.transferMessage.isVisible = isSyncing
-        enterAmountToTransferViewModel.keyboardStateCallback.value = !isSyncing
+        enterAmountToTransferViewModel.keyboardStateCallback.value =
+            !isSyncing && !transferDashViewModel.paymentOutcomeUnknown.value
     }
 
     private suspend fun handleSend(value: Dash, isEmptyWallet: Boolean): Boolean {
@@ -381,7 +399,9 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
     private fun setInternetAccessState(hasInternet: Boolean) {
         binding.networkStatusStub.isVisible = !hasInternet
         binding.transferView.isDeviceConnectedToInternet = hasInternet
-        if (!binding.transferView.walletToCoinbase) {
+        if (transferDashViewModel.paymentOutcomeUnknown.value) {
+            enterAmountToTransferViewModel.keyboardStateCallback.value = false
+        } else if (!binding.transferView.walletToCoinbase) {
             enterAmountToTransferViewModel.keyboardStateCallback.value = hasInternet
         } else {
             enterAmountToTransferViewModel.keyboardStateCallback.value =
@@ -391,7 +411,7 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
 
     private fun setTransactionState(responseState: SendDashResponseState) {
         if (responseState is SendDashResponseState.OutcomeUnknownState) {
-            showOutcomeUnknownDialog()
+            // Shown from paymentOutcomeUnknown, which survives recreation (see onViewCreated).
             return
         }
         val pair: Pair<CoinBaseResultDialog.Type, String?> = when(responseState){
@@ -432,16 +452,21 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
     }
 
     /**
-     * The transfer may already be on the network, so there is no retry: closing leaves the
-     * flow for home, where the transaction history shows whether it went out.
+     * The transfer may already be on the network, so there is no retry: the amount keyboard and
+     * Continue stay hidden, and closing leaves the flow for home, where the transaction history
+     * shows whether it went out. A dialog restored after recreation has lost its close action,
+     * so it is replaced.
      */
-    private fun showOutcomeUnknownDialog() {
+    private fun showPaymentOutcomeUnknown() {
+        enterAmountToTransferViewModel.keyboardStateCallback.value = false
+        (requireActivity().supportFragmentManager.findFragmentByTag(OUTCOME_UNKNOWN_DIALOG_TAG) as? DialogFragment)
+            ?.dismissAllowingStateLoss()
         AdaptiveDialog.create(
             R.drawable.ic_warning,
             getString(R.string.payment_submission_pending_title),
             getString(R.string.payment_outcome_unknown_message),
             getString(R.string.close)
-        ).show(requireActivity()) {
+        ).show(requireActivity(), OUTCOME_UNKNOWN_DIALOG_TAG) {
             if (isAdded) {
                 val navController = findNavController()
                 navController.popBackStack(navController.graph.startDestinationId, false)

@@ -19,6 +19,7 @@ package org.dash.wallet.integrations.maya.ui
 
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.lifecycle.SavedStateHandle
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,11 +35,13 @@ import org.dash.wallet.integrations.maya.model.Amount
 import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.mockito.kotlin.any
+import org.mockito.kotlin.doSuspendableAnswer
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
@@ -121,5 +124,30 @@ class MayaConversionPreviewOutcomeUnknownTest {
         restored.commitSwapTrade("trade").join()
 
         verify(swapProvider, times(1)).commitSwapTransaction(any(), any())
+    }
+
+    @Test
+    fun concurrentConfirms_onlyOneCommits_andARetryableFailureAllowsAnother() = runTest {
+        whenever(networkState.isConnected).thenReturn(MutableStateFlow(true))
+        val gate = CompletableDeferred<Unit>()
+        whenever(swapProvider.commitSwapTransaction(any(), any())).doSuspendableAnswer {
+            gate.await()
+            ResponseResource.Failure(IllegalStateException("route refused"), false, 0, null)
+        }
+        val viewModel = viewModel(SavedStateHandle(mapOf("swap_trade_order" to order)))
+
+        // Two rapid Confirm taps: the first is still committing when the second arrives.
+        val first = viewModel.commitSwapTrade("trade")
+        val second = viewModel.commitSwapTrade("trade")
+        gate.complete(Unit)
+        first.join()
+        second.join()
+
+        verify(swapProvider, times(1)).commitSwapTransaction(any(), any())
+        assertFalse(viewModel.paymentOutcomeUnknown.value)
+
+        // The commit failed (retryable): a later Confirm is accepted again.
+        viewModel.commitSwapTrade("trade").join()
+        verify(swapProvider, times(2)).commitSwapTransaction(any(), any())
     }
 }

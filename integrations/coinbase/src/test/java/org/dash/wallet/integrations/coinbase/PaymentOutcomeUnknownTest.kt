@@ -23,12 +23,16 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.dash.wallet.common.WalletDataProvider
@@ -46,6 +50,7 @@ import org.dash.wallet.integrations.coinbase.viewmodels.SendDashResponseState
 import org.dash.wallet.integrations.coinbase.viewmodels.TransferDashViewModel
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -88,19 +93,7 @@ class PaymentOutcomeUnknownTest {
 
     @Test
     fun transferDash_outcomeUnknown_isOutcomeUnknownState_notARetryableFailure() = runTest {
-        val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
-        every { walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY) } returns emptyFlow()
-        val viewModel = TransferDashViewModel(
-            coinBaseRepository,
-            mockk(relaxed = true),
-            walletDataProvider,
-            sendPaymentService,
-            mockk(relaxed = true),
-            networkState,
-            mockk(relaxed = true),
-            mockk(relaxed = true),
-            walletUIConfig
-        )
+        val viewModel = transferViewModel(SavedStateHandle())
 
         viewModel.sendDash(Dash.valueOf(100_000), isEmptyWallet = false, checkConditions = false, session = null)
 
@@ -108,6 +101,60 @@ class PaymentOutcomeUnknownTest {
             SendDashResponseState.OutcomeUnknownState,
             viewModel.observeSendDashToCoinbaseState.value
         )
+    }
+
+    @Test
+    fun transferDash_outcomeUnknown_isTerminal_andRefusesASecondSend() = runTest {
+        val viewModel = transferViewModel(SavedStateHandle())
+
+        viewModel.sendDash(Dash.valueOf(100_000), isEmptyWallet = false, checkConditions = false, session = null)
+        assertTrue(viewModel.paymentOutcomeUnknown.value)
+
+        // Continue again on the same screen: refused before anything is sent.
+        viewModel.sendDash(Dash.valueOf(100_000), isEmptyWallet = false, checkConditions = false, session = null)
+
+        coVerify(exactly = 1) { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any()) }
+    }
+
+    @Test
+    fun transferDash_outcomeUnknown_survivesRestore_andStillRefusesASend() = runTest {
+        val savedState = SavedStateHandle()
+        transferViewModel(savedState)
+            .sendDash(Dash.valueOf(100_000), isEmptyWallet = false, checkConditions = false, session = null)
+
+        // A new view model over the saved state, as after the process was killed and restored.
+        val restored = transferViewModel(restoredFrom(savedState))
+        assertTrue(restored.paymentOutcomeUnknown.value)
+        restored.sendDash(Dash.valueOf(100_000), isEmptyWallet = false, checkConditions = false, session = null)
+
+        coVerify(exactly = 1) { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any()) }
+    }
+
+    @Test
+    fun transferDash_concurrentSends_onlyOneReachesTheWallet_andARetryableFailureAllowsAnother() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        coEvery {
+            sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any())
+        } coAnswers {
+            gate.await()
+            throw IllegalStateException("rejected")
+        }
+        val viewModel = transferViewModel(SavedStateHandle())
+
+        val first = launch { viewModel.sendDash(Dash.valueOf(100_000), false, false, null) }
+        val second = launch { viewModel.sendDash(Dash.valueOf(100_000), false, false, null) }
+        runCurrent()
+        gate.complete(Unit)
+        advanceUntilIdle()
+        first.join()
+        second.join()
+
+        coVerify(exactly = 1) { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any()) }
+        assertFalse(viewModel.paymentOutcomeUnknown.value)
+
+        // The send was refused (a retryable failure): the user may try again.
+        viewModel.sendDash(Dash.valueOf(100_000), false, false, null)
+        coVerify(exactly = 2) { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any()) }
     }
 
     @Test
@@ -144,12 +191,56 @@ class PaymentOutcomeUnknownTest {
         previewViewModel(savedState).commitSwapTrade("trade", Constants.DASH_CURRENCY, "0.01").join()
 
         // A new view model over the saved state, as after the process was killed and restored.
-        val restored = previewViewModel(SavedStateHandle(savedState.keys().associateWith { savedState.get<Any>(it) }))
+        val restored = previewViewModel(restoredFrom(savedState))
         assertTrue(restored.paymentOutcomeUnknown.value)
         restored.commitSwapTrade("trade", Constants.DASH_CURRENCY, "0.01").join()
 
         coVerify(exactly = 1) { coinBaseRepository.commitSwapTrade(any()) }
         coVerify(exactly = 1) { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any()) }
+    }
+
+    @Test
+    fun sellDash_concurrentConfirms_onlyOneCommits_andARetryableFailureAllowsAnother() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        coEvery { coinBaseRepository.commitSwapTrade(any()) } coAnswers {
+            gate.await()
+            failure()
+        }
+        val viewModel = previewViewModel(SavedStateHandle())
+
+        // Two rapid Confirm taps: the first is still committing when the second arrives.
+        val first = viewModel.commitSwapTrade("trade", Constants.DASH_CURRENCY, "0.01")
+        val second = viewModel.commitSwapTrade("trade", Constants.DASH_CURRENCY, "0.01")
+        gate.complete(Unit)
+        first.join()
+        second.join()
+
+        coVerify(exactly = 1) { coinBaseRepository.commitSwapTrade(any()) }
+        assertFalse(viewModel.paymentOutcomeUnknown.value)
+
+        // The commit failed (retryable): a later Confirm is accepted again.
+        viewModel.commitSwapTrade("trade", Constants.DASH_CURRENCY, "0.01").join()
+        coVerify(exactly = 2) { coinBaseRepository.commitSwapTrade(any()) }
+    }
+
+    private fun restoredFrom(savedState: SavedStateHandle) =
+        SavedStateHandle(savedState.keys().associateWith { savedState.get<Any>(it) })
+
+    private fun transferViewModel(savedState: SavedStateHandle): TransferDashViewModel {
+        val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
+        every { walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY) } returns emptyFlow()
+        return TransferDashViewModel(
+            coinBaseRepository,
+            mockk(relaxed = true),
+            walletDataProvider,
+            sendPaymentService,
+            mockk(relaxed = true),
+            networkState,
+            mockk(relaxed = true),
+            mockk(relaxed = true),
+            walletUIConfig,
+            savedState
+        )
     }
 
     private fun previewViewModel(savedState: SavedStateHandle) = CoinbaseConversionPreviewViewModel(

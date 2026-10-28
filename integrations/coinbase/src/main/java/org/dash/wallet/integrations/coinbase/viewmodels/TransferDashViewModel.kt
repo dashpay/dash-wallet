@@ -36,6 +36,7 @@ import org.dash.wallet.integrations.coinbase.ui.dialogs.CoinBaseResultDialog
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.util.*
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import org.dash.wallet.common.services.ReceiveAddressUnavailableException
 
@@ -49,8 +50,23 @@ class TransferDashViewModel @Inject constructor(
     networkState: NetworkStateInt,
     private val analyticsService: AnalyticsService,
     private val transactionMetadataProvider: TransactionMetadataProvider,
-    private val walletUIConfig: WalletUIConfig
+    private val walletUIConfig: WalletUIConfig,
+    private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
+    companion object {
+        private const val KEY_PAYMENT_OUTCOME_UNKNOWN = "payment_outcome_unknown"
+    }
+
+    /**
+     * True once a transfer's send may have gone out with its outcome unknown. Terminal: no
+     * further send is accepted, and it is kept in [savedStateHandle] so a recreated screen (or
+     * process) still shows the warning instead of a Continue that could pay twice.
+     */
+    val paymentOutcomeUnknown: StateFlow<Boolean> =
+        savedStateHandle.getStateFlow(KEY_PAYMENT_OUTCOME_UNKNOWN, false)
+
+    /** Held while one send is in progress (see [sendDash]). */
+    private val sendInFlight = AtomicBoolean(false)
 
     val minimumFee: Dash = Dash.valueOf(226)
     private val _loadingState: MutableLiveData<Boolean> = MutableLiveData()
@@ -208,7 +224,17 @@ class TransferDashViewModel @Inject constructor(
      * refused with nothing sent if that wallet has since been wiped (review 4304575003).
      */
     suspend fun sendDash(dashValue: Dash, isEmptyWallet: Boolean, checkConditions: Boolean, session: WalletSession?) {
-        _sendDashToCoinbaseState.value = checkTransaction(dashValue, isEmptyWallet, checkConditions, session)
+        // Claimed synchronously, before the first suspension, so two rapid confirms cannot both
+        // pass and send; refused for good once an earlier send's outcome is unknown.
+        if (paymentOutcomeUnknown.value || !sendInFlight.compareAndSet(false, true)) {
+            return
+        }
+        try {
+            _sendDashToCoinbaseState.value = checkTransaction(dashValue, isEmptyWallet, checkConditions, session)
+        } finally {
+            // An unknown outcome has already set the terminal flag above, which keeps refusing.
+            sendInFlight.set(false)
+        }
     }
 
     suspend fun estimateNetworkFee(value: Dash, emptyWallet: Boolean): SendPaymentService.TransactionEstimate? {
@@ -256,6 +282,7 @@ class TransferDashViewModel @Inject constructor(
                 e.isLeftoverBalanceWarning -> throw e
                 // May have been sent: never reported as a failure, which offers a retry.
                 e is PaymentSubmissionPendingException -> {
+                    savedStateHandle[KEY_PAYMENT_OUTCOME_UNKNOWN] = true
                     e.printStackTrace()
                     SendDashResponseState.OutcomeUnknownState
                 }

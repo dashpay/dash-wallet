@@ -18,6 +18,7 @@ package org.dash.wallet.integrations.coinbase.viewmodels
 
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.WalletDataProvider
@@ -39,6 +40,7 @@ import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.integrations.coinbase.repository.CoinBaseRepositoryInt
 import java.util.*
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import org.dash.wallet.common.services.ReceiveAddressUnavailableException
 
@@ -88,11 +90,26 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
 
     var isFirstTime = true
 
-    fun commitSwapTrade(tradeId: String, inputCurrency: String, inputAmount: String) = viewModelScope.launch {
-        if (paymentOutcomeUnknown.value) {
-            // An earlier send may have gone out: never commit (and send) again from this screen.
-            return@launch
+    /** Held while one commit (and its send) is in progress (see [commitSwapTrade]). */
+    private val commitInFlight = AtomicBoolean(false)
+
+    fun commitSwapTrade(tradeId: String, inputCurrency: String, inputAmount: String): Job {
+        // Claimed synchronously, before launching, so two rapid Confirms cannot both commit and
+        // send. Refused for good once an earlier send may have gone out.
+        if (paymentOutcomeUnknown.value || !commitInFlight.compareAndSet(false, true)) {
+            return Job().apply { complete() }
         }
+        return viewModelScope.launch {
+            try {
+                commitAndSend(tradeId, inputCurrency, inputAmount)
+            } finally {
+                // An unknown outcome has already set the terminal flag, which keeps refusing.
+                commitInFlight.set(false)
+            }
+        }
+    }
+
+    private suspend fun commitAndSend(tradeId: String, inputCurrency: String, inputAmount: String) {
         // The wallet the user confirmed on, before the address and trade calls below wait (review
         // 4304575003): a DASH sale is refused, with nothing sent, if a wipe replaces it meanwhile.
         val session = sendPaymentService.currentWalletSession()
@@ -113,7 +130,7 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
             } catch (ex: ReceiveAddressUnavailableException) {
                 _showLoading.value = false
                 commitSwapTradeFailureState.call()
-                return@launch
+                return
             }
         }
 
@@ -138,7 +155,7 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
                         // fails the commit instead of throwing on a null address.
                         val to = depositAddress ?: run {
                             commitSwapTradeFailureState.call()
-                            return@launch
+                            return
                         }
                         sendFundToWalletParams = SendTransactionToWalletParams(
                             amount = result.value.displayInputAmount,
