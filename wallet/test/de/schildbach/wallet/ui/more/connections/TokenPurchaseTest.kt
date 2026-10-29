@@ -43,4 +43,25 @@ class TokenPurchaseTest {
         assertThrows(Exception::class.java) { runBlocking { config.purchaseWasSubmitted("scope:request") } }
         Unit
     }
+
+    @Test fun `canonical receipts block equivalent envelopes but allow a new signed operation`() = runBlocking {
+        val config = DashConnectConfig(RuntimeEnvironment.getApplication(), mockk<WalletDataProvider>(relaxed = true))
+        config.clearAll()
+        val terms = JSONObject().put("scope", "scope").put("ownerId", "owner")
+            .put("contractId", "contract").put("tokenId", "token").put("amount", "100").put("maximumCredits", "500")
+        config.savePurchase(JSONObject(terms.toString()).put("id", "scope:canonical-operation-42")
+            .put("canonicalPurchase", true).put("status", "outcomeUnknown"))
+        // Both byte-distinct envelopes decode to this native operation ID.
+        assertTrue(config.purchaseWasSubmitted("scope:canonical-operation-42", terms))
+        assertTrue(config.purchaseWasSubmitted("scope:canonical-operation-42", JSONObject(terms.toString()).put("name", "Renamed")))
+        // A later purchase carries a different nonce, which the SDK now preserves on chain.
+        assertFalse(config.purchaseWasSubmitted("scope:canonical-operation-43", terms))
+        config.savePurchase(JSONObject(terms.toString()).put("id", "scope:old-raw-byte-hash")
+            .put("status", "outcomeUnknown"))
+        // Old SDK receipts lost the submitted nonce. They cannot safely be migrated into a new intent.
+        assertTrue(config.purchaseWasSubmitted("scope:canonical-operation-43", terms))
+        val anotherWallet = JSONObject(terms.toString()).put("scope", "other-scope")
+        assertFalse(config.purchaseWasSubmitted("other-scope:canonical-operation-43", anotherWallet))
+        Unit
+    }
 }

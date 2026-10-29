@@ -128,9 +128,15 @@ open class DashConnectConfig @Inject constructor(
         }
     }
 
-    suspend fun purchaseWasSubmitted(id: String): Boolean {
+    suspend fun purchaseWasSubmitted(id: String, canonicalTerms: JSONObject? = null): Boolean {
         val records = purchaseReceipts()
-        return (0 until records.length()).any { records.getJSONObject(it).getString("id") == id }
+        return (0 until records.length()).any {
+            val record = records.getJSONObject(it)
+            record.getString("id") == id || (canonicalTerms != null && !record.optBoolean("canonicalPurchase", false) &&
+                listOf("scope", "ownerId", "contractId", "tokenId", "amount", "maximumCredits").all { field ->
+                    record.getString(field) == canonicalTerms.getString(field)
+                })
+        }
     }
 
     suspend fun savePurchase(receipt: JSONObject) {

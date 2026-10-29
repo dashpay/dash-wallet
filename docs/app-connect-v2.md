@@ -186,7 +186,7 @@ including legacy login key registration, are rejected; login remains one QR.
 The wallet displays the payer identity, token and contract IDs, quantity using
 proof-verified token decimals, and maximum cost in Platform credits. Approval
 rechecks the wallet/identity and denomination, then rebuilds the operation with
-a fresh nonce and the wallet's unbound CRITICAL key. Incoming bytes are never
+the original operation nonce and the wallet's unbound CRITICAL key. Incoming bytes are never
 signed. Network fees are additional to the purchase-price ceiling.
 
 Before submission the wallet persists a scoped receipt. Neither an SDK error
@@ -496,7 +496,17 @@ Tools renders the same Fragment-owned ViewModel state that its resume callback
 refreshes. Denying a request after failed group-scope approval reports `failed`,
 not `declined`, even when the refreshed plan requires no revocation.
 
-These changes do not yet resolve the separate canonical purchase replay-ID
-finding. The current native decoder discards envelope fields and rebuilds with a
-fresh nonce. Hashing only its decoded terms would also block legitimate repeated
-purchases with identical terms; that behavior must not be introduced silently.
+The SDK now supplies a versioned canonical purchase ID from the decoded payer,
+contract, token position/ID, quantity, maximum price and operation nonce. Ignored
+envelope fields, such as the incoming signing-key ID, do not change this ID. The
+native signing path preserves that same nonce using DPP's transition builder;
+it no longer replaces a replay with a fresh debit. Platform applies its normal
+nonce validation, so stale requests require a new QR. Identical terms with a new
+valid nonce remain supported as a separate purchase. The SDK invalidates its
+nonce cache after broadcast, including uncertain broadcast results.
+
+Receipts from the old SDK did not record the submitted nonce. For those records
+only, the wallet conservatively blocks matching payer/token/price/quantity in
+the same wallet scope; it cannot invent a safe migration from an unknown debit
+to a fresh operation. New canonical receipts do not impose an identical-terms
+ban. The budget and expiry presets are unchanged by these fixes.

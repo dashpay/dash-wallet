@@ -84,11 +84,13 @@ internal class AppConnectSession(
         mutex.withLock {
             check(platform.client.refreshProtocolVersion() >= 14) { "App Connect operations require Platform protocol version 14" }
             val scope = scope()
-            val id = "$scope:${Base58.encode(KeyExchangeCrypto.hash256(request.transitionBytes))}"
-            check(!config.purchaseWasSubmitted(id)) { "This purchase was already submitted or its outcome is unknown. Check your balances; do not retry it." }
             val identity = readIdentity()
             val summary = nativeBytes(dashsdk.prepareTokenPurchaseSdk(platform.rustSdk, request.transitionBytes, identity.id.toNative()))
             val data = JSONObject(String(summary, Charsets.UTF_8))
+            val id = "$scope:${data.getString("requestId")}"
+            check(!config.purchaseWasSubmitted(id, data.put("scope", scope))) {
+                "This purchase was already submitted or its outcome is unknown. Check your balances; do not retry it."
+            }
             val signingTime = platform.client.getPlatformTime(identity.id)
             val needsKey = runCatching { signingKey(identity, SecurityLevel.CRITICAL, signingTime) }.isFailure
             checkScope(scope)
@@ -103,7 +105,10 @@ internal class AppConnectSession(
         mutex.withLock {
             val authorize = coroutineContext.connectionAuthorization()
             checkScope(approval.scope)
-            check(!config.purchaseWasSubmitted(approval.requestId)) { "This purchase cannot be submitted again" }
+            check(!config.purchaseWasSubmitted(approval.requestId,
+                JSONObject(String(approval.summary, Charsets.UTF_8)).put("scope", approval.scope))) {
+                "This purchase cannot be submitted again"
+            }
             val wallet = walletRepo.walletApplication.wallet ?: error("Wallet unavailable")
             val keyParameter = walletRepo.getWalletEncryptionKey()
             check(!wallet.isEncrypted || keyParameter != null) { "Wallet password unavailable. Unlock the wallet and try again." }
@@ -114,6 +119,9 @@ internal class AppConnectSession(
             val summary = nativeBytes(dashsdk.prepareTokenPurchaseSdk(platform.rustSdk,
                 approval.request.transitionBytes, identity.id.toNative()))
             check(summary.contentEquals(approval.summary)) { "Purchase terms or token metadata changed. Scan again." }
+            check(approval.requestId == "${approval.scope}:${JSONObject(String(summary, Charsets.UTF_8)).getString("requestId")}") {
+                "Purchase operation identity changed. Scan again."
+            }
             val key = signingKey(identity, SecurityLevel.CRITICAL, platform.client.getPlatformTime(identity.id))
             val chain = (wallet.getKeyChainExtension(org.bitcoinj.wallet.authentication.AuthenticationGroupExtension.EXTENSION_ID)
                 as org.bitcoinj.wallet.authentication.AuthenticationGroupExtension).identityKeyChain
@@ -134,6 +142,7 @@ internal class AppConnectSession(
                 val signerContext = signer.nativeContext
                 val signerCallback = BigInteger.valueOf(signer.signerCallback)
                 val receipt = JSONObject().put("id", approval.requestId).put("scope", approval.scope)
+                    .put("canonicalPurchase", true)
                     .put("ownerId", approval.ownerId).put("contractId", approval.contractId).put("tokenId", approval.tokenId)
                     .put("amount", approval.amount.toString()).put("maximumCredits", approval.maximumCredits.toString())
                     .put("status", "outcomeUnknown").put("updatedAt", System.currentTimeMillis())
