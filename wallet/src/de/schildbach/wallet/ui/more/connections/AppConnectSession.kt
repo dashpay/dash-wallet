@@ -418,7 +418,7 @@ internal class AppConnectSession(
                 }
                 checkScope(plan.scope)
                 config.saveGrant(record.withGrantState("active"))
-                DAppConnection(Base58.encode(request.contractId), unverifiedAppName(request.label, Base58.encode(request.contractId)), "",
+                DAppConnection(Base58.encode(request.contractId), connectionDisplayName(request.label), "",
                     ConnectionStatus.ACTIVE, System.currentTimeMillis(), plan.scope)
             } finally { KeyExchangeCrypto.wipe(seed); privateKeys.forEach { KeyExchangeCrypto.wipe(it) }; KeyExchangeCrypto.wipe(ephemeral) }
         }
@@ -507,7 +507,14 @@ internal class AppConnectSession(
         dashsdk.platformMobilePutPutDocumentSdk(platform.rustSdk, doc.toNative(), Identifier.from(RESPONSE_CONTRACT).toNative(),
             TYPE, key.toNative(), BlockHeight(10000), CoreBlockHeight(platform.coreBlockHeight),
             signer.nativeContext, BigInteger.valueOf(signer.signerCallback)).unwrap()
-        check(find(identity, record).any { exact(it, record) }) { "Response not confirmed. Retry to recover." }
+        awaitResponseConfirmation(read = {
+            authorize()
+            checkScope(scope)
+            find(identity, record)
+        }, exact = { exact(it, record) }, report = { attempt, outcome ->
+            org.slf4j.LoggerFactory.getLogger(AppConnectSession::class.java)
+                .info("DashConnect response confirmation attempt {}: {}", attempt, outcome)
+        })
     }
     private fun deleteResponse(identity: Identity, record: JSONObject, signer: Signer, scope: String, authorize: () -> Unit) {
         find(identity, record).forEach { doc ->

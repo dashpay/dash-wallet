@@ -55,7 +55,7 @@ class PlatformDashConnectRepository @Inject constructor(
                 val updatedAt = if (!active && lastExpiry != null && lastExpiry <= currentTime) {
                     maxOf(latest.optLong("updatedAt"), lastExpiry)
                 } else latest.optLong("updatedAt")
-                DAppConnection(app, unverifiedAppName(latest.optString("label"), app), "",
+                DAppConnection(app, connectionDisplayName(latest.optString("label")), "",
                     when {
                         active -> ConnectionStatus.ACTIVE
                         // Revoked request keys do not prove that the app has no surviving access.

@@ -108,6 +108,7 @@ class ConnectionsViewModel @Inject constructor(
     private var pendingPlan: AppConnectPlan? = null
     private var pendingOpenedFromUrl = false
     private var pendingApprovalFailed = false
+    private var pendingApprovalRefreshFailed = false
     private var operationInProgress = false
     private var walletUnlockCheck: () -> Boolean = { false }
     private var connectionsJob: Job? = null
@@ -275,6 +276,7 @@ class ConnectionsViewModel @Inject constructor(
                 pendingPlan = plan
                 pendingOpenedFromUrl = openedFromUrl
                 pendingApprovalFailed = false
+                pendingApprovalRefreshFailed = false
                 _uiState.update { it.copy(pendingRequest = request.copy(permissionText = plan?.permissionText.orEmpty(),
                     grantChoices = plan?.choices().orEmpty(), recovering = plan?.recovering ?: false,
                     requiresGroupReapproval = plan?.requiresGroupReapproval ?: false,
@@ -410,6 +412,10 @@ class ConnectionsViewModel @Inject constructor(
         if (operationInProgress) return
         val request = pendingLoginRequest ?: return
         val plan = pendingPlan
+        if (pendingApprovalRefreshFailed) {
+            _approveResult.value = ApproveResult.Error("Approval terms could not be refreshed. Scan a new QR or revoke access.")
+            return
+        }
         if (plan?.requiresGroupReapproval == true && !plan.groupScopeChangeApproved) {
             _approveResult.value = ApproveResult.Error("Acknowledge the updated group scope before approving this recovered request.")
             return
@@ -437,27 +443,28 @@ class ConnectionsViewModel @Inject constructor(
                 pendingApprovalFailed = true
                 if (ex is CancellationException) throw ex
                 log.error("failed to approve DashConnect login", ex)
-                if (ex is GroupScopeChangedException) {
-                    try {
-                        val refreshed = checkNotNull(repository.prepareLogin(request)) { "Approval terms unavailable" }
-                        coroutineContext.connectionAuthorization()()
-                        pendingPlan = refreshed
-                        _uiState.update { state -> state.copy(requiresRevocation = refreshed.recovering,
-                            pendingRequest = state.pendingRequest?.copy(
-                            permissionText = refreshed.permissionText,
-                            grantChoices = refreshed.choices(),
-                            recovering = refreshed.recovering,
-                            requiresGroupReapproval = refreshed.requiresGroupReapproval,
-                            groupScopeChangeApproved = false,
-                            budgetPreset = refreshed.budgetPreset,
-                            lifetimePreset = refreshed.lifetimePreset
-                        )) }
-                    } catch (refreshError: Exception) {
-                        if (refreshError is CancellationException) throw refreshError
-                        log.error("failed to refresh DashConnect group consent", refreshError)
-                        _approveResult.value = ApproveResult.Error("Group scope could not be refreshed. Scan a new QR. ${refreshError.message}")
-                        return@launchAuthorizedOperation
-                    }
+                try {
+                    val refreshed = checkNotNull(repository.prepareLogin(request)) { "Approval terms unavailable" }
+                    coroutineContext.connectionAuthorization()()
+                    pendingPlan = refreshed
+                    pendingApprovalRefreshFailed = false
+                    _uiState.update { state -> state.copy(requiresRevocation = refreshed.recovering ||
+                        (ex !is GroupScopeChangedException && state.requiresRevocation),
+                        pendingRequest = state.pendingRequest?.copy(
+                        permissionText = refreshed.permissionText,
+                        grantChoices = refreshed.choices(),
+                        recovering = refreshed.recovering,
+                        requiresGroupReapproval = refreshed.requiresGroupReapproval,
+                        groupScopeChangeApproved = false,
+                        budgetPreset = refreshed.budgetPreset,
+                        lifetimePreset = refreshed.lifetimePreset
+                    )) }
+                } catch (refreshError: Exception) {
+                    if (refreshError is CancellationException) throw refreshError
+                    pendingApprovalRefreshFailed = true
+                    log.error("failed to refresh DashConnect approval terms", refreshError)
+                    _approveResult.value = ApproveResult.Error("Approval terms could not be refreshed. Scan a new QR. ${refreshError.message}")
+                    return@launchAuthorizedOperation
                 }
                 _approveResult.value = ApproveResult.Error(ex.message)
             } finally { operationInProgress = false }
@@ -498,6 +505,7 @@ class ConnectionsViewModel @Inject constructor(
         pendingPlan = null
         pendingOpenedFromUrl = false
         pendingApprovalFailed = false
+        pendingApprovalRefreshFailed = false
         _uiState.update { it.copy(pendingRequest = null, requiresRevocation = false) }
         _approveResult.value = ApproveResult.Idle
     }

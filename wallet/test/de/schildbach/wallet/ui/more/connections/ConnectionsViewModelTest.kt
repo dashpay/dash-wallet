@@ -190,6 +190,54 @@ class ConnectionsViewModelTest {
         assertTrue(model.uiState.value.requiresRevocation)
     }
 
+    @Test fun `uncertain publication refreshes to persisted recovery plan before deliberate retry`() {
+        scan(openedFromUrl = true)
+        val recovered = plan.copy(recovering = true, previousGroupScopes = plan.groupScopes)
+        coEvery { repository.prepareLogin(any()) } returns recovered
+        model.approvePendingRequest()
+        dispatcher.scheduler.advanceUntilIdle()
+        assertTrue(model.uiState.value.pendingRequest!!.recovering)
+        assertFalse(model.uiState.value.pendingRequest!!.requiresGroupReapproval)
+        assertEquals(recovered.choices(), model.uiState.value.pendingRequest!!.grantChoices)
+        assertTrue(model.uiState.value.requiresRevocation)
+        assertNull(model.callbackOffer.value)
+        coVerify(exactly = 1) { repository.approvePreparedLogin(request, plan) }
+        model.approvePendingRequest()
+        dispatcher.scheduler.advanceUntilIdle()
+        coVerify(exactly = 1) { repository.approvePreparedLogin(request, recovered) }
+    }
+
+    @Test fun `uncertain publication still requires acknowledgement of actual group changes`() {
+        scan()
+        val changed = plan.copy(recovering = true, previousGroupScopes = plan.groupScopes,
+            groupScopes = mapOf(groupId.toString() to group.copy(adminIds = setOf(groupId))))
+        coEvery { repository.prepareLogin(any()) } returns changed
+        model.approvePendingRequest()
+        dispatcher.scheduler.advanceUntilIdle()
+        assertTrue(model.uiState.value.pendingRequest!!.requiresGroupReapproval)
+        model.approvePendingRequest()
+        dispatcher.scheduler.advanceUntilIdle()
+        coVerify(exactly = 1) { repository.approvePreparedLogin(any(), any()) }
+        model.approveGroupScopeChange(true)
+        model.approvePendingRequest()
+        dispatcher.scheduler.advanceUntilIdle()
+        coVerify(exactly = 1) { repository.approvePreparedLogin(request, changed.copy(groupScopeChangeApproved = true)) }
+    }
+
+    @Test fun `failed recovery refresh blocks stale retry but retains revocation`() {
+        scan()
+        coEvery { repository.prepareLogin(any()) } throws IllegalStateException("Proof unavailable")
+        model.approvePendingRequest()
+        dispatcher.scheduler.advanceUntilIdle()
+        model.approvePendingRequest()
+        dispatcher.scheduler.advanceUntilIdle()
+        coVerify(exactly = 1) { repository.approvePreparedLogin(any(), any()) }
+        assertTrue(model.uiState.value.requiresRevocation)
+        model.denyPendingRequest()
+        dispatcher.scheduler.advanceUntilIdle()
+        coVerify(exactly = 1) { repository.revokePreparedLogin(request, plan) }
+    }
+
     @Test fun `changed group refreshes consent without automatically approving or opening callback`() {
         scan(openedFromUrl = true)
         val refreshed = plan.copy(permissionText = "Updated verified scope",

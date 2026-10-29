@@ -72,10 +72,12 @@ class RevocationSettlementTest {
             .getLong("updatedAt") > 1L)
     }
 
-    @Test fun `QR names stay explicitly unverified and include their app identity`() {
-        assertEquals("Unverified app: \"Yappr\" [contract]", unverifiedAppName("Yappr", "contract"))
-        assertEquals("Unverified app: \"Yappr\" [contract]", unverifiedAppName("Yap\u202epr\n", "contract"))
-        assertTrue(unverifiedAppName("", "contract").contains("Unknown app"))
+    @Test fun `connection cards show only the sanitized friendly name`() {
+        assertEquals("Yappr", connectionDisplayName("Login to Yappr"))
+        assertEquals("Yappr", connectionDisplayName("Yappr"))
+        assertEquals("Yappr", connectionDisplayName("Yap\u202epr\n"))
+        assertEquals("Other app", connectionDisplayName("Other app"))
+        assertEquals("Unknown app", connectionDisplayName(""))
     }
 
     @Test fun `app confirmation updates disabled timestamp without changing its state string`() {
