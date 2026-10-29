@@ -433,7 +433,39 @@ class ContactsFragment : Fragment(),
 
     override fun onAcceptRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
         dashPayViewModel.logEvent(AnalyticsConstants.UsersContacts.ACCEPT_REQUEST)
-        dashPayViewModel.sendContactRequest(usernameSearchResult.fromContactRequest!!.userId)
+        val userId = usernameSearchResult.fromContactRequest!!.userId
+        viewLifecycleOwner.lifecycleScope.launch {
+            val enough = dashPayViewModel.hasEnoughCredits()
+            if (enough == null) {
+                AdaptiveDialog.create(
+                    R.drawable.ic_warning_yellow_circle,
+                    getString(R.string.platform_credits_error),
+                    getString(R.string.platform_communication_error),
+                    getString(R.string.button_ok),
+                ).showAsync(requireActivity())
+            } else {
+                val shouldWarn = enough.isBalanceWarning()
+                val isEmpty = enough.isBalanceEmpty()
+
+                if (shouldWarn || isEmpty) {
+                    val answer = AdaptiveDialog.create(
+                        R.drawable.ic_warning_yellow_circle,
+                        if (isEmpty) getString(R.string.credit_balance_empty_warning_title) else getString(R.string.credit_balance_low_warning_title),
+                        if (isEmpty) getString(R.string.credit_balance_empty_warning_message) else getString(R.string.credit_balance_low_warning_message),
+                        getString(R.string.credit_balance_button_maybe_later),
+                        getString(R.string.credit_balance_button_buy)
+                    ).showAsync(requireActivity())
+
+                    if (answer == true) {
+                        SendCoinsActivity.startBuyCredits(requireActivity())
+                    } else if (!isEmpty) {
+                        dashPayViewModel.sendContactRequest(userId)
+                    }
+                } else {
+                    dashPayViewModel.sendContactRequest(userId)
+                }
+            }
+        }
     }
 
     override fun onIgnoreRequest(usernameSearchResult: UsernameSearchResult, position: Int) {

@@ -321,7 +321,10 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         )
 
         if (confirmed == true) {
-            handleGo(dialog.autoAcceptContactRequest)
+            // the screen closes after the payment, so with no credits to accept the request it stays pending
+            val autoAccept = dialog.autoAcceptContactRequest &&
+                dashPayViewModel.hasEnoughCredits()?.isBalanceEmpty() == false
+            handleGo(autoAccept)
         }
     }
 
