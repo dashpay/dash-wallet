@@ -1180,6 +1180,46 @@ class SdkTxStoreWalkerTest {
     }
 
     @Test
+    fun reattribution_replayedAssetLock_withoutPayloadFacts_isDeferredUntilTheMirrorCanBeVerified() = runBlocking {
+        insertAccount(bip44Account, 0)
+        insertCoreAddress("bip44_r5", bip44Account)
+        insertCoreAddress("chg_r5", bip44Account)
+        val funding = seedFundingBelowTheRescan(118, 100_001_000, "bip44_r5")
+
+        // The replayed AssetLock is stored INCOMING, its change row has not
+        // landed, and its payload does not parse: the mirror alone says
+        // −1.00001, which would be stored as OUTGOING and never flagged again.
+        val assetLock = txid(119)
+        insertTx(
+            assetLock, direction = 0, netAmount = 97_000_759, payload = byteArrayOf(31),
+            firstSeen = 1_700_000_300, typeKind = TX_TYPE_KIND_ASSET_LOCK
+        )
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ?", assetLock, funding)
+
+        queryLog.clear()
+        walker(payloadFacts = { null }).walkAll { }
+        assertTrue(queryLog.none { it.startsWith("UPDATE transactions") })
+        assertEquals(Triple(0, 97_000_759L, null), storedShape(assetLock))
+
+        // Once the change row lands and the payload parses, the row heals.
+        insertTxo(assetLock, 1, 97_000_759, "chg_r5")
+        val facts: (ByteArray) -> TxPayloadFacts? = { payload ->
+            if (payload.firstOrNull()?.toInt() == 31) {
+                TxPayloadFacts(
+                    outputsTotalDuffs = 100_000_759,
+                    outputCount = 2,
+                    inputCount = 1,
+                    outputAddresses = listOf(null, "chg_r5")
+                )
+            } else {
+                null
+            }
+        }
+        walker(payloadFacts = facts).walkAll { }
+        assertEquals(Triple(1, -3_000_241L, 241L), storedShape(assetLock))
+    }
+
+    @Test
     fun reattribution_sendPayingAContact_isNotDeferredByTheContactsUnmirroredOutput() = runBlocking {
         insertAccount(bip44Account, 0)
         insertAccount(extAccount, 13)

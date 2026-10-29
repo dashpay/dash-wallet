@@ -139,16 +139,24 @@ internal fun firstUnmirroredKnownOutput(
  * "Received" for money that was sent away, and no reconcile could ever fix
  * them because the "definitive" record itself was wrong.
  *
- * The caller invokes this for Standard (classic) records that demonstrably
- * SPENT the wallet's own TXOs ([spentOwnedDuffs] > 0 over the
- * foreign-excluded mirror), in two stored shapes:
- *  - `direction == INCOMING` — IMPOSSIBLE outright (an incoming tx never
- *    spends our outputs);
- *  - `direction == OUTGOING` — possibly correct, but the engine can persist
- *    a multi-account spend with the net of only ONE account's slice
+ * The caller invokes this for records that demonstrably SPENT the wallet's
+ * own TXOs ([spentOwnedDuffs] > 0 over the foreign-excluded mirror), in
+ * these stored shapes:
+ *  - Standard `direction == INCOMING` — IMPOSSIBLE outright (an incoming tx
+ *    never spends our outputs);
+ *  - Standard `direction == OUTGOING` — possibly correct, but the engine can
+ *    persist a multi-account spend with the net of only ONE account's slice
  *    (dashpay/platform#4387; S22 field wallet: a 15-input sweep stored as
  *    −0.005 instead of −2.61920199). The recompute below yields the
- *    whole-wallet net; an already-correct row round-trips unchanged.
+ *    whole-wallet net; an already-correct row round-trips unchanged;
+ *  - Standard `direction == INTERNAL` with a positive net — IMPOSSIBLE (an
+ *    internal move never gains value): a replayed block re-recorded it with
+ *    its change alone (D-SDK-06);
+ *  - AssetLock `direction == INTERNAL` with net 0 (dashpay/platform#4412),
+ *    and AssetLock `direction == INCOMING` — the same D-SDK-06 change-only
+ *    replay. The caller defers an AssetLock row whose payload facts are
+ *    unavailable, because a corrected (OUTGOING) AssetLock row is never
+ *    flagged again.
  * The truth is recomputed from the TXO mirror's (correct, verified) linkage:
  *
  *  - `net = fundedOwned − spentOwned` — the wallet's own Σout−Σin, the same
@@ -1058,6 +1066,21 @@ internal class SdkTxStoreWalker(
                 if (reattributionDeferredLogged.add(hex)) {
                     log.info(
                         "CoinJoin net recompute of {} deferred: no payload facts to verify the TXO " +
+                            "mirror is complete; serving the stored record",
+                        hex
+                    )
+                }
+                continue
+            }
+            if (fact == null && row.typeKind == TX_TYPE_KIND_ASSET_LOCK && hex in needsFactsHexes) {
+                // Same reason, for an AssetLock: without payload facts the
+                // completeness guard cannot run, and a missing change row
+                // would stamp −(all inputs) as OUTGOING — a shape no arm
+                // flags again, so it would never heal once the row lands.
+                // Serve the stored record and retry next pass.
+                if (reattributionDeferredLogged.add(hex)) {
+                    log.info(
+                        "AssetLock reattribution of {} deferred: no payload facts to verify the TXO " +
                             "mirror is complete; serving the stored record",
                         hex
                     )
