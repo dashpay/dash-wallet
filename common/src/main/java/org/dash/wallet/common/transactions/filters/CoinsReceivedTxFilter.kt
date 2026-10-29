@@ -24,14 +24,15 @@ import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 
 open class CoinsReceivedTxFilter(
     private val bag: TransactionBag,
-    private val coins: Coin
+    private val coins: Coin,
+    private val includeSelfTransfers: Boolean = false
 ): TransactionFilter {
     var toAddress: Address? = null
         private set
 
     override fun matches(tx: Transaction): Boolean {
         // this check prevents a CoinJoin TX from being marked as a Crowdnode TX
-        if (tx.isEntirelySelf(bag) || tx.getValue(bag).signum() < 0) {
+        if (!includeSelfTransfers && (tx.isEntirelySelf(bag) || tx.getValue(bag).signum() < 0)) {
             // Not an incoming transaction
             return false
         }
