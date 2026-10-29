@@ -297,7 +297,8 @@ internal class AppConnectSession(
                 parsed.encryption.forEachIndexed { index, binding ->
                     if (index !in plan.selectedEncryption) return@forEachIndexed
                     val purpose = if (binding.purpose == 1) Purpose.ENCRYPTION else Purpose.DECRYPTION
-                    val secret = ApplicationKeyDerivation.encryption(seed, identity.id.toBuffer(), binding.contractId, purpose, false)
+                    val secret = ApplicationKeyDerivation.encryption(
+                        seed, identity.id.toBuffer(), binding.contractId, purpose, rotation = 0L, isMainnet = false)
                     privateKeys.add(secret)
                     val data = KeyExchangeCrypto.compressedPublicKey(secret)
                     val candidates = identity.publicKeys.filter { it.purpose == purpose && it.contractBounds is SingleContractBounds &&
