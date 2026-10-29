@@ -12,11 +12,11 @@ export CARGO_PROFILE_DEV_DEBUG=0
 export CARGO_INCREMENTAL=0
 git clone https://github.com/dashpay/kotlin-platform.git "$work/kotlin-platform"
 git -C "$work/kotlin-platform" checkout --detach "$revision"
-git clone --branch ferment-5.0 https://github.com/HashEngineering/platform.git "$work/platform"
+git clone --branch ferment-5.0.1 https://github.com/HashEngineering/platform.git "$work/platform"
 platform_revision="$(cat "$work/kotlin-platform/platform-revision.txt")"
 git -C "$work/platform" checkout --detach "$platform_revision"
-git -C "$work/platform" fetch https://github.com/dashpay/platform.git tag v5.0.0-rc.7
-git -C "$work/platform" merge-base --is-ancestor v5.0.0-rc.7 HEAD
+git -C "$work/platform" fetch https://github.com/dashpay/platform.git tag v5.0.1
+git -C "$work/platform" merge-base --is-ancestor v5.0.1 HEAD
 
 sudo apt-get update
 sudo apt-get install -y cmake ninja-build swig clang libclang-dev libssl-dev pkg-config unzip
@@ -41,9 +41,20 @@ cd "$work/kotlin-platform"
   :dpp:publishMavenJavaPublicationToMavenLocal \
   :dash-sdk-android:publishReleasePublicationToMavenLocal \
   -Dmaven.repo.local="$repository" -Dorg.gradle.jvmargs=-Xmx4g \
-  -x :dash-sdk-java:signMavenJavaPublication -x :dpp:signMavenJavaPublication \
-  -x :dash-sdk-android:signReleasePublication --no-parallel --console=plain
-test -s "$repository/org/dashj/platform/dash-sdk-android/5.0.0-SNAPSHOT/dash-sdk-android-5.0.0-SNAPSHOT.aar"
+  -PskipSigning --no-parallel --console=plain
+aar="$repository/org/dashj/platform/dash-sdk-android/5.0.1-SNAPSHOT/dash-sdk-android-5.0.1-SNAPSHOT.aar"
+test -s "$aar"
+llvm_nm="$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-nm"
+for abi in arm64-v8a x86_64; do
+  native_lib="$work/libsdklib-$abi.so"
+  unzip -p "$aar" "jni/$abi/libsdklib.so" > "$native_lib"
+  test -s "$native_lib"
+  "$llvm_nm" -D --defined-only "$native_lib" > "$work/symbols-$abi.txt"
+  for symbol in prepareTokenPurchaseSdk submitTokenPurchaseSdk \
+      fetchContractGroupSnapshotWithSdk platformMobileSdkRefreshProtocolVersionWithSdk; do
+    grep -Fq "Java_org_dashj_platform_sdk_dashsdkJNI_$symbol" "$work/symbols-$abi.txt"
+  done
+done
 cargo test --locked --manifest-path platform-mobile/Cargo.toml token_purchase::tests
 ./gradlew :dash-sdk-java:test --tests '*TokenPurchaseBridgeTest' \
   :dpp:test --tests '*AppConnectKeyTest' --tests '*AppConnectIdentityTest' --tests '*IdentityNativeReadbackTest' --tests '*DataContractResponseTest' --tests '*VerifiedContractGroupTest' \
