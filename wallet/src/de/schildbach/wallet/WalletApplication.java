@@ -3642,6 +3642,12 @@ public class WalletApplication extends MultiDexApplication
     @Override
     public Collection<TransactionWrapper> wrapMatchingTransactions(@NonNull TransactionWrapperFactory... wrapperFactories) {
         awaitDeferredWalletLoad();
+        // Read once: a wipe or replacement can change the field, and the transactions must be
+        // classified against the wallet they came from
+        Wallet wallet = this.wallet;
+        if (wallet == null) {
+            return Collections.emptyList();
+        }
         org.bitcoinj.core.Context.propagate(Constants.CONTEXT);
         return TransactionWrapperHelper.INSTANCE.wrapTransactions(
                 wallet.getTransactions(true),
