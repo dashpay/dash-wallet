@@ -92,7 +92,6 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:layout_marginBottom="32dp"
-            android:background="@drawable/white_button_background_no_shadow"
             android:text="@string/button_cancel"
             android:maxLines="1"
             android:ellipsize="end"
