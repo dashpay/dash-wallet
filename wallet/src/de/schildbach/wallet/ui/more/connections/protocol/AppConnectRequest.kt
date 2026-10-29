@@ -37,13 +37,13 @@ data class AppConnectRequest(
 
 /** Strict, Android-free decoder for the App Connect v2 profile. */
 internal object AppConnectParser {
-    fun query(raw: String): Map<String, String> {
+    fun query(raw: String, singleValued: Set<String> = setOf("n", "v", "cb")): Map<String, String> {
         val result = mutableMapOf<String, String>()
         for (part in raw.split('&')) {
             val pair = part.split('=', limit = 2)
             val key = URLDecoder.decode(pair[0], "UTF-8")
             val value = URLDecoder.decode(pair.getOrElse(1) { "" }, "UTF-8")
-            require(key !in setOf("n", "v", "cb") || key !in result) { "Duplicate $key parameter" }
+            require(key !in singleValued || key !in result) { "Duplicate $key parameter" }
             result[key] = value
         }
         return result

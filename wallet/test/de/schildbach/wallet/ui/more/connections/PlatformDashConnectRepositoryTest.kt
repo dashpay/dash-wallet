@@ -72,6 +72,37 @@ class PlatformDashConnectRepositoryTest {
         assertEquals("cd".repeat(32), org.bitcoinj.core.Utils.HEX.encode(result.request.contractId))
     }
 
+    private fun testnetConnectUri(network: String = "t"): String {
+        val body = Base58.decode(testnetKeyUri().substringAfter("dash-key:").substringBefore('?'))
+        val r = java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(body)
+        return "dashpay://connect?v=2&n=$network&r=$r"
+    }
+
+    @Test
+    fun parseQr_acceptsDashPayConnectCarrier_onTestnet() = runBlocking {
+        assumeTrue("testnet-only feature", Constants.IS_TESTNET_BUILD)
+        val result = repository.parseQr(testnetConnectUri())
+        assertEquals("cd".repeat(32), org.bitcoinj.core.Utils.HEX.encode(result.request.contractId))
+    }
+
+    @Test
+    fun parseQr_rejectsDashPayConnectCarrierForAnotherNetwork() {
+        assumeTrue("testnet-only feature", Constants.IS_TESTNET_BUILD)
+        val error = assertThrows(DashConnectUriException::class.java) {
+            runBlocking { repository.parseQr(testnetConnectUri("m")) }
+        }
+        assertEquals("QR network does not match wallet network", error.message)
+    }
+
+    @Test
+    fun parseQr_reportsUnknownDashPayVerbAsNeedingNewerWallet() {
+        assumeTrue("testnet-only feature", Constants.IS_TESTNET_BUILD)
+        val error = assertThrows(DashConnectUriException::class.java) {
+            runBlocking { repository.parseQr("dashpay://sign?v=2&n=t&exp=1&st=AAAA") }
+        }
+        assertEquals(DashConnectUri.NEEDS_NEWER_WALLET_ERROR, error.message)
+    }
+
     @Test
     fun parseQr_rejectsMainnetQrOnTestnet() = runBlocking {
         assumeTrue("testnet-only feature", Constants.IS_TESTNET_BUILD)

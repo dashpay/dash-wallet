@@ -75,6 +75,25 @@ class ConnectLinkManifestTest {
         }
     }
 
+    @Test fun `dashpay connect resolves to MainActivity while dashpay invite stays with the invite handler`() {
+        val context = RuntimeEnvironment.getApplication()
+        fun matches(link: String) = context.packageManager.queryIntentActivities(
+            Intent(Intent.ACTION_VIEW, Uri.parse(link)).addCategory(Intent.CATEGORY_BROWSABLE)
+                .setPackage(context.packageName), PackageManager.MATCH_DEFAULT_ONLY
+        ).filter { it.activityInfo.exported }.map { it.activityInfo.name }
+
+        listOf("dashpay://connect?v=2&n=d&r=AAAA", "dashpay://connect/?v=2&n=d&r=AAAA").forEach { link ->
+            assertTrue(link, matches(link).contains("de.schildbach.wallet.ui.main.MainActivity"))
+            assertFalse(link, matches(link).contains("de.schildbach.wallet.ui.InviteHandlerActivity"))
+        }
+        val invite = matches("dashpay://invite?du=alice&assetlocktx=a0&pk=b&islock=c")
+        assertTrue(invite.contains("de.schildbach.wallet.ui.InviteHandlerActivity"))
+        assertFalse(invite.contains("de.schildbach.wallet.ui.main.MainActivity"))
+        // the dash-key/dash-st filter must keep matching host-less opaque URIs
+        assertTrue(matches("dash-key:abc?n=d&v=2").contains("de.schildbach.wallet.ui.main.MainActivity"))
+        assertTrue(matches("dash-st:abc?n=d&v=1").contains("de.schildbach.wallet.ui.main.MainActivity"))
+    }
+
     @Test fun `Android resolves both opaque QR link schemes to exported MainActivity`() {
         val context = RuntimeEnvironment.getApplication()
         listOf("dash-key:abc?n=d&v=2", "dash-st:abc?n=d&v=1").forEach { link ->

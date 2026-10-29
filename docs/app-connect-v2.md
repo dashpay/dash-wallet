@@ -173,6 +173,15 @@ open only after a separate, explicit host confirmation.
 
 ## Wallet Operation Links
 
+The same v2 request body is also accepted as
+`dashpay://connect?v=2&n=<m|t|d>&r=<base64url body>[&cb=<https URL>]` (App Connect DIP,
+dashpay/dips#181), from the scanners and as an Android browsable link. `dashpay://invite` is
+unchanged and still goes to the invitation handler; any other `dashpay://` verb (for example
+`sign`) is refused with a "needs a newer version of the wallet" message. `r` must be canonical
+base64url (no padding, no `+` or `/`, no non-zero trailing bits). It is at most 1,366 characters
+and decodes to at most 1,024 bytes, and the whole URI is at most 4,096 bytes. Mainnet stays
+disabled for both carriers.
+
 `dash-key:<payload>?n=d&v=2` and `dash-st:<payload>?n=d&v=1` are registered as
 Android browsable links and are also accepted by the wallet scanners. `n=t`
 selects testnet; the network must match the running wallet. Mainnet remains

@@ -50,6 +50,7 @@ import de.schildbach.wallet.ui.dashpay.*
 import de.schildbach.wallet.ui.invite.InviteHandler
 import de.schildbach.wallet.ui.invite.InviteSendContactRequestDialog
 import de.schildbach.wallet.ui.more.connections.ConnectionsFragment
+import de.schildbach.wallet.ui.more.connections.protocol.DashConnectUri
 import de.schildbach.wallet.ui.staking.StakingActivity
 import de.schildbach.wallet.ui.staking.createCrowdNodeWithdrawalReminderDialog
 import de.schildbach.wallet.ui.main.MainActivityExt.checkLowStorageAlert
@@ -390,10 +391,12 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             return
         }
         if (Intent.ACTION_VIEW == intent.action &&
-            intent.data?.scheme in setOf("dash-key", "dash-st")
+            (intent.data?.scheme in setOf("dash-key", "dash-st") ||
+                intent.data?.toString()?.let { DashConnectUri.isDashPayVerbUri(it) } == true)
         ) {
-            // DashConnect login or operation URI opened from a scanner or browser, handled by the
-            // Connections screen.
+            // DashConnect login or operation URI (dash-key:, dash-st: or dashpay://connect) opened
+            // from a scanner or browser, handled by the Connections screen. dashpay://invite is
+            // routed to InviteHandlerActivity by the manifest and never gets here.
             val uri = intent.data.toString()
             intent.data = null // consume, so recreation doesn't navigate again
             navigateToConnections(uri)

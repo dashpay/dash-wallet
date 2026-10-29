@@ -18,6 +18,7 @@
 package de.schildbach.wallet.ui.more.connections.protocol
 
 import org.bitcoinj.core.Base58
+import java.util.Locale
 
 /**
  * Network identifiers used in the `?n=` query parameter of DashConnect URIs, matching the
@@ -93,6 +94,15 @@ object DashConnectUri {
     const val KEY_SCHEME = "dash-key:"
     const val ST_SCHEME = "dash-st:"
 
+    const val DASHPAY_PREFIX = "dashpay://"
+    const val CONNECT_VERB = "connect"
+    const val INVITE_VERB = "invite"
+    const val NEEDS_NEWER_WALLET_ERROR = "This link needs a newer version of the wallet"
+    private const val MAX_CONNECT_URI_BYTES = 4096
+    private const val MAX_CONNECT_R_CHARS = 1366
+    private const val MAX_CONNECT_R_BYTES = 1024
+    private val CONNECT_SINGLE_VALUED_PARAMS = setOf("v", "n", "r", "cb")
+
     const val VERSION = 2
     const val LEGACY_KEY_REQUEST_ERROR = "Unsupported legacy connection request. Generate a new QR code."
 
@@ -119,12 +129,128 @@ object DashConnectUri {
         catch (e: Exception) { throw DashConnectUriException("Invalid connection request") }
     }
 
+    /**
+     * Parses a `dashpay://connect` request (App Connect DIP, "connect URI"). The body after `r=` is
+     * the same request v2 body as the `dash-key:` carrier and goes through the same
+     * [AppConnectParser]; only the wrapper differs.
+     *
+     * Rules: scheme and host compared case-insensitively; path empty or a single `/`; no userinfo,
+     * port or fragment; query split on `&` and form-decoded; a repeated `v`, `n`, `r` or `cb` is
+     * invalid; unknown parameters are ignored; `v` is exactly `2`; `r` is REQUIRED canonical
+     * base64url (at most 1,366 characters, 1,024 bytes); the whole URI is at most 4,096 bytes,
+     * checked before anything is decoded. `cb` keeps the `dash-key:` rules, enforced by
+     * [AppConnectParser.parse]. The caller still compares [DashKeyRequest.network] with the
+     * wallet's network before doing any network read.
+     *
+     * A `dashpay://` URI whose verb this wallet does not implement (for example `sign`) fails with
+     * [NEEDS_NEWER_WALLET_ERROR].
+     *
+     * @throws DashConnectUriException on any malformed input or validation failure.
+     */
+    fun parseConnectRequest(uri: String): DashKeyRequest {
+        val verb = dashPayVerb(uri)
+        if (verb.isNullOrEmpty() || verb == INVITE_VERB) throw DashConnectUriException("Invalid connection link")
+        // userinfo or a port makes a malformed link, not a verb a newer wallet would know
+        val authority = uri.substring(DASHPAY_PREFIX.length).takeWhile { it != '/' && it != '?' && it != '#' }
+        if ('@' in authority || ':' in authority) throw DashConnectUriException("Invalid connection link")
+        if (verb != CONNECT_VERB) throw DashConnectUriException(NEEDS_NEWER_WALLET_ERROR)
+        if (uri.toByteArray(Charsets.UTF_8).size > MAX_CONNECT_URI_BYTES) {
+            throw DashConnectUriException("Connection QR is too large")
+        }
+        try {
+            val rest = uri.substring(DASHPAY_PREFIX.length)
+            val queryStart = rest.indexOf('?')
+            if ('#' in rest || queryStart < 0) throw DashConnectUriException("Invalid connection link")
+            val authorityAndPath = rest.substring(0, queryStart)
+            val pathStart = authorityAndPath.indexOf('/')
+            val host = if (pathStart < 0) authorityAndPath else authorityAndPath.substring(0, pathStart)
+            val path = if (pathStart < 0) "" else authorityAndPath.substring(pathStart)
+            // userinfo and port both put '@' or ':' in the host part, which then no longer equals "connect"
+            if (!host.equals(CONNECT_VERB, ignoreCase = true) || (path.isNotEmpty() && path != "/")) {
+                throw DashConnectUriException("Invalid connection link")
+            }
+            val query = AppConnectParser.query(rest.substring(queryStart + 1), CONNECT_SINGLE_VALUED_PARAMS)
+            if (query["v"] != VERSION.toString()) throw DashConnectUriException("Unsupported connection version")
+            val network = DashConnectNetwork.fromCode(query["n"])
+                ?: throw DashConnectUriException("Unknown network")
+            val body = decodeBase64Url(
+                query["r"] ?: throw DashConnectUriException("Missing connection request"),
+                MAX_CONNECT_R_CHARS, MAX_CONNECT_R_BYTES
+            )
+            return AppConnectParser.parse(body, network, query["cb"])
+        } catch (e: DashConnectUriException) { throw e }
+        catch (e: Exception) { throw DashConnectUriException("Invalid connection request", e) }
+    }
+
+    /**
+     * Parses a request from either carrier: `dash-key:` or `dashpay://connect`. `dash-st:` is not a
+     * login request and is refused here, as before.
+     */
+    fun parseRequest(uri: String): DashKeyRequest = when {
+        isKeyUri(uri) -> parseKeyRequest(uri)
+        isDashPayVerbUri(uri) -> parseConnectRequest(uri)
+        else -> throw DashConnectUriException("Not a DashConnect QR code")
+    }
+
     /** True if [uri] uses the `dash-key:` scheme. */
     fun isKeyUri(uri: String): Boolean = uri.startsWith(KEY_SCHEME)
 
     fun isStUri(uri: String): Boolean = uri.startsWith(ST_SCHEME)
 
-    fun isConnectUri(uri: String): Boolean = isKeyUri(uri) || isStUri(uri)
+    /** True for `dashpay://connect...`, comparing scheme and host case-insensitively. */
+    fun isDashPayConnectUri(uri: String): Boolean = dashPayVerb(uri) == CONNECT_VERB
+
+    /**
+     * True for any `dashpay://<verb>` URI other than `invite`, which stays with the invitation
+     * handler. A verb this wallet does not implement is reported as needing a newer wallet.
+     */
+    fun isDashPayVerbUri(uri: String): Boolean = dashPayVerb(uri)?.let { it.isNotEmpty() && it != INVITE_VERB } == true
+
+    fun isConnectUri(uri: String): Boolean = isKeyUri(uri) || isStUri(uri) || isDashPayVerbUri(uri)
+
+    /** The lowercased verb (host) of a `dashpay://` URI, or null when [uri] is not one. */
+    private fun dashPayVerb(uri: String): String? {
+        // ASCII-only fold: startsWith(ignoreCase) would also accept look-alikes such as U+017F for 's'
+        if (uri.length < DASHPAY_PREFIX.length ||
+            uri.substring(0, DASHPAY_PREFIX.length).lowercase(Locale.ROOT) != DASHPAY_PREFIX) return null
+        val end = uri.indexOfAny(charArrayOf('/', '?', '#', '@', ':'), DASHPAY_PREFIX.length)
+        return uri.substring(DASHPAY_PREFIX.length, if (end < 0) uri.length else end).lowercase(Locale.ROOT)
+    }
+
+    /**
+     * Strict RFC 4648 section 5 base64url without padding. Refuses `=`, `+`, `/` and anything else
+     * outside the alphabet, a length of 1 mod 4, and non-zero trailing bits, so every value has
+     * exactly one encoding. [java.util.Base64] is lenient about padding and trailing bits, so this
+     * decodes by hand.
+     */
+    internal fun decodeBase64Url(value: String, maxChars: Int, maxBytes: Int): ByteArray {
+        require(value.isNotEmpty() && value.length <= maxChars) { "Invalid base64url length" }
+        require(value.length % 4 != 1) { "Invalid base64url length" }
+        val out = ByteArray(value.length * 6 / 8)
+        var accumulator = 0
+        var bits = 0
+        var written = 0
+        for (c in value) {
+            val sextet = when (c) {
+                in 'A'..'Z' -> c - 'A'
+                in 'a'..'z' -> c - 'a' + 26
+                in '0'..'9' -> c - '0' + 52
+                '-' -> 62
+                '_' -> 63
+                else -> throw IllegalArgumentException("Invalid base64url character")
+            }
+            accumulator = (accumulator shl 6) or sextet
+            bits += 6
+            if (bits >= 8) {
+                bits -= 8
+                out[written++] = (accumulator shr bits).toByte()
+                accumulator = accumulator and ((1 shl bits) - 1)
+            }
+        }
+        require(accumulator == 0) { "Non-canonical base64url trailing bits" }
+        require(written <= maxBytes) { "Decoded value too large" }
+        return out
+    }
 
     fun parseStRequest(uri: String): DashStRequest {
         if (uri.length > 6144 || !isStUri(uri) || uri.startsWith("dash-st://") || '#' in uri)

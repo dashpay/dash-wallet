@@ -137,6 +137,19 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
             </intent-filter>
+
+            <!-- App Connect on the DashPay scheme: dashpay://connect?v=2&n=..&r=..
+                 A separate filter: a host in the dash-key/dash-st filter above would stop those
+                 opaque URIs (which have no host) from matching. dashpay://invite stays with
+                 InviteHandlerActivity. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <data android:scheme="dashpay" android:host="connect" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+            </intent-filter>
         </activity>
 
         <activity-alias

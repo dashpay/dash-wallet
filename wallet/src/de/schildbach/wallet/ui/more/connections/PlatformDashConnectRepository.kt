@@ -82,10 +82,8 @@ class PlatformDashConnectRepository @Inject constructor(
 
     override suspend fun parseQr(qrContent: String): DashConnectQr {
         checkNetwork()
-        if (!DashConnectUri.isKeyUri(qrContent.trim())) {
-            throw DashConnectUriException("Not a DashConnect QR code")
-        }
-        val request = DashConnectUri.parseKeyRequest(qrContent.trim())
+        // Either carrier (dash-key: or dashpay://connect) carries the same request body.
+        val request = DashConnectUri.parseRequest(qrContent.trim())
         val expected = if (Constants.NETWORK_PARAMETERS.id == NetworkParameters.ID_TESTNET)
             DashConnectNetwork.TESTNET else DashConnectNetwork.DEVNET
         if (request.network != expected) throw DashConnectUriException("QR network does not match wallet network")
