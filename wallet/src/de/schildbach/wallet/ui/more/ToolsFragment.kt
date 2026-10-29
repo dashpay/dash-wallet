@@ -79,6 +79,7 @@ class ToolsFragment : Fragment() {
             setContent {
                 DashWalletTheme {
                     ToolsScreen(
+                        uiStateFlow = viewModel.uiState,
                         onBackClick = { findNavController().popBackStack() },
                         onAddressBookClick = { onAddressBook() },
                         onImportPrivateKeyClick = { onImportKeys() },

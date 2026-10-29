@@ -42,6 +42,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.withContext
 import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.core.Base58
 import javax.inject.Inject
@@ -320,17 +321,24 @@ class ConnectionsViewModel @Inject constructor(
         if (operationInProgress || _uiState.value.purchaseStatus !in setOf(TokenPurchaseStatus.READY, TokenPurchaseStatus.FAILED)) return
         val purchase = _uiState.value.pendingPurchase ?: return
         operationInProgress = true
+        val submission = TokenPurchaseSubmission()
         launchAuthorizedOperation(singleFlight = true) {
             try {
                 if (!isWalletUnlocked) return@launchAuthorizedOperation
                 requireConnectionRecords()
                 check(!purchase.requiresSigningKey) { "Set up the wallet purchase signing key before approving a purchase" }
                 _uiState.update { it.copy(purchaseStatus = TokenPurchaseStatus.SUBMITTING, purchaseError = null) }
-                repository.approveTokenPurchase(purchase)
+                withContext(submission) { repository.approveTokenPurchase(purchase) }
                 coroutineContext.connectionAuthorization()()
                 _uiState.update { it.copy(purchaseStatus = TokenPurchaseStatus.SUBMITTED) }
             } catch (error: Exception) {
-                if (error is CancellationException) throw error
+                if (error is CancellationException) {
+                    _uiState.update { it.copy(purchaseStatus = if (submission.started)
+                        TokenPurchaseStatus.OUTCOME_UNKNOWN else TokenPurchaseStatus.FAILED,
+                        purchaseError = if (submission.started) "Purchase may have been submitted. Check your balances; do not retry."
+                            else "Purchase interrupted before submission. Unlock and approve again.") }
+                    throw error
+                }
                 log.error("failed to submit DashConnect token purchase", error)
                 _uiState.update { it.copy(purchaseStatus = if (error is TokenPurchaseOutcomeUnknown)
                     TokenPurchaseStatus.OUTCOME_UNKNOWN else TokenPurchaseStatus.FAILED, purchaseError = error.message) }
@@ -481,7 +489,7 @@ class ConnectionsViewModel @Inject constructor(
             }
         } else {
             clearPendingRequest()
-            offerCallback(request, "declined", openedFromUrl)
+            offerCallback(request, terminalStatus, openedFromUrl)
         }
     }
 

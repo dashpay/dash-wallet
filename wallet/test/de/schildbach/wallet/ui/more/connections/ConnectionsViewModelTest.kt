@@ -792,7 +792,7 @@ class ConnectionsViewModelTest {
         coVerify(exactly = 0) { repository.approveTokenPurchase(any()) }
     }
 
-    private fun assertLockCancelsCapturedOperation(kind: String, background: Boolean = false) {
+    private fun assertLockCancelsCapturedOperation(kind: String, background: Boolean = false, nativeStarted: Boolean = false) {
         val locked = MutableStateFlow(false)
         model.bindWalletUnlockCheck { !locked.value }
         model.bindWalletLockState(locked)
@@ -820,7 +820,10 @@ class ConnectionsViewModelTest {
             }
             "purchase" -> {
                 scanPurchase()
-                coEvery { repository.approveTokenPurchase(any()) } coAnswers { capture() }
+                coEvery { repository.approveTokenPurchase(any()) } coAnswers {
+                    if (nativeStarted) kotlin.coroutines.coroutineContext[TokenPurchaseSubmission]!!.markStarted()
+                    capture()
+                }
                 model.approveTokenPurchase()
             }
             else -> {
@@ -848,19 +851,23 @@ class ConnectionsViewModelTest {
             coVerify(exactly = 0) { repository.revokePreparedLogin(any(), any()) }
         } else if (kind == "setup" || kind == "purchase") {
             assertNotNull(model.uiState.value.pendingPurchase)
-            assertEquals(if (kind == "setup") TokenPurchaseStatus.FAILED else TokenPurchaseStatus.OUTCOME_UNKNOWN,
+            assertEquals(if (kind == "purchase" && nativeStarted) TokenPurchaseStatus.OUTCOME_UNKNOWN else TokenPurchaseStatus.FAILED,
                 model.uiState.value.purchaseStatus)
         }
     }
 
     @Test fun `lock cancels in flight login and retains recovery without callback`() = assertLockCancelsCapturedOperation("login")
     @Test fun `lock cancels in flight key setup and requires another explicit action`() = assertLockCancelsCapturedOperation("setup")
-    @Test fun `lock cancels in flight purchase and retains uncertain debit state`() = assertLockCancelsCapturedOperation("purchase")
+    @Test fun `lock cancels purchase preflight without claiming an uncertain debit`() = assertLockCancelsCapturedOperation("purchase")
+    @Test fun `lock after purchase handoff retains uncertain debit state`() =
+        assertLockCancelsCapturedOperation("purchase", nativeStarted = true)
     @Test fun `lock cancels in flight disconnect and invalidates captured signer`() = assertLockCancelsCapturedOperation("disconnect")
 
     @Test fun `background cancels login with auto logout unchanged`() = assertLockCancelsCapturedOperation("login", true)
     @Test fun `background cancels purchase key setup`() = assertLockCancelsCapturedOperation("setup", true)
-    @Test fun `background cancels purchase and retains unknown outcome`() = assertLockCancelsCapturedOperation("purchase", true)
+    @Test fun `background cancels purchase preflight without claiming an uncertain debit`() = assertLockCancelsCapturedOperation("purchase", true)
+    @Test fun `background after purchase handoff retains unknown outcome`() =
+        assertLockCancelsCapturedOperation("purchase", background = true, nativeStarted = true)
     @Test fun `background cancels revocation without claiming completion`() = assertLockCancelsCapturedOperation("disconnect", true)
 
     @Test fun `rapid pause resume invalidates captured authorization before dispatch`() {
@@ -1164,6 +1171,18 @@ class ConnectionsViewModelTest {
         model.denyPendingRequest()
         assertNull(model.uiState.value.pendingRequest)
         assertTrue(model.callbackOffer.value!!.contains("ac=declined"))
+        coVerify(exactly = 0) { repository.revokePreparedLogin(any(), any()) }
+    }
+
+    @Test fun `denying after refreshed group consent reports failed without unnecessary revocation`() {
+        scan(openedFromUrl = true)
+        coEvery { repository.approvePreparedLogin(any(), any()) } throws GroupScopeChangedException()
+        coEvery { repository.prepareLogin(any()) } returns plan.copy(recovering = false)
+        model.approvePendingRequest()
+        dispatcher.scheduler.advanceUntilIdle()
+        assertFalse(model.uiState.value.requiresRevocation)
+        model.denyPendingRequest()
+        assertTrue(model.callbackOffer.value!!.contains("ac=failed"))
         coVerify(exactly = 0) { repository.revokePreparedLogin(any(), any()) }
     }
 

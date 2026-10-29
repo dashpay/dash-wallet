@@ -142,6 +142,14 @@ open class DashConnectConfig @Inject constructor(
         }
     }
 
+    internal suspend fun removeUnsubmittedPurchase(id: String) {
+        configContext.dataStore.edit { preferences ->
+            val records = JSONArray(preferences[PURCHASES] ?: "[]")
+            preferences[PURCHASES] = JSONArray((0 until records.length()).map { records.getJSONObject(it) }
+                .filter { it.getString("id") != id }).toString()
+        }
+    }
+
     // Unlike ordinary preferences, unreadable debit receipts must never look like an empty store.
     private suspend fun purchaseReceipts() =
         JSONArray(configContext.dataStore.data.first()[PURCHASES] ?: "[]")

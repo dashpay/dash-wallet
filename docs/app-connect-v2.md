@@ -481,3 +481,22 @@ across devnet, testnet and production; both debug APK builds and ktlintCheck pas
 After disk exhaustion interrupted a subsequent build, only regenerable compilation
 caches were cleared; the final run used a fresh in-process compiler and passed.
 The separate reported token-purchase replay-fence issue is not changed by this fix.
+
+### Purchase Handoff and Review Follow-Ups
+
+Purchase approval now distinguishes preflight from native handoff. Final scope and
+authorization checks run before the receipt write and are checked again after
+the write. If cancellation or a scope change interrupts that write, the
+unsubmitted receipt is removed durably before returning. After native handoff,
+the receipt remains even on errors or cancellation; the UI reports an unknown
+outcome rather than allowing another debit. A process death between receipt
+persistence and native entry still conservatively retains the unknown receipt.
+
+Tools renders the same Fragment-owned ViewModel state that its resume callback
+refreshes. Denying a request after failed group-scope approval reports `failed`,
+not `declined`, even when the refreshed plan requires no revocation.
+
+These changes do not yet resolve the separate canonical purchase replay-ID
+finding. The current native decoder discards envelope fields and rebuilds with a
+fresh nonce. Hashing only its decoded terms would also block legitimate repeated
+purchases with identical terms; that behavior must not be introduced silently.

@@ -128,22 +128,21 @@ internal class AppConnectSession(
                         .signHash(Sha256Hash.twiceOf(data), keyParameter)
                 }
             }.use { signer ->
+                val sdk = platform.rustSdk
+                val owner = identity.id.toNative()
+                val nativeKey = key.toNative()
+                val signerContext = signer.nativeContext
+                val signerCallback = BigInteger.valueOf(signer.signerCallback)
                 val receipt = JSONObject().put("id", approval.requestId).put("scope", approval.scope)
                     .put("ownerId", approval.ownerId).put("contractId", approval.contractId).put("tokenId", approval.tokenId)
                     .put("amount", approval.amount.toString()).put("maximumCredits", approval.maximumCredits.toString())
                     .put("status", "outcomeUnknown").put("updatedAt", System.currentTimeMillis())
-                // Persist before any native submission. Never automatically retry an uncertain credit debit.
-                config.savePurchase(receipt)
-                try {
+                submitWithPurchaseReceipt(config, receipt, preflight = {
                     checkScope(approval.scope)
                     authorize()
-                    nativeBytes(dashsdk.submitTokenPurchaseSdk(platform.rustSdk, approval.request.transitionBytes,
-                        approval.summary, identity.id.toNative(), key.toNative(), signer.nativeContext,
-                        BigInteger.valueOf(signer.signerCallback)))
-                    config.savePurchase(receipt.put("status", "submitted"))
-                } catch (error: Exception) {
-                    if (error is kotlinx.coroutines.CancellationException) throw error
-                    throw TokenPurchaseOutcomeUnknown(error)
+                }) {
+                    nativeBytes(dashsdk.submitTokenPurchaseSdk(sdk, approval.request.transitionBytes,
+                        approval.summary, owner, nativeKey, signerContext, signerCallback))
                 }
             }
         }
