@@ -1197,9 +1197,13 @@ class SdkTxStoreWalkerTest {
         exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ?", assetLock, funding)
 
         queryLog.clear()
-        walker(payloadFacts = { null }).walkAll { }
+        val byHex = HashMap<String, L1TxUiRecord>()
+        walker(payloadFacts = { null }).walkAll { page -> page.forEach { byHex[it.txidHex] = it } }
         assertTrue(queryLog.none { it.startsWith("UPDATE transactions") })
         assertEquals(Triple(0, 97_000_759L, null), storedShape(assetLock))
+        val served = requireNotNull(byHex[displayHexOf(assetLock)])
+        assertEquals(L1TxUiDirection.INCOMING, served.direction)
+        assertEquals(97_000_759L, served.netAmountDuffs)
 
         // Once the change row lands and the payload parses, the row heals.
         insertTxo(assetLock, 1, 97_000_759, "chg_r5")
@@ -1217,6 +1221,85 @@ class SdkTxStoreWalkerTest {
         }
         walker(payloadFacts = facts).walkAll { }
         assertEquals(Triple(1, -3_000_241L, 241L), storedShape(assetLock))
+    }
+
+    @Test
+    fun reattribution_replayedAssetLock_withSomeInputsUnmarked_isDeferredUntilEveryInputIsMarked() = runBlocking {
+        insertAccount(bip44Account, 0)
+        insertCoreAddress("bip44_r6", bip44Account)
+        insertCoreAddress("bip44_r7", bip44Account)
+        insertCoreAddress("chg_r6", bip44Account)
+        val first = seedFundingBelowTheRescan(120, 60_000_500, "bip44_r6")
+        val second = seedFundingBelowTheRescan(121, 40_000_500, "bip44_r7")
+
+        // Two inputs, 0.03 burned, 0.97000759 change, 241 fee — stored
+        // INCOMING after the replay, with only the first input marked spent.
+        val assetLock = txid(122)
+        insertTx(
+            assetLock, direction = 0, netAmount = 97_000_759, payload = byteArrayOf(33),
+            firstSeen = 1_700_000_400, typeKind = TX_TYPE_KIND_ASSET_LOCK
+        )
+        insertTxo(assetLock, 1, 97_000_759, "chg_r6")
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ?", assetLock, first)
+        val facts: (ByteArray) -> TxPayloadFacts? = { payload ->
+            if (payload.firstOrNull()?.toInt() == 33) {
+                TxPayloadFacts(
+                    outputsTotalDuffs = 100_000_759,
+                    outputCount = 2,
+                    inputCount = 2,
+                    outputAddresses = listOf(null, "chg_r6")
+                )
+            } else {
+                null
+            }
+        }
+
+        // One mark of two: the mirror says +0.37000259, short of the second
+        // input, so nothing is written.
+        queryLog.clear()
+        walker(payloadFacts = facts).walkAll { }
+        assertTrue(queryLog.none { it.startsWith("UPDATE transactions") })
+        assertEquals(Triple(0, 97_000_759L, null), storedShape(assetLock))
+
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ?", assetLock, second)
+        walker(payloadFacts = facts).walkAll { }
+        assertEquals(Triple(1, -3_000_241L, 241L), storedShape(assetLock))
+    }
+
+    @Test
+    fun reattribution_internalLeftAtZeroBySomeInputsUnmarked_staysFlaggedAndHeals() = runBlocking {
+        insertAccount(bip44Account, 0)
+        insertCoreAddress("bip44_r8", bip44Account)
+        insertCoreAddress("bip44_r9", bip44Account)
+        insertCoreAddress("bip44_r10", bip44Account)
+        val first = seedFundingBelowTheRescan(123, 10_193_735, "bip44_r8")
+        val second = seedFundingBelowTheRescan(124, 342, "bip44_r9")
+
+        // A two-input self-transfer, 342 fee — stored INTERNAL +0.10193735,
+        // with only the first input marked: the recompute is net 0.
+        val move = txid(125)
+        insertTx(move, direction = 2, netAmount = 10_193_735, payload = byteArrayOf(34), firstSeen = 1_700_000_500)
+        insertTxo(move, 0, 10_193_735, "bip44_r10")
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ?", move, first)
+        val facts: (ByteArray) -> TxPayloadFacts? = { payload ->
+            if (payload.firstOrNull()?.toInt() == 34) {
+                TxPayloadFacts(
+                    outputsTotalDuffs = 10_193_735,
+                    outputCount = 1,
+                    inputCount = 2,
+                    outputAddresses = listOf("bip44_r10")
+                )
+            } else {
+                null
+            }
+        }
+        walker(payloadFacts = facts).walkAll { }
+        assertEquals(Triple(2, 0L, null), storedShape(move))
+
+        // The second mark lands: the net-0 row is still flagged and heals.
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ?", move, second)
+        walker(payloadFacts = facts).walkAll { }
+        assertEquals(Triple(2, -342L, 342L), storedShape(move))
     }
 
     @Test

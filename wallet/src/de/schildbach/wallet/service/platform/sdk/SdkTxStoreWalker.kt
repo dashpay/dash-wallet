@@ -149,14 +149,15 @@ internal fun firstUnmirroredKnownOutput(
  *    (dashpay/platform#4387; S22 field wallet: a 15-input sweep stored as
  *    −0.005 instead of −2.61920199). The recompute below yields the
  *    whole-wallet net; an already-correct row round-trips unchanged;
- *  - Standard `direction == INTERNAL` with a positive net — IMPOSSIBLE (an
- *    internal move never gains value): a replayed block re-recorded it with
- *    its change alone (D-SDK-06);
+ *  - Standard `direction == INTERNAL` with a net >= 0 — IMPOSSIBLE (an
+ *    internal move pays a fee): a replayed block re-recorded it with its
+ *    change alone (D-SDK-06), or an earlier recompute saw only some of its
+ *    inputs' spent marks;
  *  - AssetLock `direction == INTERNAL` with net 0 (dashpay/platform#4412),
  *    and AssetLock `direction == INCOMING` — the same D-SDK-06 change-only
- *    replay. The caller defers an AssetLock row whose payload facts are
- *    unavailable, because a corrected (OUTGOING) AssetLock row is never
- *    flagged again.
+ *    replay. A corrected (OUTGOING) AssetLock is never flagged again, so the
+ *    caller defers one until its payload facts are available and every
+ *    input is marked spent.
  * The truth is recomputed from the TXO mirror's (correct, verified) linkage:
  *
  *  - `net = fundedOwned − spentOwned` — the wallet's own Σout−Σin, the same
@@ -690,9 +691,12 @@ internal class SdkTxStoreWalker(
      *
      * A computed correction is persisted into the SDK's own `transactions`
      * row ([persistCorrections]), so the corrected row itself is the durable
-     * per-record "already attributed" flag: on every later pass — this
-     * process or any future launch — the row no longer matches the flag
-     * condition (`direction == INCOMING`) and costs NOTHING beyond the
+     * per-record "already attributed" state: on every later pass — this
+     * process or any future launch — it either no longer matches its flag
+     * arm (an INCOMING row becomes OUTGOING or INTERNAL; an INTERNAL row with
+     * a net >= 0 becomes negative), or it is a Standard OUTGOING row whose
+     * stored net equals the mirror recompute, which skips the payload fetch
+     * and is not persisted. Either way it costs NOTHING beyond the
      * correlated subqueries every row pays. Before this, the same ~1.4k
      * provably-wrong records were re-flagged, re-aggregated and re-parsed on
      * EVERY reconcile walk of every launch (field log: three identical
@@ -905,10 +909,13 @@ internal class SdkTxStoreWalker(
                 // (D-SDK-06): a rescan resumed after a process death records
                 // a spend whose coin was funded below the rescan as an
                 // incoming payment of its change, because the engine reloaded
-                // without that coin. Both shapes are impossible for a correct
-                // row — an incoming tx never spends our coins, and an internal
-                // move never gains value — so a correct store never matches
-                // and the corrected row (OUTGOING / net <= 0) never re-flags.
+                // without that coin. An incoming tx never spends our coins,
+                // and an internal move never gains value (nor breaks even:
+                // it pays a fee), so a correct row never matches these. A
+                // Standard INTERNAL row a recompute from only some of its
+                // inputs' spent marks left at net 0 stays flagged, so it is
+                // recomputed again once the rest land. An AssetLock is only
+                // corrected once every input is marked (see the loop below).
                 (
                     it.typeKind == TX_TYPE_KIND_ASSET_LOCK &&
                         it.record.direction == L1TxUiDirection.INCOMING &&
@@ -917,7 +924,7 @@ internal class SdkTxStoreWalker(
                 (
                     it.typeKind == TX_TYPE_KIND_STANDARD &&
                         it.record.direction == L1TxUiDirection.INTERNAL &&
-                        it.record.netAmountDuffs > 0L &&
+                        it.record.netAmountDuffs >= 0L &&
                         it.spentOwnedDuffs > 0L
                     ) ||
                 // CoinJoin rounds persisted "income-only" (rust-dashcore#979
@@ -1072,17 +1079,27 @@ internal class SdkTxStoreWalker(
                 }
                 continue
             }
-            if (fact == null && row.typeKind == TX_TYPE_KIND_ASSET_LOCK && hex in needsFactsHexes) {
-                // Same reason, for an AssetLock: without payload facts the
-                // completeness guard cannot run, and a missing change row
-                // would stamp −(all inputs) as OUTGOING — a shape no arm
-                // flags again, so it would never heal once the row lands.
-                // Serve the stored record and retry next pass.
+            if (row.typeKind == TX_TYPE_KIND_ASSET_LOCK &&
+                (fact == null || row.spentOwnedCount < fact.inputCount)
+            ) {
+                // An AssetLock corrected to OUTGOING is never flagged again,
+                // so it is corrected only from complete evidence. Without
+                // payload facts the completeness guard cannot run (a missing
+                // change row would stamp −(all inputs)); none are fetched
+                // while the recompute is not negative, which an asset lock's
+                // never is once complete. The wallet funds every input of its
+                // own asset lock, so fewer confirmed spent marks than inputs
+                // means some have not landed yet, and the net would be short
+                // of them. Serve the stored record and retry next pass.
                 if (reattributionDeferredLogged.add(hex)) {
                     log.info(
-                        "AssetLock reattribution of {} deferred: no payload facts to verify the TXO " +
-                            "mirror is complete; serving the stored record",
-                        hex
+                        "AssetLock reattribution of {} deferred: {}; serving the stored record",
+                        hex,
+                        when {
+                            fact != null -> "${row.spentOwnedCount} of ${fact.inputCount} input(s) marked spent"
+                            hex in needsFactsHexes -> "no payload facts to verify the TXO mirror is complete"
+                            else -> "the mirror recompute is not negative, so its spent marks are incomplete"
+                        }
                     )
                 }
                 continue
