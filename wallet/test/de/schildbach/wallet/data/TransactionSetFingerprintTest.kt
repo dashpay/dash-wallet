@@ -17,14 +17,51 @@
 
 package de.schildbach.wallet.data
 
+import org.bitcoinj.core.Coin
+import org.bitcoinj.core.Context
+import org.bitcoinj.core.ECKey
 import org.bitcoinj.core.Sha256Hash
+import org.bitcoinj.core.Transaction
+import org.bitcoinj.params.TestNet3Params
+import org.bitcoinj.script.Script
+import org.bitcoinj.script.ScriptBuilder
+import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
+import org.bitcoinj.wallet.WalletProtobufSerializer
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 
 class TransactionSetFingerprintTest {
+    private val params = TestNet3Params.get()
+
+    @Before
+    fun setUp() {
+        // dashj's Context is global; Wallet construction needs one for these params
+        Context.propagate(Context(params))
+    }
+
+    private fun seed() = DeterministicSeed(ByteArray(16) { it.toByte() }, "", 1_600_000_000L)
+
+    private fun walletFromSeed(): Wallet = Wallet.fromSeed(params, seed(), Script.ScriptType.P2PKH)
+
+    /** A pending transaction paying to [wallet], from an input that isn't the wallet's. */
+    private fun receive(wallet: Wallet) {
+        val tx = Transaction(params)
+        tx.addInput(Sha256Hash.of("funding-${System.nanoTime()}".toByteArray()), 0, ScriptBuilder.createEmpty())
+        tx.addOutput(Coin.parseCoin("1"), wallet.freshReceiveAddress())
+        wallet.receivePending(tx, null)
+    }
+
+    private fun roundTrip(wallet: Wallet): Wallet {
+        val bytes = ByteArrayOutputStream().also { WalletProtobufSerializer().writeWallet(wallet, it) }.toByteArray()
+        return WalletProtobufSerializer().readWallet(ByteArrayInputStream(bytes))
+    }
+
     private fun txId(seed: Int): Sha256Hash = Sha256Hash.of(byteArrayOf(seed.toByte(), (seed shr 8).toByte()))
 
     // Stand-ins for a watching key's pubkey + chain code (33 + 32 bytes) and an imported pubkey
@@ -86,19 +123,119 @@ class TransactionSetFingerprintTest {
 
     @Test
     fun includesVersionAndCount() {
-        assertTrue(fingerprint(ids).startsWith("v2:1000:"))
+        assertTrue(fingerprint(ids).startsWith("v3:1000:"))
     }
 
     @Test
     fun emptySet_isNotTheNoWalletValue() {
         val empty = fingerprint(emptyList())
 
-        assertTrue(empty.startsWith("v2:0:"))
+        assertTrue(empty.startsWith("v3:0:"))
         assertNotEquals(TransactionSetFingerprint.NONE, empty)
     }
 
     @Test
     fun noWallet_isNone() {
         assertEquals(TransactionSetFingerprint.NONE, TransactionSetFingerprint.of(null as Wallet?))
+    }
+
+    @Test
+    fun realWallet_matchesItsKeysAndTransactions() {
+        val wallet = walletFromSeed()
+        receive(wallet)
+
+        val fingerprint = TransactionSetFingerprint.of(wallet)
+
+        assertNotEquals(TransactionSetFingerprint.NONE, fingerprint)
+        assertTrue(fingerprint.startsWith("v3:1:"))
+        assertEquals(
+            TransactionSetFingerprint.of(
+                TransactionSetFingerprint.keyIds(wallet),
+                wallet.getTransactionList(true).map(Transaction::getTxId)
+            ),
+            fingerprint
+        )
+    }
+
+    @Test
+    fun realWallet_importedKey_changesFingerprint() {
+        val wallet = walletFromSeed()
+        val before = TransactionSetFingerprint.of(wallet)
+
+        wallet.importKey(ECKey())
+
+        assertNotEquals(before, TransactionSetFingerprint.of(wallet))
+    }
+
+    @Test
+    fun realWallet_receivedTransaction_changesFingerprint() {
+        val wallet = walletFromSeed()
+        val before = TransactionSetFingerprint.of(wallet)
+
+        receive(wallet)
+
+        val after = TransactionSetFingerprint.of(wallet)
+        assertNotEquals(before, after)
+        assertTrue(after.startsWith("v3:1:"))
+        // Receiving also marks the key used, which may move the lookahead; the transaction alone,
+        // against the wallet's current keys, changes it too
+        assertNotEquals(TransactionSetFingerprint.of(TransactionSetFingerprint.keyIds(wallet), emptyList()), after)
+    }
+
+    @Test
+    fun realWallet_issuedKey_withSameTransactions_changesFingerprint() {
+        val wallet = walletFromSeed()
+        receive(wallet)
+        val txCount = wallet.getTransactionCount(true)
+        val before = TransactionSetFingerprint.of(wallet)
+
+        wallet.freshReceiveKey()
+
+        assertEquals(txCount, wallet.getTransactionCount(true))
+        assertNotEquals(before, TransactionSetFingerprint.of(wallet))
+    }
+
+    @Test
+    fun realWallet_lookaheadGrowth_withSameWatchingKeyAndTransactions_changesFingerprint() {
+        // The reviewer's case: more keys derived, nothing issued, no transaction added. An output
+        // already in the wallet could now be "mine", so a cached negative result must not match.
+        val wallet = walletFromSeed()
+        receive(wallet)
+        val chain = wallet.activeKeyChain
+        val issuedExternal = chain.issuedExternalKeys
+        val issuedInternal = chain.issuedInternalKeys
+        val numKeys = chain.numKeys()
+        val before = TransactionSetFingerprint.of(wallet)
+
+        chain.setLookaheadSize(chain.lookaheadSize * 2)
+        chain.maybeLookAhead()
+
+        assertTrue("lookahead derived more keys", chain.numKeys() > numKeys)
+        assertEquals(issuedExternal, chain.issuedExternalKeys)
+        assertEquals(issuedInternal, chain.issuedInternalKeys)
+        assertNotEquals(before, TransactionSetFingerprint.of(wallet))
+    }
+
+    @Test
+    fun realWallets_fromSameSeedWithoutTransactions_sameFingerprint() {
+        assertEquals(TransactionSetFingerprint.of(walletFromSeed()), TransactionSetFingerprint.of(walletFromSeed()))
+    }
+
+    @Test
+    fun realWallets_fromDifferentSeeds_differentFingerprint() {
+        val other = Wallet.createDeterministic(params, Script.ScriptType.P2PKH)
+
+        assertNotEquals(TransactionSetFingerprint.of(walletFromSeed()), TransactionSetFingerprint.of(other))
+    }
+
+    @Test
+    fun realWallet_savedAndReloaded_sameFingerprint() {
+        // The cached value has to survive a restart, so the derived-key state must too
+        val wallet = walletFromSeed()
+        receive(wallet)
+        wallet.freshReceiveKey()
+        wallet.importKey(ECKey())
+
+        assertEquals(TransactionSetFingerprint.of(wallet), TransactionSetFingerprint.of(roundTrip(wallet)))
     }
 }

@@ -20,6 +20,7 @@ package de.schildbach.wallet.data
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.Utils
+import org.bitcoinj.wallet.DeterministicKeyChain
 import org.bitcoinj.wallet.Wallet
 import java.nio.ByteBuffer
 
@@ -29,20 +30,27 @@ import java.nio.ByteBuffer
  * for the same keys and the same transactions.
  *
  * The key identity is public, non-secret material only: each active deterministic key chain's
- * watching (account) key as public key + chain code, i.e. the content of its xpub, and the public
- * key of every imported key. Public keys are readable without the spending password, so an
- * encrypted wallet fingerprints the same as when it was unencrypted. The same seed with the same
- * transactions gives the same fingerprint, which is correct: the classification is identical.
+ * watching (account) key as public key + chain code, i.e. the content of its xpub, together with
+ * the chain's derived-key state (how many keys it has derived, lookahead included, and how many
+ * external and internal keys it has issued), and the public key of every imported key. The
+ * derived-key state matters because a chain only recognizes outputs paying to keys it has already
+ * derived: deriving more keys can make an output already in the wallet "mine" without the watching
+ * key or the transaction ids changing. Public keys and key counts are readable without the spending
+ * password, so an encrypted wallet fingerprints the same as when it was unencrypted. The same seed
+ * with the same derived keys and the same transactions gives the same fingerprint, which is
+ * correct: the classification is identical.
  */
 object TransactionSetFingerprint {
     /** Returned when there is no wallet; never equal to the fingerprint of a real wallet. */
     const val NONE = ""
 
     /**
-     * Format version, so a fingerprint cached by an older format (which covered only the transaction
-     * ids) never matches one computed now.
+     * Format version, so a fingerprint cached by an older format never matches one computed now:
+     * v1 covered only the transaction ids, v2 also the watching and imported keys but not the
+     * chains' derived-key state, so a v2 value could outlive a lookahead change that made an
+     * existing output "mine".
      */
-    private const val VERSION = "v2"
+    private const val VERSION = "v3"
 
     /**
      * Fingerprints [wallet]'s key identity (see [keyIds]) and its transactions, dead ones included
@@ -60,20 +68,36 @@ object TransactionSetFingerprint {
 
     /**
      * The public identity of [wallet]'s keys: for each active deterministic key chain, the watching
-     * key's public key followed by its chain code; then each imported key's public key. Never any
-     * private key material.
+     * key's public key followed by its chain code and its derived-key state (see [derivedKeyState]);
+     * then each imported key's public key. Never any private key material.
      */
     @JvmStatic
     fun keyIds(wallet: Wallet): List<ByteArray> {
         val chainIds = wallet.activeKeyChains.map { chain ->
             val watchingKey = chain.watchingKey
-            watchingKey.pubKey + watchingKey.chainCode
+            watchingKey.pubKey + watchingKey.chainCode + derivedKeyState(chain)
         }
         return chainIds + wallet.importedKeys.map { it.pubKey }
     }
 
     /**
-     * "v2:<count>:<hex SHA-256>", where count is the number of transaction ids and the hash covers
+     * [chain]'s derived-key state as three fixed-width big-endian ints: the number of keys it holds
+     * (lookahead keys included, so this is what decides which outputs are "mine"), then the number
+     * of issued external and internal keys. Each getter takes the chain's lock; the three aren't read
+     * atomically, but a chain that changes in between changes the fingerprint on the next read
+     * anyway, and the cache is only written when the fingerprint is the same before and after a
+     * scan. The lookahead size and threshold are configuration, not state: what they cause is
+     * already counted by the number of keys.
+     */
+    private fun derivedKeyState(chain: DeterministicKeyChain): ByteArray =
+        ByteBuffer.allocate(3 * Int.SIZE_BYTES)
+            .putInt(chain.numKeys())
+            .putInt(chain.issuedExternalKeys)
+            .putInt(chain.issuedInternalKeys)
+            .array()
+
+    /**
+     * "v3:<count>:<hex SHA-256>", where count is the number of transaction ids and the hash covers
      * the key identities and the transaction ids. Both are sorted first, so the result doesn't depend
      * on the order either comes in: the key identities are treated as a set, like the transactions.
      * Each key identity is hashed to a fixed length and their number is hashed first, so key and

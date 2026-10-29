@@ -604,8 +604,8 @@ class CrowdNodeApiAggregator @Inject constructor(
      * still matches: a wallet that never signed up would otherwise rescan its whole history each
      * time the status is restored. The fingerprint identifies the wallet's keys and its set of
      * transactions, since the scan classifies each transaction against those keys, so a different
-     * wallet (even one with the same transactions) or new transactions change it and trigger a
-     * rescan. The result is cached only if the fingerprint is unchanged after the scan, so it
+     * wallet (even one with the same transactions), newly derived keys (which can make an existing
+     * output the wallet's) or new transactions change it and trigger a rescan. The result is cached only if the fingerprint is unchanged after the scan, so it
      * describes the scanned set.
      * A possible sign up that CrowdNode didn't confirm isn't cached, so it is checked again.
      * The cache is only an optimization: failing to write it just means the next restore rescans.
