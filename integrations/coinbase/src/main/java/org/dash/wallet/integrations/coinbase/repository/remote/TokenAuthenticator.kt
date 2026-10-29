@@ -28,12 +28,23 @@ import org.dash.wallet.common.data.safeApiCall
 import org.dash.wallet.integrations.coinbase.model.TokenResponse
 import org.dash.wallet.integrations.coinbase.service.CoinBaseTokenRefreshApi
 import org.dash.wallet.integrations.coinbase.utils.CoinbaseConfig
+import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
 class TokenAuthenticator @Inject constructor(
     private val tokenApi: CoinBaseTokenRefreshApi,
     private val config: CoinbaseConfig
 ) : Authenticator {
+    companion object {
+        private val log = LoggerFactory.getLogger(TokenAuthenticator::class.java)
+
+        /**
+         * The only codes on which Coinbase has definitively rejected the refresh token: 400
+         * for an `invalid_grant` (revoked or expired), 401 for credentials it will not
+         * accept. Per OAuth2 these are verdicts on the grant itself.
+         */
+        private val AUTH_REJECTION_CODES = setOf(400, 401)
+    }
 
     // For multiple call to refresh token sync
     private val tokenMutex = Mutex()
@@ -52,9 +63,23 @@ class TokenAuthenticator @Inject constructor(
                         }
                     }
 
-                    else -> {
-                        config.set(CoinbaseConfig.LAST_ACCESS_TOKEN, "")
-                        config.set(CoinbaseConfig.LAST_REFRESH_TOKEN, "")
+                    is ResponseResource.Failure -> {
+                        if (isAuthRejection(tokenResponse)) {
+                            log.info(
+                                "coinbase rejected the refresh token (code {}); clearing credentials",
+                                tokenResponse.errorCode
+                            )
+                            config.set(CoinbaseConfig.LAST_ACCESS_TOKEN, "")
+                            config.set(CoinbaseConfig.LAST_REFRESH_TOKEN, "")
+                        } else {
+                            // A transport failure says nothing about whether the token is
+                            // still good. Clearing here de-authenticated the user and forced
+                            // a re-link on a single network blip (MO-995).
+                            log.warn(
+                                "coinbase token refresh failed with no verdict on the token; keeping credentials",
+                                tokenResponse.throwable
+                            )
+                        }
                         null
                     }
                 }
@@ -62,11 +87,14 @@ class TokenAuthenticator @Inject constructor(
         }
     }
 
+    /** True only when the failure is Coinbase rejecting the grant, not the network failing. */
+    private fun isAuthRejection(failure: ResponseResource.Failure): Boolean {
+        val code = failure.errorCode
+        return !failure.isNetworkError && code != null && code in AUTH_REJECTION_CODES
+    }
+
     private suspend fun getUpdatedToken(): ResponseResource<TokenResponse?> {
-        val accessToken = config.get(CoinbaseConfig.LAST_ACCESS_TOKEN) ?: ""
         val refreshToken = config.get(CoinbaseConfig.LAST_REFRESH_TOKEN) ?: ""
-        println(" --- lastCoinbaseAccessToken --- $accessToken")
-        println(" === lastCoinbaseRefreshToken === $refreshToken")
         return safeApiCall { tokenApi.refreshToken(refreshToken = refreshToken) }
     }
 }
