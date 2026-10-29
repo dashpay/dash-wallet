@@ -112,6 +112,10 @@ again before the encrypted response is published.
 
 Before broadcasting, the wallet stores a scoped pending grant with exact public
 keys, approved limits, selected binding indices, and encrypted response triple.
+Before allocating key IDs or saving that record, approval checks every other
+grant in the same wallet/identity/network scope, regardless of app or connection
+ID. An unresolved submitted registration blocks approval until it is settled or
+permanently fenced; only the request currently being recovered is excluded.
 No seed or derived private key is persisted. A master-signed update adds keys
 and disables previous auth keys for the same identity/app/connection ID. Without
 a connection ID, older keys are not disabled. All exact keys must be confirmed

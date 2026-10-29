@@ -280,6 +280,8 @@ internal class AppConnectSession(
                 var identity = readIdentity()
                 check(identity.id.toString() == plan.identityId) { "Identity changed. Scan again." }
                 val time = platform.client.getPlatformTime(identity.id)
+                // Key IDs belong to the identity, not to an app or connection.
+                requireOtherRegistrationsSettled(plan.scope, recordId, identity, time)
                 check(selectedGrants.all { it.expiresAt!! > time + 3_600_000 }) { "Grant expired. Scan again." }
                 val keys = mutableListOf<IdentityPublicKey>()
                 var nextId = (identity.publicKeys.maxOfOrNull { it.id } ?: -1) + 1
@@ -351,7 +353,6 @@ internal class AppConnectSession(
                 }
                 val disable = AppConnectKeyState.revocableIds(AppConnectKeyState.inspect(
                     oldRecords.flatMap { decodeKeys(it) }, identity.publicKeys, time))
-                requireSettled(oldRecords, identity, time)
                 WalletSignerCallback(wallet, keyParameter, { authorize(); checkScope(plan.scope) }).use { walletSigner ->
                     object : Signer() {
                         override fun sign(publicKey: ByteArray, data: ByteArray): ByteArray {
@@ -441,6 +442,13 @@ internal class AppConnectSession(
     }
     private fun needsRegistrationRecovery(record: JSONObject) = record.optString("state") != "prepared" &&
         (record.optString("state") != "disabled" || !record.optBoolean("permanentRevocationConfirmed"))
+
+    internal suspend fun requireOtherRegistrationsSettled(scope: String, recordId: String, identity: Identity, time: Long) {
+        val otherRecords = config.getGrants().filter {
+            it.getString("scope") == scope && it.getString("id") != recordId
+        }
+        requireSettled(otherRecords, identity, time)
+    }
 
     private fun requireSettled(records: List<JSONObject>, identity: Identity, time: Long) {
         check(records.filter { needsRegistrationRecovery(it) }.none { record ->
