@@ -1223,6 +1223,10 @@ class SecurityGuardMultiThreadingTest {
                             TODO("Not yet implemented")
                         }
 
+                        override fun walletChangeCount(): Long {
+                            TODO("Not yet implemented")
+                        }
+
                         override fun wrapAllTransactions(vararg wrappers: TransactionWrapperFactory): Collection<TransactionWrapper> {
                             TODO("Not yet implemented")
                         }

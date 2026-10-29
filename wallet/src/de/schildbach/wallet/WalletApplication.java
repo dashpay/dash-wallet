@@ -88,6 +88,7 @@ import org.dash.wallet.common.AutoLogoutTimerHandler;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.InteractionAwareActivity;
 import de.schildbach.wallet.data.TransactionSetFingerprint;
+import de.schildbach.wallet.data.WalletChangeCounter;
 import de.schildbach.wallet.data.WalletData;
 import org.dash.wallet.common.data.OnboardingState;
 import org.dash.wallet.common.data.WalletUIConfig;
@@ -224,6 +225,7 @@ public class WalletApplication extends MultiDexApplication
 
     private File walletFile;
     private Wallet wallet;
+    private final WalletChangeCounter walletChangeCounter = new WalletChangeCounter();
 
     /**
      * The wallet whose primary is on disk: the one parsed from
@@ -3614,6 +3616,12 @@ public class WalletApplication extends MultiDexApplication
     public String transactionSetFingerprint() {
         awaitDeferredWalletLoad();
         return TransactionSetFingerprint.of(wallet);
+    }
+
+    @Override
+    public long walletChangeCount() {
+        awaitDeferredWalletLoad();
+        return walletChangeCounter.count(wallet);
     }
 
     @NonNull

@@ -105,6 +105,17 @@ interface WalletDataProvider {
      */
     fun transactionSetFingerprint(): String
 
+    /**
+     * A process-local counter of wallet changes: it never decreases, and it advances on every change
+     * to the wallet's transactions or their graph state (a transaction received, committed, moved
+     * between pools, connected or disconnected, including by a reorganize) and whenever a different
+     * wallet is installed. Read it before and after an operation: an equal value means the wallet
+     * didn't change in between, even if a change was undone again, which [transactionSetFingerprint]
+     * alone can't tell. It restarts with the process, so never persist it or compare it across
+     * restarts; it may also advance without a change the caller cares about (e.g. confidence).
+     */
+    fun walletChangeCount(): Long
+
     fun wrapAllTransactions(vararg wrappers: TransactionWrapperFactory): Collection<TransactionWrapper>
 
     /**

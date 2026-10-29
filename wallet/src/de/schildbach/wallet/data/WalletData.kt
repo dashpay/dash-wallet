@@ -157,6 +157,9 @@ interface WalletData {
     /** See [org.dash.wallet.common.WalletDataProvider.transactionSetFingerprint]. */
     fun transactionSetFingerprint(): String
 
+    /** See [org.dash.wallet.common.WalletDataProvider.walletChangeCount]. */
+    fun walletChangeCount(): Long
+
     fun wrapAllTransactions(vararg wrappers: TransactionWrapperFactory): Collection<TransactionWrapper>
 
     fun wrapMatchingTransactions(vararg wrappers: TransactionWrapperFactory): Collection<TransactionWrapper>

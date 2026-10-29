@@ -607,17 +607,21 @@ class CrowdNodeApiAggregator @Inject constructor(
      * transactions), since the scan classifies each transaction against those keys, so a different
      * wallet (even one with the same transactions), newly derived keys (which can make an existing
      * output the wallet's), new transactions, or an input or output that gets connected, spent or
-     * disconnected change it and trigger a rescan. The fingerprint is read partly outside the wallet
-     * lock, so the result is cached only if it is unchanged after the scan: then it describes the
-     * scanned state.
+     * disconnected change it and trigger a rescan. The result is cached only if the wallet didn't
+     * change during the scan: the fingerprint is the same after it and so is the wallet change count,
+     * which also catches a change undone within the scan (e.g. a reorg disconnecting and reconnecting
+     * inputs) that leaves the fingerprint as it was.
      * A possible sign up that CrowdNode didn't confirm isn't cached, so it is checked again.
      * The cache is only an optimization: failing to write it just means the next restore rescans.
      */
     private suspend fun tryRestoreSignUp(): Boolean {
-        // Captured before the scan and compared with a second read after it: the result is cached
-        // only if both match, so a wallet replacement, a transaction arriving or a connection or
-        // spend changing during the scan never caches a result under a fingerprint of a state the
-        // scan didn't cover.
+        // The change count is read before the first fingerprint and after the second one, and the
+        // result is cached only if both pairs match. A fingerprint read waits for a wallet mutation
+        // holding the wallet lock, and the counter is bumped inside that lock, so a mutation that
+        // overlaps the scan has been counted by the time the second fingerprint returns: a wallet
+        // replacement, a transaction arriving, or a connection or spend changing during the scan,
+        // even one changed back again, never caches a result the scan didn't cover.
+        val changeCount = walletDataProvider.walletChangeCount()
         val fingerprint = walletDataProvider.transactionSetFingerprint()
 
         if (fingerprint.isNotEmpty() && config.get(CrowdNodeConfig.NO_SIGN_UP_SCAN_FINGERPRINT) == fingerprint) {
@@ -629,14 +633,14 @@ class CrowdNodeApiAggregator @Inject constructor(
             SignUpScanResult.Restored -> true
             SignUpScanResult.Unconfirmed -> false
             SignUpScanResult.NotFound -> {
-                // An in-process replacement can't switch back to the same transaction set, so
-                // equal fingerprints before and after mean the scan covered that state. A graph
-                // change undone within the scan (e.g. a reorg disconnecting and reconnecting inputs)
-                // can't be told apart: such a result stays cached until the fingerprint next changes.
-                if (walletDataProvider.transactionSetFingerprint() == fingerprint) {
+                // Read in this order: the count after the fingerprint (see above).
+                val unchanged = walletDataProvider.transactionSetFingerprint() == fingerprint &&
+                    walletDataProvider.walletChangeCount() == changeCount
+
+                if (unchanged) {
                     cacheNoSignUpScan(fingerprint)
                 } else {
-                    log.info("the transaction set changed during the CrowdNode sign up scan, not caching the result")
+                    log.info("the wallet changed during the CrowdNode sign up scan, not caching the result")
                 }
                 false
             }

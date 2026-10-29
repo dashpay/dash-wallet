@@ -69,6 +69,7 @@ class CrowdNodeApiAggregatorTest {
     private val walletData = mock<WalletDataProvider> {
         on { wrapMatchingTransactions(any()) } doReturn listOf()
         on { transactionSetFingerprint() } doReturn ""
+        on { walletChangeCount() } doReturn 1L
         on { networkId } doReturn networkId
         doNothing().whenever(mock).attachOnWalletWipedListener(any())
     }
@@ -259,6 +260,37 @@ class CrowdNodeApiAggregatorTest {
             assertEquals(SignUpStatus.NotStarted, api.signUpStatus.value)
             verify(blockchainApi).getFullSignUpTxSet()
             verify(localConfig, never()).set(eq(CrowdNodeConfig.NO_SIGN_UP_SCAN_FINGERPRINT), any())
+        }
+    }
+
+    @Test
+    fun restoreStatus_walletChangedAndRestoredDuringScan_doesNotCacheAndRescans() {
+        runBlocking {
+            localConfig.stub {
+                onBlocking { get(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS) } doReturn OnlineAccountStatus.None.ordinal
+            }
+            walletData.stub {
+                // A change undone during the scan (e.g. a reorg disconnecting and reconnecting
+                // inputs): the fingerprint is the same before and after, the change count isn't
+                on { transactionSetFingerprint() } doReturn walletAFingerprint
+                on { walletChangeCount() }.doReturn(1L, 3L)
+            }
+            CrowdNodeApiAggregator(
+                webApi, blockchainApi, walletData, mock(), mock(),
+                localConfig, globalConfig, mock(), mock(), mock()
+            ).restoreStatus()
+
+            verify(blockchainApi).getFullSignUpTxSet()
+            verify(localConfig, never()).set(eq(CrowdNodeConfig.NO_SIGN_UP_SCAN_FINGERPRINT), any())
+
+            // Nothing was cached, so the next restore scans again; the wallet stays put this time
+            CrowdNodeApiAggregator(
+                webApi, blockchainApi, walletData, mock(), mock(),
+                localConfig, globalConfig, mock(), mock(), mock()
+            ).restoreStatus()
+
+            verify(blockchainApi, times(2)).getFullSignUpTxSet()
+            verify(localConfig).set(CrowdNodeConfig.NO_SIGN_UP_SCAN_FINGERPRINT, walletAFingerprint)
         }
     }
 
