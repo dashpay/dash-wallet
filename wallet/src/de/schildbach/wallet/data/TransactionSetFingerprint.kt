@@ -138,7 +138,8 @@ object TransactionSetFingerprint {
         val digest = Sha256Hash.newDigest()
         digest.update(intBytes(keyIds.size))
         keyIds.map(Sha256Hash::of).sorted().forEach { digest.update(it.bytes) }
-        sorted.forEach { hashTransaction(digest, it.pool, it.transaction) }
+        val hashedSpenders = HashSet<Sha256Hash>()
+        sorted.forEach { hashTransaction(digest, it.pool, it.transaction, hashedSpenders) }
         return "$VERSION:${sorted.size}:${Utils.HEX.encode(digest.digest())}"
     }
 
@@ -149,10 +150,18 @@ object TransactionSetFingerprint {
      * [UNSPENT], or [SPENT] followed by the spending transaction's id and that transaction's input
      * connections. The spender is read as `spentBy.parentTransaction`, like the matcher; its own
      * connections are hashed here too because the top-up discovery reads its connected addresses and
-     * it need not be one of the wallet's transactions. The spending input itself needs no index: it
-     * is the spender's input whose outpoint is this output, which the spender's id fixes.
+     * it need not be one of the wallet's transactions. They are hashed only the first time a spender
+     * is met ([hashedSpenders]), so a transaction spending many outputs costs one pass over its
+     * inputs, not one per output; the traversal order is fixed, so the encoding still is too. The
+     * spending input itself needs no index: it is the spender's input whose outpoint is this output,
+     * which the spender's id fixes.
      */
-    private fun hashTransaction(digest: MessageDigest, pool: WalletTransaction.Pool, tx: Transaction) {
+    private fun hashTransaction(
+        digest: MessageDigest,
+        pool: WalletTransaction.Pool,
+        tx: Transaction,
+        hashedSpenders: MutableSet<Sha256Hash>
+    ) {
         digest.update(tx.txId.bytes)
         digest.update(intBytes(pool.ordinal))
         hashInputConnections(digest, tx)
@@ -166,7 +175,9 @@ object TransactionSetFingerprint {
             } else {
                 digest.update(SPENT)
                 digest.update(spender.txId.bytes)
-                hashInputConnections(digest, spender)
+                if (hashedSpenders.add(spender.txId)) {
+                    hashInputConnections(digest, spender)
+                }
             }
         }
     }

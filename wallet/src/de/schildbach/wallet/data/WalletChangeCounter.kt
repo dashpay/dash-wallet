@@ -21,6 +21,7 @@ import org.bitcoinj.core.listeners.TransactionConfidenceEventListener
 import org.bitcoinj.utils.Threading
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.listeners.WalletChangeEventListener
+import java.lang.ref.WeakReference
 import java.util.concurrent.atomic.AtomicLong
 
 /**
@@ -42,18 +43,24 @@ import java.util.concurrent.atomic.AtomicLong
  * however notify the transaction confidence listeners inline for the received transaction, so
  * those are counted too. A reorganize suppresses both while it runs and queues `onWalletChanged`
  * at its end, still under the lock. The listeners only increment, since they run under the lock.
+ *
+ * The attached wallet is held weakly, so a wallet that is wiped or replaced isn't kept in memory
+ * until the next [count]; its listeners go with it. If it has been collected by then, the next
+ * [count] still sees a different wallet and counts the change.
  */
 class WalletChangeCounter {
     private val changes = AtomicLong()
     private val changeListener = WalletChangeEventListener { changes.incrementAndGet() }
     private val confidenceListener = TransactionConfidenceEventListener { _, _ -> changes.incrementAndGet() }
-    private var attached: Wallet? = null
+    private var attached = WeakReference<Wallet>(null)
 
     /** The current count, after attaching to [wallet] (counted as a change) if it isn't the attached one. */
     @Synchronized
     fun count(wallet: Wallet?): Long {
-        if (wallet !== attached) {
-            attached?.let { previous ->
+        val previousWallet = attached.get()
+
+        if (wallet !== previousWallet || (wallet == null && attached !== DETACHED)) {
+            previousWallet?.let { previous ->
                 previous.removeChangeEventListener(changeListener)
                 previous.removeTransactionConfidenceEventListener(confidenceListener)
             }
@@ -61,10 +68,15 @@ class WalletChangeCounter {
                 it.addChangeEventListener(Threading.SAME_THREAD, changeListener)
                 it.addTransactionConfidenceEventListener(Threading.SAME_THREAD, confidenceListener)
             }
-            attached = wallet
+            attached = if (wallet == null) DETACHED else WeakReference(wallet)
             changes.incrementAndGet()
         }
 
         return changes.get()
+    }
+
+    private companion object {
+        /** Marks an explicit attachment to no wallet, as opposed to a collected one. */
+        val DETACHED = WeakReference<Wallet>(null)
     }
 }
