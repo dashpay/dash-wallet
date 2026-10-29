@@ -44,6 +44,7 @@ cd "$work/kotlin-platform"
   -x :dash-sdk-java:signMavenJavaPublication -x :dpp:signMavenJavaPublication \
   -x :dash-sdk-android:signReleasePublication --no-parallel --console=plain
 test -s "$repository/org/dashj/platform/dash-sdk-android/5.0.0-SNAPSHOT/dash-sdk-android-5.0.0-SNAPSHOT.aar"
+cargo test --locked --manifest-path platform-mobile/Cargo.toml token_purchase::tests
 ./gradlew :dash-sdk-java:test --tests '*TokenPurchaseBridgeTest' \
   :dpp:test --tests '*AppConnectKeyTest' --tests '*AppConnectIdentityTest' --tests '*IdentityNativeReadbackTest' --tests '*DataContractResponseTest' --tests '*VerifiedContractGroupTest' \
   -x :dash-sdk-java:buildRustBindings -x :dash-sdk-java:cmakeBuild --no-parallel --console=plain
