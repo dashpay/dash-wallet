@@ -88,7 +88,41 @@ interface WalletDataProvider {
 
     fun getTransactions(vararg filters: TransactionFilter): Collection<TxInfo>
 
+    /**
+     * A fingerprint of the wallet's keys and of its transactions, dead ones included, i.e. the
+     * transactions [wrapAllTransactions] goes over, with their wallet-relative graph state. The keys
+     * are identified by public data only (the active key chains' watching keys with how many keys
+     * each has derived and issued, and the imported keys' public keys), because how a transaction is
+     * classified (mine, sent, received) depends on them. Each transaction is identified by its id and
+     * by the graph state the matchers read that the id doesn't fix: its wallet pool, whether each
+     * input is connected to the output it spends, and which transaction spends each output.
+     * Equal fingerprints mean the same keys, the same transactions and the same graph state
+     * (whatever their order, and across wallet objects and restarts), so a result computed by
+     * classifying that set is still valid; a different wallet, even with the same transactions, newly
+     * derived keys, any added, removed or different transaction, and a connection or spend that
+     * changes, change it. Confidence, update times and fees aren't covered.
+     * Empty when there is no wallet, which never equals the fingerprint of a real wallet.
+     */
+    fun transactionSetFingerprint(): String
+
+    /**
+     * A process-local counter of wallet changes: it never decreases, and it advances on every change
+     * to the wallet's transactions or their graph state (a transaction received, committed, moved
+     * between pools, connected or disconnected, including by a reorganize) and whenever a different
+     * wallet is installed. Read it before and after an operation: an equal value means the wallet
+     * didn't change in between, even if a change was undone again, which [transactionSetFingerprint]
+     * alone can't tell. It restarts with the process, so never persist it or compare it across
+     * restarts; it may also advance without a change the caller cares about (e.g. confidence).
+     */
+    fun walletChangeCount(): Long
+
     fun wrapAllTransactions(vararg wrappers: TransactionWrapperFactory): Collection<TransactionWrapper>
+
+    /**
+     * Like [wrapAllTransactions], but returns only the wrappers produced by [wrappers], without
+     * a wrapper for every other wallet transaction. Use it when looking for specific transactions.
+     */
+    fun wrapMatchingTransactions(vararg wrappers: TransactionWrapperFactory): Collection<TransactionWrapper>
 
     fun attachOnWalletWipedListener(listener: suspend () -> Unit)
 

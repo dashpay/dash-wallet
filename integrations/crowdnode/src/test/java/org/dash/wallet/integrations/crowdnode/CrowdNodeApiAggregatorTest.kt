@@ -34,10 +34,12 @@ import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
 import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
 import org.dash.wallet.integrations.crowdnode.transactions.CrowdNodeWelcomeToApiResponse
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
+import org.dash.wallet.integrations.crowdnode.transactions.PossibleWelcomeResponse
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig
 import org.junit.Before
 import org.junit.Test
 import org.mockito.kotlin.*
+import java.io.IOException
 import kotlin.time.ExperimentalTime
 
 @FlowPreview
@@ -50,6 +52,11 @@ class CrowdNodeApiAggregatorTest {
     private val confirmationTxData = "01000000016fdb75611fd8892d8d19707f0d0958da5b930c635750f2c8c5bf5a48458a8ffd000000006b483045022100ff77055377b33afb8fc2f622fda59816394a567c50e98569fe8ab68d797948b802204b05504b3f837e80f4d0d8c3c6d98107e770572a8eaae66ddd14a660fe9674f101210275ab1f1c864e594c5e075ac45fbd01a45285701e429b842f8d0a1c872cf3a7baffffffff0149d00000000000001976a9140d5bcbeeb459af40f97fcb4a98e9d1ed13e904c888ac00000000" // ktlint-disable max-line-length
     private val confirmationTx = TestTx(confirmationTxData)
 
+    // Same transaction count for wallets A and B, different transaction sets
+    private val walletAFingerprint = "33307:" + "a".repeat(64)
+    private val walletBFingerprint = "33307:" + "b".repeat(64)
+    private val walletAPlusOneFingerprint = "33308:" + "c".repeat(64)
+
     private val localConfig = mock<CrowdNodeConfig> {
         onBlocking { get(CrowdNodeConfig.BACKGROUND_ERROR) } doReturn ""
     }
@@ -60,7 +67,9 @@ class CrowdNodeApiAggregatorTest {
     }
 
     private val walletData = mock<WalletDataProvider> {
-        on { wrapAllTransactions(any()) } doReturn listOf()
+        on { wrapMatchingTransactions(any()) } doReturn listOf()
+        on { transactionSetFingerprint() } doReturn ""
+        on { walletChangeCount() } doReturn 1L
         on { networkId } doReturn networkId
         doNothing().whenever(mock).attachOnWalletWipedListener(any())
     }
@@ -166,6 +175,271 @@ class CrowdNodeApiAggregatorTest {
 
             assertEquals(SignUpStatus.NotStarted, api.signUpStatus.value)
             verifyNoInteractions(webApi)
+        }
+    }
+
+    @Test
+    fun restoreStatus_noSignUpFound_cachesFingerprint() {
+        runBlocking {
+            localConfig.stub {
+                onBlocking { get(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS) } doReturn OnlineAccountStatus.None.ordinal
+            }
+            walletData.stub {
+                on { transactionSetFingerprint() } doReturn walletAFingerprint
+            }
+            val api = CrowdNodeApiAggregator(
+                webApi, blockchainApi, walletData, mock(), mock(),
+                localConfig, globalConfig, mock(), mock(), mock()
+            )
+            api.restoreStatus()
+
+            assertEquals(SignUpStatus.NotStarted, api.signUpStatus.value)
+            verify(blockchainApi).getFullSignUpTxSet()
+            verify(localConfig).set(CrowdNodeConfig.NO_SIGN_UP_SCAN_FINGERPRINT, walletAFingerprint)
+        }
+    }
+
+    @Test
+    fun restoreStatus_fingerprintUnchanged_skipsScan() {
+        runBlocking {
+            localConfig.stub {
+                onBlocking { get(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS) } doReturn OnlineAccountStatus.None.ordinal
+                onBlocking { get(CrowdNodeConfig.NO_SIGN_UP_SCAN_FINGERPRINT) } doReturn walletAFingerprint
+            }
+            walletData.stub {
+                on { transactionSetFingerprint() } doReturn walletAFingerprint
+            }
+            val api = CrowdNodeApiAggregator(
+                webApi, blockchainApi, walletData, mock(), mock(),
+                localConfig, globalConfig, mock(), mock(), mock()
+            )
+            api.restoreStatus()
+
+            assertEquals(SignUpStatus.NotStarted, api.signUpStatus.value)
+            verify(blockchainApi, never()).getFullSignUpTxSet()
+        }
+    }
+
+    @Test
+    fun restoreStatus_fingerprintChanged_rescans() {
+        runBlocking {
+            localConfig.stub {
+                onBlocking { get(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS) } doReturn OnlineAccountStatus.None.ordinal
+                onBlocking { get(CrowdNodeConfig.NO_SIGN_UP_SCAN_FINGERPRINT) } doReturn walletAFingerprint
+            }
+            walletData.stub {
+                on { transactionSetFingerprint() } doReturn walletAPlusOneFingerprint
+            }
+            val api = CrowdNodeApiAggregator(
+                webApi, blockchainApi, walletData, mock(), mock(),
+                localConfig, globalConfig, mock(), mock(), mock()
+            )
+            api.restoreStatus()
+
+            verify(blockchainApi).getFullSignUpTxSet()
+            verify(localConfig).set(CrowdNodeConfig.NO_SIGN_UP_SCAN_FINGERPRINT, walletAPlusOneFingerprint)
+        }
+    }
+
+    @Test
+    fun restoreStatus_fingerprintChangesDuringScan_doesNotCache() {
+        runBlocking {
+            localConfig.stub {
+                onBlocking { get(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS) } doReturn OnlineAccountStatus.None.ordinal
+            }
+            walletData.stub {
+                // Wallet A before the scan, replaced by wallet B while it runs
+                on { transactionSetFingerprint() }.doReturn(walletAFingerprint, walletBFingerprint)
+            }
+            val api = CrowdNodeApiAggregator(
+                webApi, blockchainApi, walletData, mock(), mock(),
+                localConfig, globalConfig, mock(), mock(), mock()
+            )
+            api.restoreStatus()
+
+            assertEquals(SignUpStatus.NotStarted, api.signUpStatus.value)
+            verify(blockchainApi).getFullSignUpTxSet()
+            verify(localConfig, never()).set(eq(CrowdNodeConfig.NO_SIGN_UP_SCAN_FINGERPRINT), any())
+        }
+    }
+
+    @Test
+    fun restoreStatus_walletChangedAndRestoredDuringScan_doesNotCacheAndRescans() {
+        runBlocking {
+            localConfig.stub {
+                onBlocking { get(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS) } doReturn OnlineAccountStatus.None.ordinal
+            }
+            walletData.stub {
+                // A change undone during the scan (e.g. a reorg disconnecting and reconnecting
+                // inputs): the fingerprint is the same before and after, the change count isn't
+                on { transactionSetFingerprint() } doReturn walletAFingerprint
+                on { walletChangeCount() }.doReturn(1L, 3L)
+            }
+            CrowdNodeApiAggregator(
+                webApi, blockchainApi, walletData, mock(), mock(),
+                localConfig, globalConfig, mock(), mock(), mock()
+            ).restoreStatus()
+
+            verify(blockchainApi).getFullSignUpTxSet()
+            verify(localConfig, never()).set(eq(CrowdNodeConfig.NO_SIGN_UP_SCAN_FINGERPRINT), any())
+
+            // Nothing was cached, so the next restore scans again; the wallet stays put this time
+            CrowdNodeApiAggregator(
+                webApi, blockchainApi, walletData, mock(), mock(),
+                localConfig, globalConfig, mock(), mock(), mock()
+            ).restoreStatus()
+
+            verify(blockchainApi, times(2)).getFullSignUpTxSet()
+            verify(localConfig).set(CrowdNodeConfig.NO_SIGN_UP_SCAN_FINGERPRINT, walletAFingerprint)
+        }
+    }
+
+    @Test
+    fun restoreStatus_replacementWalletWithSameCount_rescans() {
+        runBlocking {
+            localConfig.stub {
+                onBlocking { get(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS) } doReturn OnlineAccountStatus.None.ordinal
+                // Cached by the previous wallet (e.g. before a restart and a recovery phrase restore)
+                onBlocking { get(CrowdNodeConfig.NO_SIGN_UP_SCAN_FINGERPRINT) } doReturn walletAFingerprint
+            }
+            walletData.stub {
+                // As many transactions as wallet A, but a different set of them
+                on { transactionSetFingerprint() } doReturn walletBFingerprint
+            }
+            val mockFullSet = mock<FullCrowdNodeSignUpTxSet> {
+                on { welcomeToApiResponse } doReturn CrowdNodeWelcomeToApiResponse(networkId).apply {
+                    matches(welcomeResponseTx.toTxInfo())
+                }
+            }
+            blockchainApi.stub {
+                on { getFullSignUpTxSet() } doReturn mockFullSet
+            }
+            val api = CrowdNodeApiAggregator(
+                webApi, blockchainApi, walletData, mock(), mock(),
+                localConfig, globalConfig, mock(), mock(), mock()
+            )
+            api.restoreStatus()
+
+            verify(blockchainApi).getFullSignUpTxSet()
+            assertEquals(SignUpStatus.Finished, api.signUpStatus.value)
+            verify(localConfig, never()).set(eq(CrowdNodeConfig.NO_SIGN_UP_SCAN_FINGERPRINT), any())
+        }
+    }
+
+    @Test
+    fun restoreStatus_noWalletFingerprint_scansAndDoesNotCache() {
+        runBlocking {
+            localConfig.stub {
+                onBlocking { get(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS) } doReturn OnlineAccountStatus.None.ordinal
+                onBlocking { get(CrowdNodeConfig.NO_SIGN_UP_SCAN_FINGERPRINT) } doReturn ""
+            }
+            walletData.stub {
+                on { transactionSetFingerprint() } doReturn ""
+            }
+            val api = CrowdNodeApiAggregator(
+                webApi, blockchainApi, walletData, mock(), mock(),
+                localConfig, globalConfig, mock(), mock(), mock()
+            )
+            api.restoreStatus()
+
+            verify(blockchainApi).getFullSignUpTxSet()
+            verify(localConfig, never()).set(eq(CrowdNodeConfig.NO_SIGN_UP_SCAN_FINGERPRINT), any())
+        }
+    }
+
+    @Test
+    fun restoreStatus_cacheWriteFails_stillRestores() {
+        runBlocking {
+            localConfig.stub {
+                onBlocking { get(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS) } doReturn OnlineAccountStatus.None.ordinal
+                onBlocking { set(eq(CrowdNodeConfig.NO_SIGN_UP_SCAN_FINGERPRINT), any()) } doAnswer {
+                    throw IOException("No space left on device")
+                }
+            }
+            walletData.stub {
+                on { transactionSetFingerprint() } doReturn walletAFingerprint
+            }
+            val api = CrowdNodeApiAggregator(
+                webApi, blockchainApi, walletData, mock(), mock(),
+                localConfig, globalConfig, mock(), mock(), mock()
+            )
+            api.restoreStatus()
+
+            assertEquals(SignUpStatus.NotStarted, api.signUpStatus.value)
+            verify(localConfig).set(CrowdNodeConfig.NO_SIGN_UP_SCAN_FINGERPRINT, walletAFingerprint)
+            // The failed write didn't abort the restore: it went on to read the saved online status
+            verify(localConfig).get(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS)
+        }
+    }
+
+    @Test
+    fun restoreStatus_cacheWriteFails_stillRestoresLinkedOnlineAccount() {
+        runBlocking {
+            localConfig.stub {
+                onBlocking { get(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS) } doReturn OnlineAccountStatus.Linking.ordinal
+                onBlocking { set(eq(CrowdNodeConfig.NO_SIGN_UP_SCAN_FINGERPRINT), any()) } doAnswer {
+                    throw IOException("No space left on device")
+                }
+            }
+            walletData.stub {
+                on { transactionSetFingerprint() } doReturn walletAFingerprint
+            }
+            val primaryAddress = "yd9CUc7wvATUS3GfdmcAhRZhG7719jhNf9"
+            webApi.stub {
+                onBlocking { isApiAddressInUse("yihMSMoesHX1JhbntTiV5Nptf5NLrmFMCu") } doReturn
+                    Pair(true, primaryAddress)
+            }
+            val api = CrowdNodeApiAggregator(
+                webApi, blockchainApi, walletData, mock(), mock(),
+                localConfig, globalConfig, mock(), mock(), mock()
+            )
+            api.restoreStatus()
+
+            verify(localConfig).set(CrowdNodeConfig.NO_SIGN_UP_SCAN_FINGERPRINT, walletAFingerprint)
+            // The saved Linking account at the saved address was checked and moved on to Validating
+            verify(webApi).isApiAddressInUse("yihMSMoesHX1JhbntTiV5Nptf5NLrmFMCu")
+            assertEquals(OnlineAccountStatus.Validating, api.onlineAccountStatus.value)
+            assertEquals("yihMSMoesHX1JhbntTiV5Nptf5NLrmFMCu", api.accountAddress)
+            assertEquals(primaryAddress, api.primaryAddress)
+        }
+    }
+
+    @Test
+    fun restoreStatus_possibleSignUpUnconfirmed_doesNotCacheAndRestoresLater() {
+        runBlocking {
+            localConfig.stub {
+                onBlocking { get(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS) } doReturn OnlineAccountStatus.None.ordinal
+            }
+            walletData.stub {
+                on { transactionSetFingerprint() } doReturn walletAFingerprint
+            }
+            val possibleWelcome = PossibleWelcomeResponse(null)
+            assertTrue(possibleWelcome.matches(welcomeResponseTx.toTxInfo()))
+            val mockFullSet = mock<FullCrowdNodeSignUpTxSet> {
+                on { possibleWelcomeToApiResponse } doReturn possibleWelcome
+            }
+            blockchainApi.stub {
+                on { getFullSignUpTxSet() } doReturn mockFullSet
+            }
+            // CrowdNode's index is behind the chain at first, then catches up
+            webApi.stub {
+                onBlocking { fromCrowdNode(any(), any()) }.doReturn(false, true)
+            }
+            val api = CrowdNodeApiAggregator(
+                webApi, blockchainApi, walletData, mock(), mock(),
+                localConfig, globalConfig, mock(), mock(), mock()
+            )
+
+            api.restoreStatus()
+
+            assertEquals(SignUpStatus.NotStarted, api.signUpStatus.value)
+            verify(localConfig, never()).set(eq(CrowdNodeConfig.NO_SIGN_UP_SCAN_FINGERPRINT), any())
+
+            api.restoreStatus()
+
+            assertEquals(SignUpStatus.Finished, api.signUpStatus.value)
+            verify(blockchainApi, times(2)).getFullSignUpTxSet()
+            verify(localConfig, never()).set(eq(CrowdNodeConfig.NO_SIGN_UP_SCAN_FINGERPRINT), any())
         }
     }
 

@@ -87,6 +87,8 @@ import org.conscrypt.Conscrypt;
 import org.dash.wallet.common.AutoLogoutTimerHandler;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.InteractionAwareActivity;
+import de.schildbach.wallet.data.TransactionSetFingerprint;
+import de.schildbach.wallet.data.WalletChangeCounter;
 import de.schildbach.wallet.data.WalletData;
 import org.dash.wallet.common.data.OnboardingState;
 import org.dash.wallet.common.data.WalletUIConfig;
@@ -224,6 +226,7 @@ public class WalletApplication extends MultiDexApplication
 
     private File walletFile;
     private Wallet wallet;
+    private final WalletChangeCounter walletChangeCounter = new WalletChangeCounter();
 
     /**
      * The wallet whose primary is on disk: the one parsed from
@@ -3617,6 +3620,19 @@ public class WalletApplication extends MultiDexApplication
         return filteredTransactions;
     }
 
+    @Override
+    @NonNull
+    public String transactionSetFingerprint() {
+        awaitDeferredWalletLoad();
+        return TransactionSetFingerprint.of(wallet);
+    }
+
+    @Override
+    public long walletChangeCount() {
+        awaitDeferredWalletLoad();
+        return walletChangeCounter.count(wallet);
+    }
+
     @NonNull
     @Override
     public Collection<TransactionWrapper> wrapAllTransactions(@NonNull TransactionWrapperFactory... wrapperFactories) {
@@ -3626,7 +3642,28 @@ public class WalletApplication extends MultiDexApplication
                 wallet.getTransactions(true),
                 wallet,
                 Constants.NETWORK_PARAMETERS,
-                wrapperFactories
+                wrapperFactories,
+                true
+        );
+    }
+
+    @NonNull
+    @Override
+    public Collection<TransactionWrapper> wrapMatchingTransactions(@NonNull TransactionWrapperFactory... wrapperFactories) {
+        awaitDeferredWalletLoad();
+        // Read once: a wipe or replacement can change the field, and the transactions must be
+        // classified against the wallet they came from
+        Wallet wallet = this.wallet;
+        if (wallet == null) {
+            return Collections.emptyList();
+        }
+        org.bitcoinj.core.Context.propagate(Constants.CONTEXT);
+        return TransactionWrapperHelper.INSTANCE.wrapTransactions(
+                wallet.getTransactions(true),
+                wallet,
+                Constants.NETWORK_PARAMETERS,
+                wrapperFactories,
+                false
         );
     }
 
