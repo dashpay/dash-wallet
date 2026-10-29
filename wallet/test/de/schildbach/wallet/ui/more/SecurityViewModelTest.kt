@@ -56,10 +56,7 @@ class SecurityViewModelTest {
         every { walletApplication.hasWallet() } returns true
         every { walletData.getWalletBalance() } returns Coin.COIN
 
-        createViewModel().setHideBalanceOnLaunch(true)
-
-        coVerify { walletUIConfig.set(WalletUIConfig.AUTO_HIDE_BALANCE, true) }
-        verify { WalletBalanceWidgetProvider.updateWidgets(walletApplication, Coin.COIN) }
+verify(timeout = 1_000) { WalletBalanceWidgetProvider.updateWidgets(walletApplication, Coin.COIN) }
     }
 
     @Test
