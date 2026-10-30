@@ -107,6 +107,8 @@ class ConnectionExpiryTest {
         assertEquals(20L, recent.getLong("updatedAt"))
         records.value = listOf(old, encryption, recent, grant("app", 8_000, state = "pending").put("updatedAt", 5_000L))
         assertEquals(5_000L, repository.observeConnections { 6_000L }.first().single().updatedAt)
+        // A newer login still registering may already hold live access, so the old expiry does not win.
+        assertEquals(ConnectionStatus.APPROVED, repository.observeConnections { 6_000L }.first().single().status)
         records.value = listOf(grant("app", 9_000, state = "disabled").put("updatedAt", 6_000L)
             .put("permanentRevocationConfirmed", true).put("appRevocationConfirmed", true))
         val disconnected = repository.observeConnections { 10_000L }.first().single()

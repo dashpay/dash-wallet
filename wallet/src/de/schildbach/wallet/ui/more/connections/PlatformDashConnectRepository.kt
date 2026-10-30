@@ -58,8 +58,11 @@ class PlatformDashConnectRepository @Inject constructor(
                 DAppConnection(app, connectionDisplayName(latest.optString("label")), "",
                     when {
                         active -> ConnectionStatus.ACTIVE
-                        // Expired keys stay enabled until revoked, so this is not a disconnection.
-                        authenticationExpiries.isNotEmpty() -> ConnectionStatus.EXPIRED
+                        // Expired keys stay enabled until revoked, so this is not a disconnection. A login
+                        // still registering, or a revocation not yet confirmed, may hold live access.
+                        authenticationExpiries.isNotEmpty() && grants.all { it.optString("state") == "active" ||
+                            (it.optString("state") == "disabled" && it.optBoolean("permanentRevocationConfirmed") &&
+                                it.optBoolean("appRevocationConfirmed")) } -> ConnectionStatus.EXPIRED
                         // Revoked request keys do not prove that the app has no surviving access.
                         grants.any { it.optString("state") != "disabled" || !it.optBoolean("permanentRevocationConfirmed") ||
                             !it.optBoolean("appRevocationConfirmed") } -> ConnectionStatus.APPROVED

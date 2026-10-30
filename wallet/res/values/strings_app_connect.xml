@@ -61,6 +61,7 @@
     <string name="dash_connect_expired_on">Connection expired</string>
     <string name="dash_connect_disconnected_on">Connection disconnected</string>
     <string name="dash_connect_reconnect">Reconnect</string>
+    <string name="dash_connect_legacy_remove_warning">This older connection has no recorded keys. Removing it from this list does not revoke any access it may have on Dash Platform.</string>
     <string name="dash_connect_shared_profile_title">Shared profile access</string>
     <plurals name="dash_connect_shared_profile_message">
         <item quantity="one">%1$d key can edit your DashPay profile but isn’t linked to any connection here</item>

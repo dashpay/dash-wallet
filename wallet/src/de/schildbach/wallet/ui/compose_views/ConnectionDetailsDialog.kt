@@ -41,6 +41,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -56,6 +59,7 @@ import androidx.fragment.app.viewModels
 import de.schildbach.wallet.ui.more.connections.AppCapability
 import de.schildbach.wallet.ui.more.connections.AppCapabilityKind
 import de.schildbach.wallet.ui.more.connections.ConnectionDetailsState
+import de.schildbach.wallet.ui.more.connections.ConnectionRecordsStatus
 import de.schildbach.wallet.ui.more.connections.ConnectionStatus
 import de.schildbach.wallet.ui.more.connections.ConnectionTerms
 import de.schildbach.wallet.ui.more.connections.ConnectionsFragment
@@ -129,9 +133,14 @@ class ConnectionDetailsDialog : OffsetDialogFragment(R.layout.dialog_compose_con
     private fun DetailsContent(modifier: Modifier) {
         val uiState by viewModel.uiState.collectAsState()
         val details = uiState.selectedConnection
-        val connection = details?.let { selected -> uiState.connections.firstOrNull { it.id == selected.connectionId } }
+        val listed = details?.let { selected -> uiState.connections.firstOrNull { it.id == selected.connectionId } }
+        // A reload (e.g. on resume) empties the list while it loads; keep showing the last row meanwhile.
+        var lastListed by remember { mutableStateOf<DAppConnection?>(null) }
+        if (listed != null) lastListed = listed
+        val reloading = uiState.recordsStatus == ConnectionRecordsStatus.LOADING
+        val connection = listed ?: lastListed?.takeIf { reloading && it.id == details?.connectionId }
 
-        // Closed elsewhere, or the connection left the list (e.g. removed): nothing to show.
+        // Closed elsewhere, or a finished read no longer has the connection (e.g. removed): nothing to show.
         LaunchedEffect(details == null, connection == null) {
             if (details == null || connection == null) {
                 viewModel.closeConnection()
@@ -220,6 +229,15 @@ internal fun ConnectionDetailsContent(
                 if (details.identityId.isNotBlank()) {
                     DetailRow(stringResource(R.string.dash_connect_identity), truncateMiddle(details.identityId))
                 }
+            }
+
+            // Removing an older connection only forgets it here; its Platform access, if any, stays.
+            if (connection.legacyOnly) {
+                Text(
+                    text = stringResource(R.string.dash_connect_legacy_remove_warning),
+                    style = MyTheme.Typography.BodyMedium,
+                    color = colors.textSecondary
+                )
             }
 
             when {

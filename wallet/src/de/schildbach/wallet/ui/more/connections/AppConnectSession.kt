@@ -685,9 +685,13 @@ internal class AppConnectSession(
     /** The terms the recorded keys grant, from local records only; null when no key is recorded. */
     suspend fun terms(app: String, expectedScope: String): ConnectionTerms? = withContext(Dispatchers.IO) {
         checkScope(expectedScope)
-        // Each login adds a grant record; the sheet describes the latest one, not every past login.
-        val keys = matchingRecords(expectedScope, app).maxByOrNull { it.optLong("updatedAt") }
-            ?.let { decodeKeys(it) }.orEmpty()
+        // Each login adds a grant record. Every one that may still authorize access counts; fully
+        // revoked logins are history, so they describe the connection only when nothing else is left.
+        val records = matchingRecords(expectedScope, app)
+        val live = records.filter { it.optString("state") != "disabled" ||
+            !it.optBoolean("permanentRevocationConfirmed") || !it.optBoolean("appRevocationConfirmed") }
+        val keys = live.ifEmpty { listOfNotNull(records.maxByOrNull { it.optLong("updatedAt") }) }
+            .flatMap { decodeKeys(it) }
         if (keys.isEmpty()) null else recordedTerms(keys)
     }
 

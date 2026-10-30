@@ -143,6 +143,7 @@ class ConnectionsViewModel @Inject constructor(
     private var walletUnlockCheck: () -> Boolean = { false }
     private var connectionsJob: Job? = null
     private var sharedKeysJob: Job? = null
+    private var detailsJob: Job? = null
     private var identityRetryJob: Job? = null
     private var walletLockJob: Job? = null
     private var walletLockGeneration: () -> Long = { 0L }
@@ -576,8 +577,10 @@ class ConnectionsViewModel @Inject constructor(
     /** Opens the details sheet for [connection] and loads what its recorded keys allow. */
     fun openConnection(connection: DAppConnection) {
         if (!isWalletUnlocked || !canUseConnections) return
+        // Each opening owns its load, so a slower earlier load cannot overwrite a newer one.
+        detailsJob?.cancel()
         _uiState.update { it.copy(selectedConnection = ConnectionDetailsState(connection.id)) }
-        viewModelScope.launch {
+        detailsJob = viewModelScope.launch {
             val loaded = try {
                 requireConnectionRecords()
                 val terms = repository.connectionTerms(connection.id, connection.scope)
@@ -612,7 +615,16 @@ class ConnectionsViewModel @Inject constructor(
     fun dismissSharedProfileKeys() {
         val keys = _uiState.value.sharedProfileKeys ?: return
         _uiState.update { it.copy(sharedProfileKeys = null) }
-        applicationScope.launch { repository.dismissSharedProfileKeys(keys) }
+        applicationScope.launch {
+            try {
+                repository.dismissSharedProfileKeys(keys)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                log.error("Cannot save dismissed DashPay profile keys", e)
+                // Not saved, so show the warning again rather than let it return unexplained later.
+                _uiState.update { if (it.sharedProfileKeys == null) it.copy(sharedProfileKeys = keys) else it }
+            }
+        }
     }
 
     fun revokeSharedProfileKeys() {
@@ -636,6 +648,7 @@ class ConnectionsViewModel @Inject constructor(
     }
 
     fun closeConnection() {
+        detailsJob?.cancel()
         _uiState.update { it.copy(selectedConnection = null) }
     }
 
