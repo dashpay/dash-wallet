@@ -152,7 +152,9 @@ internal fun firstUnmirroredKnownOutput(
  *  - Standard `direction == INTERNAL` with a net >= 0 — IMPOSSIBLE (an
  *    internal move pays a fee): a replayed block re-recorded it with its
  *    change alone (D-SDK-06), or an earlier recompute saw only some of its
- *    inputs' spent marks;
+ *    inputs' spent marks. A negative correction is never flagged again, so
+ *    the caller defers one until its payload facts are available and every
+ *    input is marked spent;
  *  - AssetLock `direction == INTERNAL` with net 0 (dashpay/platform#4412),
  *    and AssetLock `direction == INCOMING` — the same D-SDK-06 change-only
  *    replay. A corrected (OUTGOING) AssetLock is never flagged again, so the
@@ -914,7 +916,8 @@ internal class SdkTxStoreWalker(
                 // it pays a fee), so a correct row never matches these. A
                 // Standard INTERNAL row a recompute from only some of its
                 // inputs' spent marks left at net 0 stays flagged, so it is
-                // recomputed again once the rest land. An AssetLock is only
+                // recomputed again once the rest land. An AssetLock, and a
+                // Standard INTERNAL row whose recompute is negative, are only
                 // corrected once every input is marked (see the loop below).
                 (
                     it.typeKind == TX_TYPE_KIND_ASSET_LOCK &&
@@ -1099,6 +1102,33 @@ internal class SdkTxStoreWalker(
                             fact != null -> "${row.spentOwnedCount} of ${fact.inputCount} input(s) marked spent"
                             hex in needsFactsHexes -> "no payload facts to verify the TXO mirror is complete"
                             else -> "the mirror recompute is not negative, so its spent marks are incomplete"
+                        }
+                    )
+                }
+                continue
+            }
+            if (row.typeKind == TX_TYPE_KIND_STANDARD &&
+                row.record.direction == L1TxUiDirection.INTERNAL &&
+                (fundedOwned[hex] ?: 0L) - row.spentOwnedDuffs < 0L &&
+                (fact == null || row.spentOwnedCount < fact.inputCount)
+            ) {
+                // A Standard INTERNAL row corrected to a negative net is never
+                // flagged again, so, like an AssetLock, it is corrected only
+                // from complete evidence. Without payload facts neither the
+                // completeness guard nor the INTERNAL check can run, and the
+                // row would be stored as OUTGOING for good. An internal move
+                // spends only the wallet's own coins, so fewer confirmed spent
+                // marks than inputs means the net would be short of the rest.
+                // A recompute that is not negative is still applied: the row
+                // stays flagged. Serve the stored record and retry next pass.
+                if (reattributionDeferredLogged.add(hex)) {
+                    log.info(
+                        "INTERNAL reattribution of {} deferred: {}; serving the stored record",
+                        hex,
+                        if (fact != null) {
+                            "${row.spentOwnedCount} of ${fact.inputCount} input(s) marked spent"
+                        } else {
+                            "no payload facts to verify the TXO mirror is complete"
                         }
                     )
                 }

@@ -1303,6 +1303,93 @@ class SdkTxStoreWalkerTest {
     }
 
     @Test
+    fun reattribution_internalWithoutPayloadFacts_isDeferredRatherThanStoredOutgoing() = runBlocking {
+        insertAccount(bip44Account, 0)
+        insertCoreAddress("bip44_r11", bip44Account)
+        insertCoreAddress("bip44_r12", bip44Account)
+        val funding = seedFundingBelowTheRescan(126, 10_194_077, "bip44_r11")
+
+        // A self-transfer, 342 fee — stored INTERNAL +0.10193735, every input
+        // marked, but its payload cannot be parsed yet.
+        val move = txid(127)
+        insertTx(move, direction = 2, netAmount = 10_193_735, payload = byteArrayOf(35), firstSeen = 1_700_000_600)
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ?", move, funding)
+        insertTxo(move, 0, 10_193_735, "bip44_r12")
+
+        // Without facts the INTERNAL check cannot run: the row would be stored
+        // OUTGOING and, its net then matching the mirror, never refetched.
+        queryLog.clear()
+        val byHex = HashMap<String, L1TxUiRecord>()
+        walker(payloadFacts = { null }).walkAll { page -> page.forEach { byHex[it.txidHex] = it } }
+        assertTrue(queryLog.none { it.startsWith("UPDATE transactions") })
+        assertEquals(Triple(2, 10_193_735L, null), storedShape(move))
+        val served = requireNotNull(byHex[displayHexOf(move)])
+        assertEquals(L1TxUiDirection.INTERNAL, served.direction)
+        assertEquals(10_193_735L, served.netAmountDuffs)
+
+        val facts: (ByteArray) -> TxPayloadFacts? = { payload ->
+            if (payload.firstOrNull()?.toInt() == 35) {
+                TxPayloadFacts(
+                    outputsTotalDuffs = 10_193_735,
+                    outputCount = 1,
+                    inputCount = 1,
+                    outputAddresses = listOf("bip44_r12")
+                )
+            } else {
+                null
+            }
+        }
+        walker(payloadFacts = facts).walkAll { }
+        assertEquals(Triple(2, -342L, 342L), storedShape(move))
+    }
+
+    @Test
+    fun reattribution_internalWithSomeInputsUnmarked_isNotStoredNegativeUntilEveryInputIsMarked() = runBlocking {
+        insertAccount(bip44Account, 0)
+        insertCoreAddress("bip44_r13", bip44Account)
+        insertCoreAddress("bip44_r14", bip44Account)
+        insertCoreAddress("bip44_r15", bip44Account)
+        insertCoreAddress("bip44_r16", bip44Account)
+        val first = seedFundingBelowTheRescan(128, 1_000_000, "bip44_r13")
+        val second = seedFundingBelowTheRescan(129, 100_000, "bip44_r14")
+        val third = seedFundingBelowTheRescan(130, 50_000, "bip44_r15")
+
+        // A three-input self-transfer, 150,000 fee — stored INTERNAL +0.01.
+        val move = txid(131)
+        insertTx(move, direction = 2, netAmount = 1_000_000, payload = byteArrayOf(36), firstSeen = 1_700_000_700)
+        insertTxo(move, 0, 1_000_000, "bip44_r16")
+        val facts: (ByteArray) -> TxPayloadFacts? = { payload ->
+            if (payload.firstOrNull()?.toInt() == 36) {
+                TxPayloadFacts(
+                    outputsTotalDuffs = 1_000_000,
+                    outputCount = 1,
+                    inputCount = 3,
+                    outputAddresses = listOf("bip44_r16")
+                )
+            } else {
+                null
+            }
+        }
+
+        // One mark: net 0, applied — the row stays flagged.
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ?", move, first)
+        walker(payloadFacts = facts).walkAll { }
+        assertEquals(Triple(2, 0L, null), storedShape(move))
+
+        // Two marks: −100,000 would never be flagged again, so nothing is
+        // written.
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ?", move, second)
+        queryLog.clear()
+        walker(payloadFacts = facts).walkAll { }
+        assertTrue(queryLog.none { it.startsWith("UPDATE transactions") })
+        assertEquals(Triple(2, 0L, null), storedShape(move))
+
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ?", move, third)
+        walker(payloadFacts = facts).walkAll { }
+        assertEquals(Triple(2, -150_000L, 150_000L), storedShape(move))
+    }
+
+    @Test
     fun reattribution_sendPayingAContact_isNotDeferredByTheContactsUnmirroredOutput() = runBlocking {
         insertAccount(bip44Account, 0)
         insertAccount(extAccount, 13)
