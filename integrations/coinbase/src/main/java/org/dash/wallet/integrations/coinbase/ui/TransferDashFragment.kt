@@ -80,6 +80,15 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
         .noCode().minDecimals(2).optionalDecimals()
     private var onBackPressedCallback: OnBackPressedCallback? = null
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        if (savedInstanceState == null) {
+            // A newly opened screen (a new nav entry), not one recreated after a rotation or
+            // process death: an earlier transfer's unknown outcome no longer blocks this one.
+            transferDashViewModel.startNewTransfer()
+        }
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         handleBackButtonPress()

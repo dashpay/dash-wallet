@@ -131,6 +131,21 @@ class PaymentOutcomeUnknownTest {
     }
 
     @Test
+    fun transferDash_outcomeUnknown_aNewlyOpenedTransferScreen_mayTransferAgain() = runTest {
+        // The view model is scoped to the whole Coinbase graph, so it outlives the transfer screen.
+        val viewModel = transferViewModel(SavedStateHandle())
+        viewModel.sendDash(Dash.valueOf(100_000), isEmptyWallet = false, checkConditions = false, session = null)
+        assertTrue(viewModel.paymentOutcomeUnknown.value)
+
+        // The user leaves and later opens the transfer screen afresh: a new transfer, not a retry.
+        viewModel.startNewTransfer()
+
+        assertFalse(viewModel.paymentOutcomeUnknown.value)
+        viewModel.sendDash(Dash.valueOf(100_000), isEmptyWallet = false, checkConditions = false, session = null)
+        coVerify(exactly = 2) { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any()) }
+    }
+
+    @Test
     fun transferDash_concurrentSends_onlyOneReachesTheWallet_andARetryableFailureAllowsAnother() = runTest {
         val gate = CompletableDeferred<Unit>()
         coEvery {

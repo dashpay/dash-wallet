@@ -65,6 +65,16 @@ class TransferDashViewModel @Inject constructor(
     val paymentOutcomeUnknown: StateFlow<Boolean> =
         savedStateHandle.getStateFlow(KEY_PAYMENT_OUTCOME_UNKNOWN, false)
 
+    /**
+     * Called when a transfer screen is opened afresh (not recreated). This view model is scoped
+     * to the whole Coinbase graph and outlives the screen, but [paymentOutcomeUnknown] belongs to
+     * the transfer it was raised for: a new transfer starts clear, while a recreated screen keeps
+     * refusing the uncertain one.
+     */
+    fun startNewTransfer() {
+        savedStateHandle[KEY_PAYMENT_OUTCOME_UNKNOWN] = false
+    }
+
     /** Held while one send is in progress (see [sendDash]). */
     private val sendInFlight = AtomicBoolean(false)
 
