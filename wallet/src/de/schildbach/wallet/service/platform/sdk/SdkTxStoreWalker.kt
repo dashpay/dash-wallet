@@ -139,16 +139,27 @@ internal fun firstUnmirroredKnownOutput(
  * "Received" for money that was sent away, and no reconcile could ever fix
  * them because the "definitive" record itself was wrong.
  *
- * The caller invokes this for Standard (classic) records that demonstrably
- * SPENT the wallet's own TXOs ([spentOwnedDuffs] > 0 over the
- * foreign-excluded mirror), in two stored shapes:
- *  - `direction == INCOMING` — IMPOSSIBLE outright (an incoming tx never
- *    spends our outputs);
- *  - `direction == OUTGOING` — possibly correct, but the engine can persist
- *    a multi-account spend with the net of only ONE account's slice
+ * The caller invokes this for records that demonstrably SPENT the wallet's
+ * own TXOs ([spentOwnedDuffs] > 0 over the foreign-excluded mirror), in
+ * these stored shapes:
+ *  - Standard `direction == INCOMING` — IMPOSSIBLE outright (an incoming tx
+ *    never spends our outputs);
+ *  - Standard `direction == OUTGOING` — possibly correct, but the engine can
+ *    persist a multi-account spend with the net of only ONE account's slice
  *    (dashpay/platform#4387; S22 field wallet: a 15-input sweep stored as
  *    −0.005 instead of −2.61920199). The recompute below yields the
- *    whole-wallet net; an already-correct row round-trips unchanged.
+ *    whole-wallet net; an already-correct row round-trips unchanged;
+ *  - Standard `direction == INTERNAL` with a net >= 0 — IMPOSSIBLE (an
+ *    internal move pays a fee): a replayed block re-recorded it with its
+ *    change alone (D-SDK-06), or an earlier recompute saw only some of its
+ *    inputs' spent marks. A negative correction is never flagged again, so
+ *    the caller defers one until its payload facts are available and every
+ *    input is marked spent;
+ *  - AssetLock `direction == INTERNAL` with net 0 (dashpay/platform#4412),
+ *    and AssetLock `direction == INCOMING` — the same D-SDK-06 change-only
+ *    replay. A corrected (OUTGOING) AssetLock is never flagged again, so the
+ *    caller defers one until its payload facts are available and every
+ *    input is marked spent.
  * The truth is recomputed from the TXO mirror's (correct, verified) linkage:
  *
  *  - `net = fundedOwned − spentOwned` — the wallet's own Σout−Σin, the same
@@ -261,9 +272,10 @@ internal fun needsFeeRecovery(record: L1TxUiRecord): Boolean =
 
 /**
  * Rust `TransactionType` discriminant for a classic (Standard) transaction —
- * the ONLY kind [reattributeIncomingRecord] is applied to. Special kinds
- * (asset lock/unlock, provider registrations, coinbase) keep their stored
- * record untouched: their display shape is owned by the asset-lock kind
+ * the main kind [reattributeIncomingRecord] is applied to; asset locks are
+ * admitted only in their known-bad shapes ([TX_TYPE_KIND_ASSET_LOCK]). Other
+ * special kinds (asset unlock, provider registrations, coinbase) keep their
+ * stored record untouched: their display shape is owned by the asset-lock kind
  * resolver / special-kind paths, and `0xFF` (the not-yet-populated sentinel)
  * could be any of them.
  */
@@ -278,9 +290,10 @@ internal const val TX_TYPE_KIND_COINJOIN = 1
 
 /**
  * Rust `TransactionType` discriminant for an AssetLock (credit-funding)
- * transaction — admitted to reattribution ONLY in its known-bad
- * INTERNAL/net-0 persisted shape (dashpay/platform#4412); every other
- * special kind stays excluded per the note above.
+ * transaction — admitted to reattribution ONLY in its known-bad persisted
+ * shapes: INTERNAL/net-0 (dashpay/platform#4412), and INCOMING with spent
+ * evidence (a replayed block recorded it as its change alone, D-SDK-06);
+ * every other special kind stays excluded per the note above.
  */
 internal const val TX_TYPE_KIND_ASSET_LOCK = 6
 
@@ -663,8 +676,8 @@ internal class SdkTxStoreWalker(
 
     /**
      * Apply [reattributeIncomingRecord] to the rows whose stored shape is
-     * impossible (a Standard tx recorded INCOMING that spent the wallet's own
-     * TXOs). Costs nothing when no row is flagged; a flagged set pays one
+     * impossible (a Standard or AssetLock tx recorded INCOMING that spent the
+     * wallet's own TXOs, or a Standard INTERNAL one with a positive net). Costs nothing when no row is flagged; a flagged set pays one
      * chunked funded-split aggregate plus (for the net<0 subset only) one
      * chunked payload fetch (internal-vs-send discrimination and fee recovery
      * need the tx's real shape — see [TxPayloadFacts]).
@@ -680,9 +693,12 @@ internal class SdkTxStoreWalker(
      *
      * A computed correction is persisted into the SDK's own `transactions`
      * row ([persistCorrections]), so the corrected row itself is the durable
-     * per-record "already attributed" flag: on every later pass — this
-     * process or any future launch — the row no longer matches the flag
-     * condition (`direction == INCOMING`) and costs NOTHING beyond the
+     * per-record "already attributed" state: on every later pass — this
+     * process or any future launch — it either no longer matches its flag
+     * arm (an INCOMING row becomes OUTGOING or INTERNAL; an INTERNAL row with
+     * a net >= 0 becomes negative), or it is a Standard OUTGOING row whose
+     * stored net equals the mirror recompute, which skips the payload fetch
+     * and is not persisted. Either way it costs NOTHING beyond the
      * correlated subqueries every row pays. Before this, the same ~1.4k
      * provably-wrong records were re-flagged, re-aggregated and re-parsed on
      * EVERY reconcile walk of every launch (field log: three identical
@@ -891,6 +907,29 @@ internal class SdkTxStoreWalker(
                         it.record.netAmountDuffs == 0L &&
                         it.spentOwnedDuffs > 0L
                     ) ||
+                // Rows a replayed block re-recorded with its change alone
+                // (D-SDK-06): a rescan resumed after a process death records
+                // a spend whose coin was funded below the rescan as an
+                // incoming payment of its change, because the engine reloaded
+                // without that coin. An incoming tx never spends our coins,
+                // and an internal move never gains value (nor breaks even:
+                // it pays a fee), so a correct row never matches these. A
+                // Standard INTERNAL row a recompute from only some of its
+                // inputs' spent marks left at net 0 stays flagged, so it is
+                // recomputed again once the rest land. An AssetLock, and a
+                // Standard INTERNAL row whose recompute is negative, are only
+                // corrected once every input is marked (see the loop below).
+                (
+                    it.typeKind == TX_TYPE_KIND_ASSET_LOCK &&
+                        it.record.direction == L1TxUiDirection.INCOMING &&
+                        it.spentOwnedDuffs > 0L
+                    ) ||
+                (
+                    it.typeKind == TX_TYPE_KIND_STANDARD &&
+                        it.record.direction == L1TxUiDirection.INTERNAL &&
+                        it.record.netAmountDuffs >= 0L &&
+                        it.spentOwnedDuffs > 0L
+                    ) ||
                 // CoinJoin rounds persisted "income-only" (rust-dashcore#979
                 // shape — see [recomputeCoinJoinRecordNet]). Flagged on the
                 // STRUCTURAL condition (kind + direction + confirmed spent
@@ -1001,10 +1040,18 @@ internal class SdkTxStoreWalker(
             val args = ArrayList<Any?>(1 + chunk.size)
             args.add(walletId)
             args.addAll(chunk)
+            // A contact's watch-only (DIP-15 external) address is left out too:
+            // the store does not mirror outputs paid to it (0 rows on 94 such
+            // addresses in both 2026-10-28 restore stores), so counting it as
+            // "known" deferred every payment to a contact forever. A row for it,
+            // where a store does write one, is foreign and never moves the
+            // owned net, so its absence cannot make the recompute wrong.
             rawQuery(
                 "SELECT ca.address FROM core_addresses ca " +
                     "JOIN accounts a ON a.id = ca.accountId " +
-                    "WHERE a.walletId = ? AND ca.address IN ($placeholders)",
+                    "WHERE a.walletId = ? " +
+                    "AND a.accountType != ${SdkTxContactResolver.ACCOUNT_TYPE_DASHPAY_EXTERNAL} " +
+                    "AND ca.address IN ($placeholders)",
                 args.toTypedArray()
             ) { c -> while (c.moveToNext()) knownWalletAddresses += c.getString(0) }
         }
@@ -1031,6 +1078,58 @@ internal class SdkTxStoreWalker(
                         "CoinJoin net recompute of {} deferred: no payload facts to verify the TXO " +
                             "mirror is complete; serving the stored record",
                         hex
+                    )
+                }
+                continue
+            }
+            if (row.typeKind == TX_TYPE_KIND_ASSET_LOCK &&
+                (fact == null || row.spentOwnedCount < fact.inputCount)
+            ) {
+                // An AssetLock corrected to OUTGOING is never flagged again,
+                // so it is corrected only from complete evidence. Without
+                // payload facts the completeness guard cannot run (a missing
+                // change row would stamp −(all inputs)); none are fetched
+                // while the recompute is not negative, which an asset lock's
+                // never is once complete. The wallet funds every input of its
+                // own asset lock, so fewer confirmed spent marks than inputs
+                // means some have not landed yet, and the net would be short
+                // of them. Serve the stored record and retry next pass.
+                if (reattributionDeferredLogged.add(hex)) {
+                    log.info(
+                        "AssetLock reattribution of {} deferred: {}; serving the stored record",
+                        hex,
+                        when {
+                            fact != null -> "${row.spentOwnedCount} of ${fact.inputCount} input(s) marked spent"
+                            hex in needsFactsHexes -> "no payload facts to verify the TXO mirror is complete"
+                            else -> "the mirror recompute is not negative, so its spent marks are incomplete"
+                        }
+                    )
+                }
+                continue
+            }
+            if (row.typeKind == TX_TYPE_KIND_STANDARD &&
+                row.record.direction == L1TxUiDirection.INTERNAL &&
+                (fundedOwned[hex] ?: 0L) - row.spentOwnedDuffs < 0L &&
+                (fact == null || row.spentOwnedCount < fact.inputCount)
+            ) {
+                // A Standard INTERNAL row corrected to a negative net is never
+                // flagged again, so, like an AssetLock, it is corrected only
+                // from complete evidence. Without payload facts neither the
+                // completeness guard nor the INTERNAL check can run, and the
+                // row would be stored as OUTGOING for good. An internal move
+                // spends only the wallet's own coins, so fewer confirmed spent
+                // marks than inputs means the net would be short of the rest.
+                // A recompute that is not negative is still applied: the row
+                // stays flagged. Serve the stored record and retry next pass.
+                if (reattributionDeferredLogged.add(hex)) {
+                    log.info(
+                        "INTERNAL reattribution of {} deferred: {}; serving the stored record",
+                        hex,
+                        if (fact != null) {
+                            "${row.spentOwnedCount} of ${fact.inputCount} input(s) marked spent"
+                        } else {
+                            "no payload facts to verify the TXO mirror is complete"
+                        }
                     )
                 }
                 continue
