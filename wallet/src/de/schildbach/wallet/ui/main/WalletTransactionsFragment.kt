@@ -115,16 +115,6 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
     private var cacheHasRows: Boolean = false
 
     /**
-     * True once liveAdapter's loadStateFlow has reported a genuine [LoadState.Loading] refresh.
-     * The empty placeholder PagingData the live flow emits before the Room-backed Pager (or
-     * before a filter's new PagingSource) actually runs never goes through a Loading phase — there
-     * is nothing to load — so this distinguishes that placeholder's immediate NotLoading from a
-     * real (possibly empty) answer, entirely from this one loadStateFlow collector's own history:
-     * no cross-coroutine signal to race against.
-     */
-    private var liveRefreshSeenLoading: Boolean = false
-
-    /**
      * One "still syncing" invite notice per launch. The provisional
      * NOT_SYNCED verdict can be re-reached on every sync-state emission,
      * and the notice is informational — repeating it would be a nag.
@@ -158,7 +148,6 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         // into the fresh ConcatAdapter(header, cacheAdapter) below and blocks the new swap forever.
         cacheAdapterAttached = true
         cacheHasRows = false
-        liveRefreshSeenLoading = false
 
         val clickHandler = { rowView: HistoryRowView, _: Int, isProfileClick: Boolean ->
             viewLifecycleOwner.lifecycleScope.launch {
@@ -417,23 +406,24 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
             liveAdapter.loadStateFlow
                 .distinctUntilChanged()
                 .collectLatest { loadStates ->
-                    if (loadStates.refresh is LoadState.Loading) {
-                        liveRefreshSeenLoading = true
-                    }
-
                     // Swap cacheAdapter → liveAdapter inside the same ConcatAdapter as soon as the
                     // live (filter-aware) Pager has its first settled answer for the current
                     // filter — whether that answer is some rows or none. The unfiltered cache
                     // snapshot must not keep deciding what's on screen once the live data is in,
                     // or a filter matching nothing would stay masked by the cache's stale content.
-                    // liveRefreshSeenLoading gates out the transient PagingData.empty() placeholder
-                    // the live flow emits before the Room-backed Pager starts — it never passes
-                    // through Loading (there is nothing to load) — without it this would swap away
-                    // from the cache before the live side has anything real to show. Keeping one
-                    // ConcatAdapter instance avoids the "cannot find wrapper" crash from
-                    // ConcatAdapterController.
-                    if (loadStates.refresh is LoadState.NotLoading &&
-                        liveRefreshSeenLoading && cacheAdapterAttached) {
+                    // Gated on viewModel.transactionsLoaded instead of a per-view "seen Loading"
+                    // latch: that latch is reset per view but a late subscriber to the singleton
+                    // service's cachedIn() Pager (e.g. this view recreated after a bottom-nav tab
+                    // swap, once the Pager has already settled once) gets a synthesized catch-up
+                    // Insert.Refresh carrying the current settled LoadStates and never replays the
+                    // historical Loading transition, so the latch could never flip and the swap
+                    // would never fire. transactionsLoaded is flipped exactly when the service's
+                    // data source becomes authoritative and is not reset per view, so a late
+                    // subscriber reads the right value immediately. Keeping one ConcatAdapter
+                    // instance avoids the "cannot find wrapper" crash from ConcatAdapterController.
+                    if (cacheAdapterAttached &&
+                        loadStates.refresh is LoadState.NotLoading &&
+                        viewModel.transactionsLoaded.value) {
                         log.info("STARTUP swapping to live adapter: {} items at {}",
                             liveAdapter.itemCount, System.currentTimeMillis())
                         val lm = binding.walletTransactionsList.layoutManager as LinearLayoutManager
@@ -448,7 +438,8 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                     val cacheHasItems = cacheAdapterAttached && cacheHasRows
                     // Only show the loading spinner when there's nothing to display yet.
                     val isLoading = isRefreshing && liveAdapter.itemCount == 0 && !cacheHasItems
-                    val isEmpty = loadStates.refresh is LoadState.NotLoading &&
+                    val isEmpty = viewModel.transactionsLoaded.value &&
+                        loadStates.refresh is LoadState.NotLoading &&
                         liveAdapter.itemCount == 0 && !cacheHasItems
 
                     if (!isRefreshing && liveAdapter.itemCount > 0 && firstPageLoadStartTime > 0L) {

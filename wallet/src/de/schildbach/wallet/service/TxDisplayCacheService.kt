@@ -286,9 +286,9 @@ class TxDisplayCacheService @Inject constructor(
                     _currentPagingSource.value?.invalidate()
                 } else if (txDisplayCacheDao.getCount() > 0) {
                     _liveFilterFlag.value = filter.direction.toFilterFlag()
+                    initializeFactoriesFromCache()
                     _txDataSource.value = TxDataSource.RoomLive
                     _transactionsLoaded.value = true
-                    initializeFactoriesFromCache()
                 } else {
                     rebuildWrappedList(filter)
                 }
