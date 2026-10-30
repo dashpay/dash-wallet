@@ -52,6 +52,7 @@ import org.bitcoinj.wallet.CoinSelector
 import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.BlockchainState
+import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.money.Fiat
 import org.dash.wallet.common.services.BlockchainStateProvider
@@ -602,6 +603,27 @@ class ShieldedTransferViewModelTest {
         coVerify(exactly = 1) { shieldedService.shieldFromWallet(any()) }
     }
 
+    @Test
+    fun maxClick_fiatMode_showsTwoDecimalsAndTypingClearsMaxSelected() = runTest(dispatcher) {
+        // MO-1111 review round (HashEngineering): a fiat-mode Max tap must show 2 decimals
+        // like the rest of the app, not raw conversion precision (previously "$1.065892"),
+        // and typing afterwards must clear maxSelected.
+        every { exchangeRates.observeExchangeRate(any()) } returns flowOf(ExchangeRate("USD", "100.0099"))
+        val vm = viewModel()
+
+        vm.onCurrencySelected(dashMode = false)
+        vm.onMaxClick()
+
+        // 3.00 DASH (the mocked wallet balance) @ $100.0099 = $300.0297 exactly
+        assertEquals("300.03", vm.uiState.value.amountText)
+        assertTrue(vm.uiState.value.maxSelected)
+        assertEquals(Dash.parse("3.00"), vm.uiState.value.amount)
+        assertFalse(vm.uiState.value.insufficientFunds)
+
+        vm.onKeyInput("1")
+        assertFalse(vm.uiState.value.maxSelected)
+    }
+
     // ── AC3: L1 sync gate ───────────────────────────────────────────────
 
     @Test
@@ -866,58 +888,32 @@ class ShieldedTransferViewModelTest {
     }
 
     @Test
-    fun isMaxSpend_fiatMode_recognizesMaxTapDespiteCoinFiatRoundTripTruncation() {
-        // MO-1111 pre-review follow-up: dashj's ExchangeRate (coinToFiat/fiatToCoin) truncates
-        // on BOTH legs, so round-tripping a non-round balance Dash -> fiat -> Dash can land a
-        // duff short of the original even though onMaxClick writes an exact, lossless fiat
-        // string (Fiat.toKeypadString()) — reproduced below: 2.34567891 DASH at $100.0099/DASH
-        // round-trips to 234567890 duffs, one short of the original 234567891. isMaxSpend must
-        // therefore compare the parsed FIAT values (one forward conversion on each side, no
-        // round trip) rather than the re-derived DASH amount.
+    fun maxSelected_fiatMode_pinsAmountToBalanceDespiteCoinFiatRoundTripTruncation() {
+        // MO-1111 review round: dashj's ExchangeRate (coinToFiat/fiatToCoin) truncates on BOTH
+        // legs, so round-tripping a non-round balance Dash -> fiat -> Dash can land a duff short
+        // of the original (2.34567891 DASH at $100.0099/DASH round-trips to 234567890 duffs, one
+        // short). The old isMaxSpend heuristic worked around this by re-deriving intent from a
+        // fiat-value comparison; maxSelected instead pins `amount` straight to availableBalance,
+        // so it never depends on amountText round-tripping through fiat at all.
         val rate = Fiat.parseFiat("USD", "100.0099")
         val balance = Dash.parse("2.34567891")
-        val maxFiatText = balance.toFiatAt(rate)!!.toKeypadString()
 
         val afterMaxTap = ShieldedTransferUIState(
             dashMode = false,
             rate = rate,
             shieldedBalance = balance,
             direction = ShieldedTransferDirection.FromShielded,
-            amountText = maxFiatText
+            amountText = balance.toFiatAt(rate)!!.toDisplayNoCode(),
+            maxSelected = true
         )
-        // demonstrates why isMaxSpend must not compare amount == availableBalance in fiat mode
-        assertFalse(afterMaxTap.amount == afterMaxTap.availableBalance)
-        assertTrue(afterMaxTap.isMaxSpend)
+        assertEquals(balance, afterMaxTap.amount)
         assertFalse(afterMaxTap.insufficientFunds)
 
-        val typedLess = afterMaxTap.copy(amountText = "1.00")
-        assertFalse(typedLess.isMaxSpend)
-    }
-
-    @Test
-    fun isMaxSpend_fiatMode_recognizesATypedAmountThatTruncatesToTheFullBalanceInDash() {
-        // MO-1111 pre-review follow-up: the fiat-value comparison above is not a replacement for
-        // the plain Dash comparison, only an addition — fiatToCoin's own truncation can
-        // independently make an unrelated TYPED fiat amount convert to exactly availableBalance
-        // in Dash, even though that typed amount's OWN fiat value differs from the balance's
-        // rounded fiat value. Reproduced: a 0.03333333 DASH balance at $30/DASH is ~$0.9999999,
-        // but typing "1.00" truncates (fiatToCoin) to exactly 0.03333333 DASH — isMaxSpend must
-        // still recognize this as Max so the executor's fee-adjusted retry is available.
-        val rate = Fiat.parseFiat("USD", "30")
-        val balance = Dash.parse("0.03333333")
-        val typedExactInDash = ShieldedTransferUIState(
-            dashMode = false,
-            rate = rate,
-            shieldedBalance = balance,
-            direction = ShieldedTransferDirection.FromShielded,
-            amountText = "1.00"
-        )
-        assertEquals(typedExactInDash.availableBalance, typedExactInDash.amount)
-        // demonstrates why the fiat-value comparison alone would have missed it
-        assertFalse(
-            Fiat.parseFiat("USD", "1.00") == typedExactInDash.availableBalance.toFiatAt(rate)
-        )
-        assertTrue(typedExactInDash.isMaxSpend)
+        // typing clears the flag (exercised end-to-end via the ViewModel in
+        // maxClick_fiatMode_showsTwoDecimalsAndTypingClearsMaxSelected below); here, once
+        // cleared, the amount goes back to being parsed from amountText.
+        val typedAfter = afterMaxTap.copy(amountText = "1.00", maxSelected = false)
+        assertFalse(typedAfter.amount == balance)
     }
 
     // ── "You will transfer ~" hint — always DASH, both directions (user
