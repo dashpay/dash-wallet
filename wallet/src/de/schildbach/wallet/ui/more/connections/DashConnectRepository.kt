@@ -30,11 +30,14 @@ import javax.inject.Singleton
  *  - [APPROVED] — connection approved, awaiting login ("Scan the QR code to complete your login")
  *  - [ACTIVE] — session is active ("Touch to disconnect at any time")
  *  - [DISCONNECTED] — session ended ("Scan the QR code to log back in")
+ *  - [EXPIRED] — every authentication key passed its expiry but none was revoked, so they stay
+ *    enabled on Platform until the user disconnects
  */
 enum class ConnectionStatus {
     APPROVED,
     ACTIVE,
-    DISCONNECTED
+    DISCONNECTED,
+    EXPIRED
 }
 
 /**
@@ -148,6 +151,9 @@ interface DashConnectRepository {
     suspend fun disconnect(connectionId: String, scope: String? = null)
 
     suspend fun connectionDetails(connectionId: String, scope: String? = null): String = ""
+
+    /** What the recorded keys of a connection allow, read from local records only; null if none are recorded. */
+    suspend fun connectionTerms(connectionId: String, scope: String? = null): ConnectionTerms? = null
 
     /** Revoke before removal; the real repository retains the public grant audit record. */
     suspend fun removeConnection(connectionId: String, scope: String? = null)

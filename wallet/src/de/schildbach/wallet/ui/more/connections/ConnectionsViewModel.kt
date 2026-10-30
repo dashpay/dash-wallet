@@ -49,6 +49,33 @@ import javax.inject.Inject
 
 enum class ConnectionRecordsStatus { LOADING, READY, UNAVAILABLE, NO_IDENTITY }
 
+/** The Connections page tabs (Figma 40042:59884). */
+enum class ConnectionsTab {
+    ACTIVE,
+    DISCONNECTED,
+    EXPIRED;
+
+    /** Pending connections may still hold live keys, so they stay with the active ones. */
+    fun includes(connection: DAppConnection): Boolean = when (this) {
+        ACTIVE -> !connection.legacyOnly &&
+            (connection.status == ConnectionStatus.ACTIVE || connection.status == ConnectionStatus.APPROVED)
+        DISCONNECTED -> connection.legacyOnly || connection.status == ConnectionStatus.DISCONNECTED
+        EXPIRED -> !connection.legacyOnly && connection.status == ConnectionStatus.EXPIRED
+    }
+}
+
+/** The connection whose details sheet is open; the connection itself is read from the live list. */
+data class ConnectionDetailsState(
+    val connectionId: String,
+    val username: String = "",
+    val identityId: String = "",
+    val terms: ConnectionTerms? = null,
+    /** Key states and safety warnings from the recorded grants, e.g. incomplete local history. */
+    val notes: String? = null,
+    val isLoading: Boolean = true,
+    val error: String? = null
+)
+
 data class ConnectionsUIState(
     val connections: List<DAppConnection> = emptyList(),
     val recordsStatus: ConnectionRecordsStatus = ConnectionRecordsStatus.LOADING,
@@ -61,7 +88,9 @@ data class ConnectionsUIState(
     val pendingPurchase: TokenPurchaseApproval? = null,
     val purchaseStatus: TokenPurchaseStatus = TokenPurchaseStatus.READY,
     val purchaseError: String? = null,
-    val error: String? = null
+    val error: String? = null,
+    val selectedTab: ConnectionsTab = ConnectionsTab.ACTIVE,
+    val selectedConnection: ConnectionDetailsState? = null
 )
 
 @HiltViewModel
@@ -536,6 +565,36 @@ class ConnectionsViewModel @Inject constructor(
     suspend fun connectionDetails(connection: DAppConnection): String {
         requireConnectionRecords()
         return repository.connectionDetails(connection.id, connection.scope).also { requireConnectionRecords() }
+    }
+
+    fun selectTab(tab: ConnectionsTab) {
+        _uiState.update { it.copy(selectedTab = tab) }
+    }
+
+    /** Opens the details sheet for [connection] and loads what its recorded keys allow. */
+    fun openConnection(connection: DAppConnection) {
+        if (!isWalletUnlocked || !canUseConnections) return
+        _uiState.update { it.copy(selectedConnection = ConnectionDetailsState(connection.id)) }
+        viewModelScope.launch {
+            val loaded = try {
+                val notes = connectionDetails(connection)
+                val terms = repository.connectionTerms(connection.id, connection.scope)
+                val username = repository.resolveWalletUsername() ?: identityRepository.getUsername().orEmpty()
+                ConnectionDetailsState(connection.id, username,
+                    identityRepository.blockchainIdentity?.uniqueIdString.orEmpty(), terms, notes, isLoading = false)
+            } catch (ex: Exception) {
+                if (ex is CancellationException) throw ex
+                log.error("failed to load DashConnect connection details", ex)
+                ConnectionDetailsState(connection.id, isLoading = false, error = ex.message)
+            }
+            _uiState.update { state ->
+                if (state.selectedConnection?.connectionId != connection.id) state else state.copy(selectedConnection = loaded)
+            }
+        }
+    }
+
+    fun closeConnection() {
+        _uiState.update { it.copy(selectedConnection = null) }
     }
 
     fun resetApproveResult() {

@@ -148,6 +148,38 @@ internal fun AppConnectPlan.fundingLimit(): BigInteger? = selectedAuth.map { gra
 
 internal fun AppConnectPlan.connectionExpiresAt(): Long? = selectedAuth.mapNotNull { grants[it].expiresAt }.maxOrNull()
 
+/** What an existing connection's recorded keys allow, for the connection details sheet. */
+data class ConnectionTerms(
+    val capabilities: List<AppCapability>,
+    /** The largest key budget, matching the approve sheet; null when a key is unlimited. */
+    val fundingLimit: BigInteger?,
+    val expiresAt: Long?
+)
+
+internal fun recordedTerms(keys: List<org.dashj.platform.dpp.identity.IdentityPublicKey>): ConnectionTerms {
+    val authentication = keys.filter { it.purpose == org.dashj.platform.sdk.Purpose.AUTHENTICATION }
+    val capabilities = authentication.map { key ->
+        val bounds = key.contractBounds
+        val documentType = (bounds as? org.dashj.platform.dpp.identity.SingleContractDocumentType)?.documentType
+        val kind = when {
+            documentType == "profile" && bounds?.identifier?.toString() == DASHPAY_CONTRACT -> AppCapabilityKind.EDIT_DASHPAY_PROFILE
+            documentType != null -> AppCapabilityKind.EDIT_DOCUMENTS
+            else -> AppCapabilityKind.ACT_IN_APP
+        }
+        AppCapability(kind, tokens = kind == AppCapabilityKind.ACT_IN_APP &&
+            key.securityLevel == org.dashj.platform.sdk.SecurityLevel.CRITICAL,
+            documentType = documentType, budget = key.totalBudget, expiresAt = key.expiresAt)
+    }.distinct() + if (keys.any { it.purpose != org.dashj.platform.sdk.Purpose.AUTHENTICATION }) {
+        listOf(AppCapability(AppCapabilityKind.RECEIVE_ENCRYPTED))
+    } else emptyList()
+    val budgets = authentication.map { it.totalBudget }
+    return ConnectionTerms(
+        capabilities,
+        if (budgets.isEmpty() || null in budgets) null else budgets.filterNotNull().max(),
+        authentication.mapNotNull { it.expiresAt }.maxOrNull()
+    )
+}
+
 data class GrantChoice(val index: Int, val description: String, val selected: Boolean, val encryption: Boolean = false)
 
 internal fun AppConnectPlan.requireMatches(request: DashKeyRequest) {

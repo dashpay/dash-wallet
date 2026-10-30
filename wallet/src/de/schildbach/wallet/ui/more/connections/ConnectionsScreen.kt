@@ -26,11 +26,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
@@ -38,7 +38,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -49,23 +48,21 @@ import androidx.compose.ui.unit.dp
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.flow.StateFlow
 import org.dash.wallet.common.ui.components.DashButton
-import org.dash.wallet.common.ui.components.DashSwitch
 import org.dash.wallet.common.ui.components.ListEmptyState
 import org.dash.wallet.common.ui.components.ListItem
 import org.dash.wallet.common.ui.components.Menu
 import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.NavBarBack
+import org.dash.wallet.common.ui.components.NavBarBackPlus
+import org.dash.wallet.common.ui.segmented_picker.SegmentedOption
+import org.dash.wallet.common.ui.segmented_picker.SegmentedPicker
 import org.dash.wallet.common.ui.components.Size
 import org.dash.wallet.common.ui.components.Style
 import org.dash.wallet.common.ui.components.TopIntro
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 /**
- * DashConnect "Connections" screen (Figma: 5787:50880 empty state;
- * 5775:51511 / 5775:51483 / 5775:51451 list states).
+ * DashConnect "Connections" screen (Figma: 5787:50880 empty state; 40042:59884 tabbed list).
  */
 @Composable
 fun ConnectionsScreen(
@@ -74,8 +71,7 @@ fun ConnectionsScreen(
     onBackClick: () -> Unit = {},
     onScanClick: () -> Unit = {},
     onConnectionClick: (DAppConnection) -> Unit = {},
-    onConnectionQrClick: (DAppConnection) -> Unit = {},
-    onConnectionToggle: (DAppConnection, Boolean) -> Unit = { _, _ -> }
+    onTabSelected: (ConnectionsTab) -> Unit = {}
 ) {
     val uiState by uiStateFlow.collectAsState()
 
@@ -85,8 +81,7 @@ fun ConnectionsScreen(
         onBackClick = onBackClick,
         onScanClick = onScanClick,
         onConnectionClick = onConnectionClick,
-        onConnectionQrClick = onConnectionQrClick,
-        onConnectionToggle = onConnectionToggle
+        onTabSelected = onTabSelected
     )
 }
 
@@ -97,16 +92,22 @@ private fun ConnectionsScreenContent(
     onBackClick: () -> Unit = {},
     onScanClick: () -> Unit = {},
     onConnectionClick: (DAppConnection) -> Unit = {},
-    onConnectionQrClick: (DAppConnection) -> Unit = {},
-    onConnectionToggle: (DAppConnection, Boolean) -> Unit = { _, _ -> }
+    onTabSelected: (ConnectionsTab) -> Unit = {}
 ) {
     val colors = LocalDashColors.current
+    val hasConnections = !uiState.featureUnavailable && uiState.recordsStatus == ConnectionRecordsStatus.READY &&
+        uiState.connections.isNotEmpty()
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(colors.backgroundPrimary)
     ) {
-        NavBarBack(onBackClick = onBackClick)
+        // Once there is a connection the empty state's Scan QR button is gone; + adds another.
+        if (hasConnections) {
+            NavBarBackPlus(onBackClick = onBackClick, onPlusClick = onScanClick)
+        } else {
+            NavBarBack(onBackClick = onBackClick)
+        }
 
         TopIntro(
             heading = stringResource(R.string.dash_connect_connections_title)
@@ -141,23 +142,38 @@ private fun ConnectionsScreenContent(
                 modifier = Modifier.weight(1f)
             )
         } else {
+            val tabs = ConnectionsTab.entries
+            SegmentedPicker(
+                options = tabs.map { SegmentedOption(stringResource(it.title)) },
+                modifier = Modifier
+                    .padding(horizontal = 20.dp, vertical = 10.dp)
+                    .fillMaxWidth()
+                    .height(46.dp),
+                selectedIndex = tabs.indexOf(uiState.selectedTab)
+            ) { _, index -> onTabSelected(tabs[index]) }
+
+            val shown = uiState.connections.filter { uiState.selectedTab.includes(it) }
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .verticalScroll(rememberScrollState()),
+                    .verticalScroll(rememberScrollState())
+                    .padding(top = 10.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
-                Menu {
-                    uiState.connections.forEach { connection ->
-                        ConnectionListItem(
-                            connection = connection,
-                            onClick = { onConnectionClick(connection) },
-                            onQrClick = { onConnectionQrClick(connection) },
-                            onToggle = { enabled -> onConnectionToggle(connection, enabled) }
-                        )
-                        // Both pending and revoked connections need a fresh login QR.
-                        if (connection.status != ConnectionStatus.ACTIVE) {
-                            ScanToCompleteBanner(onScanClick = { onConnectionQrClick(connection) })
+                if (shown.isEmpty()) {
+                    Text(
+                        text = stringResource(uiState.selectedTab.emptyMessage),
+                        style = MyTheme.Typography.BodyMedium,
+                        color = colors.textSecondary,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(40.dp)
+                    )
+                } else {
+                    Menu {
+                        shown.forEach { connection ->
+                            ConnectionListItem(connection = connection, onClick = { onConnectionClick(connection) })
                         }
                     }
                 }
@@ -251,115 +267,34 @@ private fun ConnectionsEmptyState(
     }
 }
 
-/**
- * Blue-tint SystemMessage banner (Figma 5802:51517): info icon + prompt text + a small
- * filled-blue "Scan QR" button. Shown for pending and disconnected connections.
- */
-@Composable
-private fun ScanToCompleteBanner(
-    onScanClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val colors = LocalDashColors.current
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            // No outer horizontal inset: the banner lives inside the Menu card, which already
-            // insets its children — matching Figma where the banner is attached to the card.
-            .background(colors.dashBlue5, RoundedCornerShape(12.dp))
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Image(
-            painter = painterResource(R.drawable.ic_info_blue),
-            contentDescription = null,
-            modifier = Modifier.size(24.dp)
-        )
-        Text(
-            text = stringResource(R.string.dash_connect_scan_to_complete_banner),
-            style = MyTheme.Typography.BodyMedium,
-            color = colors.textPrimary,
-            modifier = Modifier.weight(1f)
-        )
-        DashButton(
-            text = stringResource(R.string.dash_connect_scan_qr),
-            style = Style.FilledBlue,
-            size = Size.Small,
-            stretch = false,
-            onClick = onScanClick
-        )
-    }
-}
-
+/** Figma 40058:22554 ("List - Merchant details"): the app name over its website. */
 @Composable
 private fun ConnectionListItem(
     connection: DAppConnection,
-    onClick: () -> Unit,
-    onQrClick: () -> Unit,
-    onToggle: (Boolean) -> Unit
+    onClick: () -> Unit
 ) {
-    val colors = LocalDashColors.current
-    val statusText = stringResource(
-        when (connection.status) {
-            ConnectionStatus.APPROVED -> R.string.dash_connect_status_approved
-            ConnectionStatus.ACTIVE -> R.string.dash_connect_status_active
-            ConnectionStatus.DISCONNECTED -> R.string.dash_connect_status_disconnected
-        }
-    )
-    val dateFormat = remember { SimpleDateFormat("d MMM yyyy, H:mm", Locale.getDefault()) }
-    val dotColor = if (connection.status == ConnectionStatus.ACTIVE) {
-        colors.green
-    } else {
-        colors.dashBlue
-    }
-
     ListItem(
         title = connection.name,
         subtitle = connection.url.ifBlank { null },
-        onClick = onClick,
-        trailingContent = {
-            // Figma 5799:51367 active row: status (dot + text) + date column, and — for an
-            // active connection — a toggle to its right whose OFF transition disconnects.
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.End,
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .background(dotColor, CircleShape)
-                        )
-                        Text(
-                            text = statusText,
-                            style = MyTheme.Typography.BodySmall,
-                            color = colors.textPrimary
-                        )
-                    }
-                    Text(
-                        text = dateFormat.format(Date(connection.updatedAt)),
-                        style = MyTheme.Typography.BodySmall,
-                        color = colors.textTertiary
-                    )
-                }
-                if (connection.status == ConnectionStatus.ACTIVE) {
-                    DashSwitch(
-                        checked = true,
-                        onCheckedChange = { enabled -> onToggle(enabled) }
-                    )
-                }
-            }
-        }
+        onClick = onClick
     )
 }
+
+@get:androidx.annotation.StringRes
+private val ConnectionsTab.title: Int
+    get() = when (this) {
+        ConnectionsTab.ACTIVE -> R.string.dash_connect_status_active
+        ConnectionsTab.DISCONNECTED -> R.string.dash_connect_status_disconnected
+        ConnectionsTab.EXPIRED -> R.string.dash_connect_status_expired
+    }
+
+@get:androidx.annotation.StringRes
+private val ConnectionsTab.emptyMessage: Int
+    get() = when (this) {
+        ConnectionsTab.ACTIVE -> R.string.dash_connect_tab_empty_active
+        ConnectionsTab.DISCONNECTED -> R.string.dash_connect_tab_empty_disconnected
+        ConnectionsTab.EXPIRED -> R.string.dash_connect_tab_empty_expired
+    }
 
 // ── Previews ──────────────────────────────────────────────────────────────────
 
@@ -411,33 +346,21 @@ private fun ConnectionsScreenDisconnectedPreview() {
 }
 
 @Composable
-@Preview(showBackground = true, backgroundColor = 0xFFF5F6F7)
-private fun ScanToCompleteBannerPreview() {
-    ScanToCompleteBanner(onScanClick = {})
+@Preview
+private fun ConnectionsScreenExpiredTabPreview() {
+    ConnectionsScreenContent(
+        uiState = ConnectionsUIState(
+            recordsStatus = ConnectionRecordsStatus.READY,
+            connections = listOf(previewConnection(ConnectionStatus.ACTIVE)),
+            selectedTab = ConnectionsTab.EXPIRED
+        )
+    )
 }
 
 @Composable
 @Preview(showBackground = true)
-private fun ConnectionListItemActivePreview() {
+private fun ConnectionListItemPreview() {
     Menu {
-        ConnectionListItem(
-            connection = previewConnection(ConnectionStatus.ACTIVE),
-            onClick = {},
-            onQrClick = {},
-            onToggle = {}
-        )
-    }
-}
-
-@Composable
-@Preview(showBackground = true)
-private fun ConnectionListItemApprovedPreview() {
-    Menu {
-        ConnectionListItem(
-            connection = previewConnection(ConnectionStatus.APPROVED),
-            onClick = {},
-            onQrClick = {},
-            onToggle = {}
-        )
+        ConnectionListItem(connection = previewConnection(ConnectionStatus.ACTIVE), onClick = {})
     }
 }

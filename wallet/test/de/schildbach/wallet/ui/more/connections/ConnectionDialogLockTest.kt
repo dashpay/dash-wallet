@@ -76,13 +76,13 @@ class ConnectionDialogLockTest {
         val result = async {
             val text = details.await()
             awaitUnlockedConnectionDialog(activity, activity, locked, { !locked.value }) {
-                connectionDetailsDialog(activity, "App", text, ConnectionStatus.ACTIVE).also { dialog = it }
+                connectionCallbackDialog(activity, text).also { dialog = it }
             }
         }
         try {
             runCurrent()
             locked.value = true
-            details.complete("0.5 DASH remaining")
+            details.complete("example.org")
             runCurrent()
             assertNull(dialog)
             assertFalse(result.isCompleted)

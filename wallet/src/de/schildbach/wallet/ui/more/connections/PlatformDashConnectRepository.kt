@@ -58,6 +58,8 @@ class PlatformDashConnectRepository @Inject constructor(
                 DAppConnection(app, connectionDisplayName(latest.optString("label")), "",
                     when {
                         active -> ConnectionStatus.ACTIVE
+                        // Expired keys stay enabled until revoked, so this is not a disconnection.
+                        authenticationExpiries.isNotEmpty() -> ConnectionStatus.EXPIRED
                         // Revoked request keys do not prove that the app has no surviving access.
                         grants.any { it.optString("state") != "disabled" || !it.optBoolean("permanentRevocationConfirmed") ||
                             !it.optBoolean("appRevocationConfirmed") } -> ConnectionStatus.APPROVED
@@ -134,6 +136,8 @@ class PlatformDashConnectRepository @Inject constructor(
         if (config.getGrants().none { it.getString("scope") == scope && it.getString("app") == connectionId }) {
             "This legacy connection has no recorded grant keys. Removing it from this list does not revoke any Platform authorization."
         } else session.details(connectionId, requireNotNull(scope) { "Refresh connections before viewing grants" })
+    override suspend fun connectionTerms(connectionId: String, scope: String?): ConnectionTerms? =
+        session.terms(connectionId, requireNotNull(scope) { "Refresh connections before viewing grants" })
     override suspend fun removeConnection(connectionId: String, scope: String?) {
         check(scope == runCatching { session.scope() }.getOrNull()) { "Wallet, identity or network changed" }
         config.removeLegacyConnection(connectionId, scope)

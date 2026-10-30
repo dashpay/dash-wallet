@@ -51,4 +51,15 @@
     <string name="dash_connect_spendable_info_title">What is spendable Dash?</string>
     <string name="dash_connect_spendable_info_message">This is the Dash on your wallet’s home screen – the balance you can send to anyone.\n\nIt’s separate from your identity’s balance, which only pays for network actions.</string>
     <string name="dash_connect_got_it">Got it</string>
+    <string name="dash_connect_status_expired">Expired</string>
+    <string name="dash_connect_status_pending">Pending</string>
+    <string name="dash_connect_tab_empty_active">No active connections</string>
+    <string name="dash_connect_tab_empty_disconnected">No disconnected connections</string>
+    <string name="dash_connect_tab_empty_expired">No expired connections</string>
+    <string name="dash_connect_status">Status</string>
+    <string name="dash_connect_disconnect_action">Disconnect</string>
+    <string name="dash_connect_expired_on">Connection expired</string>
+    <string name="dash_connect_was_able_to_do">See what %1$s was able to do</string>
+    <string name="dash_connect_was_not_access">See what %1$s did NOT have access to</string>
+    <string name="dash_connect_key_details">Key details</string>
 </resources>

@@ -636,6 +636,15 @@ internal class AppConnectSession(
             "Contract ownership could not be established. Complete revocation is not confirmed."
         }.ownerId
 
+    /** The terms the recorded keys grant, from local records only; null when no key is recorded. */
+    suspend fun terms(app: String, expectedScope: String): ConnectionTerms? = withContext(Dispatchers.IO) {
+        checkScope(expectedScope)
+        // Each login adds a grant record; the sheet describes the latest one, not every past login.
+        val keys = matchingRecords(expectedScope, app).maxByOrNull { it.optLong("updatedAt") }
+            ?.let { decodeKeys(it) }.orEmpty()
+        if (keys.isEmpty()) null else recordedTerms(keys)
+    }
+
     suspend fun details(app: String, expectedScope: String): String = withContext(Dispatchers.IO) {
         mutex.withLock {
             val scope = expectedScope
