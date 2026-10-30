@@ -59,6 +59,8 @@
     <string name="dash_connect_status">Status</string>
     <string name="dash_connect_disconnect_action">Disconnect</string>
     <string name="dash_connect_expired_on">Connection expired</string>
+    <string name="dash_connect_disconnected_on">Connection disconnected</string>
+    <string name="dash_connect_reconnect">Reconnect</string>
     <string name="dash_connect_was_able_to_do">See what %1$s was able to do</string>
     <string name="dash_connect_was_not_access">See what %1$s did NOT have access to</string>
     <string name="dash_connect_key_details">Key details</string>

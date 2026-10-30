@@ -58,6 +58,7 @@ import de.schildbach.wallet.ui.more.connections.AppCapabilityKind
 import de.schildbach.wallet.ui.more.connections.ConnectionDetailsState
 import de.schildbach.wallet.ui.more.connections.ConnectionStatus
 import de.schildbach.wallet.ui.more.connections.ConnectionTerms
+import de.schildbach.wallet.ui.more.connections.ConnectionsFragment
 import de.schildbach.wallet.ui.more.connections.ConnectionsViewModel
 import de.schildbach.wallet.ui.more.connections.DAppConnection
 import de.schildbach.wallet.ui.more.connections.formatDash
@@ -150,6 +151,10 @@ class ConnectionDetailsDialog : OffsetDialogFragment(R.layout.dialog_compose_con
                     if (connection.legacyOnly) viewModel.removeConnection(connection) else viewModel.disconnect(connection)
                     viewModel.closeConnection()
                 }
+            },
+            onReconnect = {
+                viewModel.closeConnection()
+                (parentFragment as? ConnectionsFragment)?.launchScanner()
             }
         )
     }
@@ -162,7 +167,8 @@ internal fun ConnectionDetailsContent(
     modifier: Modifier = Modifier,
     onFundingLimitInfo: () -> Unit = {},
     onSpendableBalanceInfo: () -> Unit = {},
-    onDisconnect: () -> Unit = {}
+    onDisconnect: () -> Unit = {},
+    onReconnect: () -> Unit = {}
 ) {
     val colors = LocalDashColors.current
     val appName = connection.name
@@ -234,13 +240,15 @@ internal fun ConnectionDetailsContent(
                             } ?: stringResource(R.string.dash_connect_funding_limit_unlimited),
                             onInfo = onFundingLimitInfo
                         )
-                        terms.expiresAt?.let {
-                            LimitRow(
-                                label = stringResource(
-                                    if (current) R.string.dash_connect_expires else R.string.dash_connect_expired_on
-                                ),
-                                value = formatDate(it)
-                            )
+                        // A disconnected connection ended when its keys were revoked, before they expired.
+                        val ended = if (connection.status == ConnectionStatus.DISCONNECTED) {
+                            R.string.dash_connect_disconnected_on to connection.updatedAt.takeIf { it > 0 }
+                        } else {
+                            (if (current) R.string.dash_connect_expires else R.string.dash_connect_expired_on) to
+                                terms.expiresAt
+                        }
+                        ended.second?.let {
+                            LimitRow(label = stringResource(ended.first), value = formatDate(it))
                         }
                     }
                     CollapsibleCard(
@@ -289,23 +297,27 @@ internal fun ConnectionDetailsContent(
         }
 
         // Expired keys stay enabled on Platform until revoked, so Expired offers Disconnect too.
-        val action = when {
-            connection.legacyOnly -> R.string.dash_connect_remove_local
-            connection.status == ConnectionStatus.DISCONNECTED -> null
-            else -> R.string.dash_connect_disconnect_action
-        }
-        action?.let {
-            SheetButtonGroup(
-                primaryButton = SheetButton(
-                    text = stringResource(it),
-                    style = Style.TintedRed,
-                    isEnabled = !details.isLoading,
-                    onClick = onDisconnect
-                ),
-                horizontalPadding = 40.dp,
-                spacing = 10.dp
+        // Reconnecting needs a new login request from the app, so it opens the scanner.
+        val button = when {
+            connection.legacyOnly -> SheetButton(
+                text = stringResource(R.string.dash_connect_remove_local),
+                style = Style.TintedRed,
+                isEnabled = !details.isLoading,
+                onClick = onDisconnect
+            )
+            connection.status == ConnectionStatus.DISCONNECTED -> SheetButton(
+                text = stringResource(R.string.dash_connect_reconnect),
+                style = Style.FilledBlue,
+                onClick = onReconnect
+            )
+            else -> SheetButton(
+                text = stringResource(R.string.dash_connect_disconnect_action),
+                style = Style.TintedRed,
+                isEnabled = !details.isLoading,
+                onClick = onDisconnect
             )
         }
+        SheetButtonGroup(primaryButton = button, horizontalPadding = 40.dp, spacing = 10.dp)
     }
 }
 

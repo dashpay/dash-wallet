@@ -184,7 +184,7 @@ class ConnectionsFragment : Fragment() {
         viewModel.refreshConnections()
     }
 
-    private fun launchScanner() {
+    internal fun launchScanner() {
         if (!viewModel.isWalletUnlocked || !viewModel.canUseConnections) return
         scanLauncher.launch(ScanActivity.getIntent(requireActivity()))
     }
