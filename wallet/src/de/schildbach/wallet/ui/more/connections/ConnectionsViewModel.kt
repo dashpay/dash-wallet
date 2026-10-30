@@ -90,7 +90,10 @@ data class ConnectionsUIState(
     val purchaseError: String? = null,
     val error: String? = null,
     val selectedTab: ConnectionsTab = ConnectionsTab.ACTIVE,
-    val selectedConnection: ConnectionDetailsState? = null
+    val selectedConnection: ConnectionDetailsState? = null,
+    /** Unlinked DashPay profile keys to warn about; null when there are none or they were dismissed. */
+    val sharedProfileKeys: SharedProfileKeys? = null,
+    val isRevokingSharedKeys: Boolean = false
 )
 
 @HiltViewModel
@@ -141,6 +144,7 @@ class ConnectionsViewModel @Inject constructor(
     private var operationInProgress = false
     private var walletUnlockCheck: () -> Boolean = { false }
     private var connectionsJob: Job? = null
+    private var sharedKeysJob: Job? = null
     private var identityRetryJob: Job? = null
     private var walletLockJob: Job? = null
     private var walletLockGeneration: () -> Long = { 0L }
@@ -247,7 +251,7 @@ class ConnectionsViewModel @Inject constructor(
                         _uiState.update { it.copy(recordsStatus = ConnectionRecordsStatus.UNAVAILABLE) }
                         return@collectLatest
                     }
-                    ConnectIdentityStatus.AVAILABLE -> Unit
+                    ConnectIdentityStatus.AVAILABLE -> loadSharedProfileKeys()
                 }
                 try {
                     // Keep rows and availability in this cancellable observation, not separate buffered consumers.
@@ -589,6 +593,46 @@ class ConnectionsViewModel @Inject constructor(
             }
             _uiState.update { state ->
                 if (state.selectedConnection?.connectionId != connection.id) state else state.copy(selectedConnection = loaded)
+            }
+        }
+    }
+
+    private fun loadSharedProfileKeys() {
+        sharedKeysJob?.cancel()
+        _uiState.update { it.copy(sharedProfileKeys = null) }
+        sharedKeysJob = viewModelScope.launch {
+            // Best effort: without Platform the warning just stays hidden.
+            val keys = try { repository.sharedProfileKeys() } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                log.warn("Cannot check for unlinked DashPay profile keys", e)
+                null
+            }
+            _uiState.update { it.copy(sharedProfileKeys = keys) }
+        }
+    }
+
+    fun dismissSharedProfileKeys() {
+        val keys = _uiState.value.sharedProfileKeys ?: return
+        _uiState.update { it.copy(sharedProfileKeys = null) }
+        applicationScope.launch { repository.dismissSharedProfileKeys(keys) }
+    }
+
+    fun revokeSharedProfileKeys() {
+        val keys = _uiState.value.sharedProfileKeys ?: return
+        if (_uiState.value.isRevokingSharedKeys) return
+        _uiState.update { it.copy(isRevokingSharedKeys = true) }
+        launchAuthorizedOperation {
+            try {
+                if (isWalletUnlocked) {
+                    requireConnectionRecords()
+                    repository.revokeSharedProfileKeys(keys)
+                    _uiState.update { it.copy(sharedProfileKeys = null) }
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                _scanOutcome.value = ScanOutcome.Error(e.message)
+            } finally {
+                _uiState.update { it.copy(isRevokingSharedKeys = false) }
             }
         }
     }

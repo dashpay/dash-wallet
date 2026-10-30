@@ -582,12 +582,7 @@ internal class AppConnectSession(
         WalletSignerCallback(wallet, keyParameter, { authorize(); checkScope(scope) }).use { signer ->
             if (disable.isNotEmpty() || fences.isNotEmpty()) {
                 identity = updateIdentityInBatches(fences, disable, read = { checkScope(scope); readIdentity() }) { current, add, ids ->
-                    val master = signingKey(current, SecurityLevel.MASTER, platform.client.getPlatformTime(current.id))
-                    checkScope(scope)
-                    current.revision++
-                    authorize()
-                    dashsdk.platformMobilePutPutIdentityUpdateSdk(platform.rustSdk, current.toNative(), KeyID(master.id),
-                        add.map { it.toNative() }, ids.map { KeyID(it) }, signer.nativeContext, BigInteger.valueOf(signer.signerCallback)).unwrap()
+                    submitIdentityUpdate(current, add, ids, signer, scope, authorize)
                 }
             }
             records.forEach { deleteResponse(identity, it, signer, scope, authorize) }
@@ -608,6 +603,57 @@ internal class AppConnectSession(
         check(unknown.isNullOrEmpty()) {
             "Recorded keys were revoked, but other enabled application keys (${unknown?.joinToString()}) remain. " +
                 "Local history is incomplete, possibly after wallet recovery. Complete revocation is not confirmed."
+        }
+    }
+
+    private fun submitIdentityUpdate(current: Identity, add: List<IdentityPublicKey>, ids: List<Int>,
+                                     signer: WalletSignerCallback, scope: String, authorize: () -> Unit) {
+        val master = signingKey(current, SecurityLevel.MASTER, platform.client.getPlatformTime(current.id))
+        checkScope(scope)
+        current.revision++
+        authorize()
+        dashsdk.platformMobilePutPutIdentityUpdateSdk(platform.rustSdk, current.toNative(), KeyID(master.id),
+            add.map { it.toNative() }, ids.map { KeyID(it) }, signer.nativeContext, BigInteger.valueOf(signer.signerCallback)).unwrap()
+    }
+
+    /**
+     * Enabled keys that can edit the DashPay profile but that no local grant record holds, e.g. after
+     * a wallet restore, or from another wallet with the same identity.
+     */
+    suspend fun sharedProfileKeys(expectedScope: String): List<Int> = withContext(Dispatchers.IO) {
+        checkScope(expectedScope)
+        sharedProfileKeyIds(readIdentity(), expectedScope)
+    }
+
+    private suspend fun sharedProfileKeyIds(identity: Identity, scope: String): List<Int> {
+        // Prepared records count, so a key from an approval still in flight is never listed.
+        val recorded = config.getGrants().filter { it.getString("scope") == scope }.flatMap { decodeKeys(it) }
+        return AppConnectKeyState.unrecordedKeys(identity.publicKeys, recorded) { key ->
+            val bounds = key.contractBounds
+            bounds is SingleContractDocumentType && bounds.identifier.toString() == DASHPAY && bounds.documentType == "profile"
+        }
+    }
+
+    /** Disables those of [ids] that are still unlinked profile keys; a key recorded since is left alone. */
+    suspend fun revokeSharedProfileKeys(ids: List<Int>, expectedScope: String) = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            val scope = expectedScope
+            val authorize = kotlin.coroutines.coroutineContext.connectionAuthorization()
+            val wallet = walletRepo.walletApplication.wallet ?: error("Wallet unavailable")
+            val keyParameter = walletRepo.getWalletEncryptionKey()
+            check(!wallet.isEncrypted || keyParameter != null) { "Wallet password unavailable. Unlock the wallet and try again." }
+            checkScope(scope)
+            val identity = readIdentity()
+            val disable = sharedProfileKeyIds(identity, scope).filter { it in ids }
+            if (disable.isEmpty()) return@withLock
+            rememberIdentity(identity)
+            val updated = WalletSignerCallback(wallet, keyParameter, { authorize(); checkScope(scope) }).use { signer ->
+                updateIdentityInBatches(emptyList(), disable, read = { checkScope(scope); readIdentity() }) { current, add, keys ->
+                    submitIdentityUpdate(current, add, keys, signer, scope, authorize)
+                }
+            }
+            checkScope(scope)
+            rememberIdentity(updated)
         }
     }
 

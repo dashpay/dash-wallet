@@ -76,6 +76,8 @@ class ConnectionsFragment : Fragment() {
                         onBackClick = { findNavController().popBackStack() },
                         onScanClick = { launchScanner() },
                         onConnectionClick = viewModel::openConnection,
+                        onDismissSharedKeys = viewModel::dismissSharedProfileKeys,
+                        onRevokeSharedKeys = viewModel::revokeSharedProfileKeys,
                         onTabSelected = viewModel::selectTab
                     )
                 }

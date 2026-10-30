@@ -61,6 +61,13 @@
     <string name="dash_connect_expired_on">Connection expired</string>
     <string name="dash_connect_disconnected_on">Connection disconnected</string>
     <string name="dash_connect_reconnect">Reconnect</string>
+    <string name="dash_connect_shared_profile_title">Shared profile access</string>
+    <plurals name="dash_connect_shared_profile_message">
+        <item quantity="one">%1$d key can edit your DashPay profile but isn’t linked to any connection here</item>
+        <item quantity="other">%1$d keys can edit your DashPay profile but aren’t linked to any connection here</item>
+    </plurals>
+    <string name="dash_connect_shared_profile_dismiss">Dismiss</string>
+    <string name="dash_connect_shared_profile_revoke">Revoke</string>
     <string name="dash_connect_was_able_to_do">See what %1$s was able to do</string>
     <string name="dash_connect_was_not_access">See what %1$s did NOT have access to</string>
     <string name="dash_connect_key_details">Key details</string>

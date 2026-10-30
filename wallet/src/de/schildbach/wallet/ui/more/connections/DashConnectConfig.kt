@@ -85,6 +85,7 @@ open class DashConnectConfig @Inject constructor(
         val CONNECTIONS = stringPreferencesKey("connections")
         private val GRANTS = stringPreferencesKey("app_connect_grants_v2")
         private val PURCHASES = stringPreferencesKey("dash_st_purchases")
+        private val DISMISSED_PROFILE_KEYS = stringPreferencesKey("dismissed_shared_profile_keys")
     }
 
     // Authorizations and unknown purchase outcomes survive a local wallet reset. Their
@@ -161,6 +162,14 @@ open class DashConnectConfig @Inject constructor(
         JSONArray(configContext.dataStore.data.first()[PURCHASES] ?: "[]")
 
     /** Inserts or replaces the stored connection keyed by [StoredConnection.contractId]. */
+    /** Unlinked DashPay profile keys the user chose not to be warned about, as "scope:keyId". */
+    suspend fun getDismissedProfileKeys(): Set<String> =
+        JSONArray(get(DISMISSED_PROFILE_KEYS) ?: "[]").let { keys -> (0 until keys.length()).map { keys.getString(it) }.toSet() }
+
+    suspend fun dismissProfileKeys(keys: Collection<String>) {
+        set(DISMISSED_PROFILE_KEYS, JSONArray((getDismissedProfileKeys() + keys).toList()).toString())
+    }
+
     suspend fun upsertConnection(connection: StoredConnection) {
         val current = getConnections().filter { it.contractId != connection.contractId }
         set(CONNECTIONS, encode(current + connection))

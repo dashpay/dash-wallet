@@ -155,6 +155,15 @@ interface DashConnectRepository {
     /** What the recorded keys of a connection allow, read from local records only; null if none are recorded. */
     suspend fun connectionTerms(connectionId: String, scope: String? = null): ConnectionTerms? = null
 
+    /** Unlinked DashPay profile keys the user has not dismissed; null when there are none. */
+    suspend fun sharedProfileKeys(): SharedProfileKeys? = null
+
+    suspend fun dismissSharedProfileKeys(keys: SharedProfileKeys) {}
+
+    suspend fun revokeSharedProfileKeys(keys: SharedProfileKeys) {
+        error("Key revocation is unavailable")
+    }
+
     /** Revoke before removal; the real repository retains the public grant audit record. */
     suspend fun removeConnection(connectionId: String, scope: String? = null)
 
@@ -174,6 +183,9 @@ interface DashConnectRepository {
      */
     suspend fun resolveAppDisplay(contractId: ByteArray, qrLabel: String): AppDisplay
 }
+
+/** Enabled identity keys that can edit the DashPay profile but belong to no connection on record. */
+data class SharedProfileKeys(val scope: String, val keyIds: List<Int>)
 
 /** Display name and website for an app, as resolved by [DashConnectRepository.resolveAppDisplay]. */
 data class AppDisplay(

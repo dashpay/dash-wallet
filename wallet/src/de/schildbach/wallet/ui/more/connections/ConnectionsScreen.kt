@@ -40,7 +40,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -71,7 +73,9 @@ fun ConnectionsScreen(
     onBackClick: () -> Unit = {},
     onScanClick: () -> Unit = {},
     onConnectionClick: (DAppConnection) -> Unit = {},
-    onTabSelected: (ConnectionsTab) -> Unit = {}
+    onTabSelected: (ConnectionsTab) -> Unit = {},
+    onDismissSharedKeys: () -> Unit = {},
+    onRevokeSharedKeys: () -> Unit = {}
 ) {
     val uiState by uiStateFlow.collectAsState()
 
@@ -81,7 +85,9 @@ fun ConnectionsScreen(
         onBackClick = onBackClick,
         onScanClick = onScanClick,
         onConnectionClick = onConnectionClick,
-        onTabSelected = onTabSelected
+        onTabSelected = onTabSelected,
+        onDismissSharedKeys = onDismissSharedKeys,
+        onRevokeSharedKeys = onRevokeSharedKeys
     )
 }
 
@@ -92,7 +98,9 @@ private fun ConnectionsScreenContent(
     onBackClick: () -> Unit = {},
     onScanClick: () -> Unit = {},
     onConnectionClick: (DAppConnection) -> Unit = {},
-    onTabSelected: (ConnectionsTab) -> Unit = {}
+    onTabSelected: (ConnectionsTab) -> Unit = {},
+    onDismissSharedKeys: () -> Unit = {},
+    onRevokeSharedKeys: () -> Unit = {}
 ) {
     val colors = LocalDashColors.current
     val hasConnections = !uiState.featureUnavailable && uiState.recordsStatus == ConnectionRecordsStatus.READY &&
@@ -177,6 +185,75 @@ private fun ConnectionsScreenContent(
                         }
                     }
                 }
+            }
+        }
+
+        val sharedKeys = uiState.sharedProfileKeys
+        if (sharedKeys != null && !uiState.featureUnavailable && uiState.recordsStatus == ConnectionRecordsStatus.READY) {
+            SharedProfileAccessMessage(
+                keyCount = sharedKeys.keyIds.size,
+                isRevoking = uiState.isRevokingSharedKeys,
+                onDismiss = onDismissSharedKeys,
+                onRevoke = onRevokeSharedKeys,
+                modifier = Modifier.padding(horizontal = 40.dp, vertical = 20.dp)
+            )
+        }
+    }
+}
+
+/** Figma 40101:8829: enabled keys that can edit the DashPay profile but belong to no connection here. */
+@Composable
+private fun SharedProfileAccessMessage(
+    keyCount: Int,
+    isRevoking: Boolean,
+    onDismiss: () -> Unit,
+    onRevoke: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val colors = LocalDashColors.current
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(colors.backgroundSecondary)
+            .padding(10.dp)
+    ) {
+        Box(Modifier.size(30.dp), contentAlignment = Alignment.Center) {
+            Image(painterResource(R.drawable.ic_connect_warning), contentDescription = null)
+        }
+        Column(
+            modifier = Modifier.weight(1f).padding(start = 8.dp, end = 16.dp, top = 5.dp, bottom = 5.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                Text(
+                    text = stringResource(R.string.dash_connect_shared_profile_title),
+                    style = MyTheme.Typography.FootnoteSemibold,
+                    color = colors.textPrimary
+                )
+                Text(
+                    text = pluralStringResource(R.plurals.dash_connect_shared_profile_message, keyCount, keyCount),
+                    style = MyTheme.Typography.Footnote,
+                    color = colors.textPrimary
+                )
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                DashButton(
+                    text = stringResource(R.string.dash_connect_shared_profile_dismiss),
+                    style = Style.TintedBlue,
+                    size = Size.Small,
+                    isEnabled = !isRevoking,
+                    modifier = Modifier.weight(1f),
+                    onClick = onDismiss
+                )
+                DashButton(
+                    text = stringResource(R.string.dash_connect_shared_profile_revoke),
+                    style = Style.FilledBlue,
+                    size = Size.Small,
+                    isEnabled = !isRevoking,
+                    modifier = Modifier.weight(1f),
+                    onClick = onRevoke
+                )
             }
         }
     }

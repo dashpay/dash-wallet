@@ -138,6 +138,19 @@ class PlatformDashConnectRepository @Inject constructor(
         } else session.details(connectionId, requireNotNull(scope) { "Refresh connections before viewing grants" })
     override suspend fun connectionTerms(connectionId: String, scope: String?): ConnectionTerms? =
         session.terms(connectionId, requireNotNull(scope) { "Refresh connections before viewing grants" })
+    override suspend fun sharedProfileKeys(): SharedProfileKeys? {
+        checkNetwork()
+        val scope = session.scope()
+        val dismissed = config.getDismissedProfileKeys()
+        return session.sharedProfileKeys(scope).filter { "$scope:$it" !in dismissed }
+            .takeIf { it.isNotEmpty() }?.let { SharedProfileKeys(scope, it) }
+    }
+    override suspend fun dismissSharedProfileKeys(keys: SharedProfileKeys) =
+        config.dismissProfileKeys(keys.keyIds.map { "${keys.scope}:$it" })
+    override suspend fun revokeSharedProfileKeys(keys: SharedProfileKeys) {
+        checkNetwork()
+        session.revokeSharedProfileKeys(keys.keyIds, keys.scope)
+    }
     override suspend fun removeConnection(connectionId: String, scope: String?) {
         check(scope == runCatching { session.scope() }.getOrNull()) { "Wallet, identity or network changed" }
         config.removeLegacyConnection(connectionId, scope)
