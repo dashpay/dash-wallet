@@ -56,6 +56,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.rememberNestedScrollInteropConnection
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
@@ -218,6 +220,9 @@ internal fun ApproveConnectionContent(
         Column(
             modifier = Modifier
                 .weight(1f, fill = false)
+                // Lets the View-based bottom sheet see this scroll, so dragging down scrolls the
+                // terms back up instead of dismissing the sheet (which denies the request).
+                .nestedScroll(rememberNestedScrollInteropConnection())
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 40.dp, vertical = 20.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
