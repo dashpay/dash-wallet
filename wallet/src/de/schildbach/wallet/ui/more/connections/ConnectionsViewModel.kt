@@ -70,8 +70,6 @@ data class ConnectionDetailsState(
     val username: String = "",
     val identityId: String = "",
     val terms: ConnectionTerms? = null,
-    /** Key states and safety warnings from the recorded grants, e.g. incomplete local history. */
-    val notes: String? = null,
     val isLoading: Boolean = true,
     val error: String? = null
 )
@@ -581,11 +579,11 @@ class ConnectionsViewModel @Inject constructor(
         _uiState.update { it.copy(selectedConnection = ConnectionDetailsState(connection.id)) }
         viewModelScope.launch {
             val loaded = try {
-                val notes = connectionDetails(connection)
+                requireConnectionRecords()
                 val terms = repository.connectionTerms(connection.id, connection.scope)
                 val username = repository.resolveWalletUsername() ?: identityRepository.getUsername().orEmpty()
                 ConnectionDetailsState(connection.id, username,
-                    identityRepository.blockchainIdentity?.uniqueIdString.orEmpty(), terms, notes, isLoading = false)
+                    identityRepository.blockchainIdentity?.uniqueIdString.orEmpty(), terms, isLoading = false)
             } catch (ex: Exception) {
                 if (ex is CancellationException) throw ex
                 log.error("failed to load DashConnect connection details", ex)

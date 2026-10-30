@@ -286,14 +286,6 @@ internal fun ConnectionDetailsContent(
                     }
                 }
             }
-
-            // The per-key states and safety warnings the old details dialog showed, e.g. that local
-            // history is incomplete and revoking recorded keys alone will not revoke all access.
-            details.notes?.takeIf { it.isNotBlank() }?.let { notes ->
-                CollapsibleCard(stringResource(R.string.dash_connect_key_details), initiallyExpanded = false) {
-                    Text(text = notes, style = MyTheme.Typography.Footnote, color = colors.textSecondary)
-                }
-            }
         }
 
         // Expired keys stay enabled on Platform until revoked, so Expired offers Disconnect too.

@@ -70,5 +70,4 @@
     <string name="dash_connect_shared_profile_revoke">Revoke</string>
     <string name="dash_connect_was_able_to_do">See what %1$s was able to do</string>
     <string name="dash_connect_was_not_access">See what %1$s did NOT have access to</string>
-    <string name="dash_connect_key_details">Key details</string>
 </resources>
