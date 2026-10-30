@@ -229,14 +229,17 @@ if (file("../local.properties").exists()) {
 
 def sakuraSporkAddress = providers.gradleProperty("sakuraSporkAddress")
         .getOrElse(localProps.getProperty("sakuraSporkAddress", ""))
-def sakuraCorePort = providers.gradleProperty("sakuraCorePort").getOrElse("20001").toInteger()
+// Parsed leniently at configuration time so a malformed value only fails devnet builds
+// (in validateSakuraConfiguration), not Gradle sync or the other flavors.
+def sakuraCorePortRaw = providers.gradleProperty("sakuraCorePort").getOrElse("20001").trim()
+def sakuraCorePort = sakuraCorePortRaw.isInteger() ? sakuraCorePortRaw.toInteger() : 20001
 def validateSakuraConfiguration = tasks.register("validateSakuraConfiguration") {
     doLast {
         if (sakuraSporkAddress.trim().isEmpty()) {
             throw new GradleException("Set sakuraSporkAddress to Sakura's public spork address before building devnet")
         }
-        if (sakuraCorePort < 1 || sakuraCorePort > 65535) {
-            throw new GradleException("sakuraCorePort must be between 1 and 65535")
+        if (!sakuraCorePortRaw.isInteger() || sakuraCorePortRaw.toInteger() < 1 || sakuraCorePortRaw.toInteger() > 65535) {
+            throw new GradleException("sakuraCorePort must be an integer between 1 and 65535, got '$sakuraCorePortRaw'")
         }
     }
 }
