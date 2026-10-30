@@ -4,10 +4,6 @@
     <string name="dash_connect_unavailable_message">DashConnect requires a supported 64-bit device and a testnet or devnet wallet.</string>
     <string name="dash_connect_remove_local">Remove from list</string>
     <string name="dash_connect_revoke">Revoke Access</string>
-    <string name="dash_connect_budget_requested">Requested budgets (capped at 5 DASH)</string>
-    <string name="dash_connect_budget_cap">Budgeted keys: %1$s DASH maximum</string>
-    <string name="dash_connect_expiry_requested">Requested expiry (up to 1 year)</string>
-    <string name="dash_connect_days">%1$d days maximum</string>
     <string name="dash_connect_return_title">Return to %1$s?</string>
     <string name="dash_connect_return_warning">This return address was supplied by the app. Open it only if you recognize the website.</string>
     <string name="dash_connect_return_open">Open Website</string>
@@ -28,4 +24,37 @@
     <string name="dash_st_purchase_approve">Approve purchase</string>
     <string name="dash_st_purchase_submitted">Purchase submitted. Check your token and credit balances for the final result. This request cannot be submitted again.</string>
     <string name="dash_connect_identity_required">Create a username to connect apps.</string>
+    <string name="dash_connect_first_connection_warning">You have never connected to this DAPP before. Only approve if you trust %1$s</string>
+    <string name="dash_connect_app_id">App ID</string>
+    <string name="dash_connect_requested">Requested</string>
+    <string name="dash_connect_funding_limit">Identity funding limit</string>
+    <string name="dash_connect_funding_limit_value">Maximum of %1$s DASH</string>
+    <string name="dash_connect_funding_limit_unlimited">No limit</string>
+    <string name="dash_connect_expires">Connection will expire</string>
+    <string name="dash_connect_change">Change</string>
+    <string name="dash_connect_able_to_do">See what %1$s will be able to do</string>
+    <string name="dash_connect_not_access">See what %1$s will NOT have access to</string>
+    <string name="dash_connect_capability_act_tokens">Act as you in all of %1$s’s features, including claiming and spending its tokens, %2$s until %3$s.
+
+The DASH limit does not limit how many of your tokens it can move.</string>
+    <string name="dash_connect_capability_act">Act as you in all of %1$s’s features, %2$s until %3$s</string>
+    <string name="dash_connect_capability_profile">Edit your DashPay profile, %1$s until %2$s</string>
+    <string name="dash_connect_capability_documents">Create and edit your %1$s documents in %2$s, %3$s until %4$s</string>
+    <string name="dash_connect_capability_encrypted">Receive messages encrypted to you in %1$s</string>
+    <string name="dash_connect_spending_limit">spending up to %1$s DASH of your identity balance</string>
+    <string name="dash_connect_spending_unlimited">spending any amount of your identity balance</string>
+    <string name="dash_connect_no_spendable_balance">Your spendable Dash balance</string>
+    <string name="dash_connect_no_recovery_phrase">Your recovery phrase</string>
+    <string name="dash_connect_funding_limits_title">Identity funding limits</string>
+    <string name="dash_connect_expiration_title">Connection expiration period</string>
+    <string name="dash_connect_days">%1$d days</string>
+    <string name="dash_connect_funding_info_title">What are identity funding limits?</string>
+    <string name="dash_connect_funding_info_message">Your identity has its own balance, separate from the Dash on your wallet’s home screen.
+
+It pays for actions on the Dash network, like updating your profile or using connected apps.</string>
+    <string name="dash_connect_spendable_info_title">What is spendable Dash?</string>
+    <string name="dash_connect_spendable_info_message">This is the Dash on your wallet’s home screen – the balance you can send to anyone.
+
+It’s separate from your identity’s balance, which only pays for network actions.</string>
+    <string name="dash_connect_got_it">Got it</string>
 </resources>

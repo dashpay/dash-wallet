@@ -77,7 +77,16 @@ data class ConnectionRequest(
     val budgetPreset: Int = 0,
     val lifetimePreset: Int = 0,
     val requiresGroupReapproval: Boolean = false,
-    val groupScopeChangeApproved: Boolean = false
+    val groupScopeChangeApproved: Boolean = false,
+    /** Plain-language lines for the approved grants; empty for a legacy login. */
+    val capabilities: List<AppCapability> = emptyList(),
+    /** Credits the app may spend at most; null when unlimited or nothing is budgeted. */
+    val fundingLimit: java.math.BigInteger? = null,
+    val expiresAt: Long? = null,
+    /** When the app created the request, millis since epoch; 0 when unknown. */
+    val requestedAt: Long = 0,
+    /** True when no connection to this app is on record. */
+    val firstConnection: Boolean = false
 )
 
 /**

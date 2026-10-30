@@ -277,11 +277,14 @@ class ConnectionsViewModel @Inject constructor(
                 pendingOpenedFromUrl = openedFromUrl
                 pendingApprovalFailed = false
                 pendingApprovalRefreshFailed = false
-                _uiState.update { it.copy(pendingRequest = request.copy(permissionText = plan?.permissionText.orEmpty(),
-                    grantChoices = plan?.choices().orEmpty(), recovering = plan?.recovering ?: false,
+                _uiState.update { state -> state.copy(pendingRequest = request.copy(permissionText = plan?.permissionText.orEmpty(),
+                    recovering = plan?.recovering ?: false,
                     requiresGroupReapproval = plan?.requiresGroupReapproval ?: false,
                     groupScopeChangeApproved = false,
-                    walletIdentityId = plan?.identityId ?: request.walletIdentityId),
+                    walletIdentityId = plan?.identityId ?: request.walletIdentityId,
+                    requestedAt = plan?.requestedAt ?: 0,
+                    firstConnection = state.connections.none { it.id == request.appContractId })
+                    .let { if (plan == null) it else it.withTerms(plan) },
                     requiresRevocation = plan?.recovering == true) }
                 _approveResult.value = ApproveResult.Idle
                 _scanOutcome.value = ScanOutcome.ConnectionRequested
@@ -385,7 +388,7 @@ class ConnectionsViewModel @Inject constructor(
             if (selected) plan.selectedEncryption + index else plan.selectedEncryption - index)
         else plan.copy(selectedAuth = if (selected) plan.selectedAuth + index else plan.selectedAuth - index)
         pendingPlan = changed
-        _uiState.update { it.copy(pendingRequest = it.pendingRequest?.copy(grantChoices = changed.choices())) }
+        _uiState.update { it.copy(pendingRequest = it.pendingRequest?.withTerms(changed)) }
     }
 
     fun selectLimits(budget: Int, lifetime: Int) {
@@ -395,8 +398,7 @@ class ConnectionsViewModel @Inject constructor(
         if (plan.recovering) return
         val changed = plan.withPresets(budget, lifetime)
         pendingPlan = changed
-        _uiState.update { it.copy(pendingRequest = it.pendingRequest?.copy(grantChoices = changed.choices(),
-            budgetPreset = budget, lifetimePreset = lifetime)) }
+        _uiState.update { it.copy(pendingRequest = it.pendingRequest?.withTerms(changed)) }
     }
 
     fun approveGroupScopeChange(approved: Boolean) {
@@ -452,13 +454,11 @@ class ConnectionsViewModel @Inject constructor(
                         (ex !is GroupScopeChangedException && state.requiresRevocation),
                         pendingRequest = state.pendingRequest?.copy(
                         permissionText = refreshed.permissionText,
-                        grantChoices = refreshed.choices(),
                         recovering = refreshed.recovering,
                         requiresGroupReapproval = refreshed.requiresGroupReapproval,
                         groupScopeChangeApproved = false,
-                        budgetPreset = refreshed.budgetPreset,
-                        lifetimePreset = refreshed.lifetimePreset
-                    )) }
+                        requestedAt = refreshed.requestedAt
+                    )?.withTerms(refreshed)) }
                 } catch (refreshError: Exception) {
                     if (refreshError is CancellationException) throw refreshError
                     pendingApprovalRefreshFailed = true
@@ -563,3 +563,13 @@ class ConnectionsViewModel @Inject constructor(
         }
     }
 }
+
+/** Copies the consent terms a plan shows (grants, limits and the plain-language summary) into the request. */
+private fun ConnectionRequest.withTerms(plan: AppConnectPlan) = copy(
+    grantChoices = plan.choices(),
+    capabilities = plan.capabilities(),
+    fundingLimit = plan.fundingLimit(),
+    expiresAt = plan.connectionExpiresAt(),
+    budgetPreset = plan.budgetPreset,
+    lifetimePreset = plan.lifetimePreset
+)
