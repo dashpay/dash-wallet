@@ -258,14 +258,11 @@ class TxDisplayCacheService @Inject constructor(
                     }
                     historyRows.add(txRow)
                 }
-                // Always populate the cache adapter, regardless of which coroutine won
-                // the serviceScope race (_txDataSource may already be RoomLive if
-                // getCount() completed before getAll()).
+                // Only _cachedRows is this coroutine's to set: the Fragment shows these
+                // through the separate cachedRows collector regardless of _txDataSource,
+                // so _txDataSource/_transactionsLoaded stay the live pipeline's alone —
+                // this coroutine deciding them too was a second writer racing it.
                 _cachedRows.value = historyRows
-                if (_txDataSource.value is TxDataSource.Empty) {
-                    _txDataSource.value = TxDataSource.PrebuiltCache(historyRows)
-                    _transactionsLoaded.value = true
-                }
             }
         }
 
@@ -524,6 +521,16 @@ class TxDisplayCacheService @Inject constructor(
                     coinJoinWrapperFactory = CoinJoinTxWrapperFactory(walletData.networkParameters, wallet as WalletEx)
                     crowdNodeWrapperFactory = FullCrowdNodeSignUpTxSetFactory(walletData.networkId)
                 }
+                // This is the one place that already knows the live pipeline is no
+                // longer running for the wallet it was bound to (factories above are
+                // rebuilt fresh for whichever wallet is current): also drop the live
+                // pipeline itself, so the next filter/wallet emission re-initializes
+                // it instead of mistaking "a pipeline is running" for "it's running
+                // for this wallet". clearDatabase() deliberately leaves this alone
+                // (see its own comment) for the still-live mid-rescan case; this event
+                // either precedes that pipeline ever starting or marks a real wallet
+                // change, so resetting it here does not touch that recovery window.
+                _txDataSource.value = TxDataSource.Empty
                 _currentPagingSource.value?.invalidate()
             }
             .catch { e -> log.error("wallet reset flow error", e) }
