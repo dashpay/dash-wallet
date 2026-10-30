@@ -79,4 +79,21 @@ class ShieldedUiFormatTest {
         assertEquals("5", Fiat.parseFiat("USD", "5").toKeypadString())
         assertEquals("0.93", Fiat.parseFiat("USD", "0.93").toKeypadString())
     }
+
+    @Test
+    fun `fiat two-decimal keypad string stays locale-neutral`() {
+        // Pre-review round 8 (finding 2): onMaxClick/onCurrencySelected write this text into the
+        // EDITABLE keypad field, which processAmountKeyInput/parseDecimalOrNull always parse with
+        // a literal '.' — unlike toDisplayNoCode() (device-locale, e.g. "300,03" on a
+        // comma-decimal device), this format must never depend on the default locale.
+        val originalLocale = Locale.getDefault()
+        Locale.setDefault(Locale.GERMANY)
+        try {
+            assertEquals("300.03", Fiat.parseFiat("USD", "300.0297").toKeypadStringTwoDecimals())
+            assertEquals("5.00", Fiat.parseFiat("USD", "5").toKeypadStringTwoDecimals())
+            assertEquals("0", Fiat.parseFiat("USD", "0").toKeypadStringTwoDecimals())
+        } finally {
+            Locale.setDefault(originalLocale)
+        }
+    }
 }

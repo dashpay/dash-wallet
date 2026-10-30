@@ -206,12 +206,17 @@ class ShieldedBalanceActivity : LockScreenActivity() {
     /**
      * PIN/biometric first, then the spend. A dismissed or failed
      * authentication simply returns — the confirm sheet stays open and
-     * nothing is submitted.
+     * nothing is submitted. The spend amount is resolved HERE, before the
+     * (possibly long) authentication wait, and threaded through to
+     * [ShieldedTransferViewModel.onConfirm] — not re-read afterwards, since
+     * a Max-pinned amount tracks the live balance and could otherwise drift
+     * from what the user actually authorized.
      */
     private fun authenticateAndConfirmTransfer() {
+        val confirmedAmount = transferViewModel.uiState.value.amount
         lifecycleScope.launch {
             securityFunctions.authenticate(this@ShieldedBalanceActivity) ?: return@launch
-            transferViewModel.onConfirm()
+            transferViewModel.onConfirm(confirmedAmount)
         }
     }
 

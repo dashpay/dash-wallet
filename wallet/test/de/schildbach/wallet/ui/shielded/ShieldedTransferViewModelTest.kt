@@ -206,7 +206,7 @@ class ShieldedTransferViewModelTest {
     private fun ShieldedTransferViewModel.typeAmountAndConfirm(amount: String = "1") {
         amount.forEach { onKeyInput(it.toString()) }
         onContinue()
-        onConfirm()
+        onConfirm(uiState.value.amount)
     }
 
     @Test
@@ -526,7 +526,7 @@ class ShieldedTransferViewModelTest {
         vm.onSwapDirection()
         vm.onMaxClick()
         vm.onContinue()
-        vm.onConfirm()
+        vm.onConfirm(vm.uiState.value.amount)
 
         assertEquals(ShieldedSubmitState.Success, vm.uiState.value.submitState)
         // first the full balance, then the deficit-adjusted amount floored
@@ -578,7 +578,7 @@ class ShieldedTransferViewModelTest {
 
         vm.onMaxClick()
         vm.onContinue()
-        vm.onConfirm()
+        vm.onConfirm(vm.uiState.value.amount)
 
         assertEquals(ShieldedSubmitState.Success, vm.uiState.value.submitState)
         // first the full 3.00 DASH balance, then minus the estimated
@@ -620,8 +620,58 @@ class ShieldedTransferViewModelTest {
         assertEquals(Dash.parse("3.00"), vm.uiState.value.amount)
         assertFalse(vm.uiState.value.insufficientFunds)
 
-        vm.onKeyInput("1")
+        // "back" actually edits the text ("300.03" -> "300.0"): a genuine edit must clear
+        // the Max intent.
+        vm.onKeyInput("back")
+        assertEquals("300.0", vm.uiState.value.amountText)
         assertFalse(vm.uiState.value.maxSelected)
+    }
+
+    @Test
+    fun maxClick_fiatMode_rejectedKeypressDoesNotClearMaxSelected() = runTest(dispatcher) {
+        // Pre-review round 8: the fiat text is already at the 2-decimal cap right after Max,
+        // so the very next digit is rejected by processAmountKeyInput (text unchanged) — that
+        // no-op must not clear maxSelected, or the Continue button would falsely disable
+        // (amount would re-derive from the rounded text instead of staying pinned to the
+        // balance) with no visible change on screen to explain why.
+        every { exchangeRates.observeExchangeRate(any()) } returns flowOf(ExchangeRate("USD", "100.0099"))
+        val vm = viewModel()
+
+        vm.onCurrencySelected(dashMode = false)
+        vm.onMaxClick()
+        assertEquals("300.03", vm.uiState.value.amountText)
+
+        vm.onKeyInput("1")
+
+        // rejected: text unchanged, so the Max intent (and the pinned amount) must survive
+        assertEquals("300.03", vm.uiState.value.amountText)
+        assertTrue(vm.uiState.value.maxSelected)
+        assertEquals(Dash.parse("3.00"), vm.uiState.value.amount)
+        assertFalse(vm.uiState.value.insufficientFunds)
+    }
+
+    @Test
+    fun typedAmount_equalsBalanceInDash_isMaxSpend_executorRetriesFeeReserved() = runTest(dispatcher) {
+        // Finding 4 (MO-1111 pre-review round 8): a manually TYPED amount that equals the
+        // transferable balance in Dash — not a Max tap — must still get the fee-adjusted
+        // retry (the user may have copied the figure shown above the keypad instead of
+        // tapping Max). maxSelected alone would miss this; isMaxSpend must OR in the
+        // Dash-domain equality check too.
+        coEvery { shieldedService.shieldFromWallet(any()) } returnsMany
+            listOf(assetLockShortResult(), SdkWriteResult.Broadcast(ShieldFromWalletOutcome.COMPLETED))
+        every { walletData.spendableUtxoCount() } returns 4
+        val vm = viewModel()
+
+        // 3.00 DASH typed digit-by-digit == the mocked 3.00 DASH wallet balance, no Max tap
+        vm.typeAmountAndConfirm("3")
+
+        assertFalse(vm.uiState.value.maxSelected)
+        assertEquals(ShieldedSubmitState.Success, vm.uiState.value.submitState)
+        coVerifyOrder {
+            shieldedService.shieldFromWallet(Dash.parse("3"))
+            shieldedService.shieldFromWallet(Dash(299_998_216L))
+        }
+        coVerify(exactly = 2) { shieldedService.shieldFromWallet(any()) }
     }
 
     // ── AC3: L1 sync gate ───────────────────────────────────────────────

@@ -154,12 +154,13 @@ data class ShieldedTransferUIState(
     /** Raw keypad text in the currently selected unit. */
     val amountText: String = "0",
     /**
-     * True from [onMaxClick][ShieldedTransferViewModel.onMaxClick] until keypad input, a
-     * direction swap, a reset or a result dismissal clears it (a currency toggle keeps it).
-     * While set, [amount] is pinned to [availableBalance] instead of parsed from [amountText]
-     * and [onConfirm][ShieldedTransferViewModel.onConfirm] threads it through as the Max intent
-     * that allows a fee-adjusted retry — so Max never depends on [amountText] round-tripping
-     * through fiat, unlike a plain Dash/fiat equality check would.
+     * True from [onMaxClick][ShieldedTransferViewModel.onMaxClick] until keypad input that
+     * actually changes [amountText], a direction swap, a reset or a result dismissal clears it
+     * (a currency toggle keeps it). While set, [amount] is pinned to [availableBalance] instead
+     * of parsed from [amountText]. [onConfirm][ShieldedTransferViewModel.onConfirm] treats this
+     * flag as ONE trigger (alongside a manually typed amount that equals [availableBalance]) for
+     * the fee-adjusted retry — so Max itself never depends on [amountText] round-tripping through
+     * fiat, unlike a plain Dash/fiat equality check would.
      */
     val maxSelected: Boolean = false,
     /** True when the primary entry unit is DASH, false when fiat. */
@@ -626,9 +627,12 @@ class ShieldedTransferViewModel @Inject constructor(
             return
         }
         val maxDecimals = if (state.dashMode) 8 else 2
+        val newText = processAmountKeyInput(state.amountText, key, maxDecimals)
         _uiState.value = state.copy(
-            amountText = processAmountKeyInput(state.amountText, key, maxDecimals),
-            maxSelected = false
+            amountText = newText,
+            // A keypress the keypad itself rejected (e.g. past maxDecimalPlaces) leaves the
+            // text unchanged and must not clear the Max intent.
+            maxSelected = if (newText == state.amountText) state.maxSelected else false
         )
         // typing again clears an inline "not sent" error
         transferExecutor.clearRetryableResult()
@@ -640,9 +644,10 @@ class ShieldedTransferViewModel @Inject constructor(
         val text = if (state.dashMode) {
             max.toKeypadString()
         } else {
-            // Rounded to 2 decimals like the rest of the app: amount is pinned to max via
-            // maxSelected below, so this text never round-trips back into the spent amount.
-            max.toFiatAt(state.rate)?.toDisplayNoCode() ?: return
+            // Rounded to 2 decimals like the rest of the app, locale-neutral (amount is pinned
+            // to max via maxSelected below, so this text never round-trips back into the spent
+            // amount, but it must stay parseable by the keypad once maxSelected is cleared).
+            max.toFiatAt(state.rate)?.toKeypadStringTwoDecimals() ?: return
         }
         _uiState.value = state.copy(amountText = text, maxSelected = true)
         transferExecutor.clearRetryableResult()
@@ -659,7 +664,7 @@ class ShieldedTransferViewModel @Inject constructor(
         val text = when {
             amount.isZero -> "0"
             dashMode -> amount.toKeypadString()
-            state.maxSelected -> amount.toFiatAt(state.rate)?.toDisplayNoCode() ?: "0"
+            state.maxSelected -> amount.toFiatAt(state.rate)?.toKeypadStringTwoDecimals() ?: "0"
             else -> amount.toFiatAt(state.rate)?.toKeypadString() ?: "0"
         }
         _uiState.value = state.copy(dashMode = dashMode, amountText = text)
@@ -716,8 +721,14 @@ class ShieldedTransferViewModel @Inject constructor(
      * and announces terminal outcomes to a user who left the screen —
      * see the executor KDoc. Single-attempt semantics unchanged: the
      * executor atomically refuses unless it is Idle/NotSent.
+     *
+     * [confirmedAmount] is the amount the user actually authorized — resolved by the caller
+     * BEFORE the PIN/biometric prompt, not re-read from [uiState] here: while [ShieldedTransferUIState
+     * .maxSelected] is set, [ShieldedTransferUIState.amount] tracks the LIVE balance, which can move
+     * during the authentication wait. Submitting a value re-derived after that wait could silently
+     * spend more or less than what the user confirmed.
      */
-    fun onConfirm() {
+    fun onConfirm(confirmedAmount: Dash) {
         val state = _uiState.value
         if (!state.canContinue || !state.showConfirm) return
         _uiState.value = state.copy(showConfirm = false)
@@ -726,9 +737,12 @@ class ShieldedTransferViewModel @Inject constructor(
         // Rust-computed note-selection fee FromShielded; the L1 asset-lock
         // fee ToShielded), so the executor may retry ONCE with a
         // fee-adjusted amount instead of failing the Max flow — see
-        // [ShieldedTransferExecutor.submit].
-        val isMaxSpend = state.maxSelected
-        if (!transferExecutor.submit(state.direction, state.amount, isMaxSpend)) {
+        // [ShieldedTransferExecutor.submit]. Also true for a manually TYPED amount that equals
+        // the balance (not just a Max tap): e.g. the user copies the figure shown above the
+        // keypad without tapping Max — typedAmount_equalsBalanceInDash_isMaxSpend_executorRetriesFeeReserved
+        // in the test class covers this.
+        val isMaxSpend = state.maxSelected || state.amount == state.availableBalance
+        if (!transferExecutor.submit(state.direction, confirmedAmount, isMaxSpend)) {
             log.warn("shielded transfer submit refused — an operation is already in flight")
         }
     }

@@ -181,6 +181,21 @@ fun Fiat.toDisplay(): String = toFormattedString()
  */
 fun Fiat.toDisplayNoCode(): String = toFormattedStringNoCode()
 
+private val FIAT_KEYPAD_TWO_DECIMALS_FORMAT: MonetaryFormat =
+    MonetaryFormat().minDecimals(2).optionalDecimals().noCode()
+
+/**
+ * "300.03"-style fiat string, two decimals, with the same locale-neutral `.` separator as
+ * [toKeypadString] (this format never calls `.withLocale()`, unlike [toDisplayNoCode]) — for the
+ * EDITABLE keypad field (Max tap / currency toggle while [maxSelected][ShieldedTransferUIState
+ * .maxSelected] is set), which must stay parseable by [parseDecimalOrNull]/[processAmountKeyInput]
+ * on a comma-decimal device locale.
+ */
+fun Fiat.toKeypadStringTwoDecimals(): String {
+    if (isZero) return "0"
+    return FIAT_KEYPAD_TWO_DECIMALS_FORMAT.format(this).toString()
+}
+
 /**
  * Plain decimal string with trailing zeros trimmed, up to [Fiat.SMALLEST_UNIT_EXPONENT] (8)
  * decimals — for the editable keypad field (Max tap / currency toggle), which is also the only
