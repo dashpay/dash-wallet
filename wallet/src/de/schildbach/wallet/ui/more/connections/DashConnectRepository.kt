@@ -152,7 +152,7 @@ interface DashConnectRepository {
 
     suspend fun connectionDetails(connectionId: String, scope: String? = null): String = ""
 
-    /** What the recorded keys of a connection allow, read from local records only; null if none are recorded. */
+    /** What the recorded keys of a connection allow, with their current Platform limits; null if none are recorded. */
     suspend fun connectionTerms(connectionId: String, scope: String? = null): ConnectionTerms? = null
 
     /** Unlinked DashPay profile keys the user has not dismissed; null when there are none. */

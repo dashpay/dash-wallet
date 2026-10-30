@@ -682,7 +682,7 @@ internal class AppConnectSession(
             "Contract ownership could not be established. Complete revocation is not confirmed."
         }.ownerId
 
-    /** The terms the recorded keys grant, from local records only; null when no key is recorded. */
+    /** The terms the recorded keys grant, with their current Platform limits; null when no key is recorded. */
     suspend fun terms(app: String, expectedScope: String): ConnectionTerms? = withContext(Dispatchers.IO) {
         checkScope(expectedScope)
         // Each login adds a grant record. Every one that may still authorize access counts; fully
@@ -690,9 +690,14 @@ internal class AppConnectSession(
         val records = matchingRecords(expectedScope, app)
         val live = records.filter { it.optString("state") != "disabled" ||
             !it.optBoolean("permanentRevocationConfirmed") || !it.optBoolean("appRevocationConfirmed") }
-        val keys = live.ifEmpty { listOfNotNull(records.maxByOrNull { it.optLong("updatedAt") }) }
+        val recorded = live.ifEmpty { listOfNotNull(records.maxByOrNull { it.optLong("updatedAt") }) }
             .flatMap { decodeKeys(it) }
-        if (keys.isEmpty()) null else recordedTerms(keys)
+        if (recorded.isEmpty()) return@withContext null
+        // Platform can change a key's budget or expiry without changing the key, so describe each one
+        // as Platform holds it now; a key no longer on the identity keeps its recorded terms.
+        val current = readIdentity().publicKeys
+        checkScope(expectedScope)
+        recordedTerms(recorded.map { key -> current.firstOrNull { AppConnectKeyState.sameKeyIdentity(it, key) } ?: key })
     }
 
     suspend fun details(app: String, expectedScope: String): String = withContext(Dispatchers.IO) {
