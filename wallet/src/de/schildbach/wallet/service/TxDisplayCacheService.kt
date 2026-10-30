@@ -273,20 +273,24 @@ class TxDisplayCacheService @Inject constructor(
             .flatMapLatest { (direction, wallet) ->
                 if (wallet == null) return@flatMapLatest emptyFlow()
                 val filter = TxDirectionFilter(direction, wallet)
-                if (wrappedTransactionList.isEmpty()) {
-                    if (txDisplayCacheDao.getCount() > 0) {
-                        _liveFilterFlag.value = filter.direction.toFilterFlag()
-                        _txDataSource.value = TxDataSource.RoomLive
-                        _transactionsLoaded.value = true
-                        initializeFactoriesFromCache()
-                    } else {
-                        rebuildWrappedList(filter)
-                    }
-                } else {
+                // _txDataSource (not wrappedTransactionList) is the right "already running" check:
+                // the RoomLive fast path below only loads active CoinJoin/CrowdNode groups into
+                // wrappedTransactionList (initializeFactoriesFromCache), so a plain wallet with only
+                // single-tx history leaves wrappedTransactionList empty forever. Keying on it here
+                // made every later direction change retake this branch — which never invalidates
+                // the Pager — so a filter pick silently updated _liveFilterFlag and changed nothing
+                // on screen.
+                if (_txDataSource.value is TxDataSource.RoomLive) {
                     log.info("direction changed to {} — switching filter flag only", direction)
                     _liveFilterFlag.value = filter.direction.toFilterFlag()
-                    _txDataSource.value = TxDataSource.RoomLive // force new Pager with updated filter
                     _currentPagingSource.value?.invalidate()
+                } else if (txDisplayCacheDao.getCount() > 0) {
+                    _liveFilterFlag.value = filter.direction.toFilterFlag()
+                    _txDataSource.value = TxDataSource.RoomLive
+                    _transactionsLoaded.value = true
+                    initializeFactoriesFromCache()
+                } else {
+                    rebuildWrappedList(filter)
                 }
                 val allFilter = TxDirectionFilter(TxFilterType.ALL, wallet)
                 walletData.observeTransactions(true, allFilter)

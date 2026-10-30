@@ -50,6 +50,7 @@ import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.data.InvitationValidationState
 import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.work.RestoreIdentityOperation
+import de.schildbach.wallet.transactions.TxFilterType
 import de.schildbach.wallet.ui.InviteHandlerViewModel
 import de.schildbach.wallet.ui.PendingInvitation
 import de.schildbach.wallet.ui.dashpay.user.DashPayUserBottomSheet
@@ -104,6 +105,26 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
     private var pendingManualRefresh: Boolean = false
 
     /**
+     * Whether cacheAdapter is still the attached list adapter, and whether its last submitted
+     * snapshot was non-empty. Tracked here and updated synchronously at the exact submission/
+     * swap points, rather than read back from [CacheTransactionAdapter.currentList] —
+     * ListAdapter.submitList() runs its diff on a background executor and posts the update back,
+     * so currentList does not reflect a just-submitted list until that round-trip lands.
+     */
+    private var cacheAdapterAttached: Boolean = true
+    private var cacheHasRows: Boolean = false
+
+    /**
+     * True once liveAdapter's loadStateFlow has reported a genuine [LoadState.Loading] refresh.
+     * The empty placeholder PagingData the live flow emits before the Room-backed Pager (or
+     * before a filter's new PagingSource) actually runs never goes through a Loading phase — there
+     * is nothing to load — so this distinguishes that placeholder's immediate NotLoading from a
+     * real (possibly empty) answer, entirely from this one loadStateFlow collector's own history:
+     * no cross-coroutine signal to race against.
+     */
+    private var liveRefreshSeenLoading: Boolean = false
+
+    /**
      * One "still syncing" invite notice per launch. The provisional
      * NOT_SYNCED verdict can be re-reached on every sync-state emission,
      * and the notice is informational — repeating it would be a nag.
@@ -129,6 +150,15 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         super.onViewCreated(view, savedInstanceState)
         onViewCreatedTime = System.currentTimeMillis()
         log.info("STARTUP WalletTransactionsFragment.onViewCreated at {}", onViewCreatedTime)
+
+        // This Fragment's VIEW (and with it cacheAdapter/concatAdapter/liveAdapter below) can be
+        // recreated more than once on the same Fragment instance (e.g. a bottom-nav tab whose view
+        // is torn down and rebuilt while the Fragment itself is retained). Reset the per-view
+        // tracking fields here or a stale "already swapped to live" from a previous view survives
+        // into the fresh ConcatAdapter(header, cacheAdapter) below and blocks the new swap forever.
+        cacheAdapterAttached = true
+        cacheHasRows = false
+        liveRefreshSeenLoading = false
 
         val clickHandler = { rowView: HistoryRowView, _: Int, isProfileClick: Boolean ->
             viewLifecycleOwner.lifecycleScope.launch {
@@ -256,10 +286,12 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
             }
         })
 
+        updateFilterButtonLabel(viewModel.transactionsDirection)
         binding.transactionFilterBtn.setOnClickListener {
             val dialogFragment = TransactionsFilterDialog(viewModel.transactionsDirection) { direction, _ ->
                 viewModel.transactionsDirection = direction
                 viewModel.logDirectionChangedEvent(direction)
+                updateFilterButtonLabel(direction)
             }
 
             dialogFragment.show(requireActivity())
@@ -308,8 +340,13 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         // becomes false — allowing showEmptyView() to fire correctly.
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.cachedRows.collect { rows ->
+                cacheHasRows = rows.isNotEmpty()
                 cacheAdapter.submitList(rows)
-                if (rows.isNotEmpty()) {
+                // The startup snapshot can arrive after the live side has already taken over and
+                // settled on its own (possibly empty) answer — cacheAdapterAttached excludes that
+                // case so a late cache emission doesn't force showTransactionList() over a correctly
+                // shown empty view.
+                if (rows.isNotEmpty() && cacheAdapterAttached) {
                     log.info("STARTUP cache submitList: {} rows at {}", rows.size, System.currentTimeMillis())
                     if (firstPageLoadStartTime == 0L) {
                         firstPageLoadStartTime = System.currentTimeMillis()
@@ -374,32 +411,45 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         }
 
         // Handle loading/empty states via liveAdapter's loadStateFlow.
-        // Also swaps the RecyclerView from cacheAdapter to liveAdapter once live items arrive.
+        // Also swaps the RecyclerView from cacheAdapter to liveAdapter once the live Pager has
+        // a definitive answer.
         viewLifecycleOwner.lifecycleScope.launch {
             liveAdapter.loadStateFlow
                 .distinctUntilChanged()
                 .collectLatest { loadStates ->
-                    val isRefreshing = loadStates.refresh is LoadState.Loading
-                    val cacheHasItems = concatAdapter.adapters.contains(cacheAdapter) &&
-                        cacheAdapter.currentList.isNotEmpty()
-                    // Only show the loading spinner when there's nothing to display yet.
-                    val isLoading = isRefreshing && liveAdapter.itemCount == 0 && !cacheHasItems
-                    val isEmpty = loadStates.refresh is LoadState.NotLoading &&
-                        liveAdapter.itemCount == 0 && !cacheHasItems
+                    if (loadStates.refresh is LoadState.Loading) {
+                        liveRefreshSeenLoading = true
+                    }
 
-                    // Swap cacheAdapter → liveAdapter inside the same ConcatAdapter once live
-                    // items are ready.  Keeping one ConcatAdapter instance avoids the
-                    // "cannot find wrapper" crash from ConcatAdapterController.
-                    if (loadStates.refresh is LoadState.NotLoading && liveAdapter.itemCount > 0 &&
-                        concatAdapter.adapters.contains(cacheAdapter)) {
+                    // Swap cacheAdapter → liveAdapter inside the same ConcatAdapter as soon as the
+                    // live (filter-aware) Pager has its first settled answer for the current
+                    // filter — whether that answer is some rows or none. The unfiltered cache
+                    // snapshot must not keep deciding what's on screen once the live data is in,
+                    // or a filter matching nothing would stay masked by the cache's stale content.
+                    // liveRefreshSeenLoading gates out the transient PagingData.empty() placeholder
+                    // the live flow emits before the Room-backed Pager starts — it never passes
+                    // through Loading (there is nothing to load) — without it this would swap away
+                    // from the cache before the live side has anything real to show. Keeping one
+                    // ConcatAdapter instance avoids the "cannot find wrapper" crash from
+                    // ConcatAdapterController.
+                    if (loadStates.refresh is LoadState.NotLoading &&
+                        liveRefreshSeenLoading && cacheAdapterAttached) {
                         log.info("STARTUP swapping to live adapter: {} items at {}",
                             liveAdapter.itemCount, System.currentTimeMillis())
                         val lm = binding.walletTransactionsList.layoutManager as LinearLayoutManager
                         val scrollState = lm.onSaveInstanceState()
                         concatAdapter.removeAdapter(cacheAdapter)
                         concatAdapter.addAdapter(liveAdapter)
+                        cacheAdapterAttached = false
                         lm.onRestoreInstanceState(scrollState)
                     }
+
+                    val isRefreshing = loadStates.refresh is LoadState.Loading
+                    val cacheHasItems = cacheAdapterAttached && cacheHasRows
+                    // Only show the loading spinner when there's nothing to display yet.
+                    val isLoading = isRefreshing && liveAdapter.itemCount == 0 && !cacheHasItems
+                    val isEmpty = loadStates.refresh is LoadState.NotLoading &&
+                        liveAdapter.itemCount == 0 && !cacheHasItems
 
                     if (!isRefreshing && liveAdapter.itemCount > 0 && firstPageLoadStartTime > 0L) {
                         log.info("STARTUP first live items visible: {}ms from onViewCreated, {}ms from first-load-start ({} items)",
@@ -410,7 +460,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                     }
 
                     val buildingFromScratch = viewModel.isBuildingCache.value &&
-                        liveAdapter.itemCount == 0 && cacheAdapter.currentList.isEmpty()
+                        liveAdapter.itemCount == 0 && !cacheHasItems
                     binding.loading.isVisible = isLoading || buildingFromScratch
                     if (isEmpty && header.isEmpty()) showEmptyView() else showTransactionList()
                 }
@@ -421,7 +471,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         // overlay so the existing list stays on screen during background rebuilds.
         viewModel.isBuildingCache.observe(viewLifecycleOwner) { building ->
             val hasRows = viewModel.transactionsLoaded.value &&
-                (liveAdapter.itemCount > 0 || cacheAdapter.currentList.isNotEmpty())
+                (liveAdapter.itemCount > 0 || (cacheAdapterAttached && cacheHasRows))
             binding.loading.isVisible = building && !hasRows
             if (!building && pendingManualRefresh) {
                 pendingManualRefresh = false
@@ -699,6 +749,18 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
 
     fun scrollToTop() {
         binding.walletTransactionsList.scrollToPosition(0)
+    }
+
+    /** Names the active filter on the Filter button itself, e.g. "Filter: Received". */
+    private fun updateFilterButtonLabel(direction: TxFilterType) {
+        binding.transactionFilterBtn.text = when (direction) {
+            TxFilterType.ALL -> getString(R.string.explore_filter)
+            TxFilterType.SENT -> getString(R.string.filter_button_label, getString(R.string.sent_transactions))
+            TxFilterType.RECEIVED ->
+                getString(R.string.filter_button_label, getString(R.string.received_transactions))
+            TxFilterType.GIFT_CARD ->
+                getString(R.string.filter_button_label, getString(R.string.explore_filter_gift_cards))
+        }
     }
 
     private fun showTransactionList() {
