@@ -34,10 +34,8 @@
     <string name="dash_connect_change">Change</string>
     <string name="dash_connect_able_to_do">See what %1$s will be able to do</string>
     <string name="dash_connect_not_access">See what %1$s will NOT have access to</string>
-    <string name="dash_connect_capability_act_tokens">Act as you in all of %1$s’s features, including claiming and spending its tokens, %2$s until %3$s.
-
-The DASH limit does not limit how many of your tokens it can move.</string>
-    <string name="dash_connect_capability_act">Act as you in all of %1$s’s features, %2$s until %3$s</string>
+    <string name="dash_connect_capability_act_tokens">Act as you in all features of %1$s, including claiming and spending its tokens, %2$s until %3$s.\n\nThe DASH limit does not limit how many of your tokens it can move.</string>
+    <string name="dash_connect_capability_act">Act as you in all features of %1$s, %2$s until %3$s</string>
     <string name="dash_connect_capability_profile">Edit your DashPay profile, %1$s until %2$s</string>
     <string name="dash_connect_capability_documents">Create and edit your %1$s documents in %2$s, %3$s until %4$s</string>
     <string name="dash_connect_capability_encrypted">Receive messages encrypted to you in %1$s</string>
@@ -49,12 +47,8 @@ The DASH limit does not limit how many of your tokens it can move.</string>
     <string name="dash_connect_expiration_title">Connection expiration period</string>
     <string name="dash_connect_days">%1$d days</string>
     <string name="dash_connect_funding_info_title">What are identity funding limits?</string>
-    <string name="dash_connect_funding_info_message">Your identity has its own balance, separate from the Dash on your wallet’s home screen.
-
-It pays for actions on the Dash network, like updating your profile or using connected apps.</string>
+    <string name="dash_connect_funding_info_message">Your identity has its own balance, separate from the Dash on your wallet’s home screen.\n\nIt pays for actions on the Dash network, like updating your profile or using connected apps.</string>
     <string name="dash_connect_spendable_info_title">What is spendable Dash?</string>
-    <string name="dash_connect_spendable_info_message">This is the Dash on your wallet’s home screen – the balance you can send to anyone.
-
-It’s separate from your identity’s balance, which only pays for network actions.</string>
+    <string name="dash_connect_spendable_info_message">This is the Dash on your wallet’s home screen – the balance you can send to anyone.\n\nIt’s separate from your identity’s balance, which only pays for network actions.</string>
     <string name="dash_connect_got_it">Got it</string>
 </resources>

@@ -28,6 +28,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -56,6 +57,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -113,7 +115,12 @@ class ApproveConnectionDialog : OffsetDialogFragment(R.layout.dialog_compose_con
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
                 DashWalletTheme {
-                    Box(Modifier.navigationBarsPadding()) { ApprovalContent() }
+                    // The expanded sheet is full height but offset by the top margin, so only the
+                    // rest is visible; cap the content there to keep the buttons on screen.
+                    val marginTop = dimensionResource(org.dash.wallet.common.R.dimen.offset_dialog_margin_top)
+                    BoxWithConstraints(Modifier.navigationBarsPadding()) {
+                        ApprovalContent(Modifier.heightIn(max = maxHeight - marginTop))
+                    }
                 }
             }
         }
@@ -139,7 +146,7 @@ class ApproveConnectionDialog : OffsetDialogFragment(R.layout.dialog_compose_con
     }
 
     @Composable
-    private fun ApprovalContent() {
+    private fun ApprovalContent(modifier: Modifier) {
         val uiState by viewModel.uiState.collectAsState()
         val approveResult by viewModel.approveResult.collectAsState()
         val isLoading = approveResult is ConnectionsViewModel.ApproveResult.Loading
@@ -154,6 +161,7 @@ class ApproveConnectionDialog : OffsetDialogFragment(R.layout.dialog_compose_con
         uiState.pendingRequest?.let { request ->
             ApproveConnectionContent(
                 request = request,
+                modifier = modifier,
                 isLoading = isLoading,
                 requiresRevocation = uiState.requiresRevocation,
                 errorMessage = (approveResult as? ConnectionsViewModel.ApproveResult.Error)?.let {
@@ -187,6 +195,7 @@ class ApproveConnectionDialog : OffsetDialogFragment(R.layout.dialog_compose_con
 @Composable
 internal fun ApproveConnectionContent(
     request: ConnectionRequest,
+    modifier: Modifier = Modifier,
     isLoading: Boolean = false,
     requiresRevocation: Boolean = false,
     /** Shown above the buttons when the approval failed; null while idle or in progress. */
@@ -204,16 +213,12 @@ internal fun ApproveConnectionContent(
     // QR label is an UNAUTHENTICATED fallback (e.g. "Login to Yappr").
     val appName = request.appLabel.ifBlank { stringResource(R.string.dash_connect_unknown_app) }
     val limitsEditable = !isLoading && !request.recovering
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(max = 720.dp)
-            .verticalScroll(rememberScrollState())
-            .padding(top = 30.dp) // space for the drag indicator and close button
-    ) {
+    // The top spacer stays outside the scroll so content never slides under the drag indicator.
+    Column(modifier = modifier.fillMaxWidth().padding(top = 30.dp)) {
         Column(
             modifier = Modifier
-                .fillMaxWidth()
+                .weight(1f, fill = false)
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 40.dp, vertical = 20.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
@@ -227,16 +232,19 @@ internal fun ApproveConnectionContent(
                     color = colors.textPrimary,
                     modifier = Modifier.fillMaxWidth()
                 )
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Image(painterResource(R.drawable.ic_connect_web), contentDescription = null)
-                    Text(
-                        text = request.appUrl.ifBlank { appName },
-                        style = MyTheme.Typography.SubheadMedium.copy(fontSize = 17.sp, lineHeight = 22.sp),
-                        color = colors.dashBlue
-                    )
+                // Only a resolved website is shown; the unverified QR label is already the title.
+                if (request.appUrl.isNotBlank()) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Image(painterResource(R.drawable.ic_connect_web), contentDescription = null)
+                        Text(
+                            text = request.appUrl,
+                            style = MyTheme.Typography.SubheadMedium.copy(fontSize = 17.sp, lineHeight = 22.sp),
+                            color = colors.dashBlue
+                        )
+                    }
                 }
             }
 
