@@ -31,6 +31,9 @@ import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.data.entity.TransactionMetadata
 import org.dash.wallet.common.transactions.TransactionCategory
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -105,7 +108,7 @@ open class DatabaseMigrationTest {
         // Check that data is valid
         runBlocking {
             val savedRate = db.exchangeRatesDao().getRateSync("ARS")
-            assert(savedRate == null)
+            assertNull(savedRate)
         }
 
         db.close()
@@ -163,17 +166,17 @@ open class DatabaseMigrationTest {
         // Check that data is valid
         runBlocking {
             val savedBlockchainState = db.blockchainStateDao().getState()
-            assert(savedBlockchainState!!.bestChainHeight == BLOCKCHAIN_HEIGHT)
+            assertEquals(BLOCKCHAIN_HEIGHT, savedBlockchainState!!.bestChainHeight)
 
             val savedRate = db.exchangeRatesDao().getRateSync("ARS")
-            assert(savedRate?.rate == EXCHANGE_RATE)
+            assertEquals(EXCHANGE_RATE, savedRate?.rate)
 
             val savedAddressMetadata = db.addressMetadataDao().loadRecipient(address)
-            assert(savedAddressMetadata?.address == address)
-            assert(savedAddressMetadata?.service == service)
+            assertEquals(address, savedAddressMetadata?.address)
+            assertEquals(service, savedAddressMetadata?.service)
 
             val savedTxMetadata = db.transactionMetadataDao().load(txMetadata.txId)!!
-            assert(savedTxMetadata == txMetadata)
+            assertEquals(txMetadata, savedTxMetadata)
         }
 
         db.close()
@@ -185,8 +188,8 @@ open class DatabaseMigrationTest {
         val db = openCacheDatabase(withCrowdNode = true)
 
         runBlocking {
-            assert(db.txGroupCacheDao().getAll().isEmpty())
-            assert(db.txDisplayCacheDao().getAll().isEmpty())
+            assertTrue(db.txGroupCacheDao().getAll().isEmpty())
+            assertTrue(db.txDisplayCacheDao().getAll().isEmpty())
         }
 
         db.close()
@@ -198,8 +201,8 @@ open class DatabaseMigrationTest {
         val db = openCacheDatabase(withCrowdNode = false)
 
         runBlocking {
-            assert(db.txGroupCacheDao().getAll().map { it.groupId } == listOf("coinjoin_2025-03-16"))
-            assert(db.txDisplayCacheDao().getAll().map { it.rowId } == listOf("coinjoin_2025-03-16"))
+            assertEquals(listOf("coinjoin_2025-03-16"), db.txGroupCacheDao().getAll().map { it.groupId })
+            assertEquals(listOf("coinjoin_2025-03-16"), db.txDisplayCacheDao().getAll().map { it.rowId })
         }
 
         db.close()
