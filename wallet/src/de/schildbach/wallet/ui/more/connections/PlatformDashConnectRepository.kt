@@ -72,6 +72,9 @@ class PlatformDashConnectRepository @Inject constructor(
                 val updatedAt = if (!active && lastExpiry != null && lastExpiry <= currentTime) {
                     maxOf(latest.optLong("updatedAt"), lastExpiry)
                 } else latest.optLong("updatedAt")
+                // Records saved before connectedAt existed became active when last updated.
+                val connectedAt = grants.filter { it.has("connectedAt") || it.optString("state") == "active" }
+                    .maxOfOrNull { it.optLong("connectedAt", it.optLong("updatedAt")) }?.takeIf { it > 0 }
                 DAppConnection(app, connectionDisplayName(latest.optString("label")), "",
                     when {
                         active -> ConnectionStatus.ACTIVE
@@ -82,7 +85,7 @@ class PlatformDashConnectRepository @Inject constructor(
                         grants.any { it.optString("state") != "disabled" || !it.optBoolean("permanentRevocationConfirmed") ||
                             !it.optBoolean("appRevocationConfirmed") } -> ConnectionStatus.APPROVED
                         else -> ConnectionStatus.DISCONNECTED
-                    }, updatedAt, scope)
+                    }, updatedAt, scope, connectedAt = connectedAt)
             }
             emit((current + legacy.filter { old -> current.none { it.id == old.contractId } }.map {
                 DAppConnection(it.contractId, it.label, it.url, ConnectionStatus.APPROVED, it.updatedAt, scope, legacyOnly = true)

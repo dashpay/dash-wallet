@@ -39,6 +39,11 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.lifecycle.lifecycleScope
+import de.schildbach.wallet.ui.LockScreenActivity
+import de.schildbach.wallet.ui.more.connections.awaitUnlockedConnectionDialog
+import de.schildbach.wallet.ui.more.connections.disconnectConfirmationDialog
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -55,6 +60,7 @@ import androidx.compose.ui.unit.sp
 import androidx.fragment.app.viewModels
 import de.schildbach.wallet.ui.more.connections.AppCapability
 import de.schildbach.wallet.ui.more.connections.AppCapabilityKind
+import de.schildbach.wallet.ui.more.connections.KeyFunding
 import de.schildbach.wallet.ui.more.connections.ConnectionDetailsState
 import de.schildbach.wallet.ui.more.connections.ConnectionRecordsStatus
 import de.schildbach.wallet.ui.more.connections.ConnectionStatus
@@ -120,6 +126,18 @@ class ConnectionDetailsDialog : OffsetDialogFragment(R.layout.dialog_compose_con
         }
     }
 
+    private fun confirmDisconnect(connection: DAppConnection) {
+        val host = activity as? LockScreenActivity ?: return
+        viewLifecycleOwner.lifecycleScope.launch {
+            val confirmed = awaitUnlockedConnectionDialog(host, viewLifecycleOwner, host.walletLocked,
+                { viewModel.isWalletUnlocked }) { disconnectConfirmationDialog(requireContext(), connection.name) }
+            if (confirmed == true && viewModel.isWalletUnlocked) {
+                viewModel.disconnect(connection)
+                viewModel.closeConnection()
+            }
+        }
+    }
+
     private fun showInfo(info: ConnectInfo) {
         if (childFragmentManager.findFragmentByTag(INFO_SHEET) == null) {
             ConnectInfoDialog.newInstance(info).show(childFragmentManager, INFO_SHEET)
@@ -159,8 +177,10 @@ class ConnectionDetailsDialog : OffsetDialogFragment(R.layout.dialog_compose_con
             onSpendableBalanceInfo = { showInfo(ConnectInfo.SPENDABLE_BALANCE) },
             onDisconnect = {
                 if (viewModel.isWalletUnlocked) {
-                    if (connection.legacyOnly) viewModel.removeConnection(connection) else viewModel.disconnect(connection)
-                    viewModel.closeConnection()
+                    if (connection.legacyOnly) {
+                        viewModel.removeConnection(connection)
+                        viewModel.closeConnection()
+                    } else confirmDisconnect(connection)
                 }
             },
             onReconnect = {
@@ -260,6 +280,17 @@ internal fun ConnectionDetailsContent(
                             } ?: stringResource(R.string.dash_connect_funding_limit_unlimited),
                             onInfo = onFundingLimitInfo
                         )
+                        terms.keyFunding.forEach { key ->
+                            LimitRow(
+                                label = keyFundingLabel(key, appName),
+                                value = key.remaining?.let {
+                                    stringResource(R.string.dash_connect_funding_left_value, formatDash(it), formatDash(key.budget))
+                                } ?: stringResource(R.string.dash_connect_funding_left_unavailable)
+                            )
+                        }
+                        connection.connectedAt?.let {
+                            LimitRow(label = stringResource(R.string.dash_connect_connected_on), value = formatDate(it))
+                        }
                         // A disconnected connection ended when its keys were revoked, before they expired.
                         val ended = if (connection.status == ConnectionStatus.DISCONNECTED) {
                             R.string.dash_connect_disconnected_on to connection.updatedAt.takeIf { it > 0 }
@@ -373,12 +404,20 @@ private fun StatusCard(status: ConnectionStatus) {
     }
 }
 
+@Composable
+private fun keyFundingLabel(key: KeyFunding, appName: String): String = when (key.kind) {
+    AppCapabilityKind.EDIT_DASHPAY_PROFILE -> stringResource(R.string.dash_connect_funding_left_profile)
+    AppCapabilityKind.EDIT_DOCUMENTS -> stringResource(R.string.dash_connect_funding_left_documents, key.documentType.orEmpty())
+    else -> stringResource(R.string.dash_connect_funding_left_app, appName)
+}
+
 private val previewConnection = DAppConnection(
     id = "D8benQGnycUTXbT8GRAaYf3GZMKVcWESiF9NyyW1Bi4e",
     name = "Yappr",
     url = "yap.pr",
     status = ConnectionStatus.ACTIVE,
-    updatedAt = 0L
+    updatedAt = 0L,
+    connectedAt = 1_793_400_000_000L
 )
 
 private val previewDetails = ConnectionDetailsState(
@@ -391,8 +430,12 @@ private val previewDetails = ConnectionDetailsState(
                 expiresAt = 1_824_854_400_000L),
             AppCapability(AppCapabilityKind.RECEIVE_ENCRYPTED)
         ),
-        fundingLimit = BigInteger("50000000000"),
-        expiresAt = 1_824_854_400_000L
+        fundingLimit = BigInteger("51000000000"),
+        expiresAt = 1_824_854_400_000L,
+        keyFunding = listOf(
+            KeyFunding(AppCapabilityKind.ACT_IN_APP, null, BigInteger("50800000000"), BigInteger("32000000000")),
+            KeyFunding(AppCapabilityKind.EDIT_DASHPAY_PROFILE, "profile", BigInteger("200000000"), null)
+        )
     ),
     isLoading = false
 )

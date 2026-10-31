@@ -178,19 +178,34 @@ data class ConnectionTerms(
     val capabilities: List<AppCapability>,
     /** The keys' budgets together, matching the approve sheet; null when a key is unlimited. */
     val fundingLimit: BigInteger?,
-    val expiresAt: Long?
+    val expiresAt: Long?,
+    /** What each enabled, budgeted key of the connection has left; empty when none is enabled. */
+    val keyFunding: List<KeyFunding> = emptyList()
 )
+
+/** One key's funding: its budget and what Platform says is left, null when that could not be read. */
+data class KeyFunding(
+    val kind: AppCapabilityKind,
+    val documentType: String?,
+    val budget: BigInteger,
+    val remaining: BigInteger?
+)
+
+internal fun capabilityKind(key: org.dashj.platform.dpp.identity.IdentityPublicKey): AppCapabilityKind {
+    val bounds = key.contractBounds
+    val documentType = (bounds as? org.dashj.platform.dpp.identity.SingleContractDocumentType)?.documentType
+    return when {
+        documentType == "profile" && bounds?.identifier?.toString() == DASHPAY_CONTRACT -> AppCapabilityKind.EDIT_DASHPAY_PROFILE
+        documentType != null -> AppCapabilityKind.EDIT_DOCUMENTS
+        else -> AppCapabilityKind.ACT_IN_APP
+    }
+}
 
 internal fun recordedTerms(keys: List<org.dashj.platform.dpp.identity.IdentityPublicKey>): ConnectionTerms {
     val authentication = keys.filter { it.purpose == org.dashj.platform.sdk.Purpose.AUTHENTICATION }
     val capabilities = authentication.map { key ->
-        val bounds = key.contractBounds
-        val documentType = (bounds as? org.dashj.platform.dpp.identity.SingleContractDocumentType)?.documentType
-        val kind = when {
-            documentType == "profile" && bounds?.identifier?.toString() == DASHPAY_CONTRACT -> AppCapabilityKind.EDIT_DASHPAY_PROFILE
-            documentType != null -> AppCapabilityKind.EDIT_DOCUMENTS
-            else -> AppCapabilityKind.ACT_IN_APP
-        }
+        val documentType = (key.contractBounds as? org.dashj.platform.dpp.identity.SingleContractDocumentType)?.documentType
+        val kind = capabilityKind(key)
         AppCapability(kind, tokens = kind == AppCapabilityKind.ACT_IN_APP &&
             key.securityLevel == org.dashj.platform.sdk.SecurityLevel.CRITICAL,
             documentType = documentType, budget = key.totalBudget, expiresAt = key.expiresAt)

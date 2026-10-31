@@ -82,6 +82,19 @@ class ConnectionExpiryTest {
         assertFalse(records.value.first().optBoolean("appRevocationConfirmed"))
     }
 
+    @Test fun `a connection shows when its latest login became active`() = runTest {
+        // A newer login, an older one saved before connectedAt existed, and one that never became active.
+        records.value = listOf(grant("app", 5_000).put("connectedAt", 300L).put("updatedAt", 400L),
+            grant("app", 5_000, state = "disabled").put("updatedAt", 900L),
+            grant("old", 5_000).put("updatedAt", 200L), grant("never", 5_000, state = "pending").put("updatedAt", 100L))
+        var connections = emptyList<DAppConnection>()
+        backgroundScope.launch { repository.observeConnections { testScheduler.currentTime }.collect { connections = it } }
+        runCurrent()
+        assertEquals(300L, connections.single { it.id == "app" }.connectedAt)
+        assertEquals(200L, connections.single { it.id == "old" }.connectedAt)
+        assertNull(connections.single { it.id == "never" }.connectedAt)
+    }
+
     @Test fun `grant updates replace expiry schedule and disabled grants stay disconnected`() = runTest {
         records.value = listOf(grant("app", 1_000))
         var connections = emptyList<DAppConnection>()

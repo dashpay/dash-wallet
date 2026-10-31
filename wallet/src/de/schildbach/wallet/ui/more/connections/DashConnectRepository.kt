@@ -53,7 +53,9 @@ data class DAppConnection(
     /** Millis since epoch of the last status change. */
     val updatedAt: Long,
     val scope: String? = null,
-    val legacyOnly: Boolean = false
+    val legacyOnly: Boolean = false,
+    /** When the latest login became active, millis since epoch; null when unknown (e.g. never approved). */
+    val connectedAt: Long? = null
 )
 
 /**

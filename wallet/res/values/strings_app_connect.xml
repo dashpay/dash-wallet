@@ -67,8 +67,16 @@
     <string name="dash_connect_tab_empty_expired">No expired connections</string>
     <string name="dash_connect_status">Status</string>
     <string name="dash_connect_disconnect_action">Disconnect</string>
+    <string name="dash_connect_disconnect_confirm_title">Disconnect %1$s?</string>
+    <string name="dash_connect_disconnect_confirm_message">%1$s’s keys will be disabled on Platform for good. To use %1$s again, connect from %1$s with a new QR code or link.</string>
     <string name="dash_connect_expired_on">Connection expired</string>
     <string name="dash_connect_disconnected_on">Connection disconnected</string>
+    <string name="dash_connect_connected_on">Connected</string>
+    <string name="dash_connect_funding_left_app">Funding left for %1$s</string>
+    <string name="dash_connect_funding_left_profile">Funding left for your DashPay profile</string>
+    <string name="dash_connect_funding_left_documents">Funding left for %1$s documents</string>
+    <string name="dash_connect_funding_left_value">%1$s of %2$s DASH</string>
+    <string name="dash_connect_funding_left_unavailable">Unavailable right now</string>
     <string name="dash_connect_reconnect">Reconnect</string>
     <string name="dash_connect_expanded">Expanded</string>
     <string name="dash_connect_collapsed">Collapsed</string>

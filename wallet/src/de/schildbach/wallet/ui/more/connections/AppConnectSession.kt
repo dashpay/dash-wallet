@@ -721,9 +721,28 @@ internal class AppConnectSession(
         if (recorded.isEmpty()) return@withContext null
         // Platform can change a key's budget or expiry without changing the key, so describe each one
         // as Platform holds it now; a key no longer on the identity keeps its recorded terms.
-        val current = readIdentity().publicKeys
+        val identity = readIdentity()
+        val current = identity.publicKeys
+        val keys = recorded.map { key -> current.firstOrNull { AppConnectKeyState.sameKeyIdentity(it, key) } ?: key }
+        // What is left on each key still enabled on the identity; an unreadable one shows as unavailable.
+        val funding = keys.filter { key -> key.purpose == Purpose.AUTHENTICATION && key.disabledAt == null &&
+            key.totalBudget != null && current.any { AppConnectKeyState.sameKeyIdentity(it, key) } }
+            .distinctBy { it.id }
+            .map { key ->
+                val remaining = try {
+                    platform.client.getIdentityKeyRemainingBudget(identity.id, key.id)
+                } catch (error: Exception) {
+                    if (error is kotlinx.coroutines.CancellationException) throw error
+                    org.slf4j.LoggerFactory.getLogger(AppConnectSession::class.java)
+                        .warn("Cannot read the remaining budget of key {}", key.id, error)
+                    null
+                }
+                KeyFunding(capabilityKind(key),
+                    (key.contractBounds as? org.dashj.platform.dpp.identity.SingleContractDocumentType)?.documentType,
+                    key.totalBudget!!, remaining)
+            }
         checkScope(expectedScope)
-        recordedTerms(recorded.map { key -> current.firstOrNull { AppConnectKeyState.sameKeyIdentity(it, key) } ?: key })
+        recordedTerms(keys).copy(keyFunding = funding)
     }
 
     suspend fun details(app: String, expectedScope: String): String = withContext(Dispatchers.IO) {

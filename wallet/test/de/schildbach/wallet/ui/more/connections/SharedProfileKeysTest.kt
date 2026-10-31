@@ -68,6 +68,32 @@ class SharedProfileKeysTest {
         verify(exactly = 0) { client.getPlatformTime(any()) }
     }
 
+    @Test fun `details read what is left on each enabled key of the connection`() = runBlocking {
+        setup()
+        fun budgeted(id: Int, bounds: ContractBounds, budget: Long, disabledAt: Long? = null) = IdentityPublicKey(id,
+            KeyType.ECDSA_HASH160, Purpose.AUTHENTICATION, SecurityLevel.HIGH, bounds, ByteArray(20) { id.toByte() }, false,
+            disabledAt = disabledAt, totalBudget = java.math.BigInteger.valueOf(budget), expiresAt = 5_000L, version = 1)
+        val own = budgeted(30, SingleContractBounds(appId), 50_800_000_000)
+        val profile = budgeted(31, SingleContractDocumentType(dashPay, "profile"), 200_000_000)
+        val revoked = budgeted(32, SingleContractBounds(appId), 1_000, disabledAt = 60)
+        every { service.platform.client.getIdentity(any(), true) } returns
+            Identity(identityId, listOf(own, profile, revoked), 100, 0, 14)
+        coEvery { config.getGrants() } returns listOf(JSONObject().put("id", "login").put("scope", session.scope())
+            .put("app", appId.toString()).put("state", "active")
+            .put("keys", JSONArray(listOf(own, profile, revoked).map { JSONObject(it.toJSON()) })))
+        every { service.platform.client.getIdentityKeyRemainingBudget(identityId, 30) } returns
+            java.math.BigInteger.valueOf(32_000_000_000)
+        every { service.platform.client.getIdentityKeyRemainingBudget(identityId, 31) } throws IllegalStateException("offline")
+        val funding = session.terms(appId.toString(), session.scope())!!.keyFunding
+        assertEquals(listOf(
+            KeyFunding(AppCapabilityKind.ACT_IN_APP, null, java.math.BigInteger.valueOf(50_800_000_000),
+                java.math.BigInteger.valueOf(32_000_000_000)),
+            KeyFunding(AppCapabilityKind.EDIT_DASHPAY_PROFILE, "profile", java.math.BigInteger.valueOf(200_000_000), null)
+        ), funding)
+        val client = service.platform.client
+        verify(exactly = 0) { client.getIdentityKeyRemainingBudget(any(), 32) }
+    }
+
     @Test fun `a changed wallet cannot list or revoke keys`() {
         setup()
         val scope = session.scope()
