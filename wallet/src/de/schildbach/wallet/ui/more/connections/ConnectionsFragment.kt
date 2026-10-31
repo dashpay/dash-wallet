@@ -30,6 +30,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -40,6 +41,8 @@ import de.schildbach.wallet.ui.compose_views.ApproveConnectionDialog
 import de.schildbach.wallet.ui.compose_views.ApproveTokenPurchaseDialog
 import de.schildbach.wallet.ui.compose_views.ConnectionDetailsDialog
 import de.schildbach.wallet.ui.LockScreenActivity
+import de.schildbach.wallet.ui.main.MainViewModel
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -52,6 +55,8 @@ import org.dash.wallet.common.ui.scan.ScanActivity
 @AndroidEntryPoint
 class ConnectionsFragment : Fragment() {
     private val viewModel: ConnectionsViewModel by viewModels()
+    // Hosts the shared create-username flow (and its mix-first prompt), as Join DashPay does.
+    private val mainViewModel: MainViewModel by activityViewModels()
 
     private val scanLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -78,7 +83,11 @@ class ConnectionsFragment : Fragment() {
                         onConnectionClick = viewModel::openConnection,
                         onDismissSharedKeys = viewModel::dismissSharedProfileKeys,
                         onRevokeSharedKeys = viewModel::revokeSharedProfileKeys,
-                        onTabSelected = viewModel::selectTab
+                        onTabSelected = viewModel::selectTab,
+                        onCreateUsernameClick = {
+                            mainViewModel.logEvent(AnalyticsConstants.UsersContacts.JOIN_DASHPAY)
+                            mainViewModel.joinDashPay()
+                        }
                     )
                 }
             }

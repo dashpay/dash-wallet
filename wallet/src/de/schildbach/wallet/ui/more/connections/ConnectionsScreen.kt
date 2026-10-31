@@ -75,7 +75,8 @@ fun ConnectionsScreen(
     onConnectionClick: (DAppConnection) -> Unit = {},
     onTabSelected: (ConnectionsTab) -> Unit = {},
     onDismissSharedKeys: () -> Unit = {},
-    onRevokeSharedKeys: () -> Unit = {}
+    onRevokeSharedKeys: () -> Unit = {},
+    onCreateUsernameClick: () -> Unit = {}
 ) {
     val uiState by uiStateFlow.collectAsState()
 
@@ -87,7 +88,8 @@ fun ConnectionsScreen(
         onConnectionClick = onConnectionClick,
         onTabSelected = onTabSelected,
         onDismissSharedKeys = onDismissSharedKeys,
-        onRevokeSharedKeys = onRevokeSharedKeys
+        onRevokeSharedKeys = onRevokeSharedKeys,
+        onCreateUsernameClick = onCreateUsernameClick
     )
 }
 
@@ -100,7 +102,8 @@ private fun ConnectionsScreenContent(
     onConnectionClick: (DAppConnection) -> Unit = {},
     onTabSelected: (ConnectionsTab) -> Unit = {},
     onDismissSharedKeys: () -> Unit = {},
-    onRevokeSharedKeys: () -> Unit = {}
+    onRevokeSharedKeys: () -> Unit = {},
+    onCreateUsernameClick: () -> Unit = {}
 ) {
     val colors = LocalDashColors.current
     val hasConnections = !uiState.featureUnavailable && uiState.recordsStatus == ConnectionRecordsStatus.READY &&
@@ -128,11 +131,10 @@ private fun ConnectionsScreenContent(
                 CircularProgressIndicator(color = colors.dashBlue)
             }
         } else if (uiState.recordsStatus == ConnectionRecordsStatus.NO_IDENTITY) {
-            Box(Modifier.weight(1f).fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) {
-                Text(stringResource(R.string.dash_connect_identity_required),
-                    style = MyTheme.Typography.TitleMediumSemibold, color = colors.textPrimary,
-                    textAlign = TextAlign.Center)
-            }
+            ConnectionsNoUsernameState(
+                onCreateUsernameClick = onCreateUsernameClick,
+                modifier = Modifier.weight(1f)
+            )
         } else if (uiState.recordsStatus == ConnectionRecordsStatus.UNAVAILABLE) {
             Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(40.dp),
                 verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
@@ -344,6 +346,59 @@ private fun ConnectionsEmptyState(
     }
 }
 
+/** Figma 40042:60147: without a username, Connections explains the feature and offers to create one. */
+@Composable
+private fun ConnectionsNoUsernameState(
+    onCreateUsernameClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val colors = LocalDashColors.current
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp, vertical = 40.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(40.dp, Alignment.CenterVertically)
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 40.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            Image(
+                painter = painterResource(R.drawable.ic_connections_empty),
+                contentDescription = null,
+                modifier = Modifier.size(80.dp)
+            )
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.dash_connect_no_username_heading),
+                    style = MyTheme.Typography.TitleMediumSemibold,
+                    color = colors.textPrimary,
+                    textAlign = TextAlign.Center
+                )
+                Text(
+                    text = stringResource(R.string.dash_connect_no_username_message),
+                    style = MyTheme.Typography.BodyLarge,
+                    color = colors.textSecondary,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+        DashButton(
+            text = stringResource(R.string.dash_connect_create_username),
+            style = Style.FilledBlue,
+            size = Size.Large,
+            onClick = onCreateUsernameClick,
+            modifier = Modifier.width(200.dp)
+        )
+    }
+}
+
 /** Figma 40058:22554 ("List - Merchant details"): the app name over its website. */
 @Composable
 private fun ConnectionListItem(
@@ -387,6 +442,12 @@ private fun previewConnection(status: ConnectionStatus) = DAppConnection(
 @Preview
 private fun ConnectionsScreenEmptyPreview() {
     ConnectionsScreenContent(uiState = ConnectionsUIState(recordsStatus = ConnectionRecordsStatus.READY))
+}
+
+@Composable
+@Preview
+private fun ConnectionsScreenNoUsernamePreview() {
+    ConnectionsScreenContent(uiState = ConnectionsUIState(recordsStatus = ConnectionRecordsStatus.NO_IDENTITY))
 }
 
 @Composable

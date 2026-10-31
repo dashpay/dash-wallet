@@ -469,7 +469,7 @@ class ConnectionsViewModelTest {
         assertTrue(model.uiState.value.connections.isEmpty())
     }
 
-    @Test fun `confirmed fresh wallet has its own state and cannot prepare scanned or URL requests`() {
+    @Test fun `confirmed fresh wallet shows the username prompt instead of preparing scanned or URL requests`() {
         every { identityConfig.observeIdentityPresence() } returns MutableStateFlow(false)
         model.refreshConnections()
         dispatcher.scheduler.runCurrent()
@@ -479,9 +479,10 @@ class ConnectionsViewModelTest {
         for (url in listOf(false, true)) {
             if (url) model.onUrlOpened("dash-key:test") else model.onQrScanned("dash-key:test")
             dispatcher.scheduler.runCurrent()
-            assertEquals("Create a username to connect apps.",
-                (model.scanOutcome.value as ConnectionsViewModel.ScanOutcome.Error).message)
-            model.resetScanOutcome()
+            assertEquals(ConnectionsViewModel.ScanOutcome.Idle, model.scanOutcome.value)
+            assertNull(model.uiState.value.error)
+            assertFalse(model.uiState.value.isLoading)
+            assertNull(model.uiState.value.pendingRequest)
         }
         verify(exactly = 0) { repository.observeConnections() }
         coVerify(exactly = 0) { repository.prepareLogin(any()) }
@@ -1467,7 +1468,8 @@ class ConnectionsViewModelTest {
             val shown = nodes(owner.rootSemanticsNode).filter {
                 it.config.contains(androidx.compose.ui.semantics.SemanticsProperties.Text)
             }.flatMap { it.config[androidx.compose.ui.semantics.SemanticsProperties.Text].map { text -> text.text } }
-            assertTrue(shown.contains(activity.getString(de.schildbach.wallet_test.R.string.dash_connect_identity_required)))
+            assertTrue(shown.contains(activity.getString(de.schildbach.wallet_test.R.string.dash_connect_no_username_heading)))
+            assertTrue(shown.contains(activity.getString(de.schildbach.wallet_test.R.string.dash_connect_create_username)))
             assertFalse(shown.contains(retryText))
             assertFalse(shown.contains(activity.getString(de.schildbach.wallet_test.R.string.dash_connect_scan_qr)))
         } finally {

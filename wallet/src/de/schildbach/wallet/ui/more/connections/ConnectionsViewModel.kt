@@ -287,6 +287,8 @@ class ConnectionsViewModel @Inject constructor(
                     "App Connect is unavailable in production or on mainnet"
                 }
                 uiState.first { it.recordsStatus != ConnectionRecordsStatus.LOADING }
+                // Without a username the screen offers to create one, which is the answer to this request.
+                if (_uiState.value.recordsStatus == ConnectionRecordsStatus.NO_IDENTITY) return@launch
                 // Keep the URI in this pending coroutine until local identity loading finishes.
                 // A completed load with no identity is handled by the normal preparation error.
                 identityRepository.initializationResult.filterNotNull().first().getOrThrow()
