@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.NetworkParameters
 import org.dashj.platform.sdk.platform.DomainDocument
+import org.json.JSONObject
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -41,16 +42,32 @@ class PlatformDashConnectRepository @Inject constructor(
         while (true) {
             val currentTime = now()
             val scope = session.scope()
-            val current = records.filter { it.getString("scope") == scope }.groupBy { it.getString("app") }.map { (app, grants) ->
-                val latest = grants.maxBy { it.optLong("updatedAt") }
-                val authenticationExpiries = grants.filter { it.optString("state") == "active" }.flatMap { record ->
-                    record.getJSONArray("keys").let { keys ->
-                        (0 until keys.length()).map { keys.getJSONObject(it) }
-                            .filter { it.getInt("purpose") == 0 }
-                            .map { it.optLong("expiresAt", Long.MAX_VALUE) }
-                    }
+            val byApp = records.filter { it.getString("scope") == scope }.groupBy { it.getString("app") }
+            fun activeRecords(grants: List<JSONObject>) = grants.filter { it.optString("state") == "active" }
+            fun savedExpiries(grants: List<JSONObject>) = activeRecords(grants).flatMap { record ->
+                record.getJSONArray("keys").let { keys ->
+                    (0 until keys.length()).map { keys.getJSONObject(it) }
+                        .filter { it.getInt("purpose") == 0 }
+                        .map { it.optLong("expiresAt", Long.MAX_VALUE) }
                 }
-                val active = authenticationExpiries.any { it > currentTime }
+            }
+            // Expired keys stay enabled until revoked, so this is not a disconnection. A login still
+            // registering, or a revocation not yet confirmed, may hold live access.
+            fun expiredCandidate(grants: List<JSONObject>) = savedExpiries(grants).let { saved ->
+                saved.isNotEmpty() && saved.none { it > currentTime }
+            } && grants.all { it.optString("state") == "active" || (it.optString("state") == "disabled" &&
+                it.optBoolean("permanentRevocationConfirmed") && it.optBoolean("appRevocationConfirmed")) }
+            // Another device can extend a key's expiry on Platform, so the saved one is only a hint: before
+            // calling a connection expired, read the identity once for every such connection.
+            val currentKeys = if (byApp.values.any { expiredCandidate(it) }) session.currentKeys(scope) else null
+            val verifiedExpiries = byApp.filterValues { expiredCandidate(it) }.mapValues { (_, grants) ->
+                currentKeys?.let { session.enabledAuthenticationExpiries(activeRecords(grants), it) }
+            }
+            val current = byApp.map { (app, grants) ->
+                val latest = grants.maxBy { it.optLong("updatedAt") }
+                val authenticationExpiries = savedExpiries(grants)
+                val verified = verifiedExpiries[app]
+                val active = authenticationExpiries.any { it > currentTime } || verified.orEmpty().any { it > currentTime }
                 val lastExpiry = authenticationExpiries.maxOrNull()
                 val updatedAt = if (!active && lastExpiry != null && lastExpiry <= currentTime) {
                     maxOf(latest.optLong("updatedAt"), lastExpiry)
@@ -58,11 +75,9 @@ class PlatformDashConnectRepository @Inject constructor(
                 DAppConnection(app, connectionDisplayName(latest.optString("label")), "",
                     when {
                         active -> ConnectionStatus.ACTIVE
-                        // Expired keys stay enabled until revoked, so this is not a disconnection. A login
-                        // still registering, or a revocation not yet confirmed, may hold live access.
-                        authenticationExpiries.isNotEmpty() && grants.all { it.optString("state") == "active" ||
-                            (it.optString("state") == "disabled" && it.optBoolean("permanentRevocationConfirmed") &&
-                                it.optBoolean("appRevocationConfirmed")) } -> ConnectionStatus.EXPIRED
+                        // Unverified (Platform unreadable): neither live nor expired is established.
+                        expiredCandidate(grants) && verified == null -> ConnectionStatus.APPROVED
+                        expiredCandidate(grants) -> ConnectionStatus.EXPIRED
                         // Revoked request keys do not prove that the app has no surviving access.
                         grants.any { it.optString("state") != "disabled" || !it.optBoolean("permanentRevocationConfirmed") ||
                             !it.optBoolean("appRevocationConfirmed") } -> ConnectionStatus.APPROVED
@@ -79,6 +94,7 @@ class PlatformDashConnectRepository @Inject constructor(
                 } }
                 .filter { it.getInt("purpose") == 0 }
                 .map { it.optLong("expiresAt", Long.MAX_VALUE) }
+                .plus(verifiedExpiries.values.asSequence().flatMap { it.orEmpty() })
                 .filter { it > currentTime && it != Long.MAX_VALUE }
                 .minOrNull() ?: break
             delay((nextExpiry - now()).coerceAtLeast(1L))

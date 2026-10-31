@@ -22,7 +22,8 @@ import org.robolectric.annotation.Config
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
-@Config(application = Application::class, sdk = [28], manifest = Config.NONE)
+@Config(application = Application::class, sdk = [28], manifest = Config.NONE,
+    shadows = [AppConnectKeyStateTest.ShadowSdkEnums::class])
 class ConnectionExpiryTest {
     private val service = mockk<PlatformService>(relaxed = true)
     private val wallet = mockk<PlatformRepo>(relaxed = true)
@@ -44,6 +45,18 @@ class ConnectionExpiryTest {
         every { config.observeConnections() } returns MutableStateFlow(emptyList())
         scope = AppConnectSession(service, wallet, identities, config).scope()
         repository = PlatformDashConnectRepository(service, wallet, identities, config)
+        // Platform holds none of the recorded keys unless a test says otherwise.
+        platformKeys()
+    }
+
+    // Expiry is verified by a Platform read on the IO dispatcher, outside the test scheduler.
+    private fun TestScope.awaitStatus(expected: ConnectionStatus, status: () -> ConnectionStatus?) {
+        repeat(200) {
+            runCurrent()
+            if (status() == expected) return
+            Thread.sleep(10)
+        }
+        assertEquals(expected, status())
     }
 
     private fun grant(app: String, vararg expiries: Long, purpose: Int = 0, state: String = "active") =
@@ -63,8 +76,7 @@ class ConnectionExpiryTest {
         assertEquals(ConnectionStatus.ACTIVE, connections.single { it.id == "app" }.status)
         assertEquals(0L, connections.single { it.id == "app" }.updatedAt)
         advanceTimeBy(1_000)
-        runCurrent()
-        assertEquals(ConnectionStatus.EXPIRED, connections.single { it.id == "app" }.status)
+        awaitStatus(ConnectionStatus.EXPIRED) { connections.single { it.id == "app" }.status }
         assertEquals(2_000L, connections.single { it.id == "app" }.updatedAt)
         // Expiry must not fabricate a confirmed app-wide revocation.
         assertFalse(records.value.first().optBoolean("appRevocationConfirmed"))
@@ -84,8 +96,7 @@ class ConnectionExpiryTest {
         runCurrent()
         assertEquals(ConnectionStatus.ACTIVE, connections.single().status)
         advanceTimeBy(2_000)
-        runCurrent()
-        assertEquals(ConnectionStatus.EXPIRED, connections.single().status)
+        awaitStatus(ConnectionStatus.EXPIRED) { connections.single().status }
         records.value = listOf(grant("app", 4_000, state = "disabled")
             .put("permanentRevocationConfirmed", true).put("appRevocationConfirmed", true))
         runCurrent()
@@ -114,6 +125,56 @@ class ConnectionExpiryTest {
         val disconnected = repository.observeConnections { 10_000L }.first().single()
         assertEquals(ConnectionStatus.DISCONNECTED, disconnected.status)
         assertEquals(6_000L, disconnected.updatedAt)
+    }
+
+    private fun key(expiresAt: Long?, disabledAt: Long? = null) = org.dashj.platform.dpp.identity.IdentityPublicKey(7,
+        org.dashj.platform.sdk.KeyType.ECDSA_HASH160, org.dashj.platform.sdk.Purpose.AUTHENTICATION,
+        org.dashj.platform.sdk.SecurityLevel.HIGH, org.dashj.platform.dpp.identity.SingleContractBounds(
+            Identifier.from(ByteArray(32) { 9 })), ByteArray(20) { 7 }, false, expiresAt = expiresAt, disabledAt = disabledAt)
+
+    private fun recordedGrant(savedExpiry: Long) = JSONObject().put("id", "$scope:app").put("scope", scope).put("app", "app")
+        .put("state", "active").put("keys", JSONArray(listOf(JSONObject(key(savedExpiry).toJSON()))))
+
+    private fun platformKeys(vararg keys: org.dashj.platform.dpp.identity.IdentityPublicKey) {
+        every { service.platform.client.getIdentity(any(), true) } returns org.dashj.platform.dpp.identity.Identity(
+            Identifier.from(ByteArray(32) { 7 }), keys.toList(), 100, 0, 14)
+    }
+
+    @Test fun `a key extended on Platform keeps the connection active until its new expiry`() = runTest {
+        records.value = listOf(recordedGrant(1_000))
+        platformKeys(key(5_000))
+        var connections = emptyList<DAppConnection>()
+        backgroundScope.launch { repository.observeConnections { testScheduler.currentTime + 2_000 }.collect { connections = it } }
+        awaitStatus(ConnectionStatus.ACTIVE) { connections.singleOrNull()?.status }
+        // The schedule follows the verified expiry, then Platform is read again.
+        advanceTimeBy(3_000)
+        awaitStatus(ConnectionStatus.EXPIRED) { connections.singleOrNull()?.status }
+    }
+
+    @Test fun `a connection is expired only when Platform confirms no recorded key is live`() = runTest {
+        records.value = listOf(recordedGrant(1_000))
+        platformKeys(key(1_000))
+        assertEquals(ConnectionStatus.EXPIRED, repository.observeConnections { 2_000L }.first().single().status)
+        platformKeys(key(5_000, disabledAt = 1_500))
+        assertEquals(ConnectionStatus.EXPIRED, repository.observeConnections { 2_000L }.first().single().status)
+        // A different key in the recorded ID slot is not the recorded key.
+        platformKeys(org.dashj.platform.dpp.identity.IdentityPublicKey(7, org.dashj.platform.sdk.KeyType.ECDSA_HASH160,
+            org.dashj.platform.sdk.Purpose.AUTHENTICATION, org.dashj.platform.sdk.SecurityLevel.HIGH,
+            null, ByteArray(20) { 8 }, false, expiresAt = 5_000))
+        assertEquals(ConnectionStatus.EXPIRED, repository.observeConnections { 2_000L }.first().single().status)
+    }
+
+    @Test fun `unreadable Platform never reports an expired connection`() = runTest {
+        records.value = listOf(recordedGrant(1_000))
+        every { service.platform.client.getIdentity(any(), true) } throws IllegalStateException("unavailable")
+        assertEquals(ConnectionStatus.APPROVED, repository.observeConnections { 2_000L }.first().single().status)
+    }
+
+    @Test fun `a live connection is listed without reading Platform`() = runTest {
+        records.value = listOf(recordedGrant(5_000))
+        val client = service.platform.client
+        assertEquals(ConnectionStatus.ACTIVE, repository.observeConnections { 2_000L }.first().single().status)
+        verify(exactly = 0) { client.getIdentity(any(), any()) }
     }
 
     @Test fun `unavailable identity never projects persisted grants as an empty list`() = runTest {

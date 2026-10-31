@@ -682,6 +682,32 @@ internal class AppConnectSession(
             "Contract ownership could not be established. Complete revocation is not confirmed."
         }.ownerId
 
+    /** The identity's keys as Platform holds them now, or null when they cannot be read. */
+    internal suspend fun currentKeys(expectedScope: String): List<IdentityPublicKey>? = withContext(Dispatchers.IO) {
+        try {
+            checkScope(expectedScope)
+            readIdentity().publicKeys.also { checkScope(expectedScope) }
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            null
+        }
+    }
+
+    /**
+     * Platform expiry of each authentication key in [records] that is still enabled in [current]; a key
+     * without an expiry counts as never expiring. Limits can change on Platform without changing the key.
+     */
+    internal fun enabledAuthenticationExpiries(records: List<JSONObject>, current: List<IdentityPublicKey>): List<Long> =
+        records.flatMap { record ->
+            val keys = record.getJSONArray("keys")
+            (0 until keys.length()).map { keys.getJSONObject(it) }
+        }.filter { it.getInt("purpose") == 0 }.mapNotNull { json ->
+            // Decode only keys still on the identity; a matching ID alone does not prove it is the same key.
+            current.firstOrNull { it.id == json.optInt("id", -1) && it.disabledAt == null }
+                ?.takeIf { AppConnectKeyState.sameKeyIdentity(it, IdentityPublicKey(jsonMap(json))) }
+                ?.let { it.expiresAt ?: Long.MAX_VALUE }
+        }
+
     /** The terms the recorded keys grant, with their current Platform limits; null when no key is recorded. */
     suspend fun terms(app: String, expectedScope: String): ConnectionTerms? = withContext(Dispatchers.IO) {
         checkScope(expectedScope)
