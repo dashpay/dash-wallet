@@ -70,6 +70,55 @@ public class WalletBalanceWidgetProvider extends AppWidgetProvider {
 
     private static final Logger log = LoggerFactory.getLogger(WalletBalanceWidgetProvider.class);
 
+    private static final class WidgetData {
+        private final ExchangeRate exchangeRate;
+        private final boolean hideBalance;
+
+        private WidgetData(final ExchangeRate exchangeRate, final boolean hideBalance) {
+            this.exchangeRate = exchangeRate;
+            this.hideBalance = hideBalance;
+        }
+    }
+
+    /** Values and visibility used to render the two widget balance rows. */
+    static final class BalanceDisplay {
+        private final CharSequence dashBalance;
+        private final CharSequence localBalance;
+        private final boolean localBalanceVisible;
+
+        private BalanceDisplay(final CharSequence dashBalance, final CharSequence localBalance,
+                               final boolean localBalanceVisible) {
+            this.dashBalance = dashBalance;
+            this.localBalance = localBalance;
+            this.localBalanceVisible = localBalanceVisible;
+        }
+
+        /** Returns the value rendered in the Dash balance row. */
+        CharSequence getDashBalance() {
+            return dashBalance;
+        }
+
+        /** Returns the value rendered in the local-currency row. */
+        CharSequence getLocalBalance() {
+            return localBalance;
+        }
+
+        /** Returns whether the local-currency row should be visible. */
+        boolean isLocalBalanceVisible() {
+            return localBalanceVisible;
+        }
+    }
+
+    /** Selects masked or formatted values and local-row visibility for the widget. */
+    static BalanceDisplay createBalanceDisplay(final CharSequence balance, final CharSequence localBalance,
+                                               final boolean hideBalance, final CharSequence hiddenBalance) {
+        if (hideBalance) {
+            return new BalanceDisplay(hiddenBalance, hiddenBalance, true);
+        }
+
+        return new BalanceDisplay(balance, localBalance, localBalance != null);
+    }
+
     private Coin getBalance(Context context) {
         final WalletApplication application = (WalletApplication) context.getApplicationContext();
         return application.getWallet().getBalance(BalanceType.ESTIMATED);
@@ -133,7 +182,7 @@ public class WalletBalanceWidgetProvider extends AppWidgetProvider {
         final Spannable balanceStr = new MonetarySpannable(btcFormat.noCode(), balance).applyMarkup(null,
                 MonetarySpannable.STANDARD_INSIGNIFICANT_SPANS);
 
-        new AsyncTask<Context, Void, ExchangeRate>() {
+        new AsyncTask<Context, Void, WidgetData>() {
             private final ExchangeRatesDao exchangeRatesDao =
                 EntryPointAccessors.fromApplication(context, BalanceWidgetEntryPoint.class).provideExchangeRatesDao();
             private final WalletUIConfig walletUIConfig =
@@ -141,14 +190,16 @@ public class WalletBalanceWidgetProvider extends AppWidgetProvider {
 
 
             @Override
-            protected ExchangeRate doInBackground(Context... contexts) {
-                return exchangeRatesDao.getRateSync(walletUIConfig.getExchangeCurrencyCodeBlocking());
+            protected WidgetData doInBackground(Context... contexts) {
+                final ExchangeRate exchangeRate = exchangeRatesDao.getRateSync(walletUIConfig.getExchangeCurrencyCodeBlocking());
+                return new WidgetData(exchangeRate, walletUIConfig.getAutoHideBalanceBlocking());
             }
 
             @Override
-            protected void onPostExecute(ExchangeRate exchangeRate) {
-                super.onPostExecute(exchangeRate);
+            protected void onPostExecute(WidgetData widgetData) {
+                super.onPostExecute(widgetData);
 
+                final ExchangeRate exchangeRate = widgetData.exchangeRate;
                 final Spannable localBalanceStr;
                 if (exchangeRate != null) {
                     org.bitcoinj.utils.ExchangeRate rate = new org.bitcoinj.utils.ExchangeRate(Coin.COIN,
@@ -164,9 +215,15 @@ public class WalletBalanceWidgetProvider extends AppWidgetProvider {
                     localBalanceStr = null;
                 }
 
-                views.setTextViewText(R.id.widget_wallet_balance_btc, balanceStr);
-                views.setViewVisibility(R.id.widget_wallet_balance_local, localBalanceStr != null ? View.VISIBLE : View.GONE);
-                views.setTextViewText(R.id.widget_wallet_balance_local, localBalanceStr);
+                final BalanceDisplay display = createBalanceDisplay(
+                        balanceStr,
+                        localBalanceStr,
+                        widgetData.hideBalance,
+                        context.getString(R.string.appwidget_balance_hidden));
+                views.setTextViewText(R.id.widget_wallet_balance_btc, display.getDashBalance());
+                views.setViewVisibility(R.id.widget_wallet_balance_local,
+                        display.isLocalBalanceVisible() ? View.VISIBLE : View.GONE);
+                views.setTextViewText(R.id.widget_wallet_balance_local, display.getLocalBalance());
 
                 if (appWidgetOptions != null) {
                     final int minWidth = appWidgetOptions.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH);

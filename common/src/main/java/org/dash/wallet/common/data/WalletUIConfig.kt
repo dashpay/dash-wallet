@@ -25,6 +25,8 @@ import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.util.Constants
+import org.slf4j.LoggerFactory
+import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 import androidx.core.content.edit
@@ -59,6 +61,7 @@ open class WalletUIConfig @Inject constructor(
     )
 ) {
     companion object {
+        private val log = LoggerFactory.getLogger(WalletUIConfig::class.java)
         private const val PREFERENCES_NAME = "wallet_ui"
         val AUTO_HIDE_BALANCE = booleanPreferencesKey("hide_balance")
         val SHOW_TAP_TO_HIDE_HINT = booleanPreferencesKey("show_tap_to_hide_balance_hint")
@@ -76,6 +79,16 @@ open class WalletUIConfig @Inject constructor(
 
     fun getExchangeCurrencyCodeBlocking(): String {
         return runBlocking { getExchangeCurrencyCode() }
+    }
+
+    /** Fails closed when the setting cannot be read. */
+    fun getAutoHideBalanceBlocking(): Boolean {
+        return try {
+            runBlocking { getPreservingErrors(AUTO_HIDE_BALANCE) ?: false }
+        } catch (exception: IOException) {
+            log.warn("cannot read the autohide balance setting, hiding the balance", exception)
+            true
+        }
     }
 }
 
