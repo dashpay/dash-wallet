@@ -157,10 +157,10 @@ data class ShieldedTransferUIState(
      * True from [onMaxClick][ShieldedTransferViewModel.onMaxClick] until keypad input that
      * actually changes [amountText], a direction swap, a reset or a result dismissal clears it
      * (a currency toggle keeps it). While set, [amount] is pinned to [availableBalance] instead
-     * of parsed from [amountText]. [onConfirm][ShieldedTransferViewModel.onConfirm] treats this
-     * flag as ONE trigger (alongside a manually typed amount that equals [availableBalance]) for
-     * the fee-adjusted retry — so Max itself never depends on [amountText] round-tripping through
-     * fiat, unlike a plain Dash/fiat equality check would.
+     * of parsed from [amountText], and [onConfirm][ShieldedTransferViewModel.onConfirm] treats it
+     * as the Max intent that allows a fee-adjusted retry — so Max never depends on [amountText]
+     * round-tripping through fiat, unlike a plain Dash/fiat equality check would. Max intent is
+     * never inferred from [amount] equalling [availableBalance]: only this explicit flag counts.
      */
     val maxSelected: Boolean = false,
     /** True when the primary entry unit is DASH, false when fiat. */
@@ -737,11 +737,10 @@ class ShieldedTransferViewModel @Inject constructor(
         // Rust-computed note-selection fee FromShielded; the L1 asset-lock
         // fee ToShielded), so the executor may retry ONCE with a
         // fee-adjusted amount instead of failing the Max flow — see
-        // [ShieldedTransferExecutor.submit]. Also true for a manually TYPED amount that equals
-        // the balance (not just a Max tap): e.g. the user copies the figure shown above the
-        // keypad without tapping Max — typedAmount_equalsBalanceInDash_isMaxSpend_executorRetriesFeeReserved
-        // in the test class covers this.
-        val isMaxSpend = state.maxSelected || state.amount == state.availableBalance
+        // [ShieldedTransferExecutor.submit]. Max intent comes ONLY from the explicit
+        // [ShieldedTransferUIState.maxSelected] flag, never inferred from an amount equalling
+        // the balance: a manually typed figure is never treated as a Max spend.
+        val isMaxSpend = state.maxSelected
         if (!transferExecutor.submit(state.direction, confirmedAmount, isMaxSpend)) {
             log.warn("shielded transfer submit refused — an operation is already in flight")
         }

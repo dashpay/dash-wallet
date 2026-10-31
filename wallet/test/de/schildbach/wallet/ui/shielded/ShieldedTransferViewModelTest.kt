@@ -650,30 +650,6 @@ class ShieldedTransferViewModelTest {
         assertFalse(vm.uiState.value.insufficientFunds)
     }
 
-    @Test
-    fun typedAmount_equalsBalanceInDash_isMaxSpend_executorRetriesFeeReserved() = runTest(dispatcher) {
-        // Finding 4 (MO-1111 pre-review round 8): a manually TYPED amount that equals the
-        // transferable balance in Dash — not a Max tap — must still get the fee-adjusted
-        // retry (the user may have copied the figure shown above the keypad instead of
-        // tapping Max). maxSelected alone would miss this; isMaxSpend must OR in the
-        // Dash-domain equality check too.
-        coEvery { shieldedService.shieldFromWallet(any()) } returnsMany
-            listOf(assetLockShortResult(), SdkWriteResult.Broadcast(ShieldFromWalletOutcome.COMPLETED))
-        every { walletData.spendableUtxoCount() } returns 4
-        val vm = viewModel()
-
-        // 3.00 DASH typed digit-by-digit == the mocked 3.00 DASH wallet balance, no Max tap
-        vm.typeAmountAndConfirm("3")
-
-        assertFalse(vm.uiState.value.maxSelected)
-        assertEquals(ShieldedSubmitState.Success, vm.uiState.value.submitState)
-        coVerifyOrder {
-            shieldedService.shieldFromWallet(Dash.parse("3"))
-            shieldedService.shieldFromWallet(Dash(299_998_216L))
-        }
-        coVerify(exactly = 2) { shieldedService.shieldFromWallet(any()) }
-    }
-
     // ── AC3: L1 sync gate ───────────────────────────────────────────────
 
     @Test
