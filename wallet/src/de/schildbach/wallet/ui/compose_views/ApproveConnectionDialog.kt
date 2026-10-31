@@ -67,6 +67,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
+import de.schildbach.wallet.ui.LockScreenActivity
+import de.schildbach.wallet.ui.more.connections.awaitUnlockedConnectionDialog
 import de.schildbach.wallet.ui.send.SendCoinsActivity
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
@@ -153,17 +155,21 @@ class ApproveConnectionDialog : OffsetDialogFragment(R.layout.dialog_compose_con
 
     /** Offers a top-up when the identity balance cannot pay to register the app's keys; the request stays open. */
     private fun showInsufficientCredits(appLabel: String) {
-        val activity = requireActivity()
+        val host = activity as? LockScreenActivity ?: return
         val appName = appLabel.ifBlank { getString(R.string.dash_connect_unknown_app) }
-        lifecycleScope.launch {
-            val buy = AdaptiveDialog.create(
-                R.drawable.ic_warning_yellow_circle,
-                getString(R.string.dash_connect_insufficient_credits_title),
-                getString(R.string.dash_connect_insufficient_credits_message, appName),
-                getString(R.string.credit_balance_button_maybe_later),
-                getString(R.string.credit_balance_button_buy)
-            ).showAsync(activity)
-            if (buy == true) SendCoinsActivity.startBuyCredits(activity)
+        viewLifecycleOwner.lifecycleScope.launch {
+            // Shown only while the wallet is unlocked, like every other prompt about a connection.
+            val buy = awaitUnlockedConnectionDialog(host, viewLifecycleOwner, host.walletLocked,
+                { viewModel.isWalletUnlocked }) {
+                AdaptiveDialog.create(
+                    R.drawable.ic_warning_yellow_circle,
+                    getString(R.string.dash_connect_insufficient_credits_title),
+                    getString(R.string.dash_connect_insufficient_credits_message, appName),
+                    getString(R.string.credit_balance_button_maybe_later),
+                    getString(R.string.credit_balance_button_buy)
+                )
+            }
+            if (buy == true && viewModel.isWalletUnlocked) SendCoinsActivity.startBuyCredits(host)
         }
     }
 
@@ -333,6 +339,10 @@ internal fun ApproveConnectionContent(
                 }
                 request.capabilities.forEach { capability ->
                     PermissionRow(R.drawable.ic_connections_check_circle, capabilityText(capability, appName))
+                }
+                // A group key also covers every contract the group's owner or admins add later.
+                request.groupScopes.forEach { scope ->
+                    PermissionRow(R.drawable.ic_connections_check_circle, scope)
                 }
             }
 

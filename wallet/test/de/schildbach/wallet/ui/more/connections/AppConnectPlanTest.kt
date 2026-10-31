@@ -117,6 +117,9 @@ class AppConnectPlanTest {
             expiresAt = time + 30 * day) })
         assertThrows(IllegalArgumentException::class.java) { overTotal.requireMatches(request) }
         overTotal.copy(recovering = true).requireMatches(request)
+        // An approval prepared by an earlier version may be unlimited; recovery keeps it, a new one may not.
+        assertThrows(IllegalArgumentException::class.java) { original.requireMatches(request) }
+        original.copy(recovering = true).requireMatches(request)
     }
 
     @Test fun `u64 requested budgets are capped without inventing absent budgets`() {

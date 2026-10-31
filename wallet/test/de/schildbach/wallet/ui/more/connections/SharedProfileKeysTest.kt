@@ -84,7 +84,10 @@ class SharedProfileKeysTest {
         every { service.platform.client.getIdentityKeyRemainingBudget(identityId, 30) } returns
             java.math.BigInteger.valueOf(32_000_000_000)
         every { service.platform.client.getIdentityKeyRemainingBudget(identityId, 31) } throws IllegalStateException("offline")
-        val funding = session.terms(appId.toString(), session.scope())!!.keyFunding
+        val terms = session.terms(appId.toString(), session.scope())!!
+        // The revoked key authorizes nothing, so its budget is not part of the connection's limit.
+        assertEquals(java.math.BigInteger.valueOf(51_000_000_000), terms.fundingLimit)
+        val funding = terms.keyFunding
         assertEquals(listOf(
             KeyFunding(AppCapabilityKind.ACT_IN_APP, null, java.math.BigInteger.valueOf(50_800_000_000),
                 java.math.BigInteger.valueOf(32_000_000_000)),

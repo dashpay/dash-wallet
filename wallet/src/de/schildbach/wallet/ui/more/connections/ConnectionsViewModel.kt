@@ -68,6 +68,8 @@ enum class ConnectionsTab {
 /** The connection whose details sheet is open; the connection itself is read from the live list. */
 data class ConnectionDetailsState(
     val connectionId: String,
+    /** The wallet, identity and network the connection belongs to; another wallet's row is not this one. */
+    val scope: String? = null,
     val username: String = "",
     val identityId: String = "",
     val terms: ConnectionTerms? = null,
@@ -597,21 +599,23 @@ class ConnectionsViewModel @Inject constructor(
         if (!isWalletUnlocked || !canUseConnections) return
         // Each opening owns its load, so a slower earlier load cannot overwrite a newer one.
         detailsJob?.cancel()
-        _uiState.update { it.copy(selectedConnection = ConnectionDetailsState(connection.id)) }
+        _uiState.update { it.copy(selectedConnection = ConnectionDetailsState(connection.id, connection.scope)) }
         detailsJob = viewModelScope.launch {
             val loaded = try {
                 requireConnectionRecords()
-                val terms = repository.connectionTerms(connection.id, connection.scope)
+                // The username and identity are read first: the terms read checks the scope after them.
                 val username = repository.resolveWalletUsername() ?: identityRepository.getUsername().orEmpty()
-                ConnectionDetailsState(connection.id, username,
-                    identityRepository.blockchainIdentity?.uniqueIdString.orEmpty(), terms, isLoading = false)
+                val identityId = identityRepository.blockchainIdentity?.uniqueIdString.orEmpty()
+                val terms = repository.connectionTerms(connection.id, connection.scope)
+                ConnectionDetailsState(connection.id, connection.scope, username, identityId, terms, isLoading = false)
             } catch (ex: Exception) {
                 if (ex is CancellationException) throw ex
                 log.error("failed to load DashConnect connection details", ex)
-                ConnectionDetailsState(connection.id, isLoading = false, error = ex.message)
+                ConnectionDetailsState(connection.id, connection.scope, isLoading = false, error = ex.message)
             }
             _uiState.update { state ->
-                if (state.selectedConnection?.connectionId != connection.id) state else state.copy(selectedConnection = loaded)
+                if (state.selectedConnection?.connectionId != connection.id ||
+                    state.selectedConnection.scope != connection.scope) state else state.copy(selectedConnection = loaded)
             }
         }
     }
@@ -699,6 +703,7 @@ class ConnectionsViewModel @Inject constructor(
 /** Copies the consent terms a plan shows (grants, limits and the plain-language summary) into the request. */
 private fun ConnectionRequest.withTerms(plan: AppConnectPlan) = copy(
     grantChoices = plan.choices(),
+    groupScopes = plan.groupScopeTexts(),
     capabilities = plan.capabilities(),
     fundingLimit = plan.fundingLimit(),
     expiresAt = plan.connectionExpiresAt(),

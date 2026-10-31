@@ -216,7 +216,9 @@ internal fun recordedTerms(keys: List<org.dashj.platform.dpp.identity.IdentityPu
     return ConnectionTerms(
         capabilities,
         if (budgets.isEmpty() || null in budgets) null else budgets.filterNotNull().fold(BigInteger.ZERO, BigInteger::add),
-        authentication.mapNotNull { it.expiresAt }.maxOrNull()
+        // A key without an expiry keeps the connection authorized indefinitely.
+        if (authentication.isEmpty() || authentication.any { it.expiresAt == null }) null
+        else authentication.maxOf { it.expiresAt!! }
     )
 }
 
@@ -228,17 +230,27 @@ internal fun AppConnectPlan.requireMatches(request: DashKeyRequest) {
     grants.zip(requested).forEach { (grant, raw) ->
         require(grant.kind == raw.kind && grant.id.contentEquals(raw.id) && grant.documentType == raw.documentType &&
             grant.securityLevel == raw.securityLevel) { "Consent bounds or security level changed" }
-        // The user sets the limits, above or below the request, so only the wallet's own bounds apply.
-        require(grant.totalBudget != null && grant.totalBudget.signum() > 0 &&
-            grant.totalBudget <= AppConnectLimits.MAX_BUDGET) { "Consent budget changed or was removed" }
+        // The user sets the limits, above or below the request, so only the wallet's own bounds apply. A
+        // recovering approval keeps what it was prepared with, which an earlier version left unlimited.
+        require((recovering && grant.totalBudget == null) || (grant.totalBudget != null &&
+            grant.totalBudget.signum() > 0 && grant.totalBudget <= AppConnectLimits.MAX_BUDGET)) {
+            "Consent budget changed or was removed"
+        }
         require(grant.expiresAt != null && grant.expiresAt <= blockTime + AppConnectLimits.MAX_LIFETIME) {
             "Consent expiry changed or was removed"
         }
     }
     // A recovering approval keeps the limits it was prepared with, which were capped per key.
-    require(recovering || selectedAuth.map { grants[it].totalBudget!! }.fold(BigInteger.ZERO, BigInteger::add) <=
+    require(recovering || selectedAuth.mapNotNull { grants[it].totalBudget }.fold(BigInteger.ZERO, BigInteger::add) <=
         AppConnectLimits.MAX_BUDGET) { "Funding limit is above 5 DASH" }
 }
+
+/** What each selected contract-group key covers: the group's verified owner, admins and members. */
+internal fun AppConnectPlan.groupScopeTexts(): List<String> = selectedAuth.sorted().map { grants[it] }
+    .filter { it.kind == 2 }.map { grant ->
+        val id = org.bitcoinj.core.Base58.encode(grant.id)
+        "Contract group: $id" + checkNotNull(groupScopes[id]) { "Verified group scope is missing" }.consentText()
+    }
 
 internal fun AppConnectPlan.choices(): List<GrantChoice> = grants.mapIndexed { index, grant ->
     GrantChoice(index, buildString {

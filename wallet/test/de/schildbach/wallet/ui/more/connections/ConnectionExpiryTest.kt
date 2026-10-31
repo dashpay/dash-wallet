@@ -33,6 +33,8 @@ class ConnectionExpiryTest {
     private val records = MutableStateFlow<List<JSONObject>>(emptyList())
     private val repository: PlatformDashConnectRepository
     private val scope: String
+    /** Platform's clock, which can differ from the device clock passed to observeConnections. */
+    private var platformTime: () -> Long = { 2_000L }
 
     init {
         val identity = mockk<BlockchainIdentity>(relaxed = true)
@@ -43,6 +45,8 @@ class ConnectionExpiryTest {
         every { wallet.walletApplication.wallet!!.watchingKey.pubKey } returns ByteArray(33) { 1 }
         every { config.observeGrants() } returns records
         every { config.observeConnections() } returns MutableStateFlow(emptyList())
+        coEvery { config.getGrants() } answers { records.value }
+        every { service.platform.client.getPlatformTime(any()) } answers { platformTime() }
         scope = AppConnectSession(service, wallet, identities, config).scope()
         repository = PlatformDashConnectRepository(service, wallet, identities, config)
         // Platform holds none of the recorded keys unless a test says otherwise.
@@ -157,6 +161,7 @@ class ConnectionExpiryTest {
         records.value = listOf(recordedGrant(1_000))
         platformKeys(key(5_000))
         var connections = emptyList<DAppConnection>()
+        platformTime = { testScheduler.currentTime + 2_000 }
         backgroundScope.launch { repository.observeConnections { testScheduler.currentTime + 2_000 }.collect { connections = it } }
         awaitStatus(ConnectionStatus.ACTIVE) { connections.singleOrNull()?.status }
         // The schedule follows the verified expiry, then Platform is read again.
@@ -175,6 +180,36 @@ class ConnectionExpiryTest {
             org.dashj.platform.sdk.Purpose.AUTHENTICATION, org.dashj.platform.sdk.SecurityLevel.HIGH,
             null, ByteArray(20) { 8 }, false, expiresAt = 5_000))
         assertEquals(ConnectionStatus.EXPIRED, repository.observeConnections { 2_000L }.first().single().status)
+    }
+
+    @Test fun `a device clock ahead of Platform does not expire a key Platform still honours`() = runTest {
+        records.value = listOf(recordedGrant(1_000))
+        platformKeys(key(5_000))
+        platformTime = { 2_000L }
+        assertEquals(ConnectionStatus.ACTIVE, repository.observeConnections { 10_000L }.first().single().status)
+        platformTime = { 6_000L }
+        assertEquals(ConnectionStatus.EXPIRED, repository.observeConnections { 10_000L }.first().single().status)
+    }
+
+    @Test fun `a live key of the app the wallet has no record of keeps it from expiring`() = runTest {
+        val app = Identifier.from(ByteArray(32) { 9 }).toString()
+        records.value = listOf(recordedGrant(1_000).put("id", "$scope:$app").put("app", app))
+        // Registered elsewhere for the same contract: another key, still enabled and unexpired.
+        val other = org.dashj.platform.dpp.identity.IdentityPublicKey(8, org.dashj.platform.sdk.KeyType.ECDSA_HASH160,
+            org.dashj.platform.sdk.Purpose.AUTHENTICATION, org.dashj.platform.sdk.SecurityLevel.HIGH,
+            org.dashj.platform.dpp.identity.SingleContractBounds(Identifier.from(ByteArray(32) { 9 })),
+            ByteArray(20) { 8 }, false, expiresAt = 5_000)
+        platformKeys(key(1_000), other)
+        assertEquals(ConnectionStatus.ACTIVE, repository.observeConnections { 2_000L }.first().single().status)
+    }
+
+    @Test fun `a key without an expiry leaves the connection without one`() {
+        fun other(expiresAt: Long?) = org.dashj.platform.dpp.identity.IdentityPublicKey(8,
+            org.dashj.platform.sdk.KeyType.ECDSA_HASH160, org.dashj.platform.sdk.Purpose.AUTHENTICATION,
+            org.dashj.platform.sdk.SecurityLevel.HIGH, org.dashj.platform.dpp.identity.SingleContractBounds(
+                Identifier.from(ByteArray(32) { 9 })), ByteArray(20) { 8 }, false, expiresAt = expiresAt)
+        assertEquals(5_000L, recordedTerms(listOf(key(5_000), other(3_000))).expiresAt)
+        assertNull(recordedTerms(listOf(key(5_000), other(null))).expiresAt)
     }
 
     @Test fun `unreadable Platform never reports an expired connection`() = runTest {

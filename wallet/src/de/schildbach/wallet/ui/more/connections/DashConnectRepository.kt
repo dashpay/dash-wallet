@@ -78,6 +78,8 @@ data class ConnectionRequest(
     val walletIdentityId: String,
     val permissionText: String = "",
     val grantChoices: List<GrantChoice> = emptyList(),
+    /** What each selected contract-group key covers, including members added later; shown before approval. */
+    val groupScopes: List<String> = emptyList(),
     val recovering: Boolean = false,
     /** The funding-limit preset matching [fundingLimit], or -1 for a custom limit. */
     val budgetPreset: Int = -1,

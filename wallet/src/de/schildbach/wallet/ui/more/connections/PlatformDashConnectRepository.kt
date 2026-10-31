@@ -57,17 +57,18 @@ class PlatformDashConnectRepository @Inject constructor(
                 saved.isNotEmpty() && saved.none { it > currentTime }
             } && grants.all { it.optString("state") == "active" || (it.optString("state") == "disabled" &&
                 it.optBoolean("permanentRevocationConfirmed") && it.optBoolean("appRevocationConfirmed")) }
-            // Another device can extend a key's expiry on Platform, so the saved one is only a hint: before
-            // calling a connection expired, read the identity once for every such connection.
-            val currentKeys = if (byApp.values.any { expiredCandidate(it) }) session.currentKeys(scope) else null
-            val verifiedExpiries = byApp.filterValues { expiredCandidate(it) }.mapValues { (_, grants) ->
-                currentKeys?.let { session.enabledAuthenticationExpiries(activeRecords(grants), it) }
-            }
+            // Another device can extend a key's expiry or add a key on Platform, so the saved expiry is only a
+            // hint: before calling a connection expired, read the identity once for every such connection and
+            // judge its keys by Platform time, not the device clock.
+            val candidates = byApp.filterValues { expiredCandidate(it) }.mapValues { (_, grants) -> activeRecords(grants) }
+            val platform = if (candidates.isNotEmpty()) session.platformAuthorization(scope, candidates) else null
+            val verifiedExpiries = candidates.mapValues { (app, _) -> platform?.expiries?.get(app) }
             val current = byApp.map { (app, grants) ->
                 val latest = grants.maxBy { it.optLong("updatedAt") }
                 val authenticationExpiries = savedExpiries(grants)
                 val verified = verifiedExpiries[app]
-                val active = authenticationExpiries.any { it > currentTime } || verified.orEmpty().any { it > currentTime }
+                val active = authenticationExpiries.any { it > currentTime } ||
+                    (platform != null && verified.orEmpty().any { it > platform.time })
                 val lastExpiry = authenticationExpiries.maxOrNull()
                 val updatedAt = if (!active && lastExpiry != null && lastExpiry <= currentTime) {
                     maxOf(latest.optLong("updatedAt"), lastExpiry)
@@ -90,17 +91,21 @@ class PlatformDashConnectRepository @Inject constructor(
             emit((current + legacy.filter { old -> current.none { it.id == old.contractId } }.map {
                 DAppConnection(it.contractId, it.label, it.url, ConnectionStatus.APPROVED, it.updatedAt, scope, legacyOnly = true)
             }).sortedByDescending { it.updatedAt })
-            val nextExpiry = records.asSequence()
+            val untilSaved = records.asSequence()
                 .filter { it.getString("scope") == scope && it.optString("state") == "active" }
                 .flatMap { record -> record.getJSONArray("keys").let { keys ->
                     (0 until keys.length()).asSequence().map { keys.getJSONObject(it) }
                 } }
                 .filter { it.getInt("purpose") == 0 }
                 .map { it.optLong("expiresAt", Long.MAX_VALUE) }
-                .plus(verifiedExpiries.values.asSequence().flatMap { it.orEmpty() })
                 .filter { it > currentTime && it != Long.MAX_VALUE }
-                .minOrNull() ?: break
-            delay((nextExpiry - now()).coerceAtLeast(1L))
+                .minOrNull()?.let { it - now() }
+            // A verified expiry is due when Platform time reaches it.
+            val untilVerified = platform?.let { p ->
+                verifiedExpiries.values.flatMap { it.orEmpty() }.filter { it > p.time && it != Long.MAX_VALUE }
+                    .minOrNull()?.let { it - p.time }
+            }
+            delay((listOfNotNull(untilSaved, untilVerified).minOrNull() ?: break).coerceAtLeast(1L))
         }
     }
 

@@ -658,10 +658,14 @@ internal class AppConnectSession(
     }
 
     internal suspend fun unrecordedAppKeys(identity: Identity, app: String, scope: String): List<Int> {
+        // Only an enabled authentication key with contract bounds can belong to an app.
+        if (identity.publicKeys.none { it.purpose == Purpose.AUTHENTICATION && it.contractBounds != null &&
+                it.disabledAt == null }) return emptyList()
         // Other locally recorded apps may legitimately have the same DashPay profile bounds.
         val recorded = config.getGrants().filter { it.getString("scope") == scope }.flatMap { decodeKeys(it) }
-        val appId = Identifier.from(app)
-        val owner = platform.client.getDataContract(appId.toBuffer(), true)?.ownerId ?: error("App contract not found")
+        // Read only when a key needs them: an identity with no unrecorded key needs no contract reads.
+        val appId by lazy { Identifier.from(app) }
+        val owner by lazy { platform.client.getDataContract(appId.toBuffer(), true)?.ownerId ?: error("App contract not found") }
         return AppConnectKeyState.unrecordedKeys(identity.publicKeys, recorded) { key ->
             val target = key.contractBounds!!.identifier
             when (val bounds = key.contractBounds) {
@@ -682,11 +686,34 @@ internal class AppConnectSession(
             "Contract ownership could not be established. Complete revocation is not confirmed."
         }.ownerId
 
-    /** The identity's keys as Platform holds them now, or null when they cannot be read. */
-    internal suspend fun currentKeys(expectedScope: String): List<IdentityPublicKey>? = withContext(Dispatchers.IO) {
+    /** Platform time and, per app, the expiry of each authentication key that may still authorize it. */
+    internal class PlatformAuthorization(val time: Long, val expiries: Map<String, List<Long>?>)
+
+    /**
+     * What Platform holds now for each app in [activeRecords]: its recorded keys still enabled, and any
+     * enabled key of the app this wallet has no record of (e.g. registered on another device). An app whose
+     * ownership cannot be established maps to null; the result is null when the identity cannot be read.
+     */
+    internal suspend fun platformAuthorization(
+        expectedScope: String,
+        activeRecords: Map<String, List<JSONObject>>
+    ): PlatformAuthorization? = withContext(Dispatchers.IO) {
         try {
             checkScope(expectedScope)
-            readIdentity().publicKeys.also { checkScope(expectedScope) }
+            val identity = readIdentity()
+            val time = platform.client.getPlatformTime(identity.id)
+            val expiries = activeRecords.mapValues { (app, records) ->
+                try {
+                    val unrecorded = unrecordedAppKeys(identity, app, expectedScope)
+                    enabledAuthenticationExpiries(records, identity.publicKeys) + identity.publicKeys
+                        .filter { it.id in unrecorded }.map { it.expiresAt ?: Long.MAX_VALUE }
+                } catch (e: Exception) {
+                    if (e is kotlinx.coroutines.CancellationException) throw e
+                    null
+                }
+            }
+            checkScope(expectedScope)
+            PlatformAuthorization(time, expiries)
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
             null
@@ -742,7 +769,8 @@ internal class AppConnectSession(
                     key.totalBudget!!, remaining)
             }
         checkScope(expectedScope)
-        recordedTerms(keys).copy(keyFunding = funding)
+        // A renewal disables the previous login's keys before the app confirms; they authorize nothing now.
+        recordedTerms(keys.filter { it.disabledAt == null }.ifEmpty { keys }).copy(keyFunding = funding)
     }
 
     suspend fun details(app: String, expectedScope: String): String = withContext(Dispatchers.IO) {

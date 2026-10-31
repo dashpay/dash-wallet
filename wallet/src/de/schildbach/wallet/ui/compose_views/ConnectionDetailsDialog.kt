@@ -148,7 +148,9 @@ class ConnectionDetailsDialog : OffsetDialogFragment(R.layout.dialog_compose_con
     private fun DetailsContent(modifier: Modifier) {
         val uiState by viewModel.uiState.collectAsState()
         val details = uiState.selectedConnection
-        val connection = details?.let { selected -> uiState.connections.firstOrNull { it.id == selected.connectionId } }
+        val connection = details?.let { selected -> uiState.connections.firstOrNull {
+            it.id == selected.connectionId && it.scope == selected.scope
+        } }
         // A reload (e.g. on resume) empties the list while it loads, so absence proves nothing until it finishes.
         val reloading = uiState.recordsStatus == ConnectionRecordsStatus.LOADING
 
