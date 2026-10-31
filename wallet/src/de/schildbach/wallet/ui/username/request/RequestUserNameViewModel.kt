@@ -1135,14 +1135,21 @@ class RequestUserNameViewModel @Inject constructor(
         // Reset ui state for retry if needed
         resetUiForRetrySubmit()
         viewModelScope.launch {
-            withContext(Dispatchers.IO) { updateConfig() }
             // send the request / create username, assume not retry
-            // If an identity was already registered but the username step failed (lost vote, locked name,
-            // or the domain document was rejected), keep the identity and only register the new name.
-            val reuseTransaction = identity?.let {
+            // master's reuse rule (#1567): an identity whose name lost its vote or was locked, or
+            // that is registered but whose name step failed, keeps the identity and only registers
+            // the new name
+            val lockedOrLost = identity?.let {
                 it.usernameRequested == UsernameRequestStatus.LOCKED ||
-                    it.usernameRequested == UsernameRequestStatus.LOST_VOTE ||
-                    (it.creationStateErrorMessage != null && it.creationState >= IdentityCreationState.IDENTITY_REGISTERED)
+                    it.usernameRequested == UsernameRequestStatus.LOST_VOTE
+            } ?: false
+            val rejectedAfterRegistration = identity?.let {
+                it.creationStateErrorMessage != null && it.creationState >= IdentityCreationState.IDENTITY_REGISTERED
+            } ?: false
+            // after the cutover also a failed name-only retry, whatever state the record shows: only
+            // an identity that exists on chain is ever given that error
+            val nameOnlyRetryFailed = identity?.let {
+                SdkTransparentUsernameCreation.isNameOnlyRetryError(it.creationStateErrorMessage)
             } ?: false
             // Post-cutover the dashj L1 engine is HELD (0 UTXOs), so the
             // dashj asset-lock funding CreateIdentityService drives fails
@@ -1161,20 +1168,20 @@ class RequestUserNameViewModel @Inject constructor(
                 requestedUserName?.let { Names.isUsernameContestable(it) } ?: false
             )
             // After the cutover an identity that already exists on chain gets ONLY its name
-            // retried (review 4299080469): the legacy reuse path below resets it to NONE and
-            // looks for a dashj funding transaction an SDK-created identity never had, so it
-            // would start fresh legacy funding. Before the cutover the legacy path is master's
-            // (#1567) and stays as it is.
+            // retried: the legacy reuse path below resets it to NONE and looks for a dashj
+            // funding transaction an SDK-created identity never had, so it would start fresh
+            // legacy funding. Before the cutover the legacy path is master's and stays as it is.
             val existingIdentityId = identity?.userId
-            val nameOnlyCandidate = reuseTransaction && existingIdentityId != null && !isUsingInvite()
-            val freshSdkCandidate = !isUsingInvite() && !reuseTransaction &&
-                submitSource != UsernamePaymentSource.SHIELDED_BALANCE
-            // Fail closed (review 4299080469, reopened): for both of these, "not committed" starts
-            // CreateIdentityService, which resets a registered identity to NONE or funds through
-            // the dashj engine. The lenient read turns an unreadable cutover state into exactly
-            // that answer, so these read the state strictly, and an unknown one refuses the
-            // submission, starting and resetting nothing.
-            val cutover: Boolean? = if (nameOnlyCandidate || freshSdkCandidate) {
+            // Fail closed: "not committed" starts CreateIdentityService, which resets a registered
+            // identity to NONE or funds through the dashj engine, and the lenient read gives
+            // exactly that answer for an unreadable state. Unknown refuses, changing nothing.
+            val cutover: Boolean? = if (
+                !isUsingInvite() &&
+                (
+                    lockedOrLost || rejectedAfterRegistration || nameOnlyRetryFailed ||
+                        submitSource != UsernamePaymentSource.SHIELDED_BALANCE
+                    )
+            ) {
                 transparentUsernameCreation.cutoverStateOrUnknown()
             } else {
                 false
@@ -1184,21 +1191,44 @@ class RequestUserNameViewModel @Inject constructor(
                 _uiState.update { it.copy(usernameSubmittedError = true) }
                 return@launch
             }
-            if (nameOnlyCandidate && cutover) {
+            val reuseTransaction = lockedOrLost || rejectedAfterRegistration || (nameOnlyRetryFailed && cutover)
+            if (reuseTransaction && !isUsingInvite() && cutover) {
+                // After the cutover a reuse submission is a name-only retry or nothing: the legacy
+                // path below resets the record and can fund a new identity. A record with no
+                // identity id cannot be retried, so it is refused.
                 log.info("name-only retry for the existing identity (cutover committed)")
                 // Accepted means the retry runs on the application scope and survives this screen,
                 // which the submitting state closes; publish it only then.
-                val accepted = transparentUsernameCreation.retryNameForExistingIdentity(
-                    requireNotNull(existingIdentityId) { "a name-only retry needs the identity id" },
-                    requestedUserName!!,
-                    requestedUsernameSecondary
-                )
+                // No requested name or no identity id: nothing to register, treated as a refusal.
+                val requestedName = requestedUserName
+                if (existingIdentityId == null) {
+                    log.warn("username submit refused: the identity to retry has no identity id")
+                }
+                val accepted = requestedName != null && existingIdentityId != null &&
+                    transparentUsernameCreation.retryNameForExistingIdentity(
+                        existingIdentityId,
+                        requestedName,
+                        requestedUsernameSecondary
+                    )
+                // A refusal changes nothing; the request is recorded only once the retry runs.
+                // The retry is already running, so a failed config write must not hide that.
+                if (accepted) {
+                    try {
+                        withContext(Dispatchers.IO) { updateConfig() }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        log.warn("name-only retry accepted but the requested name was not saved", e)
+                    }
+                }
                 _uiState.update {
                     if (accepted) it.copy(usernameRequestSubmitting = true) else it.copy(usernameSubmittedError = true)
                 }
                 return@launch
             }
-            val cutoverCommitted = freshSdkCandidate && cutover
+            withContext(Dispatchers.IO) { updateConfig() }
+            val cutoverCommitted = !isUsingInvite() && !reuseTransaction &&
+                submitSource != UsernamePaymentSource.SHIELDED_BALANCE && cutover
             if (submitSource == UsernamePaymentSource.SHIELDED_BALANCE &&
                 !isUsingInvite() && !reuseTransaction
             ) {

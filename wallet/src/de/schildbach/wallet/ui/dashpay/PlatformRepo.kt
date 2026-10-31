@@ -235,6 +235,15 @@ class PlatformRepo @Inject constructor(
         return contenders
     }
 
+    /**
+     * The DPNS labels [userId] owns, through the same lookup the profile refresh uses (the Kotlin
+     * SDK read, else dashj). Throws when they cannot be read: a caller deciding whether to submit
+     * a name again must not mistake an unreadable answer for "owns none".
+     */
+    suspend fun getOwnedUsernamesOrThrow(userId: String): List<String> =
+        (sdkUsernameQueries.getDomainDocumentsByOwnerOrNull(userId) ?: platform.names.getByOwnerId(userId))
+            .map { DomainDocument(it).label }
+
     fun getFromProfiles(
         profiles: Map<String, DashPayProfile?>,
         searchText: String,
