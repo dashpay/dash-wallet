@@ -27,6 +27,7 @@ import android.widget.Toast
 import androidx.annotation.StringRes
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
@@ -39,6 +40,7 @@ import de.schildbach.wallet.ui.transactions.TransactionResultActivity
 import de.schildbach.wallet.util.AnrException
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.SendCoinsFragmentBinding
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.InsufficientMoneyException
@@ -75,6 +77,7 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
     companion object {
         private val log = LoggerFactory.getLogger(SendCoinsFragment::class.java)
         private const val SEND_COINS_SOUND = "send_coins_broadcast_1"
+        private const val OUTCOME_UNKNOWN_DIALOG_TAG = "payment_outcome_unknown"
     }
 
     protected val binding by viewBinding(SendCoinsFragmentBinding::bind)
@@ -176,6 +179,34 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         enterAmountViewModel.onContinueEvent.observe(viewLifecycleOwner) {
             lifecycleScope.launch { authenticateOrConfirm() }
         }
+
+        // Rendered from the view model's terminal state, once per view, so a recreated screen
+        // still blocks Go and shows the warning.
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.paymentOutcomeUnknown.first { it }
+            showPaymentOutcomeUnknown()
+        }
+    }
+
+    /**
+     * The payment may have gone out: Go stays disabled ([SendCoinsViewModel.everythingPlausible]
+     * is false from now on) and the warning's Close leaves the send screen, as its back arrow
+     * does; the transaction history shows whether it went out. A dialog restored after a
+     * recreation has lost its close action, so it is replaced.
+     */
+    private fun showPaymentOutcomeUnknown() {
+        updateView()
+        (requireActivity().supportFragmentManager.findFragmentByTag(OUTCOME_UNKNOWN_DIALOG_TAG) as? DialogFragment)
+            ?.dismissAllowingStateLoss()
+        AdaptiveDialog.create(
+            R.drawable.ic_warning,
+            getString(R.string.payment_submission_pending_title),
+            getString(R.string.payment_outcome_unknown_message),
+            getString(R.string.button_close),
+            null
+        ).show(requireActivity(), OUTCOME_UNKNOWN_DIALOG_TAG) {
+            activity?.finish()
+        }
     }
 
     protected open fun updateView() {
@@ -265,6 +296,11 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
 
                 val tx = viewModel.signAndSendPayment(editedAmount.toDashjCoin(), exchangeRate, checkBalance)
                 onSignAndSendPaymentSuccess(tx, autoAcceptContactRequest)
+            } catch (ex: SendRefusedException) {
+                // Nothing was sent: another send is in progress (it resets the state when done),
+                // or an earlier one's outcome is unknown (the screen already shows that).
+                log.info("send refused: {}", ex.message)
+                return
             } catch (ex: LeftoverBalanceException) {
                 if (!isAdded) {
                     return
@@ -285,6 +321,7 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
                 }
             }
 
+            // No-op once the outcome is unknown: the screen never returns to a confirmable INPUT.
             viewModel.resetState()
         }
     }
@@ -491,6 +528,10 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         // exception text is machinery and is never rendered verbatim; every
         // other exception keeps the original verbatim rendering.
         val kind = classifySendFailure(exception)
+        if (kind == SendFailureKind.OUTCOME_UNKNOWN && viewModel.paymentOutcomeUnknown.value) {
+            // This screen's own send: shown, with a Close that leaves, from paymentOutcomeUnknown.
+            return
+        }
         val message = when (kind) {
             SendFailureKind.NOT_SYNCED -> getString(R.string.send_coins_fragment_hint_replaying)
             SendFailureKind.NOT_SUPPORTED -> getString(R.string.send_coins_error_not_supported)

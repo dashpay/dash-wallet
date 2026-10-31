@@ -18,6 +18,7 @@ package de.schildbach.wallet.ui.send
 
 import android.app.Application
 import android.os.Looper
+import androidx.lifecycle.SavedStateHandle
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.UsernameSearchResult
@@ -240,7 +241,8 @@ class SendCoinsViewModelContactResubmitTest {
             identityRepository,
             platformRepo,
             contactRequestDao,
-            provider
+            provider,
+            SavedStateHandle()
         )
     }
 
