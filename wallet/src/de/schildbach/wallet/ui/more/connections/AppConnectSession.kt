@@ -770,7 +770,11 @@ internal class AppConnectSession(
             }
         checkScope(expectedScope)
         // A renewal disables the previous login's keys before the app confirms; they authorize nothing now.
-        recordedTerms(keys.filter { it.disabledAt == null }.ifEmpty { keys }).copy(keyFunding = funding)
+        // A disconnect disables every authentication key but keeps encryption keys, so with no authentication
+        // key left enabled the recorded keys describe what the app could do.
+        val enabled = keys.filter { it.disabledAt == null }
+        recordedTerms(if (enabled.any { it.purpose == Purpose.AUTHENTICATION }) enabled else keys)
+            .copy(keyFunding = funding)
     }
 
     suspend fun details(app: String, expectedScope: String): String = withContext(Dispatchers.IO) {

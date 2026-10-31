@@ -68,6 +68,25 @@ class SharedProfileKeysTest {
         verify(exactly = 0) { client.getPlatformTime(any()) }
     }
 
+    @Test fun `a disconnected connection that kept its encryption key still shows what the app could do`() = runBlocking {
+        setup()
+        val revoked = IdentityPublicKey(40, KeyType.ECDSA_HASH160, Purpose.AUTHENTICATION, SecurityLevel.HIGH,
+            SingleContractBounds(appId), ByteArray(20) { 40 }, false, disabledAt = 60,
+            totalBudget = java.math.BigInteger.valueOf(50_000_000_000), expiresAt = 5_000L, version = 1)
+        // A disconnect keeps the shared encryption key enabled.
+        val encryption = IdentityPublicKey(41, KeyType.ECDSA_SECP256K1, Purpose.ENCRYPTION, SecurityLevel.MEDIUM,
+            SingleContractBounds(appId), ByteArray(33) { 41 }, false)
+        every { service.platform.client.getIdentity(any(), true) } returns
+            Identity(identityId, listOf(revoked, encryption), 100, 0, 14)
+        coEvery { config.getGrants() } returns listOf(JSONObject().put("id", "login").put("scope", session.scope())
+            .put("app", appId.toString()).put("state", "disabled").put("permanentRevocationConfirmed", true)
+            .put("appRevocationConfirmed", true)
+            .put("keys", JSONArray(listOf(revoked, encryption).map { JSONObject(it.toJSON()) })))
+        val terms = session.terms(appId.toString(), session.scope())!!
+        assertEquals(java.math.BigInteger.valueOf(50_000_000_000), terms.fundingLimit)
+        assertTrue(terms.capabilities.any { it.kind == AppCapabilityKind.ACT_IN_APP })
+    }
+
     @Test fun `details read what is left on each enabled key of the connection`() = runBlocking {
         setup()
         fun budgeted(id: Int, bounds: ContractBounds, budget: Long, disabledAt: Long? = null) = IdentityPublicKey(id,
