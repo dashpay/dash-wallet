@@ -192,8 +192,8 @@ private fun ToolsScreenContent(
                     action = onCsvExportClick
                 )
 
-                if (Constants.SUPPORTS_PLATFORM && Constants.SUPPORTS_CONNECT && uiState.showConnections) {
-                    // Connections (DashConnect)
+                if (Constants.SUPPORTS_PLATFORM && Constants.SUPPORTS_CONNECT) {
+                    // Connections (DashConnect), also without a username: it offers to create one
                     MenuItem(
                         title = stringResource(R.string.dash_connect_connections_title),
                         icon = R.drawable.ic_menu_connections,
