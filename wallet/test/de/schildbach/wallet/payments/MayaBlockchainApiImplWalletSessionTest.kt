@@ -19,16 +19,23 @@ package de.schildbach.wallet.payments
 
 import de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment
 import de.schildbach.wallet.service.platform.sdk.SdkL1SendService
+import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkObject
+import io.mockk.unmockkObject
 import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.data.ResponseResource
+import org.dash.wallet.common.services.PaymentSubmissionPendingException
 import org.dash.wallet.common.services.WalletSession
 import org.dash.wallet.integrations.maya.api.MayaWebApi
 import org.dash.wallet.integrations.maya.model.Amount
 import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
+import org.dashfoundation.dashsdk.keywallet.DecodedTransaction
+import org.dashfoundation.dashsdk.keywallet.TransactionDecoder
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.math.BigDecimal
@@ -106,5 +113,45 @@ class MayaBlockchainApiImplWalletSessionTest {
         assertTrue("refused for its wallet, not anything else: $refusal", refusal is IllegalStateException)
         coVerify(exactly = 1) { sdkL1SendService.releaseDeferredPayment(payment) }
         coVerify(exactly = 0) { sdkL1SendService.broadcastDeferredPayment(any(), any()) }
+    }
+
+    @Test
+    fun `an ambiguous vault broadcast is outcome unknown with its txid, never a retryable error`() = runBlocking {
+        val deposit = model()
+        val memo = requireNotNull(deposit.memo).toByteArray()
+        val txidHex = "ab".repeat(32)
+        val payment = mockk<SdkDeferredPayment>(relaxed = true) {
+            every { this@mockk.txidHex } returns txidHex
+        }
+        coEvery { sdkL1SendService.buildDeferredMayaDeposit(any(), any(), any(), any(), any()) } returns payment
+        coEvery { sdkL1SendService.broadcastDeferredPayment(payment, any()) } returns
+            SdkWriteResult.Ambiguous(IllegalStateException("broadcast timed out"))
+        // A well-shaped deposit (vault, memo), so the broadcast is reached.
+        mockkObject(TransactionDecoder)
+        try {
+            every { TransactionDecoder.decode(any(), any()) } returns DecodedTransaction(
+                ByteArray(32),
+                listOf(DecodedTransaction.Input(ByteArray(32), 0, null)),
+                listOf(
+                    DecodedTransaction.Output(
+                        deposit.vaultAddress,
+                        1_000_000L,
+                        byteArrayOf(0x76, 0xa9.toByte(), 0x14) + ByteArray(20) +
+                            byteArrayOf(0x88.toByte(), 0xac.toByte())
+                    ),
+                    DecodedTransaction.Output(null, 0L, expectedOpReturnScript(memo))
+                )
+            )
+
+            val result = api.buildAndSendSwapTx(deposit, WalletSession(walletA))
+
+            assertTrue("failed: $result", result is ResponseResource.Failure)
+            val pending = (result as ResponseResource.Failure).throwable
+            assertTrue("outcome unknown, not a generic error: $pending", pending is PaymentSubmissionPendingException)
+            assertEquals(txidHex, (pending as PaymentSubmissionPendingException).txId)
+            coVerify(exactly = 0) { sdkL1SendService.releaseDeferredPayment(any()) }
+        } finally {
+            unmockkObject(TransactionDecoder)
+        }
     }
 }

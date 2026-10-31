@@ -18,6 +18,7 @@ package de.schildbach.wallet.ui.send
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
@@ -44,6 +45,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
@@ -88,6 +90,12 @@ import de.schildbach.wallet.util.toSha256Hash
  */
 class SendException(message: String, cause: Throwable? = null) : Exception(message, cause)
 
+/**
+ * A send refused before anything was built or sent: an earlier send from this screen may have
+ * gone out ([SendCoinsViewModel.paymentOutcomeUnknown]), or another is still in progress.
+ */
+class SendRefusedException(message: String) : Exception(message)
+
 @HiltViewModel
 class SendCoinsViewModel @Inject constructor(
     walletDataProvider: WalletData,
@@ -101,11 +109,25 @@ class SendCoinsViewModel @Inject constructor(
     private val identityRepository: IdentityRepository,
     private val platformRepo: PlatformRepo,
     private val dashPayContactRequestDao: DashPayContactRequestDao,
-    private val contactPaymentAddressProvider: ContactPaymentAddressProvider
+    private val contactPaymentAddressProvider: ContactPaymentAddressProvider,
+    private val savedStateHandle: SavedStateHandle
 ) : SendCoinsBaseViewModel(walletDataProvider, configuration) {
     companion object {
         private val log = LoggerFactory.getLogger(SendCoinsViewModel::class.java)
+        private const val KEY_PAYMENT_OUTCOME_UNKNOWN = "payment_outcome_unknown"
     }
+
+    /**
+     * True once a send from this screen may have gone out with its outcome unknown. Terminal:
+     * the screen never returns to a confirmable INPUT and no further send is accepted. Kept in
+     * [savedStateHandle] so a recreated screen (or process) still refuses instead of offering the
+     * same payment again, which could pay twice once the SDK's reservation has expired.
+     */
+    val paymentOutcomeUnknown: StateFlow<Boolean> =
+        savedStateHandle.getStateFlow(KEY_PAYMENT_OUTCOME_UNKNOWN, false)
+
+    /** Held while one send is in progress (see [signAndSendPayment]). */
+    private val sendInFlight = AtomicBoolean(false)
 
     enum class State {
         INPUT, // asks for confirmation
@@ -451,7 +473,8 @@ class SendCoinsViewModel @Inject constructor(
     }
 
     fun everythingPlausible(): Boolean {
-        return state.value === State.INPUT && isPayeePlausible() && isAmountPlausible()
+        return !paymentOutcomeUnknown.value && state.value === State.INPUT &&
+            isPayeePlausible() && isAmountPlausible()
     }
 
     private suspend fun loadUserDataByUsername(username: String): UsernameSearchResult? {
@@ -475,7 +498,37 @@ class SendCoinsViewModel @Inject constructor(
         return null
     }
 
+    /**
+     * Sends the confirmed payment. Refused with [SendRefusedException], nothing built or sent,
+     * while another send is in progress (claimed before the first suspension, so two confirms
+     * cannot both send) or once an earlier send's outcome is unknown ([paymentOutcomeUnknown],
+     * set here when this send's outcome is unknown).
+     */
     suspend fun signAndSendPayment(
+        editedAmount: Coin,
+        exchangeRate: ExchangeRate?,
+        checkBalance: Boolean
+    ): Transaction {
+        if (paymentOutcomeUnknown.value) {
+            throw SendRefusedException("an earlier send's outcome is unknown; nothing was sent")
+        }
+        if (!sendInFlight.compareAndSet(false, true)) {
+            throw SendRefusedException("a send is already in progress; nothing was sent")
+        }
+        try {
+            return sendPayment(editedAmount, exchangeRate, checkBalance)
+        } catch (ex: Exception) {
+            if (classifySendFailure(ex) == SendFailureKind.OUTCOME_UNKNOWN) {
+                savedStateHandle[KEY_PAYMENT_OUTCOME_UNKNOWN] = true
+            }
+            throw ex
+        } finally {
+            // An unknown outcome has already set the terminal flag, which keeps refusing.
+            sendInFlight.set(false)
+        }
+    }
+
+    private suspend fun sendPayment(
         editedAmount: Coin,
         exchangeRate: ExchangeRate?,
         checkBalance: Boolean
@@ -694,6 +747,10 @@ class SendCoinsViewModel @Inject constructor(
      * sending), checks it again so the screen can confirm it.
      */
     fun resetState() {
+        if (paymentOutcomeUnknown.value) {
+            // The payment may have gone out: never back to a confirmable INPUT with it.
+            return
+        }
         _state.postValue(State.INPUT)
         if (refreshContactOnReset.getAndSet(false)) {
             refreshContactPayment()

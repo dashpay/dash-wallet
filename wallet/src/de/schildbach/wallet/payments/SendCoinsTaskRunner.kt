@@ -162,6 +162,28 @@ class SendEngineNotSyncedException(message: String) : IllegalStateException(mess
 class SendSignerLockedException(message: String) : IllegalStateException(message)
 
 /**
+ * An ordinary SDK send returned [SdkWriteResult.Ambiguous]: it may already be on the
+ * network, and the result carries no txid. The engine keeps the inputs reserved (until its
+ * TTL sweep), so the send UI reports "may have been sent" and never offers a retry — a new
+ * send could select different inputs and pay twice. [cause] is the SDK's failure.
+ *
+ * Recovery is only that reservation: no signed transaction is kept and nothing watches the
+ * network to commit the payment when it is seen. If it did go out, sync picks it up; once the
+ * TTL sweep frees the inputs, a resend could pick different ones and pay twice. [txId] is
+ * always [UNKNOWN_TXID].
+ */
+class SdkSendOutcomeUnknownException(cause: Throwable) : PaymentSubmissionPendingException(
+    txId = UNKNOWN_TXID,
+    cause = cause,
+    message = "SDK send outcome unknown; the payment may have been sent"
+) {
+    companion object {
+        /** [txId] of an outcome-unknown SDK send: the SDK reports no txid. */
+        const val UNKNOWN_TXID = "unknown"
+    }
+}
+
+/**
  * Phase 5d: the exception for a post-cutover [SdkWriteResult.NotBroadcast] —
  * the SDK send was refused pre-broadcast and there is no dashj fallback (the
  * held engine would queue-not-send). Typed by REASON so the UI can map it
@@ -591,7 +613,8 @@ class SendCoinsTaskRunner @Inject constructor(
      * Failure semantics (money-path, deliberately explicit):
      * - SDK [SdkWriteResult.NotBroadcast] → throw. NEVER fall back to dashj
      *   here: the held engine would queue-not-send (see [cutoverSendRoute]).
-     * - [SdkWriteResult.Ambiguous] → rethrow, never retried (double-pay risk).
+     * - [SdkWriteResult.Ambiguous] → [SdkSendOutcomeUnknownException], never
+     *   retried (double-pay risk).
      * - broadcast OK but bridge failed → throw with the txid in the message.
      *   The coins ARE on the network; the wallet reconciles via the next
      *   sync, and the error text says exactly that.
@@ -601,7 +624,7 @@ class SendCoinsTaskRunner @Inject constructor(
      * on a payment that went out (marking a contact address paid) still does
      * when the bridge then fails. It is ALSO called, with a null txid (the
      * result carries none), for [SdkWriteResult.Ambiguous] just before the
-     * rethrow: the payment may have gone out, and treating a contact address
+     * throw: the payment may have gone out, and treating a contact address
      * as used costs at most one skipped address while not doing so risks
      * reusing it. Never called for NotBroadcast (nothing left the wallet):
      * [onNotBroadcast] is, just before the throw — the proof a caller needs
@@ -661,9 +684,9 @@ class SendCoinsTaskRunner @Inject constructor(
                 tail.reached(null)
                 // Outcome unknown: the payment may be on the network. Signal it
                 // (no txid known) so a contact address is not reused, then
-                // rethrow as before — never retried (double-pay risk).
+                // report it as pending — never retried (double-pay risk).
                 notifyBroadcast(onBroadcast, txid = null)
-                throw (result.cause as? Exception ?: RuntimeException(result.cause))
+                throw SdkSendOutcomeUnknownException(result.cause)
             }
             is SdkWriteResult.NotBroadcast -> {
                 notifyNotBroadcast(onNotBroadcast)
@@ -778,7 +801,7 @@ class SendCoinsTaskRunner @Inject constructor(
      * - `Broadcast(txid)` → return the txid; the dashj send MUST NOT run
      *   (callers only consume the returned txid hex — identical either way).
      * - `NotBroadcast` → fall through to the unchanged dashj path.
-     * - `Ambiguous` → rethrow like a dashj broadcast failure; NEVER retry
+     * - `Ambiguous` → [SdkSendOutcomeUnknownException] (may have been sent); NEVER retry
      *   via dashj (its coin selection may pick different UTXOs — a dashj
      *   retry after a maybe-sent SDK tx is a potential double PAY).
      *
@@ -837,7 +860,7 @@ class SendCoinsTaskRunner @Inject constructor(
                 return sdkResult.value
             }
             is SdkWriteResult.Ambiguous ->
-                throw (sdkResult.cause as? Exception ?: RuntimeException(sdkResult.cause))
+                throw SdkSendOutcomeUnknownException(sdkResult.cause)
             is SdkWriteResult.NotBroadcast ->
                 // Phase 5d: post-cutover there is no dashj fallback — the held
                 // engine would queue-not-send (see cutoverSendRoute). Pre-cutover
