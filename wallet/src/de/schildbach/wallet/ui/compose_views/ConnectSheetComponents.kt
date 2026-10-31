@@ -22,6 +22,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.Role
@@ -208,7 +209,7 @@ internal fun LimitRow(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(label, style = MyTheme.Typography.Footnote, color = colors.textSecondary)
-                onInfo?.let { InfoButton(it) }
+                onInfo?.let { InfoButton(label, it) }
             }
             Text(value, style = MyTheme.Typography.Subhead, color = colors.textPrimary)
         }
@@ -226,12 +227,14 @@ internal fun LimitRow(
 }
 
 @Composable
-internal fun InfoButton(onClick: () -> Unit) {
+internal fun InfoButton(topic: String, onClick: () -> Unit) {
+    val label = stringResource(R.string.dash_connect_info_about, topic)
     Box(
         modifier = Modifier
             .size(18.dp)
             .clip(CircleShape)
-            .clickable(onClick = onClick),
+            .clickable(role = Role.Button, onClick = onClick)
+            .semantics { contentDescription = label },
         contentAlignment = Alignment.Center
     ) {
         Image(painterResource(R.drawable.ic_connect_info), contentDescription = null)
@@ -260,7 +263,7 @@ internal fun PermissionRow(
             modifier = Modifier.weight(1f)
         )
         Box(modifier = Modifier.size(20.dp), contentAlignment = Alignment.Center) {
-            onInfo?.let { InfoButton(it) }
+            onInfo?.let { InfoButton(text, it) }
         }
     }
 }
