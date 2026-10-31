@@ -66,7 +66,7 @@ The module defines four product flavors:
 - **prod**: Production mainnet build (`hashengineering.darkcoin.wallet`)
 - **_testNet3**: TestNet development build (`hashengineering.darkcoin.wallet_test`)
 - **staging**: Staging testnet build (`org.dash.dashpay.testnet`)
-- **devnet**: DevNet build (`org.dash.dashpay.devnet`)
+- **devnet**: Sakura devnet build (`org.dash.wallet.devnet`, `SakuraDevNetParams`; see `docs/sakura-devnet.md`)
 
 ## Important Notes
 
