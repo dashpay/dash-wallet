@@ -1029,6 +1029,24 @@ class ConnectionsViewModelTest {
         assertTrue(model.approveResult.value is ConnectionsViewModel.ApproveResult.Success)
     }
 
+    @Test fun `empty identity balance offers credits without submitting and keeps the request open`() {
+        scan()
+        val pending = model.uiState.value.pendingRequest
+        coEvery { identities.getIdentityBalance() } returns de.schildbach.wallet.data.CreditBalanceInfo(0)
+        model.approvePendingRequest()
+        dispatcher.scheduler.advanceUntilIdle()
+        assertEquals(ConnectionsViewModel.ApproveResult.InsufficientCredits, model.approveResult.value)
+        assertEquals(pending, model.uiState.value.pendingRequest)
+        assertFalse(model.uiState.value.requiresRevocation)
+        coVerify(exactly = 0) { repository.approvePreparedLogin(any(), any()) }
+        // After a top-up the same request approves; an unreadable balance is left to Platform.
+        coEvery { identities.getIdentityBalance() } returns null
+        coEvery { repository.approvePreparedLogin(any(), any()) } returns mockk(relaxed = true)
+        model.approvePendingRequest()
+        dispatcher.scheduler.advanceUntilIdle()
+        assertTrue(model.approveResult.value is ConnectionsViewModel.ApproveResult.Success)
+    }
+
     @Test fun `lock before queued login submission prevents signing without creating recovery state`() {
         var unlocked = true
         model.bindWalletUnlockCheck { unlocked }

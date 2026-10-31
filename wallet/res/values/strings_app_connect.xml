@@ -26,6 +26,8 @@
     <string name="dash_connect_no_username_heading">Sign in to apps without passwords</string>
     <string name="dash_connect_no_username_message">Apps on the Dash network use your Platform identity instead of accounts and passwords</string>
     <string name="dash_connect_create_username">Create username</string>
+    <string name="dash_connect_insufficient_credits_title">Not enough credits</string>
+    <string name="dash_connect_insufficient_credits_message">Your identity balance can’t pay the fee to connect %1$s. Buy credits, then approve again.</string>
     <string name="dash_connect_first_connection_warning">You have never connected to this DAPP before. Only approve if you trust %1$s</string>
     <string name="dash_connect_app_id">App ID</string>
     <string name="dash_connect_requested">Requested</string>

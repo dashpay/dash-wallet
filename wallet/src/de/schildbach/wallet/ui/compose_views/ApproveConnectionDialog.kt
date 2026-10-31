@@ -66,6 +66,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
+import de.schildbach.wallet.ui.send.SendCoinsActivity
+import kotlinx.coroutines.launch
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import de.schildbach.wallet.ui.more.connections.AppCapability
 import de.schildbach.wallet.ui.more.connections.AppCapabilityKind
 import de.schildbach.wallet.ui.more.connections.ConnectionRequest
@@ -147,6 +151,22 @@ class ApproveConnectionDialog : OffsetDialogFragment(R.layout.dialog_compose_con
         }
     }
 
+    /** Offers a top-up when the identity balance cannot pay to register the app's keys; the request stays open. */
+    private fun showInsufficientCredits(appLabel: String) {
+        val activity = requireActivity()
+        val appName = appLabel.ifBlank { getString(R.string.dash_connect_unknown_app) }
+        lifecycleScope.launch {
+            val buy = AdaptiveDialog.create(
+                R.drawable.ic_warning_yellow_circle,
+                getString(R.string.dash_connect_insufficient_credits_title),
+                getString(R.string.dash_connect_insufficient_credits_message, appName),
+                getString(R.string.credit_balance_button_maybe_later),
+                getString(R.string.credit_balance_button_buy)
+            ).showAsync(activity)
+            if (buy == true) SendCoinsActivity.startBuyCredits(activity)
+        }
+    }
+
     @Composable
     private fun ApprovalContent(modifier: Modifier) {
         val uiState by viewModel.uiState.collectAsState()
@@ -158,6 +178,12 @@ class ApproveConnectionDialog : OffsetDialogFragment(R.layout.dialog_compose_con
             dialog?.setCanceledOnTouchOutside(isCancelable)
             view?.findViewById<View>(org.dash.wallet.common.R.id.collapse_button)?.isEnabled = !isLoading
             if (uiState.pendingRequest == null) dismissAllowingStateLoss()
+        }
+        LaunchedEffect(approveResult) {
+            if (approveResult is ConnectionsViewModel.ApproveResult.InsufficientCredits) {
+                viewModel.resetApproveResult()
+                showInsufficientCredits(uiState.pendingRequest?.appLabel.orEmpty())
+            }
         }
 
         uiState.pendingRequest?.let { request ->

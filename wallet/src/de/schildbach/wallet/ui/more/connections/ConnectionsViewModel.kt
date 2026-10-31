@@ -111,6 +111,8 @@ class ConnectionsViewModel @Inject constructor(
         object Loading : ApproveResult()
         data class Success(val connection: DAppConnection) : ApproveResult()
         data class Error(val message: String?) : ApproveResult()
+        /** The identity balance cannot pay the fee to register the app's keys; nothing was submitted. */
+        object InsufficientCredits : ApproveResult()
     }
 
     sealed class ScanOutcome {
@@ -462,6 +464,12 @@ class ConnectionsViewModel @Inject constructor(
             try {
                 if (!isWalletUnlocked) return@launchAuthorizedOperation
                 requireConnectionRecords()
+                // A recovering approval may already have paid; otherwise stop before submitting what
+                // Platform would reject. An unreadable balance proceeds and leaves that to Platform.
+                if (plan?.recovering != true && identityRepository.getIdentityBalance()?.isBalanceEmpty() == true) {
+                    _approveResult.value = ApproveResult.InsufficientCredits
+                    return@launchAuthorizedOperation
+                }
                 // Once approval starts, a transport failure cannot establish that no grant was published.
                 _uiState.update { it.copy(requiresRevocation = true,
                     pendingRequest = it.pendingRequest?.copy(recovering = true)) }
