@@ -41,9 +41,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -133,21 +130,26 @@ class ConnectionDetailsDialog : OffsetDialogFragment(R.layout.dialog_compose_con
     private fun DetailsContent(modifier: Modifier) {
         val uiState by viewModel.uiState.collectAsState()
         val details = uiState.selectedConnection
-        val listed = details?.let { selected -> uiState.connections.firstOrNull { it.id == selected.connectionId } }
-        // A reload (e.g. on resume) empties the list while it loads; keep showing the last row meanwhile.
-        var lastListed by remember { mutableStateOf<DAppConnection?>(null) }
-        if (listed != null) lastListed = listed
+        val connection = details?.let { selected -> uiState.connections.firstOrNull { it.id == selected.connectionId } }
+        // A reload (e.g. on resume) empties the list while it loads, so absence proves nothing until it finishes.
         val reloading = uiState.recordsStatus == ConnectionRecordsStatus.LOADING
-        val connection = listed ?: lastListed?.takeIf { reloading && it.id == details?.connectionId }
 
         // Closed elsewhere, or a finished read no longer has the connection (e.g. removed): nothing to show.
-        LaunchedEffect(details == null, connection == null) {
-            if (details == null || connection == null) {
+        LaunchedEffect(details == null, connection == null, reloading) {
+            if (details == null || (connection == null && !reloading)) {
                 viewModel.closeConnection()
                 dismissAllowingStateLoss()
             }
         }
-        if (details == null || connection == null) return
+        if (details == null) return
+        if (connection == null) {
+            if (reloading) {
+                Box(modifier.fillMaxWidth().padding(vertical = 60.dp), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = LocalDashColors.current.dashBlue)
+                }
+            }
+            return
+        }
 
         ConnectionDetailsContent(
             connection = connection,
