@@ -276,8 +276,15 @@ class TxDisplayCacheService @Inject constructor(
                 // single-tx history leaves wrappedTransactionList empty forever. Keying on it here
                 // made every later direction change retake this branch — which never invalidates
                 // the Pager — so a filter pick silently updated _liveFilterFlag and changed nothing
-                // on screen.
-                if (_txDataSource.value is TxDataSource.RoomLive) {
+                // on screen. But _txDataSource alone only answers "is a pipeline running", not "is
+                // it running for THIS wallet" — a wallet wipe/replacement leaves it at RoomLive from
+                // the old wallet, since clearDatabase() deliberately never resets it (protects an
+                // in-flight rescan's recovery, see its own comment). coinJoinWrapperFactory already
+                // holds the wallet the live pipeline's factories were last built for (every RoomLive
+                // writer — initializeFactoriesFromCache, rebuildWrappedList — rebuilds it from the
+                // current wallet), so comparing it against this emission's wallet tells the two
+                // cases apart without a new field.
+                if (_txDataSource.value is TxDataSource.RoomLive && coinJoinWrapperFactory?.wallet === wallet) {
                     log.info("direction changed to {} — switching filter flag only", direction)
                     _liveFilterFlag.value = filter.direction.toFilterFlag()
                     _currentPagingSource.value?.invalidate()
@@ -521,16 +528,6 @@ class TxDisplayCacheService @Inject constructor(
                     coinJoinWrapperFactory = CoinJoinTxWrapperFactory(walletData.networkParameters, wallet as WalletEx)
                     crowdNodeWrapperFactory = FullCrowdNodeSignUpTxSetFactory(walletData.networkId)
                 }
-                // This is the one place that already knows the live pipeline is no
-                // longer running for the wallet it was bound to (factories above are
-                // rebuilt fresh for whichever wallet is current): also drop the live
-                // pipeline itself, so the next filter/wallet emission re-initializes
-                // it instead of mistaking "a pipeline is running" for "it's running
-                // for this wallet". clearDatabase() deliberately leaves this alone
-                // (see its own comment) for the still-live mid-rescan case; this event
-                // either precedes that pipeline ever starting or marks a real wallet
-                // change, so resetting it here does not touch that recovery window.
-                _txDataSource.value = TxDataSource.Empty
                 _currentPagingSource.value?.invalidate()
             }
             .catch { e -> log.error("wallet reset flow error", e) }
