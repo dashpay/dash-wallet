@@ -73,10 +73,11 @@ internal fun capabilityText(capability: AppCapability, appName: String): String 
         ?: stringResource(R.string.dash_connect_spending_unlimited)
     val until = capability.expiresAt?.let { formatDate(it) }.orEmpty()
     return when (capability.kind) {
-        AppCapabilityKind.ACT_IN_APP -> stringResource(
-            if (capability.tokens) R.string.dash_connect_capability_act_tokens else R.string.dash_connect_capability_act,
-            appName, spending, until
-        )
+        AppCapabilityKind.ACT_IN_APP -> when {
+            !capability.tokens -> stringResource(R.string.dash_connect_capability_act, appName, spending, until)
+            capability.budget == null -> stringResource(R.string.dash_connect_capability_act_tokens_unlimited, appName, until)
+            else -> stringResource(R.string.dash_connect_capability_act_tokens, appName, until, formatDash(capability.budget))
+        }
         AppCapabilityKind.EDIT_DASHPAY_PROFILE -> stringResource(R.string.dash_connect_capability_profile, spending, until)
         AppCapabilityKind.EDIT_DOCUMENTS -> stringResource(
             R.string.dash_connect_capability_documents,

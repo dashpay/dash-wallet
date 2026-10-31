@@ -43,7 +43,8 @@
     <string name="dash_connect_change">Change</string>
     <string name="dash_connect_able_to_do">See what %1$s will be able to do</string>
     <string name="dash_connect_not_access">See what %1$s will NOT have access to</string>
-    <string name="dash_connect_capability_act_tokens">Act as you in all features of %1$s, including claiming and spending its tokens, %2$s until %3$s.\n\nThe DASH limit does not limit how many of your tokens it can move.</string>
+    <string name="dash_connect_capability_act_tokens">Act as you in %1$s until %2$s, including buying and sending its tokens. It can spend up to %3$s DASH of your identity balance on fees and token purchases, but can send any amount of your %1$s tokens.</string>
+    <string name="dash_connect_capability_act_tokens_unlimited">Act as you in %1$s until %2$s, including buying and sending its tokens. It can spend any amount of your identity balance on fees and token purchases, and send any amount of your %1$s tokens.</string>
     <string name="dash_connect_capability_act">Act as you in all features of %1$s, %2$s until %3$s</string>
     <string name="dash_connect_capability_profile">Edit your DashPay profile, %1$s until %2$s</string>
     <string name="dash_connect_capability_documents">Create and edit your %1$s documents in %2$s, %3$s until %4$s</string>
