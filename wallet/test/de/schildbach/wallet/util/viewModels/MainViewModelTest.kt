@@ -97,7 +97,7 @@ import java.util.concurrent.TimeUnit
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainCoroutineRule(
-    private val testDispatcher: TestDispatcher = UnconfinedTestDispatcher()
+    val testDispatcher: TestDispatcher = UnconfinedTestDispatcher()
 ) : TestWatcher() {
     override fun starting(description: Description) {
         Dispatchers.setMain(testDispatcher)
@@ -205,6 +205,7 @@ class MainViewModelTest {
     private val uiConfigMock = mockk<WalletUIConfig> {
         every { observe(any<Preferences.Key<Boolean>>()) } returns MutableStateFlow(false)
         every { observe(WalletUIConfig.SELECTED_CURRENCY) } returns MutableStateFlow("USD")
+        every { observePreservingErrors(any<Preferences.Key<Boolean>>()) } returns MutableStateFlow(false)
     }
 
     private val identityRepository = mockk<IdentityRepository>() {
@@ -441,6 +442,188 @@ class MainViewModelTest {
      * which runs on this JUnit thread — so any access recorded on this thread is an
      * access that would happen on the real main thread in production.
      */
+    /**
+     * Privacy regression guard (MO-1107).
+     *
+     * [MainViewModel.hideBalance] used to be shared with
+     * `SharingStarted.WhileSubscribed(5000)`: the upstream `combine` only ran while at
+     * least one screen was actively collecting it, so its cached `.value` could freeze
+     * stale once every collector went away (e.g. the user navigated off both Home and
+     * More for 5+ seconds). A later preference change made with no active collector —
+     * like enabling Autohide Balance from Settings → Security while no balance screen
+     * is on screen — would not reach `.value` until something re-subscribed, so a
+     * fresh collector's first emission replayed the stale value and briefly rendered a
+     * real amount instead of the just-enabled hidden state.
+     *
+     * `Eagerly` keeps the upstream collected for the lifetime of the activity-scoped
+     * `viewModelScope`, so `.value` is always current even with zero collectors. This
+     * test never collects [MainViewModel.hideBalance] itself — it only flips the
+     * preference and reads `.value` — so it fails under `WhileSubscribed` and passes
+     * under `Eagerly`.
+     */
+    @Test(timeout = 1000)
+    fun `hideBalance value is current even with no active collector`() {
+        val autoHideBalance = MutableStateFlow(false)
+        every { uiConfigMock.observePreservingErrors(WalletUIConfig.AUTO_HIDE_BALANCE) } returns autoHideBalance
+
+        val viewModel = MainViewModel(
+            analyticsService,
+            configMock,
+            uiConfigMock,
+            exchangeRatesMock,
+            walletDataMock,
+            walletApp,
+            identityRepository,
+            platformRepo,
+            platformService,
+            platformSyncService,
+            blockchainIdentityConfigMock,
+            savedStateMock,
+            blockchainStateMock,
+            biometricHelper,
+            deviceInfoProvider,
+            invitationsDaoMock,
+            usernameRequestDaoMock,
+            userAgentDaoMock,
+            dashPayProfileDaoMock,
+            mockDashPayConfig,
+            dashPayContactRequestDao,
+            txDisplayCacheService,
+            crowdNodeApi,
+            coinJoinFundsMigrationService,
+            l1SyncStatusService,
+            contactRequestNotificationService,
+            swapProvider,
+            sdkBindRetryService,
+            shieldedBalanceService
+        )
+
+        assertEquals(false, viewModel.hideBalance.value)
+
+        autoHideBalance.value = true
+
+        assertEquals(true, viewModel.hideBalance.value)
+    }
+
+    /**
+     * Privacy regression guard (MO-1107), companion to the test above.
+     *
+     * `observe()`'s own IOException rescue ([org.dash.wallet.common.data.BaseConfig.data])
+     * emits [kotlinx.coroutines.flow.emptyPreferences] once and then completes the flow —
+     * harmless under the old `WhileSubscribed(5000)` sharing (the next resubscribe restarts
+     * it), but under `Eagerly`'s one-shot collection a completed upstream would freeze
+     * [MainViewModel.hideBalance] forever at whatever it last held, including a real,
+     * unmasked `false`. [MainViewModel] reads [WalletUIConfig.AUTO_HIDE_BALANCE] through
+     * `observePreservingErrors` (lets the failure through as a real exception instead of
+     * swallowing it) with a `retryWhen` that fails closed and keeps retrying — the same
+     * shape as `homeShieldedBalanceFlow`
+     * (see `de.schildbach.wallet.ui.main.HomeShieldedBalanceTest.anUnreadableFlag_isPending_notZero_andRecovers`).
+     * This stubs a real value followed by a read failure and asserts the result is the
+     * fail-closed `true`, not the stale `false` frozen in place.
+     */
+    @Test(timeout = 1000)
+    fun `hideBalance fails closed, not frozen unmasked, when the preference read fails`() {
+        val autoHideBalance = kotlinx.coroutines.flow.flow {
+            emit(false)
+            throw java.io.IOException("datastore unreadable")
+        }
+        every { uiConfigMock.observePreservingErrors(WalletUIConfig.AUTO_HIDE_BALANCE) } returns autoHideBalance
+
+        val viewModel = MainViewModel(
+            analyticsService,
+            configMock,
+            uiConfigMock,
+            exchangeRatesMock,
+            walletDataMock,
+            walletApp,
+            identityRepository,
+            platformRepo,
+            platformService,
+            platformSyncService,
+            blockchainIdentityConfigMock,
+            savedStateMock,
+            blockchainStateMock,
+            biometricHelper,
+            deviceInfoProvider,
+            invitationsDaoMock,
+            usernameRequestDaoMock,
+            userAgentDaoMock,
+            dashPayProfileDaoMock,
+            mockDashPayConfig,
+            dashPayContactRequestDao,
+            txDisplayCacheService,
+            crowdNodeApi,
+            coinJoinFundsMigrationService,
+            l1SyncStatusService,
+            contactRequestNotificationService,
+            swapProvider,
+            sdkBindRetryService,
+            shieldedBalanceService
+        )
+
+        assertEquals(true, viewModel.hideBalance.value)
+    }
+
+    /**
+     * Companion to the fail-closed test above: pins the *recovery* half of the same
+     * contract. `retryWhen` must resubscribe to the upstream read after failing closed,
+     * not just fail closed once and complete — a regression that swapped it for
+     * `catch { emit(true) }` (which fails closed but then completes the flow) would still
+     * pass the fail-closed test above while leaving [MainViewModel.hideBalance] frozen at
+     * `true` forever, never un-hiding once the preference becomes readable again.
+     */
+    @Test(timeout = 1000)
+    fun `hideBalance fails closed, then recovers once a later read succeeds`() {
+        var reads = 0
+        val autoHideBalance = kotlinx.coroutines.flow.flow {
+            if (reads++ == 0) {
+                emit(false)
+                throw java.io.IOException("datastore unreadable")
+            } else {
+                emit(false)
+            }
+        }
+        every { uiConfigMock.observePreservingErrors(WalletUIConfig.AUTO_HIDE_BALANCE) } returns autoHideBalance
+
+        val viewModel = MainViewModel(
+            analyticsService,
+            configMock,
+            uiConfigMock,
+            exchangeRatesMock,
+            walletDataMock,
+            walletApp,
+            identityRepository,
+            platformRepo,
+            platformService,
+            platformSyncService,
+            blockchainIdentityConfigMock,
+            savedStateMock,
+            blockchainStateMock,
+            biometricHelper,
+            deviceInfoProvider,
+            invitationsDaoMock,
+            usernameRequestDaoMock,
+            userAgentDaoMock,
+            dashPayProfileDaoMock,
+            mockDashPayConfig,
+            dashPayContactRequestDao,
+            txDisplayCacheService,
+            crowdNodeApi,
+            coinJoinFundsMigrationService,
+            l1SyncStatusService,
+            contactRequestNotificationService,
+            swapProvider,
+            sdkBindRetryService,
+            shieldedBalanceService
+        )
+
+        assertEquals(true, viewModel.hideBalance.value)
+
+        coroutineRule.testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(false, viewModel.hideBalance.value)
+    }
+
     @Test(timeout = 10_000)
     fun `dashj wallet is never accessed on the main dispatcher thread`() {
         val mainThread = Thread.currentThread()

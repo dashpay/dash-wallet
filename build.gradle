@@ -11,15 +11,15 @@ buildscript {
         // Pre-release SDK snapshot published to the Sonatype snapshots repository
         // (declared below as 'Central Portal Snapshots'; anonymous read). Pinned to
         // the exact timestamped build, not the -SNAPSHOT name, so a later upload
-        // can't change what this commit builds. 5.0.0-int31: HashEngineering/platform
-        // integration/5.0.0-int31 @ 0c5fcfec1c = v5.0-dev 45852dde68 (5.0.0-rc.4, with
-        // #5026 merged and Core v24 decoding) plus #4312/#4313 (shielded), #5259, #5256,
-        // the dashj-legacy ECDH fallback and the asset-lock 1 s re-poll; engine
-        // HashEngineering/rust-dashcore integration/5.0.0-int31-engine @ f8c8859b
-        // (v5.0-dev's edc4d430 plus int30's ten wallet fixes). Still no transaction-
-        // record folding. Recipe: HashEngineering/dash-wallet-qa
-        // recipes/platform/5.0.0-int31.yaml.
-        dashSdkVersion = '5.0.0-int31-20261019.192942-1'
+        // can't change what this commit builds. 5.0.0-int32: HashEngineering/platform
+        // integration/5.0.0-int32 @ 0495544fd5 = int31 (0c5fcfec1c) with v5.0-dev
+        // 78d494f525 (5.0.0-rc.8) merged in; engine HashEngineering/rust-dashcore
+        // integration/5.0.0-int32-engine @ 0398ec0a (rust-dashcore v0.45.0 plus #1016
+        // and #1063). Carries, as int31: #4312/#4313 (shielded), #5259, #5256, the
+        // dashj-legacy ECDH fallback and the asset-lock 1 s re-poll; still no
+        // transaction-record folding. Recipe: HashEngineering/dash-wallet-qa
+        // recipes/platform/5.0.0-int32.yaml.
+        dashSdkVersion = '5.0.0-int32-20261026.223239-1'
         // 5.0.0 carries a libsdklib.so that knows document serialization
         // format 3. Format 3 arrives with Platform protocol version 14 (it
         // stamps the document with the contract version its bytes conform to,

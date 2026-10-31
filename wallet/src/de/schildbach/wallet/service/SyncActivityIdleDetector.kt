@@ -137,6 +137,22 @@ fun engineStartHoldsService(
 ): Boolean = startingSinceMs > 0L && nowMs - startingSinceMs < capMs
 
 /**
+ * Whether an SDK replay should hold the partial wake lock. The idle guard
+ * keeps the service up for the whole replay, and that is still right when the
+ * replay cannot move: stopping it re-walks from the durable watermark on the
+ * next start. The CPU is another matter. The lock has no timeout, so a replay
+ * that cannot progress held it for as long as it stayed stuck: offline
+ * ([networkImpeded]: the engine waits for connections, as dashj did after
+ * `stopPeerGroup` released its own lock), or wedged with the filter-stall
+ * watchdog's restarts spent ([filterScanWedged]). Pure — host-testable.
+ */
+fun replayHoldsWakeLock(
+    replaying: Boolean,
+    networkImpeded: Boolean,
+    filterScanWedged: Boolean
+): Boolean = replaying && !networkImpeded && !filterScanWedged
+
+/**
  * How long after the service is created the SDK engine start may still be
  * pending — not yet begun, so [engineStartHoldsService] cannot see it — and
  * hold the service ([engineStartPendingHoldsService]). Before the start sets

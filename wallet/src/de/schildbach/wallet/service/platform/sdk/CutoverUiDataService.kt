@@ -2597,7 +2597,17 @@ class CutoverUiDataService internal constructor(
      * launch-critical window instead of competing with first frame (the
      * ~100k-tx crash-loop started life as exactly that competition).
      */
-    private val reconcileInitialDelayMs: Long = RECONCILE_INITIAL_DELAY_MS
+    private val reconcileInitialDelayMs: Long = RECONCILE_INITIAL_DELAY_MS,
+    /**
+     * Where [refreshNativeSplit] runs its blocking receive-address read. The
+     * refresh lanes publish everything else on [scope]'s dispatcher; a fixed
+     * [kotlinx.coroutines.Dispatchers.IO] here put one real-thread hop in the
+     * middle of every refresh, so a virtual-time test could assert before the
+     * refresh it had just triggered finished (and read the one before it).
+     * The live read ([sdkReceiveAddressLiveOrNull]) keeps its own IO hop: it
+     * blocks waiting for the binding and must never run on the caller's thread.
+     */
+    private val receiveRefreshDispatcher: kotlinx.coroutines.CoroutineDispatcher = kotlinx.coroutines.Dispatchers.IO
 ) {
     @Inject
     constructor(
@@ -4668,7 +4678,7 @@ class CutoverUiDataService internal constructor(
             // the read lock — NOT here. Taking it before this dispatch is what
             // let a queued refresh obtain a NEWER snapshot under an OLDER ticket
             // and then be rejected by its own fence ([receiveEngineReadLock]).
-            val (ticket, nextReceive) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val (ticket, nextReceive) = kotlinx.coroutines.withContext(receiveRefreshDispatcher) {
                 readReceiveAddressOrdered { source.nextReceiveAddressOrNull(boundWalletIdHex) }
             }
             // The CACHE answer, not the revalidation verdict: this read feeds the

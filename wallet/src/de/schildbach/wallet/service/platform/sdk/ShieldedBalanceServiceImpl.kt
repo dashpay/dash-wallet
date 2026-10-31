@@ -306,13 +306,20 @@ internal data class WalletFundingGate(val allowed: Boolean, val reason: String)
  * live 1 Hz feed, which resets to [ShadowSyncProgress.IDLE] the moment the
  * engine stops — so IDLE IS the "stale/not running" state, no clock
  * needed):
- * - engine running: phase is not [ShadowSyncPhase.IDLE];
+ * - engine running and connected: phase is not [ShadowSyncPhase.IDLE] or
+ *   [ShadowSyncPhase.CONNECTING];
  * - no sync error: phase is not [ShadowSyncPhase.ERROR];
  * - chain view current: [ShadowSyncProgress.scanCaughtUpToTip] — the header
  *   chain is at a known tip AND the wallet-relevant filter scan has caught
  *   up to it. Deliberately NOT phase==SYNCED (a live shadow may never
  *   report it) and NOT dashj parity (retired above); an all-zero snapshot
- *   or a filter scan short of the tip still keeps the gate closed.
+ *   or a filter scan short of the tip still keeps the gate closed;
+ * - filter scan within [ShadowSyncProgress.SCAN_TIP_TOLERANCE_BLOCKS] of the
+ *   tip: the HEIGHT rule, even where the display's aggregate rule says
+ *   caught up;
+ * - wallet cursor known: [ShadowSyncProgress.walletSyncedHeight] above 0;
+ * - block pipeline drained: not [ShadowSyncProgress.blockPipelineLagging],
+ *   and the wallet cursor within tolerance of the tip.
  *
  * Wallet binding is NOT re-checked here: every caller already preflights
  * the bound wallet, and an unbound wallet cannot produce a non-IDLE
@@ -323,11 +330,33 @@ internal fun evaluateWalletFundingGate(
 ): WalletFundingGate = when {
     progress.phase == ShadowSyncPhase.IDLE ->
         WalletFundingGate(false, "SDK L1 engine not running")
+    // Waiting for peers: after a route loss or a restart the snapshot can keep
+    // the previous session's heights, which would pass every height rule below
+    // while the engine cannot see a single new block (PastaClaw on #1632). The
+    // display already reads this phase as offline (SdkBlockchainStateMapper).
+    progress.phase == ShadowSyncPhase.CONNECTING ->
+        WalletFundingGate(false, "SDK L1 engine is waiting for peers")
     progress.phase == ShadowSyncPhase.ERROR ->
         WalletFundingGate(false, "SDK L1 engine reported a sync error")
     !progress.scanCaughtUpToTip ->
         WalletFundingGate(false, "SDK L1 filter scan has not caught up to the chain tip yet")
-    // THIS GATE STARTS A SPEND, so it keeps the veto the DISPLAY predicate
+    // THIS GATE STARTS A SPEND, so it keeps the HEIGHT rule too.
+    // `scanCaughtUpToTip` also passes on the iOS aggregate rule, which
+    // tolerates a filter shortfall of up to 0.3% of chain height (~4,600
+    // blocks on testnet) — right for a label, wrong for funding: an unscanned
+    // block can hold a spend of a UTXO this wallet still reads unspent, or a
+    // receive the balance is missing. The cursor rules below close that gap
+    // too (an unknown cursor, or one the §34 stall parks with the filter
+    // cursor), but this check names the cause and does not depend on the
+    // cursor feed. The funds-safety argument of SCAN_TIP_TOLERANCE_BLOCKS
+    // needs the scan itself within tolerance.
+    // Measured against the HIGHEST tip the snapshot knows, not headerTarget
+    // alone: dash-spv restores the header target from the last peer report
+    // at engine start, which can sit below the stored header tip until a peer
+    // raises it, while the filter target is already that stored tip.
+    fundingTipHeight(progress) - progress.filterHeight > ShadowSyncProgress.SCAN_TIP_TOLERANCE_BLOCKS ->
+        WalletFundingGate(false, "SDK L1 filter scan is still short of the chain tip")
+    // …and it keeps the veto the DISPLAY predicate
     // dropped on 2026-09-21. `scanCaughtUpToTip` now also accepts the iOS
     // aggregate rule and no longer requires the block pipeline drained; that
     // is right for a label and wrong for funding. Matched blocks still being
@@ -335,12 +364,34 @@ internal fun evaluateWalletFundingGate(
     // wallet already spent still reads unspent, and a transfer built on it is
     // a double-spend the network rejects (the 48.86 DASH incident's shape).
     // The wallet cursor within tolerance of the tip is the evidence those
-    // blocks are through; until then the gate stays closed. Unknown cursor
-    // (0) never counts as lagging, so this cannot wedge a wallet at the tip.
-    progress.blockPipelineLagging ->
+    // blocks are through; until then the gate stays closed.
+    //
+    // An UNKNOWN cursor (0) is no evidence either way, so it closes too
+    // (PastaClaw on #1632: filters at the tip with the cursor unknown opened a
+    // spend over a UTXO view nothing proved current). It cannot wedge a synced
+    // wallet: the cursor is seeded at engine start from the SDK's durable
+    // `WalletEntity.syncedHeight`, and dash-spv emits `SyncHeightAdvanced` for
+    // every wallet a committed filter batch covered, matches or not, which is
+    // also what the durable value is written from. A fresh testnet wallet on
+    // the emulator (2026-10-24) logged a non-zero cursor from its first batch
+    // on, and its restart was seeded from the durable value. Unknown is left
+    // for a failed seed read before the next batch commits, or a wallet no
+    // batch has covered yet.
+    progress.walletSyncedHeight <= 0L ->
+        WalletFundingGate(false, "SDK L1 wallet scan cursor is not known yet")
+    // Measured against the same highest-known tip as the height rule above:
+    // `blockPipelineLagging` reads headerTarget alone, which a restart can
+    // leave below the stored tip while the filters already reach it.
+    progress.blockPipelineLagging ||
+        fundingTipHeight(progress) - progress.walletSyncedHeight >
+        ShadowSyncProgress.SCAN_TIP_TOLERANCE_BLOCKS ->
         WalletFundingGate(false, "SDK L1 block pipeline is still processing matched blocks")
     else -> WalletFundingGate(true, "SDK L1 filter scan caught up to the chain tip")
 }
+
+/** The highest chain tip a progress snapshot knows: the reference both spend-gate height checks measure against. */
+private fun fundingTipHeight(progress: ShadowSyncProgress): Long =
+    maxOf(progress.bestKnownTipHeight, progress.filterTarget)
 
 /**
  * Pure [ShieldedSyncStatus] decision — host-testable. [ready] is the bring-up
@@ -1331,8 +1382,29 @@ class ShieldedBalanceServiceImpl internal constructor(
             log.info("shielded bring-up abandoned before the bind: a stop() arrived while the SDK was starting")
             return false
         }
+        if (!retryFailedNativeStopLocked(generation)) return false
+        // The retry suspends in the native stop (up to the SDK's quiesce
+        // budget), long enough for a stop() to time out on the lock and tear
+        // the Kotlin side down (pre-review, 2026-10-27). Whether the retry
+        // succeeded or not, nothing is left running for this pass to own:
+        // a success cleared the stale ownership, and a failure returned above
+        // with it retained for the next stop/bring-up (and for the owed-stop
+        // drain on release, which stops only owners older than the debt). So
+        // declining here needs no cleanup — but going on would enter the
+        // native bind, which can park indefinitely (plan §37.2), after the
+        // teardown it was abandoned by.
+        if (superseded()) {
+            log.info("shielded bring-up abandoned after retrying the failed stop: a stop() arrived meanwhile")
+            return false
+        }
 
         source.configureShielded(shieldedDbPath())
+        // configureShielded() suspends in a native call too; the bind after
+        // it is the step that can park, so the fence runs before it.
+        if (superseded()) {
+            log.info("shielded bring-up abandoned before the bind: a stop() arrived during the native configure")
+            return false
+        }
         source.bindShielded(walletId, listOf(DEFAULT_SHIELDED_ACCOUNT))
         if (superseded()) {
             log.warn(
@@ -1527,18 +1599,61 @@ class ShieldedBalanceServiceImpl internal constructor(
     }
 
     /**
+     * Retry a native stop that failed earlier, before this bring-up starts or
+     * adopts a loop; the caller holds [lock] and sampled [generation] under it.
+     * Returns false when the retry failed too, and the bring-up must not go on.
+     *
+     * 2026-10-27 (QA 12.0.1-qa01, Andrei): a stop() landed during a 40–75 s
+     * pass, the SDK's quiesce gave up after its 10 s drain budget and threw,
+     * and [stopNativeLoop] kept the ownership for "the next stop()". But the
+     * SDK latches its quiescing gate on a timed-out quiesce, and only a later
+     * SUCCESSFUL quiesce reopens it: until then every pass (background and
+     * forced) returns an empty summary without a word, and the cancel took the
+     * loop's registry token, so `isShieldedSyncRunning()` reads false. The
+     * service restarted seconds later, this bring-up overwrote the ownership,
+     * started the loop and reported ready over a loop that never synced again;
+     * the shielded balance froze until the app was restarted.
+     *
+     * Inferred from [loopOwnerGeneration] rather than a separate flag, as the
+     * owed-stop drain does: the ready latch is down here, and every bump of
+     * [stopGeneration] is a stop, so an owner OLDER than this generation is a
+     * loop some stop meant to end and could not — a failed in-lock stop, a
+     * failed superseded-bring-up stop, or a failed owed-stop drain (which
+     * clears its debt regardless). An owner from THIS generation (a bring-up
+     * that threw after the start, with no stop since) was never meant to stop,
+     * and is left to the adopt/start below. On a second failure the ownership
+     * stays, so the next stop() or bring-up tries again.
+     */
+    private suspend fun retryFailedNativeStopLocked(generation: Int): Boolean {
+        val owner = loopOwnerGeneration.get()
+        if (owner == NO_GENERATION || owner >= generation) return true
+        log.warn("shielded: retrying a native sync-loop stop that failed earlier, before starting the loop again")
+        stopNativeLoop()
+        if (loopOwnerGeneration.get() == owner) {
+            log.warn(
+                "shielded bring-up aborted: the native sync loop still cannot be stopped, and the SDK will " +
+                    "not run a pass until a stop succeeds — not starting the loop or reporting ready; the " +
+                    "next trigger retries"
+            )
+            return false
+        }
+        return true
+    }
+
+    /**
      * Stop the native sync loop; [loopOwnerGeneration] is cleared only once
      * the SDK call has returned. Non-cancellable (review, 2026-09-28): the SDK
      * dispatches the stop through `withContext(Dispatchers.IO)`, which a
      * cancelled caller would skip, leaving the loop running with nothing left
      * recording it. A failed stop keeps the ownership, so the next [stop]
-     * tries again instead of returning early. Callers hold [lock].
+     * tries again instead of returning early, and the next bring-up retries it
+     * before starting a loop ([retryFailedNativeStopLocked]). Callers hold [lock].
      */
     private suspend fun stopNativeLoop() {
         val owner = loopOwnerGeneration.get()
         val stopped = withContext(NonCancellable) {
             runCatching { source.stopShieldedSync() }
-                .onFailure { log.warn("failed to stop the shielded sync loop; the next stop() retries it", it) }
+                .onFailure { log.warn("failed to stop the shielded sync loop; the next stop() or bring-up retries it", it) }
                 .isSuccess
         }
         if (stopped) loopOwnerGeneration.compareAndSet(owner, NO_GENERATION)
