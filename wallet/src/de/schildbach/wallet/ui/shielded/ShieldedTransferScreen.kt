@@ -102,7 +102,7 @@ fun ShieldedTransferScreen(
      * user authentication (PIN/biometric) BEFORE [ShieldedTransferViewModel.onConfirm]
      * — the Dash Wallet → Shielded direction is a real L1 spend.
      */
-    onConfirm: () -> Unit = viewModel::onConfirm,
+    onConfirm: () -> Unit = { viewModel.onConfirm(viewModel.uiState.value.amount) },
     /**
      * Invoked on a successful transfer (Broadcast → Success) INSTEAD of
      * an in-screen overlay: the host leaves the flow and lands the user
