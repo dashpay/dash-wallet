@@ -181,19 +181,46 @@ open class DatabaseMigrationTest {
 
     @Test
     @Throws(IOException::class)
-    fun openingDatabaseRemovesCrowdNodeCacheRows() {
+    fun openingDatabaseClearsCacheWithCrowdNodeRows() {
+        val db = openCacheDatabase(withCrowdNode = true)
+
+        runBlocking {
+            assert(db.txGroupCacheDao().getAll().isEmpty())
+            assert(db.txDisplayCacheDao().getAll().isEmpty())
+        }
+
+        db.close()
+    }
+
+    @Test
+    @Throws(IOException::class)
+    fun openingDatabaseKeepsCacheWithoutCrowdNodeRows() {
+        val db = openCacheDatabase(withCrowdNode = false)
+
+        runBlocking {
+            assert(db.txGroupCacheDao().getAll().map { it.groupId } == listOf("coinjoin_2025-03-16"))
+            assert(db.txDisplayCacheDao().getAll().map { it.rowId } == listOf("coinjoin_2025-03-16"))
+        }
+
+        db.close()
+    }
+
+    private fun openCacheDatabase(withCrowdNode: Boolean): AppDatabase {
         testHelper.createDatabase(TEST_DB_NAME, 21).apply {
-            listOf(
-                Triple("crowdnode", "aa", "crowdnode"),
-                Triple("crowdnode", "bb", "crowdnode"),
-                Triple("coinjoin_2025-03-16", "cc", "coinjoin")
-            ).forEachIndexed { index, (groupId, txId, type) ->
+            val groups = mutableListOf(Triple("coinjoin_2025-03-16", "cc", "coinjoin"))
+            val rowIds = mutableListOf("coinjoin_2025-03-16")
+            if (withCrowdNode) {
+                groups.add(Triple("crowdnode", "aa", "crowdnode"))
+                groups.add(Triple("crowdnode", "bb", "crowdnode"))
+                rowIds.add("crowdnode")
+            }
+            groups.forEachIndexed { index, (groupId, txId, type) ->
                 execSQL(
                     "INSERT INTO tx_group_cache (groupId, txId, wrapperType, groupDate, sortOrder) " +
                         "VALUES ('$groupId', '$txId', '$type', '2025-03-16', $index)"
                 )
             }
-            listOf("crowdnode", "coinjoin_2025-03-16").forEach { rowId ->
+            rowIds.forEach { rowId ->
                 execSQL(
                     "INSERT INTO tx_display_cache (rowId, title, valueSatoshis, iconType, iconBgType, " +
                         "statusText, comment, transactionAmount, time, hasErrors, filterFlags) " +
@@ -203,20 +230,11 @@ open class DatabaseMigrationTest {
             close()
         }
 
-        val db = Room.databaseBuilder(
+        return Room.databaseBuilder(
             InstrumentationRegistry.getInstrumentation().targetContext,
             AppDatabase::class.java, TEST_DB_NAME
         ).addMigrations(*migrations)
             .addCallback(AppDatabaseMigrations.removeCrowdNodeCacheRows)
             .build()
-
-        runBlocking {
-            val groups = db.txGroupCacheDao().getAll()
-            assert(groups.map { it.groupId } == listOf("coinjoin_2025-03-16"))
-            val rows = db.txDisplayCacheDao().getAll()
-            assert(rows.map { it.rowId } == listOf("coinjoin_2025-03-16"))
-        }
-
-        db.close()
     }
 }

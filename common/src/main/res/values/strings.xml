@@ -163,6 +163,5 @@
     <string name="from_dash_wallet_on_this_device">From Dash wallet on this device</string>
     <string name="preposition_at">at</string>
     <string name="info">Info</string>
-    <string name="button_show_qr">Show QR</string>
     <string name="scan_qr">Scan QR</string>
 </resources>
