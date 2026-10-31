@@ -22,6 +22,9 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -124,6 +127,7 @@ internal fun CollapsibleCard(
 ) {
     val colors = LocalDashColors.current
     var expanded by rememberSaveable { mutableStateOf(initiallyExpanded) }
+    val state = stringResource(if (expanded) R.string.dash_connect_expanded else R.string.dash_connect_collapsed)
     val shape = RoundedCornerShape(20.dp)
     Column(
         modifier = Modifier
@@ -136,7 +140,8 @@ internal fun CollapsibleCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { expanded = !expanded }
+                .clickable(role = Role.Button) { expanded = !expanded }
+                .semantics { stateDescription = state }
                 .padding(start = 10.dp, top = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(20.dp)
