@@ -218,7 +218,7 @@ internal class AppConnectSession(
             selectedAuth, encChoices,
             prior?.let { indices(it, "encIndices") } ?: encChoices.indices.toSet(), prior != null, blockTime,
             groupScopes = groupScopes, previousGroupScopes = readApprovedGroupScopes(prior), requestedAt = parsed.createdAt)
-            .let { if (it.recovering) it else it.withRequestedPresets() }
+            .let { if (it.recovering) it else it.withRequestedLimits() }
     }
 
     private fun validateOwnership(request: DashKeyRequest, grants: List<AuthBinding>): Map<String, VerifiedContractGroup> {

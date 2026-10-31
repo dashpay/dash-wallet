@@ -54,6 +54,20 @@ import androidx.fragment.app.viewModels
 import de.schildbach.wallet.ui.more.connections.AppConnectPresets
 import de.schildbach.wallet.ui.more.connections.ConnectionsViewModel
 import de.schildbach.wallet.ui.more.connections.formatDash
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import android.app.DatePickerDialog
+import de.schildbach.wallet.ui.more.connections.AppConnectLimits
+import java.math.BigInteger
+import java.text.DecimalFormatSymbols
+import java.util.Calendar
+import org.dash.wallet.common.ui.components.DashButton
+import org.dash.wallet.common.ui.components.Size
+import org.dash.wallet.common.ui.enter_amount.NumericKeyboardCompose
+import org.dash.wallet.common.ui.enter_amount.processAmountKeyInput
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.DialogComposeContainerBinding
 import org.dash.wallet.common.ui.components.DashButton
@@ -103,8 +117,13 @@ class ConnectLimitPickerDialog : OffsetDialogFragment(R.layout.dialog_compose_co
                                 title = stringResource(R.string.dash_connect_funding_limits_title),
                                 options = AppConnectPresets.budgets.map { formatDash(it) },
                                 showDashIcon = true,
-                                selected = request.budgetPreset
-                            ) { select(it, request.lifetimePreset) }
+                                selected = request.budgetPreset,
+                                customLabel = stringResource(R.string.dash_connect_custom_limit),
+                                onCustom = ::showCustomLimit
+                            ) {
+                                viewModel.selectFundingLimit(AppConnectPresets.budgets[it])
+                                dismiss()
+                            }
                         } else {
                             ConnectLimitPickerContent(
                                 title = stringResource(R.string.dash_connect_expiration_title),
@@ -112,8 +131,13 @@ class ConnectLimitPickerDialog : OffsetDialogFragment(R.layout.dialog_compose_co
                                     stringResource(R.string.dash_connect_days, it.toInt())
                                 },
                                 showDashIcon = false,
-                                selected = request.lifetimePreset
-                            ) { select(request.budgetPreset, it) }
+                                selected = request.lifetimePreset,
+                                customLabel = stringResource(R.string.dash_connect_set_date),
+                                onCustom = { showDatePicker(request.blockTime, request.expiresAt) }
+                            ) {
+                                viewModel.selectExpiry(request.blockTime + AppConnectPresets.lifetimeDays[it] * AppConnectLimits.DAY)
+                                dismiss()
+                            }
                         }
                     }
                 }
@@ -121,9 +145,133 @@ class ConnectLimitPickerDialog : OffsetDialogFragment(R.layout.dialog_compose_co
         }
     }
 
-    private fun select(budget: Int, lifetime: Int) {
-        viewModel.selectLimits(budget, lifetime)
+    /** Opens the keypad sheet beside this one, under the approve sheet, then closes this picker. */
+    private fun showCustomLimit() {
+        if (parentFragmentManager.findFragmentByTag(ConnectCustomLimitDialog.TAG) == null) {
+            ConnectCustomLimitDialog().show(parentFragmentManager, ConnectCustomLimitDialog.TAG)
+        }
         dismiss()
+    }
+
+    /** Any day from tomorrow to a year after the request; the connection expires at the end of that day. */
+    private fun showDatePicker(blockTime: Long, current: Long?) {
+        val latest = blockTime + AppConnectLimits.MAX_LIFETIME
+        val initial = Calendar.getInstance().apply { timeInMillis = current ?: latest }
+        DatePickerDialog(requireContext(), { _, year, month, day ->
+            val endOfDay = Calendar.getInstance().apply {
+                set(year, month, day, 23, 59, 59)
+                set(Calendar.MILLISECOND, 0)
+            }.timeInMillis
+            viewModel.selectExpiry(minOf(endOfDay, latest))
+            dismiss()
+        }, initial.get(Calendar.YEAR), initial.get(Calendar.MONTH), initial.get(Calendar.DAY_OF_MONTH)).apply {
+            datePicker.minDate = blockTime + AppConnectLimits.DAY
+            datePicker.maxDate = latest
+        }.show()
+    }
+}
+
+/**
+ * Enters a custom funding limit for the pending approval, above 0 and at most 5 DASH.
+ *
+ * Figma Node IDs: 40103:38451 (empty), 40103:38643 (entered), 40103:38713 (above the maximum)
+ */
+class ConnectCustomLimitDialog : OffsetDialogFragment(R.layout.dialog_compose_container) {
+    companion object {
+        const val TAG = "connect_custom_limit"
+    }
+
+    override val backgroundStyle = R.style.SecondaryBackground
+    private val viewModel: ConnectionsViewModel by viewModels({ requireParentFragment().requireParentFragment() })
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        DialogComposeContainerBinding.bind(view).composeContainer.apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            setContent {
+                DashWalletTheme {
+                    val uiState by viewModel.uiState.collectAsState()
+                    val request = uiState.pendingRequest
+                    LaunchedEffect(request == null || request.recovering) {
+                        if (request == null || request.recovering) dismissAllowingStateLoss()
+                    }
+                    request ?: return@DashWalletTheme
+                    var amount by rememberSaveable { mutableStateOf("0") }
+                    Box(Modifier.navigationBarsPadding()) {
+                        ConnectCustomLimitContent(amount, onKey = { amount = processAmountKeyInput(amount, it, 8) }) { credits ->
+                            viewModel.selectFundingLimit(credits)
+                            dismiss()
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** The entered amount in credits, or null when it is not a number. */
+private fun creditsOf(amount: String): BigInteger? =
+    amount.toBigDecimalOrNull()?.movePointRight(11)?.toBigInteger()
+
+@Composable
+internal fun ConnectCustomLimitContent(amount: String, onKey: (String) -> Unit, onSubmit: (BigInteger) -> Unit) {
+    val colors = LocalDashColors.current
+    val credits = creditsOf(amount)
+    val overMax = credits != null && credits > AppConnectLimits.MAX_BUDGET
+    val valid = credits != null && credits.signum() > 0 && !overMax
+    val amountColor = if (overMax) colors.red else colors.textPrimary
+    Column(Modifier.fillMaxWidth().padding(top = 24.dp)) {
+        Text(
+            text = stringResource(R.string.dash_connect_custom_limit_title),
+            style = MyTheme.Typography.SubheadMedium,
+            color = colors.textPrimary,
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 70.dp, vertical = 10.dp)
+        )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 40.dp)
+                .heightIn(min = 92.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(amount, style = MyTheme.Typography.HeadlineLargeMedium, color = amountColor)
+                Icon(
+                    painter = painterResource(R.drawable.ic_dash_d_black),
+                    contentDescription = null,
+                    tint = amountColor,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            if (overMax) {
+                Text(
+                    text = stringResource(R.string.dash_connect_custom_limit_max, formatDash(AppConnectLimits.MAX_BUDGET)),
+                    style = MyTheme.Typography.Footnote,
+                    color = colors.red,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+        NumericKeyboardCompose(
+            decimalSeparator = DecimalFormatSymbols.getInstance().decimalSeparator,
+            bottomSlot = {
+                DashButton(
+                    text = stringResource(R.string.dash_connect_custom_limit_submit),
+                    style = Style.FilledBlue,
+                    size = Size.Large,
+                    isEnabled = valid,
+                    onClick = { credits?.takeIf { valid }?.let(onSubmit) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 40.dp, end = 40.dp, top = 20.dp)
+                )
+            },
+            onKeyInput = onKey
+        )
     }
 }
 
@@ -133,6 +281,8 @@ internal fun ConnectLimitPickerContent(
     options: List<String>,
     showDashIcon: Boolean,
     selected: Int,
+    customLabel: String,
+    onCustom: () -> Unit,
     onSelect: (Int) -> Unit
 ) {
     val colors = LocalDashColors.current
@@ -186,6 +336,20 @@ internal fun ConnectLimitPickerContent(
                 }
             }
         }
+        Text(
+            text = customLabel,
+            style = MyTheme.Typography.BodyLarge,
+            color = colors.textPrimary,
+            modifier = Modifier
+                .padding(start = 20.dp, end = 20.dp, top = 4.dp)
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(colors.backgroundSecondary)
+                .padding(6.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .clickable(role = Role.Button, onClick = onCustom)
+                .padding(14.dp)
+        )
     }
 }
 
@@ -258,8 +422,17 @@ internal fun ConnectInfoContent(info: ConnectInfo, onDismiss: () -> Unit) {
 private fun ConnectLimitPickerPreview() {
     DashWalletTheme {
         Box(Modifier.background(LocalDashColors.current.backgroundPrimary)) {
-            ConnectLimitPickerContent("Identity funding limits", listOf("0.1", "0.5", "2", "5"), true, 1) {}
+            ConnectLimitPickerContent("Identity funding limits", listOf("0.1", "0.5", "2", "5"), true, 1,
+                "Set custom limit", {}) {}
         }
+    }
+}
+
+@Preview(showBackground = true, widthDp = 420)
+@Composable
+private fun ConnectCustomLimitPreview() {
+    DashWalletTheme {
+        ConnectCustomLimitContent("6", {}) {}
     }
 }
 

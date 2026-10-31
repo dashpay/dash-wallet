@@ -10,13 +10,18 @@ internal fun formatDash(credits: BigInteger): String = credits.toBigDecimal()
     .movePointLeft(11).stripTrailingZeros().toPlainString()
 
 internal object AppConnectLimits {
-    private const val DAY = 86_400_000L
-    private val MAX_BUDGET = BigInteger("500000000000")
+    const val DAY = 86_400_000L
+    /** The most a connection may spend in total: 5 DASH, in credits. */
+    val MAX_BUDGET = BigInteger("500000000000")
+    /** A DashPay profile key's share of the funding limit: 0.002 DASH, at least 5 profile updates. */
+    val PROFILE_BUDGET = BigInteger("200000000")
+    const val MAX_LIFETIME = 365 * DAY
+    const val MIN_LIFETIME = 3_600_000L
 
     fun clamp(grant: AuthBinding, blockTime: Long, requireUsableExpiry: Boolean = true): AuthBinding = grant.copy(
         totalBudget = grant.totalBudget?.min(MAX_BUDGET),
-        expiresAt = minOf(grant.expiresAt ?: (blockTime + 90 * DAY), blockTime + 365 * DAY)
-    ).also { require(!requireUsableExpiry || it.expiresAt!! > blockTime + 3_600_000) { "Requested grant expires too soon" } }
+        expiresAt = minOf(grant.expiresAt ?: (blockTime + 90 * DAY), blockTime + MAX_LIFETIME)
+    ).also { require(!requireUsableExpiry || it.expiresAt!! > blockTime + MIN_LIFETIME) { "Requested grant expires too soon" } }
 }
 
 /** The immutable terms presented for explicit consent. No private keys are kept here. */
@@ -32,8 +37,10 @@ data class AppConnectPlan(
     val recovering: Boolean = false,
     val blockTime: Long = 0,
     val proposedGrants: List<AuthBinding> = grants,
-    val budgetPreset: Int = 0,
-    val lifetimePreset: Int = 0,
+    /** The funding limit for the whole connection, split between the selected keys; null until set. */
+    val fundingTotal: BigInteger? = null,
+    /** The one expiry shared by all of the app's keys; null until set. */
+    val expiry: Long? = null,
     val groupScopes: Map<String, VerifiedContractGroup> = emptyMap(),
     val previousGroupScopes: Map<String, VerifiedContractGroup>? = null,
     val groupScopeChangeApproved: Boolean = false,
@@ -87,33 +94,51 @@ private fun VerifiedContractGroup.consentText(): String = buildString {
 /** The identity funding limits (0.1, 0.5, 2 and 5 DASH, in credits) and expiration periods the sheet offers. */
 internal object AppConnectPresets {
     val budgets = listOf(BigInteger("10000000000"), BigInteger("50000000000"), BigInteger("200000000000"),
-        BigInteger("500000000000"))
+        AppConnectLimits.MAX_BUDGET)
     val lifetimeDays = listOf(30L, 90L, 365L)
 }
 
-/** Caps every proposed grant at the chosen presets; a preset never raises what the app requested. */
-internal fun AppConnectPlan.withPresets(budget: Int, lifetime: Int): AppConnectPlan {
-    require(budget in AppConnectPresets.budgets.indices && lifetime in AppConnectPresets.lifetimeDays.indices && !recovering)
-    val credits = AppConnectPresets.budgets[budget]
-    val expiry = blockTime + AppConnectPresets.lifetimeDays[lifetime] * 86_400_000L
-    return copy(grants = proposedGrants.map { grant -> grant.copy(
-        totalBudget = grant.totalBudget?.min(credits) ?: credits,
-        expiresAt = minOf(grant.expiresAt!!, expiry)
-    ) }, budgetPreset = budget, lifetimePreset = lifetime)
-}
+private fun AuthBinding.isDashPayProfile() =
+    kind == 1 && documentType == "profile" && org.bitcoinj.core.Base58.encode(id) == DASHPAY_CONTRACT
 
 /**
- * Selects the smallest presets at or above the app's request, so the opening sheet grants exactly what
- * was requested until the user lowers it. An unlimited budget falls to the largest preset.
+ * Sets one funding limit for the connection and one expiry for all of its keys. The limit is split
+ * between the selected keys: a DashPay profile key gets 0.002 DASH (half the limit when it is under
+ * 0.004 DASH) and the app's own keys share the rest. Either may be above or below the app's request.
  */
-internal fun AppConnectPlan.withRequestedPresets(): AppConnectPlan {
-    val budgets = AppConnectPresets.budgets
-    val requestedBudget = proposedGrants.map { it.totalBudget }.let { if (null in it) null else it.filterNotNull().maxOrNull() }
-    val budget = requestedBudget?.let { max -> budgets.indexOfFirst { it >= max } }?.takeIf { it >= 0 } ?: budgets.lastIndex
-    val requestedLifetime = proposedGrants.maxOfOrNull { it.expiresAt!! - blockTime } ?: 0L
-    val lifetime = AppConnectPresets.lifetimeDays.indexOfFirst { it * 86_400_000L >= requestedLifetime }
-        .takeIf { it >= 0 } ?: AppConnectPresets.lifetimeDays.lastIndex
-    return withPresets(budget, lifetime)
+internal fun AppConnectPlan.withLimits(total: BigInteger, expiresAt: Long): AppConnectPlan {
+    require(!recovering && total.signum() > 0 && total <= AppConnectLimits.MAX_BUDGET) { "Funding limit out of range" }
+    require(expiresAt > blockTime + AppConnectLimits.MIN_LIFETIME && expiresAt <= blockTime + AppConnectLimits.MAX_LIFETIME) {
+        "Expiry out of range"
+    }
+    val selected = selectedAuth.sorted()
+    val profiles = selected.filter { proposedGrants[it].isDashPayProfile() }.takeIf { it.size < selected.size }.orEmpty()
+    val others = selected - profiles.toSet()
+    val profileShare = AppConnectLimits.PROFILE_BUDGET.min(total.divide(BigInteger.valueOf(selected.size.toLong())))
+    val rest = total - profileShare * BigInteger.valueOf(profiles.size.toLong())
+    val (each, remainder) = rest.divideAndRemainder(BigInteger.valueOf(others.size.toLong()))
+    val budgets = profiles.associateWith { profileShare } +
+        others.mapIndexed { position, index -> index to if (position == 0) each + remainder else each }
+    // Unselected keys are not registered; they keep the whole limit so every proposal stays positive.
+    return copy(grants = proposedGrants.mapIndexed { index, grant ->
+        grant.copy(totalBudget = budgets[index] ?: total, expiresAt = expiresAt)
+    }, fundingTotal = total, expiry = expiresAt)
+}
+
+/** Recomputes the split after the selected keys change. */
+internal fun AppConnectPlan.withCurrentLimits(): AppConnectPlan =
+    if (fundingTotal == null || expiry == null || recovering) this else withLimits(fundingTotal, expiry)
+
+/**
+ * Starts at what the app requested: the total of its keys' budgets capped at 5 DASH (5 DASH when a key
+ * has no budget) and its expiry capped at a year (90 days when none was requested).
+ */
+internal fun AppConnectPlan.withRequestedLimits(): AppConnectPlan {
+    val selected = selectedAuth.sorted().map { proposedGrants[it] }
+    val requested = selected.map { it.totalBudget }
+    val total = if (null in requested) AppConnectLimits.MAX_BUDGET else
+        requested.filterNotNull().fold(BigInteger.ZERO, BigInteger::add).min(AppConnectLimits.MAX_BUDGET)
+    return withLimits(total, selected.maxOf { it.expiresAt!! })
 }
 
 enum class AppCapabilityKind { ACT_IN_APP, EDIT_DASHPAY_PROFILE, EDIT_DOCUMENTS, RECEIVE_ENCRYPTED }
@@ -142,16 +167,16 @@ internal fun AppConnectPlan.capabilities(): List<AppCapability> = selectedAuth.s
         documentType = grant.documentType, budget = grant.totalBudget, expiresAt = grant.expiresAt)
 } + if (selectedEncryption.isNotEmpty()) listOf(AppCapability(AppCapabilityKind.RECEIVE_ENCRYPTED)) else emptyList()
 
-/** The largest budget across the approved grants; null when any of them is unlimited or nothing is budgeted. */
+/** The connection's funding limit: the approved keys' budgets together; null when any of them is unlimited. */
 internal fun AppConnectPlan.fundingLimit(): BigInteger? = selectedAuth.map { grants[it].totalBudget }
-    .let { if (it.isEmpty() || null in it) null else it.filterNotNull().max() }
+    .let { if (it.isEmpty() || null in it) null else it.filterNotNull().fold(BigInteger.ZERO, BigInteger::add) }
 
 internal fun AppConnectPlan.connectionExpiresAt(): Long? = selectedAuth.mapNotNull { grants[it].expiresAt }.maxOrNull()
 
 /** What an existing connection's recorded keys allow, for the connection details sheet. */
 data class ConnectionTerms(
     val capabilities: List<AppCapability>,
-    /** The largest key budget, matching the approve sheet; null when a key is unlimited. */
+    /** The keys' budgets together, matching the approve sheet; null when a key is unlimited. */
     val fundingLimit: BigInteger?,
     val expiresAt: Long?
 )
@@ -175,7 +200,7 @@ internal fun recordedTerms(keys: List<org.dashj.platform.dpp.identity.IdentityPu
     val budgets = authentication.map { it.totalBudget }
     return ConnectionTerms(
         capabilities,
-        if (budgets.isEmpty() || null in budgets) null else budgets.filterNotNull().max(),
+        if (budgets.isEmpty() || null in budgets) null else budgets.filterNotNull().fold(BigInteger.ZERO, BigInteger::add),
         authentication.mapNotNull { it.expiresAt }.maxOrNull()
     )
 }
@@ -188,14 +213,16 @@ internal fun AppConnectPlan.requireMatches(request: DashKeyRequest) {
     grants.zip(requested).forEach { (grant, raw) ->
         require(grant.kind == raw.kind && grant.id.contentEquals(raw.id) && grant.documentType == raw.documentType &&
             grant.securityLevel == raw.securityLevel) { "Consent bounds or security level changed" }
-        require((grant.totalBudget == null && raw.totalBudget == null) || (grant.totalBudget != null &&
-            grant.totalBudget.signum() > 0 && (raw.totalBudget == null || grant.totalBudget <= raw.totalBudget) &&
-            grant.totalBudget <= BigInteger("500000000000"))) {
-            "Consent budget changed or was removed"
+        // The user sets the limits, above or below the request, so only the wallet's own bounds apply.
+        require(grant.totalBudget != null && grant.totalBudget.signum() > 0 &&
+            grant.totalBudget <= AppConnectLimits.MAX_BUDGET) { "Consent budget changed or was removed" }
+        require(grant.expiresAt != null && grant.expiresAt <= blockTime + AppConnectLimits.MAX_LIFETIME) {
+            "Consent expiry changed or was removed"
         }
-        require(grant.expiresAt != null && grant.expiresAt <= blockTime + 365 * 86_400_000L &&
-            (raw.expiresAt == null || grant.expiresAt <= raw.expiresAt)) { "Consent expiry changed or was removed" }
     }
+    // A recovering approval keeps the limits it was prepared with, which were capped per key.
+    require(recovering || selectedAuth.map { grants[it].totalBudget!! }.fold(BigInteger.ZERO, BigInteger::add) <=
+        AppConnectLimits.MAX_BUDGET) { "Funding limit is above 5 DASH" }
 }
 
 internal fun AppConnectPlan.choices(): List<GrantChoice> = grants.mapIndexed { index, grant ->

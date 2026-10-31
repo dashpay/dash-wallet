@@ -45,6 +45,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.core.Base58
+import java.math.BigInteger
 import javax.inject.Inject
 
 enum class ConnectionRecordsStatus { LOADING, READY, UNAVAILABLE, NO_IDENTITY }
@@ -423,16 +424,23 @@ class ConnectionsViewModel @Inject constructor(
         val changed = if (encryption) plan.copy(selectedEncryption =
             if (selected) plan.selectedEncryption + index else plan.selectedEncryption - index)
         else plan.copy(selectedAuth = if (selected) plan.selectedAuth + index else plan.selectedAuth - index)
+            .withCurrentLimits()
         pendingPlan = changed
         _uiState.update { it.copy(pendingRequest = it.pendingRequest?.withTerms(changed)) }
     }
 
-    fun selectLimits(budget: Int, lifetime: Int) {
+    /** Sets the connection's funding limit, in credits: above 0 and at most 5 DASH. */
+    fun selectFundingLimit(total: BigInteger) = changeLimits { it.withLimits(total, it.expiry ?: return@changeLimits null) }
+
+    /** Sets the expiry shared by the app's keys, within a year of the request's Platform time. */
+    fun selectExpiry(expiresAt: Long) = changeLimits { it.withLimits(it.fundingTotal ?: return@changeLimits null, expiresAt) }
+
+    private fun changeLimits(change: (AppConnectPlan) -> AppConnectPlan?) {
         if (!isWalletUnlocked) return
         if (operationInProgress || _uiState.value.requiresRevocation) return
         val plan = pendingPlan ?: return
         if (plan.recovering) return
-        val changed = plan.withPresets(budget, lifetime)
+        val changed = try { change(plan) } catch (e: IllegalArgumentException) { null } ?: return
         pendingPlan = changed
         _uiState.update { it.copy(pendingRequest = it.pendingRequest?.withTerms(changed)) }
     }
@@ -694,6 +702,7 @@ private fun ConnectionRequest.withTerms(plan: AppConnectPlan) = copy(
     capabilities = plan.capabilities(),
     fundingLimit = plan.fundingLimit(),
     expiresAt = plan.connectionExpiresAt(),
-    budgetPreset = plan.budgetPreset,
-    lifetimePreset = plan.lifetimePreset
+    budgetPreset = AppConnectPresets.budgets.indexOf(plan.fundingTotal),
+    lifetimePreset = AppConnectPresets.lifetimeDays.indexOfFirst { plan.blockTime + it * AppConnectLimits.DAY == plan.expiry },
+    blockTime = plan.blockTime
 )

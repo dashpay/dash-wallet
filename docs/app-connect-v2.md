@@ -96,11 +96,17 @@ wrapper being packaged before SWIG generation completed.
 
 ### Grant Lifecycle
 
-Requested budgets are capped at 5 DASH per key without dropping a requested
-limit or inventing an absent budget. Missing expiry defaults to 90 days; requested
-expiry is capped at one year and must remain over an hour beyond proved block
-time. Finite presets also cap an otherwise unlimited request; resetting to the
-requested preset restores the original terms. The primary binding cannot be unchecked.
+A connection has one funding limit and one expiry, set by the user before approving
+(MO-1117). The limit starts at the total the app requests across its keys, capped
+at 5 DASH (5 DASH when a key has no budget); the user may pick 0.1, 0.5, 2 or 5 DASH
+or a custom amount above 0 and up to 5 DASH, above or below the request. It is split
+between the selected keys: a DashPay profile key gets 0.002 DASH (half the limit
+under 0.004 DASH) and the app's own keys share the rest. The expiry starts at the
+app's request capped at one year, 90 days when none is requested, and may be 30, 90
+or 365 days or a custom date up to a year away; it must remain over an hour beyond
+proved block time. Consent checks only these wallet maximums, not the request's own
+budget or expiry. A recovering approval keeps the limits it was prepared with. The
+primary binding cannot be unchecked.
 
 For each selected auth binding the derivation leaf is
 `hash256(appEphPub || u8(originalBindingIndex))`. V1 uses `hash256(appEphPub)`.
@@ -277,8 +283,7 @@ still require emulator/device testing.
 Connection list names explicitly mark QR branding as unverified and include the
 app contract identity, including for older saved grants. Grant status transitions
 refresh updatedAt without changing it on an ordinary refresh or identical state
-write. The largest finite budget preset is 2 DASH, still capped by the requested
-budget. CI exports SUPPORT_EMAIL only after the external SDK build completes.
+write. CI exports SUPPORT_EMAIL only after the external SDK build completes.
 
 The follow-up pins DashJ in the wallet and SDK to the published timestamped build
 `24.0.0-20261024.220449-1`, keeping Core 24 support. Wallet resolution forces that

@@ -77,13 +77,17 @@ data class ConnectionRequest(
     val permissionText: String = "",
     val grantChoices: List<GrantChoice> = emptyList(),
     val recovering: Boolean = false,
-    val budgetPreset: Int = 0,
-    val lifetimePreset: Int = 0,
+    /** The funding-limit preset matching [fundingLimit], or -1 for a custom limit. */
+    val budgetPreset: Int = -1,
+    /** The expiration preset matching [expiresAt], or -1 for a custom date. */
+    val lifetimePreset: Int = -1,
+    /** Platform time the limits are measured from; the latest custom expiry is a year after it. */
+    val blockTime: Long = 0,
     val requiresGroupReapproval: Boolean = false,
     val groupScopeChangeApproved: Boolean = false,
     /** Plain-language lines for the approved grants; empty for a legacy login. */
     val capabilities: List<AppCapability> = emptyList(),
-    /** Credits the app may spend at most; null when unlimited or nothing is budgeted. */
+    /** Credits the app's keys may spend together; null when unlimited or nothing is budgeted. */
     val fundingLimit: java.math.BigInteger? = null,
     val expiresAt: Long? = null,
     /** When the app created the request, millis since epoch; 0 when unknown. */

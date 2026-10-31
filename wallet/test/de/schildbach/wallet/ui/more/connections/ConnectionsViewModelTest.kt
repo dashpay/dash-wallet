@@ -263,18 +263,23 @@ class ConnectionsViewModelTest {
             model.closePendingRequest()
             dispatcher.scheduler.runCurrent()
             scan()
-            val refreshed = plan.copy(recovering = recovering, blockTime = System.currentTimeMillis())
+            val now = System.currentTimeMillis()
+            val refreshed = plan.copy(recovering = recovering, blockTime = now).let {
+                if (recovering) it else it.withLimits(AppConnectPresets.budgets[0], now + 30 * AppConnectLimits.DAY)
+            }
             coEvery { repository.approvePreparedLogin(any(), any()) } throws GroupScopeChangedException()
             coEvery { repository.prepareLogin(any()) } returns refreshed
             model.approvePendingRequest()
             dispatcher.scheduler.runCurrent()
             assertEquals(recovering, model.uiState.value.requiresRevocation)
             model.selectGrant(1, false, false)
-            model.selectLimits(1, 1)
+            model.selectFundingLimit(AppConnectPresets.budgets[1])
+            model.selectExpiry(now + 90 * AppConnectLimits.DAY)
             val shown = model.uiState.value.pendingRequest!!
             assertEquals(recovering, shown.grantChoices.first { it.index == 1 && !it.encryption }.selected)
-            assertEquals(if (recovering) 0 else 1, shown.budgetPreset)
-            assertEquals(if (recovering) 0 else 1, shown.lifetimePreset)
+            assertEquals(if (recovering) -1 else 1, shown.budgetPreset)
+            assertEquals(if (recovering) -1 else 1, shown.lifetimePreset)
+            if (!recovering) assertEquals(AppConnectPresets.budgets[1], shown.fundingLimit)
         }
     }
 
@@ -1384,7 +1389,8 @@ class ConnectionsViewModelTest {
     @Test fun `failed approval terms stay frozen and retry uses original plan`() {
         failApproval()
         val original = model.uiState.value.pendingRequest
-        model.selectLimits(1, 1)
+        model.selectFundingLimit(AppConnectPresets.budgets[1])
+        model.selectExpiry(System.currentTimeMillis() + 90 * AppConnectLimits.DAY)
         model.selectGrant(1, false, false)
         assertEquals(original, model.uiState.value.pendingRequest)
         model.approvePendingRequest()
