@@ -3,8 +3,8 @@ buildscript {
         kotlin_version = '2.1.0'
         coroutinesVersion = '1.6.4'
         ok_http_version = '4.12.0'
-        dashjVersion = '22.0.5'
-        dppVersion = "5.0.0-SNAPSHOT"
+        dashjVersion = '24.0.0-20261024.220449-1'
+        dppVersion = "5.0.1-SNAPSHOT"
         hiltVersion = '2.53'
         hiltCompilerVersion = '1.2.0'
         hiltWorkVersion = '1.2.0'
@@ -70,9 +70,20 @@ plugins {
 }
 
 allprojects {
+    dependencies.components.withModule('org.dashj:dashj-core') {
+        // The forced timestamped build is immutable for this build; verify its checksums.
+        changing = false
+    }
     repositories {
         google()
-        mavenLocal()
+        if (rootProject.hasProperty('platformSdkRepository')) {
+            exclusiveContent {
+                forRepository { maven { url rootProject.property('platformSdkRepository') } }
+                filter { includeGroup('org.dashj.platform') }
+            }
+        } else {
+            mavenLocal()
+        }
         mavenCentral()
         maven { url 'https://jitpack.io' }
         maven { url 'https://s01.oss.sonatype.org/content/repositories/snapshots/' }
@@ -83,6 +94,7 @@ allprojects {
     }
     configurations.all {
         resolutionStrategy {
+            force "org.dashj:dashj-core:$dashjVersion"
             force 'com.google.android.recaptcha:recaptcha:18.4.0'
         }
     }

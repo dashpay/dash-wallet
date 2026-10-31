@@ -29,6 +29,8 @@ import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.transactions.TaxBitExporter
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+import de.schildbach.wallet.ui.more.connections.ConnectIdentityAvailability
+import de.schildbach.wallet.ui.more.connections.ConnectIdentityStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -38,6 +40,8 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.launchIn
@@ -55,7 +59,8 @@ import javax.inject.Inject
 data class ToolsUIState(
     val isLoading: Boolean = false,
     val isSyncing: Boolean = false,
-    val hasUsername: Boolean = false
+    val hasUsername: Boolean = false,
+    val showConnections: Boolean = true
 )
 
 @HiltViewModel
@@ -66,7 +71,8 @@ class ToolsViewModel @Inject constructor(
     blockchainStateDao: BlockchainStateDao,
     private val dashPayConfig: DashPayConfig,
     private val identityConfig: BlockchainIdentityConfig,
-    private val analyticsService: AnalyticsService
+    private val analyticsService: AnalyticsService,
+    private val connectAvailability: ConnectIdentityAvailability
 ) : ViewModel() {
 
     sealed class ExportCsvResult {
@@ -88,6 +94,7 @@ class ToolsViewModel @Inject constructor(
 
     private val _exportCsvResult = MutableStateFlow<ExportCsvResult>(ExportCsvResult.Idle)
     val exportCsvResult: StateFlow<ExportCsvResult> = _exportCsvResult.asStateFlow()
+    private var connectionAvailabilityJob: Job? = null
 
     init {
         val extendedKey: DeterministicKey = walletData.wallet!!.watchingKey
@@ -106,6 +113,17 @@ class ToolsViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(hasUsername = hasUsername())
         }
+        refreshConnectionsAvailability()
+    }
+
+    fun refreshConnectionsAvailability() {
+        connectionAvailabilityJob?.cancel()
+        _uiState.value = _uiState.value.copy(showConnections = true)
+        if (!Constants.SUPPORTS_PLATFORM || !Constants.SUPPORTS_CONNECT) return
+        connectionAvailabilityJob = connectAvailability.observe().onEach { availability ->
+            kotlin.coroutines.coroutineContext.ensureActive()
+            _uiState.value = _uiState.value.copy(showConnections = availability != ConnectIdentityStatus.NO_IDENTITY)
+        }.launchIn(viewModelScope)
     }
 
     fun copyXpubToClipboard() {

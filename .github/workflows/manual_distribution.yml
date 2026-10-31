@@ -48,12 +48,6 @@ jobs:
       run: |
           echo "build_number=$((70000+$run_num))" >> $GITHUB_ENV
 
-    - name: Get the support email
-      env:
-        SUPPORT_EMAIL: "${{ secrets.INTERNAL_SUPPORT_EMAIL }}"
-      run: |
-        echo "SUPPORT_EMAIL=$SUPPORT_EMAIL" >> $GITHUB_ENV
-
     - uses: actions/checkout@v3
     - name: set up JDK
       uses: actions/setup-java@v3
@@ -61,6 +55,14 @@ jobs:
         java-version: '17'
         distribution: 'adopt'
         cache: gradle
+
+    - uses: ./.github/actions/platform-sdk
+
+    - name: Get the support email
+      env:
+        SUPPORT_EMAIL: "${{ secrets.INTERNAL_SUPPORT_EMAIL }}"
+      run: |
+        echo "SUPPORT_EMAIL=$SUPPORT_EMAIL" >> $GITHUB_ENV
 
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew

@@ -16,12 +16,6 @@ jobs:
       run: |
           echo "build_number=$((70000))" >> $GITHUB_ENV
 
-    - name: Get the support email
-      env:
-        SUPPORT_EMAIL: "${{ secrets.INTERNAL_SUPPORT_EMAIL }}"
-      run: |
-        echo "SUPPORT_EMAIL=$SUPPORT_EMAIL" >> $GITHUB_ENV
-
     - uses: actions/checkout@v3
     - name: set up JDK
       uses: actions/setup-java@v3
@@ -29,6 +23,14 @@ jobs:
         java-version: '17'
         distribution: 'adopt'
         cache: gradle
+
+    - uses: ./.github/actions/platform-sdk
+
+    - name: Get the support email
+      env:
+        SUPPORT_EMAIL: "${{ secrets.INTERNAL_SUPPORT_EMAIL }}"
+      run: |
+        echo "SUPPORT_EMAIL=$SUPPORT_EMAIL" >> $GITHUB_ENV
 
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
@@ -99,4 +101,3 @@ jobs:
     - name: Production Build and Firebase Distribution
       if: github.event_name == 'push'
       run: bundle exec fastlane build_distribute flavor:"prod" type:"release" storepass:"${{ secrets.SIGNING_STORE_PASS }}" versioncode:"${{ env.build_number }}" comment:"Up to date Dash Wallet Production build" appid:"1:1039839682638:android:989eecd6db36de6a" testgroup:"qa" SUPPORT_EMAIL:"${{ secrets.INTERNAL_SUPPORT_EMAIL }}"
-

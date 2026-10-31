@@ -64,6 +64,11 @@ class ToolsFragment : Fragment() {
     @Inject
     lateinit var analytics: AnalyticsService
     private val viewModel: ToolsViewModel by viewModels()
+
+    override fun onResume() {
+        super.onResume()
+        viewModel.refreshConnectionsAvailability()
+    }
     private val zenLedgerViewModel: ZenLedgerViewModel by viewModels()
 
     override fun onCreateView(
@@ -74,6 +79,7 @@ class ToolsFragment : Fragment() {
             setContent {
                 DashWalletTheme {
                     ToolsScreen(
+                        uiStateFlow = viewModel.uiState,
                         onBackClick = { findNavController().popBackStack() },
                         onAddressBookClick = { onAddressBook() },
                         onImportPrivateKeyClick = { onImportKeys() },

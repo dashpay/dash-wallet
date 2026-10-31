@@ -4,6 +4,7 @@ import org.bitcoinj.core.Address;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.params.DevNetParams;
 import org.bitcoinj.params.TestNet3Params;
+import org.bitcoinj.quorums.LLMQParameters;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -31,6 +32,17 @@ public class SakuraDevNetParamsTest {
         params.getDefaultMasternodeList()[0] = "127.0.0.1";
         assertEquals("68.67.122.86", params.getDefaultMasternodeList()[0]);
         assertEquals(20002, params.getPort());
+    }
+
+    @Test
+    public void selectsSakuraRotatedAndPlatformQuorumsWithoutChangingIntervals() {
+        SakuraDevNetParams params = SakuraDevNetParams.create(testAddress(), 20001);
+        assertEquals(LLMQParameters.LLMQType.LLMQ_DEVNET_DIP0024, params.getLlmqDIP0024InstantSend());
+        assertEquals(LLMQParameters.LLMQType.LLMQ_DEVNET_PLATFORM, params.getLlmqPlatform());
+        assertTrue(params.getLlmqs().get(params.getLlmqDIP0024InstantSend()).useRotation());
+        assertEquals(48, params.getLlmqs().get(params.getLlmqDIP0024InstantSend()).getDkgInterval());
+        assertFalse(params.getLlmqs().get(params.getLlmqPlatform()).useRotation());
+        assertEquals(24, params.getLlmqs().get(params.getLlmqPlatform()).getDkgInterval());
     }
 
     @Test(expected = IllegalArgumentException.class)

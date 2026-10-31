@@ -1,0 +1,365 @@
+package de.schildbach.wallet.ui.more.connections
+
+import com.google.gson.JsonParser
+import de.schildbach.wallet.service.platform.IdentityRepository
+import de.schildbach.wallet.service.platform.PlatformService
+import de.schildbach.wallet.ui.dashpay.PlatformRepo
+import de.schildbach.wallet.ui.more.connections.protocol.DashConnectUri
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
+import io.mockk.mockkObject
+import io.mockk.unmockkObject
+import kotlinx.coroutines.runBlocking
+import org.bitcoinj.core.Base58
+import org.dashj.platform.dpp.contract.DataContract
+import org.dashj.platform.dpp.contract.VerifiedContractGroup
+import org.dashj.platform.dpp.contract.ContractGroupDocumentMember
+import org.dashj.platform.dpp.contract.ContractGroupTokenMember
+import org.dashj.platform.dpp.identifier.Identifier
+import org.dashj.platform.dpp.identity.Identity
+import org.junit.Assert.*
+import org.junit.Test
+import org.junit.Before
+import org.junit.Assume.assumeFalse
+import de.schildbach.wallet.Constants
+import org.bitcoinj.core.NetworkParameters
+
+@org.junit.runner.RunWith(org.robolectric.RobolectricTestRunner::class)
+@org.robolectric.annotation.Config(application = android.app.Application::class, sdk = [28],
+    manifest = org.robolectric.annotation.Config.NONE, shadows = [AppConnectKeyStateTest.ShadowSdkEnums::class])
+class AppConnectOwnershipTest {
+    private fun nonMainnetOnly() {
+        assumeFalse(Constants.IS_PROD_BUILD || Constants.NETWORK_PARAMETERS.id == NetworkParameters.ID_MAINNET)
+    }
+    private val service = mockk<PlatformService>(relaxed = true)
+    private val repo = mockk<PlatformRepo>(relaxed = true)
+    private val identities = mockk<IdentityRepository>(relaxed = true)
+    private val config = mockk<DashConnectConfig>(relaxed = true)
+    private val session = AppConnectSession(service, repo, identities, config)
+    private val owner = Identifier.from(ByteArray(32) { 7 })
+    private val identityId = Identifier.from(ByteArray(32) { 8 })
+    private val identity = mockk<Identity>(relaxed = true)
+    private val app = mockk<DataContract>(relaxed = true)
+    private val profile = mockk<DataContract>(relaxed = true)
+    private val vector = JsonParser.parseReader(javaClass.getResourceAsStream("/app-connect-vectors.json")!!.reader()).asJsonObject
+    private val decoded = DashConnectUri.parseKeyRequest(vector.getAsJsonObject("request")["uri"].asString)
+    private val groupRequest = decoded.copy(appConnect = decoded.appConnect!!.copy(createdAt = System.currentTimeMillis()))
+    private val request = groupRequest.copy(appConnect = groupRequest.appConnect!!.let { raw ->
+        raw.copy(auth = listOf(raw.auth.first().copy(kind = 0, securityLevel = 2, id = groupRequest.contractId)) + raw.auth.drop(1))
+    })
+    private val group = VerifiedContractGroup(Identifier.from(groupRequest.appConnect!!.auth.first().id), owner,
+        setOf(identityId), null, null, setOf(Identifier.from(request.contractId)),
+        setOf(ContractGroupDocumentMember(Identifier.from(request.contractId), "profile")),
+        setOf(ContractGroupTokenMember(Identifier.from(request.contractId), 0)))
+
+    init {
+        every { repo.walletApplication.wallet!!.watchingKey.pubKey } returns byteArrayOf(2) + ByteArray(32) { 1 }
+        every { identities.blockchainIdentity!!.uniqueIdentifier } returns identityId
+        every { identity.id } returns identityId
+        every { service.platform.client.getIdentity(any(), true) } returns identity
+        every { service.platform.client.refreshProtocolVersion() } returns 14
+        every { service.platform.client.getPlatformTime(any()) } returns System.currentTimeMillis()
+        every { app.ownerId } returns owner
+        every { app.requiresIdentityEncryptionBoundedKey } returns true
+        every { app.requiresIdentityDecryptionBoundedKey } returns true
+        every { profile.ownerId } returns Identifier.from(ByteArray(32))
+        every { service.platform.client.getDataContract(any(), true) } answers {
+            if ((firstArg<ByteArray>()).contentEquals(request.contractId)) app else profile
+        }
+        every { service.platform.client.getContractGroupOwner(any()) } returns owner
+        every { service.platform.client.getContractGroup(any()) } returns group
+        coEvery { config.getGrants() } returns emptyList()
+    }
+
+    @Test fun `owned contract plus exact DashPay profile exception prepare successfully`() = runBlocking {
+        nonMainnetOnly()
+        val plan = session.prepare(request)
+        assertEquals(2, plan.grants.size)
+        assertEquals("profile", plan.grants[1].documentType)
+        plan.requireMatches(request)
+        verify { service.platform.client.getDataContract(request.contractId, true) }
+        Unit
+    }
+
+    @Test fun `omitted optional expiry cannot block approval but selected expiry still does`() = runBlocking {
+        nonMainnetOnly()
+        val start = System.currentTimeMillis()
+        every { service.platform.client.getPlatformTime(any()) } returns start
+        val raw = request.requireAppConnect()
+        val bounded = request.copy(appConnect = raw.copy(auth = listOf(
+            raw.auth[0].copy(expiresAt = start + 90L * 86_400_000),
+            raw.auth[1].copy(expiresAt = start + 65L * 60_000))))
+        val prepared = session.prepare(bounded).copy(selectedEncryption = emptySet())
+        every { service.platform.client.getPlatformTime(any()) } returns start + 6L * 60_000
+        every { repo.walletApplication.wallet!!.isEncrypted } returns false
+        every { identity.publicKeys } returns mutableListOf()
+        coEvery { repo.getWalletEncryptionKey() } returns null
+        coEvery { repo.getWalletSeed() } returns mockk { every { seedBytes } returns ByteArray(32) { 1 } }
+        val derivation = org.dashj.platform.dpp.identity.ApplicationKeyDerivation
+        mockkObject(derivation)
+        try {
+            val reached = IllegalStateException("Selected grant reached derivation")
+            every { derivation.sessionAuthentication(any(), any(), any(), any()) } throws reached
+            val selectedOnly = assertThrows(IllegalStateException::class.java) {
+                runBlocking(ConnectionAuthorization { true }) { session.approve(bounded, prepared.copy(selectedAuth = setOf(0))) }
+            }
+            assertEquals(reached.message, selectedOnly.message)
+            val expired = assertThrows(IllegalStateException::class.java) {
+                runBlocking(ConnectionAuthorization { true }) { session.approve(bounded, prepared) }
+            }
+            assertEquals("Grant expired. Scan again.", expired.message)
+            verify(exactly = 1) { derivation.sessionAuthentication(any(), any(), any(), any()) }
+            coVerify(exactly = 0) { config.saveGrant(any()) }
+        } finally {
+            unmockkObject(derivation)
+        }
+    }
+
+    @Test fun `restart restores omitted grant selection before enforcing expiry`() = runBlocking {
+        nonMainnetOnly()
+        val start = System.currentTimeMillis()
+        every { service.platform.client.getPlatformTime(any()) } returns start
+        val raw = request.requireAppConnect()
+        val bounded = request.copy(appConnect = raw.copy(auth = listOf(
+            raw.auth[0].copy(expiresAt = start + 90L * 86_400_000),
+            raw.auth[1].copy(expiresAt = start + 65L * 60_000))))
+        val prepared = session.prepare(bounded).copy(selectedAuth = setOf(0), selectedEncryption = emptySet())
+        val approved = prepared.grants.first().copy(totalBudget = java.math.BigInteger.ONE, expiresAt = start + 86_400_000)
+        val key = org.dashj.platform.dpp.identity.IdentityPublicKey(4,
+            org.dashj.platform.sdk.KeyType.ECDSA_HASH160, org.dashj.platform.sdk.Purpose.AUTHENTICATION,
+            org.dashj.platform.sdk.SecurityLevel.HIGH,
+            org.dashj.platform.dpp.identity.SingleContractBounds(Identifier.from(approved.id)), ByteArray(20), false,
+            totalBudget = approved.totalBudget, expiresAt = approved.expiresAt, version = 1)
+        val record = org.json.JSONObject().put("id", "${prepared.scope}:${prepared.requestHash}")
+            .put("keys", org.json.JSONArray().put(org.json.JSONObject(key.toJSON())))
+            .put("authIndices", org.json.JSONArray(listOf(0))).put("encIndices", org.json.JSONArray())
+        coEvery { config.getGrants() } returns listOf(record)
+        every { service.platform.client.getPlatformTime(any()) } returns start + 6L * 60_000
+        for (state in listOf("prepared", "pending", "confirmed", "active")) {
+            record.put("state", state)
+            val restarted = AppConnectSession(service, repo, identities, config).prepare(bounded)
+            assertTrue(restarted.recovering)
+            assertEquals(setOf(0), restarted.selectedAuth)
+            assertEquals(approved.totalBudget, restarted.grants[0].totalBudget)
+            assertEquals(approved.expiresAt, restarted.grants[0].expiresAt)
+            restarted.requireMatches(bounded)
+        }
+        record.put("authIndices", org.json.JSONArray(listOf(0, 1)))
+        assertThrows(IllegalArgumentException::class.java) { runBlocking { session.prepare(bounded) } }
+        coEvery { config.getGrants() } returns emptyList()
+        assertThrows(IllegalArgumentException::class.java) { runBlocking { session.prepare(bounded) } }
+        coVerify(exactly = 0) { repo.getWalletSeed() }
+        coVerify(exactly = 0) { config.saveGrant(any()) }
+    }
+
+    @Test fun `legacy preparation and approval retries fail before any identity or signing access`() {
+        val legacy = request.copy(appConnect = null)
+        val plan = AppConnectPlan("hash", "scope", "identity", request.requireAppConnect().auth, "Consent")
+        val error = assertThrows(de.schildbach.wallet.ui.more.connections.protocol.DashConnectUriException::class.java) {
+            runBlocking { session.prepare(legacy) }
+        }
+        assertEquals(DashConnectUri.LEGACY_KEY_REQUEST_ERROR, error.message)
+        for (recovering in listOf(false, true)) {
+            val failure = assertThrows(de.schildbach.wallet.ui.more.connections.protocol.DashConnectUriException::class.java) {
+                runBlocking(ConnectionAuthorization { true }) { session.approve(legacy, plan.copy(recovering = recovering)) }
+            }
+            assertEquals(DashConnectUri.LEGACY_KEY_REQUEST_ERROR, failure.message)
+        }
+        assertThrows(de.schildbach.wallet.ui.more.connections.protocol.DashConnectUriException::class.java) {
+            plan.requireMatches(legacy)
+        }
+        verify(exactly = 0) { service.platform.client.refreshProtocolVersion() }
+        verify(exactly = 0) { service.platform.client.getIdentity(any(), any()) }
+        coVerify(exactly = 0) { repo.getWalletEncryptionKey() }
+        coVerify(exactly = 0) { repo.getWalletSeed() }
+        coVerify(exactly = 0) { config.getGrants() }
+        coVerify(exactly = 0) { config.saveGrant(any()) }
+    }
+
+    @Test fun `verified admin managed group prepares with complete dynamic scope disclosure`() = runBlocking {
+        nonMainnetOnly()
+        val client = service.platform.client
+        val plan = session.prepare(groupRequest)
+        assertEquals(group, plan.groupScopes[group.id.toString()])
+        val description = plan.choices().first().description
+        for (text in listOf(owner.toString(), identityId.toString(), "Document:", "position 0", "current AND future", "without another wallet approval")) {
+            assertTrue(description, description.contains(text))
+        }
+        plan.requireGroupScopes(mapOf(group.id.toString() to group))
+        assertEquals(owner.toString(), plan.groupScopesJson().getJSONObject(group.id.toString()).getString("ownerId"))
+        verify(exactly = 0) { client.getContractGroupOwner(any()) }
+    }
+
+    @Test fun `changed group scope blocks approval and retry before accessing seed or saving keys`() = runBlocking {
+        nonMainnetOnly()
+        val plan = session.prepare(groupRequest)
+        for (changed in listOf(group.copy(adminIds = emptySet()), group.copy(contracts = emptySet()),
+            group.copy(documentTypes = emptySet()), group.copy(tokens = emptySet()))) {
+            every { service.platform.client.getContractGroup(any()) } returns changed
+            for (recovering in listOf(false, true)) {
+                assertThrows(GroupScopeChangedException::class.java) {
+                    runBlocking(ConnectionAuthorization { true }) { session.approve(groupRequest, plan.copy(recovering = recovering)) }
+                }
+            }
+        }
+        coVerify(exactly = 0) { repo.getWalletSeed() }
+        coVerify(exactly = 0) { repo.getWalletEncryptionKey() }
+        coVerify(exactly = 0) { config.saveGrant(any()) }
+    }
+
+    @Test fun `restart preparation compares persisted approval across all recovery states`() = runBlocking {
+        nonMainnetOnly()
+        val prepared = session.prepare(groupRequest).copy(selectedEncryption = emptySet())
+        val old = prepared.copy(groupScopes = mapOf(group.id.toString() to group.copy(adminIds = emptySet())))
+        val keys = prepared.grants.mapIndexed { index, grant ->
+            val bounds = if (grant.kind == 2) org.dashj.platform.dpp.identity.ContractGroupBounds(Identifier.from(grant.id))
+                else org.dashj.platform.dpp.identity.SingleContractDocumentType(Identifier.from(grant.id), grant.documentType!!)
+            org.json.JSONObject(org.dashj.platform.dpp.identity.IdentityPublicKey(index + 4,
+                org.dashj.platform.sdk.KeyType.ECDSA_HASH160, org.dashj.platform.sdk.Purpose.AUTHENTICATION,
+                if (grant.securityLevel == 1) org.dashj.platform.sdk.SecurityLevel.CRITICAL else org.dashj.platform.sdk.SecurityLevel.HIGH,
+                bounds, ByteArray(20) { index.toByte() }, false, totalBudget = grant.totalBudget,
+                expiresAt = grant.expiresAt, version = 1).toJSON())
+        }
+        val record = org.json.JSONObject().put("id", "${prepared.scope}:${prepared.requestHash}")
+            .put("keys", org.json.JSONArray(keys)).put("authIndices", org.json.JSONArray(prepared.selectedAuth.sorted()))
+            .put("encIndices", org.json.JSONArray()).put("groupScopes", old.groupScopesJson())
+        coEvery { config.getGrants() } returns listOf(record)
+        for (state in listOf("prepared", "pending", "confirmed", "active")) {
+            record.put("state", state)
+            val restarted = AppConnectSession(service, repo, identities, config).prepare(groupRequest)
+            assertTrue(state, restarted.recovering)
+            assertTrue(state, restarted.requiresGroupReapproval)
+            assertFalse(state, restarted.groupScopeChangeApproved)
+            assertEquals(readApprovedGroupScopes(record), restarted.previousGroupScopes)
+            assertEquals(prepared.grants.map { it.totalBudget }, restarted.grants.map { it.totalBudget })
+            assertThrows(IllegalStateException::class.java) {
+                runBlocking(ConnectionAuthorization { true }) { session.approve(groupRequest, restarted) }
+            }
+        }
+        record.remove("groupScopes")
+        assertTrue(session.prepare(groupRequest).requiresGroupReapproval)
+        record.put("groupScopes", prepared.groupScopesJson())
+        assertFalse(session.prepare(groupRequest).requiresGroupReapproval)
+        coVerify(exactly = 0) { repo.getWalletEncryptionKey() }
+        coVerify(exactly = 0) { repo.getWalletSeed() }
+        coVerify(exactly = 0) { config.saveGrant(any()) }
+    }
+
+    @Test fun `recovered changed scope is blocked before seed access without acknowledgement`() = runBlocking {
+        nonMainnetOnly()
+        val prepared = session.prepare(groupRequest)
+        val old = prepared.copy(groupScopes = mapOf(group.id.toString() to group.copy(adminIds = emptySet())))
+        val record = org.json.JSONObject().put("id", "${prepared.scope}:${prepared.requestHash}")
+            .put("state", "confirmed").put("groupScopes", old.groupScopesJson())
+        coEvery { config.getGrants() } returns listOf(record)
+        val recovery = prepared.copy(recovering = true, previousGroupScopes = readApprovedGroupScopes(record))
+        assertTrue(recovery.requiresGroupReapproval)
+        assertThrows(IllegalStateException::class.java) {
+            runBlocking(ConnectionAuthorization { true }) { session.approve(groupRequest, recovery) }
+        }
+        coVerify(exactly = 0) { repo.getWalletEncryptionKey() }
+        coVerify(exactly = 0) { repo.getWalletSeed() }
+        coVerify(exactly = 0) { config.saveGrant(any()) }
+        coEvery { repo.getWalletEncryptionKey() } throws IllegalStateException("Stopped after consent guard")
+        val allowed = assertThrows(IllegalStateException::class.java) {
+            runBlocking(ConnectionAuthorization { true }) {
+                session.approve(groupRequest, recovery.copy(groupScopeChangeApproved = true))
+            }
+        }
+        assertEquals("Stopped after consent guard", allowed.message)
+        coVerify(exactly = 1) { repo.getWalletEncryptionKey() }
+    }
+
+    @Test fun `missing foreign or unverified groups fail closed`() {
+        nonMainnetOnly()
+        every { service.platform.client.getContractGroup(any()) } returns null
+        assertThrows(IllegalStateException::class.java) {
+            runBlocking { session.prepare(groupRequest) }
+        }
+        every { service.platform.client.getContractGroup(any()) } returns group.copy(ownerId = identityId)
+        assertThrows(IllegalStateException::class.java) { runBlocking { session.prepare(groupRequest) } }
+        every { service.platform.client.getContractGroup(any()) } throws IllegalStateException("Invalid proof")
+        assertThrows(IllegalStateException::class.java) { runBlocking { session.prepare(groupRequest) } }
+        coVerify(exactly = 0) { config.saveGrant(any()) }
+    }
+
+    @Test fun `optional unselected group changes do not alter selected consent`() = runBlocking {
+        nonMainnetOnly()
+        val raw = request.appConnect!!
+        val optionalGroup = groupRequest.appConnect!!.auth.first()
+        val plan = session.prepare(request.copy(appConnect = raw.copy(auth = raw.auth + optionalGroup)))
+        plan.copy(selectedAuth = setOf(0)).requireGroupScopes(emptyMap())
+        assertThrows(GroupScopeChangedException::class.java) {
+            plan.requireGroupScopes(emptyMap())
+        }
+        Unit
+    }
+
+    @Test fun `foreign single contract ownership is still rejected`() {
+        nonMainnetOnly()
+        every { app.ownerId } returns owner
+        val raw = request.appConnect!!
+        val foreign = raw.auth.first().copy(id = ByteArray(32) { 3 })
+        assertThrows(IllegalStateException::class.java) {
+            runBlocking { session.prepare(request.copy(appConnect = raw.copy(auth = listOf(foreign) + raw.auth.drop(1)))) }
+        }
+    }
+
+    @Test fun `DashPay exception does not permit contact requests or whole contract`() {
+        nonMainnetOnly()
+        val raw = request.appConnect!!
+        val changed = raw.auth[1].copy(documentType = "contactRequest")
+        assertThrows(IllegalStateException::class.java) {
+            runBlocking { session.prepare(request.copy(appConnect = raw.copy(auth = listOf(raw.auth[0], changed)))) }
+        }
+        assertThrows(IllegalStateException::class.java) {
+            runBlocking { session.prepare(request.copy(appConnect = raw.copy(auth = listOf(raw.auth[0], changed.copy(kind = 0, documentType = null))))) }
+        }
+    }
+
+    @Test fun `encryption opt in and app binding are mandatory`() {
+        nonMainnetOnly()
+        every { app.requiresIdentityEncryptionBoundedKey } returns false
+        assertThrows(IllegalStateException::class.java) { runBlocking { session.prepare(request) } }
+        every { app.requiresIdentityEncryptionBoundedKey } returns true
+        val raw = request.appConnect!!
+        assertThrows(IllegalStateException::class.java) {
+            runBlocking { session.prepare(request.copy(appConnect = raw.copy(encryption = listOf(raw.encryption[0].copy(contractId = ByteArray(32)))))) }
+        }
+    }
+
+    @Test fun `system apps old protocols and different identity hints are rejected`() {
+        nonMainnetOnly()
+        assertThrows(IllegalStateException::class.java) {
+            runBlocking { session.prepare(request.copy(contractId = Base58.decode(AppConnectSession.RESPONSE_CONTRACT))) }
+        }
+        every { service.platform.client.refreshProtocolVersion() } returns 13
+        assertThrows(IllegalStateException::class.java) { runBlocking { session.prepare(request) } }
+        every { service.platform.client.refreshProtocolVersion() } returns 14
+        assertThrows(IllegalStateException::class.java) {
+            runBlocking { session.prepare(request.copy(appConnect = request.appConnect!!.copy(identityHint = ByteArray(32)))) }
+        }
+    }
+
+    @Test fun `consent cannot remove limits raise budgets or broaden bounds`() = runBlocking {
+        nonMainnetOnly()
+        val plan = session.prepare(request)
+        val primary = plan.grants.first()
+        for (bad in listOf(primary.copy(totalBudget = null), primary.copy(totalBudget = primary.totalBudget!! + java.math.BigInteger.ONE),
+            primary.copy(expiresAt = null), primary.copy(kind = 1, documentType = "profile"))) {
+            assertThrows(IllegalArgumentException::class.java) {
+                plan.copy(grants = listOf(bad) + plan.grants.drop(1)).requireMatches(request)
+            }
+        }
+    }
+
+    @Test fun `stale wallet scope cannot revoke or inspect a new wallet`() {
+        assertThrows(IllegalStateException::class.java) { runBlocking { session.disconnect("app", "previous-wallet-scope") } }
+        assertThrows(IllegalStateException::class.java) { runBlocking { session.details("app", "previous-wallet-scope") } }
+        coVerify(exactly = 0) { config.getGrants() }
+        verify(exactly = 0) { service.platform.client.getIdentity(any(), any()) }
+    }
+}

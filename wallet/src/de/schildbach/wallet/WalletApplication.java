@@ -242,6 +242,8 @@ public class WalletApplication extends MultiDexApplication
     TxDisplayCacheService txDisplayCacheService;
     @Inject
     SwapTrackingService swapTrackingService;
+    @Inject
+    de.schildbach.wallet.ui.more.connections.DashConnectConfig dashConnectConfig;
     private WalletBalanceObserver walletBalanceObserver;
     private CoinJoinService coinJoinService;
     @Inject
@@ -974,6 +976,10 @@ public class WalletApplication extends MultiDexApplication
 
             if (files != null) {
                 for (File file: files) {
+                    // This scoped authorization/replay audit must survive same-seed recovery.
+                    if (de.schildbach.wallet.ui.more.connections.DashConnectConfig.AUDIT_FILE_NAME.equals(file.getName())) {
+                        continue;
+                    }
                     file.delete();
                 }
             }

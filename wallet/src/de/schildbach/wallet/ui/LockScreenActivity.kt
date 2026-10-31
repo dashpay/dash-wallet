@@ -32,7 +32,6 @@ import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.lifecycleScope
-import androidx.navigation.fragment.NavHostFragment
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.AutoLogout
 import de.schildbach.wallet.WalletApplication
@@ -54,6 +53,8 @@ import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityLockScreenRootBinding
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.SecureActivity
@@ -103,6 +104,16 @@ open class LockScreenActivity : SecureActivity() {
     val lockScreenDisplayed: Boolean
         get() = ::binding.isInitialized && binding.rootViewSwitcher.displayedChild == 0
 
+    private val _walletLocked = MutableStateFlow(true)
+    val walletLocked = _walletLocked.asStateFlow()
+    private val lockGeneration = java.util.concurrent.atomic.AtomicLong()
+    val walletLockGeneration: Long get() = lockGeneration.get()
+
+    private fun markWalletLocked() {
+        lockGeneration.incrementAndGet()
+        _walletLocked.value = true
+    }
+
     private val temporaryLockCheckHandler = Handler()
     private val temporaryLockCheckInterval = TimeUnit.SECONDS.toMillis(10)
     private val temporaryLockCheckRunnable = Runnable {
@@ -123,7 +134,10 @@ open class LockScreenActivity : SecureActivity() {
     }
 
     val keepUnlocked by lazy {
-        intent.getBooleanExtra(INTENT_EXTRA_KEEP_UNLOCKED, false)
+        // Only private activity entry points may request the quick-receive/scan shortcut.
+        // Exported activities must use the in-process authentication/auto-logout state.
+        !packageManager.getActivityInfo(componentName, 0).exported &&
+            intent.getBooleanExtra(INTENT_EXTRA_KEEP_UNLOCKED, false)
     }
 
     protected var isLocked: Boolean = false
@@ -255,6 +269,7 @@ open class LockScreenActivity : SecureActivity() {
             handleLockScreenActivated()
         } else {
             binding.rootViewSwitcher.displayedChild = 1
+            _walletLocked.value = false
             if (!keepUnlocked) {
                 autoLogout.maybeStartAutoLogoutTimer()
             }
@@ -423,10 +438,12 @@ open class LockScreenActivity : SecureActivity() {
             overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
         } else {
             binding.rootViewSwitcher.displayedChild = 1
+            _walletLocked.value = false
         }
     }
 
     private fun setLockState(suggestedState: State) {
+        markWalletLocked()
         binding.lockScreen.apply {
             actionScanToPay.isEnabled = true
             var lockState = suggestedState
@@ -575,6 +592,7 @@ open class LockScreenActivity : SecureActivity() {
     }
 
     private fun handleLockScreenActivated() {
+        markWalletLocked()
         if (this::alertDialog.isInitialized) {
             alertDialog.dismissDialog()
         }
@@ -603,8 +621,9 @@ open class LockScreenActivity : SecureActivity() {
                     }
 
                     if (fragment is DialogFragment) {
+                        fragment.dialog?.hide()
                         fragment.dismissAllowingStateLoss()
-                    } else if (fragment is NavHostFragment) {
+                    } else {
                         notifyAndDismissFragments(fragment.childFragmentManager)
                     }
                 }
