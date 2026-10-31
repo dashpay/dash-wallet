@@ -1,5 +1,6 @@
 package de.schildbach.wallet.ui.more
 
+import androidx.lifecycle.viewModelScope
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.WalletBalanceWidgetProvider
 import de.schildbach.wallet.database.dao.DashPayProfileDao
@@ -18,6 +19,8 @@ import io.mockk.unmockkStatic
 import io.mockk.verify
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.job
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.test.runTest
 import org.bitcoinj.core.Coin
 import org.dash.wallet.common.Configuration
@@ -56,14 +59,23 @@ class SecurityViewModelTest {
         every { walletApplication.hasWallet() } returns true
         every { walletData.getWalletBalance() } returns Coin.COIN
 
-verify(timeout = 1_000) { WalletBalanceWidgetProvider.updateWidgets(walletApplication, Coin.COIN) }
+        val viewModel = createViewModel()
+        viewModel.setHideBalanceOnLaunch(true)
+        // The refresh runs on Dispatchers.IO, outside runTest's scheduler.
+        viewModel.viewModelScope.coroutineContext.job.children.toList().joinAll()
+
+        coVerify { walletUIConfig.set(WalletUIConfig.AUTO_HIDE_BALANCE, true) }
+        verify(timeout = 1_000) { WalletBalanceWidgetProvider.updateWidgets(walletApplication, Coin.COIN) }
     }
 
     @Test
     fun `setting autohide does not refresh widget when wallet is absent`() = runTest {
         every { walletApplication.hasWallet() } returns false
 
-        createViewModel().setHideBalanceOnLaunch(true)
+        val viewModel = createViewModel()
+        viewModel.setHideBalanceOnLaunch(true)
+        // Wait for the null-wallet branch before asserting that no refresh occurred.
+        viewModel.viewModelScope.coroutineContext.job.children.toList().joinAll()
 
         coVerify { walletUIConfig.set(WalletUIConfig.AUTO_HIDE_BALANCE, true) }
         verify(exactly = 0) { WalletBalanceWidgetProvider.updateWidgets(any(), any()) }
