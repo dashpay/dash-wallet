@@ -217,7 +217,8 @@ internal class AppConnectSession(
         AppConnectPlan(requestHash(request), scope, identity.id.toString(), grants, text,
             selectedAuth, encChoices,
             prior?.let { indices(it, "encIndices") } ?: encChoices.indices.toSet(), prior != null, blockTime,
-            groupScopes = groupScopes, previousGroupScopes = readApprovedGroupScopes(prior))
+            groupScopes = groupScopes, previousGroupScopes = readApprovedGroupScopes(prior), requestedAt = parsed.createdAt)
+            .let { if (it.recovering) it else it.withRequestedPresets() }
     }
 
     private fun validateOwnership(request: DashKeyRequest, grants: List<AuthBinding>): Map<String, VerifiedContractGroup> {
@@ -581,12 +582,7 @@ internal class AppConnectSession(
         WalletSignerCallback(wallet, keyParameter, { authorize(); checkScope(scope) }).use { signer ->
             if (disable.isNotEmpty() || fences.isNotEmpty()) {
                 identity = updateIdentityInBatches(fences, disable, read = { checkScope(scope); readIdentity() }) { current, add, ids ->
-                    val master = signingKey(current, SecurityLevel.MASTER, platform.client.getPlatformTime(current.id))
-                    checkScope(scope)
-                    current.revision++
-                    authorize()
-                    dashsdk.platformMobilePutPutIdentityUpdateSdk(platform.rustSdk, current.toNative(), KeyID(master.id),
-                        add.map { it.toNative() }, ids.map { KeyID(it) }, signer.nativeContext, BigInteger.valueOf(signer.signerCallback)).unwrap()
+                    submitIdentityUpdate(current, add, ids, signer, scope, authorize)
                 }
             }
             records.forEach { deleteResponse(identity, it, signer, scope, authorize) }
@@ -607,6 +603,57 @@ internal class AppConnectSession(
         check(unknown.isNullOrEmpty()) {
             "Recorded keys were revoked, but other enabled application keys (${unknown?.joinToString()}) remain. " +
                 "Local history is incomplete, possibly after wallet recovery. Complete revocation is not confirmed."
+        }
+    }
+
+    private fun submitIdentityUpdate(current: Identity, add: List<IdentityPublicKey>, ids: List<Int>,
+                                     signer: WalletSignerCallback, scope: String, authorize: () -> Unit) {
+        val master = signingKey(current, SecurityLevel.MASTER, platform.client.getPlatformTime(current.id))
+        checkScope(scope)
+        current.revision++
+        authorize()
+        dashsdk.platformMobilePutPutIdentityUpdateSdk(platform.rustSdk, current.toNative(), KeyID(master.id),
+            add.map { it.toNative() }, ids.map { KeyID(it) }, signer.nativeContext, BigInteger.valueOf(signer.signerCallback)).unwrap()
+    }
+
+    /**
+     * Enabled keys that can edit the DashPay profile but that no local grant record holds, e.g. after
+     * a wallet restore, or from another wallet with the same identity.
+     */
+    suspend fun sharedProfileKeys(expectedScope: String): List<Int> = withContext(Dispatchers.IO) {
+        checkScope(expectedScope)
+        sharedProfileKeyIds(readIdentity(), expectedScope)
+    }
+
+    private suspend fun sharedProfileKeyIds(identity: Identity, scope: String): List<Int> {
+        // Prepared records count, so a key from an approval still in flight is never listed.
+        val recorded = config.getGrants().filter { it.getString("scope") == scope }.flatMap { decodeKeys(it) }
+        return AppConnectKeyState.unrecordedKeys(identity.publicKeys, recorded) { key ->
+            val bounds = key.contractBounds
+            bounds is SingleContractDocumentType && bounds.identifier.toString() == DASHPAY && bounds.documentType == "profile"
+        }
+    }
+
+    /** Disables those of [ids] that are still unlinked profile keys; a key recorded since is left alone. */
+    suspend fun revokeSharedProfileKeys(ids: List<Int>, expectedScope: String) = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            val scope = expectedScope
+            val authorize = kotlin.coroutines.coroutineContext.connectionAuthorization()
+            val wallet = walletRepo.walletApplication.wallet ?: error("Wallet unavailable")
+            val keyParameter = walletRepo.getWalletEncryptionKey()
+            check(!wallet.isEncrypted || keyParameter != null) { "Wallet password unavailable. Unlock the wallet and try again." }
+            checkScope(scope)
+            val identity = readIdentity()
+            val disable = sharedProfileKeyIds(identity, scope).filter { it in ids }
+            if (disable.isEmpty()) return@withLock
+            rememberIdentity(identity)
+            val updated = WalletSignerCallback(wallet, keyParameter, { authorize(); checkScope(scope) }).use { signer ->
+                updateIdentityInBatches(emptyList(), disable, read = { checkScope(scope); readIdentity() }) { current, add, keys ->
+                    submitIdentityUpdate(current, add, keys, signer, scope, authorize)
+                }
+            }
+            checkScope(scope)
+            rememberIdentity(updated)
         }
     }
 
@@ -634,6 +681,50 @@ internal class AppConnectSession(
         checkNotNull(platform.client.getDataContract(target.toBuffer(), true)) {
             "Contract ownership could not be established. Complete revocation is not confirmed."
         }.ownerId
+
+    /** The identity's keys as Platform holds them now, or null when they cannot be read. */
+    internal suspend fun currentKeys(expectedScope: String): List<IdentityPublicKey>? = withContext(Dispatchers.IO) {
+        try {
+            checkScope(expectedScope)
+            readIdentity().publicKeys.also { checkScope(expectedScope) }
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            null
+        }
+    }
+
+    /**
+     * Platform expiry of each authentication key in [records] that is still enabled in [current]; a key
+     * without an expiry counts as never expiring. Limits can change on Platform without changing the key.
+     */
+    internal fun enabledAuthenticationExpiries(records: List<JSONObject>, current: List<IdentityPublicKey>): List<Long> =
+        records.flatMap { record ->
+            val keys = record.getJSONArray("keys")
+            (0 until keys.length()).map { keys.getJSONObject(it) }
+        }.filter { it.getInt("purpose") == 0 }.mapNotNull { json ->
+            // Decode only keys still on the identity; a matching ID alone does not prove it is the same key.
+            current.firstOrNull { it.id == json.optInt("id", -1) && it.disabledAt == null }
+                ?.takeIf { AppConnectKeyState.sameKeyIdentity(it, IdentityPublicKey(jsonMap(json))) }
+                ?.let { it.expiresAt ?: Long.MAX_VALUE }
+        }
+
+    /** The terms the recorded keys grant, with their current Platform limits; null when no key is recorded. */
+    suspend fun terms(app: String, expectedScope: String): ConnectionTerms? = withContext(Dispatchers.IO) {
+        checkScope(expectedScope)
+        // Each login adds a grant record. Every one that may still authorize access counts; fully
+        // revoked logins are history, so they describe the connection only when nothing else is left.
+        val records = matchingRecords(expectedScope, app)
+        val live = records.filter { it.optString("state") != "disabled" ||
+            !it.optBoolean("permanentRevocationConfirmed") || !it.optBoolean("appRevocationConfirmed") }
+        val recorded = live.ifEmpty { listOfNotNull(records.maxByOrNull { it.optLong("updatedAt") }) }
+            .flatMap { decodeKeys(it) }
+        if (recorded.isEmpty()) return@withContext null
+        // Platform can change a key's budget or expiry without changing the key, so describe each one
+        // as Platform holds it now; a key no longer on the identity keeps its recorded terms.
+        val current = readIdentity().publicKeys
+        checkScope(expectedScope)
+        recordedTerms(recorded.map { key -> current.firstOrNull { AppConnectKeyState.sameKeyIdentity(it, key) } ?: key })
+    }
 
     suspend fun details(app: String, expectedScope: String): String = withContext(Dispatchers.IO) {
         mutex.withLock {

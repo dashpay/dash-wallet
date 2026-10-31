@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Figma "warning_triangle" icon (Approve connection sheet, node 40034:59373) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="30dp"
+    android:height="30dp"
+    android:viewportWidth="30"
+    android:viewportHeight="30">
+    <path
+        android:fillColor="#FFC043"
+        android:pathData="M20.4628,22.8991H9.5278C7.4938,22.8991 6.1888,20.7391 7.1338,18.9391L12.6058,8.5441C13.6228,6.6181 16.3768,6.6181 17.3938,8.5441L22.8658,18.9391C23.8108,20.7391 22.5058,22.8991 20.4718,22.8991H20.4628Z"
+        android:strokeWidth="1.5"
+        android:strokeColor="#FFC043"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M14.9907,15.898V12.748"
+        android:strokeWidth="1.5"
+        android:strokeColor="#FFFFFF"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M14.9907,19.0491V19.0391"
+        android:strokeWidth="1.5"
+        android:strokeColor="#FFFFFF"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

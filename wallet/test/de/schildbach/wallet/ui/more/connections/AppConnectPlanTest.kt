@@ -18,14 +18,42 @@ class AppConnectPlanTest {
     })
 
     @Test fun `presets only narrow budgets and expiry`() {
-        val changed = plan().withPresets(1, 1)
+        val changed = plan().withPresets(0, 0)
         assertEquals(BigInteger("10000000000"), changed.grants[0].totalBudget)
         assertEquals(time + 30 * day, changed.grants[0].expiresAt)
         assertEquals(BigInteger("1000000000"), changed.grants[1].totalBudget)
         assertEquals(time + 7 * day, changed.grants[1].expiresAt)
-        val reset = changed.withPresets(0, 0)
+        val reset = changed.withRequestedPresets()
         assertEquals(plan().grants.map { it.totalBudget }, reset.grants.map { it.totalBudget })
         assertEquals(plan().grants.map { it.expiresAt }, reset.grants.map { it.expiresAt })
+    }
+
+    @Test fun `requested presets are the smallest at or above the request`() {
+        val requested = plan().withRequestedPresets()
+        assertEquals(3, requested.budgetPreset)
+        assertEquals(2, requested.lifetimePreset)
+        val small = plan().grants.map { it.copy(totalBudget = BigInteger("30000000000"), expiresAt = time + 60 * day) }
+        val narrow = plan().copy(grants = small, proposedGrants = small).withRequestedPresets()
+        assertEquals(1, narrow.budgetPreset)
+        assertEquals(1, narrow.lifetimePreset)
+        assertEquals(small.map { it.totalBudget }, narrow.grants.map { it.totalBudget })
+        assertEquals(small.map { it.expiresAt }, narrow.grants.map { it.expiresAt })
+        val unlimited = plan().grants.map { it.copy(totalBudget = null) }
+        assertEquals(3, plan().copy(grants = unlimited, proposedGrants = unlimited).withRequestedPresets().budgetPreset)
+    }
+
+    @Test fun `capabilities describe the approved grants in plain language`() {
+        val dashPay = org.bitcoinj.core.Base58.decode("Bwr4WHCPz5rFVAD87RqTs3izo4zpzwsEdKPWUT1NS1C7")
+        val grants = plan().grants.let { listOf(it[0], it[1].copy(id = dashPay)) }
+        val capabilities = plan().copy(grants = grants, encryptionChoices = listOf("Encryption"),
+            selectedEncryption = setOf(0)).capabilities()
+        assertEquals(listOf(AppCapabilityKind.ACT_IN_APP, AppCapabilityKind.EDIT_DASHPAY_PROFILE,
+            AppCapabilityKind.RECEIVE_ENCRYPTED), capabilities.map { it.kind })
+        assertTrue(capabilities[0].tokens)
+        assertEquals(BigInteger("1000000000"), capabilities[1].budget)
+        assertEquals(AppCapabilityKind.EDIT_DOCUMENTS, plan().capabilities()[1].kind)
+        assertEquals(BigInteger("500000000000"), plan().fundingLimit())
+        assertEquals(time + 365 * day, plan().connectionExpiresAt())
     }
 
     @Test fun `critical consent discloses credit spending and the payee within the grant budget`() {
@@ -41,9 +69,9 @@ class AppConnectPlanTest {
         assertThrows(IllegalArgumentException::class.java) { plan().copy(recovering = true).withPresets(1, 1) }
     }
 
-    @Test fun `largest preset is two DASH and never increases a smaller request`() {
+    @Test fun `largest preset is five DASH and never increases a smaller request`() {
         val changed = plan().withPresets(3, 0)
-        assertEquals(BigInteger("200000000000"), changed.grants[0].totalBudget)
+        assertEquals(BigInteger("500000000000"), changed.grants[0].totalBudget)
         assertEquals(plan().grants[1].totalBudget, changed.grants[1].totalBudget)
     }
 
@@ -54,13 +82,13 @@ class AppConnectPlanTest {
             .asJsonObject.getAsJsonObject("request")["uri"].asString
         val decoded = de.schildbach.wallet.ui.more.connections.protocol.DashConnectUri.parseKeyRequest(uri)
         val request = decoded.copy(appConnect = decoded.appConnect!!.copy(auth = requested))
-        for (preset in 1..3) {
+        for (preset in 0..3) {
             val narrowed = original.withPresets(preset, 0)
             assertTrue(narrowed.grants.all { it.totalBudget != null && it.totalBudget.signum() > 0 })
             narrowed.requireMatches(request)
             assertTrue(narrowed.choices().all { !it.description.contains("No budget limit") })
         }
-        assertTrue(original.withPresets(1, 0).withPresets(0, 0).grants.all { it.totalBudget == null })
+        assertTrue(original.withRequestedPresets().grants.all { it.totalBudget == BigInteger("500000000000") })
         assertThrows(IllegalArgumentException::class.java) {
             original.copy(grants = requested.map { it.copy(totalBudget = BigInteger.ZERO) }).requireMatches(request)
         }

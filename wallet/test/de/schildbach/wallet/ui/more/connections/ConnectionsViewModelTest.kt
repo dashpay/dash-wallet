@@ -1510,6 +1510,59 @@ class ConnectionsViewModelTest {
             controller.pause().stop().destroy()
         }
     }
+
+    private val sharedKeys = SharedProfileKeys("scope", listOf(20))
+
+    private fun loadSharedKeys() {
+        coEvery { repository.sharedProfileKeys() } returns sharedKeys
+        model.refreshConnections()
+        dispatcher.scheduler.runCurrent()
+        assertEquals(sharedKeys, model.uiState.value.sharedProfileKeys)
+    }
+
+    @Test fun `revoking shared profile keys is authorized and clears the warning`() {
+        loadSharedKeys()
+        var authorized = false
+        coEvery { repository.revokeSharedProfileKeys(sharedKeys) } coAnswers {
+            kotlin.coroutines.coroutineContext.connectionAuthorization()()
+            authorized = true
+        }
+        model.revokeSharedProfileKeys()
+        assertTrue(model.uiState.value.isRevokingSharedKeys)
+        dispatcher.scheduler.runCurrent()
+        assertTrue(authorized)
+        assertNull(model.uiState.value.sharedProfileKeys)
+        assertFalse(model.uiState.value.isRevokingSharedKeys)
+    }
+
+    @Test fun `failed shared key revocation keeps the warning and reports the error`() {
+        loadSharedKeys()
+        coEvery { repository.revokeSharedProfileKeys(sharedKeys) } throws IllegalStateException("Identity update batch not confirmed")
+        model.revokeSharedProfileKeys()
+        dispatcher.scheduler.runCurrent()
+        assertEquals(sharedKeys, model.uiState.value.sharedProfileKeys)
+        assertFalse(model.uiState.value.isRevokingSharedKeys)
+        assertEquals("Identity update batch not confirmed",
+            (model.scanOutcome.value as ConnectionsViewModel.ScanOutcome.Error).message)
+    }
+
+    @Test fun `locked wallet cannot revoke shared profile keys`() {
+        loadSharedKeys()
+        model.bindWalletUnlockCheck { false }
+        model.revokeSharedProfileKeys()
+        dispatcher.scheduler.runCurrent()
+        coVerify(exactly = 0) { repository.revokeSharedProfileKeys(any()) }
+        assertFalse(model.uiState.value.isRevokingSharedKeys)
+    }
+
+    @Test fun `failed dismissal save shows the shared key warning again`() {
+        loadSharedKeys()
+        coEvery { repository.dismissSharedProfileKeys(sharedKeys) } throws java.io.IOException("No space left")
+        model.dismissSharedProfileKeys()
+        assertNull(model.uiState.value.sharedProfileKeys)
+        dispatcher.scheduler.runCurrent()
+        assertEquals(sharedKeys, model.uiState.value.sharedProfileKeys)
+    }
 }
 
 class ApprovalTestParent : Fragment() {
