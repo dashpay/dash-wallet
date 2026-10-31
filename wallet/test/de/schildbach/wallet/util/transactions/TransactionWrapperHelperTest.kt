@@ -27,9 +27,7 @@ import org.bitcoinj.core.TransactionBag
 import org.bitcoinj.params.TestNet3Params
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.WalletTransaction
-import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
 import org.bitcoinj.core.Utils
-import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSetFactory
 import org.junit.Before
 import org.junit.Test
 
@@ -74,51 +72,5 @@ class TransactionWrapperHelperTest {
         val receivedConnected = "020000000110ae7a5bff9016348ea2babb8b614ccf498cc89b2dd00273b009874d33b5735a010000006b483045022100a8a27fd8a0a9579fccabb171604947a75223d27eb5ae28cc348ae9c682d24b2002205d27b13f124816789e940df33c78bf3dc3ef35ee1928cebb55ec32ed095f3e8f012102bf7c36100b0d394e79a1704b8bf9e030a62e139a293f5da891671c56d555f732feffffff02304e0000000000001976a914f57766c540e7e165092e739e115383bd04d2c21888ac2cd98f4f000000001976a9140d5bcbeeb459af40f97fcb4a98e9d1ed13e904c888acdbde0a00"
         val receivedConnectedTx = Transaction(networkParams, Utils.HEX.decode(receivedConnected))
         receivedTx.inputs[0].connect(receivedConnectedTx.outputs[0])
-    }
-
-    @Test
-    fun wrapTransactions_fullCrowdNodeSignUpTxSet_correctWrapping() {
-        val wallet = mockk<Wallet>()
-        every { wallet.context } returns Context(networkParams)
-
-        val someTxData = "01000000015278aa3819d5663c38e83d98831131cbf4613028710e0807f1f3cc2c267a1d1c010000006a47304402201b32c065edb60618307f14e5f065b5ca12a9f77bfabc31bd60304730217b2cb10220135b503243dfb9a5a3e40b6b7049d6a94fcf6fb596ca8b1cd08e0389d38907920121034fc8962de581ea8bb89fd364f9560e5e3646744a7ce4ec45feade07135096997ffffffff0231d40000000000001976a9146788908cc67f13b9636fa1c50a18634dc7faf70288ac58e9da14000000001976a91497dcc58e0f473cca0318eaaa4d305c8b5d06f0b688ac00000000"
-        val someTx = Transaction(networkParams, Utils.HEX.decode(someTxData))
-        val connectedTxData = "01000000012fbfc99b81cae50e408e65978450c4176dac1abd79a750dcf7f197ae64953c8a010000006b483045022100f8b72d1516843ae7e2ce8667c53811b2c9d6eeeec74f30817ec61a08380f7e5802203b08f11294136baae1208baa704a03251d9965817beac69d5406f14c3e5624aa012102ff263761f3c8bb1a71a71faa5e9d930a28ff379f3f0b3c33be0bd41523d4b457ffffffff0231d40000000000001976a9140b627cdc0c1dc9f0a87c9491a18471e88dbfef2588ac6cbedb14000000001976a91485d306c762871bfb5572908b23dc9294ad14c44a88ac00000000"
-        val connectedTx = Transaction(networkParams, Utils.HEX.decode(connectedTxData))
-        someTx.inputs[0].connect(connectedTx.outputs[0])
-
-        val allTransactions = setOf(
-            someTx,
-            signUpRequestTx,
-            acceptTermsResponseTx,
-            acceptTermsRequestTx,
-            welcomeResponseTx,
-            topUpTx,
-            receivedTx
-        )
-
-        val hash1 = Utils.HEX.decode("28fd6a3abc9633389c146b44f59243ac1ec3caac")
-        val hash2 = Utils.HEX.decode("8b6743bde3b5b5778220891e8572d2475c1c9e0d")
-        val hash3 = Utils.HEX.decode("4a37287587b5c58c704ccdee322ab43521d3ecd2")
-
-        val bagMock = mockk<TransactionBag>()
-        every { bagMock.isPubKeyHashMine(any(), any()) } returns false
-        every { bagMock.isPubKeyHashMine(eq(hash1), any()) } returns true
-        every { bagMock.isPubKeyHashMine(eq(hash2), any()) } returns true
-        every { bagMock.isPubKeyHashMine(eq(hash3), any()) } returns true
-        every { bagMock.isWatchedScript(any())} returns true
-        every { bagMock.getTransactionPool(WalletTransaction.Pool.UNSPENT)} returns mapOf()
-        every { bagMock.getTransactionPool(WalletTransaction.Pool.PENDING)} returns mapOf()
-        every { bagMock.getTransactionPool(WalletTransaction.Pool.SPENT)} returns allTransactions.associateBy({it.txId}, {it})
-
-        val crowdNodeWrapperFactory = FullCrowdNodeSignUpTxSetFactory(networkParams, bagMock)
-        val crowdNodeWrapper = crowdNodeWrapperFactory.wrappers.first()!!
-        val wrappedTransactions = TransactionWrapperHelper.wrapTransactions(
-            allTransactions,
-            crowdNodeWrapperFactory
-        )
-
-        assertEquals("Must have CrowdNode wrapper and 2 anon wrappers:", 3, wrappedTransactions.size)
-        assertEquals("CrowdNode wrapper must have 5 transactions", 5, crowdNodeWrapper.transactions.size)
     }
 }

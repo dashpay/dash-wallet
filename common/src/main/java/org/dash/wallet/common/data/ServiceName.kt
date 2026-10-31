@@ -1,7 +1,7 @@
 package org.dash.wallet.common.data
 
 object ServiceName {
-    const val CrowdNode = "crowdnode"
+    const val CrowdNode = "crowdnode" // integration removed; kept for existing tx metadata
     const val Uphold = "uphold"
     const val Coinbase = "coinbase"
     const val CTXSpend = "ctxspend"

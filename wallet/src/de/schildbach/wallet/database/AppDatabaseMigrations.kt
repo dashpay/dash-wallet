@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.database
 
+import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
@@ -264,6 +265,20 @@ class AppDatabaseMigrations {
                     """
                 )
                 database.execSQL("ALTER TABLE `tx_display_cache` ADD COLUMN `swapStatus` TEXT")
+            }
+        }
+
+        /**
+         * CrowdNode was removed, so its transactions are no longer grouped. Drop the cached
+         * "crowdnode" group and its display row whenever the database opens, before any query
+         * runs. The group cache then has fewer txs than the wallet, which makes
+         * TxDisplayCacheService rebuild both caches and show those transactions individually.
+         * This is a data-only cleanup, so it does not need a schema version bump.
+         */
+        val removeCrowdNodeCacheRows = object : RoomDatabase.Callback() {
+            override fun onOpen(db: SupportSQLiteDatabase) {
+                db.execSQL("DELETE FROM `tx_group_cache` WHERE `wrapperType` = 'crowdnode'")
+                db.execSQL("DELETE FROM `tx_display_cache` WHERE `rowId` = 'crowdnode'")
             }
         }
 

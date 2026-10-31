@@ -494,7 +494,7 @@
     <string name="group_by">Group by</string>
     <string name="transaction_metadata_title">Transaction metadata</string>
     <string name="transaction_metadata_data_being_saved">Scheduled</string>
-    <string name="transaction_metadata_payment_category_description">Indicates if a transaction is associated with Coinbase, Uphold, Topper or CrowdNode</string>
+    <string name="transaction_metadata_payment_category_description">Indicates if a transaction is associated with Coinbase, Uphold, Topper or DashSpend</string>
     <string name="transaction_metadata_fiat_price_description">The historical price at the time of the transaction</string>
     <string name="transaction_metadata_description">Your data is stored on your device but will be lost if you reset or restore your wallet. Below are examples of the information that will be saved when saved on the network.</string>
     <string name="transaction_metadata_cost">How much does it cost?</string>

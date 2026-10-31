@@ -46,7 +46,6 @@ class FakeDashSpendService @Inject constructor(
         amount: Coin,
         coinSelector: CoinSelector?,
         emptyWallet: Boolean,
-        checkBalanceConditions: Boolean,
         beforeSending: Consumer<Transaction>?,
         canSendLockedOutput: Predicate<TransactionOutput>?
     ): Transaction {
@@ -55,7 +54,6 @@ class FakeDashSpendService @Inject constructor(
             amount,
             coinSelector,
             emptyWallet,
-            checkBalanceConditions,
             beforeSending,
             canSendLockedOutput
         )

@@ -37,11 +37,9 @@ import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.services.ConfirmTransactionService
 import org.dash.wallet.common.services.AuthenticationManager
-import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.*
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
-import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
 import org.dash.wallet.common.util.*
 import org.dash.wallet.integrations.coinbase.CoinbaseConstants
 import org.dash.wallet.integrations.coinbase.R
@@ -349,19 +347,8 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
     }
 
     private suspend fun handleSend(value: Coin, isEmptyWallet: Boolean): Boolean {
-        try {
-            transferDashViewModel.sendDash(value, isEmptyWallet, true)
-            return true
-        } catch (ex: LeftoverBalanceException) {
-            val result = MinimumBalanceDialog().showAsync(requireActivity())
-
-            if (result == true) {
-                transferDashViewModel.sendDash(value, isEmptyWallet, false)
-                return true
-            }
-        }
-
-        return false
+        transferDashViewModel.sendDash(value, isEmptyWallet)
+        return true
     }
 
     private fun handleBackButtonPress(){

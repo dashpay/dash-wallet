@@ -17,13 +17,10 @@
 
 package de.schildbach.wallet.ui.explore
 
-import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
@@ -33,13 +30,8 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.transition.MaterialFadeThrough
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.ui.staking.StakingActivity
-import de.schildbach.wallet_test.R
 import kotlinx.coroutines.launch
-import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.components.DashWalletTheme
-import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
-import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.features.exploredash.ui.explore.ExploreTopic
 import org.dash.wallet.features.exploredash.ui.explore.dialogs.ExploreDashInfoDialog
@@ -49,21 +41,8 @@ class ExploreFragment : Fragment() {
     private val viewModel: ExploreEntryViewModel by viewModels()
 
     private val screenState = mutableStateOf(
-        ExploreScreenState(
-            showFaucet = false,
-            showStaking = false,
-            apy = 0.0,
-            showWithdrawalBanner = false
-        )
+        ExploreScreenState(showFaucet = false)
     )
-
-    private val stakingLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Constants.USER_BUY_SELL_DASH) {
-            safeNavigate(ExploreFragmentDirections.exploreToBuySell())
-        }
-    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -81,16 +60,8 @@ class ExploreFragment : Fragment() {
                         onAtmsClick = {
                             safeNavigate(ExploreFragmentDirections.exploreToSearch(ExploreTopic.ATMs))
                         },
-                        onStakingClick = {
-                            viewModel.logEvent(AnalyticsConstants.CrowdNode.STAKING_ENTRY)
-                            handleStakingNavigation()
-                        },
                         onFaucetClick = {
                             safeNavigate(ExploreFragmentDirections.exploreToFaucet())
-                        },
-                        onWithdrawClick = {
-                            viewModel.logEvent(AnalyticsConstants.CrowdNode.STAKING_ENTRY)
-                            handleStakingNavigation(goToWithdraw = true)
                         }
                     )
                 }
@@ -103,24 +74,6 @@ class ExploreFragment : Fragment() {
         enterTransition = MaterialFadeThrough()
 
         screenState.value = screenState.value.copy(showFaucet = viewModel.isTestNet())
-
-        // CrowdNode functionality is limited: the staking entry point is only shown
-        // if the active wallet is already associated with a CrowdNode account
-        viewModel.hasCrowdNodeAccount.observe(viewLifecycleOwner) { hasAccount ->
-            screenState.value = screenState.value.copy(showStaking = hasAccount)
-        }
-
-        viewModel.stakingAPY.observe(viewLifecycleOwner) { apy ->
-            screenState.value = screenState.value.copy(apy = apy)
-        }
-
-        // Persistent, non-dismissible reminder to withdraw a remaining CrowdNode balance.
-        viewModel.showWithdrawalBanner.observe(viewLifecycleOwner) { show ->
-            screenState.value = screenState.value.copy(showWithdrawalBanner = show)
-        }
-
-        // load the last APY value
-        viewModel.getLastStakingAPY()
     }
 
     private fun handleMerchantsNavigation() {
@@ -131,27 +84,6 @@ class ExploreFragment : Fragment() {
                 ExploreDashInfoDialog().show(requireActivity()) {
                     viewModel.setIsInfoShown(true)
                     safeNavigate(ExploreFragmentDirections.exploreToSearch(ExploreTopic.Merchants))
-                }
-            }
-        }
-    }
-
-    private fun handleStakingNavigation(goToWithdraw: Boolean = false) {
-        lifecycleScope.launch {
-            if (viewModel.isBlockchainSynced.value == true) {
-                stakingLauncher.launch(StakingActivity.createIntent(requireContext(), goToWithdraw))
-            } else {
-                val openWebsite = AdaptiveDialog.create(
-                    null,
-                    getString(R.string.chain_syncing),
-                    getString(R.string.crowdnode_wait_for_sync),
-                    getString(R.string.button_close),
-                    getString(R.string.crowdnode_open_website)
-                ).showAsync(requireActivity())
-
-                if (openWebsite == true) {
-                    val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.crowdnode_website)))
-                    startActivity(browserIntent)
                 }
             }
         }
