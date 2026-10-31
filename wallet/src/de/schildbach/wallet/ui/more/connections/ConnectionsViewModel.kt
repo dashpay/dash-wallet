@@ -703,7 +703,6 @@ class ConnectionsViewModel @Inject constructor(
 /** Copies the consent terms a plan shows (grants, limits and the plain-language summary) into the request. */
 private fun ConnectionRequest.withTerms(plan: AppConnectPlan) = copy(
     grantChoices = plan.choices(),
-    groupScopes = plan.groupScopeTexts(),
     capabilities = plan.capabilities(),
     fundingLimit = plan.fundingLimit(),
     expiresAt = plan.connectionExpiresAt(),

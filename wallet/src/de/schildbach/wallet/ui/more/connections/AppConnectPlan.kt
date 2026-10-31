@@ -245,13 +245,6 @@ internal fun AppConnectPlan.requireMatches(request: DashKeyRequest) {
         AppConnectLimits.MAX_BUDGET) { "Funding limit is above 5 DASH" }
 }
 
-/** What each selected contract-group key covers: the group's verified owner, admins and members. */
-internal fun AppConnectPlan.groupScopeTexts(): List<String> = selectedAuth.sorted().map { grants[it] }
-    .filter { it.kind == 2 }.map { grant ->
-        val id = org.bitcoinj.core.Base58.encode(grant.id)
-        "Contract group: $id" + checkNotNull(groupScopes[id]) { "Verified group scope is missing" }.consentText()
-    }
-
 internal fun AppConnectPlan.choices(): List<GrantChoice> = grants.mapIndexed { index, grant ->
     GrantChoice(index, buildString {
         append("${if (grant.securityLevel == 1) "CRITICAL" else "HIGH"} authentication\n")

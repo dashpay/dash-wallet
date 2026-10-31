@@ -340,10 +340,6 @@ internal fun ApproveConnectionContent(
                 request.capabilities.forEach { capability ->
                     PermissionRow(R.drawable.ic_connections_check_circle, capabilityText(capability, appName))
                 }
-                // A group key also covers every contract the group's owner or admins add later.
-                request.groupScopes.forEach { scope ->
-                    PermissionRow(R.drawable.ic_connections_check_circle, scope)
-                }
             }
 
             CollapsibleCard(stringResource(R.string.dash_connect_not_access, appName), filled = true) {
