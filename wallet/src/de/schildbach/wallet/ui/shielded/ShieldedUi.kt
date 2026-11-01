@@ -186,28 +186,14 @@ private val FIAT_KEYPAD_TWO_DECIMALS_FORMAT: MonetaryFormat =
 
 /**
  * "300.03"-style fiat string, two decimals, with the same locale-neutral `.` separator as
- * [toKeypadString] (this format never calls `.withLocale()`, unlike [toDisplayNoCode]) — for the
- * EDITABLE keypad field (Max tap / currency toggle while [maxSelected][ShieldedTransferUIState
- * .maxSelected] is set), which must stay parseable by [parseDecimalOrNull]/[processAmountKeyInput]
- * on a comma-decimal device locale.
+ * [Dash.toKeypadString] (this format never calls `.withLocale()`, unlike [toDisplayNoCode]) — for
+ * the EDITABLE keypad field (Max tap and currency toggle), which must stay parseable by
+ * [parseDecimalOrNull]/[processAmountKeyInput] on a comma-decimal device locale, and must match the
+ * keypad's own two-decimal fiat precision so the resulting text is immediately editable.
  */
 fun Fiat.toKeypadStringTwoDecimals(): String {
     if (isZero) return "0"
     return FIAT_KEYPAD_TWO_DECIMALS_FORMAT.format(this).toString()
-}
-
-/**
- * Plain decimal string with trailing zeros trimmed, up to [Fiat.SMALLEST_UNIT_EXPONENT] (8)
- * decimals — for the editable keypad field (Max tap / currency toggle), which is also the only
- * source [ShieldedSendViewModel]/[ShieldedTransferViewModel] re-derive the spendable amount from.
- * Unlike [Fiat.toPlainString] (dash-wallet's own, capped at 4 decimals, `HALF_UP`-rounded — fine
- * for read-only display but not for a value that gets re-parsed), this round-trips exactly: a
- * `coinToFiat` conversion routinely needs more than 4 decimals to represent exactly, and rounding
- * that away before re-parsing it back can land the derived Dash amount off by tens of duffs.
- */
-fun Fiat.toKeypadString(): String {
-    if (isZero) return "0"
-    return toBigDecimal().stripTrailingZeros().toPlainString()
 }
 
 /** Ellipsized middle of a long address for one-line display. */

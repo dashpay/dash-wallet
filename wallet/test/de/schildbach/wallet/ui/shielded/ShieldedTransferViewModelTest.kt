@@ -650,6 +650,58 @@ class ShieldedTransferViewModelTest {
         assertFalse(vm.uiState.value.insufficientFunds)
     }
 
+    @Test
+    fun currencyToggle_dashToFiatAndBack_pinsExactAmountAcrossRounding() = runTest(dispatcher) {
+        // A currency toggle must not change what gets spent. The fiat text it writes is rounded
+        // to 2 decimals like the rest of the app, so `amount` stays pinned to the exact value
+        // that was on screen before the toggle (pinnedAmount) instead of re-parsing the rounded
+        // text: 1 DASH at $232.745151/DASH shows "232.75" but must still spend exactly 1 DASH,
+        // and toggling back to DASH must show the exact pinned amount, not a re-derived one.
+        every { exchangeRates.observeExchangeRate(any()) } returns flowOf(ExchangeRate("USD", "232.745151"))
+        val vm = viewModel()
+
+        vm.onKeyInput("1")
+        vm.onCurrencySelected(dashMode = false)
+
+        assertEquals("232.75", vm.uiState.value.amountText)
+        assertEquals(Dash.parse("1"), vm.uiState.value.amount)
+
+        vm.onCurrencySelected(dashMode = true)
+
+        assertEquals("1", vm.uiState.value.amountText)
+        assertEquals(Dash.parse("1"), vm.uiState.value.amount)
+    }
+
+    @Test
+    fun currencyToggle_thenTyping_clearsPinnedAmountAndParsesTypedFiatNormally() = runTest(dispatcher) {
+        every { exchangeRates.observeExchangeRate(any()) } returns flowOf(ExchangeRate("USD", "232.745151"))
+        val vm = viewModel()
+
+        vm.onKeyInput("1")
+        vm.onCurrencySelected(dashMode = false)
+        assertEquals("232.75", vm.uiState.value.amountText)
+
+        vm.onKeyInput("back") // a genuine edit ("232.75" -> "232.7") must clear the pinned amount
+
+        assertEquals("232.7", vm.uiState.value.amountText)
+        assertNull(vm.uiState.value.pinnedAmount)
+        val rate = Fiat.parseFiat("USD", "232.745151")
+        assertEquals(Fiat.parseFiat("USD", "232.7").toDashAt(rate), vm.uiState.value.amount)
+    }
+
+    @Test
+    fun currencyToggle_rateUnavailable_leavesModeAndTextUnchanged() = runTest(dispatcher) {
+        // No exchange rate known (the default fixture): toggling into fiat must leave the mode
+        // and text untouched, matching onMaxClick's early return, instead of landing on "0".
+        val vm = viewModel()
+
+        vm.onKeyInput("1")
+        vm.onCurrencySelected(dashMode = false)
+
+        assertTrue(vm.uiState.value.dashMode)
+        assertEquals("1", vm.uiState.value.amountText)
+    }
+
     // ── AC3: L1 sync gate ───────────────────────────────────────────────
 
     @Test

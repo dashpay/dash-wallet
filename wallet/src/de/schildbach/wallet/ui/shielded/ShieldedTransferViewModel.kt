@@ -163,6 +163,16 @@ data class ShieldedTransferUIState(
      * never inferred from [amount] equalling [availableBalance]: only this explicit flag counts.
      */
     val maxSelected: Boolean = false,
+    /**
+     * The exact amount [onCurrencySelected][ShieldedTransferViewModel.onCurrencySelected] was
+     * showing when it last re-rendered [amountText], or null. A currency toggle must not change
+     * the spent amount, but the fiat text it writes is rounded to two decimals
+     * ([Fiat.toKeypadStringTwoDecimals]) — re-parsing that text would silently drop precision, so
+     * [amount] reads this exact value instead while it is set. Cleared by the same events that
+     * clear [maxSelected] (a keypress that actually changes the text, a direction swap, a reset or
+     * a result dismissal).
+     */
+    val pinnedAmount: Dash? = null,
     /** True when the primary entry unit is DASH, false when fiat. */
     val dashMode: Boolean = true,
     val fiatCode: String = "USD",
@@ -264,12 +274,14 @@ data class ShieldedTransferUIState(
     val provingDismissed: Boolean = false
 ) {
     /**
-     * The entered amount as Dash: [availableBalance] while [maxSelected], else parsed from
-     * [amountText] (ZERO when unparseable).
+     * The entered amount as Dash: [availableBalance] while [maxSelected], [pinnedAmount] while
+     * set (a currency toggle's rounded fiat text would otherwise lose precision on re-parse),
+     * else parsed from [amountText] (ZERO when unparseable).
      */
     val amount: Dash
         get() = when {
             maxSelected -> availableBalance
+            pinnedAmount != null -> pinnedAmount
             dashMode -> parseDashOrNull(amountText) ?: Dash.ZERO
             else -> parseDecimalOrNull(amountText)?.toFiat(fiatCode)?.toDashAt(rate) ?: Dash.ZERO
         }
@@ -614,6 +626,7 @@ class ShieldedTransferViewModel @Inject constructor(
             direction = direction,
             amountText = "0",
             maxSelected = false,
+            pinnedAmount = null,
             dashMode = true,
             showConfirm = false
         )
@@ -628,11 +641,13 @@ class ShieldedTransferViewModel @Inject constructor(
         }
         val maxDecimals = if (state.dashMode) 8 else 2
         val newText = processAmountKeyInput(state.amountText, key, maxDecimals)
+        val textChanged = newText != state.amountText
         _uiState.value = state.copy(
             amountText = newText,
             // A keypress the keypad itself rejected (e.g. past maxDecimalPlaces) leaves the
-            // text unchanged and must not clear the Max intent.
-            maxSelected = if (newText == state.amountText) state.maxSelected else false
+            // text unchanged and must not clear the Max intent or the pinned toggle amount.
+            maxSelected = if (textChanged) false else state.maxSelected,
+            pinnedAmount = if (textChanged) null else state.pinnedAmount
         )
         // typing again clears an inline "not sent" error
         transferExecutor.clearRetryableResult()
@@ -644,30 +659,36 @@ class ShieldedTransferViewModel @Inject constructor(
         val text = if (state.dashMode) {
             max.toKeypadString()
         } else {
-            // Rounded to 2 decimals like the rest of the app, locale-neutral (amount is pinned
-            // to max via maxSelected below, so this text never round-trips back into the spent
-            // amount, but it must stay parseable by the keypad once maxSelected is cleared).
+            // Two decimals, like every fiat text this screen writes into the editable keypad
+            // field, locale-neutral (amount is pinned to max via maxSelected below, so this text
+            // never round-trips back into the spent amount, but it must stay parseable by the
+            // keypad once maxSelected is cleared).
             max.toFiatAt(state.rate)?.toKeypadStringTwoDecimals() ?: return
         }
-        _uiState.value = state.copy(amountText = text, maxSelected = true)
+        _uiState.value = state.copy(amountText = text, maxSelected = true, pinnedAmount = null)
         transferExecutor.clearRetryableResult()
     }
 
     /**
      * Toggle DASH ↔ fiat entry, converting the current amount (Figma "Enter in fiat");
-     * keeps [ShieldedTransferUIState.maxSelected].
+     * keeps [ShieldedTransferUIState.maxSelected]. The fiat text is rounded to two decimals like
+     * the rest of the app, so [ShieldedTransferUIState.pinnedAmount] captures the exact amount
+     * being displayed — a toggle must never change what gets spent.
      */
     fun onCurrencySelected(dashMode: Boolean) {
         val state = _uiState.value
         if (state.dashMode == dashMode) return
         val amount = state.amount
-        val text = when {
-            amount.isZero -> "0"
-            dashMode -> amount.toKeypadString()
-            state.maxSelected -> amount.toFiatAt(state.rate)?.toKeypadStringTwoDecimals() ?: "0"
-            else -> amount.toFiatAt(state.rate)?.toKeypadString() ?: "0"
+        if (amount.isZero) {
+            _uiState.value = state.copy(dashMode = dashMode, amountText = "0", pinnedAmount = null)
+            return
         }
-        _uiState.value = state.copy(dashMode = dashMode, amountText = text)
+        val text = if (dashMode) {
+            amount.toKeypadString()
+        } else {
+            amount.toFiatAt(state.rate)?.toKeypadStringTwoDecimals() ?: return
+        }
+        _uiState.value = state.copy(dashMode = dashMode, amountText = text, pinnedAmount = amount)
     }
 
     /** The btn-reverse between the From/To rows (Figma 1687:13660). */
@@ -677,7 +698,7 @@ class ShieldedTransferViewModel @Inject constructor(
             ShieldedTransferDirection.ToShielded -> ShieldedTransferDirection.FromShielded
             ShieldedTransferDirection.FromShielded -> ShieldedTransferDirection.ToShielded
         }
-        _uiState.value = state.copy(direction = direction, maxSelected = false)
+        _uiState.value = state.copy(direction = direction, maxSelected = false, pinnedAmount = null)
         transferExecutor.clearRetryableResult()
     }
 
@@ -760,7 +781,7 @@ class ShieldedTransferViewModel @Inject constructor(
     /** Dismisses a terminal result overlay (Success / MayHaveGoneThrough). */
     fun onResultHandled() {
         transferExecutor.acknowledge()
-        _uiState.value = _uiState.value.copy(amountText = "0", maxSelected = false)
+        _uiState.value = _uiState.value.copy(amountText = "0", maxSelected = false, pinnedAmount = null)
     }
 }
 
