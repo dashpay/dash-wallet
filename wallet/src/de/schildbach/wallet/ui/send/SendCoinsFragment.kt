@@ -27,7 +27,6 @@ import android.widget.Toast
 import androidx.annotation.StringRes
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
@@ -40,7 +39,6 @@ import de.schildbach.wallet.ui.transactions.TransactionResultActivity
 import de.schildbach.wallet.util.AnrException
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.SendCoinsFragmentBinding
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.InsufficientMoneyException
@@ -51,8 +49,10 @@ import org.dash.wallet.common.money.MonetaryFormat
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.LeftoverBalanceException
+import org.dash.wallet.common.services.LockScreenBroadcaster
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.common.ui.dialogs.PaymentOutcomeUnknownWarning
 import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
 import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
@@ -77,7 +77,6 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
     companion object {
         private val log = LoggerFactory.getLogger(SendCoinsFragment::class.java)
         private const val SEND_COINS_SOUND = "send_coins_broadcast_1"
-        private const val OUTCOME_UNKNOWN_DIALOG_TAG = "payment_outcome_unknown"
     }
 
     protected val binding by viewBinding(SendCoinsFragmentBinding::bind)
@@ -87,6 +86,7 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
     private val args by navArgs<SendCoinsFragmentArgs>()
 
     @Inject lateinit var authManager: AuthenticationManager
+    @Inject lateinit var lockScreenBroadcaster: LockScreenBroadcaster
     protected var enterAmountFragment: EnterAmountFragment? = null
     protected var userAuthorizedDuring: Boolean = false
         get() = field || enterAmountFragment?.didAuthorize == true
@@ -180,33 +180,11 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
             lifecycleScope.launch { authenticateOrConfirm() }
         }
 
-        // Rendered from the view model's terminal state, once per view, so a recreated screen
-        // still blocks Go and shows the warning.
-        viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.paymentOutcomeUnknown.first { it }
-            showPaymentOutcomeUnknown()
-        }
-    }
-
-    /**
-     * The payment may have gone out: Go stays disabled ([SendCoinsViewModel.everythingPlausible]
-     * is false from now on) and the warning's Close leaves the send screen, as its back arrow
-     * does; the transaction history shows whether it went out. A dialog restored after a
-     * recreation has lost its close action, so it is replaced.
-     */
-    private fun showPaymentOutcomeUnknown() {
-        updateView()
-        (requireActivity().supportFragmentManager.findFragmentByTag(OUTCOME_UNKNOWN_DIALOG_TAG) as? DialogFragment)
-            ?.dismissAllowingStateLoss()
-        AdaptiveDialog.create(
-            R.drawable.ic_warning,
-            getString(R.string.payment_submission_pending_title),
-            getString(R.string.payment_outcome_unknown_message),
-            getString(R.string.button_close),
-            null
-        ).show(requireActivity(), OUTCOME_UNKNOWN_DIALOG_TAG) {
-            activity?.finish()
-        }
+        // The payment may have gone out: Go stays disabled (everythingPlausible() is false from
+        // now on) and the warning stays up until the user's Close, which leaves the send screen
+        // as its back arrow does; the transaction history shows whether it went out.
+        PaymentOutcomeUnknownWarning(this) { activity?.finish() }
+            .keepShownWhile(viewModel.paymentOutcomeUnknown, lockScreenBroadcaster.unlocked) { updateView() }
     }
 
     protected open fun updateView() {

@@ -29,21 +29,19 @@ import androidx.browser.customtabs.CustomTabColorSchemeParams
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
-import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import coil.load
 import coil.size.Scale
 import coil.transform.CircleCropTransformation
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
 import org.dash.wallet.common.customtabs.CustomTabActivityHelper
 import org.dash.wallet.common.util.Constants
+import org.dash.wallet.common.services.LockScreenBroadcaster
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.common.ui.dialogs.PaymentOutcomeUnknownWarning
 import org.dash.wallet.common.ui.dialogs.ExtraActionDialog
 import org.dash.wallet.common.ui.setRoundedBackground
 import org.dash.wallet.common.ui.viewBinding
@@ -56,15 +54,16 @@ import org.dash.wallet.integrations.coinbase.databinding.FragmentCoinbaseConvers
 import org.dash.wallet.integrations.coinbase.model.*
 import org.dash.wallet.integrations.coinbase.ui.dialogs.CoinBaseResultDialog
 import org.dash.wallet.integrations.coinbase.viewmodels.CoinbaseConversionPreviewViewModel
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_conversion_preview) {
     companion object {
-        private const val OUTCOME_UNKNOWN_DIALOG_TAG = "payment_outcome_unknown"
     }
 
     private val binding by viewBinding(FragmentCoinbaseConversionPreviewBinding::bind)
     private val viewModel by viewModels<CoinbaseConversionPreviewViewModel>()
+    @Inject lateinit var lockScreenBroadcaster: LockScreenBroadcaster
     private lateinit var swapTradeUIModel: SwapTradeUIModel
     private var loadingDialog: AdaptiveDialog? = null
     private var isRetrying = false
@@ -211,11 +210,15 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
             ).show(requireActivity())
         }
 
-        // Rendered from the view model's terminal state, once per view, so a recreated screen
-        // still blocks Confirm and shows the warning.
-        viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.paymentOutcomeUnknown.first { it }
-            showPaymentOutcomeUnknown()
+        // The sale's send may have gone out: Confirm stays disabled and the warning stays up
+        // until the user's Close, which leaves the flow for home and its history.
+        val outcomeUnknownWarning = PaymentOutcomeUnknownWarning(this) {
+            val navController = findNavController()
+            navController.popBackStack(navController.graph.startDestinationId, false)
+        }
+        outcomeUnknownWarning.keepShownWhile(viewModel.paymentOutcomeUnknown, lockScreenBroadcaster.unlocked) {
+            countDownTimer.cancel()
+            binding.confirmBtnContainer.isEnabled = false
         }
 
         viewModel.onFailure.observe(viewLifecycleOwner) {
@@ -225,29 +228,6 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
                 getString(R.string.insufficient_money_msg),
                 getString(R.string.close)
             ).show(requireActivity())
-        }
-    }
-
-    /**
-     * The sale's send may have gone out: Confirm stays disabled and the warning's Close leaves
-     * the flow for home and its history. A dialog restored after recreation has lost its close
-     * action, so it is replaced.
-     */
-    private fun showPaymentOutcomeUnknown() {
-        countDownTimer.cancel()
-        binding.confirmBtnContainer.isEnabled = false
-        (requireActivity().supportFragmentManager.findFragmentByTag(OUTCOME_UNKNOWN_DIALOG_TAG) as? DialogFragment)
-            ?.dismissAllowingStateLoss()
-        AdaptiveDialog.create(
-            R.drawable.ic_warning,
-            getString(R.string.payment_submission_pending_title),
-            getString(R.string.payment_outcome_unknown_message),
-            getString(R.string.close)
-        ).show(requireActivity(), OUTCOME_UNKNOWN_DIALOG_TAG) {
-            if (isAdded) {
-                val navController = findNavController()
-                navController.popBackStack(navController.graph.startDestinationId, false)
-            }
         }
     }
 

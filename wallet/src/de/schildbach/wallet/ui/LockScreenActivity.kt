@@ -64,6 +64,7 @@ import org.dash.wallet.common.services.LockScreenBroadcaster
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.LockScreenAware
+import org.dash.wallet.common.ui.LockScreenHost
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dismissDialog
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
@@ -73,7 +74,7 @@ import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 @AndroidEntryPoint
-open class LockScreenActivity : SecureActivity() {
+open class LockScreenActivity : SecureActivity(), LockScreenHost {
 
     companion object {
         const val INTENT_EXTRA_KEEP_UNLOCKED = "LockScreenActivity.keep_unlocked"
@@ -135,7 +136,7 @@ open class LockScreenActivity : SecureActivity() {
      * unlocked, so this reports locked: callers then skip the work meant for
      * an unlocked wallet screen.
      */
-    val lockScreenDisplayed: Boolean
+    override val lockScreenDisplayed: Boolean
         get() = !lockScreenUiReady || binding.rootViewSwitcher.displayedChild == 0
 
     private val temporaryLockCheckHandler = Handler()
@@ -544,6 +545,8 @@ open class LockScreenActivity : SecureActivity() {
             overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
         } else {
             binding.rootViewSwitcher.displayedChild = 1
+            // After the content is shown again: a listener may now re-show what the lock dismissed.
+            lockScreenBroadcaster.notifyUnlocked()
         }
     }
 
