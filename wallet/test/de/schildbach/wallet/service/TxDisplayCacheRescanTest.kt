@@ -36,6 +36,7 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -57,6 +58,7 @@ import org.junit.After
 import org.junit.Assert.assertSame
 import org.junit.Test
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * MO-1054 end to end through [TxDisplayCacheService]: a user rescan clears the
@@ -242,6 +244,53 @@ class TxDisplayCacheRescanTest {
         awaitTrue { createdPagingSources.size >= 3 }
 
         coVerify(exactly = 1) { groupDao.getActiveGroups(any()) }
+    }
+
+    /**
+     * MO-1109 regression (c): a wallet replacement whose hydration
+     * (initializeFactoriesFromCache's getActiveGroups) is still suspended when a direction
+     * change cancels it via flatMapLatest. coinJoinWrapperFactory must stay bound to the old
+     * wallet until hydration actually finishes, so the next emission's identity check
+     * correctly treats the new wallet as not-yet-hydrated and retries, instead of taking the
+     * fast path on a factory that was published before its hydration completed.
+     */
+    @Test
+    fun walletChangeCancelledMidHydrationRetriesInsteadOfSkippingIt() = runBlocking {
+        val walletA = mockk<WalletEx>(relaxed = true)
+        val walletB = mockk<WalletEx>(relaxed = true)
+        val walletFlow = MutableStateFlow<Wallet?>(walletA)
+        val hydrationBlocked = CompletableDeferred<Unit>()
+        var firstBHydrationStarted = false
+        val bHydrationAttempts = AtomicInteger(0)
+        val cache = serviceWithWallet(walletFlow)
+        // serviceWithWallet() stubs a plain getActiveGroups(); this (later-registered) stub is
+        // the one mockk dispatches to. Keyed on wallet identity (not raw call count) so it is
+        // a no-op for wallet A's hydration regardless of exactly when it runs relative to this
+        // registration — only wallet B's *first* hydration attempt ever suspends.
+        coEvery { groupDao.getActiveGroups(any()) } coAnswers {
+            if (walletFlow.value === walletB) {
+                bHydrationAttempts.incrementAndGet()
+                if (!firstBHydrationStarted) {
+                    firstBHydrationStarted = true
+                    hydrationBlocked.await()
+                }
+            }
+            emptyList()
+        }
+
+        collectJob = CoroutineScope(Dispatchers.IO).launch { cache.transactions.collect {} }
+        awaitTrue { cache.coinJoinWrapperFactory() != null }
+        assertSame(walletA, cache.coinJoinWrapperFactory()?.wallet)
+
+        walletFlow.value = walletB
+        awaitTrue { bHydrationAttempts.get() == 1 } // hydration for B is now suspended on hydrationBlocked
+
+        cache.setFilter(TxFilterType.SENT) // cancels the suspended hydration via flatMapLatest
+        awaitTrue { bHydrationAttempts.get() == 2 } // must retry, not skip, hydration
+
+        hydrationBlocked.complete(Unit)
+        awaitTrue { cache.coinJoinWrapperFactory()?.wallet === walletB }
+        assertSame(walletB, cache.coinJoinWrapperFactory()?.wallet)
     }
 
     /**

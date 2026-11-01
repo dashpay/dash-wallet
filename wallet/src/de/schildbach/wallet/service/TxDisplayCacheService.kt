@@ -278,9 +278,12 @@ class TxDisplayCacheService @Inject constructor(
                 // the old wallet, since clearDatabase() deliberately never resets it (protects an
                 // in-flight rescan's recovery, see its own comment). coinJoinWrapperFactory already
                 // holds the wallet the live pipeline's factories were last built for (every RoomLive
-                // writer — initializeFactoriesFromCache, rebuildWrappedList — rebuilds it from the
-                // current wallet), so comparing it against this emission's wallet tells the two
-                // cases apart without a new field.
+                // writer — initializeFactoriesFromCache, rebuildWrappedList — publishes it only
+                // after that wallet's hydration has finished, never before), so comparing it
+                // against this emission's wallet tells the two cases apart without a new field.
+                // That "publish only after hydration" ordering is what makes this check safe
+                // under a flatMapLatest cancellation: a cancelled hydration leaves the factory
+                // at the previous wallet, so the check correctly falls through and retries.
                 if (_txDataSource.value is TxDataSource.RoomLive && coinJoinWrapperFactory?.wallet === wallet) {
                     log.info("direction changed to {} — switching filter flag only", direction)
                     _liveFilterFlag.value = filter.direction.toFilterFlag()
@@ -846,14 +849,12 @@ class TxDisplayCacheService @Inject constructor(
         try {
             walletData.wallet?.let { wallet ->
                 val t0 = System.currentTimeMillis()
-                coinJoinWrapperFactory = CoinJoinTxWrapperFactory(walletData.networkParameters, wallet as WalletEx)
-                crowdNodeWrapperFactory = FullCrowdNodeSignUpTxSetFactory(walletData.networkId)
+                val cjFactory = CoinJoinTxWrapperFactory(walletData.networkParameters, wallet as WalletEx)
+                val cnFactory = FullCrowdNodeSignUpTxSetFactory(walletData.networkId)
 
                 val rawCount = wallet.getTransactions(true).size
                 val t1 = System.currentTimeMillis()
 
-                val cnFactory = crowdNodeWrapperFactory ?: return
-                val cjFactory = coinJoinWrapperFactory ?: return
                 val wrapped = walletData.wrapAllTransactions(cnFactory, cjFactory)
                 val t2 = System.currentTimeMillis()
 
@@ -869,6 +870,14 @@ class TxDisplayCacheService @Inject constructor(
 
                 persistGroupCache(wrapped)
                 updateDisplayCache(wrapped.toList(), filter.direction.toFilterFlag())
+                // Publish the factories only after the RoomLive-producing work above has
+                // finished (same point updateDisplayCache sets _txDataSource.value), so a
+                // flatMapLatest cancellation before this point leaves them untouched — the
+                // next emission's wallet-identity check (see the comment above the check,
+                // service.kt:279-283) then correctly treats hydration as not-yet-done and
+                // retries, instead of wrongly matching the new wallet via a half-built factory.
+                coinJoinWrapperFactory = cjFactory
+                crowdNodeWrapperFactory = cnFactory
 
                 _isBuildingCache.value = false
                 _transactionsLoaded.value = true
@@ -939,8 +948,6 @@ class TxDisplayCacheService @Inject constructor(
         val t0 = System.currentTimeMillis()
         val cjFactory = CoinJoinTxWrapperFactory(walletData.networkParameters, wallet as WalletEx)
         val cnFactory = FullCrowdNodeSignUpTxSetFactory(walletData.networkId)
-        coinJoinWrapperFactory = cjFactory
-        crowdNodeWrapperFactory = cnFactory
 
         val today = LocalDate.now().toString()
         val activeEntries = txGroupCacheDao.getActiveGroups(today)
@@ -974,6 +981,11 @@ class TxDisplayCacheService @Inject constructor(
         }
 
         wrappedTransactionList = activeWrappers.sortedByDescending { it.groupDate }
+        // Publish the factories only now that hydration has finished — see the comment
+        // above the wallet-identity check (service.kt:279-283) for why a cancellation
+        // before this point must leave them untouched.
+        coinJoinWrapperFactory = cjFactory
+        crowdNodeWrapperFactory = cnFactory
         log.info("initializeFactoriesFromCache: {} active groups loaded in {}ms",
             byGroup.size, System.currentTimeMillis() - t0)
     }
