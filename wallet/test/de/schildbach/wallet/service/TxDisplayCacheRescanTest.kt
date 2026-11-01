@@ -291,10 +291,19 @@ class TxDisplayCacheRescanTest {
         var firstBHydrationStarted = false
         val bHydrationAttempts = AtomicInteger(0)
         val cache = serviceWithWallet(walletFlow)
-        // serviceWithWallet() stubs a plain getActiveGroups(); this (later-registered) stub is
-        // the one mockk dispatches to. Keyed on wallet identity (not raw call count) so it is
-        // a no-op for wallet A's hydration regardless of exactly when it runs relative to this
-        // registration — only wallet B's *first* hydration attempt ever suspends.
+
+        collectJob = CoroutineScope(Dispatchers.IO).launch { cache.transactions.collect {} }
+        awaitTrue { cache.coinJoinWrapperFactory() != null }
+        assertSame(walletA, cache.coinJoinWrapperFactory()?.wallet)
+
+        // Registered only AFTER wallet A's hydration has provably finished (the factory is
+        // published): the service's combine pipeline starts at construction, so re-stubbing
+        // this mock earlier raced wallet A's in-flight getActiveGroups call — MockK is not
+        // safe against stubbing concurrent with an invocation on the same mock, and the
+        // loser's exception killed the pipeline through its catch{}, leaving the factory
+        // unpublished (flaked on the build host). The stub itself is keyed on wallet
+        // identity, so it is a no-op for wallet A either way — only wallet B's *first*
+        // hydration attempt ever suspends.
         coEvery { groupDao.getActiveGroups(any()) } coAnswers {
             if (walletFlow.value === walletB) {
                 bHydrationAttempts.incrementAndGet()
@@ -305,10 +314,6 @@ class TxDisplayCacheRescanTest {
             }
             emptyList()
         }
-
-        collectJob = CoroutineScope(Dispatchers.IO).launch { cache.transactions.collect {} }
-        awaitTrue { cache.coinJoinWrapperFactory() != null }
-        assertSame(walletA, cache.coinJoinWrapperFactory()?.wallet)
 
         walletFlow.value = walletB
         awaitTrue { bHydrationAttempts.get() == 1 } // hydration for B is now suspended on hydrationBlocked
