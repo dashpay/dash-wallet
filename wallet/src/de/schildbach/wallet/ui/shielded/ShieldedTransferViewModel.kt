@@ -165,12 +165,15 @@ data class ShieldedTransferUIState(
     val maxSelected: Boolean = false,
     /**
      * The exact amount [onCurrencySelected][ShieldedTransferViewModel.onCurrencySelected] was
-     * showing when it last re-rendered [amountText], or null. A currency toggle must not change
-     * the spent amount, but the fiat text it writes is rounded to two decimals
-     * ([Fiat.toKeypadStringTwoDecimals]) — re-parsing that text would silently drop precision, so
-     * [amount] reads this exact value instead while it is set. Cleared by the same events that
-     * clear [maxSelected] (a keypress that actually changes the text, a direction swap, a reset or
-     * a result dismissal).
+     * showing when it last re-rendered [amountText] while NOT [maxSelected], or null. A currency
+     * toggle must not change the spent amount, but the fiat text it writes is rounded to two
+     * decimals ([Fiat.toKeypadStringTwoDecimals]) — re-parsing that text would silently drop
+     * precision, so [amount] reads this exact value instead while it is set. Always a
+     * direction-independent absolute value (never set while [maxSelected], which already pins to
+     * the live balance and takes priority) — so it survives
+     * [onSwapDirection][ShieldedTransferViewModel.onSwapDirection] exactly like a plain typed
+     * [amountText] does, and is only cleared by an event that also invalidates [amountText]: a
+     * keypress that actually changes it, a reset or a result dismissal.
      */
     val pinnedAmount: Dash? = null,
     /** True when the primary entry unit is DASH, false when fiat. */
@@ -673,7 +676,11 @@ class ShieldedTransferViewModel @Inject constructor(
      * Toggle DASH ↔ fiat entry, converting the current amount (Figma "Enter in fiat");
      * keeps [ShieldedTransferUIState.maxSelected]. The fiat text is rounded to two decimals like
      * the rest of the app, so [ShieldedTransferUIState.pinnedAmount] captures the exact amount
-     * being displayed — a toggle must never change what gets spent.
+     * being displayed — a toggle must never change what gets spent. Only set while NOT
+     * [ShieldedTransferUIState.maxSelected] (which already pins to the live balance and takes
+     * priority): that keeps pinnedAmount a direction-independent absolute value whenever it is
+     * set, so [onSwapDirection] can carry it across a swap exactly like it already does for a
+     * plain typed [ShieldedTransferUIState.amountText].
      */
     fun onCurrencySelected(dashMode: Boolean) {
         val state = _uiState.value
@@ -688,17 +695,28 @@ class ShieldedTransferViewModel @Inject constructor(
         } else {
             amount.toFiatAt(state.rate)?.toKeypadStringTwoDecimals() ?: return
         }
-        _uiState.value = state.copy(dashMode = dashMode, amountText = text, pinnedAmount = amount)
+        _uiState.value = state.copy(
+            dashMode = dashMode,
+            amountText = text,
+            pinnedAmount = if (state.maxSelected) null else amount
+        )
     }
 
-    /** The btn-reverse between the From/To rows (Figma 1687:13660). */
+    /**
+     * The btn-reverse between the From/To rows (Figma 1687:13660). [maxSelected] never survives a
+     * swap (Max in one direction must not silently become Max of the other side's balance), but
+     * [pinnedAmount] does, exactly like the plain typed [ShieldedTransferUIState.amountText] it
+     * stands in for: it only ever holds a direction-independent exact amount (see
+     * [onCurrencySelected]), so clearing it here would force a reparse of the rounded fiat text
+     * and silently drift the spent amount.
+     */
     fun onSwapDirection() {
         val state = _uiState.value
         val direction = when (state.direction) {
             ShieldedTransferDirection.ToShielded -> ShieldedTransferDirection.FromShielded
             ShieldedTransferDirection.FromShielded -> ShieldedTransferDirection.ToShielded
         }
-        _uiState.value = state.copy(direction = direction, maxSelected = false, pinnedAmount = null)
+        _uiState.value = state.copy(direction = direction, maxSelected = false)
         transferExecutor.clearRetryableResult()
     }
 

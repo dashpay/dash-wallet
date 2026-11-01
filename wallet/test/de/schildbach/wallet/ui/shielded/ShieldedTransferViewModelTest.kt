@@ -702,6 +702,43 @@ class ShieldedTransferViewModelTest {
         assertEquals("1", vm.uiState.value.amountText)
     }
 
+    @Test
+    fun currencyToggle_thenSwapDirection_preservesExactPinnedAmount() = runTest(dispatcher) {
+        // pinnedAmount must survive a direction swap exactly like a plain typed amountText
+        // already does, or the rounded 2-decimal fiat text gets reparsed on the new direction
+        // and silently drifts the spent amount (1 DASH at $232.745151 -> "232.75" -> swap ->
+        // reparsing "232.75" would land ~1.00002 DASH instead of exactly 1).
+        every { exchangeRates.observeExchangeRate(any()) } returns flowOf(ExchangeRate("USD", "232.745151"))
+        val vm = viewModel()
+
+        vm.onKeyInput("1")
+        vm.onCurrencySelected(dashMode = false)
+        assertEquals("232.75", vm.uiState.value.amountText)
+
+        vm.onSwapDirection()
+
+        assertFalse(vm.uiState.value.maxSelected)
+        assertEquals(Dash.parse("1"), vm.uiState.value.amount)
+    }
+
+    @Test
+    fun maxClick_thenCurrencyToggle_thenSwapDirection_doesNotPinStaleMaxAmount() = runTest(dispatcher) {
+        // maxSelected must not survive a swap (Max of one side's balance must not silently
+        // become Max of the other side's), and a toggle taken while maxSelected was set must
+        // not have left a stale pinnedAmount (the old direction's balance) behind either.
+        every { exchangeRates.observeExchangeRate(any()) } returns flowOf(ExchangeRate("USD", "100.0099"))
+        val vm = viewModel()
+
+        vm.onMaxClick() // 3.00 DASH wallet balance
+        vm.onCurrencySelected(dashMode = false)
+        assertTrue(vm.uiState.value.maxSelected)
+
+        vm.onSwapDirection()
+
+        assertFalse(vm.uiState.value.maxSelected)
+        assertNull(vm.uiState.value.pinnedAmount)
+    }
+
     // ── AC3: L1 sync gate ───────────────────────────────────────────────
 
     @Test
