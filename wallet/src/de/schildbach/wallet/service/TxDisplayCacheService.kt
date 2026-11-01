@@ -284,11 +284,21 @@ class TxDisplayCacheService @Inject constructor(
                 // That "publish only after hydration" ordering is what makes this check safe
                 // under a flatMapLatest cancellation: a cancelled hydration leaves the factory
                 // at the previous wallet, so the check correctly falls through and retries.
-                if (_txDataSource.value is TxDataSource.RoomLive && coinJoinWrapperFactory?.wallet === wallet) {
+                // The same-wallet check also requires the cache to have rows: a wallet reset
+                // (observeWalletReset) rebinds coinJoinWrapperFactory to the same wallet and
+                // leaves _txDataSource at RoomLive, but clears the cache table, so without a
+                // row count a direction change here would flip the filter flag alone and never
+                // repopulate the cache from the now-empty wallet.
+                val cachedRowCount = txDisplayCacheDao.getCount()
+                if (
+                    _txDataSource.value is TxDataSource.RoomLive &&
+                    coinJoinWrapperFactory?.wallet === wallet &&
+                    cachedRowCount > 0
+                ) {
                     log.info("direction changed to {} — switching filter flag only", direction)
                     _liveFilterFlag.value = filter.direction.toFilterFlag()
                     _currentPagingSource.value?.invalidate()
-                } else if (txDisplayCacheDao.getCount() > 0) {
+                } else if (cachedRowCount > 0) {
                     _liveFilterFlag.value = filter.direction.toFilterFlag()
                     initializeFactoriesFromCache()
                     // Re-assigning the RoomLive singleton does not emit from the StateFlow, so

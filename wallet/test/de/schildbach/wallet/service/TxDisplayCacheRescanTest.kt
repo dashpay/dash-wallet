@@ -247,6 +247,34 @@ class TxDisplayCacheRescanTest {
     }
 
     /**
+     * MO-1109 regression (e): a wallet reset (observeWalletReset) rebinds coinJoinWrapperFactory
+     * to the same wallet and leaves _txDataSource at RoomLive, but it also clears the display
+     * cache. A direction change afterwards, with the cache still empty, must rebuild the wrapped
+     * list from the wallet rather than only flip the filter flag on an empty cache — the fast
+     * path at service.kt:287-ish requires both the same-wallet identity AND a nonzero row count.
+     * serviceWithWallet() has no reset flow to drive, so the emptied cache is simulated by
+     * restubbing getCount() to 0 for the emission the direction change triggers.
+     */
+    @Test
+    fun directionChangeWithEmptyCacheAfterResetRebuildsInsteadOfFlippingFlag() = runBlocking {
+        val wallet = mockk<WalletEx>(relaxed = true)
+        val cache = serviceWithWallet(MutableStateFlow(wallet))
+
+        collectJob = CoroutineScope(Dispatchers.IO).launch { cache.transactions.collect {} }
+        awaitTrue { createdPagingSources.isNotEmpty() }
+        coVerify(exactly = 1) { groupDao.getActiveGroups(any()) }
+        assertSame(wallet, cache.coinJoinWrapperFactory()?.wallet)
+
+        coEvery { displayDao.getCount() } returns 0
+        cache.setFilter(TxFilterType.SENT)
+
+        coVerify(timeout = 5_000) { displayDao.replaceAll(any()) }
+        // Still 1: the reset re-hydrates by walking the wallet (rebuildWrappedList), not by
+        // re-reading the (now-cleared) CoinJoin/CrowdNode group cache.
+        coVerify(exactly = 1) { groupDao.getActiveGroups(any()) }
+    }
+
+    /**
      * MO-1109 regression (c): a wallet replacement whose hydration
      * (initializeFactoriesFromCache's getActiveGroups) is still suspended when a direction
      * change cancels it via flatMapLatest. coinJoinWrapperFactory must stay bound to the old
@@ -314,6 +342,7 @@ class TxDisplayCacheRescanTest {
         walletFlow.value = walletB
 
         coVerify(timeout = 5_000, exactly = 2) { groupDao.getActiveGroups(any()) }
+        awaitTrue { cache.coinJoinWrapperFactory()?.wallet === walletB }
         assertSame(walletB, cache.coinJoinWrapperFactory()?.wallet)
         awaitTrue { createdPagingSources[0].invalid }
         awaitTrue { createdPagingSources.size >= 2 }
