@@ -372,8 +372,9 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
                 // balance…" pending state that re-enables automatically at
                 // READY — never a stale-cache enabled button that lets a
                 // submit reach the SDK and bounce. L1 path is unaffected.
+                // ...and never while a submission is being routed: it was taken at the tap
                 binding.requestUsernameButton.isEnabled =
-                    buttonState == UsernameSubmitButtonState.Enabled
+                    buttonState == UsernameSubmitButtonState.Enabled && !it.usernameSubmitPreflight
                 binding.requestUsernameButton.setText(
                     if (buttonState == UsernameSubmitButtonState.PreparingShielded) {
                         R.string.username_preparing_shielded_balance
@@ -406,9 +407,12 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
                 // could not be typed in and back was the only way out. Derive it from
                 // the state each emission so it is restored the moment the submit
                 // ends.
-                binding.usernameInput.isFocusable = !it.usernameRequestSubmitting
-                binding.usernameInput.isFocusableInTouchMode = !it.usernameRequestSubmitting
-                if (it.usernameRequestSubmitting) {
+                // Also while a submission is being routed (its preflight): an edit then would not
+                // be what is submitted.
+                val inputLocked = it.usernameRequestSubmitting || it.usernameSubmitPreflight
+                binding.usernameInput.isFocusable = !inputLocked
+                binding.usernameInput.isFocusableInTouchMode = !inputLocked
+                if (inputLocked) {
                     hideKeyboard()
                 }
             } else {

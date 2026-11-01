@@ -554,6 +554,45 @@ class RequestUserNameViewModelTest {
     }
 
     @Test
+    fun submit_aNameOnlyRetry_savesTheSubmittedNameNotOneTypedDuringItsPreflight() = runVmTest {
+        // The retry's preflight (wallet binding, ownership reads) suspends before it is accepted.
+        // The input is locked meanwhile, and what is saved is the name that was submitted, even if
+        // the mutable field changes before acceptance.
+        coEvery { transparentUsernameCreation.isCutoverCommitted() } returns true
+        val preflight = kotlinx.coroutines.CompletableDeferred<Boolean>()
+        coEvery { transparentUsernameCreation.retryNameForExistingIdentity(any(), any(), any()) } coAnswers {
+            preflight.await()
+        }
+        val viewModel = viewModel()
+        viewModel.requestedUserName = "alice3"
+        viewModel.identity = BlockchainIdentityData(
+            IdentityCreationState.VOTING,
+            null,
+            "alice2",
+            null,
+            "6XqBkTZTUnDMcgGvKzs5NRotZbAMBjKhJ4bQzKzXcCwr",
+            false,
+            usernameRequested = UsernameRequestStatus.LOST_VOTE
+        )
+
+        viewModel.submit()
+
+        assertEquals("edits and submits are locked during the preflight", true, viewModel.uiState.value.usernameSubmitPreflight)
+        assertEquals(false, viewModel.uiState.value.usernameRequestSubmitting)
+        viewModel.requestedUserName = "bob99"
+        viewModel.submit()
+        preflight.complete(true)
+
+        awaitReal("the submitting state") { viewModel.uiState.value.usernameRequestSubmitting }
+        coVerify(exactly = 1) {
+            transparentUsernameCreation.retryNameForExistingIdentity(any(), any(), any())
+        }
+        coVerify(exactly = 1, timeout = 5_000) { identityConfig.set(BlockchainIdentityConfig.USERNAME, "alice3") }
+        coVerify(exactly = 0) { identityConfig.set(BlockchainIdentityConfig.USERNAME, "bob99") }
+        assertEquals(false, viewModel.uiState.value.usernameSubmitPreflight)
+    }
+
+    @Test
     fun submit_aNameOnlyRetryWithNoRequestedName_isRefused() = runVmTest {
         coEvery { transparentUsernameCreation.isCutoverCommitted() } returns true
         coEvery { transparentUsernameCreation.cutoverStateOrUnknown() } returns true
