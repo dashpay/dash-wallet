@@ -39,6 +39,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -648,6 +649,37 @@ class ShieldedTransferViewModelTest {
         assertTrue(vm.uiState.value.maxSelected)
         assertEquals(Dash.parse("3.00"), vm.uiState.value.amount)
         assertFalse(vm.uiState.value.insufficientFunds)
+    }
+
+    @Test
+    fun maxClick_thenCurrencyToggle_beforeRateArrives_leavesModeAndMaxIntentUnchanged() = runTest(dispatcher) {
+        // thepastaclaw (PR #1654, round at 4f0c7739d): Max in Dash mode, then a currency toggle
+        // before the exchange-rate flow has emitted, must not write "0" into amountText while
+        // keeping maxSelected set (that let canContinue go true with a zero-looking field once
+        // the rate arrived). onCurrencySelected's early return on a missing rate (matching
+        // onMaxClick's) already covers this; a delayed-rate flow pins it down.
+        val rateFlow = MutableSharedFlow<ExchangeRate?>()
+        every { exchangeRates.observeExchangeRate(any()) } returns rateFlow
+        val vm = viewModel()
+
+        vm.onMaxClick() // dash mode: no rate needed
+        assertEquals("3", vm.uiState.value.amountText)
+        assertTrue(vm.uiState.value.maxSelected)
+
+        vm.onCurrencySelected(dashMode = false) // rate not emitted yet
+
+        assertTrue(vm.uiState.value.dashMode)
+        assertEquals("3", vm.uiState.value.amountText)
+        assertTrue(vm.uiState.value.maxSelected)
+        assertEquals(Dash.parse("3.00"), vm.uiState.value.amount)
+
+        rateFlow.emit(ExchangeRate("USD", "100.0099"))
+        vm.onCurrencySelected(dashMode = false) // retry now that the rate is known
+
+        assertFalse(vm.uiState.value.dashMode)
+        assertEquals("300.03", vm.uiState.value.amountText)
+        assertTrue(vm.uiState.value.maxSelected)
+        assertEquals(Dash.parse("3.00"), vm.uiState.value.amount)
     }
 
     @Test
