@@ -169,11 +169,14 @@ data class ShieldedTransferUIState(
      * toggle must not change the spent amount, but the fiat text it writes is rounded to two
      * decimals ([Fiat.toKeypadStringTwoDecimals]) — re-parsing that text would silently drop
      * precision, so [amount] reads this exact value instead while it is set. Always a
-     * direction-independent absolute value (never set while [maxSelected], which already pins to
-     * the live balance and takes priority) — so it survives
+     * direction-independent absolute value (never set here while [maxSelected], which already
+     * pins to the live balance and takes priority) — so it survives
      * [onSwapDirection][ShieldedTransferViewModel.onSwapDirection] exactly like a plain typed
-     * [amountText] does, and is only cleared by an event that also invalidates [amountText]: a
-     * keypress that actually changes it, a reset or a result dismissal.
+     * [amountText] does. [onSwapDirection] also WRITES it, with the old direction's resolved Max
+     * amount, in the same update that clears [maxSelected], so a Max selection surviving a
+     * currency toggle is not lost to a reparse of the rounded fiat text once the swap clears the
+     * flag. Otherwise only cleared by an event that also invalidates [amountText]: a keypress
+     * that actually changes it, a reset or a result dismissal.
      */
     val pinnedAmount: Dash? = null,
     /** True when the primary entry unit is DASH, false when fiat. */
@@ -705,10 +708,12 @@ class ShieldedTransferViewModel @Inject constructor(
     /**
      * The btn-reverse between the From/To rows (Figma 1687:13660). [maxSelected] never survives a
      * swap (Max in one direction must not silently become Max of the other side's balance), but
-     * [pinnedAmount] does, exactly like the plain typed [ShieldedTransferUIState.amountText] it
-     * stands in for: it only ever holds a direction-independent exact amount (see
-     * [onCurrencySelected]), so clearing it here would force a reparse of the rounded fiat text
-     * and silently drift the spent amount.
+     * the amount it resolved to must: while [maxSelected], [pinnedAmount] is pinned to
+     * [ShieldedTransferUIState.amount] (the old direction's resolved Max, i.e. its
+     * [ShieldedTransferUIState.availableBalance]) in the same update that clears the flag,
+     * otherwise clearing [maxSelected] alone would leave a rounded fiat [amountText] to be
+     * re-parsed and silently drift the spent amount. Otherwise [pinnedAmount] is left as-is,
+     * exactly like the plain typed [ShieldedTransferUIState.amountText] it stands in for.
      */
     fun onSwapDirection() {
         val state = _uiState.value
@@ -716,7 +721,11 @@ class ShieldedTransferViewModel @Inject constructor(
             ShieldedTransferDirection.ToShielded -> ShieldedTransferDirection.FromShielded
             ShieldedTransferDirection.FromShielded -> ShieldedTransferDirection.ToShielded
         }
-        _uiState.value = state.copy(direction = direction, maxSelected = false)
+        _uiState.value = state.copy(
+            direction = direction,
+            maxSelected = false,
+            pinnedAmount = if (state.maxSelected) state.amount else state.pinnedAmount
+        )
         transferExecutor.clearRetryableResult()
     }
 
