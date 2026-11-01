@@ -38,6 +38,7 @@ import org.dashj.platform.dashpay.UsernameStatus
 import org.dashj.platform.sdk.platform.Names
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -156,5 +157,53 @@ class IdentityReplacementNameRecordTest {
         repository().updateBlockchainIdentityData(data, recovered(primary = "replacement22", secondary = null))
 
         assertEquals("replacement22", data.username)
+    }
+
+    // ── an ordinary recovery retry after the handoff worker failed (review r4301924854) ──
+
+    /** The record an ordinary (not fromCreation) RestoreIdentityWorker run starts from. */
+    private fun ordinaryRetrySeed(persisted: BlockchainIdentityData, requested: RequestedNameContext?) =
+        recoverySeedRecord(persisted, requested, identityId, fromCreation = false)
+            ?: BlockchainIdentityData(IdentityCreationState.NONE, null, null, null, null, true)
+
+    @Test
+    fun `an ordinary retry after a failed handoff keeps the replacement name and its contest`() = runBlocking {
+        // the handoff worker failed before finishRestoration: the record is restoring, and the
+        // tile retry (or the background discovery) runs the worker again without fromCreation
+        val failedHandoff = record(primary = "replacement", secondary = "brimoztest3")
+        val requested = RequestedNameContext(identityId, "replacement", null)
+
+        val seed = ordinaryRetrySeed(failedHandoff, requested)
+        // the replacement is still in its vote: only the instant secondary is a registered domain
+        repository().updateBlockchainIdentityData(seed, recovered(primary = "brimoztest3", secondary = null))
+
+        assertEquals("the replacement stays the requested name", "replacement", seed.username)
+        assertEquals("brimoztest3", seed.usernameSecondary)
+        // the contested-name scan reads that name (the USERNAME pref the record is saved to)
+        val candidates = de.schildbach.wallet.service.platform.work.contestedNameCandidates(
+            currentUsername = "brimoztest3",
+            primaryUsername = "brimoztest3",
+            secondaryUsername = null,
+            usernameStatusKeys = emptyList(),
+            requestedLabel = seed.username
+        )
+        assertTrue("its contest is scanned: $candidates", Names.normalizeString("replacement") in candidates)
+    }
+
+    @Test
+    fun `a genuine restore, or another identity's requested names, starts from an empty record`() {
+        val persisted = record(primary = "replacement", secondary = "brimoztest3")
+
+        assertEquals(null, recoverySeedRecord(persisted, null, identityId, fromCreation = false))
+        assertEquals(
+            null,
+            recoverySeedRecord(
+                persisted,
+                RequestedNameContext("8fLsPxiqXkZuS2Dhe3y5JVbbLpz8aVLPEkfZwcrGqZjk", "replacement", null),
+                identityId,
+                fromCreation = false
+            )
+        )
+        assertEquals(null, recoverySeedRecord(null, RequestedNameContext(identityId, "x", null), identityId, false))
     }
 }

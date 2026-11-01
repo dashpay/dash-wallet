@@ -21,6 +21,10 @@ import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.IdentityCreationState
+import de.schildbach.wallet.service.platform.InMemoryRequestedNameJournal
+import de.schildbach.wallet.service.platform.PendingNameOnlyRetry
+import de.schildbach.wallet.service.platform.RequestedNameContext
+import de.schildbach.wallet.service.platform.RequestedNameJournal
 import de.schildbach.wallet.service.platform.work.RestoreIdentityOperation
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -539,7 +543,13 @@ class SdkTransparentUsernameCreation internal constructor(
      * Held across every DPNS registration's re-check → submit → record, per identity, shared with
      * the other in-app registrars. A fresh lock by default keeps the host-JVM tests independent.
      */
-    private val dpnsLock: DpnsRegistrationLock = DpnsRegistrationLock()
+    private val dpnsLock: DpnsRegistrationLock = DpnsRegistrationLock(),
+    /**
+     * Durable record of the requested names and of a name-only retry in flight, so a retry the
+     * process lost is reconciled on restart ([reconcileInterruptedNameRetry]) and recovery keeps
+     * the requested names. In memory by default, for the host-JVM tests.
+     */
+    private val nameJournal: RequestedNameJournal = InMemoryRequestedNameJournal()
 ) {
     @Inject
     constructor(
@@ -591,7 +601,8 @@ class SdkTransparentUsernameCreation internal constructor(
         nameAlreadyTaken = { identityIdBase58, label ->
             identityOwnsOrContendsFor(platformRepo.get(), identityIdBase58, label)
         },
-        dpnsLock = dpnsLock
+        dpnsLock = dpnsLock,
+        nameJournal = blockchainIdentityConfig
     )
 
     /** Test seam: the funding call blocks on network I/O — keep it off main. */
@@ -1043,6 +1054,8 @@ class SdkTransparentUsernameCreation internal constructor(
         // the tile reads "requesting your username" while the name lands.
         try {
             persistNameContext(identityIdBase58, label, secondaryLabel, false)
+            // kept apart from the record, which recovery rebuilds from the chain
+            nameJournal.recordRequestedNames(RequestedNameContext(identityIdBase58, label, secondaryLabel))
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             log.warn("failed to persist identity/name context before DPNS registration", t)
@@ -1162,8 +1175,11 @@ class SdkTransparentUsernameCreation internal constructor(
             // VOTING advance).
             try {
                 handOffToLegacy(identityIdBase58)
+                // the recovery worker owns the outcome now
+                if (nameOnlyRetry) finishPendingNameRetry()
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
+                // a name-only retry stays pending: the restart reconcile hands it off again
                 log.error(
                     "legacy identity handoff failed for {}… — the identity/name are on chain; " +
                         "platform sync recovery will pick it up",
@@ -1190,18 +1206,21 @@ class SdkTransparentUsernameCreation internal constructor(
             // drops the replacement. It stamps its own retryable error instead, AMBIGUOUS
             // included, which the home tile sends back into the name-only retry; there the
             // ownership check keeps a name that did land from being submitted again.
-            try {
-                if (nameOnlyRetry) {
-                    driveCreationState(
-                        IdentityCreationState.USERNAME_REGISTERING,
-                        "$NAME_ONLY_RETRY_ERROR: ${nameFailure ?: nameStatus.name}"
-                    )
-                } else {
+            if (nameOnlyRetry) {
+                // Not swallowed: the run's own handler records it again, and until an error is
+                // on record the retry stays pending for the restart reconcile.
+                driveCreationState(
+                    IdentityCreationState.USERNAME_REGISTERING,
+                    "$NAME_ONLY_RETRY_ERROR: ${nameFailure ?: nameStatus.name}"
+                )
+                finishPendingNameRetry()
+            } else {
+                try {
                     persistNameContext(identityIdBase58, label, secondaryLabel, true)
+                } catch (t: Throwable) {
+                    if (t is CancellationException) throw t
+                    log.warn("failed to record the DPNS registration failure", t)
                 }
-            } catch (t: Throwable) {
-                if (t is CancellationException) throw t
-                log.warn("failed to record the DPNS registration failure", t)
             }
             log.warn(
                 "transparent identity {}… created but its DPNS name did not register " +
@@ -1865,7 +1884,7 @@ class SdkTransparentUsernameCreation internal constructor(
                 // exception crashes the process after the screen was told the retry started.
                 // Record a retryable error so the retry card shows.
                 log.error("name-only retry for identity {} failed", identityIdBase58, e)
-                recordRetryFailure(e)
+                if (recordRetryFailure(e)) finishPendingNameRetry()
             }
         }
         if (!trackOrRefuse(job)) {
@@ -1885,18 +1904,128 @@ class SdkTransparentUsernameCreation internal constructor(
         return true
     }
 
-    /** Best effort: if the state write fails as well, the failure is only logged. */
-    private suspend fun recordRetryFailure(cause: Exception) {
+    /**
+     * Best effort: if the state write fails as well, the failure is only logged and false is
+     * returned (the retry then stays pending for [reconcileInterruptedNameRetry]).
+     */
+    private suspend fun recordRetryFailure(cause: Exception): Boolean = try {
+        driveCreationState(
+            IdentityCreationState.USERNAME_REGISTERING,
+            "$NAME_ONLY_RETRY_ERROR: ${cause.message ?: cause.javaClass.simpleName}"
+        )
+        true
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        log.error("could not record the failed name-only retry", e)
+        false
+    }
+
+    /** The name-only retry's outcome has a durable owner: no longer pending. Best effort. */
+    private suspend fun finishPendingNameRetry() {
         try {
-            driveCreationState(
-                IdentityCreationState.USERNAME_REGISTERING,
-                "$NAME_ONLY_RETRY_ERROR: ${cause.message ?: cause.javaClass.simpleName}"
-            )
+            nameJournal.finishNameOnlyRetry()
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            log.error("could not record the failed name-only retry", e)
+            // still pending: the restart reconcile re-reads ownership and records the same outcome
+            log.warn("could not clear the pending name-only retry", e)
         }
+    }
+
+    /**
+     * Reconciles a name-only retry the process lost: one recorded as pending
+     * ([RequestedNameJournal.beginNameOnlyRetry]) whose outcome never reached a durable owner, the
+     * process having died during its registration. Nothing else would ever finish it: the record
+     * is not restoring, so discovery enqueues no recovery, and it is not VOTING.
+     *
+     * Never registers anything. It reads whether the identity owns or contends for the requested
+     * name, under the identity's [DpnsRegistrationLock]:
+     * - it does (registered, or contested and in its vote): the name is recorded as registered —
+     *   DONE for a non-contested request — and handed to recovery, which reaches DONE or VOTING;
+     * - it does not: the name-only retry's retryable error, which the home tile sends back into
+     *   [retryNameForExistingIdentity] (that re-checks ownership before submitting);
+     * - it cannot be read: nothing changes, and the next trigger tries again.
+     *
+     * Does nothing while a name operation runs in this process, or when the record moved on past
+     * the name step. Returns true when it changed the record.
+     */
+    suspend fun reconcileInterruptedNameRetry(): Boolean {
+        val pending = try {
+            nameJournal.pendingNameOnlyRetry()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("could not read the pending name-only retry", e)
+            null
+        } ?: return false
+        synchronized(this) {
+            if (nameRetryInFlight || _submitState.value == ShieldedUsernameSubmitState.Proving) {
+                // the run is live in this process: it owns its outcome
+                return false
+            }
+            nameRetryInFlight = true
+        }
+        try {
+            return reconcileNow(pending)
+        } finally {
+            releaseNameRetry()
+        }
+    }
+
+    private suspend fun reconcileNow(pending: PendingNameOnlyRetry): Boolean {
+        val request = pending.request
+        val identityIdBase58 = request.identityIdBase58
+        if (pending.recordIdentityId != identityIdBase58 ||
+            pending.creationState >= IdentityCreationState.DONE ||
+            pending.creationState == IdentityCreationState.VOTING
+        ) {
+            // another identity's record, or the run (or its recovery) got past the name step
+            log.info("pending name-only retry for {}… already finished; clearing it", identityIdBase58.take(8))
+            finishPendingNameRetry()
+            return false
+        }
+        val ours = dpnsLock.withIdentityLock(identityIdBase58) { ownershipRecheck(identityIdBase58, request.username) }
+        if (ours == null) {
+            log.warn("interrupted name-only retry for {}…: ownership unreadable; retrying later", identityIdBase58.take(8))
+            return false
+        }
+        val contested = Names.isUsernameContestable(request.username) ||
+            (request.secondaryUsername != null && Names.isUsernameContestable(request.secondaryUsername))
+        try {
+            // the run may have died before writing them
+            persistNameContext(identityIdBase58, request.username, request.secondaryUsername, false)
+            clearPreviousNameRequest()
+            if (ours) {
+                log.info(
+                    "interrupted name-only retry for {}…: '{}' is the identity's; handing it to recovery",
+                    identityIdBase58.take(8),
+                    request.username
+                )
+                driveCreationState(
+                    if (contested) IdentityCreationState.USERNAME_REGISTERED else IdentityCreationState.DONE,
+                    null
+                )
+                handOffToLegacy(identityIdBase58)
+            } else {
+                log.info(
+                    "interrupted name-only retry for {}…: '{}' did not register; offering a retry",
+                    identityIdBase58.take(8),
+                    request.username
+                )
+                driveCreationState(
+                    IdentityCreationState.USERNAME_REGISTERING,
+                    "$NAME_ONLY_RETRY_ERROR: interrupted before it completed"
+                )
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("could not reconcile the interrupted name-only retry; retrying later", e)
+            return false
+        }
+        finishPendingNameRetry()
+        return true
     }
 
     private suspend fun retryNameNow(
@@ -1907,6 +2036,10 @@ class SdkTransparentUsernameCreation internal constructor(
     ) {
         log.info("name-only retry for existing identity {}: requesting a new DPNS name", identityIdBase58)
         val (walletId, identityId, alreadyTaken) = resolved
+        // Before anything changes: from here on, a process death leaves a pending retry that the
+        // restart reconciles ([reconcileInterruptedNameRetry]) instead of a record stuck on the
+        // name step with no job and no error.
+        nameJournal.beginNameOnlyRetry(RequestedNameContext(identityIdBase58, username, secondaryUsername))
         val contested = Names.isUsernameContestable(username) ||
             (secondaryUsername != null && Names.isUsernameContestable(secondaryUsername))
         // The requested names become the record's (a secondary only when one is requested, so a

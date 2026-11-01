@@ -267,6 +267,9 @@ class PlatformSynchronizationService @Inject constructor(
     // The DashPay half of the user-facing "still syncing" state; this service
     // is the only component that knows whether DashPay applies at all.
     private val dashPaySyncStatus: de.schildbach.wallet.service.DashPaySyncStatus,
+    // A Provider: only the identity reconcile below reads it.
+    private val transparentUsernameCreation:
+        javax.inject.Provider<de.schildbach.wallet.service.platform.sdk.SdkTransparentUsernameCreation>,
 ) : PlatformSyncService {
     companion object {
         private val log: Logger = LoggerFactory.getLogger(PlatformSynchronizationService::class.java)
@@ -2864,8 +2867,21 @@ class PlatformSynchronizationService @Inject constructor(
         }
         // update contacts, profiles and other platform data
         else {
-            checkVotingStatus(identityData)
-            reconcileUsernameStatus(identityData)
+            // A name-only retry the process lost (killed during its registration) is finished
+            // first; when it changed the record, the checks below wait for the next trigger
+            // rather than act on the record read before it.
+            val reconciledNameRetry = try {
+                transparentUsernameCreation.get().reconcileInterruptedNameRetry()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                log.warn("discoverAndRecoverIdentity: could not reconcile an interrupted name-only retry", e)
+                false
+            }
+            if (!reconciledNameRetry) {
+                checkVotingStatus(identityData)
+                reconcileUsernameStatus(identityData)
+            }
 
             if (!updatingContacts.get()) {
                 updateContactRequests(initialSync = true)

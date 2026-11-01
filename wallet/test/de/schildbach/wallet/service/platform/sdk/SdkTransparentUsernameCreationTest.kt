@@ -1100,6 +1100,172 @@ class SdkTransparentUsernameCreationTest {
         assertEquals(listOf(identityIdBase58), retried.handedOff)
     }
 
+    // ── a name-only retry the process lost ───────────────────────────────
+
+    /** One process's instance, sharing [journal] (the durable store) with the others. */
+    private fun TestScope.instance(
+        source: TransparentUsernameSource,
+        journal: de.schildbach.wallet.service.platform.RequestedNameJournal,
+        run: RetryRun,
+        appScope: CoroutineScope? = null,
+        nameAlreadyTaken: suspend (String, String) -> Boolean = { _, _ -> false }
+    ) = SdkTransparentUsernameCreation(
+        source = source,
+        cutoverCommitted = { true },
+        feeDuffs = { feeDuffs },
+        handOffToLegacy = { run.handedOff += it },
+        driveCreationState = { state, error -> run.states += state to error },
+        persistNameContext = { id, name, second, restoring -> run.nameContexts += listOf(id, name, second, restoring) },
+        executorScope = appScope,
+        nameAlreadyTaken = nameAlreadyTaken,
+        fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock(),
+        nameJournal = journal
+    ).also { it.ioDispatcher = kotlinx.coroutines.test.StandardTestDispatcher(testScheduler) }
+
+    /** A name-only retry whose process dies while its name is being submitted. */
+    private suspend fun TestScope.killedWhileSubmitting(
+        source: TransparentUsernameSource,
+        journal: de.schildbach.wallet.service.platform.RequestedNameJournal,
+        username: String
+    ): RetryRun {
+        val submitting = CompletableDeferred<Unit>()
+        coEvery { source.registerDpnsName(walletIdHex, identityId, username) } coAnswers {
+            submitting.complete(Unit)
+            awaitCancellation()
+        }
+        val run = RetryRun()
+        val appScope = CoroutineScope(SupervisorJob() + kotlinx.coroutines.test.StandardTestDispatcher(testScheduler))
+        assertTrue(instance(source, journal, run, appScope).retryNameForExistingIdentity(identityIdBase58, username, null))
+        advanceUntilIdle()
+        assertTrue("the name is being submitted", submitting.isCompleted)
+        appScope.cancel() // the process dies: nothing of the run after this point executes
+        advanceUntilIdle()
+        assertTrue("left on the name step with no error: ${run.states}", run.states.all { it.second == null })
+        assertTrue("and no recovery job", run.handedOff.isEmpty())
+        return run
+    }
+
+    @Test
+    fun `a retry killed before its name registered is offered again on restart, never resubmitted`() = runTest {
+        val source = source(lockAfterFailure = null)
+        val journal = de.schildbach.wallet.service.platform.InMemoryRequestedNameJournal()
+        killedWhileSubmitting(source, journal, "alice3")
+
+        val restart = RetryRun()
+        val restarted = instance(source, journal, restart)
+        assertTrue("reconciled", restarted.reconcileInterruptedNameRetry())
+
+        val (state, error) = restart.states.last()
+        assertEquals(IdentityCreationState.USERNAME_REGISTERING, state)
+        assertTrue("the error the home tile retries by name: $error", SdkTransparentUsernameCreation.isNameOnlyRetryError(error))
+        assertEquals("the requested names are on the record", listOf(identityIdBase58, "alice3", null, false), restart.nameContexts.last())
+        coVerify(exactly = 1) { source.registerDpnsName(any(), any(), "alice3") }
+        assertTrue(restart.handedOff.isEmpty())
+        assertNull("no longer pending", journal.pendingNameOnlyRetry())
+        assertFalse("reconciled once", restarted.reconcileInterruptedNameRetry())
+        neverFunded(source)
+    }
+
+    @Test
+    fun `a killed contested retry that landed during its vote is handed to recovery on restart`() = runTest {
+        // a contested name has no domain document during its vote: only its contender shows it
+        val source = source(lockAfterFailure = null)
+        val journal = de.schildbach.wallet.service.platform.InMemoryRequestedNameJournal()
+        killedWhileSubmitting(source, journal, "alice")
+
+        val restart = RetryRun()
+        assertTrue(instance(source, journal, restart, nameAlreadyTaken = { _, label -> label == "alice" }).reconcileInterruptedNameRetry())
+
+        assertEquals(
+            "registered, not DONE: recovery takes it to VOTING",
+            IdentityCreationState.USERNAME_REGISTERED to null,
+            restart.states.last()
+        )
+        assertFalse(restart.states.any { it.first == IdentityCreationState.DONE })
+        assertEquals(listOf(identityIdBase58), restart.handedOff)
+        coVerify(exactly = 1) { source.registerDpnsName(any(), any(), "alice") }
+        assertNull(journal.pendingNameOnlyRetry())
+    }
+
+    @Test
+    fun `a killed retry whose name registered is completed on restart`() = runTest {
+        val source = source(lockAfterFailure = null)
+        val journal = de.schildbach.wallet.service.platform.InMemoryRequestedNameJournal()
+        killedWhileSubmitting(source, journal, "alice3")
+
+        val restart = RetryRun()
+        assertTrue(instance(source, journal, restart, nameAlreadyTaken = { _, label -> label == "alice3" }).reconcileInterruptedNameRetry())
+
+        assertEquals(IdentityCreationState.DONE to null, restart.states.last())
+        assertEquals(listOf(identityIdBase58), restart.handedOff)
+        coVerify(exactly = 1) { source.registerDpnsName(any(), any(), "alice3") }
+    }
+
+    @Test
+    fun `an unreadable ownership check on restart changes nothing and is tried again later`() = runTest {
+        val source = source(lockAfterFailure = null)
+        val journal = de.schildbach.wallet.service.platform.InMemoryRequestedNameJournal()
+        killedWhileSubmitting(source, journal, "alice3")
+
+        val restart = RetryRun()
+        val unreadable = instance(source, journal, restart, nameAlreadyTaken = { _, _ -> throw java.io.IOException("DAPI") })
+        assertFalse(unreadable.reconcileInterruptedNameRetry())
+
+        assertTrue("nothing written: ${restart.states}", restart.states.isEmpty() && restart.nameContexts.isEmpty())
+        assertTrue(restart.handedOff.isEmpty())
+        assertEquals("still pending", "alice3", journal.pendingNameOnlyRetry()?.request?.username)
+    }
+
+    @Test
+    fun `a retry still running in this process is left to finish on its own`() = runTest {
+        val source = source(lockAfterFailure = null)
+        coEvery { source.registerDpnsName(walletIdHex, identityId, "alice3") } returns "alice3.dash"
+        val journal = de.schildbach.wallet.service.platform.InMemoryRequestedNameJournal()
+        val gate = CompletableDeferred<Unit>()
+        val run = RetryRun()
+        val appScope = CoroutineScope(SupervisorJob() + kotlinx.coroutines.test.StandardTestDispatcher(testScheduler))
+        val creation = SdkTransparentUsernameCreation(
+            source = source,
+            cutoverCommitted = { true },
+            feeDuffs = { feeDuffs },
+            handOffToLegacy = { run.handedOff += it },
+            driveCreationState = { state, error -> run.states += state to error },
+            persistNameContext = { _, _, _, _ -> gate.await() },
+            executorScope = appScope,
+            fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock(),
+            nameJournal = journal
+        ).also { it.ioDispatcher = kotlinx.coroutines.test.StandardTestDispatcher(testScheduler) }
+
+        assertTrue(creation.retryNameForExistingIdentity(identityIdBase58, "alice3", null))
+        advanceUntilIdle()
+        assertFalse("the live run owns its outcome", creation.reconcileInterruptedNameRetry())
+        assertTrue(run.states.isEmpty())
+
+        gate.complete(Unit)
+        advanceUntilIdle()
+        assertEquals(IdentityCreationState.DONE to null, run.states.last())
+        assertNull("the run cleared it once handed off", journal.pendingNameOnlyRetry())
+        appScope.cancel()
+    }
+
+    @Test
+    fun `a failed retry whose error was recorded is not pending`() = runTest {
+        val source = source(lockAfterFailure = null)
+        coEvery { source.registerDpnsName(walletIdHex, identityId, "alice3") } throws
+            DashSdkError.InvalidParameter("domain document rejected")
+        val journal = de.schildbach.wallet.service.platform.InMemoryRequestedNameJournal()
+        val run = RetryRun()
+        val appScope = CoroutineScope(SupervisorJob() + kotlinx.coroutines.test.StandardTestDispatcher(testScheduler))
+
+        assertTrue(instance(source, journal, run, appScope).retryNameForExistingIdentity(identityIdBase58, "alice3", null))
+        advanceUntilIdle()
+
+        assertTrue(SdkTransparentUsernameCreation.isNameOnlyRetryError(run.states.last().second))
+        assertNull(journal.pendingNameOnlyRetry())
+        assertEquals("the requested names stay for recovery", "alice3", journal.requestedNames()?.username)
+        appScope.cancel()
+    }
+
     // ── per-identity DPNS lock ───────────────────────────────────────────
 
     /** A source whose registerDpnsName blocks on [gate], then records the label as owned. */

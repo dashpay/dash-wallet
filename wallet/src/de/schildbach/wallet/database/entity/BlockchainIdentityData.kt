@@ -19,13 +19,18 @@ package de.schildbach.wallet.database.entity
 
 import android.content.Context
 import android.net.Uri
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.google.common.base.Stopwatch
 import de.schildbach.wallet.data.InvitationLinkData
+import de.schildbach.wallet.service.platform.PendingNameOnlyRetry
 import de.schildbach.wallet.service.platform.PlatformService
+import de.schildbach.wallet.service.platform.RequestedNameContext
+import de.schildbach.wallet.service.platform.RequestedNameJournal
+import de.schildbach.wallet.service.platform.recoverySeedRecord
 import de.schildbach.wallet.service.platform.serializeIdentityToleratingContractBounds
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -198,7 +203,7 @@ open class BlockchainIdentityConfig @Inject constructor(
     PREFERENCES_NAME,
     walletDataProvider,
     migrations = listOf()
-) {
+), RequestedNameJournal {
     companion object {
         const val PREFERENCES_NAME = "platform-identity"
 
@@ -237,6 +242,17 @@ open class BlockchainIdentityConfig @Inject constructor(
          * asset lock (see [SdkTransparentTopUp.topUp]'s newUserIntent).
          */
         val TOP_UP_WORK_SDK_STARTED_ID = stringPreferencesKey("top_up_work_sdk_started_id")
+
+        /**
+         * The names last requested for an identity ([RequestedNameContext]), kept apart from
+         * [USERNAME]/[USERNAME_SECONDARY], which recovery rewrites from the chain.
+         */
+        val REQUESTED_NAMES_IDENTITY_ID = stringPreferencesKey("requested_names_identity_id")
+        val REQUESTED_NAMES_USERNAME = stringPreferencesKey("requested_names_username")
+        val REQUESTED_NAMES_USERNAME_SECONDARY = stringPreferencesKey("requested_names_username_secondary")
+
+        /** A name-only retry of the requested names is in flight; see [RequestedNameJournal]. */
+        val NAME_ONLY_RETRY_PENDING = booleanPreferencesKey("name_only_retry_pending")
         private val log = LoggerFactory.getLogger(BlockchainIdentityConfig::class.java)
     }
 
@@ -370,6 +386,51 @@ open class BlockchainIdentityConfig @Inject constructor(
             }
         }
     }
+
+    override suspend fun requestedNames(): RequestedNameContext? = data.first().let { prefs ->
+        val identityId = prefs[REQUESTED_NAMES_IDENTITY_ID] ?: return@let null
+        val username = prefs[REQUESTED_NAMES_USERNAME] ?: return@let null
+        RequestedNameContext(identityId, username, prefs[REQUESTED_NAMES_USERNAME_SECONDARY])
+    }
+
+    override suspend fun recordRequestedNames(request: RequestedNameContext) {
+        context.dataStore.edit { prefs -> putRequestedNames(prefs, request) }
+    }
+
+    override suspend fun beginNameOnlyRetry(request: RequestedNameContext) {
+        context.dataStore.edit { prefs ->
+            putRequestedNames(prefs, request)
+            prefs[NAME_ONLY_RETRY_PENDING] = true
+            prefs[CREATION_STATE] = IdentityCreationState.USERNAME_REGISTERING.name
+            prefs.remove(CREATION_STATE_ERROR_MESSAGE)
+        }
+    }
+
+    override suspend fun pendingNameOnlyRetry(): PendingNameOnlyRetry? {
+        val prefs = data.first()
+        if (prefs[NAME_ONLY_RETRY_PENDING] != true) return null
+        val request = requestedNames() ?: return null
+        return PendingNameOnlyRetry(
+            request,
+            IdentityCreationState.valueOf(prefs[CREATION_STATE] ?: IdentityCreationState.NONE.name),
+            prefs[IDENTITY_ID]
+        )
+    }
+
+    override suspend fun finishNameOnlyRetry() {
+        context.dataStore.edit { prefs -> prefs.remove(NAME_ONLY_RETRY_PENDING) }
+    }
+
+    private fun putRequestedNames(prefs: MutablePreferences, request: RequestedNameContext) {
+        prefs[REQUESTED_NAMES_IDENTITY_ID] = request.identityIdBase58
+        prefs[REQUESTED_NAMES_USERNAME] = request.username
+        request.secondaryUsername?.let { prefs[REQUESTED_NAMES_USERNAME_SECONDARY] = it }
+            ?: prefs.remove(REQUESTED_NAMES_USERNAME_SECONDARY)
+    }
+
+    /** The record a recovery of [identityIdBase58] starts from; see [recoverySeedRecord]. */
+    suspend fun loadRecoverySeed(identityIdBase58: String, fromCreation: Boolean): BlockchainIdentityData? =
+        recoverySeedRecord(load(), requestedNames(), identityIdBase58, fromCreation)
 
     suspend fun clear() {
         log.info("clearing data")
