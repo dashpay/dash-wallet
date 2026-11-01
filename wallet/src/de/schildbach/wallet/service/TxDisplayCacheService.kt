@@ -157,7 +157,6 @@ class TxDisplayCacheService @Inject constructor(
 
     private sealed class TxDataSource {
         object Empty : TxDataSource()
-        class PrebuiltCache(val rows: List<HistoryRowView>) : TxDataSource()
         object RoomLive : TxDataSource()
     }
     private val _txDataSource = MutableStateFlow<TxDataSource>(TxDataSource.Empty)
@@ -184,10 +183,9 @@ class TxDisplayCacheService @Inject constructor(
     private var coinJoinWrapperFactory: CoinJoinTxWrapperFactory? = null
 
     /**
-     * Pre-built rows for the fast startup phase (from Room display cache).
-     * Set directly by the init coroutine so that the cacheAdapter always receives rows,
-     * even if the wallet-ready flow wins the serviceScope race and transitions
-     * _txDataSource to RoomLive before PrebuiltCache is set.
+     * Pre-built rows for the fast startup phase (from Room display cache). Set
+     * directly by the init coroutine, independently of [_txDataSource] — see
+     * that coroutine's own comment for why it owns only this flow.
      */
     private val _cachedRows = MutableStateFlow<List<HistoryRowView>>(emptyList())
     val cachedRows: StateFlow<List<HistoryRowView>> = _cachedRows.asStateFlow()
@@ -200,7 +198,6 @@ class TxDisplayCacheService @Inject constructor(
         .flatMapLatest { source ->
             when (source) {
                 is TxDataSource.Empty -> flowOf(PagingData.empty())
-                is TxDataSource.PrebuiltCache -> flowOf(PagingData.empty())
                 is TxDataSource.RoomLive -> {
                     Pager(
                         config = pagingConfig,
@@ -291,7 +288,12 @@ class TxDisplayCacheService @Inject constructor(
                 } else if (txDisplayCacheDao.getCount() > 0) {
                     _liveFilterFlag.value = filter.direction.toFilterFlag()
                     initializeFactoriesFromCache()
+                    // Re-assigning the RoomLive singleton does not emit from the StateFlow, so
+                    // the live Pager (still the previous wallet's) would otherwise keep running
+                    // with its captured filter — invalidate it explicitly, as the same-wallet
+                    // branch above does.
                     _txDataSource.value = TxDataSource.RoomLive
+                    _currentPagingSource.value?.invalidate()
                     _transactionsLoaded.value = true
                 } else {
                     rebuildWrappedList(filter)

@@ -329,8 +329,12 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         // becomes false — allowing showEmptyView() to fire correctly.
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.cachedRows.collect { rows ->
-                cacheHasRows = rows.isNotEmpty()
-                cacheAdapter.submitList(rows)
+                // cacheHasRows is read by other collectors (loadStateFlow, isBuildingCache) to
+                // decide whether rows are actually on screen. submitList()'s diff runs on a
+                // background thread before the RecyclerView is updated, so setting the flag here
+                // (rather than in the commit callback) could let one of those collectors see
+                // cacheHasRows = true while the cache adapter still shows zero items.
+                cacheAdapter.submitList(rows) { cacheHasRows = rows.isNotEmpty() }
                 // The startup snapshot can arrive after the live side has already taken over and
                 // settled on its own (possibly empty) answer — cacheAdapterAttached excludes that
                 // case so a late cache emission doesn't force showTransactionList() over a correctly
@@ -461,8 +465,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         // from scratch (no rows displayed yet). If rows are already visible, suppress the
         // overlay so the existing list stays on screen during background rebuilds.
         viewModel.isBuildingCache.observe(viewLifecycleOwner) { building ->
-            val hasRows = viewModel.transactionsLoaded.value &&
-                (liveAdapter.itemCount > 0 || (cacheAdapterAttached && cacheHasRows))
+            val hasRows = liveAdapter.itemCount > 0 || (cacheAdapterAttached && cacheHasRows)
             binding.loading.isVisible = building && !hasRows
             if (!building && pendingManualRefresh) {
                 pendingManualRefresh = false
