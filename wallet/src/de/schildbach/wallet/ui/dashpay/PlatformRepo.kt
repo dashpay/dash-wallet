@@ -557,4 +557,26 @@ class PlatformRepo @Inject constructor(
             ContestedUsernameFees.currentProtocolVersion
         }
     }
+
+    /**
+     * The protocol version the network reported, or null when it did not answer. A refresh that fails
+     * still returns a number, the SDK's starting version (13 on mainnet and testnet), so the version
+     * counts only after a proven query for [identityId] succeeds: its verified response sets it.
+     */
+    suspend fun readProtocolVersion(identityId: Identifier): Int? {
+        return withContext(Dispatchers.IO) {
+            try {
+                platform.client.getPlatformTime(identityId)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                log.warn("unable to read the platform protocol version", e)
+                return@withContext null
+            }
+            platform.client.getProtocolVersion().also {
+                ContestedUsernameFees.updateProtocolVersion(it)
+                log.info("platform protocol version: {}", it)
+            }
+        }
+    }
 }

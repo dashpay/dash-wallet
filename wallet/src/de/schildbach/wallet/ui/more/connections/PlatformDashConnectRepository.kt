@@ -32,7 +32,8 @@ class PlatformDashConnectRepository @Inject constructor(
     companion object { const val KEY_EXCHANGE_CONTRACT_ID = AppConnectSession.RESPONSE_CONTRACT }
     private val session = AppConnectSession(platform, platformRepo, identityRepository, config)
 
-    override suspend fun isAvailable(): Boolean? = ConnectAvailability.isAvailable(platformRepo)
+    override suspend fun isAvailable(): Boolean? =
+        ConnectAvailability.isAvailable(platformRepo, identityRepository.blockchainIdentity?.uniqueIdentifier)
 
     override fun observeConnections(): Flow<List<DAppConnection>> = observeConnections(System::currentTimeMillis)
 
@@ -197,7 +198,7 @@ class PlatformDashConnectRepository @Inject constructor(
         AppDisplay("\"${qrLabel.ifBlank { "Unknown app" }}\"", "")
 
     private suspend fun checkNetwork() {
-        val available = ConnectAvailability.isAvailable(platformRepo)
+        val available = isAvailable()
         checkNotNull(available) { ConnectAvailability.VERSION_UNKNOWN_ERROR }
         check(available) { ConnectAvailability.VERSION_TOO_OLD_ERROR }
     }

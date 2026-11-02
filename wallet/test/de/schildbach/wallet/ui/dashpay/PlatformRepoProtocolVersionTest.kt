@@ -71,6 +71,33 @@ class PlatformRepoProtocolVersionTest {
         Unit
     }
 
+    @Test
+    fun readProtocolVersion_ignoresTheStartingVersionWhenTheNetworkDoesNotAnswer() = runBlocking {
+        val identityId = org.dashj.platform.dpp.identifier.Identifier.from(ByteArray(32) { 7 })
+        // Offline, the SDK keeps and reports its per-network starting version (13 on testnet).
+        every { platform.client.refreshProtocolVersion() } returns 13
+        every { platform.client.getProtocolVersion() } returns 13
+        every { platform.client.getPlatformTime(identityId) } throws IllegalStateException("offline")
+        assertNull(repository.readProtocolVersion(identityId))
+        assertEquals(0, ContestedUsernameFees.protocolVersions.value)
+    }
+
+    @Test
+    fun readProtocolVersion_returnsTheVersionAProvenQuerySet() = runBlocking {
+        val identityId = org.dashj.platform.dpp.identifier.Identifier.from(ByteArray(32) { 7 })
+        every { platform.client.getPlatformTime(identityId) } returns 1_000L
+        every { platform.client.getProtocolVersion() } returns 14
+        assertEquals(14, repository.readProtocolVersion(identityId))
+        assertEquals(14, ContestedUsernameFees.protocolVersions.value)
+    }
+
+    @Test(expected = CancellationException::class)
+    fun readProtocolVersion_rethrowsCancellation() = runBlocking {
+        every { platform.client.getPlatformTime(any()) } throws CancellationException("cancelled")
+        repository.readProtocolVersion(org.dashj.platform.dpp.identifier.Identifier.from(ByteArray(32) { 7 }))
+        Unit
+    }
+
     @Test fun encryptedWalletWithoutPasswordDoesNotDeriveAKey() {
         val wallet = mockk<org.bitcoinj.wallet.WalletEx>(relaxed = true)
         val crypter = mockk<org.bitcoinj.crypto.KeyCrypter>(relaxed = true)

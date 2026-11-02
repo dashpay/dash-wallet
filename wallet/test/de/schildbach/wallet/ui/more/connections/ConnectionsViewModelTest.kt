@@ -81,6 +81,7 @@ class ConnectionsViewModelTest {
         if (::model.isInitialized) model.viewModelScope.cancel()
         applicationScope.cancel()
         Constants.SUPPORTS_PLATFORM = originalSupportsPlatform
+        ConnectAvailability.resetForTest()
         Dispatchers.resetMain()
     }
 
@@ -98,6 +99,18 @@ class ConnectionsViewModelTest {
         dispatcher.scheduler.runCurrent()
         assertEquals(2, reads)
         assertFalse(model.uiState.value.featureUnavailable)
+    }
+
+    @Test fun `a wallet without a username is offered one before the version is read`() {
+        model.viewModelScope.cancel()
+        // The version is read with the identity, so without one it cannot be read.
+        coEvery { repository.isAvailable() } returns null
+        every { identityConfig.observeIdentityPresence() } returns MutableStateFlow(false)
+        model = ConnectionsViewModel(repository, identities, applicationScope, availability())
+        dispatcher.scheduler.runCurrent()
+        assertEquals(ConnectionRecordsStatus.NO_IDENTITY, model.uiState.value.recordsStatus)
+        assertFalse(model.uiState.value.featureUnavailable)
+        coVerify(exactly = 0) { repository.isAvailable() }
     }
 
     private fun assertUnsupportedRequestRejected(openedFromUrl: Boolean, purchase: Boolean) {
@@ -782,7 +795,7 @@ class ConnectionsViewModelTest {
         val platform = mockk<de.schildbach.wallet.service.platform.PlatformService>(relaxed = true)
         val wallet = mockk<de.schildbach.wallet.ui.dashpay.PlatformRepo>(relaxed = true)
         every { wallet.walletApplication.wallet!!.watchingKey.pubKey } returns ByteArray(33) { 1 }
-        coEvery { wallet.refreshProtocolVersion() } returns ConnectAvailability.MIN_PROTOCOL_VERSION
+        coEvery { wallet.readProtocolVersion(any()) } returns ConnectAvailability.MIN_PROTOCOL_VERSION
         val config = mockk<DashConnectConfig>()
         val scope = AppConnectSession(platform, wallet, identities, config).scope()
         val record = org.json.JSONObject().put("scope", scope).put("app", "app").put("state", "active")

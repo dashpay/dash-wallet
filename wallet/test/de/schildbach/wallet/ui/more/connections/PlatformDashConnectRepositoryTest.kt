@@ -18,13 +18,13 @@
 package de.schildbach.wallet.ui.more.connections
 
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.service.platform.ContestedUsernameFees
 import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.PlatformService
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.more.connections.protocol.DashConnectUriException
 import de.schildbach.wallet.ui.more.connections.protocol.DashConnectUri
 import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import org.bitcoinj.core.Base58
@@ -60,12 +60,16 @@ class PlatformDashConnectRepositoryTest {
     fun setup() {
         // Platform support depends on the device ABI, which a plain JVM test does not report.
         Constants.SUPPORTS_PLATFORM = true
-        coEvery { platformRepo.refreshProtocolVersion() } returns ConnectAvailability.MIN_PROTOCOL_VERSION
+        ConnectAvailability.resetForTest()
+        every { identityRepository.blockchainIdentity?.uniqueIdentifier } returns
+            org.dashj.platform.dpp.identifier.Identifier.from(ByteArray(32) { 7 })
+        coEvery { platformRepo.readProtocolVersion(any()) } returns ConnectAvailability.MIN_PROTOCOL_VERSION
     }
 
     @After
     fun teardown() {
         Constants.SUPPORTS_PLATFORM = originalSupportsPlatform
+        ConnectAvailability.resetForTest()
     }
 
     private fun appPublicKey(): ByteArray =
@@ -152,8 +156,7 @@ class PlatformDashConnectRepositoryTest {
     @Test
     fun parseQr_refusesWhilePlatformIsBelowProtocol14() {
         assumeTrue("testnet-only feature", Constants.IS_TESTNET_BUILD)
-        ContestedUsernameFees.reset()
-        coEvery { platformRepo.refreshProtocolVersion() } returns 13
+        coEvery { platformRepo.readProtocolVersion(any()) } returns 13
         val error = assertThrows(IllegalStateException::class.java) {
             runBlocking { repository.parseQr(testnetKeyUri()) }
         }
@@ -163,9 +166,8 @@ class PlatformDashConnectRepositoryTest {
     @Test
     fun parseQr_asksToRetryWhenThePlatformVersionCannotBeRead() {
         assumeTrue("testnet-only feature", Constants.IS_TESTNET_BUILD)
-        ContestedUsernameFees.reset()
-        // A failed lookup leaves the version unread.
-        coEvery { platformRepo.refreshProtocolVersion() } returns 0
+        // The network did not answer, so the SDK's starting version was never confirmed.
+        coEvery { platformRepo.readProtocolVersion(any()) } returns null
         val error = assertThrows(IllegalStateException::class.java) {
             runBlocking { repository.parseQr(testnetKeyUri()) }
         }

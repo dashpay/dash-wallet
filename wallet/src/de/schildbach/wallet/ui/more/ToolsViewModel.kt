@@ -28,8 +28,8 @@ import de.schildbach.wallet.database.dao.BlockchainStateDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.transactions.TaxBitExporter
-import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.more.connections.ConnectAvailability
+import de.schildbach.wallet.ui.more.connections.DashConnectRepository
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -71,7 +71,7 @@ class ToolsViewModel @Inject constructor(
     private val dashPayConfig: DashPayConfig,
     private val identityConfig: BlockchainIdentityConfig,
     private val analyticsService: AnalyticsService,
-    private val platformRepo: PlatformRepo
+    private val connectRepository: DashConnectRepository
 ) : ViewModel() {
 
     sealed class ExportCsvResult {
@@ -123,7 +123,7 @@ class ToolsViewModel @Inject constructor(
      */
     fun refreshConnectionsAvailability() {
         if (ConnectAvailability.isSupported && !_uiState.value.connectionsAvailable) {
-            viewModelScope.launch { ConnectAvailability.isAvailable(platformRepo) }
+            viewModelScope.launch { connectRepository.isAvailable() }
         }
     }
 

@@ -54,7 +54,7 @@ class AppConnectOwnershipTest {
         every { identities.blockchainIdentity!!.uniqueIdentifier } returns identityId
         every { identity.id } returns identityId
         every { service.platform.client.getIdentity(any(), true) } returns identity
-        every { service.platform.client.refreshProtocolVersion() } returns 14
+        every { service.platform.client.getProtocolVersion() } returns 14
         every { service.platform.client.getPlatformTime(any()) } returns System.currentTimeMillis()
         every { app.ownerId } returns owner
         every { app.requiresIdentityEncryptionBoundedKey } returns true
@@ -112,6 +112,14 @@ class AppConnectOwnershipTest {
         }
     }
 
+    @Test fun `a version the network did not confirm cannot pass for protocol 14`() {
+        // A failed refresh returns the SDK's starting version; only a proven read sets the one checked here.
+        every { service.platform.client.refreshProtocolVersion() } returns 14
+        every { service.platform.client.getProtocolVersion() } returns 13
+        val error = assertThrows(IllegalStateException::class.java) { runBlocking { session.prepare(request) } }
+        assertEquals(ConnectAvailability.VERSION_TOO_OLD_ERROR, error.message)
+    }
+
     @Test fun `restart restores omitted grant selection before enforcing expiry`() = runBlocking {
         val start = System.currentTimeMillis()
         every { service.platform.client.getPlatformTime(any()) } returns start
@@ -164,7 +172,7 @@ class AppConnectOwnershipTest {
         assertThrows(de.schildbach.wallet.ui.more.connections.protocol.DashConnectUriException::class.java) {
             plan.requireMatches(legacy)
         }
-        verify(exactly = 0) { service.platform.client.refreshProtocolVersion() }
+        verify(exactly = 0) { service.platform.client.getProtocolVersion() }
         verify(exactly = 0) { service.platform.client.getIdentity(any(), any()) }
         coVerify(exactly = 0) { repo.getWalletEncryptionKey() }
         coVerify(exactly = 0) { repo.getWalletSeed() }
@@ -319,9 +327,9 @@ class AppConnectOwnershipTest {
         assertThrows(IllegalStateException::class.java) {
             runBlocking { session.prepare(request.copy(contractId = Base58.decode(AppConnectSession.RESPONSE_CONTRACT))) }
         }
-        every { service.platform.client.refreshProtocolVersion() } returns 13
+        every { service.platform.client.getProtocolVersion() } returns 13
         assertThrows(IllegalStateException::class.java) { runBlocking { session.prepare(request) } }
-        every { service.platform.client.refreshProtocolVersion() } returns 14
+        every { service.platform.client.getProtocolVersion() } returns 14
         assertThrows(IllegalStateException::class.java) {
             runBlocking { session.prepare(request.copy(appConnect = request.appConnect!!.copy(identityHint = ByteArray(32)))) }
         }

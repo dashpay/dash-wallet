@@ -239,17 +239,6 @@ class ConnectionsViewModel @Inject constructor(
             return
         }
         connectionsJob = viewModelScope.launch {
-            // An unreadable version is not proof the network is too old: it leaves the screen retryable.
-            val available = try { repository.isAvailable() } catch (error: Exception) {
-                if (error is CancellationException) throw error
-                log.warn("Cannot read the Platform protocol version", error)
-                null
-            }
-            _uiState.update { it.copy(featureUnavailable = available == false) }
-            if (available != true) {
-                _uiState.update { it.copy(recordsStatus = ConnectionRecordsStatus.UNAVAILABLE) }
-                return@launch
-            }
             identityAvailability.observe().collectLatest { availability ->
                 kotlin.coroutines.coroutineContext.ensureActive()
                 _uiState.update { it.copy(recordsStatus = ConnectionRecordsStatus.LOADING, connections = emptyList()) }
@@ -263,7 +252,22 @@ class ConnectionsViewModel @Inject constructor(
                         _uiState.update { it.copy(recordsStatus = ConnectionRecordsStatus.UNAVAILABLE) }
                         return@collectLatest
                     }
-                    ConnectIdentityStatus.AVAILABLE -> loadSharedProfileKeys()
+                    ConnectIdentityStatus.AVAILABLE -> {
+                        // The version is read with the identity. An unread one is not proof the network
+                        // is too old: it leaves the screen retryable.
+                        val available = try { repository.isAvailable() } catch (error: Exception) {
+                            if (error is CancellationException) throw error
+                            log.warn("Cannot read the Platform protocol version", error)
+                            null
+                        }
+                        kotlin.coroutines.coroutineContext.ensureActive()
+                        _uiState.update { it.copy(featureUnavailable = available == false) }
+                        if (available != true) {
+                            _uiState.update { it.copy(recordsStatus = ConnectionRecordsStatus.UNAVAILABLE) }
+                            return@collectLatest
+                        }
+                        loadSharedProfileKeys()
+                    }
                 }
                 try {
                     // Keep rows and availability in this cancellable observation, not separate buffered consumers.
@@ -296,17 +300,21 @@ class ConnectionsViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 check(Constants.SUPPORTS_PLATFORM) { "App Connect is unavailable on this device" }
-                when (repository.isAvailable()) {
-                    true -> {}
+                fun requireAvailable(available: Boolean?) = when (available) {
+                    true, null -> {}
                     false -> {
                         _uiState.update { it.copy(featureUnavailable = true) }
                         error(ConnectAvailability.VERSION_TOO_OLD_ERROR)
                     }
-                    null -> error(ConnectAvailability.VERSION_UNKNOWN_ERROR)
                 }
+                // A known answer needs no identity; the version is read with one, so an unread one waits for it.
+                val known = repository.isAvailable().also(::requireAvailable)
                 uiState.first { it.recordsStatus != ConnectionRecordsStatus.LOADING }
                 // Without a username the screen offers to create one, which is the answer to this request.
                 if (_uiState.value.recordsStatus == ConnectionRecordsStatus.NO_IDENTITY) return@launch
+                if (known == null) {
+                    checkNotNull(repository.isAvailable().also(::requireAvailable)) { ConnectAvailability.VERSION_UNKNOWN_ERROR }
+                }
                 // Keep the URI in this pending coroutine until local identity loading finishes.
                 // A completed load with no identity is handled by the normal preparation error.
                 identityRepository.initializationResult.filterNotNull().first().getOrThrow()
