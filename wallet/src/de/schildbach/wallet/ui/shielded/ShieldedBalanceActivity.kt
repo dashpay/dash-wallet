@@ -35,6 +35,7 @@ import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet.ui.more.MoreFragment
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.launch
+import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.ui.components.DashWalletTheme
 import javax.inject.Inject
@@ -204,19 +205,18 @@ class ShieldedBalanceActivity : LockScreenActivity() {
     }
 
     /**
-     * PIN/biometric first, then the spend. A dismissed or failed
-     * authentication simply returns — the confirm sheet stays open and
-     * nothing is submitted. The spend amount is resolved HERE, before the
-     * (possibly long) authentication wait, and threaded through to
-     * [ShieldedTransferViewModel.onConfirm] — not re-read afterwards, since
-     * a Max-pinned amount tracks the live balance and could otherwise drift
-     * from what the user actually authorized.
+     * PIN/biometric first, then the spend — delegates to
+     * [captureAuthenticateAndSubmit] (same seam a unit test drives without an
+     * Activity/Hilt) so the capture-before-authenticate contract is covered
+     * off-device.
      */
     private fun authenticateAndConfirmTransfer() {
-        val confirmedAmount = transferViewModel.uiState.value.amount
         lifecycleScope.launch {
-            securityFunctions.authenticate(this@ShieldedBalanceActivity) ?: return@launch
-            transferViewModel.onConfirm(confirmedAmount)
+            captureAuthenticateAndSubmit(
+                capture = { transferViewModel.uiState.value.amount },
+                authenticate = { securityFunctions.authenticate(this@ShieldedBalanceActivity) != null },
+                submit = transferViewModel::onConfirm
+            )
         }
     }
 
@@ -273,4 +273,25 @@ class ShieldedBalanceActivity : LockScreenActivity() {
             Intent.createChooser(intent, getString(R.string.shielded_share_address))
         )
     }
+}
+
+/**
+ * The capture → authenticate → submit sequence behind
+ * [ShieldedBalanceActivity.authenticateAndConfirmTransfer], pulled out as a pure
+ * seam so the snapshot contract is unit-testable without an Activity/Hilt:
+ * [capture] resolves the spend amount BEFORE [authenticate]'s (possibly long)
+ * PIN/biometric wait, and that captured value — never a live re-read — is what
+ * reaches [submit]. A Max-pinned amount tracks the live balance, so re-reading
+ * it after authentication could silently submit more or less than the user
+ * actually authorized. [authenticate] returns false for a dismissed or failed
+ * prompt, in which case nothing is submitted.
+ */
+internal suspend fun captureAuthenticateAndSubmit(
+    capture: () -> Dash,
+    authenticate: suspend () -> Boolean,
+    submit: (Dash) -> Unit
+) {
+    val confirmedAmount = capture()
+    if (!authenticate()) return
+    submit(confirmedAmount)
 }
