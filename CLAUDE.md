@@ -11,7 +11,7 @@ Dash Wallet is an Android application for the Dash cryptocurrency. This is a mul
 - **wallet/**: Main Android wallet application (Kotlin/Java)
 - **common/**: Shared components used across modules
 - **features/exploredash/**: Explore Dash feature module
-- **integrations/**: Third-party service integrations (Uphold, Coinbase, Crowdnode)
+- **integrations/**: Third-party service integrations (Uphold, Coinbase, Maya)
 - **integration-android/**: Library for integrating Dash payments into other apps
 - **sample-integration-android/**: Example integration app
 - **market/**: App store materials

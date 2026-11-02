@@ -53,12 +53,10 @@ import org.bitcoinj.crypto.IKey
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.protocols.payments.PaymentProtocol
 import org.bitcoinj.protocols.payments.PaymentProtocolException.InvalidPaymentRequestURL
-import org.bitcoinj.script.ScriptException
 import org.bitcoinj.wallet.*
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.payments.parsers.DashPaymentIntentParser
 import org.dash.wallet.common.services.DirectPayException
-import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.PaymentRecoveryMetadata
 import org.dash.wallet.common.services.PaymentSubmissionPendingException
 import org.dash.wallet.common.services.SendPaymentService
@@ -164,13 +162,11 @@ class SendCoinsTaskRunner @Inject constructor(
     suspend fun findUnresolvedSubmission(paymentRequestHash: ByteArray?): Sha256Hash? =
         pendingPaymentVerifier.unresolvedSubmissionFor(paymentRequestHash?.let { Constants.HEX.encode(it) })
 
-    @Throws(LeftoverBalanceException::class)
     override suspend fun sendCoins(
         address: Address,
         amount: Coin,
         coinSelector: CoinSelector?,
         emptyWallet: Boolean,
-        checkBalanceConditions: Boolean,
         beforeSending: Consumer<Transaction>?,
         canSendLockedOutput: Predicate<TransactionOutput>?
     ): Transaction {
@@ -180,16 +176,10 @@ class SendCoinsTaskRunner @Inject constructor(
         val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
         Context.propagate(wallet.context)
 
-        if (checkBalanceConditions && !wallet.isAddressMine(address)) {
-            // This can throw LeftoverBalanceException
-            walletData.checkSendingConditions(address, amount)
-        }
-
         val sendRequest =
             createSendRequest(address, amount, coinSelector, emptyWallet, canSendLockedOutput = canSendLockedOutput)
         return sendCoins(
             sendRequest,
-            checkBalanceConditions = false,
             beforeSending = beforeSending
         )
     }
@@ -274,7 +264,7 @@ class SendCoinsTaskRunner @Inject constructor(
 
     override suspend fun sendTransaction(sendRequest: SendRequest): Transaction {
         pendingPaymentVerifier.awaitRestored()
-        return sendCoins(sendRequest, txCompleted = true, checkBalanceConditions = false)
+        return sendCoins(sendRequest, txCompleted = true)
     }
 
     /**
@@ -588,10 +578,10 @@ class SendCoinsTaskRunner @Inject constructor(
         // replacement that passes the readiness barrier precisely because the wipe emptied the
         // pending store. maybeCommitTx does not check whose transaction it is given.
         val sent = try {
-            sendCoins(sendRequest, txCompleted = true, checkBalanceConditions = true, originWallet = wallet)
+            sendCoins(sendRequest, txCompleted = true, originWallet = wallet)
         } catch (e: Exception) {
             // Committing locally can still fail, and several of those failures land before
-            // maybeCommitTx: a leftover-balance check, verification, the database. The payment is
+            // maybeCommitTx: verification, the database. The payment is
             // out there regardless, so this is not a failure to report as one. Reporting it as
             // such would send callers down their cleanup path and delete the order they recorded
             // before sending, leaving the watch to commit an acknowledged purchase with nothing
@@ -881,11 +871,9 @@ class SendCoinsTaskRunner @Inject constructor(
         MaxOutputAmountCoinSelector()
     }
 
-    @Throws(LeftoverBalanceException::class)
     suspend fun sendCoins(
         sendRequest: SendRequest,
         txCompleted: Boolean = false,
-        checkBalanceConditions: Boolean = true,
         beforeSending: Consumer<Transaction>? = null,
         serviceName: String? = null,
         originWallet: Wallet? = null
@@ -913,10 +901,6 @@ class SendCoinsTaskRunner @Inject constructor(
             } catch (e: Exception) {
                 log.error("Failed to dump thread traces during executeDryrun", e)
             }
-        }
-
-        if (checkBalanceConditions) {
-            checkBalanceConditions(wallet, sendRequest.tx)
         }
 
         try {
@@ -1016,23 +1000,6 @@ class SendCoinsTaskRunner @Inject constructor(
             }
         }
         return false
-    }
-
-    @Throws(LeftoverBalanceException::class)
-    private fun checkBalanceConditions(wallet: Wallet, tx: Transaction) {
-        for (output in tx.outputs) {
-            try {
-                if (!output.isMine(wallet)) {
-                    val script = output.scriptPubKey
-                    val address = script.getToAddress(
-                        de.schildbach.wallet.Constants.NETWORK_PARAMETERS,
-                        true
-                    )
-                    walletData.checkSendingConditions(address, output.value)
-                    return
-                }
-            } catch (ignored: ScriptException) { }
-        }
     }
 
     private fun buildOkHttpPaymentRequest(requestUrl: String): Request {

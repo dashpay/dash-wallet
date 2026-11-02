@@ -779,15 +779,6 @@ class DashSpendViewModel @Inject constructor(
         giftCardDao.insertGiftCards(giftCard)
     }
 
-    fun needsCrowdNodeWarning(dashAmount: Coin): Boolean {
-        return try {
-            walletDataProvider.checkSendingConditions(null, dashAmount)
-            false
-        } catch (_: LeftoverBalanceException) {
-            true
-        }
-    }
-
     fun setIsFixedDenomination(isFixed: Boolean?) {
         _isFixedDenomination.value = isFixed
     }

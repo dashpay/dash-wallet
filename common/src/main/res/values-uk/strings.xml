@@ -152,4 +152,5 @@
     <string name="send_coins_error_msg">Проблема з відправкою монет!</string>
     <string name="from_dash_wallet_on_this_device">З Dash Wallet на цьому пристрої</string>
     <string name="preposition_at">в</string>
-    </resources>
+    <string name="scan_qr">Сканувати QR</string>
+</resources>

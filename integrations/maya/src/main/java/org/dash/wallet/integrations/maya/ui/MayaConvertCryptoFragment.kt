@@ -42,7 +42,6 @@ import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
-import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.safeNavigate
@@ -618,13 +617,13 @@ class MayaConvertCryptoFragment : Fragment() {
 
     // ── Swap flow (unchanged from the view-based implementation) ─────────────────
 
-    private fun proceedWithSwap(request: SwapRequest, checkSendingConditions: Boolean = true) {
+    private fun proceedWithSwap(request: SwapRequest) {
         if (request.cryptoAmount == null && request.amount != null) {
             showSwapValueErrorView(SwapValueErrorType.ExchangeRateMissing)
             return
         }
 
-        val swapValueErrorType = convertViewModel.checkEnteredAmountValue(checkSendingConditions)
+        val swapValueErrorType = convertViewModel.checkEnteredAmountValue()
         lifecycleScope.launch {
             if (swapValueErrorType == SwapValueErrorType.NOError) {
                 if (!request.dashToCrypto && convertViewModel.dashToCrypto.value == true) {
@@ -653,23 +652,9 @@ class MayaConvertCryptoFragment : Fragment() {
             SwapValueErrorType.NotEnoughBalance -> getString(R.string.you_dont_have_enough_balance)
             SwapValueErrorType.UnAuthorizedValue -> getString(R.string.auth_limit_description)
             SwapValueErrorType.ExchangeRateMissing -> getString(R.string.exchange_rate_not_found)
-            SwapValueErrorType.SendingConditionsUnmet -> {
-                showMinimumBalanceWarning()
-                null
-            }
             else -> null
         }
         setInlineError(errorMessage)
-    }
-
-    private fun showMinimumBalanceWarning() {
-        MinimumBalanceDialog().show(requireActivity()) { isOkToContinue ->
-            val request = convertViewModel.onContinueEvent.value
-
-            if (isOkToContinue == true && request != null) {
-                proceedWithSwap(request, false)
-            }
-        }
     }
 
     private fun maxAmountErrorMessage(): String? {

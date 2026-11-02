@@ -29,7 +29,6 @@ import org.bitcoinj.wallet.CoinSelector
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.bitcoinj.wallet.authentication.AuthenticationKeyUsage
-import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.common.transactions.TransactionWrapperFactory
 import org.dash.wallet.common.transactions.filters.TransactionFilter
@@ -79,9 +78,6 @@ interface WalletDataProvider {
     fun detachOnWalletWipedListener(listener: suspend () -> Unit)
 
     fun processDirectTransaction(tx: Transaction)
-
-    @Throws(LeftoverBalanceException::class)
-    fun checkSendingConditions(address: Address?, amount: Coin)
 
     fun observeMostRecentTransaction(): Flow<Transaction>
     fun observeMixedBalance(): Flow<Coin>

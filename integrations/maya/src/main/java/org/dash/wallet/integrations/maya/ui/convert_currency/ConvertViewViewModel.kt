@@ -34,7 +34,6 @@ import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
-import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.Constants
@@ -320,7 +319,7 @@ class ConvertViewViewModel @Inject constructor(
         validSwapValue.call()
     }
 
-    fun checkEnteredAmountValue(checkSendingConditions: Boolean): SwapValueErrorType {
+    fun checkEnteredAmountValue(): SwapValueErrorType {
         val coin = try {
             if (dashToCrypto.value == true) {
                 Coin.parseCoin(maxForDashWalletAmount.replace(',', '.'))
@@ -339,9 +338,6 @@ class ConvertViewViewModel @Inject constructor(
                 it.isLessThan(minAllowedSwapDashCoin) -> SwapValueErrorType.LessThanMin
                 it.isGreaterThan(coin) -> SwapValueErrorType.MoreThanMax.apply {
                     amount = maxCoinBaseAccountAmount
-                }
-                checkSendingConditions && !doesMeetSendingConditions(it) -> {
-                    SwapValueErrorType.SendingConditionsUnmet
                 }
                 else -> SwapValueErrorType.NOError
             }
@@ -481,20 +477,6 @@ class ConvertViewViewModel @Inject constructor(
         savedStateHandle[KEY_AMOUNT] = amount.copy()
         maxAmountSelected = true
         updateAmounts()
-    }
-
-    private fun doesMeetSendingConditions(value: Coin): Boolean {
-        if (dashToCrypto.value != true) {
-            // No need to check
-            return true
-        }
-
-        return try {
-            walletDataProvider.checkSendingConditions(null, value)
-            true
-        } catch (ex: LeftoverBalanceException) {
-            false
-        }
     }
 
     private fun logEnteredAmountCurrency(inputType: CurrencyInputType) {

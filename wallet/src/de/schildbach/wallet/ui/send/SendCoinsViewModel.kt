@@ -239,8 +239,7 @@ class SendCoinsViewModel @Inject constructor(
 
     suspend fun signAndSendPayment(
         editedAmount: Coin,
-        exchangeRate: ExchangeRate?,
-        checkBalance: Boolean
+        exchangeRate: ExchangeRate?
     ): Transaction = withContext(Dispatchers.IO) {
         Context.propagate(wallet.context)
         _state.postValue(State.SENDING)
@@ -264,7 +263,7 @@ class SendCoinsViewModel @Inject constructor(
             finalSendRequest.memo = basePaymentIntent.memo
             finalSendRequest.exchangeRate = exchangeRate
             Context.propagate(wallet.context)
-            sendCoinsTaskRunner.sendCoins(finalSendRequest, checkBalanceConditions = checkBalance)
+            sendCoinsTaskRunner.sendCoins(finalSendRequest)
         } catch (ex: Exception) {
             _state.postValue(State.FAILED)
             throw ex
@@ -277,7 +276,6 @@ class SendCoinsViewModel @Inject constructor(
     suspend fun signAndSendAssetLock(
         editedAmount: Coin,
         exchangeRate: ExchangeRate?,
-        checkBalance: Boolean,
         key: ECKey,
         emptyWallet: Boolean
     ): Transaction = withContext(Dispatchers.IO) {
@@ -325,7 +323,7 @@ class SendCoinsViewModel @Inject constructor(
                 }
             }
 
-            sendCoinsTaskRunner.sendCoins(finalSendRequest, checkBalanceConditions = checkBalance)
+            sendCoinsTaskRunner.sendCoins(finalSendRequest)
         } catch (ex: Exception) {
             _state.postValue(State.FAILED)
             throw ex

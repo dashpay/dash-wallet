@@ -17,21 +17,15 @@
 
 package de.schildbach.wallet.payments;
 
-import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.InsufficientMoneyException;
 import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.crypto.KeyCrypterException;
-import org.bitcoinj.script.Script;
-import org.bitcoinj.script.ScriptException;
 import org.bitcoinj.wallet.SendRequest;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.Wallet.CompletionException;
 import org.bitcoinj.wallet.Wallet.CouldNotAdjustDownwards;
-import org.dash.wallet.common.WalletDataProvider;
-import org.dash.wallet.common.services.LeftoverBalanceException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,14 +34,11 @@ import de.schildbach.wallet.Constants;
 import android.os.Handler;
 import android.os.Looper;
 
-import androidx.annotation.NonNull;
-
 /**
  * @author Andreas Schildbach
  */
 public abstract class SendCoinsOfflineTask {
     private final Wallet wallet;
-    private final WalletDataProvider walletData;
     private final Handler backgroundHandler;
     private final Handler callbackHandler;
 
@@ -55,28 +46,21 @@ public abstract class SendCoinsOfflineTask {
 
     public SendCoinsOfflineTask(
             final Wallet wallet,
-            final WalletDataProvider walletData,
             final Handler backgroundHandler
     ) {
         this.wallet = wallet;
-        this.walletData = walletData;
         this.backgroundHandler = backgroundHandler;
         this.callbackHandler = new Handler(Looper.myLooper());
     }
 
     public final void sendCoinsOffline(
             final SendRequest sendRequest,
-            final boolean txAlreadyCompleted,
-            final boolean checkBalanceConditions
+            final boolean txAlreadyCompleted
     ) {
         backgroundHandler.post(() -> {
             org.bitcoinj.core.Context.propagate(Constants.CONTEXT);
 
             try {
-                if (checkBalanceConditions) {
-                    checkBalanceConditions(sendRequest.tx);
-                }
-
                 log.info("sending: {}", sendRequest);
                 if (txAlreadyCompleted) {
                     wallet.commitTx(sendRequest.tx);
@@ -86,9 +70,6 @@ public abstract class SendCoinsOfflineTask {
                 final Transaction transaction = sendRequest.tx;
                 log.info("send successful, transaction committed: {}", transaction.getTxId().toString());
                 callbackHandler.post(() -> onSuccess(transaction));
-            } catch (final LeftoverBalanceException ex) {
-                log.info("send failed due to leftover balance check");
-                callbackHandler.post(() -> onLeftoverBalanceError(ex));
             } catch (final InsufficientMoneyException x) {
                 final Coin missing = x.missing;
                 if (missing != null)
@@ -123,8 +104,6 @@ public abstract class SendCoinsOfflineTask {
 
     protected abstract void onInsufficientMoney(Coin missing);
 
-    protected abstract void onLeftoverBalanceError(@NonNull LeftoverBalanceException ex);
-
     protected abstract void onInvalidEncryptionKey();
 
     protected void onEmptyWalletFailed() {
@@ -132,17 +111,4 @@ public abstract class SendCoinsOfflineTask {
     }
 
     protected abstract void onFailure(Exception exception);
-
-    private void checkBalanceConditions(Transaction tx) throws LeftoverBalanceException {
-        for (TransactionOutput output : tx.getOutputs()) {
-            try {
-                if (!output.isMine(wallet)) {
-                    final Script script = output.getScriptPubKey();
-                    Address address = script.getToAddress(Constants.NETWORK_PARAMETERS, true);
-                    walletData.checkSendingConditions(address, output.getValue());
-                    return;
-                }
-            } catch (final ScriptException ignored) { }
-        }
-    }
 }

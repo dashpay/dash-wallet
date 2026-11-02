@@ -48,10 +48,8 @@ import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.MonetaryFormat
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.services.AuthenticationManager
-import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
-import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
 import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.common.ui.viewBinding
@@ -237,7 +235,7 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         updateView()
     }
 
-    private suspend fun handleGo(checkBalance: Boolean, autoAcceptContactRequest: Boolean) {
+    private suspend fun handleGo(autoAcceptContactRequest: Boolean) {
         if (viewModel.dryrunSendRequest == null) {
             log.error("illegal state dryrunSendRequest == null")
             return
@@ -256,17 +254,8 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
                     viewModel.logEvent(AnalyticsConstants.SendReceive.ENTER_AMOUNT_MAX)
                 }
 
-                val tx = viewModel.signAndSendPayment(editedAmount, exchangeRate, checkBalance)
+                val tx = viewModel.signAndSendPayment(editedAmount, exchangeRate)
                 onSignAndSendPaymentSuccess(tx, autoAcceptContactRequest)
-            } catch (ex: LeftoverBalanceException) {
-                if (!isAdded) {
-                    return
-                }
-                val shouldContinue = MinimumBalanceDialog().showAsync(requireActivity())
-
-                if (shouldContinue == true) {
-                    handleGo(false, autoAcceptContactRequest)
-                }
             } catch (ex: Exception) {
                 viewModel.logSendError(args.paymentIntent.source)
                 log.info("send exception: ", ex)
@@ -332,7 +321,7 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         )
 
         if (confirmed == true) {
-            handleGo(true, dialog.autoAcceptContactRequest)
+            handleGo(dialog.autoAcceptContactRequest)
         }
     }
 
