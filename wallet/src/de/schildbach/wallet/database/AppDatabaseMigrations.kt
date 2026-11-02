@@ -278,7 +278,7 @@ class AppDatabaseMigrations {
         val removeCrowdNodeCacheRows = object : RoomDatabase.Callback() {
             override fun onOpen(db: SupportSQLiteDatabase) {
                 val hasCrowdNodeRows = db.query(
-                    "SELECT 1 FROM `tx_group_cache` WHERE `wrapperType` = 'crowdnode' " +
+                    "SELECT 1 FROM `tx_group_cache` WHERE `groupId` = 'crowdnode' " +
                         "UNION ALL SELECT 1 FROM `tx_display_cache` WHERE `rowId` = 'crowdnode' LIMIT 1"
                 ).use { it.moveToFirst() }
                 if (hasCrowdNodeRows) {

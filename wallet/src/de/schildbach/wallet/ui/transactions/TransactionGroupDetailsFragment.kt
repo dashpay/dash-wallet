@@ -58,7 +58,7 @@ class TransactionGroupDetailsFragment() : OffsetDialogFragment(R.layout.transact
             is CoinJoinMixingTxSet -> {
                 binding.groupTitle.text = getString(R.string.coinjoin_mixing_transactions)
                 binding.icon.setImageResource(R.drawable.ic_coinjoin)
-                binding.detailsTitle.text = getString(R.string.coinjoin_transaction_group)
+                binding.detailsTitle.text = getString(R.string.coinjoin_transaction_group_title)
                 binding.detailsMessage.text = getString(R.string.coinjoin_transaction_group)
             }
         }

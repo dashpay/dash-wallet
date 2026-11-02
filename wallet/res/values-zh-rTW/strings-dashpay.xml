@@ -416,6 +416,7 @@
     <string name="coinjoin_mixing_level_subtitle">您可以隨時變更或停止混合級別</string>
     <string name="coinjoin_mixing_transactions">混合交易</string>
     <string name="coinjoin_transaction_group">這些都是混合關聯交易。</string>
+    <string name="coinjoin_transaction_group_title">為什麼我會看到所有這些交易？</string>
     <string name="intermediate">中間的</string>
     <string name="advanced">進階</string>
     <string name="intermediate_level_card_decs">擁有極高技術水平的高級用戶可以確定您的交易歷史記錄</string>

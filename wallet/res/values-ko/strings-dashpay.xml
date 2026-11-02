@@ -416,6 +416,7 @@
     <string name="coinjoin_mixing_level_subtitle">믹싱 레벨은 언제든 변경 혹은 중지할 수 있습니다</string>
     <string name="coinjoin_mixing_transactions">거래 믹싱</string>
     <string name="coinjoin_transaction_group">이는 거래와 관련된 믹싱입니다.</string>
+    <string name="coinjoin_transaction_group_title">왜 모든 거래 내역을 보게 되나요?</string>
     <string name="intermediate">중급</string>
     <string name="advanced">고급</string>
     <string name="intermediate_level_card_decs">높은 수준의 기술적 전문 지식을 가진 고급 사용자의 경우 거래 기록을 결정할 수 있습니다</string>
