@@ -24,6 +24,7 @@ import de.schildbach.wallet.data.WalletData
 import de.schildbach.wallet.database.dao.TxDisplayCacheDao
 import de.schildbach.wallet.database.dao.TxGroupCacheDao
 import de.schildbach.wallet.database.entity.TxDisplayCacheEntry
+import de.schildbach.wallet.database.entity.TxGroupCacheEntry
 import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.sdk.CutoverState
 import de.schildbach.wallet.service.platform.sdk.CutoverUiDataService
@@ -72,7 +73,9 @@ import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.common.transactions.TxInfo
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicInteger
@@ -145,7 +148,10 @@ class TxDisplayCacheRescanTest {
     private fun serviceWithWallet(
         walletFlow: StateFlow<Wallet?>,
         rebuildWraps: Collection<TransactionWrapper> = emptyList(),
-        firstCountReadThrows: Boolean = false
+        firstCountReadThrows: Boolean = false,
+        // Stubbed BEFORE the service exists for the same construction-race reason
+        // as firstCountReadThrows above.
+        groupReads: (suspend () -> List<TxGroupCacheEntry>)? = null
     ): TxDisplayCacheService {
         coEvery { displayDao.getAll() } returns emptyList()
         if (firstCountReadThrows) {
@@ -159,7 +165,11 @@ class TxDisplayCacheRescanTest {
         } else {
             coEvery { displayDao.getCount() } returns 3_272
         }
-        coEvery { groupDao.getActiveGroups(any()) } returns emptyList()
+        if (groupReads == null) {
+            coEvery { groupDao.getActiveGroups(any()) } returns emptyList()
+        } else {
+            coEvery { groupDao.getActiveGroups(any()) } coAnswers { groupReads() }
+        }
         every { displayDao.pagingSource(any()) } answers { FakePagingSource(firstArg()).also { createdPagingSources += it } }
         val walletData = mockk<WalletData>(relaxed = true) {
             every { observeWallet() } returns walletFlow
@@ -428,6 +438,67 @@ class TxDisplayCacheRescanTest {
     }
 
     /**
+     * MO-1109 regression (i): the warm-cache branch must publish the live pipeline
+     * (RoomLive, Pager invalidation, transactionsLoaded) BEFORE hydrating the group
+     * factories. A getActiveGroups failure ends the whole filter subscription through
+     * its catch — at base the live Pager kept serving the cache rows through that, so
+     * hydrating first would regress a transient group-read failure into a session with
+     * no live list at all. The retry the hydrate-first order used to provide lives in
+     * the wallet-identity term of the same-wallet fast-path check: the factory is
+     * published only after hydration finishes, so a direction change cancelling an
+     * in-flight hydration re-enters the warm path (getActiveGroups runs again) instead
+     * of taking the flag-only fast path. A THROWN read, by contrast, ends the
+     * subscription with no next emission (the accepted residual, same as base), so the
+     * warm re-entry is staged here via a cancelled first hydration and the throw lands
+     * on the retry's read.
+     */
+    @Test
+    fun groupReadFailureOnTheWarmPathStillStartsTheLiveList() = runBlocking {
+        val wallet = mockk<WalletEx>(relaxed = true)
+        val groupReadCalls = AtomicInteger(0)
+        val firstHydrationCancelled = CompletableDeferred<Unit>()
+        val cache = serviceWithWallet(
+            MutableStateFlow(wallet),
+            groupReads = {
+                when (groupReadCalls.incrementAndGet()) {
+                    1 -> try {
+                        awaitCancellation()
+                    } finally {
+                        firstHydrationCancelled.complete(Unit)
+                    }
+                    2 -> throw RuntimeException("injected Room failure")
+                    else -> emptyList()
+                }
+            }
+        )
+
+        collectJob = CoroutineScope(Dispatchers.IO).launch { cache.transactions.collect {} }
+
+        // The live pipeline is already up while the first hydration is still suspended
+        // on its getActiveGroups call: loaded flipped, a Room paging source built, and
+        // the factory NOT yet published for this wallet.
+        awaitTrue { groupReadCalls.get() == 1 }
+        awaitTrue { cache.transactionsLoaded.value }
+        awaitTrue { createdPagingSources.isNotEmpty() }
+        assertNull(cache.coinJoinWrapperFactory())
+
+        // The pick cancels the suspended hydration; the unpublished factory fails the
+        // same-wallet fast-path check, so it re-enters the warm path (a second
+        // getActiveGroups read) instead of flipping the flag only — and that read throws.
+        cache.setFilter(TxFilterType.SENT)
+        withTimeout(5_000) { firstHydrationCancelled.await() }
+        coVerify(timeout = 5_000, exactly = 2) { groupDao.getActiveGroups(any()) }
+
+        // The failed read ended the filter subscription, but the live list survived it:
+        // still loaded, the Pager re-queried with the picked flag, and nothing rebuilt.
+        awaitTrue { createdPagingSources[0].invalid }
+        awaitTrue { createdPagingSources.size >= 2 }
+        assertEquals(TxDisplayCacheEntry.FLAG_SENT, createdPagingSources[1].filterFlag)
+        assertTrue(cache.transactionsLoaded.value)
+        coVerify(exactly = 0) { displayDao.replaceAll(any()) }
+    }
+
+    /**
      * MO-1109 regression (c): a wallet replacement whose hydration
      * (initializeFactoriesFromCache's getActiveGroups) is still suspended when a direction
      * change cancels it via flatMapLatest. coinJoinWrapperFactory must stay bound to the old
@@ -512,12 +583,14 @@ class TxDisplayCacheRescanTest {
         val letReplaceAllReturn = CompletableDeferred<Unit>()
         coEvery { displayDao.replaceAll(any()) } coAnswers {
             replaceAllEntered.complete(Unit)
-            // A Room transaction is not cancellable mid-flight: the write runs to commit
-            // regardless, and the flatMapLatest cancellation surfaces only as replaceAll
-            // resumes its (by then cancelled) caller. Suspend until that cancellation
-            // arrives, then hold the "commit" open until the test releases it; the
-            // CancellationException propagates as the stub returns, like Room's own
-            // prompt cancellation.
+            // A suspend @Transaction DAO method is rolled back when a cancellation
+            // lands inside its body (the count then stays a KNOWN zero, so the next
+            // emission simply rebuilds again). This test models the other interleaving:
+            // the transaction has already committed when the flatMapLatest cancellation
+            // surfaces, as replaceAll resumes its (by then cancelled) caller. Suspend
+            // until that cancellation arrives, then hold the "commit" open until the
+            // test releases it; the CancellationException propagates as the stub
+            // returns, like Room's own prompt cancellation after a commit.
             try {
                 awaitCancellation()
             } finally {
