@@ -64,7 +64,7 @@ import kotlin.concurrent.thread
 /**
  * A send whose outcome is unknown ([PaymentSubmissionPendingException]) may already be on the
  * network. The send screen must not go back to a confirmable INPUT with the same payment and its
- * dry run (after the SDK reservation expires a second send could pay twice), also after the
+ * dry run (a second send would fund from other coins and could pay twice), also after the
  * screen or process is recreated. And two confirms in flight must not both send.
  */
 @RunWith(RobolectricTestRunner::class)

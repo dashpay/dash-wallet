@@ -163,14 +163,22 @@ class SendSignerLockedException(message: String) : IllegalStateException(message
 
 /**
  * An ordinary SDK send returned [SdkWriteResult.Ambiguous]: it may already be on the
- * network, and the result carries no txid. The engine keeps the inputs reserved (until its
- * TTL sweep), so the send UI reports "may have been sent" and never offers a retry — a new
- * send could select different inputs and pay twice. [cause] is the SDK's failure.
+ * network, and the result carries no txid. The send UI reports "may have been sent" and never
+ * offers a retry. [cause] is the SDK's failure.
  *
- * Recovery is only that reservation: no signed transaction is kept and nothing watches the
- * network to commit the payment when it is seen. If it did go out, sync picks it up; once the
- * TTL sweep frees the inputs, a resend could pick different ones and pay twice. [txId] is
- * always [UNKNOWN_TXID].
+ * The engine holds the inputs in two ways, and neither makes a retry safe:
+ * - the build's input reservation has a TTL, and the engine's sweep reclaims it in time;
+ * - but every broadcast outcome other than a definitive rejection — an ambiguous one included —
+ *   also leaves a pending-spend fence on the inputs (rs-platform-wallet `wallet/core/broadcast.rs`).
+ *   The fence ends only when this wallet observes the outpoints spent, by this transaction or a
+ *   competing one. It has no timeout, so sweeping the reservation does not free the inputs: an
+ *   unseen transaction keeps them held for the rest of this wallet generation (until the wallet
+ *   is reloaded).
+ *
+ * The fence stops the same inputs from being spent twice, not the payment from being made
+ * twice: a resend would fund from other coins. No signed transaction is kept here and nothing
+ * watches the network to commit the payment when it is seen; if it did go out, sync picks it
+ * up. [txId] is always [UNKNOWN_TXID].
  */
 class SdkSendOutcomeUnknownException(cause: Throwable) : PaymentSubmissionPendingException(
     txId = UNKNOWN_TXID,

@@ -42,6 +42,7 @@ import org.dash.wallet.common.services.LockScreenBroadcaster
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.PaymentOutcomeUnknownWarning
+import org.dash.wallet.common.ui.dialogs.TaggedProgressDialog
 import org.dash.wallet.common.ui.dialogs.ExtraActionDialog
 import org.dash.wallet.common.ui.setRoundedBackground
 import org.dash.wallet.common.ui.viewBinding
@@ -65,7 +66,8 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
     private val viewModel by viewModels<CoinbaseConversionPreviewViewModel>()
     @Inject lateinit var lockScreenBroadcaster: LockScreenBroadcaster
     private lateinit var swapTradeUIModel: SwapTradeUIModel
-    private var loadingDialog: AdaptiveDialog? = null
+    // Kept single across a recreation, which restores the dialog (see TaggedProgressDialog).
+    private val progressDialog = TaggedProgressDialog({ parentFragmentManager })
     private var isRetrying = false
     private var transactionStateDialog: CoinBaseResultDialog? = null
     private var newSwapOrderId: String? = null
@@ -303,17 +305,11 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
     }
 
     private fun showProgress(messageResId: Int) {
-        if (loadingDialog != null && loadingDialog?.isAdded == true) {
-            loadingDialog?.dismissAllowingStateLoss()
-        }
-        loadingDialog = AdaptiveDialog.progress(getString(messageResId))
-        loadingDialog?.show(parentFragmentManager, "progress")
+        progressDialog.show(getString(messageResId))
     }
 
     private fun dismissProgress() {
-        if (loadingDialog != null && loadingDialog?.isAdded == true) {
-            loadingDialog?.dismissAllowingStateLoss()
-        }
+        progressDialog.hide()
     }
 
     private fun showBuyOrderDialog(type: CoinBaseResultDialog.Type, responseMessage: String? = null) {

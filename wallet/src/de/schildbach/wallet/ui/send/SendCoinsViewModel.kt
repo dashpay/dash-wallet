@@ -124,7 +124,8 @@ class SendCoinsViewModel @Inject constructor(
      * True once a send from this screen may have gone out with its outcome unknown. Terminal:
      * the screen never returns to a confirmable INPUT and no further send is accepted. Kept in
      * [savedStateHandle] so a recreated screen (or process) still refuses instead of offering the
-     * same payment again, which could pay twice once the SDK's reservation has expired.
+     * same payment again: the SDK keeps the first send's inputs fenced, but a second send would
+     * fund from other coins and could pay twice.
      */
     val paymentOutcomeUnknown: StateFlow<Boolean> =
         savedStateHandle.getStateFlow(KEY_PAYMENT_OUTCOME_UNKNOWN, false)

@@ -42,6 +42,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.*
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.PaymentOutcomeUnknownWarning
+import org.dash.wallet.common.ui.dialogs.TaggedProgressDialog
 import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
 import org.dash.wallet.common.util.*
 import org.dash.wallet.integrations.coinbase.CoinbaseConstants
@@ -70,7 +71,8 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
     private val transferDashViewModel by coinbaseViewModels<TransferDashViewModel>()
     private val sharedViewModel by coinbaseViewModels<CoinbaseViewModel>()
     private val binding by viewBinding(TransferDashFragmentBinding::bind)
-    private var loadingDialog: AdaptiveDialog? = null
+    // Kept single across a recreation, which restores the dialog (see TaggedProgressDialog).
+    private val progressDialog = TaggedProgressDialog({ parentFragmentManager })
     @Inject lateinit var securityFunctions: AuthenticationManager
     @Inject lateinit var confirmTransactionLauncher: ConfirmTransactionService
     @Inject lateinit var lockScreenBroadcaster: LockScreenBroadcaster
@@ -491,17 +493,11 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
     }
 
     private fun hideProgressDialog() {
-        if (loadingDialog != null && loadingDialog?.isAdded == true) {
-            loadingDialog?.dismissAllowingStateLoss()
-        }
+        progressDialog.hide()
     }
 
     private fun displayProgressDialog() {
-        if (loadingDialog != null && loadingDialog?.isAdded == true) {
-            loadingDialog?.dismissAllowingStateLoss()
-        }
-        loadingDialog = AdaptiveDialog.progress(getString(R.string.loading))
-        loadingDialog?.show(parentFragmentManager, "progress")
+        progressDialog.show(getString(R.string.loading))
     }
 
     private fun hideBanners(){
