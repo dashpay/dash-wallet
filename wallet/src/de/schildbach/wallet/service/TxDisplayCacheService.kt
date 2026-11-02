@@ -319,8 +319,18 @@ class TxDisplayCacheService @Inject constructor(
                     _liveFilterFlag.value = filter.direction.toFilterFlag()
                     _currentPagingSource.value?.invalidate()
                 } else if (cachedRowCount == null || cachedRowCount > 0) {
+                    // Publish the live pipeline BEFORE hydrating the group factories: the
+                    // cache rows are already there, and a getActiveGroups failure below
+                    // completes this whole subscription through the catch below, so a
+                    // RoomLive flipped only after hydration would leave the session with
+                    // no live Pager at all over a perfectly good cache. Flipping it before
+                    // hydration is safe because the retry lives in the wallet-identity
+                    // term of the same-wallet fast-path check above: every RoomLive writer
+                    // publishes coinJoinWrapperFactory only after its hydration finishes,
+                    // so a cancelled or failed hydration leaves the factory at its previous
+                    // value, fails that check, and the next emission re-enters this branch
+                    // instead of taking the flag-only fast path.
                     _liveFilterFlag.value = filter.direction.toFilterFlag()
-                    initializeFactoriesFromCache()
                     // Re-assigning the RoomLive singleton does not emit from the StateFlow, so
                     // the live Pager (still the previous wallet's) would otherwise keep running
                     // with its captured filter — invalidate it explicitly, as the same-wallet
@@ -328,6 +338,7 @@ class TxDisplayCacheService @Inject constructor(
                     _txDataSource.value = TxDataSource.RoomLive
                     _currentPagingSource.value?.invalidate()
                     _transactionsLoaded.value = true
+                    initializeFactoriesFromCache()
                 } else {
                     rebuildWrappedList(filter)
                 }
