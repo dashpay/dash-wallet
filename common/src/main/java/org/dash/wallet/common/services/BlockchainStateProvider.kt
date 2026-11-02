@@ -28,9 +28,6 @@ import org.dash.wallet.common.data.NetworkStatus
  *
  * This data provider gives access to the current BlockchainState (block height, isSynced)
  * as well as other data that depends on the current state of the blockchain.
- *
- * This includes:
- *  - Masternode APY (function of block height, difficulty, and network)
  */
 
 interface BlockchainStateProvider {
