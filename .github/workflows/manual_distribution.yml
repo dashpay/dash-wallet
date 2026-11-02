@@ -78,9 +78,9 @@ jobs:
       continue-on-error: true
       with:
         path: vendor/bundle
-        key: ${{ runner.os }}-gems-${{ hashFiles('**/Gemfile.lock') }}
+        key: ${{ runner.os }}-gems-ruby-3.3-${{ hashFiles('**/Gemfile.lock') }}
         restore-keys: |
-            ${{ runner.os }}-gems-
+            ${{ runner.os }}-gems-ruby-3.3-
             
     - name: Setup fastlane
       run: |
