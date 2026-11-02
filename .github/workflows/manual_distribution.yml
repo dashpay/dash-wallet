@@ -68,7 +68,7 @@ jobs:
     - name: Set up Ruby
       uses: ruby/setup-ruby@v1
       with:
-        ruby-version: '3.0.3'
+        ruby-version: '3.3'
         
     - name: Generate cache key
       run: bash .deploy/checksum.sh checksum.txt
@@ -84,8 +84,6 @@ jobs:
             
     - name: Setup fastlane
       run: |
-        gem install bundler:2.2.26
-        gem install google-cloud-storage
         bundle config path vendor/bundle
         bundle install --jobs 4 --retry 3
         
