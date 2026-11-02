@@ -33,7 +33,9 @@ data class PendingNameOnlyRetry(
     /** The identity record's creation state now. */
     val creationState: IdentityCreationState,
     /** The identity record's identity id now. */
-    val recordIdentityId: String?
+    val recordIdentityId: String?,
+    /** The identity record's error now, from the same read. */
+    val errorMessage: String? = null
 )
 
 /**
@@ -63,6 +65,12 @@ interface RequestedNameJournal {
 
     /** Clears the pending mark; the requested names stay. */
     suspend fun finishNameOnlyRetry()
+
+    /**
+     * In one write: records the retry's terminal [errorMessage] on the identity record (at
+     * USERNAME_REGISTERING) and clears the pending mark, so no state has one without the other.
+     */
+    suspend fun failNameOnlyRetry(errorMessage: String)
 }
 
 /** In-memory [RequestedNameJournal] for host tests; not durable. */
@@ -72,6 +80,8 @@ class InMemoryRequestedNameJournal : RequestedNameJournal {
     @Volatile private var pending = false
 
     @Volatile var creationState: IdentityCreationState = IdentityCreationState.NONE
+
+    @Volatile var errorMessage: String? = null
 
     override suspend fun requestedNames(): RequestedNameContext? = request
 
@@ -83,12 +93,19 @@ class InMemoryRequestedNameJournal : RequestedNameJournal {
         this.request = request
         pending = true
         creationState = IdentityCreationState.USERNAME_REGISTERING
+        errorMessage = null
     }
 
     override suspend fun pendingNameOnlyRetry(): PendingNameOnlyRetry? =
-        request?.takeIf { pending }?.let { PendingNameOnlyRetry(it, creationState, it.identityIdBase58) }
+        request?.takeIf { pending }?.let { PendingNameOnlyRetry(it, creationState, it.identityIdBase58, errorMessage) }
 
     override suspend fun finishNameOnlyRetry() {
+        pending = false
+    }
+
+    override suspend fun failNameOnlyRetry(errorMessage: String) {
+        creationState = IdentityCreationState.USERNAME_REGISTERING
+        this.errorMessage = errorMessage
         pending = false
     }
 }

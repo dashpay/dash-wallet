@@ -1468,6 +1468,47 @@ class SdkTransparentUsernameCreationTest {
         appScope.cancel()
     }
 
+    @Test
+    fun `a taken name's error survives a failed pending-mark clear and the restart reconcile`() = runTest {
+        // the error and the mark's retirement are one write: there is no state with the error
+        // saved and the retry still pending, which the reconcile would answer with "interrupted"
+        val source = source(lockAfterFailure = null)
+        coEvery { source.registerDpnsName(walletIdHex, identityId, "alice3") } throws
+            DashSdkError.InvalidParameter("DuplicateUniqueIndexError: alice3 is taken")
+        val store = de.schildbach.wallet.service.platform.InMemoryRequestedNameJournal()
+        val journal = object : de.schildbach.wallet.service.platform.RequestedNameJournal by store {
+            override suspend fun finishNameOnlyRetry() {
+                throw java.io.IOException("datastore write failed")
+            }
+        }
+        val run = RetryRun()
+        val appScope = CoroutineScope(SupervisorJob() + kotlinx.coroutines.test.StandardTestDispatcher(testScheduler))
+        assertTrue(instance(source, journal, run, appScope).retryNameForExistingIdentity(identityIdBase58, "alice3", null))
+        advanceUntilIdle()
+        appScope.cancel()
+
+        instance(source, journal, run).reconcileInterruptedNameRetry()
+
+        val error = run.states.last().second
+        assertTrue("the taken-name error survives: $error", error?.contains("DuplicateUniqueIndexError") == true)
+        assertNull(store.pendingNameOnlyRetry())
+    }
+
+    @Test
+    fun `the restart reconcile never replaces a saved terminal error`() = runTest {
+        // a store written before the single edit existed: error saved, mark still set
+        val source = source(lockAfterFailure = null)
+        val store = de.schildbach.wallet.service.platform.InMemoryRequestedNameJournal()
+        store.beginNameOnlyRetry(RequestedNameContext(identityIdBase58, "alice3", null))
+        store.errorMessage = "${SdkTransparentUsernameCreation.NAME_ONLY_RETRY_ERROR}: DuplicateUniqueIndexError"
+        val run = RetryRun()
+
+        assertFalse(instance(source, store, run).reconcileInterruptedNameRetry())
+
+        assertTrue("nothing written: ${run.states}", run.states.isEmpty() && run.nameContexts.isEmpty())
+        assertNull("the recorded outcome retires the mark", store.pendingNameOnlyRetry())
+    }
+
     // ── per-identity DPNS lock ───────────────────────────────────────────
 
     /** A source whose registerDpnsName blocks on [gate], then records the label as owned. */

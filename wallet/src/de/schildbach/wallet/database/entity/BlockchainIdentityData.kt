@@ -283,31 +283,31 @@ open class BlockchainIdentityConfig @Inject constructor(
         }
     }
 
-    private val identityData: Flow<BlockchainIdentityData> = data
-        .map { prefs ->
-            BlockchainIdentityData(
-                creationState = IdentityCreationState.valueOf(prefs[CREATION_STATE] ?: "NONE"),
-                creationStateErrorMessage = prefs[CREATION_STATE_ERROR_MESSAGE],
-                username = prefs[USERNAME],
-                usernameSecondary = prefs[USERNAME_SECONDARY],
-                userId = prefs[IDENTITY_ID],
-                restoring = prefs[RESTORING] ?: false,
-                creditFundingTxId = prefs[ASSET_LOCK_TXID]?.let { Sha256Hash.wrap(it) },
-                identity = prefs[IDENTITY]?.let { platformService.dpp.identity.createFromBuffer(Converters.fromHex(it)) },
-                usingInvite = prefs[USING_INVITE] ?: false,
-                invite = prefs[INVITE_LINK]?.let { InvitationLinkData(Uri.parse(it), false) },
-                preorderSalt = prefs[PREORDER_SALT]?.let { Converters.fromHex(it) },
-                preorderSaltSecondary = prefs[PREORDER_SALT_SECONDARY]?.let { Converters.fromHex(it) },
-                registrationStatus = prefs[IDENTITY_REGISTRATION_STATUS]?.let { IdentityStatus.valueOf(it) },
-                usernameStatus = prefs[USERNAME_REGISTRATION_STATUS]?.let { UsernameStatus.valueOf(it) },
-                usernameSecondaryStatus = prefs[USERNAME_SECONDARY_REGISTRATION_STATUS]?.let { UsernameStatus.valueOf(it) },
-                creditBalance = prefs[BALANCE]?.let { Coin.valueOf(it) },
-                verificationLink = prefs[REQUESTED_USERNAME_LINK],
-                cancelledVerificationLink = prefs[CANCELED_REQUESTED_USERNAME_LINK],
-                usernameRequested = prefs[USERNAME_REQUESTED]?.let { UsernameRequestStatus.valueOf(it) },
-                votingPeriodStart = prefs[VOTING_PERIOD_START]
-            )
-        }
+    private val identityData: Flow<BlockchainIdentityData> = data.map(::identityDataFrom)
+
+    private fun identityDataFrom(prefs: Preferences): BlockchainIdentityData =
+        BlockchainIdentityData(
+            creationState = IdentityCreationState.valueOf(prefs[CREATION_STATE] ?: "NONE"),
+            creationStateErrorMessage = prefs[CREATION_STATE_ERROR_MESSAGE],
+            username = prefs[USERNAME],
+            usernameSecondary = prefs[USERNAME_SECONDARY],
+            userId = prefs[IDENTITY_ID],
+            restoring = prefs[RESTORING] ?: false,
+            creditFundingTxId = prefs[ASSET_LOCK_TXID]?.let { Sha256Hash.wrap(it) },
+            identity = prefs[IDENTITY]?.let { platformService.dpp.identity.createFromBuffer(Converters.fromHex(it)) },
+            usingInvite = prefs[USING_INVITE] ?: false,
+            invite = prefs[INVITE_LINK]?.let { InvitationLinkData(Uri.parse(it), false) },
+            preorderSalt = prefs[PREORDER_SALT]?.let { Converters.fromHex(it) },
+            preorderSaltSecondary = prefs[PREORDER_SALT_SECONDARY]?.let { Converters.fromHex(it) },
+            registrationStatus = prefs[IDENTITY_REGISTRATION_STATUS]?.let { IdentityStatus.valueOf(it) },
+            usernameStatus = prefs[USERNAME_REGISTRATION_STATUS]?.let { UsernameStatus.valueOf(it) },
+            usernameSecondaryStatus = prefs[USERNAME_SECONDARY_REGISTRATION_STATUS]?.let { UsernameStatus.valueOf(it) },
+            creditBalance = prefs[BALANCE]?.let { Coin.valueOf(it) },
+            verificationLink = prefs[REQUESTED_USERNAME_LINK],
+            cancelledVerificationLink = prefs[CANCELED_REQUESTED_USERNAME_LINK],
+            usernameRequested = prefs[USERNAME_REQUESTED]?.let { UsernameRequestStatus.valueOf(it) },
+            votingPeriodStart = prefs[VOTING_PERIOD_START]
+        )
 
     private val identityBaseData: Flow<BlockchainIdentityBaseData> = data
         .map { prefs ->
@@ -438,17 +438,37 @@ open class BlockchainIdentityConfig @Inject constructor(
         return PendingNameOnlyRetry(
             request,
             IdentityCreationState.valueOf(prefs[CREATION_STATE] ?: IdentityCreationState.NONE.name),
-            prefs[IDENTITY_ID]
+            prefs[IDENTITY_ID],
+            prefs[CREATION_STATE_ERROR_MESSAGE]
         )
+    }
+
+    override suspend fun failNameOnlyRetry(errorMessage: String) {
+        context.dataStore.edit { prefs ->
+            prefs[CREATION_STATE] = IdentityCreationState.USERNAME_REGISTERING.name
+            prefs[CREATION_STATE_ERROR_MESSAGE] = errorMessage
+            prefs.remove(NAME_ONLY_RETRY_PENDING)
+        }
     }
 
     override suspend fun finishNameOnlyRetry() {
         context.dataStore.edit { prefs -> prefs.remove(NAME_ONLY_RETRY_PENDING) }
     }
 
-    /** The record a recovery of [identityIdBase58] starts from; see [recoverySeedRecord]. */
-    suspend fun loadRecoverySeed(identityIdBase58: String, fromCreation: Boolean): BlockchainIdentityData? =
-        recoverySeedRecord(load(), requestedNames(), identityIdBase58, fromCreation)
+    /** A snapshot of the store that THROWS on a failed read, unlike [data] (which reads as empty). */
+    internal open suspend fun readStrict(): Preferences = context.dataStore.data.first()
+
+    /**
+     * The record a recovery of [identityIdBase58] starts from; see [recoverySeedRecord]. The
+     * record and the requested names come from one strict read: an unreadable store throws, so
+     * the recovery fails and is retried, instead of reading as a fresh restore (an empty record,
+     * whose walk lets the recovered names replace the requested ones).
+     */
+    suspend fun loadRecoverySeed(identityIdBase58: String, fromCreation: Boolean): BlockchainIdentityData? {
+        val prefs = readStrict()
+        val record = identityDataFrom(prefs).takeIf { it.creationState != IdentityCreationState.NONE }
+        return recoverySeedRecord(record, requestedNamesIn(prefs), identityIdBase58, fromCreation)
+    }
 
     suspend fun clear() {
         log.info("clearing data")

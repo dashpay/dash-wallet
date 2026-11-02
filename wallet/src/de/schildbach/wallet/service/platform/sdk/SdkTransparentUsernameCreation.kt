@@ -1220,11 +1220,7 @@ class SdkTransparentUsernameCreation internal constructor(
             if (nameOnlyRetry) {
                 // Not swallowed: the run's own handler records it again, and until an error is
                 // on record the retry stays pending for the restart reconcile.
-                driveCreationState(
-                    IdentityCreationState.USERNAME_REGISTERING,
-                    "$NAME_ONLY_RETRY_ERROR: ${nameFailure ?: nameStatus.name}"
-                )
-                finishPendingNameRetry()
+                failPendingNameRetry("$NAME_ONLY_RETRY_ERROR: ${nameFailure ?: nameStatus.name}")
             } else {
                 try {
                     persistNameContext(identityIdBase58, label, secondaryLabel, true)
@@ -1913,7 +1909,7 @@ class SdkTransparentUsernameCreation internal constructor(
                 // exception crashes the process after the screen was told the retry started.
                 // Record a retryable error so the retry card shows.
                 log.error("name-only retry for identity {} failed", identityIdBase58, e)
-                if (recordRetryFailure(e)) finishPendingNameRetry()
+                recordRetryFailure(e)
             }
         }
         if (!trackOrRefuse(job)) {
@@ -1938,16 +1934,33 @@ class SdkTransparentUsernameCreation internal constructor(
      * returned (the retry then stays pending for [reconcileInterruptedNameRetry]).
      */
     private suspend fun recordRetryFailure(cause: Exception): Boolean = try {
-        driveCreationState(
-            IdentityCreationState.USERNAME_REGISTERING,
-            "$NAME_ONLY_RETRY_ERROR: ${cause.message ?: cause.javaClass.simpleName}"
-        )
+        failPendingNameRetry("$NAME_ONLY_RETRY_ERROR: ${cause.message ?: cause.javaClass.simpleName}")
         true
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
         log.error("could not record the failed name-only retry", e)
         false
+    }
+
+    /**
+     * Records the retry's terminal [errorMessage] and retires its pending mark in ONE write
+     * ([RequestedNameJournal.failNameOnlyRetry]): with two, a process death or a failed second
+     * write between them left the retry pending with its error saved, and the restart reconcile
+     * could answer a taken name with the generic "interrupted" error. Throws when it could not
+     * be written (the retry then stays pending).
+     */
+    private suspend fun failPendingNameRetry(errorMessage: String) {
+        nameJournal.failNameOnlyRetry(errorMessage)
+        // The same values through the ordinary state seam, for its observers. Already on record:
+        // a failure here must not turn into a second, different error.
+        try {
+            driveCreationState(IdentityCreationState.USERNAME_REGISTERING, errorMessage)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("name-only retry error recorded; the state echo failed", e)
+        }
     }
 
     /** The name-only retry's outcome has a durable owner: no longer pending. Best effort. */
@@ -2014,6 +2027,13 @@ class SdkTransparentUsernameCreation internal constructor(
             finishPendingNameRetry()
             return false
         }
+        if (isNameOnlyRetryError(pending.errorMessage)) {
+            // its outcome is on record (a store written before the error and the mark's
+            // retirement became one write): never replaced, the mark only retired
+            log.info("pending name-only retry for {}… already recorded its error; clearing it", identityIdBase58.take(8))
+            finishPendingNameRetry()
+            return false
+        }
         if (pending.creationState >= IdentityCreationState.DONE) {
             // DONE is written for a confirmed name before the handoff, and the retry stays pending
             // until the handoff succeeded: the recovery job may never have been enqueued
@@ -2057,10 +2077,9 @@ class SdkTransparentUsernameCreation internal constructor(
                     identityIdBase58.take(8),
                     request.username
                 )
-                driveCreationState(
-                    IdentityCreationState.USERNAME_REGISTERING,
-                    "$NAME_ONLY_RETRY_ERROR: interrupted before it completed"
-                )
+                // the error and the mark's retirement in one write
+                failPendingNameRetry("$NAME_ONLY_RETRY_ERROR: interrupted before it completed")
+                return true
             }
         } catch (e: CancellationException) {
             throw e
