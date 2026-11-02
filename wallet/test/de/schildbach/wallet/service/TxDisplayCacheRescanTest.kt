@@ -551,6 +551,52 @@ class TxDisplayCacheRescanTest {
     }
 
     /**
+     * MO-1109 regression (i): a cold start over a warm cache whose hydration
+     * (initializeFactoriesFromCache's getActiveGroups) is still suspended when an on-demand
+     * group load (a row tap, or the metadata observer) runs. loadWrapperOnDemand builds lazy
+     * factories for its own call, and they must stay local: a published lazy factory is
+     * bound to the current wallet without having hydrated it, so once a direction change
+     * cancels the suspended hydration, the next emission would take the same-wallet fast
+     * path and never hydrate — today's active CoinJoin/CrowdNode groups would stay unloaded
+     * for the whole session.
+     */
+    @Test
+    fun onDemandLoadDuringCancelledColdStartHydrationNeverSatisfiesTheFastPath() = runBlocking {
+        val wallet = mockk<WalletEx>(relaxed = true)
+        val hydrationGate = CompletableDeferred<Unit>()
+        val hydrationAttempts = AtomicInteger(0)
+        // Registered BEFORE the service exists, like the other pre-construction stubs. The
+        // entry's txId is not valid hex, so the on-demand load exercises the lazy-factory
+        // branch and returns null without needing a real dashj transaction.
+        coEvery { groupDao.getGroupEntries("coinjoin_2026-11-02") } returns listOf(
+            TxGroupCacheEntry("coinjoin_2026-11-02", "not-a-txid", TxGroupCacheEntry.TYPE_COINJOIN, "2026-11-02", 0)
+        )
+        val cache = serviceWithWallet(
+            MutableStateFlow(wallet),
+            groupReads = {
+                // The cold-start hydration suspends until it is cancelled; the retry returns.
+                if (hydrationAttempts.incrementAndGet() == 1) hydrationGate.await()
+                emptyList()
+            }
+        )
+
+        collectJob = CoroutineScope(Dispatchers.IO).launch { cache.transactions.collect {} }
+        awaitTrue { hydrationAttempts.get() == 1 } // the cold-start hydration is now suspended
+
+        // An on-demand group load inside the hydration window builds lazy factories…
+        cache.loadGroupWrapper("coinjoin_2026-11-02")
+        // …but must not publish them: a published factory is the fast-path check's proof
+        // that this wallet's hydration finished.
+        assertNull(cache.coinJoinWrapperFactory())
+
+        cache.setFilter(TxFilterType.SENT) // cancels the suspended hydration via flatMapLatest
+        awaitTrue { hydrationAttempts.get() == 2 } // warm re-entry (retried hydration), not the fast path
+
+        // The retry's read returned, so the factory that gets published is the hydrated one.
+        awaitTrue { cache.coinJoinWrapperFactory()?.wallet === wallet }
+    }
+
+    /**
      * MO-1109 regression (h): a same-wallet rebuild (KNOWN zero count, as after a wallet
      * reset) whose replaceAll has already committed when a second direction change cancels
      * it via flatMapLatest. The factories that wrapped the rebuilt history must already be

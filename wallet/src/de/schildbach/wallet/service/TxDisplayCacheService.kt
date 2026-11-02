@@ -325,11 +325,14 @@ class TxDisplayCacheService @Inject constructor(
                     // RoomLive flipped only after hydration would leave the session with
                     // no live Pager at all over a perfectly good cache. Flipping it before
                     // hydration is safe because the retry lives in the wallet-identity
-                    // term of the same-wallet fast-path check above: every RoomLive writer
-                    // publishes coinJoinWrapperFactory only after its hydration finishes,
-                    // so a cancelled or failed hydration leaves the factory at its previous
-                    // value, fails that check, and the next emission re-enters this branch
-                    // instead of taking the flag-only fast path.
+                    // term of the same-wallet fast-path check above: every hydrating
+                    // writer publishes coinJoinWrapperFactory only after its hydration
+                    // finishes (observeWalletReset rebinds it without hydrating, but its
+                    // KNOWN-zero count fails that check), so a cancelled hydration leaves
+                    // the factory at its previous value, fails the check, and the next
+                    // emission re-enters this branch instead of taking the flag-only fast
+                    // path. A thrown read has no next emission — it ends this subscription
+                    // through the catch below, as at base.
                     _liveFilterFlag.value = filter.direction.toFilterFlag()
                     // Re-assigning the RoomLive singleton does not emit from the StateFlow, so
                     // the live Pager (still the previous wallet's) would otherwise keep running
@@ -1044,14 +1047,16 @@ class TxDisplayCacheService @Inject constructor(
 
     private suspend fun loadWrapperOnDemand(groupId: String, wrapperType: String): TransactionWrapper? {
         val wallet = walletData.wallet ?: return null
-        // Lazily initialize factories if they haven't been set yet (e.g. metadata flow fires
-        // before rebuildWrappedList / initializeFactoriesFromCache has run).
-        if (coinJoinWrapperFactory == null) {
-            coinJoinWrapperFactory = CoinJoinTxWrapperFactory(walletData.networkParameters, wallet as WalletEx)
-            crowdNodeWrapperFactory = FullCrowdNodeSignUpTxSetFactory(walletData.networkId)
-        }
-        val cjFactory = coinJoinWrapperFactory ?: return null
-        val cnFactory = crowdNodeWrapperFactory ?: return null
+        // Fall back to lazily built factories when none are published yet (e.g. the metadata
+        // flow fires before rebuildWrappedList / initializeFactoriesFromCache has run). They
+        // stay local to this call and are never published: only a hydrating path
+        // (rebuildWrappedList, initializeFactoriesFromCache) may publish a factory, because
+        // the same-wallet fast-path check trusts a published factory as proof that its
+        // wallet's hydration finished — a lazy one would satisfy that check and the
+        // hydration would be skipped. Each caller dedupes groups within a call, so a
+        // per-call factory loses nothing.
+        val cjFactory = coinJoinWrapperFactory ?: CoinJoinTxWrapperFactory(walletData.networkParameters, wallet as WalletEx)
+        val cnFactory = crowdNodeWrapperFactory ?: FullCrowdNodeSignUpTxSetFactory(walletData.networkId)
 
         val entries = txGroupCacheDao.getGroupEntries(groupId)
         val txs = entries.sortedBy { it.sortOrder }.mapNotNull { row ->
