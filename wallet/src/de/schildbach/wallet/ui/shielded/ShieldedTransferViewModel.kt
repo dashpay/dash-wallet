@@ -161,6 +161,9 @@ data class ShieldedTransferUIState(
      * as the Max intent that allows a fee-adjusted retry — so Max never depends on [amountText]
      * round-tripping through fiat, unlike a plain Dash/fiat equality check would. Max intent is
      * never inferred from [amount] equalling [availableBalance]: only this explicit flag counts.
+     * A live balance update for the SELECTED direction also re-renders [amountText] from the new
+     * [amount] (see [ShieldedTransferViewModel.applyBalanceUpdate]), so the primary field never
+     * lags what [amount] and the confirm sheet already show.
      */
     val maxSelected: Boolean = false,
     /**
@@ -521,7 +524,9 @@ class ShieldedTransferViewModel @Inject constructor(
             .launchIn(viewModelScope)
 
         shieldedBalanceService.observeShieldedBalance()
-            .onEach { _uiState.value = _uiState.value.copy(shieldedBalance = it) }
+            .onEach { balance ->
+                applyBalanceUpdate(ShieldedTransferDirection.FromShielded) { it.copy(shieldedBalance = balance) }
+            }
             .launchIn(viewModelScope)
 
         // Shielded-pool readiness gate: both directions stay blocked until
@@ -561,7 +566,9 @@ class ShieldedTransferViewModel @Inject constructor(
             .combine(cutoverUiDataService.sdkConfirmedBalance) { chainLocked, sdkConfirmed ->
                 Dash((sdkConfirmed ?: chainLocked).value)
             }
-            .onEach { _uiState.value = _uiState.value.copy(walletBalance = it) }
+            .onEach { balance ->
+                applyBalanceUpdate(ShieldedTransferDirection.ToShielded) { it.copy(walletBalance = balance) }
+            }
             .launchIn(viewModelScope)
 
         // Total balance only feeds the "<amount> pending" explainer line.
@@ -661,18 +668,46 @@ class ShieldedTransferViewModel @Inject constructor(
 
     fun onMaxClick() {
         val state = _uiState.value
-        val max = state.availableBalance
-        val text = if (state.dashMode) {
-            max.toKeypadString()
-        } else {
-            // Two decimals, like every fiat text this screen writes into the editable keypad
-            // field, locale-neutral (amount is pinned to max via maxSelected below, so this text
-            // never round-trips back into the spent amount, but it must stay parseable by the
-            // keypad once maxSelected is cleared).
-            max.toFiatAt(state.rate)?.toKeypadStringTwoDecimals() ?: return
-        }
+        val text = maxAmountText(state) ?: return
         _uiState.value = state.copy(amountText = text, maxSelected = true, pinnedAmount = null)
         transferExecutor.clearRetryableResult()
+    }
+
+    /**
+     * [state.availableBalance] formatted for the editable keypad field in [state]'s current
+     * unit — the same text [onMaxClick] writes. Null when fiat mode has no rate yet (matching
+     * [onMaxClick]'s own early return): the caller leaves [ShieldedTransferUIState.amountText]
+     * as-is rather than writing an unparseable or zero-looking value.
+     */
+    private fun maxAmountText(state: ShieldedTransferUIState): String? =
+        if (state.dashMode) {
+            state.availableBalance.toKeypadString()
+        } else {
+            // Two decimals, like every fiat text this screen writes into the editable keypad
+            // field, locale-neutral.
+            state.availableBalance.toFiatAt(state.rate)?.toKeypadStringTwoDecimals()
+        }
+
+    /**
+     * Applies a live balance update for [direction] via [update], then — while
+     * [ShieldedTransferUIState.maxSelected] is set for that SAME direction — re-renders the
+     * primary [ShieldedTransferUIState.amountText] from the new live amount, so it never lags
+     * what [ShieldedTransferUIState.amount] (and the confirm sheet) already show. A balance
+     * update for the direction NOT currently selected only updates its stored balance; it has
+     * no visible amount to refresh yet. [ShieldedTransferUIState.maxSelected] and
+     * [ShieldedTransferUIState.pinnedAmount] are left untouched — a keypress still edits the
+     * now-current text normally afterwards.
+     */
+    private fun applyBalanceUpdate(
+        direction: ShieldedTransferDirection,
+        update: (ShieldedTransferUIState) -> ShieldedTransferUIState
+    ) {
+        val updated = update(_uiState.value)
+        _uiState.value = if (updated.maxSelected && updated.direction == direction) {
+            maxAmountText(updated)?.let { updated.copy(amountText = it) } ?: updated
+        } else {
+            updated
+        }
     }
 
     /**
