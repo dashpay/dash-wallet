@@ -18,6 +18,8 @@ import kotlinx.coroutines.flow.map
  */
 object ConnectAvailability {
     const val MIN_PROTOCOL_VERSION = 14
+    const val VERSION_TOO_OLD_ERROR = "DashConnect requires Platform protocol version $MIN_PROTOCOL_VERSION"
+    const val VERSION_UNKNOWN_ERROR = "Cannot check the Platform version. Check your connection and try again."
 
     /** This build and device can run DashConnect; the network may still be too old for it. */
     val isSupported: Boolean
@@ -28,8 +30,15 @@ object ConnectAvailability {
         .map { isSupported && it >= MIN_PROTOCOL_VERSION }
         .distinctUntilChanged()
 
-    /** Asks the network for its protocol version unless it is already known to be new enough. */
-    suspend fun isAvailable(platformRepo: PlatformRepo): Boolean = isSupported &&
-        (ContestedUsernameFees.currentProtocolVersion >= MIN_PROTOCOL_VERSION ||
-            platformRepo.refreshProtocolVersion() >= MIN_PROTOCOL_VERSION)
+    /**
+     * Asks the network for its protocol version unless it is already known to be new enough. Null when
+     * the version has never been read (a failed lookup leaves it at 0), so the caller can offer a retry
+     * instead of calling the network too old.
+     */
+    suspend fun isAvailable(platformRepo: PlatformRepo): Boolean? {
+        if (!isSupported) return false
+        if (ContestedUsernameFees.currentProtocolVersion >= MIN_PROTOCOL_VERSION) return true
+        val version = platformRepo.refreshProtocolVersion()
+        return if (version == 0) null else version >= MIN_PROTOCOL_VERSION
+    }
 }

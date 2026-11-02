@@ -161,6 +161,18 @@ class PlatformDashConnectRepositoryTest {
     }
 
     @Test
+    fun parseQr_asksToRetryWhenThePlatformVersionCannotBeRead() {
+        assumeTrue("testnet-only feature", Constants.IS_TESTNET_BUILD)
+        ContestedUsernameFees.reset()
+        // A failed lookup leaves the version unread.
+        coEvery { platformRepo.refreshProtocolVersion() } returns 0
+        val error = assertThrows(IllegalStateException::class.java) {
+            runBlocking { repository.parseQr(testnetKeyUri()) }
+        }
+        assertEquals(ConnectAvailability.VERSION_UNKNOWN_ERROR, error.message)
+    }
+
+    @Test
     fun parseQr_rejectsLegacyLoginInsteadOfClassifyingItAsUsable() {
         assumeTrue("testnet-only feature", Constants.IS_TESTNET_BUILD)
         val legacy = testnetKeyUri().replace("&v=2", "&v=1")

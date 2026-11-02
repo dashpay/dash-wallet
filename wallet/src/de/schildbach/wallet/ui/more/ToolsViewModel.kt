@@ -71,7 +71,7 @@ class ToolsViewModel @Inject constructor(
     private val dashPayConfig: DashPayConfig,
     private val identityConfig: BlockchainIdentityConfig,
     private val analyticsService: AnalyticsService,
-    platformRepo: PlatformRepo
+    private val platformRepo: PlatformRepo
 ) : ViewModel() {
 
     sealed class ExportCsvResult {
@@ -115,8 +115,14 @@ class ToolsViewModel @Inject constructor(
         ConnectAvailability.availability.onEach {
             _uiState.value = uiState.value.copy(connectionsAvailable = it)
         }.launchIn(viewModelScope)
-        if (ConnectAvailability.isSupported) {
-            // Records the network's protocol version, which the availability above follows.
+    }
+
+    /**
+     * Asks the network for its protocol version, which the availability above follows. Called on every
+     * resume: a lookup that failed offline, or a network that has since upgraded, is read again.
+     */
+    fun refreshConnectionsAvailability() {
+        if (ConnectAvailability.isSupported && !_uiState.value.connectionsAvailable) {
             viewModelScope.launch { ConnectAvailability.isAvailable(platformRepo) }
         }
     }

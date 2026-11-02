@@ -125,8 +125,11 @@ data class DashConnectQr(val request: DashKeyRequest)
  * placeholder data for tests and Compose previews.
  */
 interface DashConnectRepository {
-    /** Whether this build supports DashConnect and the network runs Platform protocol version 14 or later. */
-    suspend fun isAvailable(): Boolean
+    /**
+     * Whether this build supports DashConnect and the network runs Platform protocol version 14 or later;
+     * null when the network's version could not be read.
+     */
+    suspend fun isAvailable(): Boolean?
 
     fun observeConnections(): Flow<List<DAppConnection>>
 
@@ -210,7 +213,7 @@ data class AppDisplay(
 class MockDashConnectRepository @Inject constructor() : DashConnectRepository {
     private val connections = MutableStateFlow<List<DAppConnection>>(emptyList())
 
-    override suspend fun isAvailable(): Boolean = ConnectAvailability.isSupported
+    override suspend fun isAvailable(): Boolean? = ConnectAvailability.isSupported
 
     override fun observeConnections(): Flow<List<DAppConnection>> = connections.asStateFlow()
 

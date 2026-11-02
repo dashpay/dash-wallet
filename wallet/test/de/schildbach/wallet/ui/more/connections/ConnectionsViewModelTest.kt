@@ -84,6 +84,22 @@ class ConnectionsViewModelTest {
         Dispatchers.resetMain()
     }
 
+    @Test fun `an unread Platform version leaves the screen retryable instead of unavailable`() {
+        model.viewModelScope.cancel()
+        var reads = 0
+        coEvery { repository.isAvailable() } answers { reads++; null }
+        model = ConnectionsViewModel(repository, identities, applicationScope, availability())
+        dispatcher.scheduler.runCurrent()
+        assertFalse(model.uiState.value.featureUnavailable)
+        assertEquals(ConnectionRecordsStatus.UNAVAILABLE, model.uiState.value.recordsStatus)
+        // Connectivity returns: Retry reads the version again.
+        coEvery { repository.isAvailable() } answers { reads++; true }
+        model.retryConnections()
+        dispatcher.scheduler.runCurrent()
+        assertEquals(2, reads)
+        assertFalse(model.uiState.value.featureUnavailable)
+    }
+
     private fun assertUnsupportedRequestRejected(openedFromUrl: Boolean, purchase: Boolean) {
         model.viewModelScope.cancel()
         Constants.SUPPORTS_PLATFORM = false

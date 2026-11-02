@@ -239,14 +239,14 @@ class ConnectionsViewModel @Inject constructor(
             return
         }
         connectionsJob = viewModelScope.launch {
-            // An unreadable version counts as too old until a later refresh reads it.
+            // An unreadable version is not proof the network is too old: it leaves the screen retryable.
             val available = try { repository.isAvailable() } catch (error: Exception) {
                 if (error is CancellationException) throw error
                 log.warn("Cannot read the Platform protocol version", error)
-                false
+                null
             }
-            _uiState.update { it.copy(featureUnavailable = !available) }
-            if (!available) {
+            _uiState.update { it.copy(featureUnavailable = available == false) }
+            if (available != true) {
                 _uiState.update { it.copy(recordsStatus = ConnectionRecordsStatus.UNAVAILABLE) }
                 return@launch
             }
@@ -296,9 +296,13 @@ class ConnectionsViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 check(Constants.SUPPORTS_PLATFORM) { "App Connect is unavailable on this device" }
-                if (!repository.isAvailable()) {
-                    _uiState.update { it.copy(featureUnavailable = true) }
-                    error("DashConnect requires Platform protocol version ${ConnectAvailability.MIN_PROTOCOL_VERSION}")
+                when (repository.isAvailable()) {
+                    true -> {}
+                    false -> {
+                        _uiState.update { it.copy(featureUnavailable = true) }
+                        error(ConnectAvailability.VERSION_TOO_OLD_ERROR)
+                    }
+                    null -> error(ConnectAvailability.VERSION_UNKNOWN_ERROR)
                 }
                 uiState.first { it.recordsStatus != ConnectionRecordsStatus.LOADING }
                 // Without a username the screen offers to create one, which is the answer to this request.
