@@ -38,7 +38,6 @@ import org.dash.wallet.common.money.fiatValue
 import org.dash.wallet.common.services.ConfirmTransactionService
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.LockScreenBroadcaster
-import org.dash.wallet.common.services.isLeftoverBalanceWarning
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.*
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
@@ -308,8 +307,13 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
 
                     if (isTransactionConfirmed) {
                         transferDashViewModel.logTransfer(enterAmountToTransferViewModel.isFiatSelected)
-                        AdaptiveDialog.withProgress(getString(R.string.please_wait_title), requireActivity()) {
-                            handleSend(dashValue, isEmptyWallet)
+                        // The view model runs the send (and shows progress), so a recreation of
+                        // this screen cannot cancel it once it may be on the network. Bound once,
+                        // at the confirm: a send after the leftover-balance question must still
+                        // come from the wallet the transfer was confirmed on.
+                        val session = transferDashViewModel.currentWalletSession()
+                        if (!transferDashViewModel.submitTransfer(dashValue, isEmptyWallet, true, session)) {
+                            log.info("transfer refused: a send is in progress or an earlier outcome is unknown")
                         }
                     }
                 }
@@ -327,6 +331,19 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
 
         transferDashViewModel.observeSendDashToCoinbaseState.observe(viewLifecycleOwner){
             setTransactionState(it)
+        }
+
+        transferDashViewModel.onLeftoverBalanceWarning.observe(viewLifecycleOwner) { pending ->
+            viewLifecycleOwner.lifecycleScope.launch {
+                if (MinimumBalanceDialog().showAsync(requireActivity()) == true) {
+                    transferDashViewModel.submitTransfer(
+                        pending.dashValue,
+                        pending.isEmptyWallet,
+                        checkConditions = false,
+                        session = pending.session
+                    )
+                }
+            }
         }
 
         transferDashViewModel.onBuildTransactionParamsCallback.observe(viewLifecycleOwner){
@@ -380,29 +397,6 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
         binding.transferMessage.isVisible = isSyncing
         enterAmountToTransferViewModel.keyboardStateCallback.value =
             !isSyncing && !transferDashViewModel.paymentOutcomeUnknown.value
-    }
-
-    private suspend fun handleSend(value: Dash, isEmptyWallet: Boolean): Boolean {
-        // Bound once, at the confirm: the leftover-balance dialog below waits on the user, and
-        // the send it leads to must still come from the wallet the transfer was confirmed on.
-        val session = transferDashViewModel.currentWalletSession()
-        try {
-            transferDashViewModel.sendDash(value, isEmptyWallet, true, session)
-            return true
-        } catch (ex: Exception) {
-            if (!ex.isLeftoverBalanceWarning) {
-                throw ex
-            }
-
-            val result = MinimumBalanceDialog().showAsync(requireActivity())
-
-            if (result == true) {
-                transferDashViewModel.sendDash(value, isEmptyWallet, false, session)
-                return true
-            }
-        }
-
-        return false
     }
 
     private fun handleBackButtonPress(){

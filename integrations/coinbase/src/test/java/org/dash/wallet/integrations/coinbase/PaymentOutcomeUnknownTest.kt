@@ -146,6 +146,76 @@ class PaymentOutcomeUnknownTest {
     }
 
     @Test
+    fun transferDash_theUiWaiterCancelledDuringTheSend_isAnUnknownOutcome_notARetry() = runTest {
+        // A recreation used to cancel the fragment coroutine that ran the send while it may
+        // already have gone out: it was reported as a retryable failure.
+        val held = CompletableDeferred<Unit>()
+        coEvery {
+            sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any())
+        } coAnswers {
+            held.await()
+            "txid"
+        }
+        val viewModel = transferViewModel(SavedStateHandle())
+
+        val waiter = launch { viewModel.sendDash(Dash.valueOf(100_000), false, false, null) }
+        runCurrent()
+        waiter.cancel()
+        advanceUntilIdle()
+
+        assertTrue(viewModel.paymentOutcomeUnknown.value)
+        assertFalse(viewModel.observeSendDashToCoinbaseState.value is SendDashResponseState.FailureState)
+        viewModel.sendDash(Dash.valueOf(100_000), false, false, null)
+        coVerify(exactly = 1) { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any()) }
+    }
+
+    @Test
+    fun transferDash_aSendInProgress_whenTheProcessDies_isAnUnknownOutcome_onRestore() = runTest {
+        val held = CompletableDeferred<Unit>()
+        coEvery {
+            sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any())
+        } coAnswers {
+            held.await()
+            "txid"
+        }
+        val savedState = SavedStateHandle()
+        val viewModel = transferViewModel(savedState)
+        val sending = launch { viewModel.sendDash(Dash.valueOf(100_000), false, false, null) }
+        runCurrent()
+
+        // The process is killed now; a new view model starts from the state saved meanwhile.
+        val restored = transferViewModel(restoredFrom(savedState))
+        assertTrue(restored.paymentOutcomeUnknown.value)
+        restored.sendDash(Dash.valueOf(100_000), false, false, null)
+
+        held.complete(Unit)
+        sending.join()
+        coVerify(exactly = 1) { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any()) }
+    }
+
+    @Test
+    fun transferDash_aSubmissionOwnedByTheViewModel_outlivesTheScreen_andCannotBeSentAgain() = runTest {
+        val held = CompletableDeferred<Unit>()
+        coEvery {
+            sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any())
+        } coAnswers {
+            held.await()
+            "txid"
+        }
+        val viewModel = transferViewModel(SavedStateHandle())
+
+        assertTrue(viewModel.submitTransfer(Dash.valueOf(100_000), false, true, null))
+        // A second Continue, from this screen or a recreated one, while the first is sending.
+        assertFalse(viewModel.submitTransfer(Dash.valueOf(100_000), false, true, null))
+
+        held.complete(Unit)
+        advanceUntilIdle()
+
+        assertTrue(viewModel.observeSendDashToCoinbaseState.value is SendDashResponseState.SuccessState)
+        coVerify(exactly = 1) { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any()) }
+    }
+
+    @Test
     fun transferDash_concurrentSends_onlyOneReachesTheWallet_andARetryableFailureAllowsAnother() = runTest {
         val gate = CompletableDeferred<Unit>()
         coEvery {

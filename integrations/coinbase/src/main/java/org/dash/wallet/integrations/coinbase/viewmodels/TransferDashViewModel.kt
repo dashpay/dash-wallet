@@ -3,6 +3,8 @@ package org.dash.wallet.integrations.coinbase.viewmodels
 import androidx.annotation.StringRes
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -55,6 +57,7 @@ class TransferDashViewModel @Inject constructor(
 ) : ViewModel() {
     companion object {
         private const val KEY_PAYMENT_OUTCOME_UNKNOWN = "payment_outcome_unknown"
+        private const val KEY_SEND_IN_PROGRESS = "send_in_progress"
     }
 
     /**
@@ -73,6 +76,54 @@ class TransferDashViewModel @Inject constructor(
      */
     fun startNewTransfer() {
         savedStateHandle[KEY_PAYMENT_OUTCOME_UNKNOWN] = false
+    }
+
+    init {
+        // A transfer was sending when the process died: it may have gone out, and nothing is
+        // left to say whether it did.
+        if (savedStateHandle.get<Boolean>(KEY_SEND_IN_PROGRESS) == true) {
+            savedStateHandle[KEY_PAYMENT_OUTCOME_UNKNOWN] = true
+            savedStateHandle[KEY_SEND_IN_PROGRESS] = false
+        }
+    }
+
+    /** A transfer the leftover-balance check stopped, to send anyway once the user agrees. */
+    data class PendingTransfer(val dashValue: Dash, val isEmptyWallet: Boolean, val session: WalletSession?)
+
+    /** The send would leave too little behind: the screen asks, then calls [submitTransfer] again. */
+    val onLeftoverBalanceWarning = SingleLiveEvent<PendingTransfer>()
+
+    /**
+     * Starts the transfer in this view model's scope, so a recreation of the screen (which
+     * cancels the screen's own coroutines) cannot cancel a send that may already be on the
+     * network. Its result arrives in [observeSendDashToCoinbaseState], or [onLeftoverBalanceWarning].
+     * False, with nothing started, when a send is in progress or an earlier one's outcome is
+     * unknown.
+     */
+    fun submitTransfer(
+        dashValue: Dash,
+        isEmptyWallet: Boolean,
+        checkConditions: Boolean,
+        session: WalletSession?
+    ): Boolean {
+        if (paymentOutcomeUnknown.value || sendInFlight.get()) {
+            return false
+        }
+        // Undispatched: sendDash claims the send before this returns.
+        viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
+            _loadingState.value = true
+            try {
+                sendDash(dashValue, isEmptyWallet, checkConditions, session)
+            } catch (ex: Exception) {
+                if (!ex.isLeftoverBalanceWarning) {
+                    throw ex
+                }
+                onLeftoverBalanceWarning.value = PendingTransfer(dashValue, isEmptyWallet, session)
+            } finally {
+                _loadingState.value = false
+            }
+        }
+        return true
     }
 
     /** Held while one send is in progress (see [sendDash]). */
@@ -239,10 +290,19 @@ class TransferDashViewModel @Inject constructor(
         if (paymentOutcomeUnknown.value || !sendInFlight.compareAndSet(false, true)) {
             return
         }
+        // Saved with the screen's state: should the process die before this send ends, the
+        // restored screen treats its outcome as unknown (see init).
+        savedStateHandle[KEY_SEND_IN_PROGRESS] = true
         try {
             _sendDashToCoinbaseState.value = checkTransaction(dashValue, isEmptyWallet, checkConditions, session)
+        } catch (ex: CancellationException) {
+            // Cancelled while sending: the transfer may have gone out, and nobody is left to
+            // learn whether it did.
+            savedStateHandle[KEY_PAYMENT_OUTCOME_UNKNOWN] = true
+            throw ex
         } finally {
             // An unknown outcome has already set the terminal flag above, which keeps refusing.
+            savedStateHandle[KEY_SEND_IN_PROGRESS] = false
             sendInFlight.set(false)
         }
     }
@@ -289,6 +349,8 @@ class TransferDashViewModel @Inject constructor(
             SendDashResponseState.SuccessState(walletDataProvider.isTransactionPending(txId))
         } catch (e: Exception) {
             when {
+                // Not a failure of the send: the caller decides what a cancellation means.
+                e is CancellationException -> throw e
                 e.isLeftoverBalanceWarning -> throw e
                 // May have been sent: never reported as a failure, which offers a retry.
                 e is PaymentSubmissionPendingException -> {

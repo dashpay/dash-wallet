@@ -27,7 +27,9 @@ import android.widget.Toast
 import androidx.annotation.StringRes
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.database.entity.DashPayProfile
@@ -39,6 +41,7 @@ import de.schildbach.wallet.ui.transactions.TransactionResultActivity
 import de.schildbach.wallet.util.AnrException
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.SendCoinsFragmentBinding
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.InsufficientMoneyException
@@ -180,6 +183,17 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
             lifecycleScope.launch { authenticateOrConfirm() }
         }
 
+        // A send's outcome, once, whether this screen or one recreated meanwhile started it.
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.sendOutcome.filterNotNull().collect { outcome ->
+                    if (viewModel.consumeSendOutcome(outcome)) {
+                        onSendOutcome(outcome)
+                    }
+                }
+            }
+        }
+
         // The payment may have gone out: Go stays disabled (everythingPlausible() is false from
         // now on) and the warning stays up until the user's Close, which leaves the send screen
         // as its back arrow does; the transaction history shows whether it went out.
@@ -253,42 +267,47 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         updateView()
     }
 
-    private suspend fun handleGo(checkBalance: Boolean, autoAcceptContactRequest: Boolean) {
+    private fun handleGo(checkBalance: Boolean, autoAcceptContactRequest: Boolean) {
         if (viewModel.currentDryRun() == null) {
             log.error("illegal state: no dry run of the current payment")
             return
         }
 
-        val editedAmount = enterAmountViewModel.amount.value
+        val editedAmount = enterAmountViewModel.amount.value ?: return
         val rate = enterAmountViewModel.selectedExchangeRate.value
+        val exchangeRate = rate?.fiat?.let { ExchangeRate(Coin.COIN, it.toDashjFiat()) }
 
-        if (editedAmount != null) {
-            val exchangeRate = rate?.fiat?.let { ExchangeRate(Coin.COIN, it.toDashjFiat()) }
+        // The view model runs the send, so a recreation of this screen cannot cancel it once it
+        // may be on the network; its outcome is handled in onSendOutcome, by this screen or the
+        // recreated one.
+        if (viewModel.submitPayment(editedAmount.toDashjCoin(), exchangeRate, checkBalance, autoAcceptContactRequest)) {
+            viewModel.logSend()
 
-            try {
-                viewModel.logSend()
+            if (enterAmountFragment?.maxSelected == true) {
+                viewModel.logEvent(AnalyticsConstants.SendReceive.ENTER_AMOUNT_MAX)
+            }
+        } else {
+            // Nothing was sent: a send is already in progress, or an earlier one's outcome is
+            // unknown (the screen already shows that).
+            log.info("send refused: a send is in progress or an earlier outcome is unknown")
+        }
+    }
 
-                if (enterAmountFragment?.maxSelected == true) {
-                    viewModel.logEvent(AnalyticsConstants.SendReceive.ENTER_AMOUNT_MAX)
-                }
+    /** What follows a send the view model ran; the view model is already back to INPUT. */
+    private suspend fun onSendOutcome(outcome: SendCoinsViewModel.SendOutcome) {
+        when (outcome) {
+            is SendCoinsViewModel.SendOutcome.Sent ->
+                onSignAndSendPaymentSuccess(outcome.transaction, outcome.autoAcceptContactRequest)
+            is SendCoinsViewModel.SendOutcome.Failed -> {
+                val ex = outcome.exception
+                if (ex is LeftoverBalanceException) {
+                    val shouldContinue = MinimumBalanceDialog().showAsync(requireActivity())
 
-                val tx = viewModel.signAndSendPayment(editedAmount.toDashjCoin(), exchangeRate, checkBalance)
-                onSignAndSendPaymentSuccess(tx, autoAcceptContactRequest)
-            } catch (ex: SendRefusedException) {
-                // Nothing was sent: another send is in progress (it resets the state when done),
-                // or an earlier one's outcome is unknown (the screen already shows that).
-                log.info("send refused: {}", ex.message)
-                return
-            } catch (ex: LeftoverBalanceException) {
-                if (!isAdded) {
+                    if (shouldContinue == true) {
+                        handleGo(false, outcome.autoAcceptContactRequest)
+                    }
                     return
                 }
-                val shouldContinue = MinimumBalanceDialog().showAsync(requireActivity())
-
-                if (shouldContinue == true) {
-                    handleGo(false, autoAcceptContactRequest)
-                }
-            } catch (ex: Exception) {
                 viewModel.logSendError(args.paymentIntent.source)
                 log.info("send exception: ", ex)
                 when (ex) {
@@ -298,9 +317,6 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
                     else -> showFailureDialog(ex)
                 }
             }
-
-            // No-op once the outcome is unknown: the screen never returns to a confirmable INPUT.
-            viewModel.resetState()
         }
     }
 

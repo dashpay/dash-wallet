@@ -29,7 +29,11 @@ import de.schildbach.wallet.service.platform.sdk.ContactPaymentAddressProvider
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
@@ -51,6 +55,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import java.util.concurrent.CountDownLatch
+import java.time.Duration
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Consumer
@@ -72,7 +77,7 @@ class SendCoinsViewModelOutcomeUnknownTest {
     private val balance = Coin.COIN.multiply(5)
 
     /** What each send attempt reaching the runner does: return a tx or throw. */
-    private fun runner(sends: AtomicInteger, onSend: () -> Transaction): SendCoinsTaskRunner {
+    private fun runner(sends: AtomicInteger, onSend: suspend () -> Transaction): SendCoinsTaskRunner {
         val runner = mockk<SendCoinsTaskRunner>(relaxed = true)
         coEvery { runner.isCutoverCommitted() } returns true
         every { runner.observeCutoverCommitted() } returns flowOf(true)
@@ -92,7 +97,7 @@ class SendCoinsViewModelOutcomeUnknownTest {
                 any<(String?) -> Unit>(),
                 any<() -> Unit>()
             )
-        } answers {
+        } coAnswers {
             sends.incrementAndGet()
             onSend()
         }
@@ -160,7 +165,7 @@ class SendCoinsViewModelOutcomeUnknownTest {
     @Test
     fun outcomeUnknown_isTerminal_theScreenCannotConfirmOrSendAgain() {
         val sends = AtomicInteger()
-        val viewModel = buildViewModel(runner(sends, ::outcomeUnknown), SavedStateHandle())
+        val viewModel = buildViewModel(runner(sends) { outcomeUnknown() }, SavedStateHandle())
         open(viewModel)
 
         assertThrows(PaymentSubmissionPendingException::class.java) { send(viewModel) }
@@ -180,13 +185,13 @@ class SendCoinsViewModelOutcomeUnknownTest {
     fun outcomeUnknown_survivesRestore_andStillRefuses() {
         val sends = AtomicInteger()
         val savedState = SavedStateHandle()
-        val first = buildViewModel(runner(sends, ::outcomeUnknown), savedState)
+        val first = buildViewModel(runner(sends) { outcomeUnknown() }, savedState)
         open(first)
         assertThrows(PaymentSubmissionPendingException::class.java) { send(first) }
 
         // A new view model over the saved state, as after the process was killed and restored:
         // the same payment is resolved and dry-run again, but cannot be confirmed or sent.
-        val restored = buildViewModel(runner(sends, ::outcomeUnknown), restoredFrom(savedState))
+        val restored = buildViewModel(runner(sends) { outcomeUnknown() }, restoredFrom(savedState))
         assertTrue(restored.paymentOutcomeUnknown.value)
         open(restored)
         assertFalse(restored.everythingPlausible())
@@ -228,5 +233,99 @@ class SendCoinsViewModelOutcomeUnknownTest {
         assertTrue(viewModel.everythingPlausible())
         assertThrows(IllegalStateException::class.java) { send(viewModel) }
         assertEquals(2, sends.get())
+    }
+
+    private fun awaitCondition(what: String, condition: () -> Boolean) {
+        val deadline = System.currentTimeMillis() + 10_000
+        idle()
+        while (!condition()) {
+            check(System.currentTimeMillis() < deadline) { "timed out waiting for: $what" }
+            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(20))
+            Thread.sleep(20)
+        }
+    }
+
+    /** A send held inside the runner, as a native broadcast in progress, until released. */
+    private class HeldSend {
+        val entered = CountDownLatch(1)
+        val release = CompletableDeferred<Unit>()
+
+        suspend fun hold(): Transaction {
+            entered.countDown()
+            release.await()
+            return mockk(relaxed = true)
+        }
+
+        fun awaitEntered() = check(entered.await(10, TimeUnit.SECONDS)) { "the send never reached the runner" }
+    }
+
+    @Test
+    fun theUiWaiterCancelledAfterSubmissionStarted_isAnUnknownOutcome_notARetry() {
+        // A recreation used to cancel the fragment coroutine that ran the send while the native
+        // broadcast may already have gone out: nothing was recorded and Go worked again.
+        val sends = AtomicInteger()
+        val held = HeldSend()
+        val viewModel = buildViewModel(runner(sends) { held.hold() }, SavedStateHandle())
+        open(viewModel)
+
+        val waiter = CoroutineScope(Dispatchers.IO).launch { viewModel.signAndSendPayment(amount, null, true) }
+        held.awaitEntered()
+        waiter.cancel()
+        runBlocking { waiter.join() }
+
+        assertTrue(viewModel.paymentOutcomeUnknown.value)
+        assertFalse(viewModel.everythingPlausible())
+        assertThrows(SendRefusedException::class.java) { send(viewModel) }
+        assertEquals(1, sends.get())
+    }
+
+    @Test
+    fun aSendInProgress_whenTheProcessDies_isAnUnknownOutcome_onRestore() {
+        val sends = AtomicInteger()
+        val held = HeldSend()
+        val savedState = SavedStateHandle()
+        val viewModel = buildViewModel(runner(sends) { held.hold() }, savedState)
+        open(viewModel)
+
+        val sending = thread { runCatching { send(viewModel) } }
+        held.awaitEntered()
+
+        // The process is killed now; a new view model starts from the state saved meanwhile.
+        val restored = buildViewModel(runner(sends) { held.hold() }, restoredFrom(savedState))
+        assertTrue(restored.paymentOutcomeUnknown.value)
+        open(restored)
+        assertFalse(restored.everythingPlausible())
+        assertThrows(SendRefusedException::class.java) { send(restored) }
+
+        held.release.complete(Unit)
+        sending.join(10_000)
+        assertEquals(1, sends.get())
+    }
+
+    @Test
+    fun aSubmissionOwnedByTheViewModel_outlivesTheScreen_andTheRecreatedScreenCannotSendAgain() {
+        val sends = AtomicInteger()
+        val held = HeldSend()
+        val viewModel = buildViewModel(runner(sends) { held.hold() }, SavedStateHandle())
+        open(viewModel)
+
+        assertTrue(viewModel.submitPayment(amount, null, checkBalance = true, autoAcceptContactRequest = false))
+        held.awaitEntered()
+
+        // The recreated screen initialises the payment again: it must not reset the send to INPUT.
+        runBlocking { viewModel.initPaymentIntent(PaymentIntent.fromAddress(payee.toBase58(), null)) }
+        idle()
+        assertFalse(viewModel.everythingPlausible())
+        assertFalse(viewModel.submitPayment(amount, null, checkBalance = true, autoAcceptContactRequest = false))
+
+        held.release.complete(Unit)
+        awaitCondition("the send's outcome") { viewModel.sendOutcome.value != null }
+
+        val outcome = viewModel.sendOutcome.value
+        assertTrue(outcome is SendCoinsViewModel.SendOutcome.Sent)
+        assertEquals(1, sends.get())
+        // The screen handles it once.
+        assertTrue(viewModel.consumeSendOutcome(requireNotNull(outcome)))
+        assertFalse(viewModel.consumeSendOutcome(outcome))
     }
 }

@@ -38,6 +38,7 @@ import de.schildbach.wallet.service.platform.sdk.ContactPaymentTarget
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.util.AnrException
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -45,6 +46,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -115,6 +117,7 @@ class SendCoinsViewModel @Inject constructor(
     companion object {
         private val log = LoggerFactory.getLogger(SendCoinsViewModel::class.java)
         private const val KEY_PAYMENT_OUTCOME_UNKNOWN = "payment_outcome_unknown"
+        private const val KEY_SEND_IN_PROGRESS = "send_in_progress"
     }
 
     /**
@@ -125,6 +128,76 @@ class SendCoinsViewModel @Inject constructor(
      */
     val paymentOutcomeUnknown: StateFlow<Boolean> =
         savedStateHandle.getStateFlow(KEY_PAYMENT_OUTCOME_UNKNOWN, false)
+
+    init {
+        // A send was in progress when the process died: it may have gone out, and nothing is
+        // left to say whether it did.
+        if (savedStateHandle.get<Boolean>(KEY_SEND_IN_PROGRESS) == true) {
+            log.warn("a send was in progress when the process died; its outcome is unknown")
+            savedStateHandle[KEY_PAYMENT_OUTCOME_UNKNOWN] = true
+            savedStateHandle[KEY_SEND_IN_PROGRESS] = false
+        }
+    }
+
+    /** The result of a send this view model ran ([submitPayment]), for the screen to act on. */
+    sealed class SendOutcome {
+        abstract val autoAcceptContactRequest: Boolean
+
+        data class Sent(
+            val transaction: Transaction,
+            override val autoAcceptContactRequest: Boolean
+        ) : SendOutcome()
+
+        data class Failed(
+            val exception: Exception,
+            override val autoAcceptContactRequest: Boolean
+        ) : SendOutcome()
+    }
+
+    private val _sendOutcome = MutableStateFlow<SendOutcome?>(null)
+
+    /**
+     * The latest send's outcome until the screen takes it ([consumeSendOutcome]). Kept here, not
+     * in the screen, so a screen recreated while the send ran still sees how it ended.
+     */
+    val sendOutcome: StateFlow<SendOutcome?> = _sendOutcome.asStateFlow()
+
+    /**
+     * Starts the confirmed payment in this view model's scope, so a recreation of the screen
+     * (which cancels the screen's own coroutines) cannot cancel a send that may already be on
+     * the network. Its result arrives in [sendOutcome], after which the screen goes back to
+     * INPUT ([resetState], a no-op once the outcome is unknown). False, with nothing started,
+     * when a send is already in progress or an earlier one's outcome is unknown.
+     */
+    fun submitPayment(
+        editedAmount: Coin,
+        exchangeRate: ExchangeRate?,
+        checkBalance: Boolean,
+        autoAcceptContactRequest: Boolean
+    ): Boolean {
+        if (paymentOutcomeUnknown.value || sendInFlight.get()) {
+            return false
+        }
+        // Undispatched: signAndSendPayment claims the send before this returns.
+        viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
+            val outcome = try {
+                SendOutcome.Sent(signAndSendPayment(editedAmount, exchangeRate, checkBalance), autoAcceptContactRequest)
+            } catch (ex: SendRefusedException) {
+                log.info("send refused: {}", ex.message)
+                return@launch
+            } catch (ex: CancellationException) {
+                throw ex
+            } catch (ex: Exception) {
+                SendOutcome.Failed(ex, autoAcceptContactRequest)
+            }
+            _sendOutcome.value = outcome
+            resetState()
+        }
+        return true
+    }
+
+    /** Takes [outcome] for handling; false if it was already taken (the screen acts on it once). */
+    fun consumeSendOutcome(outcome: SendOutcome): Boolean = _sendOutcome.compareAndSet(outcome, null)
 
     /** Held while one send is in progress (see [signAndSendPayment]). */
     private val sendInFlight = AtomicBoolean(false)
@@ -465,7 +538,11 @@ class SendCoinsViewModel @Inject constructor(
             return
         }
         withContext(Dispatchers.Main.immediate) {
-            _state.value = State.INPUT
+            // Not under a send in progress (a screen recreated meanwhile resolves the payment
+            // again): the send's outcome sets the state when it ends.
+            if (!sendInFlight.get()) {
+                _state.value = State.INPUT
+            }
         }
         withContext(Dispatchers.IO) {
             executeDryrun(currentAmount)
@@ -473,7 +550,7 @@ class SendCoinsViewModel @Inject constructor(
     }
 
     fun everythingPlausible(): Boolean {
-        return !paymentOutcomeUnknown.value && state.value === State.INPUT &&
+        return !paymentOutcomeUnknown.value && !sendInFlight.get() && state.value === State.INPUT &&
             isPayeePlausible() && isAmountPlausible()
     }
 
@@ -515,15 +592,23 @@ class SendCoinsViewModel @Inject constructor(
         if (!sendInFlight.compareAndSet(false, true)) {
             throw SendRefusedException("a send is already in progress; nothing was sent")
         }
+        // Saved with the screen's state: should the process die before this send ends, the
+        // restored screen treats its outcome as unknown (see init).
+        savedStateHandle[KEY_SEND_IN_PROGRESS] = true
+        val submitted = AtomicBoolean(false)
         try {
-            return sendPayment(editedAmount, exchangeRate, checkBalance)
+            return sendPayment(editedAmount, exchangeRate, checkBalance, submitted)
         } catch (ex: Exception) {
-            if (classifySendFailure(ex) == SendFailureKind.OUTCOME_UNKNOWN) {
+            // Cancelled once the submission had started: the broadcast may have gone out, and
+            // nobody is left to learn whether it did.
+            val cancelledAfterSubmission = ex is CancellationException && submitted.get()
+            if (cancelledAfterSubmission || classifySendFailure(ex) == SendFailureKind.OUTCOME_UNKNOWN) {
                 savedStateHandle[KEY_PAYMENT_OUTCOME_UNKNOWN] = true
             }
             throw ex
         } finally {
             // An unknown outcome has already set the terminal flag, which keeps refusing.
+            savedStateHandle[KEY_SEND_IN_PROGRESS] = false
             sendInFlight.set(false)
         }
     }
@@ -531,7 +616,8 @@ class SendCoinsViewModel @Inject constructor(
     private suspend fun sendPayment(
         editedAmount: Coin,
         exchangeRate: ExchangeRate?,
-        checkBalance: Boolean
+        checkBalance: Boolean,
+        submitted: AtomicBoolean
     ): Transaction = withContext(Dispatchers.IO) {
         Context.propagate(wallet.context)
         _state.postValue(State.SENDING)
@@ -666,6 +752,7 @@ class SendCoinsViewModel @Inject constructor(
                     }
                 }
             ) { signals ->
+                submitted.set(true)
                 sendCoinsTaskRunner.sendCoins(
                     finalSendRequest,
                     checkBalanceConditions = checkBalance,
