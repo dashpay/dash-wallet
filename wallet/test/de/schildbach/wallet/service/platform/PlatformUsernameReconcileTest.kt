@@ -71,6 +71,9 @@ class PlatformUsernameReconcileTest {
     private val dashPayProfileDao =
         mockk<de.schildbach.wallet.database.dao.DashPayProfileDao>(relaxed = true)
 
+    private val transparentUsernameCreation =
+        mockk<de.schildbach.wallet.service.platform.sdk.SdkTransparentUsernameCreation>(relaxed = true)
+
     private fun service() = PlatformSynchronizationService(
         platform = mockk(relaxed = true),
         platformRepo = platformRepo,
@@ -106,7 +109,7 @@ class PlatformUsernameReconcileTest {
         shieldedTransferExecutor = mockk(relaxed = true),
         contactRequestNotificationService = mockk(relaxed = true),
         dashPaySyncStatus = de.schildbach.wallet.service.DashPaySyncStatus(),
-        transparentUsernameCreation = javax.inject.Provider { mockk(relaxed = true) }
+        transparentUsernameCreation = javax.inject.Provider { transparentUsernameCreation }
     )
 
     @Test
@@ -198,5 +201,19 @@ class PlatformUsernameReconcileTest {
         assertEquals(UsernameStatus.NOT_PRESENT, data.usernameStatus)
         assertEquals(IdentityCreationState.VOTING, data.creationState)
         coVerify(exactly = 0) { identityRepository.updateBlockchainIdentityData(any()) }
+    }
+
+    @Test
+    fun theSyncTicker_reconcilesAnInterruptedNameOnlyRetry_onEveryPass() = runBlocking {
+        // discovery runs once per service lifetime once an identity exists, so a reconcile it
+        // deferred (ownership unreadable) must be retried by the recurring pass
+        val service = service()
+        try {
+            service.initSync(runFirstUpdateBlocking = false)
+
+            coVerify(timeout = 5_000, atLeast = 1) { transparentUsernameCreation.reconcileInterruptedNameRetry() }
+        } finally {
+            service.stopSync()
+        }
     }
 }

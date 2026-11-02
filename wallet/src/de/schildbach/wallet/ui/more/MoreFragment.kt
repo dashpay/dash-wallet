@@ -637,9 +637,17 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
             createIdentityViewModel.retryCreateIdentity()
         } else {
             // as the home tile: reuse the existing identity's record, so the new name is
-            // registered for it (no fresh funding)
-            createIdentityViewModel.blockchainIdentity.value?.let { identity ->
-                startActivity(CreateUsernameActivity.createIntentReuseTransaction(requireActivity(), identity))
+            // registered for it (no fresh funding). The observed identity may not have arrived
+            // yet, so the stored record is read; a tap is never silently dropped.
+            viewLifecycleOwner.lifecycleScope.launch {
+                val identity = createIdentityViewModel.existingIdentityForNewName()
+                if (identity != null) {
+                    startActivity(CreateUsernameActivity.createIntentReuseTransaction(requireActivity(), identity))
+                } else {
+                    // never a fresh creation without the existing identity's context
+                    log.warn("taken-name retry: no identity record to reuse")
+                    Toast.makeText(requireContext(), errorMessage, Toast.LENGTH_LONG).show()
+                }
             }
         }
     }

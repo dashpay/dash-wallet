@@ -19,6 +19,7 @@ package de.schildbach.wallet.service.platform.sdk
 
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.entity.IdentityCreationState
+import de.schildbach.wallet.service.platform.RequestedNameContext
 import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -1263,6 +1264,80 @@ class SdkTransparentUsernameCreationTest {
         assertTrue(SdkTransparentUsernameCreation.isNameOnlyRetryError(run.states.last().second))
         assertNull(journal.pendingNameOnlyRetry())
         assertEquals("the requested names stay for recovery", "alice3", journal.requestedNames()?.username)
+        appScope.cancel()
+    }
+
+    @Test
+    fun `a DONE retry whose handoff never happened is handed off on restart, then cleared`() = runTest {
+        // the confirmed non-contested name is DONE before the handoff; the handoff throws (or the
+        // process dies right there): the recovery job never exists
+        val source = source(lockAfterFailure = null)
+        coEvery { source.registerDpnsName(walletIdHex, identityId, "alice3") } returns "alice3.dash"
+        val journal = de.schildbach.wallet.service.platform.InMemoryRequestedNameJournal()
+        val run = RetryRun()
+        val appScope = CoroutineScope(SupervisorJob() + kotlinx.coroutines.test.StandardTestDispatcher(testScheduler))
+        val first = SdkTransparentUsernameCreation(
+            source = source,
+            cutoverCommitted = { true },
+            feeDuffs = { feeDuffs },
+            handOffToLegacy = { throw IllegalStateException("WorkManager not initialised") },
+            driveCreationState = { state, error -> run.states += state to error },
+            executorScope = appScope,
+            fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock(),
+            nameJournal = journal
+        ).also { it.ioDispatcher = kotlinx.coroutines.test.StandardTestDispatcher(testScheduler) }
+        assertTrue(first.retryNameForExistingIdentity(identityIdBase58, "alice3", null))
+        advanceUntilIdle()
+        appScope.cancel()
+        assertEquals(IdentityCreationState.DONE to null, run.states.last())
+        assertTrue("no recovery owner yet, so still pending", journal.pendingNameOnlyRetry() != null)
+        journal.creationState = IdentityCreationState.DONE // what the record says now
+
+        val restart = RetryRun()
+        assertTrue(instance(source, journal, restart).reconcileInterruptedNameRetry())
+
+        assertEquals("handed to recovery on restart", listOf(identityIdBase58), restart.handedOff)
+        assertNull(journal.pendingNameOnlyRetry())
+        coVerify(exactly = 1) { source.registerDpnsName(any(), any(), "alice3") }
+    }
+
+    @Test
+    fun `an accepted retry is already pending when it is acknowledged`() = runTest {
+        // the screen publishes "submitting" on acceptance: the durable record must exist by then,
+        // not only once the launched job gets to run
+        val source = source(lockAfterFailure = null)
+        coEvery { source.registerDpnsName(walletIdHex, identityId, "alice3") } returns "alice3.dash"
+        val journal = de.schildbach.wallet.service.platform.InMemoryRequestedNameJournal()
+        val run = RetryRun()
+        val appScope = CoroutineScope(SupervisorJob() + kotlinx.coroutines.test.StandardTestDispatcher(testScheduler))
+        val creation = instance(source, journal, run, appScope)
+
+        assertTrue(creation.retryNameForExistingIdentity(identityIdBase58, "alice4", "alice5"))
+
+        assertEquals(
+            RequestedNameContext(identityIdBase58, "alice4", "alice5"),
+            journal.pendingNameOnlyRetry()?.request
+        )
+        appScope.cancel()
+    }
+
+    @Test
+    fun `a retry whose durable record cannot be written is refused, starting nothing`() = runTest {
+        val source = source(lockAfterFailure = null)
+        val journal = object : de.schildbach.wallet.service.platform.RequestedNameJournal by
+            de.schildbach.wallet.service.platform.InMemoryRequestedNameJournal() {
+            override suspend fun beginNameOnlyRetry(request: RequestedNameContext) {
+                throw java.io.IOException("datastore write failed")
+            }
+        }
+        val run = RetryRun()
+        val appScope = CoroutineScope(SupervisorJob() + kotlinx.coroutines.test.StandardTestDispatcher(testScheduler))
+
+        assertFalse(instance(source, journal, run, appScope).retryNameForExistingIdentity(identityIdBase58, "alice3", null))
+        advanceUntilIdle()
+
+        assertTrue("nothing written: ${run.states}", run.states.isEmpty() && run.nameContexts.isEmpty())
+        coVerify(exactly = 0) { source.registerDpnsName(any(), any(), any()) }
         appScope.cancel()
     }
 

@@ -5,6 +5,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
+import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.service.platform.sdk.SdkTransparentUsernameCreation
 import de.schildbach.wallet.service.platform.work.RestoreIdentityOperation
@@ -58,6 +59,14 @@ class CreateIdentityViewModel @Inject constructor(
             }
             .launchIn(viewModelScope)
     }
+
+    /**
+     * The existing identity a new name is registered for (a taken name's "Try again"): the
+     * observed one, or the stored record when the observation has not been delivered yet (it is
+     * posted asynchronously). Null only when there is no identity record at all.
+     */
+    suspend fun existingIdentityForNewName(): BlockchainIdentityData? =
+        blockchainIdentity.value ?: blockchainIdentityDataDao.load()
 
     fun retryCreateIdentity() {
         viewModelScope.launch {

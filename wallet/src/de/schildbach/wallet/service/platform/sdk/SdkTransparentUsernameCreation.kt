@@ -1872,6 +1872,24 @@ class SdkTransparentUsernameCreation internal constructor(
             log.warn("name-only retry refused: could not check the identity's names", e)
             return false
         }
+        // Durable before it is accepted: the caller acknowledges acceptance (the screen closes on
+        // it), so from then on a process death must leave a pending retry that the restart
+        // reconciles ([reconcileInterruptedNameRetry]), never a record on the name step with no
+        // job and no error. One write: it also puts the requested names on the record. A failed
+        // write refuses the retry, having changed nothing.
+        try {
+            withContext(ioDispatcher) {
+                // not after a wipe started: the write would outlive the wallet it belongs to
+                secretWriteFence.withSecretWritePermit("name-only retry record") {
+                    nameJournal.beginNameOnlyRetry(RequestedNameContext(identityIdBase58, username, secondaryUsername))
+                }
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("name-only retry refused: could not record it", e)
+            return false
+        }
         // LAZY + tracked before start: the job can never run unfenced.
         val job = scope.launch(start = CoroutineStart.LAZY) {
             try {
@@ -1976,14 +1994,26 @@ class SdkTransparentUsernameCreation internal constructor(
     private suspend fun reconcileNow(pending: PendingNameOnlyRetry): Boolean {
         val request = pending.request
         val identityIdBase58 = request.identityIdBase58
-        if (pending.recordIdentityId != identityIdBase58 ||
-            pending.creationState >= IdentityCreationState.DONE ||
-            pending.creationState == IdentityCreationState.VOTING
-        ) {
-            // another identity's record, or the run (or its recovery) got past the name step
+        if (pending.recordIdentityId != identityIdBase58 || pending.creationState == IdentityCreationState.VOTING) {
+            // another identity's record, or recovery already took it to its vote
             log.info("pending name-only retry for {}… already finished; clearing it", identityIdBase58.take(8))
             finishPendingNameRetry()
             return false
+        }
+        if (pending.creationState >= IdentityCreationState.DONE) {
+            // DONE is written for a confirmed name before the handoff, and the retry stays pending
+            // until the handoff succeeded: the recovery job may never have been enqueued
+            try {
+                handOffToLegacy(identityIdBase58)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                log.warn("could not hand the completed name-only retry to recovery; retrying later", e)
+                return false
+            }
+            log.info("pending name-only retry for {}… was DONE; handed to recovery", identityIdBase58.take(8))
+            finishPendingNameRetry()
+            return true
         }
         val ours = dpnsLock.withIdentityLock(identityIdBase58) { ownershipRecheck(identityIdBase58, request.username) }
         if (ours == null) {
@@ -2036,10 +2066,7 @@ class SdkTransparentUsernameCreation internal constructor(
     ) {
         log.info("name-only retry for existing identity {}: requesting a new DPNS name", identityIdBase58)
         val (walletId, identityId, alreadyTaken) = resolved
-        // Before anything changes: from here on, a process death leaves a pending retry that the
-        // restart reconciles ([reconcileInterruptedNameRetry]) instead of a record stuck on the
-        // name step with no job and no error.
-        nameJournal.beginNameOnlyRetry(RequestedNameContext(identityIdBase58, username, secondaryUsername))
+        // already pending and on record: [launchNameRetry] wrote it before accepting
         val contested = Names.isUsernameContestable(username) ||
             (secondaryUsername != null && Names.isUsernameContestable(secondaryUsername))
         // The requested names become the record's (a secondary only when one is requested, so a

@@ -690,6 +690,11 @@ class PlatformSynchronizationService @Inject constructor(
         txMetadataJob?.cancel(CancellationException("re-arming the tx metadata ticker"))
         platformSyncJob = TickerFlow(UPDATE_TIMER_DELAY)
             .onEach {
+                // Every pass, not only discovery's (which runs once per service lifetime once an
+                // identity exists): a reconcile deferred on an unreadable ownership read is
+                // retried here. A DataStore read and nothing more when nothing is pending; off
+                // this pass, and single-flight inside, so a slow Platform read never stacks.
+                syncScope.launch { reconcileInterruptedNameRetry("sync tick") }
                 // Background-aware cadence (docs/upgrade-memory-and-sync-plan.md
                 // §10.4, emulator finding 11): the full contact/profile/invite/
                 // metadata cycle every 15 s is for a user looking at the app.
@@ -2870,15 +2875,7 @@ class PlatformSynchronizationService @Inject constructor(
             // A name-only retry the process lost (killed during its registration) is finished
             // first; when it changed the record, the checks below wait for the next trigger
             // rather than act on the record read before it.
-            val reconciledNameRetry = try {
-                transparentUsernameCreation.get().reconcileInterruptedNameRetry()
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                log.warn("discoverAndRecoverIdentity: could not reconcile an interrupted name-only retry", e)
-                false
-            }
-            if (!reconciledNameRetry) {
+            if (!reconcileInterruptedNameRetry("discoverAndRecoverIdentity")) {
                 checkVotingStatus(identityData)
                 reconcileUsernameStatus(identityData)
             }
@@ -2888,6 +2885,19 @@ class PlatformSynchronizationService @Inject constructor(
             }
             return false
         }
+    }
+
+    /**
+     * See [de.schildbach.wallet.service.platform.sdk.SdkTransparentUsernameCreation.reconcileInterruptedNameRetry].
+     * Never throws, except for cancellation.
+     */
+    private suspend fun reconcileInterruptedNameRetry(caller: String): Boolean = try {
+        transparentUsernameCreation.get().reconcileInterruptedNameRetry()
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        log.warn("{}: could not reconcile an interrupted name-only retry", caller, e)
+        false
     }
 
     override suspend fun checkUsernameVotingStatus() {

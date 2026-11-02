@@ -52,7 +52,9 @@ interface RequestedNameJournal {
 
     /**
      * In one write: records [request], marks a name-only retry pending, and puts the identity
-     * record on the name step (USERNAME_REGISTERING, no error).
+     * record on the name step for [request]'s identity and names (USERNAME_REGISTERING, no error,
+     * not restoring, the old name's request status cleared; a registered secondary stays when no
+     * secondary is requested).
      */
     suspend fun beginNameOnlyRetry(request: RequestedNameContext)
 

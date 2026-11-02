@@ -254,6 +254,32 @@ open class BlockchainIdentityConfig @Inject constructor(
         /** A name-only retry of the requested names is in flight; see [RequestedNameJournal]. */
         val NAME_ONLY_RETRY_PENDING = booleanPreferencesKey("name_only_retry_pending")
         private val log = LoggerFactory.getLogger(BlockchainIdentityConfig::class.java)
+
+        private fun putRequestedNames(prefs: MutablePreferences, request: RequestedNameContext) {
+            prefs[REQUESTED_NAMES_IDENTITY_ID] = request.identityIdBase58
+            prefs[REQUESTED_NAMES_USERNAME] = request.username
+            request.secondaryUsername?.let { prefs[REQUESTED_NAMES_USERNAME_SECONDARY] = it }
+                ?: prefs.remove(REQUESTED_NAMES_USERNAME_SECONDARY)
+        }
+
+        /**
+         * The single edit of [beginNameOnlyRetry]: the record a later "Try again" reads (identity
+         * id, the requested names, restoring, the old name's request status) changes together with
+         * the pending mark, so no partial write can drop the requested secondary.
+         */
+        internal fun writeNameOnlyRetryStart(prefs: MutablePreferences, request: RequestedNameContext) {
+            putRequestedNames(prefs, request)
+            prefs[IDENTITY_ID] = request.identityIdBase58
+            prefs[USERNAME] = request.username
+            // a secondary only when one is requested: a registered secondary stays
+            request.secondaryUsername?.let { prefs[USERNAME_SECONDARY] = it }
+            prefs[RESTORING] = false
+            // the lost or locked status belonged to the old name
+            prefs.remove(USERNAME_REQUESTED)
+            prefs[NAME_ONLY_RETRY_PENDING] = true
+            prefs[CREATION_STATE] = IdentityCreationState.USERNAME_REGISTERING.name
+            prefs.remove(CREATION_STATE_ERROR_MESSAGE)
+        }
     }
 
     private val identityData: Flow<BlockchainIdentityData> = data
@@ -398,12 +424,7 @@ open class BlockchainIdentityConfig @Inject constructor(
     }
 
     override suspend fun beginNameOnlyRetry(request: RequestedNameContext) {
-        context.dataStore.edit { prefs ->
-            putRequestedNames(prefs, request)
-            prefs[NAME_ONLY_RETRY_PENDING] = true
-            prefs[CREATION_STATE] = IdentityCreationState.USERNAME_REGISTERING.name
-            prefs.remove(CREATION_STATE_ERROR_MESSAGE)
-        }
+        context.dataStore.edit { prefs -> writeNameOnlyRetryStart(prefs, request) }
     }
 
     override suspend fun pendingNameOnlyRetry(): PendingNameOnlyRetry? {
@@ -419,13 +440,6 @@ open class BlockchainIdentityConfig @Inject constructor(
 
     override suspend fun finishNameOnlyRetry() {
         context.dataStore.edit { prefs -> prefs.remove(NAME_ONLY_RETRY_PENDING) }
-    }
-
-    private fun putRequestedNames(prefs: MutablePreferences, request: RequestedNameContext) {
-        prefs[REQUESTED_NAMES_IDENTITY_ID] = request.identityIdBase58
-        prefs[REQUESTED_NAMES_USERNAME] = request.username
-        request.secondaryUsername?.let { prefs[REQUESTED_NAMES_USERNAME_SECONDARY] = it }
-            ?: prefs.remove(REQUESTED_NAMES_USERNAME_SECONDARY)
     }
 
     /** The record a recovery of [identityIdBase58] starts from; see [recoverySeedRecord]. */

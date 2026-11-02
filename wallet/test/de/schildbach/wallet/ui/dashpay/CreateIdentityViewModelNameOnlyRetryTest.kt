@@ -129,4 +129,23 @@ class CreateIdentityViewModelNameOnlyRetryTest {
         verify(exactly = 1, timeout = 5_000) { walletApplication.startService(any()) }
         coVerify(exactly = 0) { transparentUsernameCreation.retryNameForExistingIdentity(any(), any(), any()) }
     }
+
+    @Test
+    fun `a taken name's new-name route reads the stored identity when none was observed yet`() = runBlocking {
+        // the LiveData is posted asynchronously; a tap before it lands must still reuse the
+        // existing identity, never be ignored or fall back to a fresh creation
+        val stored = de.schildbach.wallet.database.entity.BlockchainIdentityData(
+            de.schildbach.wallet.database.entity.IdentityCreationState.USERNAME_REGISTERING,
+            SdkTransparentUsernameCreation.NAME_ONLY_RETRY_ERROR + ": DuplicateUniqueIndexError",
+            "alice3",
+            null,
+            identityId,
+            false
+        )
+        coEvery { config.load() } returns stored
+        val viewModel = viewModel()
+        assertEquals(null, viewModel.blockchainIdentity.value)
+
+        assertEquals(stored, viewModel.existingIdentityForNewName())
+    }
 }
