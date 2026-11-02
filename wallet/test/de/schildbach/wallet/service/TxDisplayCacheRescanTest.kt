@@ -296,7 +296,9 @@ class TxDisplayCacheRescanTest {
         val tx = Transaction(params).apply {
             addOutput(Coin.parseCoin("0.5"), Address.fromBase58(params, "yMY5bqWcknGy5xYBHSsh2xvHZiJsRucjuy"))
         }
-        val replacedRows = mutableListOf<List<TxDisplayCacheEntry>>()
+        // CopyOnWriteArrayList: the capture appends on the service's worker thread and the
+        // assertions read on the test thread.
+        val replacedRows = CopyOnWriteArrayList<List<TxDisplayCacheEntry>>()
         coEvery { displayDao.replaceAll(capture(replacedRows)) } just Runs
         val cache = serviceWithWallet(MutableStateFlow(wallet), rebuildWraps = listOf(singleTxWrapper(tx, params)))
 
@@ -309,6 +311,9 @@ class TxDisplayCacheRescanTest {
         cache.setFilter(TxFilterType.SENT)
 
         coVerify(timeout = 5_000) { displayDao.replaceAll(any()) }
+        // coVerify returns once the call is RECORDED, which does not order with the
+        // capture-append on the worker thread — await the captured rows before reading them.
+        awaitTrue { replacedRows.isNotEmpty() }
         assertEquals(1, replacedRows.last().size)
         assertEquals(tx.txId.toString(), replacedRows.last().first().rowId)
         // Still 1: the reset re-hydrates by walking the wallet (rebuildWrappedList), not by
