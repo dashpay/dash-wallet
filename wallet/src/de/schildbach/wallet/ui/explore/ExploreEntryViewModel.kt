@@ -6,14 +6,12 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.NetworkParameters
 import org.dash.wallet.common.WalletDataProvider
-import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.features.exploredash.utils.ExploreConfig
 import javax.inject.Inject
 
 @HiltViewModel
 class ExploreEntryViewModel @Inject constructor(
     private val exploreConfig: ExploreConfig,
-    private val analytics: AnalyticsService,
     private val walletData: WalletDataProvider
 ): ViewModel() {
     suspend fun isInfoShown(): Boolean =
@@ -23,10 +21,6 @@ class ExploreEntryViewModel @Inject constructor(
         viewModelScope.launch {
             exploreConfig.set(ExploreConfig.HAS_INFO_SCREEN_BEEN_SHOWN, isShown)
         }
-    }
-
-    fun logEvent(event: String) {
-        analytics.logEvent(event, mapOf())
     }
 
     fun isTestNet(): Boolean {
