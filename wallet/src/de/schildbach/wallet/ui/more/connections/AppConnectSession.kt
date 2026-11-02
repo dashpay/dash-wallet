@@ -82,7 +82,9 @@ internal class AppConnectSession(
 
     suspend fun prepareTokenPurchase(request: DashStRequest): TokenPurchaseApproval = withContext(Dispatchers.IO) {
         mutex.withLock {
-            check(platform.client.refreshProtocolVersion() >= 14) { "App Connect operations require Platform protocol version 14" }
+            check(platform.client.refreshProtocolVersion() >= ConnectAvailability.MIN_PROTOCOL_VERSION) {
+                "App Connect operations require Platform protocol version ${ConnectAvailability.MIN_PROTOCOL_VERSION}"
+            }
             val scope = scope()
             val identity = readIdentity()
             val summary = nativeBytes(dashsdk.prepareTokenPurchaseSdk(platform.rustSdk, request.transitionBytes, identity.id.toNative()))
@@ -181,8 +183,9 @@ internal class AppConnectSession(
 
     suspend fun prepare(request: DashKeyRequest): AppConnectPlan = withContext(Dispatchers.IO) {
         val parsed = request.requireAppConnect()
-        check(Constants.NETWORK_PARAMETERS.id != NetworkParameters.ID_MAINNET) { "App Connect is unavailable on mainnet" }
-        check(platform.client.refreshProtocolVersion() >= 14) { "App Connect requires Platform protocol version 14" }
+        check(platform.client.refreshProtocolVersion() >= ConnectAvailability.MIN_PROTOCOL_VERSION) {
+            "App Connect requires Platform protocol version ${ConnectAvailability.MIN_PROTOCOL_VERSION}"
+        }
         val scope = scope()
         val identity = readIdentity()
         val blockTime = platform.client.getPlatformTime(identity.id)
@@ -259,7 +262,7 @@ internal class AppConnectSession(
             check(0 in plan.selectedAuth && plan.selectedAuth.all { it in plan.grants.indices }) { "Primary grant is required" }
             check(plan.selectedEncryption.all { it in parsed.encryption.indices })
             parsed.requireFresh(System.currentTimeMillis())
-            check(platform.client.refreshProtocolVersion() >= 14)
+            check(platform.client.refreshProtocolVersion() >= ConnectAvailability.MIN_PROTOCOL_VERSION)
             val selectedGrants = plan.selectedAuth.sorted().map { plan.grants[it] }
             plan.requireGroupScopes(validateOwnership(request, selectedGrants))
             val recordId = "${plan.scope}:${plan.requestHash}"

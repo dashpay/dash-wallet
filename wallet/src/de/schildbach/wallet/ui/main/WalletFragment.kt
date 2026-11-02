@@ -355,8 +355,8 @@ class WalletFragment : Fragment(R.layout.home_content) {
         if (de.schildbach.wallet.Constants.SUPPORTS_CONNECT &&
             DashConnectUri.isConnectUri(input)
         ) {
-            // DashConnect QR, handled by the Connections screen. Where the feature is off (prod)
-            // these URIs fall through to the normal unrecognised-QR error.
+            // DashConnect QR, handled by the Connections screen, which also says when the network is
+            // too old for it. Where the feature is off these URIs fall through to the unrecognised-QR error.
             safeNavigate(WalletFragmentDirections.homeToConnections(input))
             return
         }

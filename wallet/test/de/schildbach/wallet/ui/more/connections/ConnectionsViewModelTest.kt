@@ -57,9 +57,8 @@ class ConnectionsViewModelTest {
     @Before fun setup() {
         Dispatchers.setMain(dispatcher)
         originalSupportsPlatform = Constants.SUPPORTS_PLATFORM
-        org.junit.Assume.assumeFalse(Constants.IS_PROD_BUILD ||
-            Constants.NETWORK_PARAMETERS.id == org.bitcoinj.core.NetworkParameters.ID_MAINNET)
         Constants.SUPPORTS_PLATFORM = true
+        coEvery { repository.isAvailable() } returns true
         every { repository.observeConnections() } returns MutableStateFlow(emptyList())
         every { identities.blockchainIdentity } returns null
         every { identities.blockchainIdentityFlow } returns MutableStateFlow(null)
@@ -767,6 +766,7 @@ class ConnectionsViewModelTest {
         val platform = mockk<de.schildbach.wallet.service.platform.PlatformService>(relaxed = true)
         val wallet = mockk<de.schildbach.wallet.ui.dashpay.PlatformRepo>(relaxed = true)
         every { wallet.walletApplication.wallet!!.watchingKey.pubKey } returns ByteArray(33) { 1 }
+        coEvery { wallet.refreshProtocolVersion() } returns ConnectAvailability.MIN_PROTOCOL_VERSION
         val config = mockk<DashConnectConfig>()
         val scope = AppConnectSession(platform, wallet, identities, config).scope()
         val record = org.json.JSONObject().put("scope", scope).put("app", "app").put("state", "active")

@@ -28,6 +28,8 @@ import de.schildbach.wallet.database.dao.BlockchainStateDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.transactions.TaxBitExporter
+import de.schildbach.wallet.ui.dashpay.PlatformRepo
+import de.schildbach.wallet.ui.more.connections.ConnectAvailability
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -55,7 +57,9 @@ import javax.inject.Inject
 data class ToolsUIState(
     val isLoading: Boolean = false,
     val isSyncing: Boolean = false,
-    val hasUsername: Boolean = false
+    val hasUsername: Boolean = false,
+    /** DashConnect is supported here and the network runs Platform protocol version 14 or later. */
+    val connectionsAvailable: Boolean = false
 )
 
 @HiltViewModel
@@ -66,7 +70,8 @@ class ToolsViewModel @Inject constructor(
     blockchainStateDao: BlockchainStateDao,
     private val dashPayConfig: DashPayConfig,
     private val identityConfig: BlockchainIdentityConfig,
-    private val analyticsService: AnalyticsService
+    private val analyticsService: AnalyticsService,
+    platformRepo: PlatformRepo
 ) : ViewModel() {
 
     sealed class ExportCsvResult {
@@ -105,6 +110,14 @@ class ToolsViewModel @Inject constructor(
 
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(hasUsername = hasUsername())
+        }
+
+        ConnectAvailability.availability.onEach {
+            _uiState.value = uiState.value.copy(connectionsAvailable = it)
+        }.launchIn(viewModelScope)
+        if (ConnectAvailability.isSupported) {
+            // Records the network's protocol version, which the availability above follows.
+            viewModelScope.launch { ConnectAvailability.isAvailable(platformRepo) }
         }
     }
 
