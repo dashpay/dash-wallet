@@ -52,11 +52,13 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Context
@@ -73,6 +75,7 @@ import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.common.transactions.TxInfo
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
@@ -151,17 +154,24 @@ class TxDisplayCacheRescanTest {
         firstCountReadThrows: Boolean = false,
         // Stubbed BEFORE the service exists for the same construction-race reason
         // as firstCountReadThrows above.
-        groupReads: (suspend () -> List<TxGroupCacheEntry>)? = null
+        groupReads: (suspend () -> List<TxGroupCacheEntry>)? = null,
+        // Same pre-construction stubbing rule; getCount() is the only suspension
+        // point the combine pipeline hits while _txDataSource is still Empty
+        // (RoomLive is set before initializeFactoriesFromCache), so holding it
+        // is how a test keeps the source Empty.
+        countReads: (suspend () -> Int)? = null
     ): TxDisplayCacheService {
         coEvery { displayDao.getAll() } returns emptyList()
         if (firstCountReadThrows) {
             // Stubbed BEFORE the service exists: its combine pipeline starts at
             // construction, so restubbing afterwards would race the in-flight first
             // getCount() call (see the getActiveGroups comment further down).
-            val countReads = AtomicInteger(0)
+            val firstReads = AtomicInteger(0)
             coEvery { displayDao.getCount() } coAnswers {
-                if (countReads.incrementAndGet() == 1) throw RuntimeException("injected Room failure") else 3_272
+                if (firstReads.incrementAndGet() == 1) throw RuntimeException("injected Room failure") else 3_272
             }
+        } else if (countReads != null) {
+            coEvery { displayDao.getCount() } coAnswers { countReads() }
         } else {
             coEvery { displayDao.getCount() } returns 3_272
         }
@@ -691,5 +701,44 @@ class TxDisplayCacheRescanTest {
         assertSame(walletB, cache.coinJoinWrapperFactory()?.wallet)
         awaitTrue { createdPagingSources[0].invalid }
         awaitTrue { createdPagingSources.size >= 2 }
+    }
+
+    /**
+     * While the data source is still Empty the service must emit NOTHING. A synthetic
+     * PagingData.empty() placeholder presents an empty list whose NotLoading refresh the
+     * Fragment's cache→live swap gate cannot tell from a settled Room answer: with the
+     * placeholder's load states dispatched after the worker had already flipped RoomLive
+     * and transactionsLoaded, the gate detached the still-populated cache adapter over an
+     * empty live list — and a failing first Room refresh left nothing to re-attach. The
+     * first emission must therefore be the first Room generation. The source is held at
+     * Empty by suspending the combine pipeline's getCount() read, its only suspension
+     * point before RoomLive is set (factory hydration runs after that flip).
+     */
+    @Test
+    fun nothingIsEmittedWhileTheSourceIsEmptyAndTheFirstEmissionIsARoomGeneration() = runBlocking {
+        val wallet = mockk<WalletEx>(relaxed = true)
+        val countReadEntered = CompletableDeferred<Unit>()
+        val countReadGate = CompletableDeferred<Unit>()
+        val cache = serviceWithWallet(
+            MutableStateFlow(wallet),
+            countReads = {
+                countReadEntered.complete(Unit)
+                countReadGate.await()
+                3_272
+            }
+        )
+
+        // The pipeline is provably suspended before it could leave Empty…
+        withTimeout(5_000) { countReadEntered.await() }
+        // …and while Empty, nothing is emitted and no paging source is built.
+        assertNull(withTimeoutOrNull(1_000) { cache.transactions.first() })
+        assertTrue(createdPagingSources.isEmpty())
+
+        // Released, the warm path runs: the first emission is the first Room
+        // generation, from exactly one paging source carrying the initial (ALL) flag.
+        countReadGate.complete(Unit)
+        assertNotNull(withTimeoutOrNull(5_000) { cache.transactions.first() })
+        awaitTrue { createdPagingSources.size == 1 }
+        assertEquals(0, createdPagingSources[0].filterFlag)
     }
 }

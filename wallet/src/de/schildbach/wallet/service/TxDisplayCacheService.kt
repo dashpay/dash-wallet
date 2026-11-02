@@ -68,7 +68,6 @@ import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
@@ -194,13 +193,18 @@ class TxDisplayCacheService @Inject constructor(
     val cachedRows: StateFlow<List<HistoryRowView>> = _cachedRows.asStateFlow()
 
     /**
-     * Live PagingData stream. Switches from empty → Room-live after the first
-     * rebuild or display-cache hydration. cachedIn() keeps pages across recompositions.
+     * Live PagingData stream. Nothing is emitted while the data source is still
+     * [TxDataSource.Empty]: the first emission is the first Room generation, so
+     * any NotLoading refresh a collector sees is by construction a settled Room
+     * answer — never a synthetic placeholder presented before Room has loaded a
+     * page. The Fragment's cache→live swap gate relies on exactly that; a
+     * placeholder emitted here once let it detach the cache adapter over an
+     * empty live list. cachedIn() keeps pages across recompositions.
      */
     val transactions: Flow<PagingData<HistoryRowView>> = _txDataSource
         .flatMapLatest { source ->
             when (source) {
-                is TxDataSource.Empty -> flowOf(PagingData.empty())
+                is TxDataSource.Empty -> emptyFlow()
                 is TxDataSource.RoomLive -> {
                     Pager(
                         config = pagingConfig,

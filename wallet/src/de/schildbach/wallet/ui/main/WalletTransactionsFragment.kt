@@ -423,8 +423,11 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                     // historical Loading transition, so the latch could never flip and the swap
                     // would never fire. transactionsLoaded is flipped exactly when the service's
                     // data source becomes authoritative and is not reset per view, so a late
-                    // subscriber reads the right value immediately. Keeping one ConcatAdapter
-                    // instance avoids the "cannot find wrapper" crash from ConcatAdapterController.
+                    // subscriber reads the right value immediately. The service emits nothing
+                    // while its data source is still Empty, so a NotLoading refresh here always
+                    // comes from a settled Room generation, never a startup placeholder.
+                    // Keeping one ConcatAdapter instance avoids the "cannot find wrapper"
+                    // crash from ConcatAdapterController.
                     if (cacheAdapterAttached &&
                         loadStates.refresh is LoadState.NotLoading &&
                         viewModel.transactionsLoaded.value) {
