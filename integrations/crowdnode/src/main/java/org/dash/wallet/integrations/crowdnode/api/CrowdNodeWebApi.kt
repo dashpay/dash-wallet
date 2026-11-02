@@ -158,7 +158,7 @@ open class CrowdNodeWebApi @Inject constructor(
     }
     // end TODO
 
-    suspend fun fromCrowdNode(address: String, tx: TxInfo): Boolean? {
+    open suspend fun fromCrowdNode(address: String, tx: TxInfo): Boolean? {
         var fromCrowdNode: Boolean? = false
 
         for (i in 0..3) {

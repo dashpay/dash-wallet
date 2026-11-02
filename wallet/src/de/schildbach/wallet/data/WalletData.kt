@@ -154,7 +154,15 @@ interface WalletData {
 
     fun getTransactions(vararg filters: WalletTransactionFilter): Collection<Transaction>
 
+    /** See [org.dash.wallet.common.WalletDataProvider.transactionSetFingerprint]. */
+    fun transactionSetFingerprint(): String
+
+    /** See [org.dash.wallet.common.WalletDataProvider.walletChangeCount]. */
+    fun walletChangeCount(): Long
+
     fun wrapAllTransactions(vararg wrappers: TransactionWrapperFactory): Collection<TransactionWrapper>
+
+    fun wrapMatchingTransactions(vararg wrappers: TransactionWrapperFactory): Collection<TransactionWrapper>
 
     fun attachOnWalletWipedListener(listener: suspend () -> Unit)
 

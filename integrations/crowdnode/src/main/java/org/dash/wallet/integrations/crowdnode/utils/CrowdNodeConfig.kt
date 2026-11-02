@@ -41,6 +41,9 @@ open class CrowdNodeConfig @Inject constructor(
         val CONFIRMATION_DIALOG_SHOWN = booleanPreferencesKey("confirmation_dialog_shown")
         val BACKGROUND_ERROR = stringPreferencesKey("error")
         val SIGN_UP_FINISHED = booleanPreferencesKey("sign_up_finished")
+
+        // WalletDataProvider.transactionSetFingerprint() at the last full scan that found no sign up
+        val NO_SIGN_UP_SCAN_FINGERPRINT = stringPreferencesKey("no_sign_up_scan_fingerprint")
         val ONLINE_ACCOUNT_STATUS = intPreferencesKey("online_account_status")
         val LAST_BALANCE = longPreferencesKey("last_balance")
         val SIGNED_EMAIL_MESSAGE_ID = intPreferencesKey("signed_email_message_id")

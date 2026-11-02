@@ -134,7 +134,7 @@ class PlatformServiceImplementation @Inject constructor(
     val walletDataProvider: WalletData
 ) : PlatformService {
     // none of the following should be initialized if platform is not supported
-    private val _platform by platformLazy { Platform(Constants.NETWORK_PARAMETERS) }
+    private val _platform by platformLazy { createNetworkPlatform(Constants.NETWORK_PARAMETERS) }
     override val platform: Platform
         get() = _platform!!
     private val _profiles by platformLazy { Profiles(platform) }
@@ -248,7 +248,12 @@ class PlatformServiceImplementation @Inject constructor(
 
     override fun setMasternodeListManager(masternodeListManager: SimplifiedMasternodeListManager) {
         this.masternodeListManager = masternodeListManager
+        val configuredAddresses = platform.client.dapiAddressListProvider
         platform.setMasternodeListManager(masternodeListManager)
+        if (params is de.schildbach.wallet.network.SakuraDevNetParams) {
+            // Keep Sakura's explicit HTTPS ports; the SDK's legacy discovery replaces them.
+            platform.client.dapiAddressListProvider = configuredAddresses
+        }
     }
 
     override fun getIdentity(userId: Identifier): Identity? =

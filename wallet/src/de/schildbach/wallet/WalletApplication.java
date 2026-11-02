@@ -87,6 +87,8 @@ import org.conscrypt.Conscrypt;
 import org.dash.wallet.common.AutoLogoutTimerHandler;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.InteractionAwareActivity;
+import de.schildbach.wallet.data.TransactionSetFingerprint;
+import de.schildbach.wallet.data.WalletChangeCounter;
 import de.schildbach.wallet.data.WalletData;
 import org.dash.wallet.common.data.OnboardingState;
 import org.dash.wallet.common.data.WalletUIConfig;
@@ -190,6 +192,7 @@ import de.schildbach.wallet.util.BackupReplacementState;
 import de.schildbach.wallet.util.RecoveryResetState;
 import de.schildbach.wallet.util.SafeModeRetryWaiters;
 import de.schildbach.wallet.util.StartupBreadcrumbs;
+import de.schildbach.wallet.util.ThreadCpuSampler;
 import de.schildbach.wallet.util.WalletFileSizeGuard;
 import de.schildbach.wallet.util.WalletSaveTracker;
 import de.schildbach.wallet.util.WalletLoadBudget;
@@ -223,6 +226,7 @@ public class WalletApplication extends MultiDexApplication
 
     private File walletFile;
     private Wallet wallet;
+    private final WalletChangeCounter walletChangeCounter = new WalletChangeCounter();
 
     /**
      * The wallet whose primary is on disk: the one parsed from
@@ -537,6 +541,14 @@ public class WalletApplication extends MultiDexApplication
         autoLogout = new AutoLogout(config);
         autoLogout.registerDeviceInteractiveReceiver(this);
         registerActivityLifecycleCallbacks(new WalletActivityTracker(this, config, autoLogout, restartService));
+        // WHICH THREAD burns CPU while the app is in the background (QA saw
+        // EXCESSIVE_RESOURCE_USAGE kills of the cached process with an empty
+        // log). Non-prod only; samples /proc every minute while no activity
+        // is visible, never keeps the process alive. See ThreadCpuSampler.
+        // Started once the tracker that feeds AppForegroundMonitor is
+        // registered; the sampler itself waits an interval before its first
+        // scan, since the monitor reads "background" until an activity starts.
+        ThreadCpuSampler.start();
         // A background start's deferred wallet load must be finished before
         // ANY activity is created (review, 2026-09-30). UI lifecycle code reads
         // the wallet synchronously (fragments' onAttach, view models); blocked
@@ -3608,6 +3620,19 @@ public class WalletApplication extends MultiDexApplication
         return filteredTransactions;
     }
 
+    @Override
+    @NonNull
+    public String transactionSetFingerprint() {
+        awaitDeferredWalletLoad();
+        return TransactionSetFingerprint.of(wallet);
+    }
+
+    @Override
+    public long walletChangeCount() {
+        awaitDeferredWalletLoad();
+        return walletChangeCounter.count(wallet);
+    }
+
     @NonNull
     @Override
     public Collection<TransactionWrapper> wrapAllTransactions(@NonNull TransactionWrapperFactory... wrapperFactories) {
@@ -3617,7 +3642,28 @@ public class WalletApplication extends MultiDexApplication
                 wallet.getTransactions(true),
                 wallet,
                 Constants.NETWORK_PARAMETERS,
-                wrapperFactories
+                wrapperFactories,
+                true
+        );
+    }
+
+    @NonNull
+    @Override
+    public Collection<TransactionWrapper> wrapMatchingTransactions(@NonNull TransactionWrapperFactory... wrapperFactories) {
+        awaitDeferredWalletLoad();
+        // Read once: a wipe or replacement can change the field, and the transactions must be
+        // classified against the wallet they came from
+        Wallet wallet = this.wallet;
+        if (wallet == null) {
+            return Collections.emptyList();
+        }
+        org.bitcoinj.core.Context.propagate(Constants.CONTEXT);
+        return TransactionWrapperHelper.INSTANCE.wrapTransactions(
+                wallet.getTransactions(true),
+                wallet,
+                Constants.NETWORK_PARAMETERS,
+                wrapperFactories,
+                false
         );
     }
 

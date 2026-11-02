@@ -19,6 +19,8 @@ package de.schildbach.wallet.ui.more
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.FirebaseApp
+import de.schildbach.wallet_test.BuildConfig
 import com.google.firebase.installations.FirebaseInstallations
 import com.google.firebase.messaging.FirebaseMessaging
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -128,6 +130,7 @@ class AboutViewModel @Inject constructor(
     }
 
     private fun loadFirebaseIds() {
+        if (BuildConfig.DEBUG && FirebaseApp.getApps(walletApplication).isEmpty()) return
         FirebaseInstallations.getInstance().id.addOnCompleteListener { task ->
             val id = if (task.isSuccessful) task.result ?: "" else ""
             _uiState.update { it.copy(firebaseInstallationId = id) }

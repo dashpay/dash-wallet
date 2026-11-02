@@ -1354,7 +1354,15 @@ class CutoverUiDataServiceTest {
         /** MO-995: the bind-retry consultation the bound-wallet wait loop drives. */
         retryBind: suspend () -> Unit = {},
         /** [SdkWalletBinder.walletBindConfirmations]; default never advances. */
-        walletBindConfirmations: kotlinx.coroutines.flow.StateFlow<Long> = MutableStateFlow(0L)
+        walletBindConfirmations: kotlinx.coroutines.flow.StateFlow<Long> = MutableStateFlow(0L),
+        /**
+         * The refresh's receive-address read. Under `runTest` it stays on the
+         * test scheduler, so `runCurrent()` returns only once the refresh it
+         * triggered has published; elsewhere the production IO hop.
+         */
+        receiveRefreshDispatcher: kotlinx.coroutines.CoroutineDispatcher =
+            scope.coroutineContext[kotlin.coroutines.ContinuationInterceptor] as? kotlinx.coroutines.test.TestDispatcher
+                ?: Dispatchers.IO
     ) = CutoverUiDataService(
         source = source,
         dashPayConfig = dashPayConfig,
@@ -1383,7 +1391,8 @@ class CutoverUiDataServiceTest {
         resolveMetadata = { txids -> metadata.filterKeys { it in txids } },
         retryBind = retryBind,
         walletBindConfirmations = walletBindConfirmations,
-        nowMs = { now }
+        nowMs = { now },
+        receiveRefreshDispatcher = receiveRefreshDispatcher
     )
 
     @Test
@@ -2771,8 +2780,10 @@ class CutoverUiDataServiceTest {
         val state = MutableStateFlow<String?>("CUT_OVER")
         val events = kotlinx.coroutines.flow.MutableSharedFlow<L1TxEvent>(extraBufferCapacity = 4)
         val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
+        // The parked read below is gated on the IO worker thread it runs on.
         val service = buildService(
-            source, configWithMutableState(state), backgroundScope, txEvents = events
+            source, configWithMutableState(state), backgroundScope, txEvents = events,
+            receiveRefreshDispatcher = Dispatchers.IO
         )
         service.start()
         assertTrue(
@@ -2867,7 +2878,11 @@ class CutoverUiDataServiceTest {
         )
         val events = kotlinx.coroutines.flow.MutableSharedFlow<L1TxEvent>(extraBufferCapacity = 4)
         val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
-        val service = buildService(source, routed.config, backgroundScope, txEvents = events)
+        // The parked read below is gated on the IO worker thread it runs on.
+        val service = buildService(
+            source, routed.config, backgroundScope, txEvents = events,
+            receiveRefreshDispatcher = Dispatchers.IO
+        )
         service.start()
         assertTrue(
             "the overlay must serve the engine address once the pipeline's first read lands",

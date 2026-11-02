@@ -596,12 +596,77 @@ class CrowdNodeApiAggregator @Inject constructor(
         return true
     }
 
+    private enum class SignUpScanResult { Restored, Unconfirmed, NotFound }
+
+    /**
+     * Scans every wallet transaction for a CrowdNode sign up. When none is found, the fingerprint of
+     * the wallet's keys and scanned transactions is cached and the scan is skipped while the wallet's
+     * fingerprint still matches: a wallet that never signed up would otherwise rescan its whole
+     * history each time the status is restored. The fingerprint identifies the wallet's keys and its
+     * transactions with the graph state the scan reads (pools, input connections, spending
+     * transactions), since the scan classifies each transaction against those keys, so a different
+     * wallet (even one with the same transactions), newly derived keys (which can make an existing
+     * output the wallet's), new transactions, or an input or output that gets connected, spent or
+     * disconnected change it and trigger a rescan. The result is cached only if the wallet didn't
+     * change during the scan: the fingerprint is the same after it and so is the wallet change count,
+     * which also catches a change undone within the scan (e.g. a reorg disconnecting and reconnecting
+     * inputs) that leaves the fingerprint as it was.
+     * A possible sign up that CrowdNode didn't confirm isn't cached, so it is checked again.
+     * The cache is only an optimization: failing to write it just means the next restore rescans.
+     */
     private suspend fun tryRestoreSignUp(): Boolean {
+        // The change count is read before the first fingerprint and after the second one, and the
+        // result is cached only if both pairs match. A fingerprint read waits for a wallet mutation
+        // holding the wallet lock, and the counter is bumped inside that lock, so a mutation that
+        // overlaps the scan has been counted by the time the second fingerprint returns: a wallet
+        // replacement, a transaction arriving, or a connection or spend changing during the scan,
+        // even one changed back again, never caches a result the scan didn't cover.
+        val changeCount = walletDataProvider.walletChangeCount()
+        val fingerprint = walletDataProvider.transactionSetFingerprint()
+
+        if (fingerprint.isNotEmpty() && config.get(CrowdNodeConfig.NO_SIGN_UP_SCAN_FINGERPRINT) == fingerprint) {
+            log.info("no CrowdNode sign up found in the last scan of this transaction set, skipping the scan")
+            return false
+        }
+
+        return when (tryRestoreSignUpFromTransactions()) {
+            SignUpScanResult.Restored -> true
+            SignUpScanResult.Unconfirmed -> false
+            SignUpScanResult.NotFound -> {
+                // Read in this order: the count after the fingerprint (see above).
+                val unchanged = walletDataProvider.transactionSetFingerprint() == fingerprint &&
+                    walletDataProvider.walletChangeCount() == changeCount
+
+                if (unchanged) {
+                    cacheNoSignUpScan(fingerprint)
+                } else {
+                    log.info("the wallet changed during the CrowdNode sign up scan, not caching the result")
+                }
+                false
+            }
+        }
+    }
+
+    private suspend fun cacheNoSignUpScan(fingerprint: String) {
+        if (fingerprint.isEmpty()) {
+            return
+        }
+
+        try {
+            config.set(CrowdNodeConfig.NO_SIGN_UP_SCAN_FINGERPRINT, fingerprint)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("failed to cache the CrowdNode no-sign-up scan result", e)
+        }
+    }
+
+    private suspend fun tryRestoreSignUpFromTransactions(): SignUpScanResult {
         val fullSignUpSet = blockchainApi.getFullSignUpTxSet()
         fullSignUpSet?.let { set ->
             if (set.welcomeToApiResponse != null) {
                 setFinished(set.welcomeToApiResponse!!.toAddress)
-                return true
+                return SignUpScanResult.Restored
             }
 
             if (set.possibleWelcomeToApiResponse != null) {
@@ -613,13 +678,13 @@ class CrowdNodeApiAggregator @Inject constructor(
                     webApi.fromCrowdNode(address, transaction) != false
                 ) {
                     setFinished(address)
-                    return true
+                    return SignUpScanResult.Restored
                 }
             }
 
             if (set.acceptTermsResponse != null) {
                 setAcceptingTerms(set.acceptTermsResponse!!.toAddress)
-                return true
+                return SignUpScanResult.Restored
             }
 
             if (set.possibleAcceptTermsResponse != null) {
@@ -631,12 +696,16 @@ class CrowdNodeApiAggregator @Inject constructor(
                     webApi.fromCrowdNode(address, transaction) != false
                 ) {
                     setAcceptingTerms(address)
-                    return true
+                    return SignUpScanResult.Restored
                 }
+            }
+
+            if (set.possibleWelcomeToApiResponse != null || set.possibleAcceptTermsResponse != null) {
+                return SignUpScanResult.Unconfirmed
             }
         }
 
-        return false
+        return SignUpScanResult.NotFound
     }
 
     private suspend fun markAccountAddressWithTaxCategory() {

@@ -105,6 +105,8 @@ class ShieldedBalanceServiceTest {
         var lastCoreFeePerByte: Int? = null
 
         var onConfigure: (String) -> Unit = {}
+        /** Suspending configure hook: a bring-up parked inside the native configure. */
+        var onConfigureSuspend: suspend () -> Unit = {}
         var onBind: () -> Unit = {}
         /** Suspending bind hook: a bring-up parked inside the native bind (plan §37). */
         var onBindSuspend: suspend () -> Unit = {}
@@ -143,6 +145,7 @@ class ShieldedBalanceServiceTest {
             lastDbPath = dbPath
             events += "configure"
             onConfigure(dbPath)
+            onConfigureSuspend()
         }
 
         override suspend fun bindShielded(walletId: ByteArray, accounts: List<Int>) {
@@ -172,6 +175,7 @@ class ShieldedBalanceServiceTest {
         override suspend fun startShieldedSync() {
             startCalls++
             events += "start"
+            if (quiesceLatched) startsWhileLatched++
             nativeLoopRunning = true
             onStart()
             onStartSuspend()
@@ -180,10 +184,33 @@ class ShieldedBalanceServiceTest {
         /** Suspending hook inside the native loop stop — an owed-stop drain that takes a while (review 2026-09-28). */
         var onStopSuspend: suspend () -> Unit = {}
 
+        /**
+         * How many of the next native stops fail the way the SDK's quiesce does
+         * when a pass outlasts its drain budget (QA 12.0.1-qa01): the stop
+         * throws, the cancel took the loop's registry token so [syncRunning]
+         * reads false, and the quiescing gate stays latched ([quiesceLatched])
+         * until a later stop SUCCEEDS — while latched, no pass ever runs.
+         */
+        var stopTimeoutsRemaining = 0
+
+        /** The SDK's latched quiescing gate: a loop started while it is set never syncs. */
+        var quiesceLatched = false
+
+        /** Starts issued while [quiesceLatched] — a "ready" loop that can never run a pass. */
+        var startsWhileLatched = 0
+
         override suspend fun stopShieldedSync() {
             stopCalls++
             events += "stop"
             onStopSuspend()
+            if (stopTimeoutsRemaining > 0) {
+                stopTimeoutsRemaining--
+                quiesceLatched = true
+                syncRunning = false
+                events += "stopFailed"
+                throw IllegalStateException("shielded sync pass did not drain within the quiesce budget")
+            }
+            quiesceLatched = false
             nativeLoopRunning = false
         }
 
@@ -408,7 +435,9 @@ class ShieldedBalanceServiceTest {
         headerHeight = 1_500_000,
         headerTarget = 1_500_000,
         filterHeight = 1_500_000,
-        filterTarget = 1_500_000
+        filterTarget = 1_500_000,
+        // A known wallet cursor at the tip: an unknown one closes the gate.
+        walletSyncedHeight = 1_500_000
     )
 
     private fun service(
@@ -937,6 +966,234 @@ class ShieldedBalanceServiceTest {
         service.stop()
         assertEquals("retried", 2, source.stopCalls)
         assertFalse(source.nativeLoopRunning)
+    }
+
+    /**
+     * QA 12.0.1-qa01 (Andrei, 2026-10-27): a stop() during a long pass timed
+     * out in the SDK's quiesce, which latches the quiescing gate until a later
+     * stop succeeds and makes `isShieldedSyncRunning()` read false. The next
+     * bring-up used to start the loop over the latch and report ready with no
+     * pass ever running again. It must retry the native stop FIRST.
+     */
+    @Test
+    fun bringUp_retriesAFailedNativeStop_beforeStartingTheLoop() = runBlocking {
+        val source = readySource().apply { stopTimeoutsRemaining = 1 }
+        val service = service(source)
+        assertTrue(service.ensureShieldedReady())
+
+        service.stop()
+        assertTrue("the timed-out quiesce latched the gate", source.quiesceLatched)
+        assertFalse("…and the SDK reports no loop", source.syncRunning)
+        source.events.clear()
+
+        assertTrue(service.ensureShieldedReady())
+        assertEquals("the failed stop was retried", 2, source.stopCalls)
+        assertEquals(2, source.startCalls)
+        val stopAt = source.events.indexOf("stop")
+        val startAt = source.events.indexOf("start")
+        assertTrue("the retry ran before the start: ${source.events}", stopAt in 0 until startAt)
+        assertFalse("the retry cleared the latch", source.quiesceLatched)
+        assertEquals("no loop was started over the latch", 0, source.startsWhileLatched)
+    }
+
+    /**
+     * When the bring-up's retry of a failed native stop fails too, the latch
+     * is still closed: the bring-up must neither start the loop nor report
+     * ready, and must keep the ownership so the next trigger retries — which
+     * recovers once a stop succeeds.
+     */
+    @Test
+    fun bringUp_whoseStopRetryFailsToo_doesNotReportReady_andTheNextTriggerRecovers() = runBlocking {
+        val source = readySource().apply { stopTimeoutsRemaining = 2 }
+        val service = service(source)
+        assertTrue(service.ensureShieldedReady())
+        service.stop()
+        assertTrue(source.quiesceLatched)
+
+        assertFalse("not ready over a loop that cannot sync", service.ensureShieldedReady())
+        assertEquals("the retry was attempted", 2, source.stopCalls)
+        assertEquals("…and no loop was started", 1, source.startCalls)
+        assertEquals(0, source.startsWhileLatched)
+        assertTrue(source.quiesceLatched)
+
+        assertTrue("the next trigger recovers", service.ensureShieldedReady())
+        assertEquals("…by retrying the stop once more", 3, source.stopCalls)
+        assertEquals(2, source.startCalls)
+        assertFalse(source.quiesceLatched)
+        assertEquals(0, source.startsWhileLatched)
+    }
+
+    /**
+     * Review (PR 1651): the owed-stop drain clears its debt whether or not the
+     * native stop succeeded, but a failed stop keeps the stale loop ownership.
+     * A queued bring-up that pays a timed-out stop's debt and fails — the
+     * quiesce latched — must then retry that retained ownership before it
+     * binds a loop; when the retry fails as well, it neither starts the loop
+     * nor reports ready, and a later trigger retries and recovers.
+     */
+    @Test
+    fun bringUp_whoseOwedStopDrainFails_doesNotStartOrReportReady_andTheNextTriggerRecovers() = runBlocking {
+        val commitGate = CompletableDeferred<Unit>()
+        var parked = false
+        var commits = 0
+        // One timeout for the owed-stop drain, one for the bring-up's own retry.
+        val source = readySource().apply { stopTimeoutsRemaining = 2 }
+        val service = service(source, stopLockTimeoutMs = 200, afterReadyCommitted = {
+            if (++commits == 1) {
+                parked = true
+                commitGate.await()
+            }
+        })
+
+        // #1 is past its last check with the loop running; stop A times out and records the debt.
+        val first = async(Dispatchers.Default) { service.ensureShieldedReady() }
+        withTimeout(5_000) { while (!parked) delay(10) }
+        withTimeout(5_000) { service.stop() }
+        assertEquals("the fallback cannot reach the loop", 0, source.stopCalls)
+        source.events.clear()
+
+        // #2 is queued on the lock (UNDISPATCHED: provably before #1 releases), so it pays the debt.
+        val second = async(start = CoroutineStart.UNDISPATCHED) { service.ensureShieldedReady() }
+        assertTrue(second.isActive)
+        commitGate.complete(Unit)
+        assertFalse("#1 was superseded by stop A", first.await())
+
+        assertFalse("not ready over a loop that cannot sync", second.await())
+        assertEquals(
+            "the drain's stop failed, then the bring-up retried the retained ownership and failed again",
+            listOf("stop", "stopFailed", "support", "bound", "stop", "stopFailed"),
+            source.events
+        )
+        assertEquals("…and no loop was started", 1, source.startCalls)
+        assertEquals("…nor bound", 1, source.bindCalls)
+        assertEquals(0, source.startsWhileLatched)
+        assertTrue(source.quiesceLatched)
+        assertEquals(ShieldedSyncStatus.NOT_READY, service.shieldedSyncStatus.value)
+
+        assertTrue("the next trigger recovers", service.ensureShieldedReady())
+        assertEquals("…by retrying the stop once more", 3, source.stopCalls)
+        assertEquals("…and starting exactly one loop", 2, source.startCalls)
+        assertFalse(source.quiesceLatched)
+        assertEquals(0, source.startsWhileLatched)
+    }
+
+    /**
+     * Pre-review, 2026-10-27: the bring-up's retry of a failed native stop
+     * suspends (up to the SDK's quiesce budget). A stop() that times out on the
+     * lock meanwhile tears the Kotlin side down; when the retry then SUCCEEDS,
+     * the abandoned bring-up used to go on into configure and the native bind —
+     * which can park indefinitely (plan §37.2) — after that teardown. It must
+     * re-check for a stop right after the retry and decline without touching
+     * the SDK again; the next trigger then brings up normally.
+     */
+    @Test
+    fun bringUp_supersededDuringTheStopRetry_declinesBeforeTheBind_andTheNextTriggerRecovers() = runBlocking {
+        val retryGate = CompletableDeferred<Unit>()
+        var stops = 0
+        val source = readySource().apply {
+            stopTimeoutsRemaining = 1
+            onStopSuspend = { if (++stops == 2) retryGate.await() }
+        }
+        val service = service(source, stopLockTimeoutMs = 200)
+        assertTrue(service.ensureShieldedReady())
+        service.stop() // fails in the quiesce: the stale ownership stays
+        assertTrue(source.quiesceLatched)
+
+        // The next bring-up retries that stop and is parked inside it.
+        val bringUp = async(Dispatchers.Default) { service.ensureShieldedReady() }
+        withTimeout(5_000) { while (source.stopCalls < 2) delay(10) }
+        assertTrue("the bring-up is parked inside the stop retry", bringUp.isActive)
+
+        val startedNs = System.nanoTime()
+        withTimeout(5_000) { service.stop() }
+        val elapsedMs = (System.nanoTime() - startedNs) / 1_000_000
+        assertTrue("stop() returned in ${elapsedMs}ms, within its bound", elapsedMs < 4_000)
+        assertEquals("the fallback cannot reach the loop", 2, source.stopCalls)
+        assertEquals(ShieldedSyncStatus.NOT_READY, service.shieldedSyncStatus.value)
+        source.events.clear()
+
+        retryGate.complete(Unit) // the retry succeeds into a superseded bring-up
+        assertFalse("superseded: not ready", bringUp.await())
+        assertEquals("no configure, bind, start or extra stop after the retry", emptyList<String>(), source.events)
+        assertFalse("the retry cleared the latch", source.quiesceLatched)
+        assertEquals(ShieldedSyncStatus.NOT_READY, service.shieldedSyncStatus.value)
+
+        assertTrue("the next trigger brings up normally", service.ensureShieldedReady())
+        assertEquals("…without stopping anything again", 2, source.stopCalls)
+        assertEquals(2, source.bindCalls)
+        assertEquals(2, source.startCalls)
+        assertEquals(0, source.startsWhileLatched)
+    }
+
+    /**
+     * configureShielded() suspends in a native call too. A stop() that times out
+     * on the lock while the bring-up is parked there tears the Kotlin side down;
+     * the bring-up must re-check for a stop after the configure and decline
+     * before the native bind (which can park indefinitely, plan §37.2) — no
+     * bind, no loop start. The next trigger then brings up normally.
+     */
+    @Test
+    fun bringUp_supersededDuringConfigure_skipsTheBind_andTheNextTriggerRecovers() = runBlocking {
+        val configureGate = CompletableDeferred<Unit>()
+        var configures = 0
+        val source = readySource().apply {
+            onConfigureSuspend = { if (++configures == 1) configureGate.await() }
+        }
+        val service = service(source, stopLockTimeoutMs = 200)
+
+        val bringUp = async(Dispatchers.Default) { service.ensureShieldedReady() }
+        withTimeout(5_000) { while (source.configureCalls == 0) delay(10) }
+        assertTrue("the bring-up is parked inside the configure", bringUp.isActive)
+
+        withTimeout(5_000) { service.stop() } // times out on the lock, tears the Kotlin side down
+        assertEquals(ShieldedSyncStatus.NOT_READY, service.shieldedSyncStatus.value)
+        source.events.clear()
+
+        configureGate.complete(Unit) // the native configure returns into a superseded bring-up
+        assertFalse("superseded: not ready", bringUp.await())
+        assertEquals("no bind or start after the configure", emptyList<String>(), source.events)
+        assertEquals(0, source.bindCalls)
+        assertEquals(0, source.startCalls)
+        assertEquals("nothing was started, so nothing to stop", 0, source.stopCalls)
+        assertEquals(ShieldedSyncStatus.NOT_READY, service.shieldedSyncStatus.value)
+
+        assertTrue("the next trigger brings up normally", service.ensureShieldedReady())
+        assertEquals(2, source.configureCalls)
+        assertEquals(1, source.bindCalls)
+        assertEquals(1, source.startCalls)
+        assertEquals(0, source.stopCalls)
+    }
+
+    /** Regression: after a stop that succeeded, the next bring-up issues no extra native stop. */
+    @Test
+    fun bringUp_afterASuccessfulStop_issuesNoExtraNativeStop() = runBlocking {
+        val source = readySource()
+        val service = service(source)
+        assertTrue(service.ensureShieldedReady())
+        service.stop()
+        assertEquals(1, source.stopCalls)
+
+        assertTrue(service.ensureShieldedReady())
+        assertEquals("no stop beyond the one stop() issued", 1, source.stopCalls)
+        assertEquals(2, source.startCalls)
+    }
+
+    /**
+     * A bring-up that threw after starting its loop leaves the ownership at its
+     * OWN generation with no stop since; the next bring-up must not stop that
+     * loop needlessly — it adopts or starts as before.
+     */
+    @Test
+    fun bringUp_doesNotStopALoopOwnedByTheCurrentGeneration() = runBlocking {
+        var failStart = true
+        val source = readySource().apply {
+            onStart = { if (failStart) { failStart = false; throw IllegalStateException("start failed after the loop began") } }
+        }
+        val service = service(source)
+        assertFalse(service.ensureShieldedReady())
+
+        assertTrue(service.ensureShieldedReady())
+        assertEquals("no stop: nothing meant this loop to end", 0, source.stopCalls)
     }
 
     /**
@@ -2782,6 +3039,11 @@ class ShieldedBalanceServiceTest {
         assertFalse(evaluateWalletFundingGate(ShadowSyncProgress.IDLE).allowed)
         // Engine errored — closed even with a complete scan snapshot.
         assertFalse(evaluateWalletFundingGate(caughtUp.copy(phase = ShadowSyncPhase.ERROR)).allowed)
+        // Waiting for peers (PastaClaw on #1632): the previous session's heights
+        // still read caught up, but the engine cannot see a new block.
+        val connecting = evaluateWalletFundingGate(caughtUp.copy(phase = ShadowSyncPhase.CONNECTING))
+        assertFalse(connecting.allowed)
+        assertEquals("SDK L1 engine is waiting for peers", connecting.reason)
 
         // Genuinely mid-scan: headers at the tip but the filter scan far
         // behind (the real "still scanning" state) stays closed. The aggregate
@@ -2817,21 +3079,46 @@ class ShieldedBalanceServiceTest {
                 noAggregate.copy(filterHeight = 1_500_000 - ShadowSyncProgress.SCAN_TIP_TOLERANCE_BLOCKS - 1)
             ).allowed
         )
-        // The same one-block-past-tolerance gap WITH an honest aggregate OPENS:
-        // 3 short of 1.5M is 99.9998%, and since 2026-09-21 the gate applies
-        // the iOS rule (>= 0.999). This is the change, stated as a test: the
-        // §34 stall (2,167 short, 99.954%) opens too.
-        assertTrue(
-            evaluateWalletFundingGate(
-                caughtUp.copy(filterHeight = 1_500_000 - ShadowSyncProgress.SCAN_TIP_TOLERANCE_BLOCKS - 1)
-            ).allowed
+        // The same one-block-past-tolerance gap WITH an honest aggregate stays
+        // CLOSED: 3 short of 1.5M is 99.9998%, which the DISPLAY's iOS rule
+        // (>= 0.999) calls caught up, but a spend needs the scan itself within
+        // tolerance. Same for the §34 stall (2,167 short, 99.954%) with the
+        // wallet cursor unknown — the one case the pipeline veto cannot see.
+        val pastTolerance = caughtUp.copy(filterHeight = 1_500_000 - ShadowSyncProgress.SCAN_TIP_TOLERANCE_BLOCKS - 1)
+        assertTrue("the display calls it caught up", pastTolerance.scanCaughtUpToTip)
+        val pastToleranceGate = evaluateWalletFundingGate(pastTolerance)
+        assertFalse(pastToleranceGate.allowed)
+        assertTrue(pastToleranceGate.reason, pastToleranceGate.reason.contains("short of the chain tip"))
+        val section34Stall = caughtUp.copy(
+            headerHeight = 1_558_166, headerTarget = 1_558_166,
+            filterHeight = 1_555_999, filterTarget = 1_558_166, overallPercent = 0.99954,
+            walletSyncedHeight = 0
         )
+        assertTrue("the display calls it caught up", section34Stall.scanCaughtUpToTip)
+        assertFalse("an unknown cursor is not lag", section34Stall.blockPipelineLagging)
+        assertFalse(evaluateWalletFundingGate(section34Stall).allowed)
+        // A stale header target restored at engine start (below the stored
+        // header tip the filter target already names): the gap is measured
+        // against the highest known tip, so 400 unscanned blocks stay closed.
+        val staleTarget = caughtUp.copy(
+            headerHeight = 1_500_500, headerTarget = 1_500_000,
+            filterHeight = 1_500_100, filterTarget = 1_500_500
+        )
+        assertTrue("the display calls it caught up", staleTarget.scanCaughtUpToTip)
+        val staleGate = evaluateWalletFundingGate(staleTarget)
+        assertFalse(staleGate.allowed)
+        assertTrue(staleGate.reason, staleGate.reason.contains("short of the chain tip"))
+        // …and the pipeline veto measures against the same tip: filters at the
+        // stored tip, the wallet cursor level with the stale target (500 back).
+        val stalePipeline = staleTarget.copy(filterHeight = 1_500_499, walletSyncedHeight = 1_500_000)
+        assertFalse("headerTarget alone reads no lag", stalePipeline.blockPipelineLagging)
+        val stalePipelineGate = evaluateWalletFundingGate(stalePipeline)
+        assertFalse(stalePipelineGate.allowed)
+        assertTrue(stalePipelineGate.reason, stalePipelineGate.reason.contains("processing matched blocks"))
         assertTrue(
+            "a cursor within tolerance of the highest-known tip opens, stale target or not",
             evaluateWalletFundingGate(
-                caughtUp.copy(
-                    headerHeight = 1_558_166, headerTarget = 1_558_166,
-                    filterHeight = 1_555_999, filterTarget = 1_558_166, overallPercent = 0.99954
-                )
+                stalePipeline.copy(walletSyncedHeight = 1_500_500 - ShadowSyncProgress.SCAN_TIP_TOLERANCE_BLOCKS)
             ).allowed
         )
 
@@ -2842,8 +3129,14 @@ class ShieldedBalanceServiceTest {
         val lagging = evaluateWalletFundingGate(caughtUp.copy(walletSyncedHeight = 1_200_000))
         assertFalse(lagging.allowed)
         assertTrue(lagging.reason, lagging.reason.contains("processing matched blocks"))
-        // Unknown cursor (0) is not lag: the gate cannot wedge a wallet at the tip.
-        assertTrue(evaluateWalletFundingGate(caughtUp.copy(walletSyncedHeight = 0)).allowed)
+        // An unknown cursor (0) is no evidence the matched blocks are through
+        // (PastaClaw on #1632): closed, with filters at the tip and no lag the
+        // display could see.
+        val unknownCursor = caughtUp.copy(walletSyncedHeight = 0)
+        assertFalse("no lag the display could see", unknownCursor.blockPipelineLagging)
+        val unknownGate = evaluateWalletFundingGate(unknownCursor)
+        assertFalse(unknownGate.allowed)
+        assertEquals("SDK L1 wallet scan cursor is not known yet", unknownGate.reason)
     }
 
     @Test

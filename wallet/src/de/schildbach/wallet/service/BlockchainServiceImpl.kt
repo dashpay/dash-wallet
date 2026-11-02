@@ -32,7 +32,6 @@ import android.content.pm.ServiceInfo
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
-import android.net.NetworkRequest
 import android.net.Uri
 import android.os.Binder
 import android.os.Build
@@ -1014,16 +1013,28 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     private var wakeLock: PowerManager.WakeLock? = null
 
     /**
-     * Whether the REPLAY's own acquisition of [wakeLock] is outstanding.
-     * Tracked apart from `isHeld` because the lock is reference-counted and
-     * shared with the dashj path: with the Tools dashj-sync diagnostic on, a
-     * peergroup and an SDK replay coexist, so `isHeld` cannot say whose count
-     * is whose. Each owner releases its own acquisition — the tick receiver
-     * on replay completion, [onDestroy] for an interrupted replay, where one
-     * release used to cover two acquisitions (review, 2026-09-22/23).
+     * The REPLAY's own acquisition of [wakeLock], tracked apart from `isHeld`
+     * because the lock is reference-counted and shared with the dashj path:
+     * with the Tools dashj-sync diagnostic on, a peergroup and an SDK replay
+     * coexist, so `isHeld` cannot say whose count is whose. Each owner releases
+     * its own acquisition — the tick receiver on replay completion, [onDestroy]
+     * for an interrupted replay, where one release used to cover two
+     * acquisitions (review, 2026-09-22/23). See [ReplayWakeLock].
      */
-    @Volatile
-    private var replayWakeLockHeld = false
+    private val replayWakeLock = ReplayWakeLock(
+        lock = {
+            wakeLock?.let { lock ->
+                object : ReplayWakeLockHandle {
+                    override val isHeld: Boolean get() = lock.isHeld
+                    override fun acquire() = lock.acquire()
+                    override fun release() = lock.release()
+                }
+            }
+        },
+        sdkPath = { dashjHeldByCutover },
+        replayDue = { replayWakeLockDue() },
+        otherHolds = { replayWakeLockOtherHolds(System.currentTimeMillis()) }
+    )
     private var peerConnectivityListener: PeerConnectivityListener? = null
     private var nm: NotificationManager? = null
     private val impediments: MutableSet<Impediment> = EnumSet.noneOf(
@@ -1934,16 +1945,28 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         }
     private var networkCallbackRegistered = false
     private lateinit var networkCallback: ConnectivityManager.NetworkCallback
-    private val availableNetworks: MutableSet<Network> = ConcurrentHashMap.newKeySet()
+    /** The default network's verdict; touched only under [ImpedimentGate]'s lock. */
+    private val defaultNetwork = DefaultNetworkTracker<Network>()
+    /** Serializes changes to [impediments] and decides the start-up connectivity seed. */
+    private val impedimentGate = ImpedimentGate()
+    /**
+     * The network callbacks' work, one at a time in delivery order. Each used to
+     * launch onto the multi-threaded IO pool, so an `onLost` could be processed
+     * before the `onAvailable` it follows and leave a lost network counted as
+     * available — online with no network.
+     */
+    private val networkEventDispatcher = Dispatchers.IO.limitedParallelism(1)
     private inner class NetworkCallbackImpl : ConnectivityManager.NetworkCallback() {
         init {
             // Setup security health monitoring
             securityFunctions.observeHealth().observe(this@BlockchainServiceImpl) { status ->
                 isKeyStoreHealthy = status.isHealthy
-                if (isKeyStoreHealthy) {
-                    impediments.remove(Impediment.SECURITY)
-                } else {
-                    impediments.add(Impediment.SECURITY)
+                impedimentGate.update {
+                    if (isKeyStoreHealthy) {
+                        impediments.remove(Impediment.SECURITY)
+                    } else {
+                        impediments.add(Impediment.SECURITY)
+                    }
                 }
                 updateBlockchainStateImpediments()
                 check()
@@ -1951,7 +1974,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         }
 
         override fun onAvailable(network: Network) {
-            serviceScope.launch {
+            serviceScope.launch(networkEventDispatcher) {
                 val capabilities = connectivityManager.getNetworkCapabilities(network)
                 val hasInternet = capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
                 val hasValidated = capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) == true
@@ -1973,9 +1996,12 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     log.info(s.toString())
                 }
 
-                if (hasInternet && hasValidated) {
-                    availableNetworks.add(network)
-                    impediments.remove(Impediment.NETWORK)
+                // The NEW default network: its own capabilities decide, usable or not.
+                val usable = capabilities?.let { hasInternet && hasValidated }
+                val offline = impedimentGate.networkCallbackUpdate {
+                    defaultNetwork.onAvailable(network, usable).also(::applyNetworkVerdict)
+                }
+                if (offline != null) {
                     updateBlockchainStateImpediments()
                     check()
                 }
@@ -1983,13 +2009,14 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         }
 
         override fun onLost(network: Network) {
-            serviceScope.launch {
-                availableNetworks.remove(network)
-                log.info("network lost: $network, remaining networks: ${availableNetworks.size}")
-
-                // Only add impediment if no suitable networks remain
-                if (availableNetworks.isEmpty()) {
-                    impediments.add(Impediment.NETWORK)
+            serviceScope.launch(networkEventDispatcher) {
+                // Offline only if this is still the default network: a lost former
+                // default whose successor was already reported says nothing.
+                val offline = impedimentGate.networkCallbackUpdate {
+                    defaultNetwork.onLost(network).also(::applyNetworkVerdict)
+                }
+                log.info("network lost: $network, {}", if (offline == true) "no default network" else "not the default")
+                if (offline != null) {
                     updateBlockchainStateImpediments()
                     check()
                 }
@@ -1997,7 +2024,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         }
 
         override fun onCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) {
-            serviceScope.launch {
+            serviceScope.launch(networkEventDispatcher) {
                 val hasInternet = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
                 val hasValidated = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
 
@@ -2009,23 +2036,37 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     log.info(s.toString())
                 }
 
-                if (hasInternet && hasValidated) {
-                    impediments.remove(Impediment.NETWORK)
-                } else {
+                // An update for a network that is not the tracked default says nothing.
+                val offline = impedimentGate.networkCallbackUpdate {
+                    defaultNetwork.onCapabilitiesChanged(network, hasInternet && hasValidated)
+                        .also(::applyNetworkVerdict)
+                }
+                if (offline != null) {
+                    updateBlockchainStateImpediments()
+                    check()
+                }
+            }
+        }
+
+        override fun onUnavailable() {
+            super.onUnavailable()
+            serviceScope.launch(networkEventDispatcher) {
+                log.info("network unavailable - no network satisfies request")
+                impedimentGate.networkCallbackUpdate {
                     impediments.add(Impediment.NETWORK)
+                    true // offline: a verdict, which supersedes the start-up seed
                 }
                 updateBlockchainStateImpediments()
                 check()
             }
         }
 
-        override fun onUnavailable() {
-            super.onUnavailable()
-            serviceScope.launch {
-                log.info("network unavailable - no network satisfies request")
-                impediments.add(Impediment.NETWORK)
-                updateBlockchainStateImpediments()
-                check()
+        /** Inside [ImpedimentGate.networkCallbackUpdate]: true offline, false online, null no change. */
+        private fun applyNetworkVerdict(offline: Boolean?) {
+            when (offline) {
+                true -> impediments.add(Impediment.NETWORK)
+                false -> impediments.remove(Impediment.NETWORK)
+                null -> Unit
             }
         }
 
@@ -2576,7 +2617,11 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 committedHeight,
                 durableHeightTracker.observe(durableHeight, System.currentTimeMillis())
             )
-            holdWakeLockWhileReplaying(replaying || engineStarting || durableLagging)
+            // A replay that cannot make progress keeps the service up but releases the CPU.
+            // ReplayWakeLock reads both parts live (replayWakeLockDue, replayWakeLockOtherHolds),
+            // the same way the event rechecks do; the observe() above is what ages the
+            // durable height for them.
+            replayWakeLock.recheck()
             // Those two holds also keep the service in the foreground: the scan reads
             // synced while they last, and a demoted service would be stopped anyway.
             if (foregroundDemotionGate.onHold(sdkHoldsService(System.currentTimeMillis()))) {
@@ -2625,32 +2670,6 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             }
             if (shouldStopForIdle(activityHistory, replaying)) {
                 onIdleVerdict()
-            }
-        }
-
-        /**
-         * On the SDK path no peergroup start acquires the partial wake lock,
-         * so a replay that the idle rule now keeps alive could still be
-         * dozed. Hold the lock for exactly the span the service is kept
-         * alive for: acquired while `replaying`, released when the replay
-         * completes. The dashj path's own acquire/release (checkService /
-         * stopPeerGroup) is untouched; onDestroy releases either way.
-         */
-        private fun holdWakeLockWhileReplaying(replaying: Boolean) {
-            if (!dashjHeldByCutover) return
-            val lock = wakeLock ?: return
-            try {
-                if (replaying && !replayWakeLockHeld) {
-                    log.info("replay or engine start in progress on the SDK path — acquiring the wake lock")
-                    lock.acquire()
-                    replayWakeLockHeld = true
-                } else if (!replaying && replayWakeLockHeld) {
-                    log.info("replay / engine start complete — releasing the wake lock")
-                    replayWakeLockHeld = false
-                    if (lock.isHeld) lock.release()
-                }
-            } catch (t: Throwable) {
-                log.warn("wake lock hold/release for the replay failed", t)
             }
         }
     }
@@ -2891,6 +2910,11 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         "dashjHeldByCutover={}, dashjSyncDiagnostic={})",
                     dashjEngineMayStart, coordinatorAllowsDashj, dashjHeldByCutover, dashjSyncDiagnostic
                 )
+                // Re-take the replay wake lock the moment the filter wedge clears:
+                // ACTION_TIME_TICK is not delivered while the CPU sleeps (see ReplayWakeLock).
+                // Unconditional: the cutover gate can be re-resolved later in this
+                // service's life, and recheck re-reads it itself.
+                replayWakeLock.observeWedgeClears(serviceScope, l1ShadowSyncService.filterScanWedgeClears)
 
                 // re-lock inputs of BIP70 payments with an unknown result and keep watching for them
                 pendingDirectPaymentVerifier.resume()
@@ -3118,15 +3142,24 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     // Initialize network callback (now that securityFunctions is available)
                     networkCallback = NetworkCallbackImpl()
 
-                    // Register network callback for modern network monitoring
-                    // Use NetworkRequest to reliably detect when no validated network is available (e.g., airplane mode)
-                    val networkRequest = NetworkRequest.Builder()
-                        .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                        .addCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
-                        .build()
-                    connectivityManager.registerNetworkCallback(networkRequest, networkCallback)
+                    // Track the DEFAULT network — the route the service's traffic takes —
+                    // not any network with internet: a validated secondary network said
+                    // "online" while the default route was down (see DefaultNetworkTracker).
+                    // The callback reports nothing while there is no default network, so a
+                    // service created offline read as online — and a persisted replay
+                    // held the no-timeout wake lock in airplane mode. Seed the NETWORK
+                    // impediment from connectivity read AFTER registering (a network
+                    // lost in between is then not missed), unless a callback update
+                    // has already landed: see ImpedimentGate.
+                    val seedToken = impedimentGate.seedToken()
+                    connectivityManager.registerDefaultNetworkCallback(networkCallback)
                     networkCallbackRegistered = true
-                    log.info("network callback registered with NetworkRequest: {}", networkCallback)
+                    log.info("default network callback registered: {}", networkCallback)
+                    val usableNow = hasUsableNetworkNow(connectivityManager)
+                    if (impedimentGate.seedOffline(seedToken, usableNow) { impediments.add(Impediment.NETWORK) }) {
+                        log.info("no usable network at service start — NETWORK impediment set until one appears")
+                        updateBlockchainStateImpediments()
+                    }
                 }
                 monitorOlderTransactions(wallet)
                 wallet.addCoinsReceivedEventListener(
@@ -3588,6 +3621,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
     override fun onDestroy() {
         log.info(".onDestroy()")
+        replayWakeLock.retire()
         pendingDestroys.schedule(SystemClock.elapsedRealtime())
         super.onDestroy()
         // unregister receivers on the main thread, if they were registered
@@ -3599,7 +3633,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         if (networkCallbackRegistered) {
             connectivityManager.unregisterNetworkCallback(networkCallback)
             networkCallbackRegistered = false
-            availableNetworks.clear()
+            impedimentGate.update { defaultNetwork.clear() }
         }
 
         log.info("receivers unregistered, Now starting coroutine to finish the rest of the cleanup")
@@ -3763,13 +3797,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     // One release per owner: the replay's own acquisition first
                     // (an interrupted replay never reached its completion
                     // release), then whatever the dashj path still holds.
-                    if (replayWakeLockHeld) {
-                        replayWakeLockHeld = false
-                        if (lock.isHeld) {
-                            log.debug("releasing the replay's wake-lock acquisition")
-                            lock.release()
-                        }
-                    }
+                    replayWakeLock.releaseForTeardown()
                     if (lock.isHeld) {
                         log.debug("wakelock still held, releasing")
                         lock.release()
@@ -3936,8 +3964,37 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         )
     }
 
+    /**
+     * The rest of the replay wake lock's decision: an SDK engine start in flight,
+     * or the SDK still saving the scan. The same two holds the tick computes, read
+     * live so an event recheck sees them as they are now, not as the last tick
+     * recorded them (D-1632-01). [DurableHeightTracker.msSinceChange] reads the
+     * tracker without recording, so only the tick ages the durable height.
+     */
+    private fun replayWakeLockOtherHolds(nowMs: Long): Boolean {
+        if (!dashjHeldByCutover) return false
+        if (engineStartHoldsService(l1ShadowSyncService.engineStartingSinceMs(), nowMs)) return true
+        val durableHeight = l1ShadowSyncService.durableSyncedHeight()
+        return durableLagHoldsService(
+            durableHeight,
+            l1ShadowSyncService.engineCommittedHeight(),
+            durableHeightTracker.msSinceChange(durableHeight, nowMs)
+        )
+    }
+
+    /** The replay half of the hold decision, read now. */
+    private fun replayWakeLockDue(): Boolean = dashjHeldByCutover && replayHoldsWakeLock(
+        replaying = blockchainState?.replaying == true && !sdkBindBlocked(),
+        networkImpeded = impediments.contains(Impediment.NETWORK),
+        filterScanWedged = l1ShadowSyncService.filterScanWedged()
+    )
+
     private fun updateBlockchainStateImpediments() {
         blockchainStateDataProvider.updateImpediments(impediments)
+        // The network back or gone (any impediment change): the replay may be
+        // due the lock again, or no longer, and the tick will not come while
+        // the CPU sleeps.
+        replayWakeLock.recheck()
     }
 
 //    /**
