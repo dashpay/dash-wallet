@@ -112,6 +112,39 @@ class AppConnectOwnershipTest {
         }
     }
 
+    @Test fun `approval derives the app keys for the wallet's network`() = runBlocking {
+        every { repo.walletApplication.wallet!!.isEncrypted } returns false
+        every { identity.publicKeys } returns mutableListOf()
+        coEvery { repo.getWalletEncryptionKey() } returns null
+        coEvery { repo.getWalletSeed() } returns mockk { every { seedBytes } returns ByteArray(32) { 1 } }
+        val derivation = org.dashj.platform.dpp.identity.ApplicationKeyDerivation
+        val network = de.schildbach.wallet.Constants.NETWORK_PARAMETERS
+        val original = network.id
+        mockkObject(derivation)
+        try {
+            val reached = IllegalStateException("Encryption key reached derivation")
+            // A fresh secret per call: approval wipes the ones it used.
+            every { derivation.sessionAuthentication(any(), any(), any(), any()) } answers { ByteArray(32) { 3 } }
+            every { derivation.encryption(any(), any(), any(), any(), any(), any()) } throws reached
+            for ((id, mainnet) in listOf(org.bitcoinj.core.NetworkParameters.ID_MAINNET to true,
+                    org.bitcoinj.core.NetworkParameters.ID_TESTNET to false)) {
+                org.robolectric.util.ReflectionHelpers.setField(network, "id", id)
+                // The connection scope includes the network, so each network prepares its own plan.
+                val prepared = session.prepare(request).copy(selectedAuth = setOf(0), selectedEncryption = setOf(0))
+                val failure = assertThrows(IllegalStateException::class.java) {
+                    runBlocking(ConnectionAuthorization { true }) { session.approve(request, prepared) }
+                }
+                assertEquals(reached.message, failure.message)
+                verify(exactly = 1) { derivation.sessionAuthentication(any(), any(), any(), mainnet) }
+                verify(exactly = 1) { derivation.encryption(any(), any(), any(), any(), any(), mainnet) }
+            }
+            coVerify(exactly = 0) { config.saveGrant(any()) }
+        } finally {
+            org.robolectric.util.ReflectionHelpers.setField(network, "id", original)
+            unmockkObject(derivation)
+        }
+    }
+
     @Test fun `a version the network did not confirm cannot pass for protocol 14`() {
         // A failed refresh returns the SDK's starting version; only a proven read sets the one checked here.
         every { service.platform.client.refreshProtocolVersion() } returns 14
