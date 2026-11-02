@@ -171,9 +171,11 @@ class SendSignerLockedException(message: String) : IllegalStateException(message
  * - but every broadcast outcome other than a definitive rejection — an ambiguous one included —
  *   also leaves a pending-spend fence on the inputs (rs-platform-wallet `wallet/core/broadcast.rs`).
  *   The fence ends only when this wallet observes the outpoints spent, by this transaction or a
- *   competing one. It has no timeout, so sweeping the reservation does not free the inputs: an
- *   unseen transaction keeps them held for the rest of this wallet generation (until the wallet
- *   is reloaded).
+ *   competing one. It has no timeout, so sweeping the reservation does not free the inputs. It
+ *   is kept in memory by the wallet manager, per wallet id (`manager/mod.rs`
+ *   `in_broadcast_fences_for`): reloading the wallet, or removing and re-creating it under the
+ *   same manager, keeps it. Only the manager or the process going away ends it unobserved, as
+ *   it is never persisted.
  *
  * The fence stops the same inputs from being spent twice, not the payment from being made
  * twice: a resend would fund from other coins. No signed transaction is kept here and nothing
