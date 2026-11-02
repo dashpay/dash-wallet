@@ -43,6 +43,8 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -52,6 +54,7 @@ import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
@@ -130,6 +133,7 @@ class TxDisplayCacheRescanTest {
     }
 
     private val createdPagingSources = CopyOnWriteArrayList<FakePagingSource>()
+    private val wrapAllCoinJoinFactories = CopyOnWriteArrayList<CoinJoinTxWrapperFactory>()
     private var collectJob: Job? = null
 
     /**
@@ -161,7 +165,16 @@ class TxDisplayCacheRescanTest {
             every { observeWallet() } returns walletFlow
             every { observeWalletReset() } returns emptyFlow()
             every { wallet } answers { walletFlow.value }
-            every { wrapAllTransactions(any(), any()) } returns rebuildWraps
+            every { wrapAllTransactions(any(), any()) } answers {
+                // Record the CoinJoin factory each rebuild wraps with (the vararg may
+                // surface expanded or as one array, so scan rather than index). The
+                // CopyOnWriteArrayList is appended on the service's worker thread and
+                // read on the test thread.
+                wrapAllCoinJoinFactories += invocation.args
+                    .flatMap { arg -> if (arg is Array<*>) arg.toList() else listOf(arg) }
+                    .filterIsInstance<CoinJoinTxWrapperFactory>()
+                rebuildWraps
+            }
         }
         val metadata = mockk<TransactionMetadataProvider>(relaxed = true) {
             every { observePresentableMetadata() } returns emptyFlow()
@@ -366,10 +379,12 @@ class TxDisplayCacheRescanTest {
         cache.setFilter(TxFilterType.SENT) // the count read throws → UNKNOWN → fast path
         awaitTrue { createdPagingSources[0].invalid }
         awaitTrue { createdPagingSources.size >= 2 }
+        assertEquals(TxDisplayCacheEntry.FLAG_SENT, createdPagingSources[1].filterFlag)
 
         cache.setFilter(TxFilterType.RECEIVED) // only a live collector can see this pick
         awaitTrue { createdPagingSources[1].invalid }
         awaitTrue { createdPagingSources.size >= 3 }
+        assertEquals(TxDisplayCacheEntry.FLAG_RECEIVED, createdPagingSources[2].filterFlag)
 
         // Neither pick re-hydrated or rebuilt: the unreadable count stayed on the fast path.
         coVerify(exactly = 1) { groupDao.getActiveGroups(any()) }
@@ -462,6 +477,74 @@ class TxDisplayCacheRescanTest {
         hydrationBlocked.complete(Unit)
         awaitTrue { cache.coinJoinWrapperFactory()?.wallet === walletB }
         assertSame(walletB, cache.coinJoinWrapperFactory()?.wallet)
+    }
+
+    /**
+     * MO-1109 regression (h): a same-wallet rebuild (KNOWN zero count, as after a wallet
+     * reset) whose replaceAll has already committed when a second direction change cancels
+     * it via flatMapLatest. The factories that wrapped the rebuilt history must already be
+     * published at that point — wrapAllTransactions does not suspend, so rebuildWrappedList
+     * publishes them before its first suspension — because the next emission sees the
+     * committed rows and takes the same-wallet fast path, which never re-hydrates. With a
+     * post-commit publish the service kept whatever factories were installed before the
+     * rebuild (e.g. the empty same-wallet ones a wallet reset installs) over the rebuilt rows.
+     */
+    @Test
+    fun rebuildCancelledAfterReplaceAllCommitsStillPublishesItsFactories() = runBlocking {
+        val wallet = mockk<WalletEx>(relaxed = true)
+        val cache = serviceWithWallet(MutableStateFlow(wallet))
+
+        collectJob = CoroutineScope(Dispatchers.IO).launch { cache.transactions.collect {} }
+        awaitTrue { createdPagingSources.isNotEmpty() }
+        awaitTrue { cache.coinJoinWrapperFactory()?.wallet === wallet }
+        val factoryBeforeRebuild = cache.coinJoinWrapperFactory()
+
+        // Both restubbed only after the initial emission has provably finished (factory
+        // published, source created), so neither races an in-flight call on its mock.
+        val countReads = AtomicInteger(0)
+        coEvery { displayDao.getCount() } coAnswers {
+            // One KNOWN zero (the reset-emptied cache) routes the next pick into
+            // rebuildWrappedList; after its replaceAll commits, the rows are back.
+            if (countReads.incrementAndGet() == 1) 0 else 3_272
+        }
+        val replaceAllEntered = CompletableDeferred<Unit>()
+        val replaceAllCancelled = CompletableDeferred<Unit>()
+        val letReplaceAllReturn = CompletableDeferred<Unit>()
+        coEvery { displayDao.replaceAll(any()) } coAnswers {
+            replaceAllEntered.complete(Unit)
+            // A Room transaction is not cancellable mid-flight: the write runs to commit
+            // regardless, and the flatMapLatest cancellation surfaces only as replaceAll
+            // resumes its (by then cancelled) caller. Suspend until that cancellation
+            // arrives, then hold the "commit" open until the test releases it; the
+            // CancellationException propagates as the stub returns, like Room's own
+            // prompt cancellation.
+            try {
+                awaitCancellation()
+            } finally {
+                replaceAllCancelled.complete(Unit)
+                withContext(NonCancellable) { letReplaceAllReturn.await() }
+            }
+        }
+
+        cache.setFilter(TxFilterType.SENT) // KNOWN zero → rebuildWrappedList
+        withTimeout(5_000) { replaceAllEntered.await() }
+        cache.setFilter(TxFilterType.RECEIVED) // cancels the in-flight rebuild
+        withTimeout(5_000) { replaceAllCancelled.await() } // cancel delivered mid-commit
+        letReplaceAllReturn.complete(Unit)
+
+        // The cancelled rebuild still published the exact factory that wrapped its rows.
+        awaitTrue { cache.coinJoinWrapperFactory() !== factoryBeforeRebuild }
+        assertEquals(1, wrapAllCoinJoinFactories.size)
+        assertSame(wrapAllCoinJoinFactories[0], cache.coinJoinWrapperFactory())
+
+        // The queued RECEIVED pick sees the committed rows and takes the same-wallet fast
+        // path over them: Pager re-queried with the new flag, no re-hydration, no rebuild.
+        awaitTrue { createdPagingSources[0].invalid }
+        awaitTrue { createdPagingSources.size >= 2 }
+        assertEquals(TxDisplayCacheEntry.FLAG_RECEIVED, createdPagingSources[1].filterFlag)
+        coVerify(exactly = 1) { groupDao.getActiveGroups(any()) }
+        coVerify(exactly = 1) { displayDao.replaceAll(any()) }
+        assertEquals(1, wrapAllCoinJoinFactories.size)
     }
 
     /**

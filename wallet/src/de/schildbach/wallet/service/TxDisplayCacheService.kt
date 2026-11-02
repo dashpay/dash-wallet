@@ -180,8 +180,10 @@ class TxDisplayCacheService @Inject constructor(
     @Volatile private var chainLockBlockHeight: Int = 0
     private var wasReplaying: Boolean? = null
 
-    private var crowdNodeWrapperFactory: FullCrowdNodeSignUpTxSetFactory? = null
-    private var coinJoinWrapperFactory: CoinJoinTxWrapperFactory? = null
+    // Published on one serviceScope worker thread and read on others (the same-wallet
+    // fast-path check, and tests polling across threads), so the write must be visible.
+    @Volatile private var crowdNodeWrapperFactory: FullCrowdNodeSignUpTxSetFactory? = null
+    @Volatile private var coinJoinWrapperFactory: CoinJoinTxWrapperFactory? = null
 
     /**
      * Pre-built rows for the fast startup phase (from Room display cache). Set
@@ -896,16 +898,24 @@ class TxDisplayCacheService @Inject constructor(
                     t1 - t0, t2 - t1, t3 - t2, t3 - t0
                 )
 
-                persistGroupCache(wrapped)
-                updateDisplayCache(wrapped.toList(), filter.direction.toFilterFlag())
-                // Publish the factories only after the RoomLive-producing work above has
-                // finished (same point updateDisplayCache sets _txDataSource.value), so a
-                // flatMapLatest cancellation before this point leaves them untouched — the
-                // next emission's wallet-identity check (see the comment above the check,
-                // service.kt:279-283) then correctly treats hydration as not-yet-done and
-                // retries, instead of wrongly matching the new wallet via a half-built factory.
+                // Publish the factories now, BEFORE the first suspension (persistGroupCache),
+                // unlike initializeFactoriesFromCache, which publishes only after its last
+                // hydrating read. The two paths differ in what the same-wallet fast-path
+                // check can see: this rebuild is entered only on a KNOWN zero row count, and
+                // wrapAllTransactions does not suspend, so the factories are fully hydrated
+                // the moment they are published here — yet the fast path cannot match them
+                // until the cache has rows, which only this rebuild's own replaceAll
+                // provides. A rebuild cancelled before that commit is simply retried (the
+                // count is still zero), and one cancelled after it keeps the factories
+                // consistent with the rows it wrote. Publishing them only after the commit
+                // instead left whatever factories were installed before (e.g. the empty
+                // same-wallet ones a wallet reset installs) to be matched by the fast path
+                // over this rebuild's rows, with no later re-hydration.
                 coinJoinWrapperFactory = cjFactory
                 crowdNodeWrapperFactory = cnFactory
+
+                persistGroupCache(wrapped)
+                updateDisplayCache(wrapped.toList(), filter.direction.toFilterFlag())
 
                 _isBuildingCache.value = false
                 _transactionsLoaded.value = true
@@ -1009,9 +1019,12 @@ class TxDisplayCacheService @Inject constructor(
         }
 
         wrappedTransactionList = activeWrappers.sortedByDescending { it.groupDate }
-        // Publish the factories only now that hydration has finished — see the comment
-        // above the wallet-identity check (service.kt:279-283) for why a cancellation
-        // before this point must leave them untouched.
+        // Publish the factories only now that hydration has finished. Unlike
+        // rebuildWrappedList, this warm path is entered with cache rows already present,
+        // so a factory published before the getActiveGroups read above completed would
+        // let the same-wallet fast-path check match the new wallet over the old wallet's
+        // rows — a cancellation before this point must leave the factories untouched
+        // (see the comment above that check).
         coinJoinWrapperFactory = cjFactory
         crowdNodeWrapperFactory = cnFactory
         log.info("initializeFactoriesFromCache: {} active groups loaded in {}ms",
