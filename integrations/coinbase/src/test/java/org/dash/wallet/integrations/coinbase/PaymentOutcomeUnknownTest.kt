@@ -39,6 +39,7 @@ import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.common.services.PaymentSubmissionPendingException
 import org.dash.wallet.common.services.SendPaymentService
@@ -51,6 +52,7 @@ import org.dash.wallet.integrations.coinbase.viewmodels.TransferDashViewModel
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -213,6 +215,24 @@ class PaymentOutcomeUnknownTest {
 
         assertTrue(viewModel.observeSendDashToCoinbaseState.value is SendDashResponseState.SuccessState)
         coVerify(exactly = 1) { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any()) }
+    }
+
+    @Test
+    fun transferDash_aLeftoverBalanceWarning_isKeptUntilTheScreenTakesIt_once() = runTest {
+        coEvery {
+            sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any())
+        } throws LeftoverBalanceException(Dash.valueOf(1_000), "leftover")
+        val viewModel = transferViewModel(SavedStateHandle())
+
+        // Raised while no screen is resumed to ask (stopped, or being recreated).
+        assertTrue(viewModel.submitTransfer(Dash.valueOf(100_000), false, true, null))
+        advanceUntilIdle()
+
+        val pending = requireNotNull(viewModel.leftoverBalanceWarning.value)
+        assertEquals(Dash.valueOf(100_000), pending.dashValue)
+        assertTrue(viewModel.consumeLeftoverBalanceWarning(pending))
+        assertFalse("asked once", viewModel.consumeLeftoverBalanceWarning(pending))
+        assertNull(viewModel.leftoverBalanceWarning.value)
     }
 
     @Test

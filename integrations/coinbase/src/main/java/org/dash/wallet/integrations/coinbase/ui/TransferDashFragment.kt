@@ -335,16 +335,18 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
             setTransactionState(it)
         }
 
-        transferDashViewModel.onLeftoverBalanceWarning.observe(viewLifecycleOwner) { pending ->
-            viewLifecycleOwner.lifecycleScope.launch {
-                if (MinimumBalanceDialog().showAsync(requireActivity()) == true) {
-                    transferDashViewModel.submitTransfer(
-                        pending.dashValue,
-                        pending.isEmptyWallet,
-                        checkConditions = false,
-                        session = pending.session
-                    )
-                }
+        // Only once resumed, so that the question can be shown.
+        handleWhenResumed(
+            transferDashViewModel.leftoverBalanceWarning,
+            transferDashViewModel::consumeLeftoverBalanceWarning
+        ) { pending ->
+            if (MinimumBalanceDialog().showAsync(requireActivity()) == true) {
+                transferDashViewModel.submitTransfer(
+                    pending.dashValue,
+                    pending.isEmptyWallet,
+                    checkConditions = false,
+                    session = pending.session
+                )
             }
         }
 

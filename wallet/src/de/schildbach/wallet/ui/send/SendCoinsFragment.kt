@@ -27,9 +27,7 @@ import android.widget.Toast
 import androidx.annotation.StringRes
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.database.entity.DashPayProfile
@@ -41,7 +39,6 @@ import de.schildbach.wallet.ui.transactions.TransactionResultActivity
 import de.schildbach.wallet.util.AnrException
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.SendCoinsFragmentBinding
-import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.InsufficientMoneyException
@@ -59,6 +56,7 @@ import org.dash.wallet.common.ui.dialogs.PaymentOutcomeUnknownWarning
 import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
 import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
+import org.dash.wallet.common.ui.handleWhenResumed
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.toFormattedString
@@ -183,16 +181,9 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
             lifecycleScope.launch { authenticateOrConfirm() }
         }
 
-        // A send's outcome, once, whether this screen or one recreated meanwhile started it.
-        viewLifecycleOwner.lifecycleScope.launch {
-            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.sendOutcome.filterNotNull().collect { outcome ->
-                    if (viewModel.consumeSendOutcome(outcome)) {
-                        onSendOutcome(outcome)
-                    }
-                }
-            }
-        }
+        // A send's outcome, once, whether this screen or one recreated meanwhile started it, and
+        // only once resumed, so that its dialog can be shown.
+        handleWhenResumed(viewModel.sendOutcome, viewModel::consumeSendOutcome) { onSendOutcome(it) }
 
         // The payment may have gone out: Go stays disabled (everythingPlausible() is false from
         // now on) and the warning stays up until the user's Close, which leaves the send screen

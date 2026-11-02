@@ -90,13 +90,23 @@ class TransferDashViewModel @Inject constructor(
     /** A transfer the leftover-balance check stopped, to send anyway once the user agrees. */
     data class PendingTransfer(val dashValue: Dash, val isEmptyWallet: Boolean, val session: WalletSession?)
 
-    /** The send would leave too little behind: the screen asks, then calls [submitTransfer] again. */
-    val onLeftoverBalanceWarning = SingleLiveEvent<PendingTransfer>()
+    private val _leftoverBalanceWarning = MutableStateFlow<PendingTransfer?>(null)
+
+    /**
+     * The send would leave too little behind: the screen asks, then calls [submitTransfer] again.
+     * Kept until the screen takes it ([consumeLeftoverBalanceWarning]), so a warning raised while
+     * the screen is stopped or being recreated is asked once it resumes.
+     */
+    val leftoverBalanceWarning: StateFlow<PendingTransfer?> = _leftoverBalanceWarning.asStateFlow()
+
+    /** True for exactly one taker of [pending], which then asks the user. */
+    fun consumeLeftoverBalanceWarning(pending: PendingTransfer): Boolean =
+        _leftoverBalanceWarning.compareAndSet(pending, null)
 
     /**
      * Starts the transfer in this view model's scope, so a recreation of the screen (which
      * cancels the screen's own coroutines) cannot cancel a send that may already be on the
-     * network. Its result arrives in [observeSendDashToCoinbaseState], or [onLeftoverBalanceWarning].
+     * network. Its result arrives in [observeSendDashToCoinbaseState], or [leftoverBalanceWarning].
      * False, with nothing started, when a send is in progress or an earlier one's outcome is
      * unknown.
      */
@@ -118,7 +128,7 @@ class TransferDashViewModel @Inject constructor(
                 if (!ex.isLeftoverBalanceWarning) {
                     throw ex
                 }
-                onLeftoverBalanceWarning.value = PendingTransfer(dashValue, isEmptyWallet, session)
+                _leftoverBalanceWarning.value = PendingTransfer(dashValue, isEmptyWallet, session)
             } finally {
                 _loadingState.value = false
             }
