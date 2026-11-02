@@ -20,6 +20,7 @@ package de.schildbach.wallet.database.entity
 import android.content.Context
 import android.net.Uri
 import androidx.datastore.preferences.core.MutablePreferences
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
@@ -413,10 +414,12 @@ open class BlockchainIdentityConfig @Inject constructor(
         }
     }
 
-    override suspend fun requestedNames(): RequestedNameContext? = data.first().let { prefs ->
-        val identityId = prefs[REQUESTED_NAMES_IDENTITY_ID] ?: return@let null
-        val username = prefs[REQUESTED_NAMES_USERNAME] ?: return@let null
-        RequestedNameContext(identityId, username, prefs[REQUESTED_NAMES_USERNAME_SECONDARY])
+    override suspend fun requestedNames(): RequestedNameContext? = requestedNamesIn(data.first())
+
+    private fun requestedNamesIn(prefs: Preferences): RequestedNameContext? {
+        val identityId = prefs[REQUESTED_NAMES_IDENTITY_ID] ?: return null
+        val username = prefs[REQUESTED_NAMES_USERNAME] ?: return null
+        return RequestedNameContext(identityId, username, prefs[REQUESTED_NAMES_USERNAME_SECONDARY])
     }
 
     override suspend fun recordRequestedNames(request: RequestedNameContext) {
@@ -428,9 +431,10 @@ open class BlockchainIdentityConfig @Inject constructor(
     }
 
     override suspend fun pendingNameOnlyRetry(): PendingNameOnlyRetry? {
+        // one snapshot: the mark, the names and the record's state from the same read
         val prefs = data.first()
         if (prefs[NAME_ONLY_RETRY_PENDING] != true) return null
-        val request = requestedNames() ?: return null
+        val request = requestedNamesIn(prefs) ?: return null
         return PendingNameOnlyRetry(
             request,
             IdentityCreationState.valueOf(prefs[CREATION_STATE] ?: IdentityCreationState.NONE.name),

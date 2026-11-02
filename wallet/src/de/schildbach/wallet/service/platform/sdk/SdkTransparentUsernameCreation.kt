@@ -1980,14 +1980,9 @@ class SdkTransparentUsernameCreation internal constructor(
      * the name step. Returns true when it changed the record.
      */
     suspend fun reconcileInterruptedNameRetry(): Boolean {
-        val pending = try {
-            nameJournal.pendingNameOnlyRetry()
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            log.warn("could not read the pending name-only retry", e)
-            null
-        } ?: return false
+        // The slot first, then the read: a read taken before the claim can be a live retry's,
+        // which may since have recorded its own outcome (a taken name's error), cleared its mark
+        // and freed the slot; acting on that snapshot would overwrite the outcome.
         synchronized(this) {
             if (nameRetryInFlight || _submitState.value == ShieldedUsernameSubmitState.Proving) {
                 // the run is live in this process: it owns its outcome
@@ -1996,6 +1991,14 @@ class SdkTransparentUsernameCreation internal constructor(
             nameRetryInFlight = true
         }
         try {
+            val pending = try {
+                nameJournal.pendingNameOnlyRetry()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                log.warn("could not read the pending name-only retry", e)
+                null
+            } ?: return false
             return reconcileNow(pending)
         } finally {
             releaseNameRetry()

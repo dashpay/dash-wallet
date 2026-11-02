@@ -1430,6 +1430,44 @@ class SdkTransparentUsernameCreationTest {
         appScope.cancel()
     }
 
+    @Test
+    fun `a reconcile racing a live retry never replaces its taken-name error`() = runTest {
+        // a sync tick reads the pending retry while it is live; the retry then records the
+        // taken-name error, clears its mark and frees the slot; the tick must not act on what it read
+        val source = source(lockAfterFailure = null)
+        val submitted = CompletableDeferred<Unit>()
+        coEvery { source.registerDpnsName(walletIdHex, identityId, "alice3") } coAnswers {
+            submitted.await()
+            throw DashSdkError.InvalidParameter("DuplicateUniqueIndexError: alice3 is taken")
+        }
+        val readResumes = CompletableDeferred<Unit>()
+        val store = de.schildbach.wallet.service.platform.InMemoryRequestedNameJournal()
+        val journal = object : de.schildbach.wallet.service.platform.RequestedNameJournal by store {
+            override suspend fun pendingNameOnlyRetry(): de.schildbach.wallet.service.platform.PendingNameOnlyRetry? {
+                val read = store.pendingNameOnlyRetry()
+                readResumes.await() // the read is suspended after it has taken its snapshot
+                return read
+            }
+        }
+        val run = RetryRun()
+        val appScope = CoroutineScope(SupervisorJob() + kotlinx.coroutines.test.StandardTestDispatcher(testScheduler))
+        val creation = instance(source, journal, run, appScope)
+
+        assertTrue(creation.retryNameForExistingIdentity(identityIdBase58, "alice3", null))
+        advanceUntilIdle()
+        val tick = async { creation.reconcileInterruptedNameRetry() }
+        advanceUntilIdle()
+        submitted.complete(Unit) // the live retry records its error, clears its mark, frees the slot
+        advanceUntilIdle()
+        readResumes.complete(Unit)
+
+        assertFalse("the tick reconciled nothing", tick.await())
+        val error = run.states.last().second
+        assertTrue("the taken-name error survives: $error", error?.contains("DuplicateUniqueIndexError") == true)
+        assertNull(store.pendingNameOnlyRetry())
+        appScope.cancel()
+    }
+
     // ── per-identity DPNS lock ───────────────────────────────────────────
 
     /** A source whose registerDpnsName blocks on [gate], then records the label as owned. */
