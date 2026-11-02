@@ -292,8 +292,14 @@ class TxDisplayCacheService @Inject constructor(
                 // repopulate the cache from the now-empty wallet. The count read runs on
                 // every emission, so a failed read must not throw — it would complete the
                 // whole combine subscription through the catch below and no later filter pick
-                // would ever reach the Pager again — and is instead treated as UNKNOWN: the
-                // proven same wallet still takes the fast path, anything else rebuilds.
+                // would ever reach the Pager again — and is instead treated as UNKNOWN:
+                // assume the cache has rows, so the proven same wallet keeps the fast path
+                // and anything else takes the warm-cache re-init, which only READS the
+                // cache. Only a KNOWN zero may fall through to rebuildWrappedList: that
+                // replaceAll()s the cache from dashj, which post-cutover can hold zero
+                // transactions while the SDK-owned cache holds the real history, so an
+                // unknown count reaching it would wipe valid rows (the exact rebuild
+                // forceRebuildTransactionCache refuses).
                 val cachedRowCount: Int? = try {
                     txDisplayCacheDao.getCount()
                 } catch (e: CancellationException) {
@@ -310,7 +316,7 @@ class TxDisplayCacheService @Inject constructor(
                     log.info("direction changed to {} — switching filter flag only", direction)
                     _liveFilterFlag.value = filter.direction.toFilterFlag()
                     _currentPagingSource.value?.invalidate()
-                } else if (cachedRowCount != null && cachedRowCount > 0) {
+                } else if (cachedRowCount == null || cachedRowCount > 0) {
                     _liveFilterFlag.value = filter.direction.toFilterFlag()
                     initializeFactoriesFromCache()
                     // Re-assigning the RoomLive singleton does not emit from the StateFlow, so

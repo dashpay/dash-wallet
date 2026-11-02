@@ -140,10 +140,21 @@ class TxDisplayCacheRescanTest {
      */
     private fun serviceWithWallet(
         walletFlow: StateFlow<Wallet?>,
-        rebuildWraps: Collection<TransactionWrapper> = emptyList()
+        rebuildWraps: Collection<TransactionWrapper> = emptyList(),
+        firstCountReadThrows: Boolean = false
     ): TxDisplayCacheService {
         coEvery { displayDao.getAll() } returns emptyList()
-        coEvery { displayDao.getCount() } returns 3_272
+        if (firstCountReadThrows) {
+            // Stubbed BEFORE the service exists: its combine pipeline starts at
+            // construction, so restubbing afterwards would race the in-flight first
+            // getCount() call (see the getActiveGroups comment further down).
+            val countReads = AtomicInteger(0)
+            coEvery { displayDao.getCount() } coAnswers {
+                if (countReads.incrementAndGet() == 1) throw RuntimeException("injected Room failure") else 3_272
+            }
+        } else {
+            coEvery { displayDao.getCount() } returns 3_272
+        }
         coEvery { groupDao.getActiveGroups(any()) } returns emptyList()
         every { displayDao.pagingSource(any()) } answers { FakePagingSource().also { createdPagingSources += it } }
         val walletData = mockk<WalletData>(relaxed = true) {
@@ -353,6 +364,41 @@ class TxDisplayCacheRescanTest {
         awaitTrue { createdPagingSources.size >= 3 }
 
         // Neither pick re-hydrated or rebuilt: the unreadable count stayed on the fast path.
+        coVerify(exactly = 1) { groupDao.getActiveGroups(any()) }
+        coVerify(exactly = 0) { displayDao.replaceAll(any()) }
+    }
+
+    /**
+     * MO-1109 regression (g): the count read fails on the FIRST emission, before any
+     * pipeline is RoomLive — e.g. a transient Room failure at startup. The held dashj
+     * wallet can be empty post-cutover while the SDK-owned cache holds the real history,
+     * so an unknown count must take the non-destructive warm-cache path (read-only
+     * initializeFactoriesFromCache, then RoomLive), NEVER the rebuildWrappedList fallback
+     * whose replaceAll would wipe the cache from dashj — the exact destructive rebuild
+     * forceRebuildTransactionCache refuses. Only a KNOWN zero count may rebuild.
+     */
+    @Test
+    fun countReadFailureOnFirstEmissionTakesTheWarmPathAndNeverRebuilds() = runBlocking {
+        val wallet = mockk<WalletEx>(relaxed = true)
+        val cache = serviceWithWallet(MutableStateFlow(wallet), firstCountReadThrows = true)
+
+        collectJob = CoroutineScope(Dispatchers.IO).launch { cache.transactions.collect {} }
+
+        // The warm-cache branch finished: factories hydrated from the cache tables,
+        // the factory published for THIS wallet, and RoomLive set (only a RoomLive
+        // pipeline builds a Room PagingSource).
+        awaitTrue { createdPagingSources.isNotEmpty() }
+        awaitTrue { cache.coinJoinWrapperFactory()?.wallet === wallet }
+        coVerify(exactly = 1) { groupDao.getActiveGroups(any()) }
+        // Asserted only after awaiting the warm-branch effects above, so a rebuild
+        // in flight could not slip in after the check.
+        coVerify(exactly = 0) { displayDao.replaceAll(any()) }
+
+        // A later direction change still works: the second count read succeeds and the
+        // now-RoomLive fast path invalidates the Pager.
+        cache.setFilter(TxFilterType.SENT)
+        awaitTrue { createdPagingSources[0].invalid }
+        awaitTrue { createdPagingSources.size >= 2 }
         coVerify(exactly = 1) { groupDao.getActiveGroups(any()) }
         coVerify(exactly = 0) { displayDao.replaceAll(any()) }
     }
