@@ -29,11 +29,14 @@ import de.schildbach.wallet.service.platform.sdk.CutoverState
 import de.schildbach.wallet.service.platform.sdk.CutoverUiDataService
 import de.schildbach.wallet.transactions.TxFilterType
 import de.schildbach.wallet.transactions.coinjoin.CoinJoinTxWrapperFactory
+import de.schildbach.wallet.transactions.toTxInfo
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.CompletableDeferred
@@ -50,11 +53,22 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import org.bitcoinj.core.Address
+import org.bitcoinj.core.Coin
+import org.bitcoinj.core.Context
+import org.bitcoinj.core.NetworkParameters
+import org.bitcoinj.core.Transaction
+import org.bitcoinj.core.TransactionBag
+import org.bitcoinj.params.TestNet3Params
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.WalletEx
+import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.TransactionMetadataProvider
+import org.dash.wallet.common.transactions.TransactionWrapper
+import org.dash.wallet.common.transactions.TxInfo
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
 import org.junit.Test
 import java.util.concurrent.CopyOnWriteArrayList
@@ -124,7 +138,10 @@ class TxDisplayCacheRescanTest {
      * discriminator in the combine/flatMapLatest chain — [service] above always emits a
      * null wallet, so it never reaches those branches.
      */
-    private fun serviceWithWallet(walletFlow: StateFlow<Wallet?>): TxDisplayCacheService {
+    private fun serviceWithWallet(
+        walletFlow: StateFlow<Wallet?>,
+        rebuildWraps: Collection<TransactionWrapper> = emptyList()
+    ): TxDisplayCacheService {
         coEvery { displayDao.getAll() } returns emptyList()
         coEvery { displayDao.getCount() } returns 3_272
         coEvery { groupDao.getActiveGroups(any()) } returns emptyList()
@@ -133,6 +150,7 @@ class TxDisplayCacheRescanTest {
             every { observeWallet() } returns walletFlow
             every { observeWalletReset() } returns emptyFlow()
             every { wallet } answers { walletFlow.value }
+            every { wrapAllTransactions(any(), any()) } returns rebuildWraps
         }
         val metadata = mockk<TransactionMetadataProvider>(relaxed = true) {
             every { observePresentableMetadata() } returns emptyFlow()
@@ -162,6 +180,19 @@ class TxDisplayCacheRescanTest {
     private suspend fun awaitTrue(timeoutMs: Long = 5_000, condition: () -> Boolean) {
         withTimeout(timeoutMs) {
             while (!condition()) delay(10)
+        }
+    }
+
+    /** A minimal single-tx wrapper over a real dashj [tx], shaped like the service's own. */
+    private fun singleTxWrapper(tx: Transaction, params: NetworkParameters): TransactionWrapper {
+        Context.getOrCreate(params) // toTxInfo reads tx confidence through dashj's ambient Context
+        val txInfo = tx.toTxInfo(mockk<TransactionBag>(relaxed = true), params)
+        return object : TransactionWrapper {
+            override val id = tx.txId.toString()
+            override val transactions = hashMapOf(txInfo.txId to txInfo)
+            override val groupDate = txInfo.groupDate
+            override fun tryInclude(tx: TxInfo) = tx.txId == txInfo.txId
+            override fun getValue() = Dash(txInfo.netValueDuffs)
         }
     }
 
@@ -258,7 +289,16 @@ class TxDisplayCacheRescanTest {
     @Test
     fun directionChangeWithEmptyCacheAfterResetRebuildsInsteadOfFlippingFlag() = runBlocking {
         val wallet = mockk<WalletEx>(relaxed = true)
-        val cache = serviceWithWallet(MutableStateFlow(wallet))
+        // One real transaction for the rebuild to find, so the test proves what the
+        // rebuild WRITES (the wallet's tx rendered into a display row), not merely
+        // that replaceAll ran.
+        val params = TestNet3Params.get()
+        val tx = Transaction(params).apply {
+            addOutput(Coin.parseCoin("0.5"), Address.fromBase58(params, "yMY5bqWcknGy5xYBHSsh2xvHZiJsRucjuy"))
+        }
+        val replacedRows = mutableListOf<List<TxDisplayCacheEntry>>()
+        coEvery { displayDao.replaceAll(capture(replacedRows)) } just Runs
+        val cache = serviceWithWallet(MutableStateFlow(wallet), rebuildWraps = listOf(singleTxWrapper(tx, params)))
 
         collectJob = CoroutineScope(Dispatchers.IO).launch { cache.transactions.collect {} }
         awaitTrue { createdPagingSources.isNotEmpty() }
@@ -269,9 +309,47 @@ class TxDisplayCacheRescanTest {
         cache.setFilter(TxFilterType.SENT)
 
         coVerify(timeout = 5_000) { displayDao.replaceAll(any()) }
+        assertEquals(1, replacedRows.last().size)
+        assertEquals(tx.txId.toString(), replacedRows.last().first().rowId)
         // Still 1: the reset re-hydrates by walking the wallet (rebuildWrappedList), not by
         // re-reading the (now-cleared) CoinJoin/CrowdNode group cache.
         coVerify(exactly = 1) { groupDao.getActiveGroups(any()) }
+    }
+
+    /**
+     * MO-1109 regression (f): the row-count read runs on every filter emission, so a one-off
+     * Room failure there must not complete the combine subscription through its catch{} — the
+     * same-wallet pick treats the unreadable count as UNKNOWN and still takes the flag-only
+     * fast path (no rebuild on a cache that may well have rows), and the NEXT pick working
+     * proves the collector survived the throw.
+     */
+    @Test
+    fun countReadFailureOnDirectionChangeStillInvalidatesAndKeepsTheCollectorAlive() = runBlocking {
+        val wallet = mockk<WalletEx>(relaxed = true)
+        val cache = serviceWithWallet(MutableStateFlow(wallet))
+
+        collectJob = CoroutineScope(Dispatchers.IO).launch { cache.transactions.collect {} }
+        awaitTrue { createdPagingSources.isNotEmpty() }
+        assertSame(wallet, cache.coinJoinWrapperFactory()?.wallet)
+
+        // Restubbed only after the initial emission has provably finished (same quiescence
+        // point the empty-cache test uses), so it cannot race an in-flight getCount() call.
+        val countReads = AtomicInteger(0)
+        coEvery { displayDao.getCount() } coAnswers {
+            if (countReads.incrementAndGet() == 1) throw RuntimeException("injected Room failure") else 3_272
+        }
+
+        cache.setFilter(TxFilterType.SENT) // the count read throws → UNKNOWN → fast path
+        awaitTrue { createdPagingSources[0].invalid }
+        awaitTrue { createdPagingSources.size >= 2 }
+
+        cache.setFilter(TxFilterType.RECEIVED) // only a live collector can see this pick
+        awaitTrue { createdPagingSources[1].invalid }
+        awaitTrue { createdPagingSources.size >= 3 }
+
+        // Neither pick re-hydrated or rebuilt: the unreadable count stayed on the fast path.
+        coVerify(exactly = 1) { groupDao.getActiveGroups(any()) }
+        coVerify(exactly = 0) { displayDao.replaceAll(any()) }
     }
 
     /**

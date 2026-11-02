@@ -47,6 +47,7 @@ import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.main.HistoryRowView
 import de.schildbach.wallet.ui.transactions.TransactionRowView
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -288,17 +289,28 @@ class TxDisplayCacheService @Inject constructor(
                 // (observeWalletReset) rebinds coinJoinWrapperFactory to the same wallet and
                 // leaves _txDataSource at RoomLive, but clears the cache table, so without a
                 // row count a direction change here would flip the filter flag alone and never
-                // repopulate the cache from the now-empty wallet.
-                val cachedRowCount = txDisplayCacheDao.getCount()
+                // repopulate the cache from the now-empty wallet. The count read runs on
+                // every emission, so a failed read must not throw — it would complete the
+                // whole combine subscription through the catch below and no later filter pick
+                // would ever reach the Pager again — and is instead treated as UNKNOWN: the
+                // proven same wallet still takes the fast path, anything else rebuilds.
+                val cachedRowCount: Int? = try {
+                    txDisplayCacheDao.getCount()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    log.warn("display-cache row count read failed; treating it as unknown", e)
+                    null
+                }
                 if (
                     _txDataSource.value is TxDataSource.RoomLive &&
                     coinJoinWrapperFactory?.wallet === wallet &&
-                    cachedRowCount > 0
+                    (cachedRowCount == null || cachedRowCount > 0)
                 ) {
                     log.info("direction changed to {} — switching filter flag only", direction)
                     _liveFilterFlag.value = filter.direction.toFilterFlag()
                     _currentPagingSource.value?.invalidate()
-                } else if (cachedRowCount > 0) {
+                } else if (cachedRowCount != null && cachedRowCount > 0) {
                     _liveFilterFlag.value = filter.direction.toFilterFlag()
                     initializeFactoriesFromCache()
                     // Re-assigning the RoomLive singleton does not emit from the StateFlow, so
