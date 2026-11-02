@@ -26,6 +26,7 @@ import de.schildbach.wallet.service.platform.PendingNameOnlyRetry
 import de.schildbach.wallet.service.platform.RequestedNameContext
 import de.schildbach.wallet.service.platform.RequestedNameJournal
 import de.schildbach.wallet.service.platform.work.RestoreIdentityOperation
+import androidx.work.await
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -108,6 +109,14 @@ internal suspend fun identityOwnsOrContendsFor(
                 repo.getVoteContendersOrThrow(label).map.keys.any { it == Identifier.from(identityIdBase58) }
             )
 }
+
+/**
+ * A recovery handoff that returns only once WorkManager has durably enqueued the job [enqueue]
+ * started, and throws when that failed. `enqueue()` itself persists asynchronously: returning on
+ * it could clear a pending name-only retry while the job was never committed.
+ */
+internal fun awaitingEnqueue(enqueue: (identityIdBase58: String) -> androidx.work.Operation): suspend (String) -> Unit =
+    { identityIdBase58 -> enqueue(identityIdBase58).await() }
 
 internal fun registrationRowsFor(keys: List<IdentityKeyPreview>): List<IdentityPubkey> =
     RegistrationKeys.buildRegistrationRows(
@@ -466,9 +475,11 @@ class SdkTransparentUsernameCreation internal constructor(
     /**
      * Hands the freshly created on-chain identity to the legacy state
      * machine (prod: enqueue [RestoreIdentityOperation]) — best-effort,
-     * never affects the returned result.
+     * never affects the returned result. Returns once the recovery job is
+     * durably enqueued and throws when the enqueue failed ([awaitingEnqueue]):
+     * a name-only retry stays pending until then.
      */
-    private val handOffToLegacy: (identityIdBase58: String) -> Unit,
+    private val handOffToLegacy: suspend (identityIdBase58: String) -> Unit,
     /**
      * Persist the identity funding asset-lock txid (DISPLAY-order hex, i.e.
      * `Sha256Hash.toString()` form) so the app-side records can label this L1
@@ -570,7 +581,7 @@ class SdkTransparentUsernameCreation internal constructor(
         cutoverCommittedOrUnknown = { sdkL1SendService.cutoverCommittedOrUnknown() },
         // Lazy: Constants untouched at construction (inert-until-called).
         feeDuffs = { contested -> transparentUsernameFeeDuffs(contested, sdkService) },
-        handOffToLegacy = { identityId ->
+        handOffToLegacy = awaitingEnqueue { identityId ->
             RestoreIdentityOperation(walletApplication).create(identityId, fromCreation = true).enqueue()
         },
         persistFundingTxid = { displayHex ->

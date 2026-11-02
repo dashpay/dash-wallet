@@ -1341,6 +1341,95 @@ class SdkTransparentUsernameCreationTest {
         appScope.cancel()
     }
 
+    /** A WorkManager enqueue whose durable commit completes when [commit] is completed. */
+    private fun asyncEnqueue(commit: com.google.common.util.concurrent.SettableFuture<androidx.work.Operation.State.SUCCESS>) =
+        mockk<androidx.work.Operation> { every { result } returns commit }
+
+    private fun TestScope.retryHandingOffTo(
+        source: TransparentUsernameSource,
+        journal: de.schildbach.wallet.service.platform.RequestedNameJournal,
+        run: RetryRun,
+        appScope: CoroutineScope,
+        operation: androidx.work.Operation
+    ) = SdkTransparentUsernameCreation(
+        source = source,
+        cutoverCommitted = { true },
+        feeDuffs = { feeDuffs },
+        handOffToLegacy = awaitingEnqueue { id ->
+            run.handedOff += id
+            operation
+        },
+        driveCreationState = { state, error -> run.states += state to error },
+        executorScope = appScope,
+        fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock(),
+        nameJournal = journal
+    ).also { it.ioDispatcher = kotlinx.coroutines.test.StandardTestDispatcher(testScheduler) }
+
+    @Test
+    fun `the retry stays pending until its recovery job is durably enqueued`() = runTest {
+        val source = source(lockAfterFailure = null)
+        coEvery { source.registerDpnsName(walletIdHex, identityId, "alice3") } returns "alice3.dash"
+        val journal = de.schildbach.wallet.service.platform.InMemoryRequestedNameJournal()
+        val commit = com.google.common.util.concurrent.SettableFuture.create<androidx.work.Operation.State.SUCCESS>()
+        val run = RetryRun()
+        val appScope = CoroutineScope(SupervisorJob() + kotlinx.coroutines.test.StandardTestDispatcher(testScheduler))
+
+        assertTrue(
+            retryHandingOffTo(source, journal, run, appScope, asyncEnqueue(commit))
+                .retryNameForExistingIdentity(identityIdBase58, "alice3", null)
+        )
+        advanceUntilIdle()
+        assertEquals(listOf(identityIdBase58), run.handedOff)
+        assertTrue("enqueued but not committed: still pending", journal.pendingNameOnlyRetry() != null)
+
+        commit.set(androidx.work.Operation.SUCCESS)
+        advanceUntilIdle()
+        assertNull("committed: recovery owns it", journal.pendingNameOnlyRetry())
+        appScope.cancel()
+    }
+
+    @Test
+    fun `an enqueue that fails asynchronously keeps the retry pending`() = runTest {
+        val source = source(lockAfterFailure = null)
+        coEvery { source.registerDpnsName(walletIdHex, identityId, "alice3") } returns "alice3.dash"
+        val journal = de.schildbach.wallet.service.platform.InMemoryRequestedNameJournal()
+        val commit = com.google.common.util.concurrent.SettableFuture.create<androidx.work.Operation.State.SUCCESS>()
+        val run = RetryRun()
+        val appScope = CoroutineScope(SupervisorJob() + kotlinx.coroutines.test.StandardTestDispatcher(testScheduler))
+
+        assertTrue(
+            retryHandingOffTo(source, journal, run, appScope, asyncEnqueue(commit))
+                .retryNameForExistingIdentity(identityIdBase58, "alice3", null)
+        )
+        advanceUntilIdle()
+        commit.setException(IllegalStateException("WorkManager database write failed"))
+        advanceUntilIdle()
+
+        assertTrue("no recovery job: the restart reconcile hands it off again", journal.pendingNameOnlyRetry() != null)
+        assertEquals(IdentityCreationState.DONE to null, run.states.last())
+        appScope.cancel()
+    }
+
+    @Test
+    fun `the restart reconcile keeps a DONE retry pending when its enqueue fails asynchronously`() = runTest {
+        val source = source(lockAfterFailure = null)
+        val journal = de.schildbach.wallet.service.platform.InMemoryRequestedNameJournal()
+        journal.beginNameOnlyRetry(RequestedNameContext(identityIdBase58, "alice3", null))
+        journal.creationState = IdentityCreationState.DONE
+        val commit = com.google.common.util.concurrent.SettableFuture.create<androidx.work.Operation.State.SUCCESS>()
+        commit.setException(IllegalStateException("WorkManager database write failed"))
+        val run = RetryRun()
+        val appScope = CoroutineScope(SupervisorJob() + kotlinx.coroutines.test.StandardTestDispatcher(testScheduler))
+
+        val reconciled = retryHandingOffTo(source, journal, run, appScope, asyncEnqueue(commit))
+            .reconcileInterruptedNameRetry()
+
+        assertFalse(reconciled)
+        assertEquals(listOf(identityIdBase58), run.handedOff)
+        assertTrue("still pending", journal.pendingNameOnlyRetry() != null)
+        appScope.cancel()
+    }
+
     // ── per-identity DPNS lock ───────────────────────────────────────────
 
     /** A source whose registerDpnsName blocks on [gate], then records the label as owned. */
