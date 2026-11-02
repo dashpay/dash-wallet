@@ -156,7 +156,7 @@ class TxDisplayCacheRescanTest {
             coEvery { displayDao.getCount() } returns 3_272
         }
         coEvery { groupDao.getActiveGroups(any()) } returns emptyList()
-        every { displayDao.pagingSource(any()) } answers { FakePagingSource().also { createdPagingSources += it } }
+        every { displayDao.pagingSource(any()) } answers { FakePagingSource(firstArg()).also { createdPagingSources += it } }
         val walletData = mockk<WalletData>(relaxed = true) {
             every { observeWallet() } returns walletFlow
             every { observeWalletReset() } returns emptyFlow()
@@ -213,8 +213,12 @@ class TxDisplayCacheRescanTest {
         return field.get(this) as CoinJoinTxWrapperFactory?
     }
 
-    /** A real (non-mock) PagingSource so Paging3's own invalidate()/refresh machinery runs. */
-    private class FakePagingSource : PagingSource<Int, TxDisplayCacheEntry>() {
+    /**
+     * A real (non-mock) PagingSource so Paging3's own invalidate()/refresh machinery runs.
+     * Remembers the [filterFlag] it was queried with, so tests can assert a recreated
+     * source actually carries the newly picked direction instead of only counting sources.
+     */
+    private class FakePagingSource(val filterFlag: Int) : PagingSource<Int, TxDisplayCacheEntry>() {
         override suspend fun load(params: LoadParams<Int>): LoadResult<Int, TxDisplayCacheEntry> =
             LoadResult.Page(emptyList(), null, null)
         override fun getRefreshKey(state: PagingState<Int, TxDisplayCacheEntry>): Int? = null
@@ -276,14 +280,17 @@ class TxDisplayCacheRescanTest {
 
         collectJob = CoroutineScope(Dispatchers.IO).launch { cache.transactions.collect {} }
         awaitTrue { createdPagingSources.isNotEmpty() }
+        assertEquals(0, createdPagingSources[0].filterFlag) // initial query is unfiltered (ALL)
 
         cache.setFilter(TxFilterType.SENT)
         awaitTrue { createdPagingSources[0].invalid }
         awaitTrue { createdPagingSources.size >= 2 }
+        assertEquals(TxDisplayCacheEntry.FLAG_SENT, createdPagingSources[1].filterFlag)
 
         cache.setFilter(TxFilterType.RECEIVED)
         awaitTrue { createdPagingSources[1].invalid }
         awaitTrue { createdPagingSources.size >= 3 }
+        assertEquals(TxDisplayCacheEntry.FLAG_RECEIVED, createdPagingSources[2].filterFlag)
 
         coVerify(exactly = 1) { groupDao.getActiveGroups(any()) }
     }
@@ -293,7 +300,8 @@ class TxDisplayCacheRescanTest {
      * to the same wallet and leaves _txDataSource at RoomLive, but it also clears the display
      * cache. A direction change afterwards, with the cache still empty, must rebuild the wrapped
      * list from the wallet rather than only flip the filter flag on an empty cache — the fast
-     * path at service.kt:287-ish requires both the same-wallet identity AND a nonzero row count.
+     * path in the service's combine collector requires both the same-wallet identity AND a
+     * nonzero row count.
      * serviceWithWallet() has no reset flow to drive, so the emptied cache is simulated by
      * restubbing getCount() to 0 for the emission the direction change triggers.
      */
@@ -399,6 +407,7 @@ class TxDisplayCacheRescanTest {
         cache.setFilter(TxFilterType.SENT)
         awaitTrue { createdPagingSources[0].invalid }
         awaitTrue { createdPagingSources.size >= 2 }
+        assertEquals(TxDisplayCacheEntry.FLAG_SENT, createdPagingSources[1].filterFlag)
         coVerify(exactly = 1) { groupDao.getActiveGroups(any()) }
         coVerify(exactly = 0) { displayDao.replaceAll(any()) }
     }
