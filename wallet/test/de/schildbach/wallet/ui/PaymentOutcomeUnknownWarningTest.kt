@@ -25,9 +25,12 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModel
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import org.dash.wallet.common.ui.LockScreenHost
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.PaymentOutcomeUnknownWarning
@@ -63,8 +66,22 @@ class PaymentOutcomeUnknownWarningTest {
         }
     }
 
+    /** The screen's terminal flag, kept in saved state as the payment view models keep it. */
+    class ScreenState(private val savedState: SavedStateHandle) : ViewModel() {
+        val outcomeUnknown: StateFlow<Boolean> = savedState.getStateFlow(KEY, false)
+
+        fun markOutcomeUnknown() {
+            savedState[KEY] = true
+        }
+
+        companion object {
+            const val KEY = "payment_outcome_unknown"
+        }
+    }
+
     class PaymentScreen : Fragment() {
-        val outcomeUnknown = MutableStateFlow(false)
+        private val state by viewModels<ScreenState>()
+        val outcomeUnknown: StateFlow<Boolean> get() = state.outcomeUnknown
         val unlocked = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
         var closes = 0
         var blocked = false
@@ -76,6 +93,8 @@ class PaymentOutcomeUnknownWarningTest {
             PaymentOutcomeUnknownWarning(this) { closes++ }
                 .keepShownWhile(outcomeUnknown, unlocked) { blocked = true }
         }
+
+        fun markOutcomeUnknown() = state.markOutcomeUnknown()
     }
 
     companion object {
@@ -83,10 +102,14 @@ class PaymentOutcomeUnknownWarningTest {
     }
 
     private val controller = Robolectric.buildActivity(HostActivity::class.java).setup()
-    private val activity = controller.get()
-    private val screen = PaymentScreen().also {
+    private var activity = controller.get()
+    private var screen = PaymentScreen().also {
         activity.supportFragmentManager.beginTransaction().add(CONTAINER_ID, it).commitNow()
     }
+
+    /** All the dialogs under the warning's tag, restored or shown. */
+    private fun taggedWarnings() = activity.supportFragmentManager.fragments
+        .filter { it.tag == PaymentOutcomeUnknownWarning.TAG }
 
     private fun idle() = shadowOf(Looper.getMainLooper()).idle()
 
@@ -111,7 +134,7 @@ class PaymentOutcomeUnknownWarningTest {
         idle()
         assertNull(warning())
 
-        screen.outcomeUnknown.value = true
+        screen.markOutcomeUnknown()
         idle()
 
         assertNotNull(warning())
@@ -121,7 +144,7 @@ class PaymentOutcomeUnknownWarningTest {
 
     @Test
     fun lockDismissesTheWarning_theScreenStays_andItIsShownAgainOnUnlock() {
-        screen.outcomeUnknown.value = true
+        screen.markOutcomeUnknown()
         idle()
         val first = warning()
         assertNotNull(first)
@@ -147,7 +170,7 @@ class PaymentOutcomeUnknownWarningTest {
 
     @Test
     fun lockDismissesTheWarning_andItIsShownAgainOnTheNextResume() {
-        screen.outcomeUnknown.value = true
+        screen.markOutcomeUnknown()
         idle()
 
         lock()
@@ -162,7 +185,7 @@ class PaymentOutcomeUnknownWarningTest {
 
     @Test
     fun aResumeWhileLocked_doesNotShowTheWarningOverTheLockScreen() {
-        screen.outcomeUnknown.value = true
+        screen.markOutcomeUnknown()
         idle()
 
         lock()
@@ -176,13 +199,42 @@ class PaymentOutcomeUnknownWarningTest {
 
     @Test
     fun explicitClose_leavesTheScreen_once() {
-        screen.outcomeUnknown.value = true
+        screen.markOutcomeUnknown()
         idle()
 
         clickClose(requireNotNull(warning()))
 
         assertEquals(1, screen.closes)
         assertNull(warning())
+    }
+
+    @Test
+    fun recreation_keepsTheFlag_replacesTheRestoredWarning_andCloseExitsTheNewScreenOnce() {
+        screen.markOutcomeUnknown()
+        idle()
+        val before = requireNotNull(warning())
+        val oldScreen = screen
+
+        // A configuration change: the FragmentManager restores the screen and the warning, but
+        // the restored warning has lost its Close action.
+        controller.recreate()
+        idle()
+        activity = controller.get()
+        screen = activity.supportFragmentManager.findFragmentById(CONTAINER_ID) as PaymentScreen
+
+        assertNotSame(oldScreen, screen)
+        assertTrue("the terminal flag survives the recreation", screen.outcomeUnknown.value)
+        assertTrue(screen.blocked)
+        assertEquals("exactly one warning, the restored copy replaced", 1, taggedWarnings().size)
+        val after = requireNotNull(warning())
+        assertNotSame(before, after)
+        assertEquals("no exit without the user's Close", 0, screen.closes + oldScreen.closes)
+
+        clickClose(after)
+
+        assertEquals("Close exits the recreated screen once", 1, screen.closes)
+        assertEquals(0, oldScreen.closes)
+        assertTrue(taggedWarnings().isEmpty())
     }
 
     @Test
