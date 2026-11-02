@@ -207,6 +207,12 @@ internal data class ShieldedMaxFeeAdjustment(val deficitCredits: Long, val adjus
  * adjusted attempt converges. The adjusted amount is floored to a whole
  * duff ([creditsToDash]) since the app's money type can't carry sub-duff
  * credits.
+ *
+ * The retry may only shrink [requested] by the FEE, never by missing
+ * principal: when [available] is already below [requested] — the balance
+ * moved out from under a captured Max amount during authentication, not
+ * just short by a fee — this returns null so the caller ends NotSent
+ * instead of silently submitting a smaller amount than the user confirmed.
  */
 internal fun shieldedMaxFeeAdjustment(
     requested: Dash,
@@ -223,6 +229,7 @@ internal fun shieldedMaxFeeAdjustment(
     } catch (e: ArithmeticException) {
         return null
     }
+    if (available < requestedCredits) return null
     val adjustedCredits = requestedCredits - deficitCredits
     if (adjustedCredits <= 0) return null
     val adjustedAmount = creditsToDash(adjustedCredits)

@@ -291,6 +291,50 @@ class ShieldedTransferExecutorTest {
         )
     }
 
+    /**
+     * The balance-decrease shape (Round 11, finding 1): the captured Max amount was 3 DASH,
+     * but the shielded balance dropped to 2 DASH during the PIN/biometric wait before the
+     * first attempt ran. `available` (2 DASH's credits) is below the REQUESTED credits
+     * (3 DASH's), not just short by a fee — so even though `required - available` parses as
+     * a positive deficit, the retry must not be computed: it would shrink by less than the
+     * missing principal and could still broadcast a different amount than the user
+     * authorized.
+     */
+    @Test
+    fun shieldedMaxFeeAdjustment_returnsNull_whenAvailableIsBelowTheRequestedAmount() {
+        val requested = Dash.parse("3") // 300_000_000_000 credits
+        assertNull(
+            shieldedMaxFeeAdjustment(
+                requested,
+                SdkWriteResult.NotBroadcast(
+                    "Insufficient shielded balance: available 200000000000, required 300000010000"
+                )
+            )
+        )
+    }
+
+    @Test
+    fun maxWithdraw_balanceDroppedBelowTheCapturedAmount_isNotSent_withoutASecondAttempt() =
+        runTest(dispatcher) {
+            // available (2 DASH) < requested (3 DASH): the shape a live balance decrease
+            // during authentication produces. Even though the deficit parses as positive and
+            // a second attempt (at ~2 DASH − fee) WOULD succeed if made, it must not be — the
+            // captured 3 DASH is what the user authorized, and the balance no longer covers it.
+            coEvery { shieldedService.withdrawToCore(any(), any()) } returns SdkWriteResult.NotBroadcast(
+                "pre-broadcast shielded note-selection failure",
+                RuntimeException(
+                    "shielded withdraw failed: Insufficient shielded balance: " +
+                        "available 200000000000, required 300000010000"
+                )
+            )
+            val executor = executor()
+
+            executor.submit(ShieldedTransferDirection.FromShielded, Dash.parse("3"), isMaxSpend = true)
+
+            assertTrue(executor.submitState.value is ShieldedSubmitState.NotSent)
+            coVerify(exactly = 1) { shieldedService.withdrawToCore(any(), any()) }
+        }
+
     // ── Max-spend fee reserve (ToShielded) ──────────────────────────────
 
     /**
