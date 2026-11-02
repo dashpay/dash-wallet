@@ -405,7 +405,7 @@ data class ShieldedTransferUIState(
      * True while a transfer operation is in flight ([ShieldedSubmitState
      * .Proving]) — regardless of whether the proving dialog is up or was
      * dismissed. The Continue button shows the in-progress state and a
-     * second submit is impossible ([canContinue] excludes Proving, and
+     * second submit is impossible ([canSubmit] excludes Proving, and
      * [ShieldedTransferExecutor.submit] refuses atomically anyway).
      */
     val transferInFlight: Boolean
@@ -422,12 +422,22 @@ data class ShieldedTransferUIState(
         get() = showConfirm || showTimingInfo ||
             (submitState != ShieldedSubmitState.Idle && submitState !is ShieldedSubmitState.NotSent)
 
-    val canContinue: Boolean
+    /**
+     * The readiness half of [canContinue] — everything EXCEPT the live amount/rate
+     * validation ([insufficientFunds], [amount].isPositive, the fiat-rate gate). [onConfirm]
+     * guards with this, not [canContinue]: the amount it submits was captured BEFORE the
+     * PIN/biometric wait (see [ShieldedTransferViewModel.onConfirm]'s KDoc), so re-validating
+     * it against the LIVE [amount]/[insufficientFunds] here would compare the authorized
+     * amount against a balance/rate that already moved on, rejecting a still-fundable submit
+     * (or, mirror case, waving through one the live numbers would have blocked).
+     */
+    val canSubmit: Boolean
         get() = ready && chainSynced && shieldedPoolReady && directionAvailable &&
-            amount.isPositive && !insufficientFunds &&
-            (dashMode || rate != null) &&
             // NotSent is provably pre-broadcast, so retrying is safe
             (submitState == ShieldedSubmitState.Idle || submitState is ShieldedSubmitState.NotSent)
+
+    val canContinue: Boolean
+        get() = canSubmit && amount.isPositive && !insufficientFunds && (dashMode || rate != null)
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -830,10 +840,19 @@ class ShieldedTransferViewModel @Inject constructor(
      * .maxSelected] is set, [ShieldedTransferUIState.amount] tracks the LIVE balance, which can move
      * during the authentication wait. Submitting a value re-derived after that wait could silently
      * spend more or less than what the user confirmed.
+     *
+     * The guard below is [ShieldedTransferUIState.canSubmit] (readiness only), NOT
+     * [ShieldedTransferUIState.canContinue]: `canContinue` also re-validates the LIVE editor
+     * proposal (`amount`, `insufficientFunds`, the fiat-rate gate), which can diverge from
+     * [confirmedAmount] by the time authentication returns (a rate/balance tick mid-wait) and
+     * would then silently refuse to submit an amount the user already authorized and that is
+     * still fundable. A [confirmedAmount] that the live balance can no longer cover is instead
+     * rejected pre-broadcast by the executor/service and surfaces as [ShieldedSubmitState.NotSent] —
+     * it must not be re-checked here.
      */
     fun onConfirm(confirmedAmount: Dash) {
         val state = _uiState.value
-        if (!state.canContinue || !state.showConfirm) return
+        if (!state.canSubmit || !state.showConfirm || !confirmedAmount.isPositive) return
         _uiState.value = state.copy(showConfirm = false)
         // Confirming the full available balance means "spend everything":
         // the exact fee is unknowable here in either direction (the

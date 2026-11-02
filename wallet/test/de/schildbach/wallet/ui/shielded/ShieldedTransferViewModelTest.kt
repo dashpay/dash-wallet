@@ -953,6 +953,72 @@ class ShieldedTransferViewModelTest {
             coVerify(exactly = 1) { shieldedService.withdrawToCore(any(), any()) }
         }
 
+    // ── Round 13 (thepastaclaw, discussion_r4448120958): onConfirm guarded with canContinue,
+    // which re-validates the LIVE editor proposal (amount, insufficientFunds, the fiat-rate gate)
+    // AFTER authentication, but submits the CAPTURED amount — the two can diverge for a typed
+    // fiat amount when the rate moves mid-wait, and the live revalidation then silently refused
+    // an authorized, still-fundable submit. onConfirm now guards with canSubmit (readiness only)
+    // and validates confirmedAmount directly. ──────────────────────────────────────────────────
+
+    @Test
+    fun confirmedFiatAmount_laterRateMoveMakesTheLiveAmountInsufficient_stillSubmitsTheCapturedAmount() =
+        runTest(dispatcher) {
+            // 3 DASH available, type $299 at $100/DASH (captures 2.99 DASH), then the rate drops
+            // to $99/DASH: the live amount (299 / 99 ≈ 3.0202) is now insufficient against the
+            // 3.00 DASH balance, but the 2.99 DASH actually authorized is still well-funded.
+            coEvery { shieldedService.shieldFromWallet(any()) } returns
+                SdkWriteResult.Broadcast(ShieldFromWalletOutcome.COMPLETED)
+            val rateFlow = MutableStateFlow<ExchangeRate?>(ExchangeRate("USD", "100.00"))
+            every { exchangeRates.observeExchangeRate(any()) } returns rateFlow
+            val vm = viewModel()
+
+            vm.onCurrencySelected(dashMode = false)
+            "299".forEach { vm.onKeyInput(it.toString()) }
+            val captured = vm.uiState.value.amount
+            assertEquals(Dash.parse("2.99"), captured)
+            vm.onContinue()
+
+            rateFlow.value = ExchangeRate("USD", "99.00")
+            assertTrue(vm.uiState.value.insufficientFunds)
+
+            vm.onConfirm(captured)
+
+            assertEquals(ShieldedSubmitState.Success, vm.uiState.value.submitState)
+            coVerify(exactly = 1) { shieldedService.shieldFromWallet(Dash.parse("2.99")) }
+        }
+
+    @Test
+    fun onConfirm_poolNotReadyDuringAuthentication_doesNotSubmit() = runTest(dispatcher) {
+        val vm = viewModel()
+
+        vm.onKeyInput("1")
+        val captured = vm.uiState.value.amount
+        vm.onContinue()
+
+        poolSyncStatus.value = ShieldedSyncStatus.SYNCING
+        vm.onConfirm(captured)
+
+        coVerify(exactly = 0) { shieldedService.shieldFromWallet(any()) }
+    }
+
+    @Test
+    fun onConfirm_capturedAmountAboveADroppedLiveBalance_submitsAndEndsNotSent() = runTest(dispatcher) {
+        coEvery { shieldedService.shieldFromWallet(any()) } returns assetLockShortResult()
+        val walletBalanceFlow = MutableStateFlow(Coin.parseCoin("3.00"))
+        every { walletData.observeBalance(any(), any()) } returns walletBalanceFlow
+        val vm = viewModel()
+
+        vm.onKeyInput("2") // 2 DASH, well within the 3.00 DASH balance at capture time
+        val captured = vm.uiState.value.amount
+        vm.onContinue()
+
+        walletBalanceFlow.value = Coin.parseCoin("1.00") // dropped below captured during auth
+        vm.onConfirm(captured)
+
+        assertTrue(vm.uiState.value.submitState is ShieldedSubmitState.NotSent)
+        coVerify(exactly = 1) { shieldedService.shieldFromWallet(Dash.parse("2")) }
+    }
+
     // ── AC3: L1 sync gate ───────────────────────────────────────────────
 
     @Test
