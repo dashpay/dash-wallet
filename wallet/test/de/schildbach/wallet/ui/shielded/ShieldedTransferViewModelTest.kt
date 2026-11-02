@@ -870,6 +870,27 @@ class ShieldedTransferViewModelTest {
         assertFalse(vm.uiState.value.maxSelected)
     }
 
+    @Test
+    fun maxSelected_fiatMode_reRendersPrimaryTextOnRateUpdate() = runTest(dispatcher) {
+        // Round 12b: a rate tick while Max is selected in fiat mode needs the same refresh as a
+        // balance tick — the exchange-rate observer only did copy(rate = ...), so amountText kept
+        // showing the OLD rate's fiat text while `amount` (the live Dash balance) and the
+        // secondary line were already current (the same mismatch class as finding 1).
+        val rateFlow = MutableStateFlow<ExchangeRate?>(ExchangeRate("USD", "100.00"))
+        every { exchangeRates.observeExchangeRate(any()) } returns rateFlow
+        val vm = viewModel()
+
+        vm.onCurrencySelected(dashMode = false)
+        vm.onMaxClick()
+        assertEquals("300.00", vm.uiState.value.amountText) // 3.00 DASH @ $100.00
+
+        rateFlow.value = ExchangeRate("USD", "200.00")
+
+        assertEquals("600.00", vm.uiState.value.amountText)
+        assertEquals(Dash.parse("3.00"), vm.uiState.value.amount)
+        assertTrue(vm.uiState.value.maxSelected)
+    }
+
     // ── Round 12 (thepastaclaw, finding 3): captured-before-authentication contract exercised
     // through the real ViewModel/executor wiring, not just the pure seam — a Max capture must
     // reach the service as the EXACT captured amount even though the live balance (and the

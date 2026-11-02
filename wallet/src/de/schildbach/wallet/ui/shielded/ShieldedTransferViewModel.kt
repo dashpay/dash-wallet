@@ -161,8 +161,10 @@ data class ShieldedTransferUIState(
      * as the Max intent that allows a fee-adjusted retry — so Max never depends on [amountText]
      * round-tripping through fiat, unlike a plain Dash/fiat equality check would. Max intent is
      * never inferred from [amount] equalling [availableBalance]: only this explicit flag counts.
-     * A live balance update for the SELECTED direction also re-renders [amountText] from the new
-     * [amount] (see [ShieldedTransferViewModel.applyBalanceUpdate]), so the primary field never
+     * A live balance OR exchange-rate update also re-renders [amountText] from the new [amount]
+     * (see [ShieldedTransferViewModel.applyBalanceUpdate] and
+     * [ShieldedTransferViewModel.refreshMaxAmountText]) — a balance update for the SELECTED
+     * direction in either unit, or a rate update while in fiat mode — so the primary field never
      * lags what [amount] and the confirm sheet already show.
      */
     val maxSelected: Boolean = false,
@@ -619,11 +621,18 @@ class ShieldedTransferViewModel @Inject constructor(
             .onEach { _uiState.value = _uiState.value.copy(verificationStatus = it) }
             .launchIn(viewModelScope)
 
+        // A rate tick while Max is selected in FIAT mode needs the same refresh as a balance
+        // tick: amountText holds the OLD rate's fiat text, so it diverges from `amount` (which
+        // reads the live balance) the same way a stale balance text would. Dash mode doesn't
+        // depend on the rate, so it never needs this.
         walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
             .filterNotNull()
             .onEach { code -> _uiState.value = _uiState.value.copy(fiatCode = code) }
             .flatMapLatest(exchangeRates::observeExchangeRate)
-            .onEach { rate -> _uiState.value = _uiState.value.copy(rate = rate?.fiat) }
+            .onEach { rate ->
+                val updated = _uiState.value.copy(rate = rate?.fiat)
+                _uiState.value = refreshMaxAmountText(updated, updated.maxSelected && !updated.dashMode)
+            }
             .launchIn(viewModelScope)
     }
 
@@ -689,25 +698,36 @@ class ShieldedTransferViewModel @Inject constructor(
         }
 
     /**
-     * Applies a live balance update for [direction] via [update], then — while
-     * [ShieldedTransferUIState.maxSelected] is set for that SAME direction — re-renders the
-     * primary [ShieldedTransferUIState.amountText] from the new live amount, so it never lags
-     * what [ShieldedTransferUIState.amount] (and the confirm sheet) already show. A balance
-     * update for the direction NOT currently selected only updates its stored balance; it has
-     * no visible amount to refresh yet. [ShieldedTransferUIState.maxSelected] and
-     * [ShieldedTransferUIState.pinnedAmount] are left untouched — a keypress still edits the
-     * now-current text normally afterwards.
+     * Re-renders [updated]'s primary [ShieldedTransferUIState.amountText] from [maxAmountText]
+     * when [shouldRefresh] — the shared Max refresh behind a live balance update ([applyBalanceUpdate])
+     * and a live exchange-rate update (the [walletUIConfig] rate observer in `init`), so the
+     * primary field never lags what [ShieldedTransferUIState.amount] (and the confirm sheet)
+     * already show. A null [maxAmountText] (no rate yet) leaves the text as-is.
+     * [ShieldedTransferUIState.maxSelected] and [ShieldedTransferUIState.pinnedAmount] are left
+     * untouched — a keypress still edits the now-current text normally afterwards.
+     */
+    private fun refreshMaxAmountText(
+        updated: ShieldedTransferUIState,
+        shouldRefresh: Boolean
+    ): ShieldedTransferUIState =
+        if (shouldRefresh) {
+            maxAmountText(updated)?.let { updated.copy(amountText = it) } ?: updated
+        } else {
+            updated
+        }
+
+    /**
+     * Applies a live balance update for [direction] via [update], then re-renders the primary
+     * amount text via [refreshMaxAmountText] while [ShieldedTransferUIState.maxSelected] is set
+     * for that SAME direction. A balance update for the direction NOT currently selected only
+     * updates its stored balance; it has no visible amount to refresh yet.
      */
     private fun applyBalanceUpdate(
         direction: ShieldedTransferDirection,
         update: (ShieldedTransferUIState) -> ShieldedTransferUIState
     ) {
         val updated = update(_uiState.value)
-        _uiState.value = if (updated.maxSelected && updated.direction == direction) {
-            maxAmountText(updated)?.let { updated.copy(amountText = it) } ?: updated
-        } else {
-            updated
-        }
+        _uiState.value = refreshMaxAmountText(updated, updated.maxSelected && updated.direction == direction)
     }
 
     /**
