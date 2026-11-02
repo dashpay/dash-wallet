@@ -11,8 +11,10 @@ not a real user's keys or a pinned production app ID.
   limits, DIP-13 application derivation, complete proof-verified contract-group
   scope and remaining-budget queries,
   identity updates and index-only document deletion.
-- A non-mainnet network running protocol version 14 or later. Testnet and devnets
-  must match the scanned request's network selector. The SDK must be configured
+- A network running Platform protocol version 14 or later; mainnet, testnet and devnets
+  must match the scanned request's network selector (`m`, `t`, `d`). Below version 14 the
+  Tools entry is hidden and the Connections screen and every operation report DashConnect
+  as unavailable (`ConnectAvailability`). The SDK must be configured
   for the actual devnet, not merely for testnet coin derivation.
 - Wallet-owned unbound master and HIGH document-signing keys. New identities also
   include an unbound CRITICAL authentication key. Existing identities without it
@@ -189,13 +191,11 @@ dashpay/dips#181), from the scanners and as an Android browsable link. `dashpay:
 unchanged and still goes to the invitation handler; any other `dashpay://` verb (for example
 `sign`) is refused with a "needs a newer version of the wallet" message. `r` must be canonical
 base64url (no padding, no `+` or `/`, no non-zero trailing bits). It is at most 1,366 characters
-and decodes to at most 1,024 bytes, and the whole URI is at most 4,096 bytes. Mainnet stays
-disabled for both carriers.
+and decodes to at most 1,024 bytes, and the whole URI is at most 4,096 bytes.
 
 `dash-key:<payload>?n=d&v=2` and `dash-st:<payload>?n=d&v=1` are registered as
 Android browsable links and are also accepted by the wallet scanners. `n=t`
-selects testnet; the network must match the running wallet. Mainnet remains
-disabled. These are custom URI schemes, not verified HTTPS App Links, and do
+selects testnet and `n=m` mainnet; the network must match the running wallet. These are custom URI schemes, not verified HTTPS App Links, and do
 not authenticate the calling app.
 
 `dash-st:` currently accepts only a single unsigned token direct purchase.

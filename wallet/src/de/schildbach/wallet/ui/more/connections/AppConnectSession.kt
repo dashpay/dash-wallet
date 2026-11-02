@@ -82,7 +82,9 @@ internal class AppConnectSession(
 
     suspend fun prepareTokenPurchase(request: DashStRequest): TokenPurchaseApproval = withContext(Dispatchers.IO) {
         mutex.withLock {
-            check(platform.client.refreshProtocolVersion() >= 14) { "App Connect operations require Platform protocol version 14" }
+            check(platform.client.refreshProtocolVersion() >= ConnectAvailability.MIN_PROTOCOL_VERSION) {
+                "App Connect operations require Platform protocol version ${ConnectAvailability.MIN_PROTOCOL_VERSION}"
+            }
             val scope = scope()
             val identity = readIdentity()
             val summary = nativeBytes(dashsdk.prepareTokenPurchaseSdk(platform.rustSdk, request.transitionBytes, identity.id.toNative()))
@@ -181,8 +183,9 @@ internal class AppConnectSession(
 
     suspend fun prepare(request: DashKeyRequest): AppConnectPlan = withContext(Dispatchers.IO) {
         val parsed = request.requireAppConnect()
-        check(Constants.NETWORK_PARAMETERS.id != NetworkParameters.ID_MAINNET) { "App Connect is unavailable on mainnet" }
-        check(platform.client.refreshProtocolVersion() >= 14) { "App Connect requires Platform protocol version 14" }
+        check(platform.client.refreshProtocolVersion() >= ConnectAvailability.MIN_PROTOCOL_VERSION) {
+            "App Connect requires Platform protocol version ${ConnectAvailability.MIN_PROTOCOL_VERSION}"
+        }
         val scope = scope()
         val identity = readIdentity()
         val blockTime = platform.client.getPlatformTime(identity.id)
@@ -259,7 +262,7 @@ internal class AppConnectSession(
             check(0 in plan.selectedAuth && plan.selectedAuth.all { it in plan.grants.indices }) { "Primary grant is required" }
             check(plan.selectedEncryption.all { it in parsed.encryption.indices })
             parsed.requireFresh(System.currentTimeMillis())
-            check(platform.client.refreshProtocolVersion() >= 14)
+            check(platform.client.refreshProtocolVersion() >= ConnectAvailability.MIN_PROTOCOL_VERSION)
             val selectedGrants = plan.selectedAuth.sorted().map { plan.grants[it] }
             plan.requireGroupScopes(validateOwnership(request, selectedGrants))
             val recordId = "${plan.scope}:${plan.requestHash}"
@@ -285,11 +288,13 @@ internal class AppConnectSession(
                 requireOtherRegistrationsSettled(plan.scope, recordId, identity, time)
                 check(selectedGrants.all { it.expiresAt!! > time + 3_600_000 }) { "Grant expired. Scan again." }
                 val keys = mutableListOf<IdentityPublicKey>()
+                // Application keys use the network's coin type in their derivation path.
+                val isMainnet = Constants.NETWORK_PARAMETERS.id == NetworkParameters.ID_MAINNET
                 var nextId = (identity.publicKeys.maxOfOrNull { it.id } ?: -1) + 1
                 plan.grants.forEachIndexed { index, grant ->
                     if (index !in plan.selectedAuth) return@forEachIndexed
                     val leaf = KeyExchangeCrypto.sessionRequestLeaf(request.appEphemeralPubKey, index)
-                    val secret = ApplicationKeyDerivation.sessionAuthentication(seed, identity.id.toBuffer(), leaf, false)
+                    val secret = ApplicationKeyDerivation.sessionAuthentication(seed, identity.id.toBuffer(), leaf, isMainnet)
                     privateKeys.add(secret)
                     val key = IdentityPublicKey(nextId++, KeyType.ECDSA_HASH160, Purpose.AUTHENTICATION,
                         if (grant.securityLevel == 1) SecurityLevel.CRITICAL else SecurityLevel.HIGH,
@@ -301,7 +306,7 @@ internal class AppConnectSession(
                     if (index !in plan.selectedEncryption) return@forEachIndexed
                     val purpose = if (binding.purpose == 1) Purpose.ENCRYPTION else Purpose.DECRYPTION
                     val secret = ApplicationKeyDerivation.encryption(
-                        seed, identity.id.toBuffer(), binding.contractId, purpose, rotation = 0L, isMainnet = false)
+                        seed, identity.id.toBuffer(), binding.contractId, purpose, rotation = 0L, isMainnet = isMainnet)
                     privateKeys.add(secret)
                     val data = KeyExchangeCrypto.compressedPublicKey(secret)
                     val candidates = identity.publicKeys.filter { it.purpose == purpose && it.contractBounds is SingleContractBounds &&
