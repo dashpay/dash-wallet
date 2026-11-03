@@ -166,8 +166,9 @@ class DispatchingSwapProvider @Inject constructor(
 
     override suspend fun commitSwapTransaction(
         tradeId: String,
-        swapTradeUIModel: SwapTradeUIModel
-    ): ResponseResource<SwapTradeUIModel> = active.commitSwapTransaction(tradeId, swapTradeUIModel)
+        swapTradeUIModel: SwapTradeUIModel,
+        onDepositing: suspend () -> Unit
+    ): ResponseResource<SwapTradeUIModel> = active.commitSwapTransaction(tradeId, swapTradeUIModel, onDepositing)
 
     override suspend fun createBuyOrder(
         sellAsset: String,

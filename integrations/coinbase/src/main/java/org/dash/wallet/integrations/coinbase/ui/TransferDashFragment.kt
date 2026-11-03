@@ -37,10 +37,12 @@ import org.dash.wallet.common.money.MoneyFormat
 import org.dash.wallet.common.money.fiatValue
 import org.dash.wallet.common.services.ConfirmTransactionService
 import org.dash.wallet.common.services.AuthenticationManager
-import org.dash.wallet.common.services.isLeftoverBalanceWarning
+import org.dash.wallet.common.services.LockScreenBroadcaster
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.*
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.common.ui.dialogs.PaymentOutcomeUnknownWarning
+import org.dash.wallet.common.ui.dialogs.TaggedProgressDialog
 import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
 import org.dash.wallet.common.util.*
 import org.dash.wallet.integrations.coinbase.CoinbaseConstants
@@ -62,6 +64,7 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
 
     companion object {
         private val log = LoggerFactory.getLogger(TransferDashFragment::class.java)
+        private const val TRANSACTION_STATE_DIALOG_TAG = "TransactionStateDialog"
         fun newInstance() = TransferDashFragment()
     }
 
@@ -69,13 +72,24 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
     private val transferDashViewModel by coinbaseViewModels<TransferDashViewModel>()
     private val sharedViewModel by coinbaseViewModels<CoinbaseViewModel>()
     private val binding by viewBinding(TransferDashFragmentBinding::bind)
-    private var loadingDialog: AdaptiveDialog? = null
+    // Kept single across a recreation, which restores the dialog (see TaggedProgressDialog).
+    private val progressDialog = TaggedProgressDialog({ parentFragmentManager })
     @Inject lateinit var securityFunctions: AuthenticationManager
     @Inject lateinit var confirmTransactionLauncher: ConfirmTransactionService
+    @Inject lateinit var lockScreenBroadcaster: LockScreenBroadcaster
     private var dashValue: Dash = Dash.ZERO
     private val dashFormat = MoneyFormat().withLocale(GenericUtils.getDeviceLocale())
         .noCode().minDecimals(2).optionalDecimals()
     private var onBackPressedCallback: OnBackPressedCallback? = null
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        if (savedInstanceState == null) {
+            // A newly opened screen (a new nav entry), not one recreated after a rotation or
+            // process death: an earlier transfer's unknown outcome no longer blocks this one.
+            transferDashViewModel.startNewTransfer()
+        }
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -114,6 +128,10 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
         }
 
         enterAmountToTransferViewModel.onContinueTransferEvent.observe(viewLifecycleOwner){
+            if (transferDashViewModel.paymentOutcomeUnknown.value) {
+                // An earlier transfer may have gone out: no further transfer from this screen.
+                return@observe
+            }
             lifecycleScope.launch {
                 dashValue = it.second
                 if (binding.transferView.walletToCoinbase) {
@@ -274,6 +292,9 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
             val isEmptyWallet = enterAmountToTransferViewModel.isMaxAmountSelected &&
                     binding.transferView.walletToCoinbase
 
+            if (transferDashViewModel.paymentOutcomeUnknown.value) {
+                return@observe
+            }
             lifecycleScope.launch {
                 val details = transferDashViewModel.estimateNetworkFee(dashValue, emptyWallet = isEmptyWallet)
                 details?.amountToSend?.toPlainString()?.let { amountStr ->
@@ -289,8 +310,13 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
 
                     if (isTransactionConfirmed) {
                         transferDashViewModel.logTransfer(enterAmountToTransferViewModel.isFiatSelected)
-                        AdaptiveDialog.withProgress(getString(R.string.please_wait_title), requireActivity()) {
-                            handleSend(dashValue, isEmptyWallet)
+                        // The view model runs the send (and shows progress), so a recreation of
+                        // this screen cannot cancel it once it may be on the network. Bound once,
+                        // at the confirm: a send after the leftover-balance question must still
+                        // come from the wallet the transfer was confirmed on.
+                        val session = transferDashViewModel.currentWalletSession()
+                        if (!transferDashViewModel.submitTransfer(dashValue, isEmptyWallet, true, session)) {
+                            log.info("transfer refused: a send is in progress or an earlier outcome is unknown")
                         }
                     }
                 }
@@ -306,8 +332,32 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
             ).show(requireActivity())
         }
 
-        transferDashViewModel.observeSendDashToCoinbaseState.observe(viewLifecycleOwner){
-            setTransactionState(it)
+        // The transfer's result and the leftover-balance question: once each, only while
+        // resumed and unlocked (see handleWhenResumed).
+        handleWhenResumed(
+            transferDashViewModel.observeSendDashToCoinbaseState,
+            lockScreenBroadcaster.unlocked,
+            transferDashViewModel::consumeSendDashToCoinbaseState,
+            transferDashViewModel::retainSendDashToCoinbaseState
+        ) { setTransactionState(it, this) }
+
+        handleWhenResumed(
+            transferDashViewModel.leftoverBalanceWarning,
+            lockScreenBroadcaster.unlocked,
+            transferDashViewModel::consumeLeftoverBalanceWarning,
+            transferDashViewModel::retainLeftoverBalanceWarning
+        ) { pending ->
+            val sendAnyway = MinimumBalanceDialog().showAsync(requireActivity(), MinimumBalanceDialog.TAG)
+                ?: return@handleWhenResumed false
+            if (sendAnyway) {
+                transferDashViewModel.submitTransfer(
+                    pending.dashValue,
+                    pending.isEmptyWallet,
+                    checkConditions = false,
+                    session = pending.session
+                )
+            }
+            true
         }
 
         transferDashViewModel.onBuildTransactionParamsCallback.observe(viewLifecycleOwner){
@@ -340,35 +390,27 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
                 findNavController().popBackStack()
             }
         }
+
+        // The transfer may already be on the network, so there is no retry: the amount keyboard
+        // and Continue stay hidden, and the warning stays up until the user's Close, which leaves
+        // the flow for home, where the transaction history shows whether it went out.
+        val outcomeUnknownWarning = PaymentOutcomeUnknownWarning(this) {
+            val navController = findNavController()
+            navController.popBackStack(navController.graph.startDestinationId, false)
+        }
+        outcomeUnknownWarning.keepShownWhile(
+            transferDashViewModel.paymentOutcomeUnknown,
+            lockScreenBroadcaster.unlocked
+        ) {
+            enterAmountToTransferViewModel.keyboardStateCallback.value = false
+        }
     }
 
     private fun setIsSyncing(isSyncing: Boolean) {
         binding.transferView.setSyncing(isSyncing)
         binding.transferMessage.isVisible = isSyncing
-        enterAmountToTransferViewModel.keyboardStateCallback.value = !isSyncing
-    }
-
-    private suspend fun handleSend(value: Dash, isEmptyWallet: Boolean): Boolean {
-        // Bound once, at the confirm: the leftover-balance dialog below waits on the user, and
-        // the send it leads to must still come from the wallet the transfer was confirmed on.
-        val session = transferDashViewModel.currentWalletSession()
-        try {
-            transferDashViewModel.sendDash(value, isEmptyWallet, true, session)
-            return true
-        } catch (ex: Exception) {
-            if (!ex.isLeftoverBalanceWarning) {
-                throw ex
-            }
-
-            val result = MinimumBalanceDialog().showAsync(requireActivity())
-
-            if (result == true) {
-                transferDashViewModel.sendDash(value, isEmptyWallet, false, session)
-                return true
-            }
-        }
-
-        return false
+        enterAmountToTransferViewModel.keyboardStateCallback.value =
+            !isSyncing && !transferDashViewModel.paymentOutcomeUnknown.value
     }
 
     private fun handleBackButtonPress(){
@@ -381,7 +423,9 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
     private fun setInternetAccessState(hasInternet: Boolean) {
         binding.networkStatusStub.isVisible = !hasInternet
         binding.transferView.isDeviceConnectedToInternet = hasInternet
-        if (!binding.transferView.walletToCoinbase) {
+        if (transferDashViewModel.paymentOutcomeUnknown.value) {
+            enterAmountToTransferViewModel.keyboardStateCallback.value = false
+        } else if (!binding.transferView.walletToCoinbase) {
             enterAmountToTransferViewModel.keyboardStateCallback.value = hasInternet
         } else {
             enterAmountToTransferViewModel.keyboardStateCallback.value =
@@ -389,19 +433,34 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
         }
     }
 
-    private fun setTransactionState(responseState: SendDashResponseState) {
-        val pair: Pair<CoinBaseResultDialog.Type, String?> = when(responseState){
-            is SendDashResponseState.SuccessState -> {
-                Pair(if (responseState.isTransactionPending) CoinBaseResultDialog.Type.TRANSFER_DASH_SUCCESS else CoinBaseResultDialog.Type.TRANSFER_DASH_ERROR, null)
-            }
-            is SendDashResponseState.FailureState -> Pair(CoinBaseResultDialog.Type.TRANSFER_DASH_ERROR, responseState.failureMessage)
-            is SendDashResponseState.InsufficientMoneyState -> Pair(CoinBaseResultDialog.Type.TRANSFER_DASH_ERROR, getString(R.string.insufficient_money_to_transfer))
-            else -> Pair(CoinBaseResultDialog.Type.TRANSFER_DASH_ERROR, null)
+    /**
+     * Shows the transfer's result until it is dismissed; false when no button answered it (the
+     * lock screen dismisses every dialog when it locks; a recreation tears it down: see
+     * handleWhenResumed). A button marks [delivery] answered at once, since its action may leave
+     * the screen before the dialog is gone.
+     */
+    private suspend fun setTransactionState(
+        responseState: SendDashResponseState,
+        delivery: OutcomeDelivery
+    ): Boolean {
+        if (responseState is SendDashResponseState.OutcomeUnknownState) {
+            // Shown from paymentOutcomeUnknown, which survives recreation (see onViewCreated).
+            return true
         }
+        var answered = false
+        val message = when (responseState) {
+            is SendDashResponseState.FailureState -> responseState.failureMessage
+            is SendDashResponseState.InsufficientMoneyState -> getString(R.string.insufficient_money_to_transfer)
+            else -> null
+        }
+        val pair = Pair(responseState.resultDialogType(), message)
 
         val transactionStateDialog = CoinBaseResultDialog.newInstance(pair.first, pair.second, dashToCoinbase = true).apply {
             onCoinBaseResultDialogButtonsClickListener = object : CoinBaseResultDialog.CoinBaseResultDialogButtonsClickListener {
                 override fun onPositiveButtonClick(type: CoinBaseResultDialog.Type) {
+                    answered = true
+                    delivery.markAnswered()
+                    transferDashViewModel.acknowledgeTransferResult()
                     when(type){
                         CoinBaseResultDialog.Type.TRANSFER_DASH_SUCCESS -> {
                             transferDashViewModel.logClose(type)
@@ -419,12 +478,18 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
                 }
 
                 override fun onNegativeButtonClick(type: CoinBaseResultDialog.Type) {
+                    answered = true
+                    delivery.markAnswered()
+                    transferDashViewModel.acknowledgeTransferResult()
                     transferDashViewModel.logClose(type)
                 }
             }
         }
 
-        transactionStateDialog.showNow(parentFragmentManager, "TransactionStateDialog")
+        // Replaces a copy restored after a recreation, whose button listener was lost.
+        transactionStateDialog.showNowReplacing(parentFragmentManager, TRANSACTION_STATE_DIALOG_TAG)
+        transactionStateDialog.awaitDestroyed()
+        return answered
     }
 
     @SuppressLint("SetTextI18n")
@@ -457,17 +522,11 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
     }
 
     private fun hideProgressDialog() {
-        if (loadingDialog != null && loadingDialog?.isAdded == true) {
-            loadingDialog?.dismissAllowingStateLoss()
-        }
+        progressDialog.hide()
     }
 
     private fun displayProgressDialog() {
-        if (loadingDialog != null && loadingDialog?.isAdded == true) {
-            loadingDialog?.dismissAllowingStateLoss()
-        }
-        loadingDialog = AdaptiveDialog.progress(getString(R.string.loading))
-        loadingDialog?.show(parentFragmentManager, "progress")
+        progressDialog.show(getString(R.string.loading))
     }
 
     private fun hideBanners(){
@@ -483,3 +542,14 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
         onBackPressedCallback?.remove()
     }
 }
+
+/**
+ * The result dialog for a transfer's [SendDashResponseState]: a send that went out is always a
+ * success, never an error whose Retry would pay again.
+ */
+internal fun SendDashResponseState.resultDialogType(): CoinBaseResultDialog.Type =
+    if (this is SendDashResponseState.SuccessState) {
+        CoinBaseResultDialog.Type.TRANSFER_DASH_SUCCESS
+    } else {
+        CoinBaseResultDialog.Type.TRANSFER_DASH_ERROR
+    }

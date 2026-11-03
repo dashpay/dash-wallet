@@ -63,9 +63,10 @@ enum class SendFailureKind {
 
     /**
      * The payment may have been sent, but its outcome is unknown
-     * ([PaymentSubmissionPendingException]: an SDK broadcast a Reset Wallet
-     * cancelled after it went out, among others). Never "payment failed" and
-     * never an invitation to retry: the copy says it may have been sent.
+     * ([PaymentSubmissionPendingException]: an ordinary SDK send whose
+     * broadcast came back ambiguous, or an SDK broadcast a Reset Wallet
+     * cancelled after it went out, among others). Never "payment failed"
+     * and never an invitation to retry: the copy says it may have been sent.
      */
     OUTCOME_UNKNOWN,
 

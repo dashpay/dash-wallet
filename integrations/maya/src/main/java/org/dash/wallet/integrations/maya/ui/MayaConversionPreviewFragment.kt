@@ -36,6 +36,7 @@ import org.dash.wallet.common.services.LockScreenBroadcaster
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.common.ui.dialogs.PaymentOutcomeUnknownWarning
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.observe
@@ -237,6 +238,17 @@ class MayaConversionPreviewFragment : Fragment() {
 
         observeNavigationCallBack()
 
+        // The deposit may have gone out: Confirm stays disabled and the warning stays up until
+        // the user's Close, which leaves the flow for home and its history.
+        val outcomeUnknownWarning = PaymentOutcomeUnknownWarning(this) {
+            val navController = findNavController()
+            navController.popBackStack(navController.graph.startDestinationId, false)
+        }
+        outcomeUnknownWarning.keepShownWhile(viewModel.paymentOutcomeUnknown, lockScreenBroadcaster.unlocked) {
+            countDownTimer?.cancel()
+            uiState = uiState.copy(isConfirmBlocked = true)
+        }
+
         viewModel.onInsufficientMoneyCallback.observe(viewLifecycleOwner) {
             AdaptiveDialog.create(
                 R.drawable.ic_error,
@@ -275,6 +287,9 @@ class MayaConversionPreviewFragment : Fragment() {
     }
 
     private fun onConfirmClick() {
+        if (viewModel.paymentOutcomeUnknown.value) {
+            return
+        }
         countDownTimer?.cancel()
         if (isRefreshing) {
             getNewCommitOrder()

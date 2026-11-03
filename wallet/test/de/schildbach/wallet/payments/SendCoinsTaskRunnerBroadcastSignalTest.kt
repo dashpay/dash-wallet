@@ -59,6 +59,7 @@ import org.bitcoinj.params.TestNet3Params
 import org.bitcoinj.wallet.FriendChainAccess
 import org.bitcoinj.wallet.SendRequest
 import org.bitcoinj.wallet.Wallet
+import org.dash.wallet.common.services.PaymentSubmissionPendingException
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dashj.platform.dpp.identifier.Identifier
@@ -188,11 +189,33 @@ class SendCoinsTaskRunnerBroadcastSignalTest {
         try {
             sendCollecting(signals)
             fail("a bridge failure still surfaces to the UI")
-        } catch (expected: RuntimeException) {
+        } catch (expected: PaymentSubmissionPendingException) {
+            // Pending, not an ordinary failure: the payment went out, so the UI must not offer a
+            // retry that would pay again from other coins.
+            assertEquals(sdkTxid, expected.txId)
             assertTrue(expected.message.orEmpty().contains(sdkTxid))
         }
 
         assertEquals(listOf(sdkTxid), signals)
+    }
+
+    @Test
+    fun postCutover_broadcastThenAFailingMetadataStep_isPending_notARetryableFailure() = runTest {
+        postCutover(SdkWriteResult.Broadcast(sdkTxid))
+        bridgeReturns(BridgedTxResult.Bridged(mockk(relaxed = true), adoptedWalletInstance = false))
+
+        try {
+            runner.sendCoins(
+                sendRequest(),
+                checkBalanceConditions = false,
+                beforeSending = { throw IllegalStateException("memo could not be written") },
+                intendedRecipient = recipient
+            )
+            fail("the failure still surfaces")
+        } catch (expected: PaymentSubmissionPendingException) {
+            // The payment went out: never an ordinary failure a retry could pay twice on.
+            assertEquals(sdkTxid, expected.txId)
+        }
     }
 
     @Test
@@ -243,16 +266,17 @@ class SendCoinsTaskRunnerBroadcastSignalTest {
     }
 
     @Test
-    fun postCutover_ambiguous_signalsAnUnknownTxid_andStillThrowsTheCause() = runTest {
+    fun postCutover_ambiguous_signalsAnUnknownTxid_andThrowsPending() = runTest {
         postCutover(SdkWriteResult.Ambiguous(IllegalStateException("timeout")))
         val signals = mutableListOf<String?>()
 
         try {
             sendCollecting(signals)
             fail("expected the ambiguous failure")
-        } catch (expected: IllegalStateException) {
-            // the SDK's cause, rethrown (coroutine stack recovery may copy it)
-            assertEquals("timeout", expected.message)
+        } catch (expected: PaymentSubmissionPendingException) {
+            // "may have been sent" (never a retryable failure), carrying the
+            // SDK's cause (coroutine stack recovery may copy it)
+            assertEquals("timeout", expected.cause?.message)
         }
 
         assertEquals(listOf<String?>(null), signals)
@@ -639,8 +663,8 @@ class SendCoinsTaskRunnerBroadcastSignalTest {
                 )
             }
             fail("the bridge failure still surfaces")
-        } catch (expected: RuntimeException) {
-            // the UI reports "sent, appears after the next sync"
+        } catch (expected: PaymentSubmissionPendingException) {
+            // the UI reports the payment as possibly sent, never as a retryable failure
         }
 
         assertEquals(listOf(recipient), marks)
@@ -662,8 +686,8 @@ class SendCoinsTaskRunnerBroadcastSignalTest {
                 )
             }
             fail("expected the ambiguous failure")
-        } catch (expected: IllegalStateException) {
-            // the UI still reports the failure; the address is not reused
+        } catch (expected: PaymentSubmissionPendingException) {
+            // the UI reports "may have been sent"; the address is not reused
         }
 
         assertEquals(listOf(recipient), marks)

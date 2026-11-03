@@ -18,10 +18,13 @@ package org.dash.wallet.integrations.maya.ui
 
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ResponseResource
@@ -34,6 +37,7 @@ import org.dash.wallet.common.money.TxIds
 import org.dash.wallet.common.services.InsufficientFundsException
 import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.common.services.PaymentStillConfirmingException
+import org.dash.wallet.common.services.PaymentSubmissionPendingException
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -48,6 +52,7 @@ import org.dash.wallet.integrations.maya.ui.convert_currency.model.SendTransacti
 import org.dash.wallet.integrations.maya.utils.MayaConstants
 import org.dash.wallet.integrations.maya.utils.SwapBackend
 import org.slf4j.LoggerFactory
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 
 @HiltViewModel
@@ -66,6 +71,8 @@ class MayaConversionPreviewViewModel @Inject constructor(
         private const val IS_LOCK_TIMEOUT_MS = 10_000L
         private const val KEY_ORDER = "swap_trade_order"
         private const val KEY_QUOTE_CREATED_AT = "quote_created_at"
+        private const val KEY_PAYMENT_OUTCOME_UNKNOWN = "payment_outcome_unknown"
+        private const val KEY_DEPOSIT_IN_PROGRESS = "deposit_in_progress"
     }
 
     /**
@@ -115,20 +122,68 @@ class MayaConversionPreviewViewModel @Inject constructor(
     val onInsufficientMoneyCallback = SingleLiveEvent<Unit>()
 
     /**
+     * True once the deposit may have gone out with its outcome unknown. Terminal: no further
+     * commit is accepted, and it is kept in [savedStateHandle] so a recreated screen (or process)
+     * still shows the warning instead of a Confirm button that could pay twice.
+     */
+    val paymentOutcomeUnknown: StateFlow<Boolean> =
+        savedStateHandle.getStateFlow(KEY_PAYMENT_OUTCOME_UNKNOWN, false)
+
+    init {
+        // A deposit was being built or broadcast when the process died: it may have gone out,
+        // and nothing is left to say whether it did.
+        if (savedStateHandle.get<Boolean>(KEY_DEPOSIT_IN_PROGRESS) == true) {
+            log.warn("a swap deposit was in progress when the process died; its outcome is unknown")
+            savedStateHandle[KEY_PAYMENT_OUTCOME_UNKNOWN] = true
+            savedStateHandle[KEY_DEPOSIT_IN_PROGRESS] = false
+        }
+    }
+
+    /**
      * The deposit was refused before anything was built: an earlier payment's outcome is still
      * being confirmed and its inputs are not protected from coin selection. Not a swap failure;
      * the screen says to try again once that payment is confirmed.
      */
     val onPaymentStillConfirmingCallback = SingleLiveEvent<Unit>()
 
-    fun commitSwapTrade(tradeId: String) = viewModelScope.launch {
+    /** Held while one commit (and its deposit) is in progress (see [commitSwapTrade]). */
+    private val commitInFlight = AtomicBoolean(false)
+
+    fun commitSwapTrade(tradeId: String): Job {
+        // Claimed synchronously, before launching, so two rapid Confirms cannot both commit and
+        // deposit. Refused for good once an earlier deposit may have gone out.
+        if (paymentOutcomeUnknown.value || !commitInFlight.compareAndSet(false, true)) {
+            return Job().apply { complete() }
+        }
+        return viewModelScope.launch {
+            try {
+                commitAndDeposit(tradeId)
+            } finally {
+                // The deposit call has returned (or never started): its outcome is known, or
+                // already recorded as unknown, which keeps refusing.
+                savedStateHandle[KEY_DEPOSIT_IN_PROGRESS] = false
+                commitInFlight.set(false)
+            }
+        }
+    }
+
+    private suspend fun commitAndDeposit(tradeId: String) {
         analyticsService.logEvent(AnalyticsConstants.Coinbase.CONVERT_QUOTE_CONFIRM, mapOf())
         val inputCurrency = swapTradeUIModel.amount.dashCode
         val inputAmount = swapTradeUIModel.amount.dash
 
         // TODO: this is the action to do the swap
         _showLoading.value = true
-        when (val result = swapProvider.commitSwapTransaction(tradeId, swapTradeUIModel)) {
+        // Saved, right before the deposit is built and broadcast (after the quote refresh, which
+        // sends nothing): should the process die before the call returns, the restored screen
+        // treats the deposit's outcome as unknown (see init).
+        val result = swapProvider.commitSwapTransaction(tradeId, swapTradeUIModel) {
+            withContext(Dispatchers.Main.immediate) {
+                savedStateHandle[KEY_DEPOSIT_IN_PROGRESS] = true
+            }
+        }
+        savedStateHandle[KEY_DEPOSIT_IN_PROGRESS] = false
+        when (result) {
             is ResponseResource.Success -> {
                 // Wait for the swap transaction to be IS-locked or confirmed on the network.
                 // This verifies that the transaction was successfully broadcast and seen by peers.
@@ -217,11 +272,15 @@ class MayaConversionPreviewViewModel @Inject constructor(
                 _showLoading.value = false
                 if (result.throwable is InsufficientFundsException) {
                     onInsufficientMoneyCallback.call()
-                    return@launch
+                    return
+                }
+                if (result.throwable is PaymentSubmissionPendingException) {
+                    savedStateHandle[KEY_PAYMENT_OUTCOME_UNKNOWN] = true
+                    return
                 }
                 if (result.throwable is PaymentStillConfirmingException) {
                     onPaymentStillConfirmingCallback.call()
-                    return@launch
+                    return
                 }
                 val error = result.errorBody
                 if (error.isNullOrEmpty()) {

@@ -101,7 +101,9 @@ data class MayaConversionPreviewUIState(
     val quoteSecondsLeft: Long? = null,
     /** True while the swap order is being committed (or a fresh quote fetched). */
     val isLoading: Boolean = false,
-    val isOnline: Boolean = true
+    val isOnline: Boolean = true,
+    /** An earlier deposit may have gone out: Confirm/Refresh stays disabled for good. */
+    val isConfirmBlocked: Boolean = false
 )
 
 @Composable
@@ -201,7 +203,7 @@ fun MayaConversionPreviewScreen(
                     },
                     style = if (state.quoteSecondsLeft != null) Style.FilledBlue else Style.TintedBlue,
                     size = Size.Large,
-                    isEnabled = !state.isLoading,
+                    isEnabled = !state.isLoading && !state.isConfirmBlocked,
                     isLoading = state.isLoading,
                     onClick = onConfirmClick,
                     modifier = Modifier.weight(1f)

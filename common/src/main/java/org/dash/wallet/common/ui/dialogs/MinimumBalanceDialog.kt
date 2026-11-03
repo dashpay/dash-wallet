@@ -28,6 +28,11 @@ import javax.inject.Inject
 
 @AndroidEntryPoint
 class MinimumBalanceDialog : AdaptiveDialog(R.layout.dialog_adaptive) {
+    companion object {
+        /** The leftover-balance question's tag, so a recreated screen replaces a restored copy. */
+        const val TAG = "minimum_balance_question"
+    }
+
     @Inject
     lateinit var analytics: AnalyticsService
 

@@ -38,8 +38,11 @@ import coil.transform.CircleCropTransformation
 import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.customtabs.CustomTabActivityHelper
 import org.dash.wallet.common.util.Constants
+import org.dash.wallet.common.services.LockScreenBroadcaster
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.common.ui.dialogs.PaymentOutcomeUnknownWarning
+import org.dash.wallet.common.ui.dialogs.TaggedProgressDialog
 import org.dash.wallet.common.ui.dialogs.ExtraActionDialog
 import org.dash.wallet.common.ui.setRoundedBackground
 import org.dash.wallet.common.ui.viewBinding
@@ -52,13 +55,19 @@ import org.dash.wallet.integrations.coinbase.databinding.FragmentCoinbaseConvers
 import org.dash.wallet.integrations.coinbase.model.*
 import org.dash.wallet.integrations.coinbase.ui.dialogs.CoinBaseResultDialog
 import org.dash.wallet.integrations.coinbase.viewmodels.CoinbaseConversionPreviewViewModel
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_conversion_preview) {
+    companion object {
+    }
+
     private val binding by viewBinding(FragmentCoinbaseConversionPreviewBinding::bind)
     private val viewModel by viewModels<CoinbaseConversionPreviewViewModel>()
+    @Inject lateinit var lockScreenBroadcaster: LockScreenBroadcaster
     private lateinit var swapTradeUIModel: SwapTradeUIModel
-    private var loadingDialog: AdaptiveDialog? = null
+    // Kept single across a recreation, which restores the dialog (see TaggedProgressDialog).
+    private val progressDialog = TaggedProgressDialog({ parentFragmentManager })
     private var isRetrying = false
     private var transactionStateDialog: CoinBaseResultDialog? = null
     private var newSwapOrderId: String? = null
@@ -113,6 +122,9 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
         }
 
         binding.confirmBtnContainer.setOnClickListener {
+            if (viewModel.paymentOutcomeUnknown.value) {
+                return@setOnClickListener
+            }
             countDownTimer.cancel()
             if (isRetrying) {
                 getNewCommitOrder()
@@ -200,6 +212,17 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
             ).show(requireActivity())
         }
 
+        // The sale's send may have gone out: Confirm stays disabled and the warning stays up
+        // until the user's Close, which leaves the flow for home and its history.
+        val outcomeUnknownWarning = PaymentOutcomeUnknownWarning(this) {
+            val navController = findNavController()
+            navController.popBackStack(navController.graph.startDestinationId, false)
+        }
+        outcomeUnknownWarning.keepShownWhile(viewModel.paymentOutcomeUnknown, lockScreenBroadcaster.unlocked) {
+            countDownTimer.cancel()
+            binding.confirmBtnContainer.isEnabled = false
+        }
+
         viewModel.onFailure.observe(viewLifecycleOwner) {
             AdaptiveDialog.create(
                 R.drawable.ic_error,
@@ -282,17 +305,11 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
     }
 
     private fun showProgress(messageResId: Int) {
-        if (loadingDialog != null && loadingDialog?.isAdded == true) {
-            loadingDialog?.dismissAllowingStateLoss()
-        }
-        loadingDialog = AdaptiveDialog.progress(getString(messageResId))
-        loadingDialog?.show(parentFragmentManager, "progress")
+        progressDialog.show(getString(messageResId))
     }
 
     private fun dismissProgress() {
-        if (loadingDialog != null && loadingDialog?.isAdded == true) {
-            loadingDialog?.dismissAllowingStateLoss()
-        }
+        progressDialog.hide()
     }
 
     private fun showBuyOrderDialog(type: CoinBaseResultDialog.Type, responseMessage: String? = null) {
