@@ -40,7 +40,11 @@ import org.dash.wallet.common.customtabs.CustomTabActivityHelper
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.services.LockScreenBroadcaster
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.OutcomeDelivery
+import org.dash.wallet.common.ui.awaitDestroyed
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.common.ui.handleWhenResumed
+import org.dash.wallet.common.ui.showNowReplacing
 import org.dash.wallet.common.ui.dialogs.PaymentOutcomeUnknownWarning
 import org.dash.wallet.common.ui.dialogs.TaggedProgressDialog
 import org.dash.wallet.common.ui.dialogs.ExtraActionDialog
@@ -60,6 +64,7 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_conversion_preview) {
     companion object {
+        private const val SALE_SUCCESS_DIALOG_TAG = "CoinbaseSaleSuccessDialog"
     }
 
     private val binding by viewBinding(FragmentCoinbaseConversionPreviewBinding::bind)
@@ -149,9 +154,14 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
             showBuyOrderDialog(CoinBaseResultDialog.Type.CONVERSION_ERROR, it)
         }
 
-        viewModel.sellSwapSuccessState.observe(viewLifecycleOwner) {
-            showBuyOrderDialog(CoinBaseResultDialog.Type.CONVERSION_SUCCESS)
-        }
+        // The sale's success: once, only while resumed and unlocked, and again until answered
+        // (see handleWhenResumed); the preview refuses another Confirm meanwhile.
+        handleWhenResumed(
+            viewModel.saleSent,
+            lockScreenBroadcaster.unlocked,
+            viewModel::consumeSaleSent,
+            viewModel::retainSaleSent
+        ) { showSaleSuccess(this) }
 
         binding.contentOrderReview.coinbaseFeeInfoContainer.setOnClickListener {
             viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_QUOTE_FEE_INFO)
@@ -312,6 +322,42 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
         progressDialog.hide()
     }
 
+    /**
+     * Shows the sale's success until it is answered; false when no button answered it (the lock
+     * screen dismissed it, or a recreation tore it down). A button marks [delivery] answered at
+     * once, since its action leaves the screen before the dialog is gone.
+     */
+    private suspend fun showSaleSuccess(delivery: OutcomeDelivery): Boolean {
+        var answered = false
+        val dialog = CoinBaseResultDialog.newInstance(
+            CoinBaseResultDialog.Type.CONVERSION_SUCCESS,
+            null,
+            dashToCoinbase = true
+        ).apply {
+            onCoinBaseResultDialogButtonsClickListener = object : CoinBaseResultDialog.CoinBaseResultDialogButtonsClickListener {
+                override fun onPositiveButtonClick(type: CoinBaseResultDialog.Type) {
+                    answered = true
+                    delivery.markAnswered()
+                    viewModel.acknowledgeSaleResult()
+                    viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_SUCCESS_CLOSE)
+                    dismiss()
+                    val navController = findNavController()
+                    navController.popBackStack(navController.graph.startDestinationId, false)
+                }
+
+                override fun onNegativeButtonClick(type: CoinBaseResultDialog.Type) {
+                    answered = true
+                    delivery.markAnswered()
+                    viewModel.acknowledgeSaleResult()
+                }
+            }
+        }
+        // Replaces a copy restored after a recreation, whose button listener was lost.
+        dialog.showNowReplacing(parentFragmentManager, SALE_SUCCESS_DIALOG_TAG)
+        dialog.awaitDestroyed()
+        return answered
+    }
+
     private fun showBuyOrderDialog(type: CoinBaseResultDialog.Type, responseMessage: String? = null) {
         if (transactionStateDialog?.dialog?.isShowing == true)
             transactionStateDialog?.dismissAllowingStateLoss()
@@ -335,7 +381,6 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
                             findNavController().popBackStack()
                         }
                         CoinBaseResultDialog.Type.CONVERSION_SUCCESS -> {
-                            viewModel.acknowledgeSaleResult()
                             viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_SUCCESS_CLOSE)
                             dismiss()
                             val navController = findNavController()

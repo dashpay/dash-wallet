@@ -384,15 +384,13 @@ class PaymentOutcomeUnknownTest {
         val savedState = SavedStateHandle()
         val viewModel = previewViewModel(savedState)
         var failureEvents = 0
-        var successEvents = 0
         viewModel.onFailure.observeForever { failureEvents++ }
-        viewModel.sellSwapSuccessState.observeForever { successEvents++ }
 
         viewModel.commitSwapTrade("trade", Constants.DASH_CURRENCY, "0.01").join()
 
         assertTrue(viewModel.paymentOutcomeUnknown.value)
         assertEquals(0, failureEvents)
-        assertEquals(0, successEvents)
+        assertNull(viewModel.saleSent.value)
 
         // Confirm again on the same screen: refused before any commit or send.
         viewModel.commitSwapTrade("trade", Constants.DASH_CURRENCY, "0.01").join()
@@ -411,14 +409,12 @@ class PaymentOutcomeUnknownTest {
         } throws IllegalStateException("rejected")
         val viewModel = previewViewModel(SavedStateHandle())
         var failureEvents = 0
-        var successEvents = 0
         viewModel.onFailure.observeForever { failureEvents++ }
-        viewModel.sellSwapSuccessState.observeForever { successEvents++ }
 
         viewModel.commitSwapTrade("trade", Constants.DASH_CURRENCY, "0.01").join()
 
         assertEquals(1, failureEvents)
-        assertEquals("nothing was sent, so the sale is not reported as done", 0, successEvents)
+        assertNull("nothing was sent, so the sale is not reported as done", viewModel.saleSent.value)
         assertFalse(viewModel.paymentOutcomeUnknown.value)
     }
 
@@ -429,12 +425,67 @@ class PaymentOutcomeUnknownTest {
         coEvery { coinBaseRepository.createAddress() } returns ResponseResource.Success("XcoinbaseDepositAddress")
         coEvery { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any()) } returns "txid"
         val viewModel = previewViewModel(SavedStateHandle())
-        var successEvents = 0
-        viewModel.sellSwapSuccessState.observeForever { successEvents++ }
 
         viewModel.commitSwapTrade("trade", Constants.DASH_CURRENCY, "0.01").join()
 
-        assertEquals(1, successEvents)
+        assertEquals(CoinbaseConversionPreviewViewModel.SaleSent("txid"), viewModel.saleSent.value)
+    }
+
+    @Test
+    fun sellDash_aSuccessDismissedByTheLock_isKept_andTheSaleCannotBeCommittedAgain() = runTest {
+        coEvery { coinBaseRepository.commitSwapTrade(any()) } returns
+            ResponseResource.Success(SwapTradeUIModel(swapTradeId = "trade", inputCurrency = Constants.DASH_CURRENCY))
+        coEvery { coinBaseRepository.createAddress() } returns ResponseResource.Success("XcoinbaseDepositAddress")
+        coEvery { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any()) } returns "txid"
+        val viewModel = previewViewModel(SavedStateHandle())
+        viewModel.commitSwapTrade("trade", Constants.DASH_CURRENCY, "0.01").join()
+
+        // Taken and shown; the lock dismisses the dialog unanswered, which gives it back.
+        val sent = requireNotNull(viewModel.saleSent.value)
+        assertTrue(viewModel.consumeSaleSent(sent))
+        viewModel.retainSaleSent(sent)
+        assertEquals("shown again after the unlock", sent, viewModel.saleSent.value)
+
+        // Confirm on the preview meanwhile: refused, nothing committed or sent again.
+        viewModel.commitSwapTrade("trade", Constants.DASH_CURRENCY, "0.01").join()
+        assertTrue(viewModel.consumeSaleSent(sent))
+        viewModel.commitSwapTrade("trade", Constants.DASH_CURRENCY, "0.01").join()
+        coVerify(exactly = 1) { coinBaseRepository.commitSwapTrade(any()) }
+        coVerify(exactly = 1) { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any()) }
+    }
+
+    @Test
+    fun sellDash_theStateSavedAtTheConfirmTap_beforeTheSendStarts_alreadyRefusesOnRestore() = runTest {
+        // Android may save the instance state while the commit and address requests run (the
+        // app was backgrounded) and never again before the process dies.
+        val held = CompletableDeferred<Unit>()
+        coEvery { coinBaseRepository.commitSwapTrade(any()) } coAnswers {
+            held.await()
+            ResponseResource.Success(SwapTradeUIModel(swapTradeId = "trade", inputCurrency = Constants.DASH_CURRENCY))
+        }
+        coEvery { coinBaseRepository.createAddress() } returns ResponseResource.Success("XcoinbaseDepositAddress")
+        coEvery { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any()) } returns "txid"
+        val savedState = SavedStateHandle()
+        val committing = previewViewModel(savedState).commitSwapTrade("trade", Constants.DASH_CURRENCY, "0.01")
+        runCurrent()
+        val savedWhileCommitting = restoredFrom(savedState)
+
+        // The send then goes out; the process dies with only that early state.
+        held.complete(Unit)
+        committing.join()
+        assertTrue(previewViewModel(savedWhileCommitting).paymentOutcomeUnknown.value)
+    }
+
+    @Test
+    fun sellDash_aCommitRefusedBeforeTheSend_sentNothing_andIsNoLongerInProgress() = runTest {
+        coEvery { coinBaseRepository.commitSwapTrade(any()) } returns failure()
+        val savedState = SavedStateHandle()
+        val viewModel = previewViewModel(savedState)
+        viewModel.commitSwapTrade("trade", Constants.DASH_CURRENCY, "0.01").join()
+
+        assertFalse(previewViewModel(restoredFrom(savedState)).paymentOutcomeUnknown.value)
+        viewModel.commitSwapTrade("trade", Constants.DASH_CURRENCY, "0.01").join()
+        coVerify(exactly = 2) { coinBaseRepository.commitSwapTrade(any()) }
     }
 
     @Test
