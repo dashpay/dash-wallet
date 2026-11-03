@@ -39,6 +39,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.lifecycle.viewModelScope
@@ -105,15 +106,17 @@ class ToolsViewModel @Inject constructor(
         )
 
         blockchainStateDao.observeState().onEach {
-            _uiState.value = uiState.value.copy(isSyncing = it?.isSynced() != true)
+            _uiState.update { state -> state.copy(isSyncing = it?.isSynced() != true) }
         }.launchIn(viewModelScope)
 
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(hasUsername = hasUsername())
+            // Read first: a copy of the state taken before this suspends would undo other updates.
+            val hasUsername = hasUsername()
+            _uiState.update { it.copy(hasUsername = hasUsername) }
         }
 
         ConnectAvailability.availability.onEach {
-            _uiState.value = uiState.value.copy(connectionsAvailable = it)
+            _uiState.update { state -> state.copy(connectionsAvailable = it) }
         }.launchIn(viewModelScope)
     }
 
