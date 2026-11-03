@@ -18,7 +18,6 @@ import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.getDashBalance
-import org.dash.wallet.common.isTransactionPending
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.money.FiatValue
 import org.dash.wallet.common.observeTotalDashBalance
@@ -197,12 +196,16 @@ class TransferDashViewModel @Inject constructor(
     val observeSendDashToCoinbaseState: StateFlow<SendDashResponseState?> = _sendDashToCoinbaseState.asStateFlow()
 
     /** True for exactly one taker of [state], which then shows it. */
-    fun consumeSendDashToCoinbaseState(state: SendDashResponseState): Boolean {
-        val taken = _sendDashToCoinbaseState.compareAndSet(state, null)
-        if (taken && state is SendDashResponseState.SuccessState) {
-            savedStateHandle[KEY_SENT_UNDELIVERED] = false
-        }
-        return taken
+    fun consumeSendDashToCoinbaseState(state: SendDashResponseState): Boolean =
+        _sendDashToCoinbaseState.compareAndSet(state, null)
+
+    /**
+     * The user answered the transfer's result dialog. Until then a transfer that went out stays
+     * marked in the saved state, so a process death with the dialog up restores a screen that
+     * refuses to send it again.
+     */
+    fun acknowledgeTransferResult() {
+        savedStateHandle[KEY_SENT_UNDELIVERED] = false
     }
 
     /** Gives back a taken [state] the user did not answer, unless a newer one arrived. */
@@ -212,7 +215,7 @@ class TransferDashViewModel @Inject constructor(
         }
     }
 
-    /** A transfer that went out stays marked, in the saved state, until the screen takes its result. */
+    /** A transfer that went out stays marked, in the saved state, until the user answers its result. */
     private fun markSentUndelivered(state: SendDashResponseState) {
         if (state is SendDashResponseState.SuccessState) {
             savedStateHandle[KEY_SENT_UNDELIVERED] = true
@@ -423,7 +426,9 @@ class TransferDashViewModel @Inject constructor(
                 dashAddress,
                 ServiceName.Coinbase
             )
-            SendDashResponseState.SuccessState(walletDataProvider.isTransactionPending(txId))
+            // Sent, whether or not the wallet already lists it as pending (it may not have it yet,
+            // or it may be confirmed already): never reported as an error that offers a retry.
+            SendDashResponseState.SuccessState(txId)
         } catch (e: Exception) {
             when {
                 // Not a failure of the send: the caller decides what a cancellation means.
@@ -545,7 +550,7 @@ class TransferDashViewModel @Inject constructor(
 }
 
 sealed class SendDashResponseState {
-    data class SuccessState(val isTransactionPending: Boolean): SendDashResponseState()
+    data class SuccessState(val txId: String): SendDashResponseState()
     object InsufficientMoneyState: SendDashResponseState()
     data class FailureState(val failureMessage: String): SendDashResponseState()
     object UnknownFailureState: SendDashResponseState()

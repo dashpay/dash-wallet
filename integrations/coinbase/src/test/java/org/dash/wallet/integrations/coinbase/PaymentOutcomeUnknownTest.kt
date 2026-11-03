@@ -45,6 +45,8 @@ import org.dash.wallet.common.services.PaymentSubmissionPendingException
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.integrations.coinbase.model.SwapTradeUIModel
+import org.dash.wallet.integrations.coinbase.ui.dialogs.CoinBaseResultDialog
+import org.dash.wallet.integrations.coinbase.ui.resultDialogType
 import org.dash.wallet.integrations.coinbase.repository.CoinBaseRepositoryInt
 import org.dash.wallet.integrations.coinbase.viewmodels.CoinbaseConversionPreviewViewModel
 import org.dash.wallet.integrations.coinbase.viewmodels.SendDashResponseState
@@ -253,7 +255,7 @@ class PaymentOutcomeUnknownTest {
     }
 
     @Test
-    fun transferDash_aSuccessTakenByTheScreen_isNotUnknown_onRestore() = runTest {
+    fun transferDash_aSuccessShownButNotAnswered_isUnknownOnRestore_andAnsweredIsNot() = runTest {
         coEvery { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any()) } returns "txid"
         val savedState = SavedStateHandle()
         val viewModel = transferViewModel(savedState)
@@ -263,7 +265,30 @@ class PaymentOutcomeUnknownTest {
         val result = requireNotNull(viewModel.observeSendDashToCoinbaseState.value)
         assertTrue(viewModel.consumeSendDashToCoinbaseState(result))
 
+        // The result dialog is up when the process dies: the transfer must not be sendable again.
+        assertTrue(transferViewModel(restoredFrom(savedState)).paymentOutcomeUnknown.value)
+
+        viewModel.acknowledgeTransferResult()
         assertFalse(transferViewModel(restoredFrom(savedState)).paymentOutcomeUnknown.value)
+    }
+
+    @Test
+    fun transferDash_aSentTransfer_isASuccess_evenWhenTheWalletDoesNotListItAsPending() = runTest {
+        // The wallet may not have the transaction yet, or it may be confirmed already.
+        every { walletDataProvider.getTransaction(any()) } returns null
+        coEvery { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any()) } returns "txid"
+        val viewModel = transferViewModel(SavedStateHandle())
+
+        assertTrue(viewModel.submitTransfer(Dash.valueOf(100_000), false, true, null))
+        advanceUntilIdle()
+
+        val result = requireNotNull(viewModel.observeSendDashToCoinbaseState.value)
+        assertEquals(SendDashResponseState.SuccessState("txid"), result)
+        assertEquals(CoinBaseResultDialog.Type.TRANSFER_DASH_SUCCESS, result.resultDialogType())
+        assertEquals(
+            CoinBaseResultDialog.Type.TRANSFER_DASH_ERROR,
+            SendDashResponseState.FailureState("rejected").resultDialogType()
+        )
     }
 
     @Test

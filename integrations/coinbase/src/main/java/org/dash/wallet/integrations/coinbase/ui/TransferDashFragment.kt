@@ -448,20 +448,19 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
             return true
         }
         var answered = false
-        val pair: Pair<CoinBaseResultDialog.Type, String?> = when(responseState){
-            is SendDashResponseState.SuccessState -> {
-                Pair(if (responseState.isTransactionPending) CoinBaseResultDialog.Type.TRANSFER_DASH_SUCCESS else CoinBaseResultDialog.Type.TRANSFER_DASH_ERROR, null)
-            }
-            is SendDashResponseState.FailureState -> Pair(CoinBaseResultDialog.Type.TRANSFER_DASH_ERROR, responseState.failureMessage)
-            is SendDashResponseState.InsufficientMoneyState -> Pair(CoinBaseResultDialog.Type.TRANSFER_DASH_ERROR, getString(R.string.insufficient_money_to_transfer))
-            else -> Pair(CoinBaseResultDialog.Type.TRANSFER_DASH_ERROR, null)
+        val message = when (responseState) {
+            is SendDashResponseState.FailureState -> responseState.failureMessage
+            is SendDashResponseState.InsufficientMoneyState -> getString(R.string.insufficient_money_to_transfer)
+            else -> null
         }
+        val pair = Pair(responseState.resultDialogType(), message)
 
         val transactionStateDialog = CoinBaseResultDialog.newInstance(pair.first, pair.second, dashToCoinbase = true).apply {
             onCoinBaseResultDialogButtonsClickListener = object : CoinBaseResultDialog.CoinBaseResultDialogButtonsClickListener {
                 override fun onPositiveButtonClick(type: CoinBaseResultDialog.Type) {
                     answered = true
                     delivery.markAnswered()
+                    transferDashViewModel.acknowledgeTransferResult()
                     when(type){
                         CoinBaseResultDialog.Type.TRANSFER_DASH_SUCCESS -> {
                             transferDashViewModel.logClose(type)
@@ -481,6 +480,7 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
                 override fun onNegativeButtonClick(type: CoinBaseResultDialog.Type) {
                     answered = true
                     delivery.markAnswered()
+                    transferDashViewModel.acknowledgeTransferResult()
                     transferDashViewModel.logClose(type)
                 }
             }
@@ -542,3 +542,14 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
         onBackPressedCallback?.remove()
     }
 }
+
+/**
+ * The result dialog for a transfer's [SendDashResponseState]: a send that went out is always a
+ * success, never an error whose Retry would pay again.
+ */
+internal fun SendDashResponseState.resultDialogType(): CoinBaseResultDialog.Type =
+    if (this is SendDashResponseState.SuccessState) {
+        CoinBaseResultDialog.Type.TRANSFER_DASH_SUCCESS
+    } else {
+        CoinBaseResultDialog.Type.TRANSFER_DASH_ERROR
+    }
