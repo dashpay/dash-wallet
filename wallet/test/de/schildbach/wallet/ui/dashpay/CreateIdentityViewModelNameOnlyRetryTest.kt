@@ -53,12 +53,32 @@ class CreateIdentityViewModelNameOnlyRetryTest {
         every { observe() } returns emptyFlow()
         every { observe(BlockchainIdentityConfig.CREATION_STATE) } returns emptyFlow()
         every { observe(BlockchainIdentityConfig.CREATION_STATE_ERROR_MESSAGE) } returns emptyFlow()
-        coEvery { get(BlockchainIdentityConfig.RESTORING) } returns false
-        coEvery { get(BlockchainIdentityConfig.USING_INVITE) } returns false
-        coEvery { get(BlockchainIdentityConfig.IDENTITY_ID) } returns identityId
-        coEvery { get(BlockchainIdentityConfig.USERNAME) } returns "alice3"
-        coEvery { get(BlockchainIdentityConfig.USERNAME_SECONDARY) } returns null
+        // The lenient per-key reads read a failed store as "absent": routing must never use them.
+        for (key in listOf(
+            BlockchainIdentityConfig.CREATION_STATE_ERROR_MESSAGE,
+            BlockchainIdentityConfig.IDENTITY_ID,
+            BlockchainIdentityConfig.USERNAME,
+            BlockchainIdentityConfig.USERNAME_SECONDARY
+        )) {
+            coEvery { get(key) } returns null
+        }
+        coEvery { get(BlockchainIdentityConfig.RESTORING) } returns null
+        coEvery { get(BlockchainIdentityConfig.USING_INVITE) } returns null
     }
+
+    private fun routing(
+        error: String?,
+        username: String? = "alice3",
+        restoring: Boolean = false,
+        usingInvite: Boolean = false
+    ) = BlockchainIdentityConfig.RetryRouting(
+        errorMessage = error,
+        identityId = identityId,
+        username = username,
+        usernameSecondary = null,
+        restoring = restoring,
+        usingInvite = usingInvite
+    )
 
     @Before
     fun setUp() {
@@ -81,8 +101,7 @@ class CreateIdentityViewModelNameOnlyRetryTest {
 
     @Test
     fun `a name-only error retries the name, never CreateIdentityService`() {
-        coEvery { config.getPreservingErrors(BlockchainIdentityConfig.CREATION_STATE_ERROR_MESSAGE) } returns
-            SdkTransparentUsernameCreation.NAME_ONLY_RETRY_ERROR + ": timeout"
+        coEvery { config.retryRouting() } returns routing(SdkTransparentUsernameCreation.NAME_ONLY_RETRY_ERROR + ": timeout")
         coEvery { transparentUsernameCreation.retryNameForExistingIdentity(any(), any(), any()) } returns true
 
         viewModel().retryCreateIdentity()
@@ -96,7 +115,7 @@ class CreateIdentityViewModelNameOnlyRetryTest {
     @Test
     fun `a refused name-only retry is reported once, with the error on record`() = runBlocking {
         val error = SdkTransparentUsernameCreation.NAME_ONLY_RETRY_ERROR + ": timeout"
-        coEvery { config.getPreservingErrors(BlockchainIdentityConfig.CREATION_STATE_ERROR_MESSAGE) } returns error
+        coEvery { config.retryRouting() } returns routing(error)
         coEvery { transparentUsernameCreation.retryNameForExistingIdentity(any(), any(), any()) } returns false
 
         val viewModel = viewModel()
@@ -109,8 +128,7 @@ class CreateIdentityViewModelNameOnlyRetryTest {
     @Test
     fun `a name-only retry with no requested name on record is reported as refused`() = runBlocking {
         val error = SdkTransparentUsernameCreation.NAME_ONLY_RETRY_ERROR + ": timeout"
-        coEvery { config.getPreservingErrors(BlockchainIdentityConfig.CREATION_STATE_ERROR_MESSAGE) } returns error
-        coEvery { config.get(BlockchainIdentityConfig.USERNAME) } returns null
+        coEvery { config.retryRouting() } returns routing(error, username = null)
 
         val viewModel = viewModel()
         viewModel.retryCreateIdentity()
@@ -122,7 +140,7 @@ class CreateIdentityViewModelNameOnlyRetryTest {
 
     @Test
     fun `any other error keeps the legacy retry`() {
-        coEvery { config.getPreservingErrors(BlockchainIdentityConfig.CREATION_STATE_ERROR_MESSAGE) } returns "some other failure"
+        coEvery { config.retryRouting() } returns routing("some other failure")
 
         viewModel().retryCreateIdentity()
 
@@ -131,12 +149,10 @@ class CreateIdentityViewModelNameOnlyRetryTest {
     }
 
     @Test
-    fun `an unreadable retry marker refuses the retry, never CreateIdentityService`() = runBlocking {
-        // the lenient read turns a failed read into "no error on record", which routed a
-        // name-only retry's error to the legacy service
-        coEvery { config.getPreservingErrors(BlockchainIdentityConfig.CREATION_STATE_ERROR_MESSAGE) } throws
-            java.io.IOException("datastore unreadable")
-        coEvery { config.get(BlockchainIdentityConfig.CREATION_STATE_ERROR_MESSAGE) } returns null
+    fun `an unreadable routing snapshot refuses the retry, never CreateIdentityService`() = runBlocking {
+        // one strict read for every routing field (the error marker, the identity id, the names,
+        // restoring, using an invite): a failed read refuses, whichever field it would have hit
+        coEvery { config.retryRouting() } throws java.io.IOException("datastore unreadable")
 
         val viewModel = viewModel()
         viewModel.retryCreateIdentity()
@@ -144,6 +160,18 @@ class CreateIdentityViewModelNameOnlyRetryTest {
         withTimeout(5_000) { viewModel.nameRetryRefused.first() }
         verify(exactly = 0) { walletApplication.startService(any()) }
         coVerify(exactly = 0) { transparentUsernameCreation.retryNameForExistingIdentity(any(), any(), any()) }
+    }
+
+    @Test
+    fun `routing never falls back to the lenient per-key reads`() {
+        // they would read an unreadable store as absent: no error (legacy route), no restoring
+        coEvery { config.retryRouting() } returns routing("some other failure")
+
+        viewModel().retryCreateIdentity()
+
+        verify(exactly = 1, timeout = 5_000) { walletApplication.startService(any()) }
+        coVerify(exactly = 0) { config.get(any<androidx.datastore.preferences.core.Preferences.Key<Any>>()) }
+        coVerify(exactly = 0) { config.getPreservingErrors(any<androidx.datastore.preferences.core.Preferences.Key<Any>>()) }
     }
 
     @Test

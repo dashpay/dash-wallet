@@ -501,6 +501,33 @@ open class BlockchainIdentityConfig @Inject constructor(
     /** A snapshot of the store that THROWS on a failed read, unlike [data] (which reads as empty). */
     internal open suspend fun readStrict(): Preferences = context.dataStore.data.first()
 
+    /** The fields the identity-creation retry routes on, all from one read; see [retryRouting]. */
+    data class RetryRouting(
+        val errorMessage: String?,
+        val identityId: String?,
+        val username: String?,
+        val usernameSecondary: String?,
+        val restoring: Boolean,
+        val usingInvite: Boolean
+    )
+
+    /**
+     * Every field the More screen's retry routes on, from ONE strict read ([readStrict]): an
+     * unreadable store throws instead of reading as "no error, not restoring, no invite", which
+     * would send a name-only retry's error to CreateIdentityService. Callers refuse on the throw.
+     */
+    open suspend fun retryRouting(): RetryRouting {
+        val prefs = readStrict()
+        return RetryRouting(
+            errorMessage = prefs[CREATION_STATE_ERROR_MESSAGE],
+            identityId = prefs[IDENTITY_ID],
+            username = prefs[USERNAME],
+            usernameSecondary = prefs[USERNAME_SECONDARY],
+            restoring = prefs[RESTORING] ?: false,
+            usingInvite = prefs[USING_INVITE] ?: false
+        )
+    }
+
     /**
      * The record a recovery of [identityIdBase58] starts from; see [recoverySeedRecord]. The
      * record and the requested names come from one strict read: an unreadable store throws, so

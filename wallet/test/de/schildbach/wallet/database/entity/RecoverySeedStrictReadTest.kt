@@ -48,4 +48,35 @@ class RecoverySeedStrictReadTest {
             runBlocking { config.loadRecoverySeed(identityId, fromCreation = true) }
         }
     }
+
+    @Test
+    fun `the retry routing fields come from one strict read that throws when unreadable`() {
+        val config = mockk<BlockchainIdentityConfig> {
+            coEvery { readStrict() } throws java.io.IOException("datastore unreadable")
+            coEvery { retryRouting() } answers { callOriginal() }
+        }
+
+        assertThrows(java.io.IOException::class.java) { runBlocking { config.retryRouting() } }
+    }
+
+    @Test
+    fun `the retry routing snapshot carries every routing field of the one read`() = runBlocking {
+        val prefs = androidx.datastore.preferences.core.mutablePreferencesOf(
+            BlockchainIdentityConfig.CREATION_STATE_ERROR_MESSAGE to "boom",
+            BlockchainIdentityConfig.IDENTITY_ID to identityId,
+            BlockchainIdentityConfig.USERNAME to "alice3",
+            BlockchainIdentityConfig.USERNAME_SECONDARY to "alice4",
+            BlockchainIdentityConfig.RESTORING to true,
+            BlockchainIdentityConfig.USING_INVITE to true
+        )
+        val config = mockk<BlockchainIdentityConfig> {
+            coEvery { readStrict() } returns prefs
+            coEvery { retryRouting() } answers { callOriginal() }
+        }
+
+        org.junit.Assert.assertEquals(
+            BlockchainIdentityConfig.RetryRouting("boom", identityId, "alice3", "alice4", restoring = true, usingInvite = true),
+            config.retryRouting()
+        )
+    }
 }

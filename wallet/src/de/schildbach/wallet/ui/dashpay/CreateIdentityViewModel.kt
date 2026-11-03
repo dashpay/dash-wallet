@@ -76,43 +76,43 @@ class CreateIdentityViewModel @Inject constructor(
             // name-only retry with the requested names on record, never to CreateIdentityService,
             // which would reset the identity and fund it again. A name that did land meanwhile is
             // not submitted again there.
-            // Strict: the lenient read turns an unreadable store into "no error on record", which
-            // would send a name-only retry's error to CreateIdentityService. Unknown refuses.
-            val error = try {
-                blockchainIdentityDataDao.getPreservingErrors(BlockchainIdentityConfig.CREATION_STATE_ERROR_MESSAGE)
+            // Every routing field from ONE strict read: a lenient per-key read turns an unreadable
+            // store into "no error, not restoring, no invite", which sends a name-only retry's
+            // error to CreateIdentityService. Unknown refuses, starting nothing.
+            val routing = try {
+                blockchainIdentityDataDao.retryRouting()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                log.warn("retry refused: the creation error on record cannot be read", e)
+                log.warn("retry refused: the identity record cannot be read", e)
                 _nameRetryRefused.trySend(_creationException.value)
                 return@launch
             }
+            val error = routing.errorMessage
             if (SdkTransparentUsernameCreation.isNameOnlyRetryError(error)) {
-                val identityId = blockchainIdentityDataDao.get(BlockchainIdentityConfig.IDENTITY_ID)
-                val username = blockchainIdentityDataDao.get(BlockchainIdentityConfig.USERNAME)
+                val identityId = routing.identityId
+                val username = routing.username
                 val accepted = identityId != null && username != null &&
                     transparentUsernameCreation.retryNameForExistingIdentity(
                         identityId,
                         username,
-                        blockchainIdentityDataDao.get(BlockchainIdentityConfig.USERNAME_SECONDARY)
+                        routing.usernameSecondary
                     )
                 if (!accepted) {
                     _nameRetryRefused.trySend(error)
                 }
                 return@launch
             }
-            val isRestoring = blockchainIdentityDataDao.get(BlockchainIdentityConfig.RESTORING) ?: false
+            val isRestoring = routing.restoring
 
             if (isRestoring) {
-                val identityId = blockchainIdentityDataDao.get(BlockchainIdentityConfig.IDENTITY_ID)
-                identityId?.let {
+                routing.identityId?.let { identityId ->
                     RestoreIdentityOperation(walletApplication)
                         .create(identityId, true)
                         .enqueue()
                 }
             } else {
-                val usingInvite = blockchainIdentityDataDao.get(BlockchainIdentityConfig.USING_INVITE) ?: false
-                if (usingInvite) {
+                if (routing.usingInvite) {
                     walletApplication.startService(
                         CreateIdentityService.createIntentForRetryFromInvite(
                             walletApplication,
