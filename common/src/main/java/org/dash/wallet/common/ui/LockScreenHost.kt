@@ -17,8 +17,40 @@
 
 package org.dash.wallet.common.ui
 
+import androidx.fragment.app.DialogFragment
+import androidx.fragment.app.FragmentManager
+import androidx.navigation.fragment.NavHostFragment
+
 /** An activity that can cover its content with the wallet's lock screen. */
 interface LockScreenHost {
     /** True while the lock screen covers the activity's content. */
     val lockScreenDisplayed: Boolean
+}
+
+/**
+ * When the lock screen comes up: tells each [LockScreenAware] fragment, and dismisses every
+ * dialog in [fragmentManager] and its navigation hosts. Transactions still queued are run first,
+ * so a dialog whose show() was committed but not yet executed (AdaptiveDialog.showAsync) is
+ * dismissed too, rather than appearing above the PIN screen once its transaction runs.
+ */
+fun dismissDialogsForLockScreen(fragmentManager: FragmentManager) {
+    try {
+        fragmentManager.executePendingTransactions()
+    } catch (e: IllegalStateException) {
+        // Already executing transactions (or destroyed): nothing is left queued to run here.
+    }
+    fragmentManager.fragments.forEach { fragment ->
+        // check to see if the activity is valid and fragment is added to its activity
+        if (fragment.activity != null && fragment.isAdded) {
+            if (fragment is LockScreenAware) {
+                fragment.onLockScreenActivated()
+            }
+
+            if (fragment is DialogFragment) {
+                fragment.dismissAllowingStateLoss()
+            } else if (fragment is NavHostFragment) {
+                dismissDialogsForLockScreen(fragment.childFragmentManager)
+            }
+        }
+    }
 }

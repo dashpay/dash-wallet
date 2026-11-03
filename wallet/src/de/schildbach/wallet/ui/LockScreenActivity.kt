@@ -29,11 +29,8 @@ import androidx.activity.addCallback
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.core.view.isVisible
-import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.lifecycleScope
-import androidx.navigation.fragment.NavHostFragment
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.AutoLogout
 import de.schildbach.wallet.WalletApplication
@@ -63,8 +60,8 @@ import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.LockScreenBroadcaster
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.common.ui.LockScreenAware
 import org.dash.wallet.common.ui.LockScreenHost
+import org.dash.wallet.common.ui.dismissDialogsForLockScreen
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dismissDialog
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
@@ -706,7 +703,7 @@ open class LockScreenActivity : SecureActivity(), LockScreenHost {
             alertDialog.dismissDialog()
         }
         lockScreenBroadcaster.activatingLockScreen.call()
-        notifyAndDismissFragments(supportFragmentManager)
+        dismissDialogsForLockScreen(supportFragmentManager)
         onLockScreenActivated()
     }
 
@@ -717,25 +714,6 @@ open class LockScreenActivity : SecureActivity(), LockScreenHost {
         lockScreenDeactivatedListeners.forEach {
             it.invoke()
         }
-    }
-
-    private fun notifyAndDismissFragments(fragmentManager: FragmentManager) {
-        fragmentManager.fragments
-            .takeIf { it.isNotEmpty() }
-            ?.forEach { fragment ->
-                // check to see if the activity is valid and fragment is added to its activity
-                if (fragment.activity != null && fragment.isAdded) {
-                    if (fragment is LockScreenAware) {
-                        fragment.onLockScreenActivated()
-                    }
-
-                    if (fragment is DialogFragment) {
-                        fragment.dismissAllowingStateLoss()
-                    } else if (fragment is NavHostFragment) {
-                        notifyAndDismissFragments(fragment.childFragmentManager)
-                    }
-                }
-            }
     }
 
     private fun dismissKeyboard() {

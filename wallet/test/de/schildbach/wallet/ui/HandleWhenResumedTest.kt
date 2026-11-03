@@ -34,6 +34,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import org.dash.wallet.common.ui.LockScreenHost
 import org.dash.wallet.common.ui.OutcomeDelivery
 import org.dash.wallet.common.ui.awaitDestroyed
+import org.dash.wallet.common.ui.dismissDialogsForLockScreen
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.handleWhenResumed
 import org.dash.wallet.common.ui.showNowReplacing
@@ -173,6 +174,19 @@ class HandleWhenResumedTest {
         activity.supportFragmentManager.fragments.filterIsInstance<AdaptiveDialog>()
 
     private fun dialog(): AdaptiveDialog? = dialogs().singleOrNull()
+
+    @Test
+    fun aDialogWhoseShowIsStillQueued_whenTheWalletLocks_isDismissedToo() {
+        idle()
+        // showAsync's show() only queues the dialog's transaction; the lock runs before it.
+        AdaptiveDialog.simple("leftover balance", "Close", "Continue")
+            .show(activity.supportFragmentManager, QUESTION_TAG)
+
+        dismissDialogsForLockScreen(activity.supportFragmentManager)
+        idle()
+
+        assertNull("no question left above the PIN screen", dialog())
+    }
 
     @Test
     fun anOutcomeWhileStopped_isKept_andShownOnResume() {
