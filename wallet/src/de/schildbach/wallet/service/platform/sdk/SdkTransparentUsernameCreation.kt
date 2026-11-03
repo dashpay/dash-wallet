@@ -119,6 +119,24 @@ internal suspend fun identityOwnsOrContendsFor(
 internal fun awaitingEnqueue(enqueue: (identityIdBase58: String) -> androidx.work.Operation): suspend (String) -> Unit =
     { identityIdBase58 -> enqueue(identityIdBase58).await() }
 
+/**
+ * The production verification-link publisher of the SDK registration owners: the requested link
+ * on record (read strictly: an unreadable link is not "no link") handed to the existing
+ * IdentityVerify publisher, awaiting the enqueue. Nothing when no valid link is on record.
+ */
+internal fun verificationLinkPublisher(
+    config: BlockchainIdentityConfig,
+    application: android.app.Application
+): suspend (String) -> Unit = { label ->
+    val link = config.getPreservingErrors(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK)
+    if (link != null && SdkTransparentUsernameCreation.isVerificationLink(link)) {
+        de.schildbach.wallet.ui.dashpay.work.BroadcastIdentityVerifyOperation(application)
+            .create(label, link)
+            .enqueue()
+            .await()
+    }
+}
+
 internal fun registrationRowsFor(keys: List<IdentityKeyPreview>): List<IdentityPubkey> =
     RegistrationKeys.buildRegistrationRows(
         publicKeys = keys.map { it.publicKey },
@@ -561,7 +579,15 @@ class SdkTransparentUsernameCreation internal constructor(
      * process lost is reconciled on restart ([reconcileInterruptedNameRetry]) and recovery keeps
      * the requested names. In memory by default, for the host-JVM tests.
      */
-    private val nameJournal: RequestedNameJournal = InMemoryRequestedNameJournal()
+    private val nameJournal: RequestedNameJournal = InMemoryRequestedNameJournal(),
+    /**
+     * Publishes the verification link the user gave for a contested [label] (its IdentityVerify
+     * document), durably handed to its worker before it returns; nothing when no valid link is on
+     * record. Throws when that cannot be established: the caller's retry then stays pending.
+     * The legacy creation publishes it in CreateIdentityService; recovery only reads it back.
+     * No-op by default.
+     */
+    private val publishVerificationLink: suspend (label: String) -> Unit = {}
 ) {
     @Inject
     constructor(
@@ -614,7 +640,8 @@ class SdkTransparentUsernameCreation internal constructor(
             identityOwnsOrContendsFor(platformRepo.get(), identityIdBase58, label)
         },
         dpnsLock = dpnsLock,
-        nameJournal = blockchainIdentityConfig
+        nameJournal = blockchainIdentityConfig,
+        publishVerificationLink = verificationLinkPublisher(blockchainIdentityConfig, walletApplication)
     )
 
     /** Test seam: the funding call blocks on network I/O — keep it off main. */
@@ -1187,6 +1214,8 @@ class SdkTransparentUsernameCreation internal constructor(
             // VOTING advance).
             try {
                 handOffToLegacy(identityIdBase58)
+                // a contested request's verification link, which recovery never publishes
+                if (Names.isUsernameContestable(label)) publishVerificationLink(label)
                 // the recovery worker owns the outcome now
                 if (nameOnlyRetry) finishPendingNameRetry()
             } catch (t: Throwable) {
@@ -2089,6 +2118,8 @@ class SdkTransparentUsernameCreation internal constructor(
                     null
                 )
                 handOffToLegacy(identityIdBase58)
+                // the run may have died before publishing it
+                if (Names.isUsernameContestable(request.username)) publishVerificationLink(request.username)
             } else {
                 log.info(
                     "interrupted name-only retry for {}…: '{}' did not register; offering a retry",
@@ -2159,6 +2190,9 @@ class SdkTransparentUsernameCreation internal constructor(
          * restore worker, which would drop the replacement name.
          */
         const val NAME_ONLY_RETRY_ERROR = "username registration did not complete (retryable, name only)"
+
+        /** A verification link worth publishing: what the legacy creation path accepts. */
+        fun isVerificationLink(link: String): Boolean = link.matches(Regex("^https?://.+$"))
 
         /** True when [creationStateErrorMessage] was stamped by a name-only retry. */
         fun isNameOnlyRetryError(creationStateErrorMessage: String?): Boolean =
