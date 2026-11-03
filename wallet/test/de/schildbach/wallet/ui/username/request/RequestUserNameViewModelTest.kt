@@ -2083,4 +2083,13 @@ class RequestUserNameViewModelTest {
         "6XqBkTZTUnDMcgGvKzs5NRotZbAMBjKhJ4bQzKzXcCwr",
         false
     )
+
+    @Test
+    fun `a submit being routed counts as underway for the screen's identity observers`() {
+        // the observers that finish the screen for a creation already in flight must stand down
+        // while a name-only retry's start write moves the record, before it is accepted
+        assertFalse(RequestUserNameUIState().submissionUnderway)
+        assertTrue(RequestUserNameUIState(usernameSubmitPreflight = true).submissionUnderway)
+        assertTrue(RequestUserNameUIState(usernameRequestSubmitting = true).submissionUnderway)
+    }
 }

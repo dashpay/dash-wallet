@@ -98,6 +98,14 @@ import kotlin.math.max
 /** What one tap on the request button submits, captured at the tap. */
 internal data class UsernameSubmission(val username: String?, val secondary: String?, val link: String?)
 
+/**
+ * A submit from this screen is being routed or was handed off. The identity-state observers that
+ * finish the screen for a creation already in flight stand down then: the submit's own outcome
+ * closes it, and a name-only retry's start write moves the record before the retry is accepted.
+ */
+val RequestUserNameUIState.submissionUnderway: Boolean
+    get() = usernameRequestSubmitting || usernameSubmitPreflight
+
 data class RequestUserNameUIState(
     val usernameRequestSubmitting: Boolean = false,
     /**

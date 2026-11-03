@@ -33,12 +33,14 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -1318,6 +1320,35 @@ class SdkTransparentUsernameCreationTest {
             RequestedNameContext(identityIdBase58, "alice4", "alice5"),
             journal.pendingNameOnlyRetry()?.request
         )
+        appScope.cancel()
+    }
+
+    @Test
+    fun `a caller cancelled once the durable start is written still gets its retry run`() = runTest {
+        // the start write clears the old error and LOST_VOTE: the request screen can close on
+        // that record before the retry's job exists, cancelling the caller's (viewModel) scope
+        val source = source(lockAfterFailure = null)
+        coEvery { source.registerDpnsName(walletIdHex, identityId, "alice3") } returns "alice3.dash"
+        val store = de.schildbach.wallet.service.platform.InMemoryRequestedNameJournal()
+        lateinit var caller: Job
+        val journal = object : de.schildbach.wallet.service.platform.RequestedNameJournal by store {
+            override suspend fun beginNameOnlyRetry(request: RequestedNameContext) {
+                store.beginNameOnlyRetry(request)
+                caller.cancel() // the screen closed on the record's emission
+            }
+        }
+        val run = RetryRun()
+        val appScope = CoroutineScope(SupervisorJob() + kotlinx.coroutines.test.StandardTestDispatcher(testScheduler))
+        val creation = instance(source, journal, run, appScope)
+
+        caller = launch { creation.retryNameForExistingIdentity(identityIdBase58, "alice3", null) }
+        advanceUntilIdle()
+
+        assertTrue("the caller was cancelled", caller.isCancelled)
+        coVerify(exactly = 1) { source.registerDpnsName(walletIdHex, identityId, "alice3") }
+        assertEquals("handed to recovery", listOf(identityIdBase58), run.handedOff)
+        assertNull("no longer pending", store.pendingNameOnlyRetry())
+        assertTrue("slot released after the run", creation.retryNameForExistingIdentity(identityIdBase58, "alice3", null))
         appScope.cancel()
     }
 

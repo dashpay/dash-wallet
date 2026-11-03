@@ -31,6 +31,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -1837,11 +1838,13 @@ class SdkTransparentUsernameCreation internal constructor(
         // handler gets there first: a second release could free a slot another caller holds.
         val released = AtomicBoolean(false)
         val release = { if (released.compareAndSet(false, true)) releaseNameRetry() }
-        var launched = false
+        // Set once the job's completion handler owns the release: the caller can be cancelled
+        // after the job started (see [launchNameRetry]), and must not free the slot it holds.
+        val handedToJob = AtomicBoolean(false)
         try {
-            return launchNameRetry(scope, identityIdBase58, username, secondaryUsername, release).also { launched = it }
+            return launchNameRetry(scope, identityIdBase58, username, secondaryUsername, release, handedToJob)
         } finally {
-            if (!launched) release()
+            if (!handedToJob.get()) release()
         }
     }
 
@@ -1855,7 +1858,8 @@ class SdkTransparentUsernameCreation internal constructor(
         identityIdBase58: String,
         username: String,
         secondaryUsername: String?,
-        release: () -> Unit
+        release: () -> Unit,
+        handedToJob: AtomicBoolean
     ): Boolean {
         // Resolved before accepting, failing closed: a refusal touches nothing and shows the
         // screen's error, so no stamped error can send a later "Try again" anywhere else.
@@ -1884,49 +1888,58 @@ class SdkTransparentUsernameCreation internal constructor(
         // reconciles ([reconcileInterruptedNameRetry]), never a record on the name step with no
         // job and no error. One write: it also puts the requested names on the record. A failed
         // write refuses the retry, having changed nothing.
-        try {
-            withContext(ioDispatcher) {
-                // not after a wipe started: the write would outlive the wallet it belongs to
-                secretWriteFence.withSecretWritePermit("name-only retry record") {
-                    nameJournal.beginNameOnlyRetry(RequestedNameContext(identityIdBase58, username, secondaryUsername))
-                }
-            }
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            log.warn("name-only retry refused: could not record it", e)
-            return false
-        }
-        // LAZY + tracked before start: the job can never run unfenced.
-        val job = scope.launch(start = CoroutineStart.LAZY) {
+        //
+        // From the write until the job is started, the caller's cancellation does not stop it:
+        // the write clears the old error and LOST_VOTE/LOCKED, and the request screen can close
+        // on that record (clearing the viewModelScope this runs in) before the job exists, which
+        // would leave a pending retry with nothing submitting it. The section is short (one store
+        // write, then non-suspending launch/track/start) and the wipe fence still refuses it.
+        return withContext(NonCancellable) {
             try {
-                retryNameNow(identityIdBase58, username, secondaryUsername, resolved)
+                withContext(ioDispatcher) {
+                    // not after a wipe started: the write would outlive the wallet it belongs to
+                    secretWriteFence.withSecretWritePermit("name-only retry record") {
+                        nameJournal.beginNameOnlyRetry(RequestedNameContext(identityIdBase58, username, secondaryUsername))
+                    }
+                }
             } catch (e: CancellationException) {
-                // the wipe fence cancelling the run: nothing to record for a wallet being wiped
                 throw e
             } catch (e: Exception) {
-                // Never out of the launch: the application scope has no handler, so an escaped
-                // exception crashes the process after the screen was told the retry started.
-                // Record a retryable error so the retry card shows.
-                log.error("name-only retry for identity {} failed", identityIdBase58, e)
-                recordRetryFailure(e)
+                log.warn("name-only retry refused: could not record it", e)
+                return@withContext false
             }
+            // LAZY + tracked before start: the job can never run unfenced.
+            val job = scope.launch(start = CoroutineStart.LAZY) {
+                try {
+                    retryNameNow(identityIdBase58, username, secondaryUsername, resolved)
+                } catch (e: CancellationException) {
+                    // the wipe fence cancelling the run: nothing to record for a wallet being wiped
+                    throw e
+                } catch (e: Exception) {
+                    // Never out of the launch: the application scope has no handler, so an escaped
+                    // exception crashes the process after the screen was told the retry started.
+                    // Record a retryable error so the retry card shows.
+                    log.error("name-only retry for identity {} failed", identityIdBase58, e)
+                    recordRetryFailure(e)
+                }
+            }
+            if (!trackOrRefuse(job)) {
+                // the caller's finally releases the single-flight slot
+                log.warn("name-only retry refused: wallet wipe in progress")
+                return@withContext false
+            }
+            // [release] frees the slot once, whether this handler or the caller's finally (on a
+            // refusal) runs first. A wipe cancelling the job before this line still releases it:
+            // the handler runs at once on a completed job.
+            job.invokeOnCompletion { release() }
+            handedToJob.set(true)
+            if (!startOrRefuse(job)) {
+                // a wipe cancelled it between the track and the start; its handler releases
+                log.warn("name-only retry refused: wallet wipe in progress")
+                return@withContext false
+            }
+            true
         }
-        if (!trackOrRefuse(job)) {
-            // the caller's finally releases the single-flight slot
-            log.warn("name-only retry refused: wallet wipe in progress")
-            return false
-        }
-        // [release] frees the slot once, whether this handler or the caller's finally (on a
-        // refusal) runs first. A wipe cancelling the job before this line still releases it: the
-        // handler runs at once on a completed job.
-        job.invokeOnCompletion { release() }
-        if (!startOrRefuse(job)) {
-            // a wipe cancelled it between the track and the start; the caller's finally releases
-            log.warn("name-only retry refused: wallet wipe in progress")
-            return false
-        }
-        return true
     }
 
     /**

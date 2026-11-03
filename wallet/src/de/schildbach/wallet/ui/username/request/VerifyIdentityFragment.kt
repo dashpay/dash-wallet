@@ -83,7 +83,7 @@ class VerifyIdentityFragment : Fragment(R.layout.fragment_verfiy_identity) {
                         } else {
                             val creationState = it?.creationState ?: IdentityCreationState.NONE
                             if (creationState.ordinal > IdentityCreationState.NONE.ordinal &&
-                                !requestUserNameViewModel.uiState.value.usernameRequestSubmitting
+                                !requestUserNameViewModel.uiState.value.submissionUnderway
                             ) {
                                 // Same rule as RequestUsernameFragment: a
                                 // submit this session finishes via the
