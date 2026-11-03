@@ -47,6 +47,7 @@ import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.main.HistoryRowView
 import de.schildbach.wallet.ui.transactions.TransactionRowView
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -67,7 +68,6 @@ import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
@@ -157,7 +157,6 @@ class TxDisplayCacheService @Inject constructor(
 
     private sealed class TxDataSource {
         object Empty : TxDataSource()
-        class PrebuiltCache(val rows: List<HistoryRowView>) : TxDataSource()
         object RoomLive : TxDataSource()
     }
     private val _txDataSource = MutableStateFlow<TxDataSource>(TxDataSource.Empty)
@@ -180,27 +179,32 @@ class TxDisplayCacheService @Inject constructor(
     @Volatile private var chainLockBlockHeight: Int = 0
     private var wasReplaying: Boolean? = null
 
-    private var crowdNodeWrapperFactory: FullCrowdNodeSignUpTxSetFactory? = null
-    private var coinJoinWrapperFactory: CoinJoinTxWrapperFactory? = null
+    // Published on one serviceScope worker thread and read on others (the same-wallet
+    // fast-path check, and tests polling across threads), so the write must be visible.
+    @Volatile private var crowdNodeWrapperFactory: FullCrowdNodeSignUpTxSetFactory? = null
+    @Volatile private var coinJoinWrapperFactory: CoinJoinTxWrapperFactory? = null
 
     /**
-     * Pre-built rows for the fast startup phase (from Room display cache).
-     * Set directly by the init coroutine so that the cacheAdapter always receives rows,
-     * even if the wallet-ready flow wins the serviceScope race and transitions
-     * _txDataSource to RoomLive before PrebuiltCache is set.
+     * Pre-built rows for the fast startup phase (from Room display cache). Set
+     * directly by the init coroutine, independently of [_txDataSource] — see
+     * that coroutine's own comment for why it owns only this flow.
      */
     private val _cachedRows = MutableStateFlow<List<HistoryRowView>>(emptyList())
     val cachedRows: StateFlow<List<HistoryRowView>> = _cachedRows.asStateFlow()
 
     /**
-     * Live PagingData stream. Switches from empty → Room-live after the first
-     * rebuild or display-cache hydration. cachedIn() keeps pages across recompositions.
+     * Live PagingData stream. Nothing is emitted while the data source is still
+     * [TxDataSource.Empty]: the first emission is the first Room generation, so
+     * any NotLoading refresh a collector sees is by construction a settled Room
+     * answer — never a synthetic placeholder presented before Room has loaded a
+     * page. The Fragment's cache→live swap gate relies on exactly that; a
+     * placeholder emitted here once let it detach the cache adapter over an
+     * empty live list. cachedIn() keeps pages across recompositions.
      */
     val transactions: Flow<PagingData<HistoryRowView>> = _txDataSource
         .flatMapLatest { source ->
             when (source) {
-                is TxDataSource.Empty -> flowOf(PagingData.empty())
-                is TxDataSource.PrebuiltCache -> flowOf(PagingData.empty())
+                is TxDataSource.Empty -> emptyFlow()
                 is TxDataSource.RoomLive -> {
                     Pager(
                         config = pagingConfig,
@@ -258,14 +262,11 @@ class TxDisplayCacheService @Inject constructor(
                     }
                     historyRows.add(txRow)
                 }
-                // Always populate the cache adapter, regardless of which coroutine won
-                // the serviceScope race (_txDataSource may already be RoomLive if
-                // getCount() completed before getAll()).
+                // Only _cachedRows is this coroutine's to set: the Fragment shows these
+                // through the separate cachedRows collector regardless of _txDataSource,
+                // so _txDataSource/_transactionsLoaded stay the live pipeline's alone —
+                // this coroutine deciding them too was a second writer racing it.
                 _cachedRows.value = historyRows
-                if (_txDataSource.value is TxDataSource.Empty) {
-                    _txDataSource.value = TxDataSource.PrebuiltCache(historyRows)
-                    _transactionsLoaded.value = true
-                }
             }
         }
 
@@ -273,20 +274,91 @@ class TxDisplayCacheService @Inject constructor(
             .flatMapLatest { (direction, wallet) ->
                 if (wallet == null) return@flatMapLatest emptyFlow()
                 val filter = TxDirectionFilter(direction, wallet)
-                if (wrappedTransactionList.isEmpty()) {
-                    if (txDisplayCacheDao.getCount() > 0) {
-                        _liveFilterFlag.value = filter.direction.toFilterFlag()
-                        _txDataSource.value = TxDataSource.RoomLive
-                        _transactionsLoaded.value = true
-                        initializeFactoriesFromCache()
-                    } else {
-                        rebuildWrappedList(filter)
-                    }
-                } else {
+                // _txDataSource (not wrappedTransactionList) is the right "already running" check:
+                // the RoomLive fast path below only loads active CoinJoin/CrowdNode groups into
+                // wrappedTransactionList (initializeFactoriesFromCache), so a plain wallet with only
+                // single-tx history leaves wrappedTransactionList empty forever. Keying on it here
+                // made every later direction change retake this branch — which never invalidates
+                // the Pager — so a filter pick silently updated _liveFilterFlag and changed nothing
+                // on screen. But _txDataSource alone only answers "is a pipeline running", not "is
+                // it running for THIS wallet" — a wallet wipe/replacement leaves it at RoomLive from
+                // the old wallet, since clearDatabase() deliberately never resets it (protects an
+                // in-flight rescan's recovery, see its own comment). coinJoinWrapperFactory already
+                // holds the wallet the live pipeline's factories were last built for (every RoomLive
+                // writer — initializeFactoriesFromCache, rebuildWrappedList — publishes it only
+                // after that wallet's hydration has finished, never before), so comparing it
+                // against this emission's wallet tells the two cases apart without a new field.
+                // That "publish only after hydration" ordering is what makes this check safe
+                // under a flatMapLatest cancellation: a cancelled hydration leaves the factory
+                // at the previous wallet, so the check correctly falls through and retries.
+                // The same-wallet check also requires the cache to have rows: a wallet reset
+                // (observeWalletReset) rebinds coinJoinWrapperFactory to the same wallet and
+                // leaves _txDataSource at RoomLive, but clears the cache table, so without a
+                // row count a direction change here would flip the filter flag alone and never
+                // repopulate the cache from the now-empty wallet. The count read runs on
+                // every emission, so a failed read must not throw — it would complete the
+                // whole combine subscription through the catch below and no later filter pick
+                // would ever reach the Pager again — and is instead treated as UNKNOWN:
+                // assume the cache has rows, so the proven same wallet keeps the fast path
+                // and anything else takes the warm-cache re-init, which only READS the
+                // cache. Only a KNOWN zero may fall through to rebuildWrappedList: that
+                // replaceAll()s the cache from dashj, which post-cutover can hold zero
+                // transactions while the SDK-owned cache holds the real history, so an
+                // unknown count reaching it would wipe valid rows (the exact rebuild
+                // forceRebuildTransactionCache refuses).
+                val cachedRowCount: Int? = try {
+                    txDisplayCacheDao.getCount()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    log.warn("display-cache row count read failed; treating it as unknown", e)
+                    null
+                }
+                if (
+                    _txDataSource.value is TxDataSource.RoomLive &&
+                    coinJoinWrapperFactory?.wallet === wallet &&
+                    (cachedRowCount == null || cachedRowCount > 0)
+                ) {
                     log.info("direction changed to {} — switching filter flag only", direction)
                     _liveFilterFlag.value = filter.direction.toFilterFlag()
-                    _txDataSource.value = TxDataSource.RoomLive // force new Pager with updated filter
                     _currentPagingSource.value?.invalidate()
+                } else if (cachedRowCount == null || cachedRowCount > 0) {
+                    // Publish the live pipeline BEFORE hydrating the group factories: the
+                    // cache rows are already there, so the live Pager must not wait on a
+                    // hydration that only enriches CoinJoin/CrowdNode rows. Flipping it before
+                    // hydration is safe because the retry lives in the wallet-identity
+                    // term of the same-wallet fast-path check above: every hydrating
+                    // writer publishes coinJoinWrapperFactory only after its hydration
+                    // finishes (observeWalletReset rebinds it without hydrating, but its
+                    // KNOWN-zero count fails that check), so a cancelled hydration leaves
+                    // the factory at its previous value, fails the check, and the next
+                    // emission re-enters this branch instead of taking the flag-only fast
+                    // path.
+                    _liveFilterFlag.value = filter.direction.toFilterFlag()
+                    // Re-assigning the RoomLive singleton does not emit from the StateFlow, so
+                    // the live Pager (still the previous wallet's) would otherwise keep running
+                    // with its captured filter — invalidate it explicitly, as the same-wallet
+                    // branch above does.
+                    _txDataSource.value = TxDataSource.RoomLive
+                    _currentPagingSource.value?.invalidate()
+                    _transactionsLoaded.value = true
+                    // A failed hydration must not end this subscription (the catch below
+                    // completes the combine, and no later filter pick would ever reach the
+                    // Pager again); the factory it leaves unpublished is what makes the next
+                    // emission fail the same-wallet check above and retry the hydration here.
+                    // A failed hydration also skips this emission's incremental collector:
+                    // its factories are the only thing that keeps CoinJoin/CrowdNode rows
+                    // grouped, and a row persisted ungrouped is never regrouped by the retry.
+                    try {
+                        initializeFactoriesFromCache()
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        log.warn("group factory hydration from cache failed; the next emission retries it", e)
+                        return@flatMapLatest emptyFlow()
+                    }
+                } else {
+                    rebuildWrappedList(filter)
                 }
                 val allFilter = TxDirectionFilter(TxFilterType.ALL, wallet)
                 walletData.observeTransactions(true, allFilter)
@@ -836,14 +908,12 @@ class TxDisplayCacheService @Inject constructor(
         try {
             walletData.wallet?.let { wallet ->
                 val t0 = System.currentTimeMillis()
-                coinJoinWrapperFactory = CoinJoinTxWrapperFactory(walletData.networkParameters, wallet as WalletEx)
-                crowdNodeWrapperFactory = FullCrowdNodeSignUpTxSetFactory(walletData.networkId)
+                val cjFactory = CoinJoinTxWrapperFactory(walletData.networkParameters, wallet as WalletEx)
+                val cnFactory = FullCrowdNodeSignUpTxSetFactory(walletData.networkId)
 
                 val rawCount = wallet.getTransactions(true).size
                 val t1 = System.currentTimeMillis()
 
-                val cnFactory = crowdNodeWrapperFactory ?: return
-                val cjFactory = coinJoinWrapperFactory ?: return
                 val wrapped = walletData.wrapAllTransactions(cnFactory, cjFactory)
                 val t2 = System.currentTimeMillis()
 
@@ -856,6 +926,22 @@ class TxDisplayCacheService @Inject constructor(
                     rawCount, wrapped.size, wrappedTransactionList.size,
                     t1 - t0, t2 - t1, t3 - t2, t3 - t0
                 )
+
+                // Publish the factories now, BEFORE the first suspension (persistGroupCache),
+                // unlike initializeFactoriesFromCache, which publishes only after its last
+                // hydrating read. The two paths differ in what the same-wallet fast-path
+                // check can see: this rebuild is entered only on a KNOWN zero row count, and
+                // wrapAllTransactions does not suspend, so the factories are fully hydrated
+                // the moment they are published here — yet the fast path cannot match them
+                // until the cache has rows, which only this rebuild's own replaceAll
+                // provides. A rebuild cancelled before that commit is simply retried (the
+                // count is still zero), and one cancelled after it keeps the factories
+                // consistent with the rows it wrote. Publishing them only after the commit
+                // instead left whatever factories were installed before (e.g. the empty
+                // same-wallet ones a wallet reset installs) to be matched by the fast path
+                // over this rebuild's rows, with no later re-hydration.
+                coinJoinWrapperFactory = cjFactory
+                crowdNodeWrapperFactory = cnFactory
 
                 persistGroupCache(wrapped)
                 updateDisplayCache(wrapped.toList(), filter.direction.toFilterFlag())
@@ -929,8 +1015,6 @@ class TxDisplayCacheService @Inject constructor(
         val t0 = System.currentTimeMillis()
         val cjFactory = CoinJoinTxWrapperFactory(walletData.networkParameters, wallet as WalletEx)
         val cnFactory = FullCrowdNodeSignUpTxSetFactory(walletData.networkId)
-        coinJoinWrapperFactory = cjFactory
-        crowdNodeWrapperFactory = cnFactory
 
         val today = LocalDate.now().toString()
         val activeEntries = txGroupCacheDao.getActiveGroups(today)
@@ -964,20 +1048,30 @@ class TxDisplayCacheService @Inject constructor(
         }
 
         wrappedTransactionList = activeWrappers.sortedByDescending { it.groupDate }
+        // Publish the factories only now that hydration has finished. Unlike
+        // rebuildWrappedList, this warm path is entered with cache rows already present,
+        // so a factory published before the getActiveGroups read above completed would
+        // let the same-wallet fast-path check match the new wallet over the old wallet's
+        // rows — a cancellation before this point must leave the factories untouched
+        // (see the comment above that check).
+        coinJoinWrapperFactory = cjFactory
+        crowdNodeWrapperFactory = cnFactory
         log.info("initializeFactoriesFromCache: {} active groups loaded in {}ms",
             byGroup.size, System.currentTimeMillis() - t0)
     }
 
     private suspend fun loadWrapperOnDemand(groupId: String, wrapperType: String): TransactionWrapper? {
         val wallet = walletData.wallet ?: return null
-        // Lazily initialize factories if they haven't been set yet (e.g. metadata flow fires
-        // before rebuildWrappedList / initializeFactoriesFromCache has run).
-        if (coinJoinWrapperFactory == null) {
-            coinJoinWrapperFactory = CoinJoinTxWrapperFactory(walletData.networkParameters, wallet as WalletEx)
-            crowdNodeWrapperFactory = FullCrowdNodeSignUpTxSetFactory(walletData.networkId)
-        }
-        val cjFactory = coinJoinWrapperFactory ?: return null
-        val cnFactory = crowdNodeWrapperFactory ?: return null
+        // Fall back to lazily built factories when none are published yet (e.g. the metadata
+        // flow fires before rebuildWrappedList / initializeFactoriesFromCache has run). They
+        // stay local to this call and are never published: only a hydrating path
+        // (rebuildWrappedList, initializeFactoriesFromCache) may publish a factory, because
+        // the same-wallet fast-path check trusts a published factory as proof that its
+        // wallet's hydration finished — a lazy one would satisfy that check and the
+        // hydration would be skipped. Each caller dedupes groups within a call, so a
+        // per-call factory loses nothing.
+        val cjFactory = coinJoinWrapperFactory ?: CoinJoinTxWrapperFactory(walletData.networkParameters, wallet as WalletEx)
+        val cnFactory = crowdNodeWrapperFactory ?: FullCrowdNodeSignUpTxSetFactory(walletData.networkId)
 
         val entries = txGroupCacheDao.getGroupEntries(groupId)
         val txs = entries.sortedBy { it.sortOrder }.mapNotNull { row ->

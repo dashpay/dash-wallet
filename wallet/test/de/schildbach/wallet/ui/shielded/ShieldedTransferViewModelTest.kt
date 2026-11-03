@@ -39,6 +39,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -52,7 +53,9 @@ import org.bitcoinj.wallet.CoinSelector
 import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.BlockchainState
+import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.money.Fiat
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.NotificationService
@@ -204,7 +207,7 @@ class ShieldedTransferViewModelTest {
     private fun ShieldedTransferViewModel.typeAmountAndConfirm(amount: String = "1") {
         amount.forEach { onKeyInput(it.toString()) }
         onContinue()
-        onConfirm()
+        onConfirm(uiState.value.amount)
     }
 
     @Test
@@ -524,7 +527,7 @@ class ShieldedTransferViewModelTest {
         vm.onSwapDirection()
         vm.onMaxClick()
         vm.onContinue()
-        vm.onConfirm()
+        vm.onConfirm(vm.uiState.value.amount)
 
         assertEquals(ShieldedSubmitState.Success, vm.uiState.value.submitState)
         // first the full balance, then the deficit-adjusted amount floored
@@ -576,7 +579,7 @@ class ShieldedTransferViewModelTest {
 
         vm.onMaxClick()
         vm.onContinue()
-        vm.onConfirm()
+        vm.onConfirm(vm.uiState.value.amount)
 
         assertEquals(ShieldedSubmitState.Success, vm.uiState.value.submitState)
         // first the full 3.00 DASH balance, then minus the estimated
@@ -599,6 +602,421 @@ class ShieldedTransferViewModelTest {
         // a typed (non-Max) amount never auto-adjusts: single attempt, NotSent
         assertTrue(vm.uiState.value.submitState is ShieldedSubmitState.NotSent)
         coVerify(exactly = 1) { shieldedService.shieldFromWallet(any()) }
+    }
+
+    @Test
+    fun maxClick_fiatMode_showsTwoDecimalsAndTypingClearsMaxSelected() = runTest(dispatcher) {
+        // MO-1111 review round (HashEngineering): a fiat-mode Max tap must show 2 decimals
+        // like the rest of the app, not raw conversion precision (previously "$1.065892"),
+        // and typing afterwards must clear maxSelected.
+        every { exchangeRates.observeExchangeRate(any()) } returns flowOf(ExchangeRate("USD", "100.0099"))
+        val vm = viewModel()
+
+        vm.onCurrencySelected(dashMode = false)
+        vm.onMaxClick()
+
+        // 3.00 DASH (the mocked wallet balance) @ $100.0099 = $300.0297 exactly
+        assertEquals("300.03", vm.uiState.value.amountText)
+        assertTrue(vm.uiState.value.maxSelected)
+        assertEquals(Dash.parse("3.00"), vm.uiState.value.amount)
+        assertFalse(vm.uiState.value.insufficientFunds)
+
+        // "back" actually edits the text ("300.03" -> "300.0"): a genuine edit must clear
+        // the Max intent.
+        vm.onKeyInput("back")
+        assertEquals("300.0", vm.uiState.value.amountText)
+        assertFalse(vm.uiState.value.maxSelected)
+    }
+
+    @Test
+    fun maxClick_fiatMode_rejectedKeypressDoesNotClearMaxSelected() = runTest(dispatcher) {
+        // Pre-review round 8: the fiat text is already at the 2-decimal cap right after Max,
+        // so the very next digit is rejected by processAmountKeyInput (text unchanged) — that
+        // no-op must not clear maxSelected, or the Continue button would falsely disable
+        // (amount would re-derive from the rounded text instead of staying pinned to the
+        // balance) with no visible change on screen to explain why.
+        every { exchangeRates.observeExchangeRate(any()) } returns flowOf(ExchangeRate("USD", "100.0099"))
+        val vm = viewModel()
+
+        vm.onCurrencySelected(dashMode = false)
+        vm.onMaxClick()
+        assertEquals("300.03", vm.uiState.value.amountText)
+
+        vm.onKeyInput("1")
+
+        // rejected: text unchanged, so the Max intent (and the pinned amount) must survive
+        assertEquals("300.03", vm.uiState.value.amountText)
+        assertTrue(vm.uiState.value.maxSelected)
+        assertEquals(Dash.parse("3.00"), vm.uiState.value.amount)
+        assertFalse(vm.uiState.value.insufficientFunds)
+    }
+
+    @Test
+    fun maxClick_thenCurrencyToggle_beforeRateArrives_leavesModeAndMaxIntentUnchanged() = runTest(dispatcher) {
+        // thepastaclaw (PR #1654, round at 4f0c7739d): Max in Dash mode, then a currency toggle
+        // before the exchange-rate flow has emitted, must not write "0" into amountText while
+        // keeping maxSelected set (that let canContinue go true with a zero-looking field once
+        // the rate arrived). onCurrencySelected's early return on a missing rate (matching
+        // onMaxClick's) already covers this; a delayed-rate flow pins it down.
+        val rateFlow = MutableSharedFlow<ExchangeRate?>()
+        every { exchangeRates.observeExchangeRate(any()) } returns rateFlow
+        val vm = viewModel()
+
+        vm.onMaxClick() // dash mode: no rate needed
+        assertEquals("3", vm.uiState.value.amountText)
+        assertTrue(vm.uiState.value.maxSelected)
+
+        vm.onCurrencySelected(dashMode = false) // rate not emitted yet
+
+        assertTrue(vm.uiState.value.dashMode)
+        assertEquals("3", vm.uiState.value.amountText)
+        assertTrue(vm.uiState.value.maxSelected)
+        assertEquals(Dash.parse("3.00"), vm.uiState.value.amount)
+
+        rateFlow.emit(ExchangeRate("USD", "100.0099"))
+        vm.onCurrencySelected(dashMode = false) // retry now that the rate is known
+
+        assertFalse(vm.uiState.value.dashMode)
+        assertEquals("300.03", vm.uiState.value.amountText)
+        assertTrue(vm.uiState.value.maxSelected)
+        assertEquals(Dash.parse("3.00"), vm.uiState.value.amount)
+    }
+
+    @Test
+    fun currencyToggle_dashToFiatAndBack_pinsExactAmountAcrossRounding() = runTest(dispatcher) {
+        // A currency toggle must not change what gets spent. The fiat text it writes is rounded
+        // to 2 decimals like the rest of the app, so `amount` stays pinned to the exact value
+        // that was on screen before the toggle (pinnedAmount) instead of re-parsing the rounded
+        // text: 1 DASH at $232.745151/DASH shows "232.75" but must still spend exactly 1 DASH,
+        // and toggling back to DASH must show the exact pinned amount, not a re-derived one.
+        every { exchangeRates.observeExchangeRate(any()) } returns flowOf(ExchangeRate("USD", "232.745151"))
+        val vm = viewModel()
+
+        vm.onKeyInput("1")
+        vm.onCurrencySelected(dashMode = false)
+
+        assertEquals("232.75", vm.uiState.value.amountText)
+        assertEquals(Dash.parse("1"), vm.uiState.value.amount)
+
+        vm.onCurrencySelected(dashMode = true)
+
+        assertEquals("1", vm.uiState.value.amountText)
+        assertEquals(Dash.parse("1"), vm.uiState.value.amount)
+    }
+
+    @Test
+    fun currencyToggle_thenTyping_clearsPinnedAmountAndParsesTypedFiatNormally() = runTest(dispatcher) {
+        every { exchangeRates.observeExchangeRate(any()) } returns flowOf(ExchangeRate("USD", "232.745151"))
+        val vm = viewModel()
+
+        vm.onKeyInput("1")
+        vm.onCurrencySelected(dashMode = false)
+        assertEquals("232.75", vm.uiState.value.amountText)
+
+        vm.onKeyInput("back") // a genuine edit ("232.75" -> "232.7") must clear the pinned amount
+
+        assertEquals("232.7", vm.uiState.value.amountText)
+        assertNull(vm.uiState.value.pinnedAmount)
+        val rate = Fiat.parseFiat("USD", "232.745151")
+        assertEquals(Fiat.parseFiat("USD", "232.7").toDashAt(rate), vm.uiState.value.amount)
+    }
+
+    @Test
+    fun currencyToggle_rateUnavailable_leavesModeAndTextUnchanged() = runTest(dispatcher) {
+        // No exchange rate known (the default fixture): toggling into fiat must leave the mode
+        // and text untouched, matching onMaxClick's early return, instead of landing on "0".
+        val vm = viewModel()
+
+        vm.onKeyInput("1")
+        vm.onCurrencySelected(dashMode = false)
+
+        assertTrue(vm.uiState.value.dashMode)
+        assertEquals("1", vm.uiState.value.amountText)
+    }
+
+    @Test
+    fun currencyToggle_thenSwapDirection_preservesExactPinnedAmount() = runTest(dispatcher) {
+        // pinnedAmount must survive a direction swap exactly like a plain typed amountText
+        // already does, or the rounded 2-decimal fiat text gets reparsed on the new direction
+        // and silently drifts the spent amount (1 DASH at $232.745151 -> "232.75" -> swap ->
+        // reparsing "232.75" would land ~1.00002 DASH instead of exactly 1).
+        every { exchangeRates.observeExchangeRate(any()) } returns flowOf(ExchangeRate("USD", "232.745151"))
+        val vm = viewModel()
+
+        vm.onKeyInput("1")
+        vm.onCurrencySelected(dashMode = false)
+        assertEquals("232.75", vm.uiState.value.amountText)
+
+        vm.onSwapDirection()
+
+        assertFalse(vm.uiState.value.maxSelected)
+        assertEquals(Dash.parse("1"), vm.uiState.value.amount)
+    }
+
+    @Test
+    fun maxClick_thenCurrencyToggle_thenSwapDirection_pinsExactMaxAmount() = runTest(dispatcher) {
+        // maxSelected must not survive a swap (Max of one side's balance must not silently
+        // become Max of the other side's), but the amount it resolved to must: a toggle taken
+        // while maxSelected was set rounds the fiat text to 2 decimals ("300.03" for 3.00 DASH
+        // at $100.0099), so clearing maxSelected on swap without pinning that exact amount would
+        // leave the rounded text to be reparsed under the NEW direction's rate/balance context,
+        // silently drifting the spent amount (CodeRabbit finding on 8a5369b54).
+        every { exchangeRates.observeExchangeRate(any()) } returns flowOf(ExchangeRate("USD", "100.0099"))
+        val vm = viewModel()
+
+        vm.onMaxClick() // 3.00 DASH wallet balance
+        vm.onCurrencySelected(dashMode = false)
+        assertEquals("300.03", vm.uiState.value.amountText)
+        assertTrue(vm.uiState.value.maxSelected)
+
+        vm.onSwapDirection()
+
+        assertFalse(vm.uiState.value.maxSelected)
+        assertEquals(Dash.parse("3.00"), vm.uiState.value.pinnedAmount)
+        assertEquals(Dash.parse("3.00"), vm.uiState.value.amount)
+    }
+
+    // ── Round 12 (thepastaclaw, finding 1): the primary field must not lag a live balance
+    // change while Max is selected — amountText only ever got written once, by onMaxClick
+    // itself, so a balance update after Max left it showing the OLD figure while amount (and
+    // the confirm sheet) already tracked the new one. ───────────────────────────────────────
+
+    @Test
+    fun maxSelected_toShielded_dashMode_reRendersPrimaryTextOnLiveBalanceIncrease() = runTest(dispatcher) {
+        val walletBalanceFlow = MutableStateFlow(Coin.parseCoin("3.00"))
+        every { walletData.observeBalance(any(), any()) } returns walletBalanceFlow
+        val vm = viewModel()
+
+        vm.onMaxClick()
+        assertEquals("3", vm.uiState.value.amountText)
+
+        walletBalanceFlow.value = Coin.parseCoin("4.00")
+
+        assertEquals("4", vm.uiState.value.amountText)
+        assertEquals(Dash.parse("4.00"), vm.uiState.value.amount)
+        assertTrue(vm.uiState.value.maxSelected)
+
+        // a keypress afterwards edits the now-current text normally
+        vm.onKeyInput("9")
+        assertEquals("49", vm.uiState.value.amountText)
+        assertFalse(vm.uiState.value.maxSelected)
+    }
+
+    @Test
+    fun maxSelected_toShielded_fiatMode_reRendersPrimaryTextOnLiveBalanceIncrease() = runTest(dispatcher) {
+        every { exchangeRates.observeExchangeRate(any()) } returns flowOf(ExchangeRate("USD", "200.00"))
+        val walletBalanceFlow = MutableStateFlow(Coin.parseCoin("3.00"))
+        every { walletData.observeBalance(any(), any()) } returns walletBalanceFlow
+        val vm = viewModel()
+
+        vm.onCurrencySelected(dashMode = false)
+        vm.onMaxClick()
+        assertEquals("600.00", vm.uiState.value.amountText)
+
+        walletBalanceFlow.value = Coin.parseCoin("4.00")
+
+        assertEquals("800.00", vm.uiState.value.amountText)
+        assertEquals(Dash.parse("4.00"), vm.uiState.value.amount)
+        assertTrue(vm.uiState.value.maxSelected)
+
+        // the field is already at the 2-decimal cap, so a digit press is rejected (no-op) and
+        // must not clear Max — "back" is what actually edits it
+        vm.onKeyInput("back")
+        assertEquals("800.0", vm.uiState.value.amountText)
+        assertFalse(vm.uiState.value.maxSelected)
+    }
+
+    @Test
+    fun maxSelected_fromShielded_dashMode_reRendersPrimaryTextOnLiveBalanceIncrease() = runTest(dispatcher) {
+        val shieldedBalanceFlow = MutableStateFlow(Dash.parse("3.00"))
+        every { shieldedService.observeShieldedBalance() } returns shieldedBalanceFlow
+        val vm = viewModel()
+
+        vm.onSwapDirection()
+        vm.onMaxClick()
+        assertEquals("3", vm.uiState.value.amountText)
+
+        shieldedBalanceFlow.value = Dash.parse("4.00")
+
+        assertEquals("4", vm.uiState.value.amountText)
+        assertEquals(Dash.parse("4.00"), vm.uiState.value.amount)
+        assertTrue(vm.uiState.value.maxSelected)
+
+        vm.onKeyInput("9")
+        assertEquals("49", vm.uiState.value.amountText)
+        assertFalse(vm.uiState.value.maxSelected)
+    }
+
+    @Test
+    fun maxSelected_fromShielded_fiatMode_reRendersPrimaryTextOnLiveBalanceIncrease() = runTest(dispatcher) {
+        every { exchangeRates.observeExchangeRate(any()) } returns flowOf(ExchangeRate("USD", "200.00"))
+        val shieldedBalanceFlow = MutableStateFlow(Dash.parse("3.00"))
+        every { shieldedService.observeShieldedBalance() } returns shieldedBalanceFlow
+        val vm = viewModel()
+
+        vm.onSwapDirection()
+        vm.onCurrencySelected(dashMode = false)
+        vm.onMaxClick()
+        assertEquals("600.00", vm.uiState.value.amountText)
+
+        shieldedBalanceFlow.value = Dash.parse("4.00")
+
+        assertEquals("800.00", vm.uiState.value.amountText)
+        assertEquals(Dash.parse("4.00"), vm.uiState.value.amount)
+        assertTrue(vm.uiState.value.maxSelected)
+
+        vm.onKeyInput("back")
+        assertEquals("800.0", vm.uiState.value.amountText)
+        assertFalse(vm.uiState.value.maxSelected)
+    }
+
+    @Test
+    fun maxSelected_fiatMode_reRendersPrimaryTextOnRateUpdate() = runTest(dispatcher) {
+        // Round 12b: a rate tick while Max is selected in fiat mode needs the same refresh as a
+        // balance tick — the exchange-rate observer only did copy(rate = ...), so amountText kept
+        // showing the OLD rate's fiat text while `amount` (the live Dash balance) and the
+        // secondary line were already current (the same mismatch class as finding 1).
+        val rateFlow = MutableStateFlow<ExchangeRate?>(ExchangeRate("USD", "100.00"))
+        every { exchangeRates.observeExchangeRate(any()) } returns rateFlow
+        val vm = viewModel()
+
+        vm.onCurrencySelected(dashMode = false)
+        vm.onMaxClick()
+        assertEquals("300.00", vm.uiState.value.amountText) // 3.00 DASH @ $100.00
+
+        rateFlow.value = ExchangeRate("USD", "200.00")
+
+        assertEquals("600.00", vm.uiState.value.amountText)
+        assertEquals(Dash.parse("3.00"), vm.uiState.value.amount)
+        assertTrue(vm.uiState.value.maxSelected)
+    }
+
+    // ── Round 12 (thepastaclaw, finding 3): captured-before-authentication contract exercised
+    // through the real ViewModel/executor wiring, not just the pure seam — a Max capture must
+    // reach the service as the EXACT captured amount even though the live balance (and the
+    // re-rendered primary field) already moved on by the time onConfirm is called. ─────────────
+
+    @Test
+    fun maxToShielded_balanceMovesAfterCapture_submitsCapturedAmount_feeOnlyShortfallStillRetriesOnce() =
+        runTest(dispatcher) {
+            coEvery { shieldedService.shieldFromWallet(any()) } returnsMany
+                listOf(assetLockShortResult(), SdkWriteResult.Broadcast(ShieldFromWalletOutcome.COMPLETED))
+            every { walletData.spendableUtxoCount() } returns 4
+            val walletBalanceFlow = MutableStateFlow(Coin.parseCoin("3.00"))
+            every { walletData.observeBalance(any(), any()) } returns walletBalanceFlow
+            val vm = viewModel()
+
+            vm.onMaxClick()
+            val captured = vm.uiState.value.amount // 3.00 DASH, resolved before the balance moves
+
+            // the live balance moves (e.g. during a PIN/biometric wait) — the primary field and
+            // `amount` both now track 4.00, but `captured` was already resolved above
+            walletBalanceFlow.value = Coin.parseCoin("4.00")
+            vm.onContinue()
+            vm.onConfirm(captured)
+
+            assertEquals(ShieldedSubmitState.Success, vm.uiState.value.submitState)
+            coVerifyOrder {
+                shieldedService.shieldFromWallet(Dash.parse("3.00"))
+                shieldedService.shieldFromWallet(Dash(299_998_216L))
+            }
+            coVerify(exactly = 2) { shieldedService.shieldFromWallet(any()) }
+        }
+
+    // ── Round 12 (thepastaclaw, finding 2): a manually typed amount that happens to equal the
+    // available balance is a REGULAR spend (gate decision 4: isMaxSpend == maxSelected only) —
+    // a fee shortfall must dead-end in a single attempt, never the Max fee-adjusted retry. ─────
+
+    @Test
+    fun typedAmount_equalsWalletBalance_notMaxSpend_feeShortfall_isNotSent_singleAttempt() =
+        runTest(dispatcher) {
+            coEvery { shieldedService.shieldFromWallet(any()) } returns assetLockShortResult()
+            val vm = viewModel()
+
+            vm.typeAmountAndConfirm("3") // exactly the 3.00 DASH wallet balance, no Max tap
+
+            assertTrue(vm.uiState.value.submitState is ShieldedSubmitState.NotSent)
+            coVerify(exactly = 1) { shieldedService.shieldFromWallet(any()) }
+        }
+
+    @Test
+    fun typedAmount_equalsShieldedBalance_notMaxSpend_feeShortfall_isNotSent_singleAttempt() =
+        runTest(dispatcher) {
+            coEvery { shieldedService.withdrawToCore(any(), any()) } returns
+                insufficientShieldedResult(1_550_000_000_000L, 1_550_275_190_400L)
+            val vm = viewModel()
+
+            vm.onSwapDirection()
+            vm.typeAmountAndConfirm("15.5") // exactly the 15.5 DASH shielded balance, no Max tap
+
+            assertTrue(vm.uiState.value.submitState is ShieldedSubmitState.NotSent)
+            coVerify(exactly = 1) { shieldedService.withdrawToCore(any(), any()) }
+        }
+
+    // ── Round 13 (thepastaclaw, discussion_r4448120958): onConfirm guarded with canContinue,
+    // which re-validates the LIVE editor proposal (amount, insufficientFunds, the fiat-rate gate)
+    // AFTER authentication, but submits the CAPTURED amount — the two can diverge for a typed
+    // fiat amount when the rate moves mid-wait, and the live revalidation then silently refused
+    // an authorized, still-fundable submit. onConfirm now guards with canSubmit (readiness only)
+    // and validates confirmedAmount directly. ──────────────────────────────────────────────────
+
+    @Test
+    fun confirmedFiatAmount_laterRateMoveMakesTheLiveAmountInsufficient_stillSubmitsTheCapturedAmount() =
+        runTest(dispatcher) {
+            // 3 DASH available, type $299 at $100/DASH (captures 2.99 DASH), then the rate drops
+            // to $99/DASH: the live amount (299 / 99 ≈ 3.0202) is now insufficient against the
+            // 3.00 DASH balance, but the 2.99 DASH actually authorized is still well-funded.
+            coEvery { shieldedService.shieldFromWallet(any()) } returns
+                SdkWriteResult.Broadcast(ShieldFromWalletOutcome.COMPLETED)
+            val rateFlow = MutableStateFlow<ExchangeRate?>(ExchangeRate("USD", "100.00"))
+            every { exchangeRates.observeExchangeRate(any()) } returns rateFlow
+            val vm = viewModel()
+
+            vm.onCurrencySelected(dashMode = false)
+            "299".forEach { vm.onKeyInput(it.toString()) }
+            val captured = vm.uiState.value.amount
+            assertEquals(Dash.parse("2.99"), captured)
+            vm.onContinue()
+
+            rateFlow.value = ExchangeRate("USD", "99.00")
+            assertTrue(vm.uiState.value.insufficientFunds)
+
+            vm.onConfirm(captured)
+
+            assertEquals(ShieldedSubmitState.Success, vm.uiState.value.submitState)
+            coVerify(exactly = 1) { shieldedService.shieldFromWallet(Dash.parse("2.99")) }
+        }
+
+    @Test
+    fun onConfirm_poolNotReadyDuringAuthentication_doesNotSubmit() = runTest(dispatcher) {
+        val vm = viewModel()
+
+        vm.onKeyInput("1")
+        val captured = vm.uiState.value.amount
+        vm.onContinue()
+
+        poolSyncStatus.value = ShieldedSyncStatus.SYNCING
+        vm.onConfirm(captured)
+
+        coVerify(exactly = 0) { shieldedService.shieldFromWallet(any()) }
+    }
+
+    @Test
+    fun onConfirm_capturedAmountAboveADroppedLiveBalance_submitsAndEndsNotSent() = runTest(dispatcher) {
+        coEvery { shieldedService.shieldFromWallet(any()) } returns assetLockShortResult()
+        val walletBalanceFlow = MutableStateFlow(Coin.parseCoin("3.00"))
+        every { walletData.observeBalance(any(), any()) } returns walletBalanceFlow
+        val vm = viewModel()
+
+        vm.onKeyInput("2") // 2 DASH, well within the 3.00 DASH balance at capture time
+        val captured = vm.uiState.value.amount
+        vm.onContinue()
+
+        walletBalanceFlow.value = Coin.parseCoin("1.00") // dropped below captured during auth
+        vm.onConfirm(captured)
+
+        assertTrue(vm.uiState.value.submitState is ShieldedSubmitState.NotSent)
+        coVerify(exactly = 1) { shieldedService.shieldFromWallet(Dash.parse("2")) }
     }
 
     // ── AC3: L1 sync gate ───────────────────────────────────────────────
@@ -862,6 +1280,35 @@ class ShieldedTransferViewModelTest {
         assertEquals(Dash.parse("0.75"), state.pendingWalletBalance)
         // Max/availableBalance draws from the confirmed figure only.
         assertEquals(Dash.parse("2.00"), state.availableBalance)
+    }
+
+    @Test
+    fun maxSelected_fiatMode_pinsAmountToBalanceDespiteCoinFiatRoundTripTruncation() {
+        // MO-1111 review round: dashj's ExchangeRate (coinToFiat/fiatToCoin) truncates on BOTH
+        // legs, so round-tripping a non-round balance Dash -> fiat -> Dash can land a duff short
+        // of the original (2.34567891 DASH at $100.0099/DASH round-trips to 234567890 duffs, one
+        // short). The old isMaxSpend heuristic worked around this by re-deriving intent from a
+        // fiat-value comparison; maxSelected instead pins `amount` straight to availableBalance,
+        // so it never depends on amountText round-tripping through fiat at all.
+        val rate = Fiat.parseFiat("USD", "100.0099")
+        val balance = Dash.parse("2.34567891")
+
+        val afterMaxTap = ShieldedTransferUIState(
+            dashMode = false,
+            rate = rate,
+            shieldedBalance = balance,
+            direction = ShieldedTransferDirection.FromShielded,
+            amountText = balance.toFiatAt(rate)!!.toDisplayNoCode(),
+            maxSelected = true
+        )
+        assertEquals(balance, afterMaxTap.amount)
+        assertFalse(afterMaxTap.insufficientFunds)
+
+        // typing clears the flag (exercised end-to-end via the ViewModel in
+        // maxClick_fiatMode_showsTwoDecimalsAndTypingClearsMaxSelected below); here, once
+        // cleared, the amount goes back to being parsed from amountText.
+        val typedAfter = afterMaxTap.copy(amountText = "1.00", maxSelected = false)
+        assertFalse(typedAfter.amount == balance)
     }
 
     // ── "You will transfer ~" hint — always DASH, both directions (user

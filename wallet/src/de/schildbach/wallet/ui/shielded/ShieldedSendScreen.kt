@@ -169,7 +169,7 @@ private fun ShieldedSendScreenContent(
                 Spacer(modifier = Modifier.height(20.dp))
 
                 val secondaryText = if (uiState.dashMode) {
-                    uiState.amount.toFiatAt(uiState.rate)?.toPlainString() ?: "0"
+                    uiState.amount.toFiatAt(uiState.rate)?.toDisplayNoCode() ?: "0"
                 } else {
                     uiState.amount.toKeypadString()
                 }
