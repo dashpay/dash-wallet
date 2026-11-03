@@ -43,6 +43,15 @@ class CoinBaseResultDialog : DialogFragment() {
         super.onCreate(savedInstanceState)
 
         setStyle(STYLE_NO_FRAME, R.style.FullScreenDialog)
+        // A sent payment's success is answered only by its button, which acknowledges it: Back
+        // would dismiss it unanswered and leave the payment marked, refusing later ones.
+        val type = arguments?.getInt("Type")
+        if (type == Type.CONVERSION_SUCCESS.ordinal ||
+            type == Type.TRANSFER_DASH_SUCCESS.ordinal ||
+            type == Type.DEPOSIT_SUCCESS.ordinal
+        ) {
+            isCancelable = false
+        }
     }
 
     override fun onCreateView(
