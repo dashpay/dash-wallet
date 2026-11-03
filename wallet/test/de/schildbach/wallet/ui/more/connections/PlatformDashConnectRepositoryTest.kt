@@ -164,18 +164,25 @@ class PlatformDashConnectRepositoryTest {
         assertEquals(true, runBlocking { repository.isAvailable() })
     }
 
-    @Test
-    fun isAvailable_answersWithTheNewestVersionWhenProbesOverlap() = runBlocking {
+    private fun assertOverlappingProbeAnswersWithTheNewestVersion(olderResult: Int?) = runBlocking {
         assumeTrue(ConnectAvailability.isSupported)
-        // An older probe reads 13 but finishes after a newer one has read 14.
+        // An older probe finishes after a newer one has read 14.
         val olderRead = CompletableDeferred<Int?>()
         coEvery { platformRepo.readProtocolVersion() } coAnswers { olderRead.await() }
         val older = async(Dispatchers.Unconfined) { repository.isAvailable() }
         coEvery { platformRepo.readProtocolVersion() } returns ConnectAvailability.MIN_PROTOCOL_VERSION
         assertEquals(true, repository.isAvailable())
-        olderRead.complete(13)
+        olderRead.complete(olderResult)
         assertEquals(true, older.await())
     }
+
+    @Test
+    fun isAvailable_answersWithTheNewestVersionWhenAnOlderProbeReadsLess() =
+        assertOverlappingProbeAnswersWithTheNewestVersion(olderResult = 13)
+
+    @Test
+    fun isAvailable_answersWithTheNewestVersionWhenAnOlderProbeFails() =
+        assertOverlappingProbeAnswersWithTheNewestVersion(olderResult = null)
 
     @Test
     fun parseQr_refusesWhilePlatformIsBelowProtocol14() {

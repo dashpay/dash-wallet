@@ -42,9 +42,11 @@ object ConnectAvailability {
     suspend fun isAvailable(platformRepo: PlatformRepo): Boolean? {
         if (!isSupported) return false
         if (reportedVersion.value >= MIN_PROTOCOL_VERSION) return true
-        val version = platformRepo.readProtocolVersion() ?: return null
-        // An overlapping probe may have read a newer version first; answer with the one kept.
-        return reportedVersion.updateAndGet { maxOf(it, version) } >= MIN_PROTOCOL_VERSION
+        val version = platformRepo.readProtocolVersion()
+        // An overlapping probe may have read a newer version first, even when this one failed; answer
+        // with the one kept.
+        val kept = reportedVersion.updateAndGet { maxOf(it, version ?: 0) }
+        return if (kept >= MIN_PROTOCOL_VERSION) true else version?.let { false }
     }
 
     internal fun resetForTest() {
