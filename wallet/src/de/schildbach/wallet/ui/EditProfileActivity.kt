@@ -438,7 +438,7 @@ class EditProfileActivity : LockScreenActivity() {
                     if (answer == true) {
                         SendCoinsActivity.startBuyCredits(this@EditProfileActivity)
                     } else {
-                        if (shouldWarn)
+                        if (!isEmpty)
                             save()
                     }
                 } else {
@@ -624,7 +624,7 @@ class EditProfileActivity : LockScreenActivity() {
                 getString(R.string.yes)
             ).show(this) {
                 if (it == true) {
-                    save()
+                    saveButton()
                 } else {
                     super.finish()
                 }

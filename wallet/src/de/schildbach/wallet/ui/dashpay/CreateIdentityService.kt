@@ -693,9 +693,14 @@ class CreateIdentityService : LifecycleService() {
             val results = identityRepository.getUser(user)
             if (results.isNotEmpty()) {
                 val inviterUserId = results[0].dashPayProfile.userId
-                SendContactRequestOperation(walletApplication)
-                        .create(inviterUserId)
-                        .enqueue()
+                // a small invite may leave too few credits for the contact request; it would fail in the background
+                if (identityRepository.getIdentityBalance()?.isBalanceEmpty() == false) {
+                    SendContactRequestOperation(walletApplication)
+                            .create(inviterUserId)
+                            .enqueue()
+                } else {
+                    log.info("not sending a contact request to the inviter: credit balance is empty or unknown")
+                }
                 configuration.apply {
                     inviter = inviterUserId
                     inviterContactRequestSentInfoShown = false
