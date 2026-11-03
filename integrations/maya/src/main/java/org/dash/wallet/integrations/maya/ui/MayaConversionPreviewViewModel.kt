@@ -130,8 +130,9 @@ class MayaConversionPreviewViewModel @Inject constructor(
         savedStateHandle.getStateFlow(KEY_PAYMENT_OUTCOME_UNKNOWN, false)
 
     init {
-        // A deposit was being built or broadcast when the process died: it may have gone out,
-        // and nothing is left to say whether it did.
+        // A deposit was being built or broadcast, or had gone out with its result not yet taken
+        // over by the flow ([acknowledgeDepositResult]), when the process died: the restored
+        // screen must not offer it again, and nothing is left to say how it ended.
         if (savedStateHandle.get<Boolean>(KEY_DEPOSIT_IN_PROGRESS) == true) {
             log.warn("a swap deposit was in progress when the process died; its outcome is unknown")
             savedStateHandle[KEY_PAYMENT_OUTCOME_UNKNOWN] = true
@@ -149,6 +150,14 @@ class MayaConversionPreviewViewModel @Inject constructor(
     /** Held while one commit (and its deposit) is in progress (see [commitSwapTrade]). */
     private val commitInFlight = AtomicBoolean(false)
 
+    /**
+     * The flow has taken over the sent deposit's result (ConvertViewViewModel's saved pending
+     * result), which shows it again after a restore: the preview no longer needs to refuse it.
+     */
+    fun acknowledgeDepositResult() {
+        savedStateHandle[KEY_DEPOSIT_IN_PROGRESS] = false
+    }
+
     fun commitSwapTrade(tradeId: String): Job {
         // Claimed synchronously, before launching, so two rapid Confirms cannot both commit and
         // deposit. Refused for good once an earlier deposit may have gone out.
@@ -159,9 +168,8 @@ class MayaConversionPreviewViewModel @Inject constructor(
             try {
                 commitAndDeposit(tradeId)
             } finally {
-                // The deposit call has returned (or never started): its outcome is known, or
-                // already recorded as unknown, which keeps refusing.
-                savedStateHandle[KEY_DEPOSIT_IN_PROGRESS] = false
+                // A deposit that went out stays marked until its result is taken over
+                // (acknowledgeDepositResult); a refused one was unmarked where it was refused.
                 commitInFlight.set(false)
             }
         }
@@ -182,7 +190,6 @@ class MayaConversionPreviewViewModel @Inject constructor(
                 savedStateHandle[KEY_DEPOSIT_IN_PROGRESS] = true
             }
         }
-        savedStateHandle[KEY_DEPOSIT_IN_PROGRESS] = false
         when (result) {
             is ResponseResource.Success -> {
                 // Wait for the swap transaction to be IS-locked or confirmed on the network.
@@ -215,6 +222,7 @@ class MayaConversionPreviewViewModel @Inject constructor(
 
                 _showLoading.value = false
                 if (result.value == SwapTradeResponse.EMPTY_SWAP_TRADE) {
+                    savedStateHandle[KEY_DEPOSIT_IN_PROGRESS] = false
                     commitSwapTradeFailureState.call()
                 } else {
                     // commitSwapTransaction refreshes the route before broadcasting, and on
@@ -270,6 +278,9 @@ class MayaConversionPreviewViewModel @Inject constructor(
             }
             is ResponseResource.Failure -> {
                 _showLoading.value = false
+                // Refused, or its outcome unknown (recorded below as the terminal flag): either
+                // way no longer a deposit in progress.
+                savedStateHandle[KEY_DEPOSIT_IN_PROGRESS] = false
                 if (result.throwable is InsufficientFundsException) {
                     onInsufficientMoneyCallback.call()
                     return

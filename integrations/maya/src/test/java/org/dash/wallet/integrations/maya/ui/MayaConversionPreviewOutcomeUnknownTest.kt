@@ -27,12 +27,16 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.common.services.PaymentSubmissionPendingException
+import org.dash.wallet.integrations.maya.api.DispatchingSwapProvider
 import org.dash.wallet.integrations.maya.api.SwapProvider
 import org.dash.wallet.integrations.maya.model.Amount
 import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
+import org.dash.wallet.integrations.maya.ui.convert_currency.model.SendTransactionToWalletParams
+import org.dash.wallet.integrations.maya.utils.SwapBackend
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -71,10 +75,13 @@ class MayaConversionPreviewOutcomeUnknownTest {
     private val networkState = mock<NetworkStateInt>()
     private val order = SwapTradeUIModel(Amount(), false, "vaultAddress", "destinationAddress")
 
+    private val walletDataProvider = mock<WalletDataProvider>()
+    private val dispatchingSwapProvider = mock<DispatchingSwapProvider>()
+
     private fun viewModel(savedState: SavedStateHandle) = MayaConversionPreviewViewModel(
         swapProvider,
-        mock(),
-        mock(),
+        dispatchingSwapProvider,
+        walletDataProvider,
         mock(),
         networkState,
         mock(),
@@ -207,6 +214,57 @@ class MayaConversionPreviewOutcomeUnknownTest {
         viewModel(savedState).commitSwapTrade("trade").join()
 
         // The deposit was refused (a retryable failure): the restored screen may confirm again.
+        assertFalse(viewModel(restoredFrom(savedState)).paymentOutcomeUnknown.value)
+    }
+
+    /** A deposit that went out (txid [sentTxid]); its IS-lock wait is held on [lock]. */
+    private suspend fun stubSentDeposit(lock: CompletableDeferred<Unit>) {
+        whenever(networkState.isConnected).thenReturn(MutableStateFlow(true))
+        whenever(dispatchingSwapProvider.currentBackend()).thenReturn(SwapBackend.MAYA)
+        whenever(walletDataProvider.waitUntilLocked(any())).doSuspendableAnswer { lock.await() }
+        whenever(swapProvider.commitSwapTransaction(any(), any(), any())).doSuspendableAnswer {
+            @Suppress("UNCHECKED_CAST")
+            (it.arguments[2] as suspend () -> Unit).invoke()
+            ResponseResource.Success(order.copy().apply { txid = sentTxid })
+        }
+    }
+
+    private val sentTxid = "ab".repeat(32)
+
+    @Test
+    fun aSentDeposit_waitingForItsLock_whenTheProcessDies_isAnUnknownOutcome_onRestore() = runTest {
+        val lock = CompletableDeferred<Unit>()
+        stubSentDeposit(lock)
+        val savedState = SavedStateHandle(mapOf("swap_trade_order" to order))
+        val committing = viewModel(savedState).commitSwapTrade("trade")
+
+        // Broadcast; the process is killed while the screen waits up to 10s for the IS-lock.
+        val restored = viewModel(restoredFrom(savedState))
+        assertTrue(restored.paymentOutcomeUnknown.value)
+        restored.commitSwapTrade("trade").join()
+
+        lock.complete(Unit)
+        committing.join()
+        verify(swapProvider, times(1)).commitSwapTransaction(any(), any(), any())
+    }
+
+    @Test
+    fun aSentDeposit_staysMarked_untilItsResultIsTakenOver() = runTest {
+        val lock = CompletableDeferred<Unit>()
+        lock.complete(Unit)
+        stubSentDeposit(lock)
+        val savedState = SavedStateHandle(mapOf("swap_trade_order" to order))
+        val viewModel = viewModel(savedState)
+        var delivered: SendTransactionToWalletParams? = null
+        viewModel.commitSwapTradeSuccessState.observeForever { delivered = it }
+
+        viewModel.commitSwapTrade("trade").join()
+        assertEquals(sentTxid, delivered?.txid)
+
+        // Delivered, but not yet recorded as the flow's pending result.
+        assertTrue(viewModel(restoredFrom(savedState)).paymentOutcomeUnknown.value)
+
+        viewModel.acknowledgeDepositResult()
         assertFalse(viewModel(restoredFrom(savedState)).paymentOutcomeUnknown.value)
     }
 }

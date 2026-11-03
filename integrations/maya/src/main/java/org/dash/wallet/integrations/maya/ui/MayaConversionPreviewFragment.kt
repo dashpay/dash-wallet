@@ -217,6 +217,8 @@ class MayaConversionPreviewFragment : Fragment() {
             // Remember the result until the user acknowledges it: the lock screen auto-dismisses
             // the result sheet, and this lets us re-show it once the lock screen goes away.
             convertViewModel.pendingConversionResult = transactionParams
+            // That saved result now answers for the deposit after a restore.
+            viewModel.acknowledgeDepositResult()
             safeNavigate(
                 MayaConversionPreviewFragmentDirections.mayaOrderPreviewToOrderExecution(transactionParams)
             )
