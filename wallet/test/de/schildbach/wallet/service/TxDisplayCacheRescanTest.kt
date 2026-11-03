@@ -368,6 +368,11 @@ class TxDisplayCacheRescanTest {
         awaitTrue { replacedRows.isNotEmpty() }
         assertEquals(1, replacedRows.last().size)
         assertEquals(tx.txId.toString(), replacedRows.last().first().rowId)
+        // The rebuild is bound to the emission's wallet: both the factory it wrapped
+        // with and the one it republished hold it (the wrapAllTransactions stub itself
+        // ignores its wallet argument, so this is what pins it).
+        assertSame(wallet, wrapAllCoinJoinFactories.last().wallet)
+        assertSame(wallet, cache.coinJoinWrapperFactory()?.wallet)
         // Still 1: the reset re-hydrates by walking the wallet (rebuildWrappedList), not by
         // re-reading the (now-cleared) CoinJoin/CrowdNode group cache.
         coVerify(exactly = 1) { groupDao.getActiveGroups(any()) }
