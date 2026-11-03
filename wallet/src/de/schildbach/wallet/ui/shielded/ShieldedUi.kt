@@ -21,7 +21,9 @@ import org.bitcoinj.core.Coin
 import org.dash.wallet.common.money.Fiat
 import org.dash.wallet.common.money.MonetaryFormat
 import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.common.util.toFormattedString
+import org.dash.wallet.common.util.toFormattedStringNoCode
 import java.math.BigDecimal
 import java.text.NumberFormat
 import de.schildbach.wallet.util.format
@@ -172,6 +174,27 @@ fun Fiat.toDashAt(rate: Fiat?): Dash? = rate?.let {
 
 /** "$50.00"-style formatted fiat string. */
 fun Fiat.toDisplay(): String = toFormattedString()
+
+/**
+ * "50.00"-style formatted fiat string, two decimals and no currency symbol — for the
+ * amount-entry secondary line, which renders its own currency symbol separately.
+ */
+fun Fiat.toDisplayNoCode(): String = toFormattedStringNoCode()
+
+private val FIAT_KEYPAD_TWO_DECIMALS_FORMAT: MonetaryFormat =
+    MonetaryFormat().minDecimals(2).optionalDecimals().noCode()
+
+/**
+ * "300.03"-style fiat string, two decimals, with the same locale-neutral `.` separator as
+ * [Dash.toKeypadString] (this format never calls `.withLocale()`, unlike [toDisplayNoCode]) — for
+ * the EDITABLE keypad field (Max tap and currency toggle), which must stay parseable by
+ * [parseDecimalOrNull]/[processAmountKeyInput] on a comma-decimal device locale, and must match the
+ * keypad's own two-decimal fiat precision so the resulting text is immediately editable.
+ */
+fun Fiat.toKeypadStringTwoDecimals(): String {
+    if (isZero) return "0"
+    return FIAT_KEYPAD_TWO_DECIMALS_FORMAT.format(this).toString()
+}
 
 /** Ellipsized middle of a long address for one-line display. */
 fun String.ellipsizeAddress(head: Int = 10, tail: Int = 6): String =
