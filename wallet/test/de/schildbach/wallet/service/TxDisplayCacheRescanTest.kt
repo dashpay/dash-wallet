@@ -450,17 +450,15 @@ class TxDisplayCacheRescanTest {
     /**
      * MO-1109 regression (i): the warm-cache branch must publish the live pipeline
      * (RoomLive, Pager invalidation, transactionsLoaded) BEFORE hydrating the group
-     * factories. A getActiveGroups failure ends the whole filter subscription through
-     * its catch — at base the live Pager kept serving the cache rows through that, so
-     * hydrating first would regress a transient group-read failure into a session with
-     * no live list at all. The retry the hydrate-first order used to provide lives in
-     * the wallet-identity term of the same-wallet fast-path check: the factory is
-     * published only after hydration finishes, so a direction change cancelling an
-     * in-flight hydration re-enters the warm path (getActiveGroups runs again) instead
-     * of taking the flag-only fast path. A THROWN read, by contrast, ends the
-     * subscription with no next emission (the accepted residual, same as base), so the
-     * warm re-entry is staged here via a cancelled first hydration and the throw lands
-     * on the retry's read.
+     * factories, and a getActiveGroups failure must neither take the live list down nor
+     * end the filter subscription — the hydration only enriches CoinJoin/CrowdNode rows
+     * over a perfectly good cache. The retry lives in the wallet-identity term of the
+     * same-wallet fast-path check: the factory is published only after hydration
+     * finishes, so a direction change cancelling an in-flight hydration — or following
+     * a THROWN read, which likewise leaves the factory unpublished — re-enters the warm
+     * path (getActiveGroups runs again) instead of taking the flag-only fast path. The
+     * warm re-entry is staged here via a cancelled first hydration, the throw lands on
+     * the retry's read, and a third pick proves the subscription survived the throw.
      */
     @Test
     fun groupReadFailureOnTheWarmPathStillStartsTheLiveList() = runBlocking {
@@ -499,12 +497,24 @@ class TxDisplayCacheRescanTest {
         withTimeout(5_000) { firstHydrationCancelled.await() }
         coVerify(timeout = 5_000, exactly = 2) { groupDao.getActiveGroups(any()) }
 
-        // The failed read ended the filter subscription, but the live list survived it:
-        // still loaded, the Pager re-queried with the picked flag, and nothing rebuilt.
+        // The live list survived the failed read: still loaded, the Pager re-queried
+        // with the picked flag, and nothing rebuilt.
         awaitTrue { createdPagingSources[0].invalid }
         awaitTrue { createdPagingSources.size >= 2 }
         assertEquals(TxDisplayCacheEntry.FLAG_SENT, createdPagingSources[1].filterFlag)
         assertTrue(cache.transactionsLoaded.value)
+        coVerify(exactly = 0) { displayDao.replaceAll(any()) }
+
+        // So did the filter subscription: a later pick (RECEIVED — _currentFilter is a
+        // StateFlow, so re-picking SENT would not re-emit) still reaches the Pager, and
+        // the factory the throw left unpublished routes it through the warm path again
+        // (a third getActiveGroups read, which succeeds and publishes the factory).
+        cache.setFilter(TxFilterType.RECEIVED)
+        awaitTrue { createdPagingSources[1].invalid }
+        awaitTrue { createdPagingSources.size >= 3 }
+        assertEquals(TxDisplayCacheEntry.FLAG_RECEIVED, createdPagingSources[2].filterFlag)
+        coVerify(timeout = 5_000, exactly = 3) { groupDao.getActiveGroups(any()) }
+        awaitTrue { cache.coinJoinWrapperFactory()?.wallet === wallet }
         coVerify(exactly = 0) { displayDao.replaceAll(any()) }
     }
 

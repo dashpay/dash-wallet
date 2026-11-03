@@ -324,10 +324,8 @@ class TxDisplayCacheService @Inject constructor(
                     _currentPagingSource.value?.invalidate()
                 } else if (cachedRowCount == null || cachedRowCount > 0) {
                     // Publish the live pipeline BEFORE hydrating the group factories: the
-                    // cache rows are already there, and a getActiveGroups failure below
-                    // completes this whole subscription through the catch below, so a
-                    // RoomLive flipped only after hydration would leave the session with
-                    // no live Pager at all over a perfectly good cache. Flipping it before
+                    // cache rows are already there, so the live Pager must not wait on a
+                    // hydration that only enriches CoinJoin/CrowdNode rows. Flipping it before
                     // hydration is safe because the retry lives in the wallet-identity
                     // term of the same-wallet fast-path check above: every hydrating
                     // writer publishes coinJoinWrapperFactory only after its hydration
@@ -335,8 +333,7 @@ class TxDisplayCacheService @Inject constructor(
                     // KNOWN-zero count fails that check), so a cancelled hydration leaves
                     // the factory at its previous value, fails the check, and the next
                     // emission re-enters this branch instead of taking the flag-only fast
-                    // path. A thrown read has no next emission — it ends this subscription
-                    // through the catch below, as at base.
+                    // path.
                     _liveFilterFlag.value = filter.direction.toFilterFlag()
                     // Re-assigning the RoomLive singleton does not emit from the StateFlow, so
                     // the live Pager (still the previous wallet's) would otherwise keep running
@@ -345,7 +342,17 @@ class TxDisplayCacheService @Inject constructor(
                     _txDataSource.value = TxDataSource.RoomLive
                     _currentPagingSource.value?.invalidate()
                     _transactionsLoaded.value = true
-                    initializeFactoriesFromCache()
+                    // A failed hydration must not end this subscription (the catch below
+                    // completes the combine, and no later filter pick would ever reach the
+                    // Pager again); the factory it leaves unpublished is what makes the next
+                    // emission fail the same-wallet check above and retry the hydration here.
+                    try {
+                        initializeFactoriesFromCache()
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        log.warn("group factory hydration from cache failed; the next emission retries it", e)
+                    }
                 } else {
                     rebuildWrappedList(filter)
                 }
