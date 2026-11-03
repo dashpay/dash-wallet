@@ -130,10 +130,11 @@ internal fun verificationLinkPublisher(
 ): suspend (String) -> Unit = { label ->
     val link = config.getPreservingErrors(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK)
     if (link != null && SdkTransparentUsernameCreation.isVerificationLink(link)) {
-        de.schildbach.wallet.ui.dashpay.work.BroadcastIdentityVerifyOperation(application)
-            .create(label, link)
-            .enqueue()
-            .await()
+        val operation = de.schildbach.wallet.ui.dashpay.work.BroadcastIdentityVerifyOperation(application)
+        // a re-publish (a reconcile after the first one was enqueued) never broadcasts twice
+        if (!de.schildbach.wallet.ui.dashpay.work.BroadcastIdentityVerifyOperation.publishedOrPending(operation.states(label))) {
+            operation.create(label, link).enqueue().await()
+        }
     }
 }
 
@@ -2068,9 +2069,27 @@ class SdkTransparentUsernameCreation internal constructor(
         // the replacement: a vote check for the old name can write its snapshot back over it
         val replacementVoting = pending.creationState == IdentityCreationState.VOTING &&
             pending.recordUsername?.let { Names.normalizeString(it) } == Names.normalizeString(request.username)
-        if (pending.recordIdentityId != identityIdBase58 || replacementVoting) {
-            // another identity's record, or recovery already took it to its vote
+        if (pending.recordIdentityId != identityIdBase58) {
+            // another identity's record
             log.info("pending name-only retry for {}… already finished; clearing it", identityIdBase58.take(8))
+            finishPendingNameRetry()
+            return false
+        }
+        if (replacementVoting) {
+            // Recovery took it to its vote, which proves the name, not the separate verification
+            // link publication (its enqueue can have failed, or the process died before it): that
+            // keeps the retry pending until it is done. The publisher never publishes twice.
+            if (Names.isUsernameContestable(request.username)) {
+                try {
+                    publishVerificationLink(request.username)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    log.warn("could not publish the voting replacement's verification link; retrying later", e)
+                    return false
+                }
+            }
+            log.info("pending name-only retry for {}… reached its vote; clearing it", identityIdBase58.take(8))
             finishPendingNameRetry()
             return false
         }

@@ -22,6 +22,7 @@ import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.PlatformBroadcastService
 import de.schildbach.wallet.service.work.BaseWorker
 import org.bitcoinj.crypto.KeyCrypterException
@@ -35,13 +36,30 @@ class BroadcastIdentityVerifyWorker @AssistedInject constructor(
     @Assisted parameters: WorkerParameters,
     val analytics: AnalyticsService,
     val platformBroadcastService: PlatformBroadcastService,
-    val walletDataProvider: WalletData
+    val walletDataProvider: WalletData,
+    val identityRepository: IdentityRepository
 ) : BaseWorker(context, parameters) {
+
+    enum class IdentityWait { PUBLISH, RETRY, GIVE_UP }
 
     companion object {
         const val KEY_PASSWORD = "BroadcastIdentityVerifyWorker.PASSWORD"
         const val KEY_USERNAME = "BroadcastIdentityVerifyWorker.USERNAME"
         const val KEY_URL = "BroadcastIdentityVerifyWorker.URL"
+
+        /**
+         * Runs (with WorkManager's backoff) this worker waits for the identity to be loaded
+         * before it gives up: an SDK registration enqueues it next to recovery, which loads the
+         * identity only when it finishes.
+         */
+        const val MAX_IDENTITY_WAIT_ATTEMPTS = 12
+
+        /** Whether to publish now, wait for recovery to load the identity, or stop waiting. */
+        fun identityWait(identityLoaded: Boolean, runAttemptCount: Int): IdentityWait = when {
+            identityLoaded -> IdentityWait.PUBLISH
+            runAttemptCount < MAX_IDENTITY_WAIT_ATTEMPTS -> IdentityWait.RETRY
+            else -> IdentityWait.GIVE_UP
+        }
     }
 
     override suspend fun doWorkWithBaseProgress(): Result {
@@ -59,6 +77,16 @@ class BroadcastIdentityVerifyWorker @AssistedInject constructor(
             analytics.logError(ex, "Identity Verify: failed to derive encryption key")
             val msg = formatExceptionMessage("derive encryption key", ex)
             return Result.failure(workDataOf(KEY_ERROR_MESSAGE to msg))
+        }
+
+        // Not loaded yet (recovery still running): retry later instead of failing for good,
+        // which would leave the name's contest without its verification link.
+        when (identityWait(identityRepository.blockchainIdentity?.identity != null, runAttemptCount)) {
+            IdentityWait.PUBLISH -> Unit
+            IdentityWait.RETRY -> return Result.retry()
+            IdentityWait.GIVE_UP -> return Result.failure(
+                workDataOf(KEY_ERROR_MESSAGE to "the identity was never loaded; verification link not published")
+            )
         }
 
         return try {

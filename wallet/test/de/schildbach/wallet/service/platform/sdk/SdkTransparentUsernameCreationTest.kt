@@ -1618,6 +1618,42 @@ class SdkTransparentUsernameCreationTest {
     }
 
     @Test
+    fun `a contested replacement recovery took to its vote still publishes its link before it is cleared`() = runTest {
+        // recovery's enqueue landed, the verification enqueue did not (a failed link read, or a
+        // process death between the two): reaching VOTING does not discharge the publication
+        val source = source(lockAfterFailure = null)
+        val store = de.schildbach.wallet.service.platform.InMemoryRequestedNameJournal()
+        store.beginNameOnlyRetry(RequestedNameContext(identityIdBase58, "alice", null))
+        store.creationState = IdentityCreationState.VOTING
+        store.username = "alice"
+        val run = RetryRun()
+
+        instance(source, store, run).reconcileInterruptedNameRetry()
+
+        assertEquals(listOf("alice"), run.published.map { it.first })
+        assertNull("cleared once published", store.pendingNameOnlyRetry())
+        assertTrue("nothing registered or handed off again", run.handedOff.isEmpty())
+        coVerify(exactly = 0) { source.registerDpnsName(any(), any(), any()) }
+    }
+
+    @Test
+    fun `a voting replacement whose link cannot be published yet stays pending`() = runTest {
+        val source = source(lockAfterFailure = null)
+        val store = de.schildbach.wallet.service.platform.InMemoryRequestedNameJournal()
+        store.beginNameOnlyRetry(RequestedNameContext(identityIdBase58, "alice", null))
+        store.creationState = IdentityCreationState.VOTING
+        store.username = "alice"
+        val run = RetryRun()
+
+        assertFalse(
+            instance(source, store, run, publishVerificationLink = { throw java.io.IOException("link unreadable") })
+                .reconcileInterruptedNameRetry()
+        )
+
+        assertTrue("the next trigger publishes it", store.pendingNameOnlyRetry() != null)
+    }
+
+    @Test
     fun `a pending retry whose record a stale vote check put back to the old name is reconciled, not cleared`() = runTest {
         // a voting lookup for the old name finished after the replacement was accepted and wrote
         // its whole snapshot back: VOTING, but for the old name; the replacement never registered

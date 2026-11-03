@@ -33,6 +33,14 @@ class BroadcastIdentityVerifyOperation(val application: Application) {
         private const val WORK_NAME = "BroadcastIdentityVerify.WORK#"
 
         fun uniqueWorkName(toUserId: String) = WORK_NAME + toUserId
+
+        /**
+         * The name's verification work already published its document, or is still queued or
+         * running: publishing again would broadcast a second document (KEEP only covers work
+         * that has not finished).
+         */
+        fun publishedOrPending(states: List<WorkInfo.State>): Boolean =
+            states.any { it == WorkInfo.State.SUCCEEDED || !it.isFinished }
     }
 
     private val workManager: WorkManager = WorkManager.getInstance(application)
@@ -41,6 +49,10 @@ class BroadcastIdentityVerifyOperation(val application: Application) {
      * Gets the list of all SendContactRequestWorker WorkInfo's
      */
     val allOperationsData = workManager.getWorkInfosByTagLiveData(BroadcastIdentityVerifyWorker::class.qualifiedName!!)
+
+    /** The states of [username]'s verification work WorkManager still remembers. */
+    suspend fun states(username: String): List<WorkInfo.State> =
+        workManager.getWorkInfosForUniqueWork(uniqueWorkName(username)).await().map { it.state }
 
     @SuppressLint("EnqueueWork")
     fun create(username: String, url: String): WorkContinuation {
