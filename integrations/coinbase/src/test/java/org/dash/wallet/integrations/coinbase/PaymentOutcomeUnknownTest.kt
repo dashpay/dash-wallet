@@ -236,6 +236,95 @@ class PaymentOutcomeUnknownTest {
     }
 
     @Test
+    fun transferDash_aSuccessHeldWhileLocked_whenTheProcessDies_refusesTheTransferOnRestore() = runTest {
+        coEvery { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any()) } returns "txid"
+        val savedState = SavedStateHandle()
+        val viewModel = transferViewModel(savedState)
+
+        // Sent; the result waits for the screen (the wallet is locked) when the process is killed.
+        assertTrue(viewModel.submitTransfer(Dash.valueOf(100_000), false, true, null))
+        advanceUntilIdle()
+        assertTrue(viewModel.observeSendDashToCoinbaseState.value is SendDashResponseState.SuccessState)
+
+        val restored = transferViewModel(restoredFrom(savedState))
+        assertTrue(restored.paymentOutcomeUnknown.value)
+        assertFalse(restored.submitTransfer(Dash.valueOf(100_000), false, true, null))
+        coVerify(exactly = 1) { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any()) }
+    }
+
+    @Test
+    fun transferDash_aSuccessTakenByTheScreen_isNotUnknown_onRestore() = runTest {
+        coEvery { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any()) } returns "txid"
+        val savedState = SavedStateHandle()
+        val viewModel = transferViewModel(savedState)
+
+        assertTrue(viewModel.submitTransfer(Dash.valueOf(100_000), false, true, null))
+        advanceUntilIdle()
+        val result = requireNotNull(viewModel.observeSendDashToCoinbaseState.value)
+        assertTrue(viewModel.consumeSendDashToCoinbaseState(result))
+
+        assertFalse(transferViewModel(restoredFrom(savedState)).paymentOutcomeUnknown.value)
+    }
+
+    @Test
+    fun transferDash_anEarlierTransfersLeftoverWarning_isNotAskedOnANewTransferScreen() = runTest {
+        coEvery {
+            sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any())
+        } throws LeftoverBalanceException(Dash.valueOf(1_000), "leftover")
+        val viewModel = transferViewModel(SavedStateHandle())
+
+        // Raised for a transfer the user left without answering.
+        assertTrue(viewModel.submitTransfer(Dash.valueOf(100_000), false, true, null))
+        advanceUntilIdle()
+        assertTrue(viewModel.leftoverBalanceWarning.value != null)
+
+        viewModel.startNewTransfer()
+
+        assertNull(viewModel.leftoverBalanceWarning.value)
+    }
+
+    @Test
+    fun transferDash_aSendFinishingAfterANewTransferOpened_isNotShownOnIt() = runTest {
+        val held = CompletableDeferred<Unit>()
+        var leftover = true
+        coEvery {
+            sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any())
+        } coAnswers {
+            held.await()
+            if (leftover) throw LeftoverBalanceException(Dash.valueOf(1_000), "leftover")
+            "txid"
+        }
+        val viewModel = transferViewModel(SavedStateHandle())
+
+        assertTrue(viewModel.submitTransfer(Dash.valueOf(100_000), false, true, null))
+        runCurrent()
+        // The screen is left (e.g. the session expired) and Transfer is opened again.
+        viewModel.startNewTransfer()
+        held.complete(Unit)
+        advanceUntilIdle()
+
+        assertNull("the old amount's question", viewModel.leftoverBalanceWarning.value)
+
+        // Likewise an old transfer's result, or its unknown outcome.
+        val again = CompletableDeferred<Unit>()
+        leftover = false
+        coEvery {
+            sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any())
+        } coAnswers {
+            again.await()
+            throw outcomeUnknown
+        }
+        assertTrue(viewModel.submitTransfer(Dash.valueOf(100_000), false, true, null))
+        runCurrent()
+        viewModel.startNewTransfer()
+        again.complete(Unit)
+        advanceUntilIdle()
+
+        assertNull(viewModel.observeSendDashToCoinbaseState.value)
+        assertFalse(viewModel.paymentOutcomeUnknown.value)
+    }
+
+    @Test
     fun transferDash_concurrentSends_onlyOneReachesTheWallet_andARetryableFailureAllowsAnother() = runTest {
         val gate = CompletableDeferred<Unit>()
         coEvery {

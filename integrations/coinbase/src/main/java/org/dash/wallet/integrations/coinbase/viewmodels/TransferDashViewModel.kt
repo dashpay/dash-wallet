@@ -39,6 +39,7 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import org.dash.wallet.common.services.ReceiveAddressUnavailableException
 
@@ -58,6 +59,7 @@ class TransferDashViewModel @Inject constructor(
     companion object {
         private const val KEY_PAYMENT_OUTCOME_UNKNOWN = "payment_outcome_unknown"
         private const val KEY_SEND_IN_PROGRESS = "send_in_progress"
+        private const val KEY_SENT_UNDELIVERED = "sent_undelivered"
     }
 
     /**
@@ -75,8 +77,17 @@ class TransferDashViewModel @Inject constructor(
      * refusing the uncertain one.
      */
     fun startNewTransfer() {
+        // Results and questions of an earlier transfer, including one whose send is still
+        // running, are dropped rather than shown on (or answered from) the new screen.
+        transferGeneration.incrementAndGet()
+        _leftoverBalanceWarning.value = null
+        _sendDashToCoinbaseState.value = null
         savedStateHandle[KEY_PAYMENT_OUTCOME_UNKNOWN] = false
+        savedStateHandle[KEY_SENT_UNDELIVERED] = false
     }
+
+    /** Which opened transfer screen a send belongs to (see [startNewTransfer]). */
+    private val transferGeneration = AtomicInteger(0)
 
     init {
         // A transfer was sending when the process died: it may have gone out, and nothing is
@@ -84,6 +95,12 @@ class TransferDashViewModel @Inject constructor(
         if (savedStateHandle.get<Boolean>(KEY_SEND_IN_PROGRESS) == true) {
             savedStateHandle[KEY_PAYMENT_OUTCOME_UNKNOWN] = true
             savedStateHandle[KEY_SEND_IN_PROGRESS] = false
+        }
+        // A transfer went out, but the process died before the screen took its result (held
+        // while the wallet was locked): the restored screen must not offer it again.
+        if (savedStateHandle.get<Boolean>(KEY_SENT_UNDELIVERED) == true) {
+            savedStateHandle[KEY_PAYMENT_OUTCOME_UNKNOWN] = true
+            savedStateHandle[KEY_SENT_UNDELIVERED] = false
         }
     }
 
@@ -124,6 +141,7 @@ class TransferDashViewModel @Inject constructor(
         if (paymentOutcomeUnknown.value || sendInFlight.get()) {
             return false
         }
+        val generation = transferGeneration.get()
         // Undispatched: sendDash claims the send before this returns.
         viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
             _loadingState.value = true
@@ -133,7 +151,11 @@ class TransferDashViewModel @Inject constructor(
                 if (!ex.isLeftoverBalanceWarning) {
                     throw ex
                 }
-                _leftoverBalanceWarning.value = PendingTransfer(dashValue, isEmptyWallet, session)
+                // Asked only on the screen that started it: answered on a newer one, it would
+                // send the old amount without the balance check.
+                if (generation == transferGeneration.get()) {
+                    _leftoverBalanceWarning.value = PendingTransfer(dashValue, isEmptyWallet, session)
+                }
             } finally {
                 _loadingState.value = false
             }
@@ -173,12 +195,26 @@ class TransferDashViewModel @Inject constructor(
     val observeSendDashToCoinbaseState: StateFlow<SendDashResponseState?> = _sendDashToCoinbaseState.asStateFlow()
 
     /** True for exactly one taker of [state], which then shows it. */
-    fun consumeSendDashToCoinbaseState(state: SendDashResponseState): Boolean =
-        _sendDashToCoinbaseState.compareAndSet(state, null)
+    fun consumeSendDashToCoinbaseState(state: SendDashResponseState): Boolean {
+        val taken = _sendDashToCoinbaseState.compareAndSet(state, null)
+        if (taken && state is SendDashResponseState.SuccessState) {
+            savedStateHandle[KEY_SENT_UNDELIVERED] = false
+        }
+        return taken
+    }
 
     /** Gives back a taken [state] the user did not answer, unless a newer one arrived. */
     fun retainSendDashToCoinbaseState(state: SendDashResponseState) {
-        _sendDashToCoinbaseState.compareAndSet(null, state)
+        if (_sendDashToCoinbaseState.compareAndSet(null, state)) {
+            markSentUndelivered(state)
+        }
+    }
+
+    /** A transfer that went out stays marked, in the saved state, until the screen takes its result. */
+    private fun markSentUndelivered(state: SendDashResponseState) {
+        if (state is SendDashResponseState.SuccessState) {
+            savedStateHandle[KEY_SENT_UNDELIVERED] = true
+        }
     }
 
     private val _userAccountDataWithExchangeRate = MutableLiveData<CoinbaseToDashExchangeRateUIModel>()
@@ -321,12 +357,23 @@ class TransferDashViewModel @Inject constructor(
         // Saved with the screen's state: should the process die before this send ends, the
         // restored screen treats its outcome as unknown (see init).
         savedStateHandle[KEY_SEND_IN_PROGRESS] = true
+        val generation = transferGeneration.get()
         try {
-            _sendDashToCoinbaseState.value = checkTransaction(dashValue, isEmptyWallet, checkConditions, session)
+            val state = checkTransaction(dashValue, isEmptyWallet, checkConditions, session)
+            // A newer transfer screen was opened meanwhile: this result is not its own.
+            if (generation == transferGeneration.get()) {
+                if (state == SendDashResponseState.OutcomeUnknownState) {
+                    savedStateHandle[KEY_PAYMENT_OUTCOME_UNKNOWN] = true
+                }
+                markSentUndelivered(state)
+                _sendDashToCoinbaseState.value = state
+            }
         } catch (ex: CancellationException) {
             // Cancelled while sending: the transfer may have gone out, and nobody is left to
             // learn whether it did.
-            savedStateHandle[KEY_PAYMENT_OUTCOME_UNKNOWN] = true
+            if (generation == transferGeneration.get()) {
+                savedStateHandle[KEY_PAYMENT_OUTCOME_UNKNOWN] = true
+            }
             throw ex
         } finally {
             // An unknown outcome has already set the terminal flag above, which keeps refusing.
@@ -382,7 +429,6 @@ class TransferDashViewModel @Inject constructor(
                 e.isLeftoverBalanceWarning -> throw e
                 // May have been sent: never reported as a failure, which offers a retry.
                 e is PaymentSubmissionPendingException -> {
-                    savedStateHandle[KEY_PAYMENT_OUTCOME_UNKNOWN] = true
                     e.printStackTrace()
                     SendDashResponseState.OutcomeUnknownState
                 }

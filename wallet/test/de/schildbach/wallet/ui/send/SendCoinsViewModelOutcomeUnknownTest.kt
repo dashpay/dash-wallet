@@ -328,4 +328,40 @@ class SendCoinsViewModelOutcomeUnknownTest {
         assertTrue(viewModel.consumeSendOutcome(requireNotNull(outcome)))
         assertFalse(viewModel.consumeSendOutcome(outcome))
     }
+
+    @Test
+    fun aSentResultHeldWhileLocked_whenTheProcessDies_isAnUnknownOutcome_onRestore() {
+        val sends = AtomicInteger()
+        val savedState = SavedStateHandle()
+        val viewModel = buildViewModel(runner(sends) { mockk(relaxed = true) }, savedState)
+        open(viewModel)
+
+        // The send goes out, but its result waits for the screen (the wallet is locked).
+        assertTrue(viewModel.submitPayment(amount, null, checkBalance = true, autoAcceptContactRequest = false))
+        awaitCondition("the send's outcome") { viewModel.sendOutcome.value != null }
+        assertTrue(viewModel.sendOutcome.value is SendCoinsViewModel.SendOutcome.Sent)
+
+        // The process is killed before the screen takes it: the same payment must not be sendable.
+        val restored = buildViewModel(runner(sends) { mockk(relaxed = true) }, restoredFrom(savedState))
+        assertTrue(restored.paymentOutcomeUnknown.value)
+        open(restored)
+        assertFalse(restored.everythingPlausible())
+        assertThrows(SendRefusedException::class.java) { send(restored) }
+        assertEquals(1, sends.get())
+    }
+
+    @Test
+    fun aSentResultTakenByTheScreen_isNotAnUnknownOutcome_onRestore() {
+        val sends = AtomicInteger()
+        val savedState = SavedStateHandle()
+        val viewModel = buildViewModel(runner(sends) { mockk(relaxed = true) }, savedState)
+        open(viewModel)
+
+        assertTrue(viewModel.submitPayment(amount, null, checkBalance = true, autoAcceptContactRequest = false))
+        awaitCondition("the send's outcome") { viewModel.sendOutcome.value != null }
+        assertTrue(viewModel.consumeSendOutcome(requireNotNull(viewModel.sendOutcome.value)))
+
+        val restored = buildViewModel(runner(sends) { mockk(relaxed = true) }, restoredFrom(savedState))
+        assertFalse(restored.paymentOutcomeUnknown.value)
+    }
 }

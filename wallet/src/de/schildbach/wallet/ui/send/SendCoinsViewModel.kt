@@ -118,6 +118,7 @@ class SendCoinsViewModel @Inject constructor(
         private val log = LoggerFactory.getLogger(SendCoinsViewModel::class.java)
         private const val KEY_PAYMENT_OUTCOME_UNKNOWN = "payment_outcome_unknown"
         private const val KEY_SEND_IN_PROGRESS = "send_in_progress"
+        private const val KEY_SENT_UNDELIVERED = "sent_undelivered"
     }
 
     /**
@@ -137,6 +138,13 @@ class SendCoinsViewModel @Inject constructor(
             log.warn("a send was in progress when the process died; its outcome is unknown")
             savedStateHandle[KEY_PAYMENT_OUTCOME_UNKNOWN] = true
             savedStateHandle[KEY_SEND_IN_PROGRESS] = false
+        }
+        // A send went out, but the process died before the screen took its result (held while
+        // the wallet was locked): the restored screen must not offer the same payment again.
+        if (savedStateHandle.get<Boolean>(KEY_SENT_UNDELIVERED) == true) {
+            log.warn("a sent payment's result was lost with the process; treating it as unknown")
+            savedStateHandle[KEY_PAYMENT_OUTCOME_UNKNOWN] = true
+            savedStateHandle[KEY_SENT_UNDELIVERED] = false
         }
     }
 
@@ -191,6 +199,9 @@ class SendCoinsViewModel @Inject constructor(
             } catch (ex: Exception) {
                 SendOutcome.Failed(ex, autoAcceptContactRequest)
             }
+            // Saved with the outcome, on the same main-thread turn the in-progress mark was
+            // cleared in: a payment that went out stays marked until the screen takes it.
+            markSentUndelivered(outcome)
             _sendOutcome.value = outcome
             resetState()
         }
@@ -198,11 +209,25 @@ class SendCoinsViewModel @Inject constructor(
     }
 
     /** Takes [outcome] for handling; false if it was already taken (the screen acts on it once). */
-    fun consumeSendOutcome(outcome: SendOutcome): Boolean = _sendOutcome.compareAndSet(outcome, null)
+    fun consumeSendOutcome(outcome: SendOutcome): Boolean {
+        val taken = _sendOutcome.compareAndSet(outcome, null)
+        if (taken && outcome is SendOutcome.Sent) {
+            savedStateHandle[KEY_SENT_UNDELIVERED] = false
+        }
+        return taken
+    }
 
     /** Gives back a taken [outcome] the user did not answer, unless a newer one arrived. */
     fun retainSendOutcome(outcome: SendOutcome) {
-        _sendOutcome.compareAndSet(null, outcome)
+        if (_sendOutcome.compareAndSet(null, outcome)) {
+            markSentUndelivered(outcome)
+        }
+    }
+
+    private fun markSentUndelivered(outcome: SendOutcome) {
+        if (outcome is SendOutcome.Sent) {
+            savedStateHandle[KEY_SENT_UNDELIVERED] = true
+        }
     }
 
     /** Held while one send is in progress (see [signAndSendPayment]). */
