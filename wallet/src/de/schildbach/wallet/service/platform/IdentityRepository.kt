@@ -26,6 +26,7 @@ import de.schildbach.wallet.ui.dashpay.PlatformRepo.Companion.TOP_CONTACT_COUNT
 import de.schildbach.wallet.ui.dashpay.UserAlert
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig.Companion.UPGRADE_IDENTITY_REQUIRED
+import de.schildbach.wallet.ui.dashpay.utils.ownedRecordPrimary
 import de.schildbach.wallet.ui.dashpay.utils.preferDisplayLabel
 import de.schildbach.wallet.ui.dashpay.utils.recoveredPrimaryIsPendingDualSecondary
 import io.grpc.StatusRuntimeException
@@ -167,6 +168,13 @@ interface IdentityRepository {
     suspend fun updateDashPayProfile(dashPayProfile: DashPayProfile)
     suspend fun updateDashPayContactRequest(dashPayContactRequest: DashPayContactRequest)
     suspend fun recoverDashPayProfile(blockchainIdentity: BlockchainIdentity)
+
+    /**
+     * The name this wallet's own profile carries, chosen from [ownedNames] (names the identity
+     * owns on chain): the identity record's primary when it is one of them, else null, and the
+     * caller keeps its own choice. See [ownedRecordPrimary].
+     */
+    suspend fun ownProfileUsername(ownedNames: Collection<String>): String?
     suspend fun getNotificationCount(date: Long): Int
     suspend fun getLocalUserProfile(): DashPayProfile?
     suspend fun addInviteUserAlert()
@@ -1169,7 +1177,12 @@ class IdentityRepositoryImpl @Inject constructor(
     override suspend fun recoverDashPayProfile(blockchainIdentity: BlockchainIdentity) {
         withContext(Dispatchers.IO) {
             if (platform.hasApp("dashpay")) {
-                getUsername()?.let { recovered ->
+                // The record's chosen primary when the recovered identity owns it (a replacement
+                // registered next to the old instant secondary): the cached wrapper's
+                // currentUsername can still be the old name.
+                val confirmedNames = listOfNotNull(blockchainIdentity.primaryUsername, blockchainIdentity.secondaryUsername)
+                    .filter { blockchainIdentity.statusOfUsername(it) == UsernameStatus.CONFIRMED }
+                (ownProfileUsername(confirmedNames) ?: getUsername())?.let { recovered ->
                     // getUsername() returns the wrapper's currentUsername, which
                     // recoverUsernames() left as the DPNS NORMALIZED label. The
                     // profile's `username` is a DISPLAY field (More screen,
@@ -1199,6 +1212,9 @@ class IdentityRepositoryImpl @Inject constructor(
             }
         }
     }
+
+    override suspend fun ownProfileUsername(ownedNames: Collection<String>): String? =
+        ownedRecordPrimary(loadBlockchainIdentityBaseData().username, ownedNames, Names::normalizeString)
 
     override suspend fun updateDashPayProfile(dashPayProfile: DashPayProfile) {
         dashPayProfileDao.insert(dashPayProfile)

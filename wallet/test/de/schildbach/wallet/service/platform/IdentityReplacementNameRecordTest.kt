@@ -206,4 +206,45 @@ class IdentityReplacementNameRecordTest {
         )
         assertEquals(null, recoverySeedRecord(null, RequestedNameContext(identityId, "x", null), identityId, false))
     }
+
+    // ── the profile row of the identity after a replacement registered ──
+
+    @Test
+    fun `profile recovery names the profile after the registered replacement, not the old secondary`() = runBlocking {
+        val storage = mockk<BlockchainIdentityConfig>(relaxed = true)
+        val record = record(primary = "replacement22", secondary = "brimoztest3")
+        coEvery { storage.loadBase() } returns record
+        // the stale cached wrapper (or the stored name) still says the old instant secondary
+        coEvery { storage.get(BlockchainIdentityConfig.USERNAME) } returns "brimoztest3"
+        val profileDao = mockk<de.schildbach.wallet.database.dao.DashPayProfileDao>(relaxed = true)
+        val appDatabase = mockk<AppDatabase>(relaxed = true) {
+            every { dashPayProfileDao() } returns profileDao
+        }
+        val platformRepo = mockk<PlatformRepo>(relaxed = true) {
+            every { platform.hasApp("dashpay") } returns true
+        }
+        val repository = IdentityRepositoryImpl(
+            walletApplication = mockk<WalletApplication>(relaxed = true),
+            appDatabase = appDatabase,
+            blockchainIdentityDataStorage = storage,
+            walletDataProvider = mockk<WalletData>(relaxed = true),
+            platformRepo = platformRepo,
+            dashPayConfig = mockk<DashPayConfig>(relaxed = true),
+            dashSystemService = mockk<DashSystemService>(relaxed = true),
+            sdkUsernameQueries = mockk<SdkUsernameQueries>(relaxed = true),
+            sdkProfileQueries = mockk<SdkProfileQueries>(relaxed = true)
+        )
+        val identity = recovered(primary = "brimoztest3", secondary = "replacement22").apply {
+            every { statusOfUsername(Names.normalizeString("replacement22")) } returns UsernameStatus.CONFIRMED
+            every { statusOfUsername(Names.normalizeString("brimoztest3")) } returns UsernameStatus.CONFIRMED
+            every { getProfile() } returns null
+        }
+
+        repository.recoverDashPayProfile(identity)
+
+        io.mockk.coVerify {
+            // DashPayProfile.equals ignores the username: match it explicitly
+            profileDao.insert(match { it.userId == identityId && it.username == "replacement22" })
+        }
+    }
 }

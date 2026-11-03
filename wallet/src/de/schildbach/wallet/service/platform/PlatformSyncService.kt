@@ -1688,6 +1688,8 @@ class PlatformSynchronizationService @Inject constructor(
                     }
                 }
 
+                preferOwnRecordPrimary(nameById, nameDocuments)
+
                 for (id in profileById.keys) {
                     if (nameById.containsKey(id)) {
                         updateDashPayProfile(nameById, id, profileById, checkingIntegrity)
@@ -1728,6 +1730,31 @@ class PlatformSynchronizationService @Inject constructor(
             }
         } catch (e: Exception) {
             platformRepo.formatExceptionMessage("update contact profiles", e)
+        }
+    }
+
+    /**
+     * This wallet's own identity owns several names (a replacement registered next to the old
+     * instant secondary): its profile carries the identity record's chosen primary, the same
+     * rule profile recovery applies ([IdentityRepository.ownProfileUsername]), not whichever
+     * name the heuristic above kept. Best effort: an unreadable record keeps that choice.
+     */
+    private suspend fun preferOwnRecordPrimary(
+        nameById: HashMap<Identifier, DomainDocument>,
+        nameDocuments: List<DomainDocument>
+    ) {
+        try {
+            val ownUserId = identityRepository.loadBlockchainIdentityBaseData().userId ?: return
+            val ownId = Identifier.from(ownUserId)
+            val owned = nameDocuments.filter { it.ownerId == ownId }
+            if (owned.isEmpty()) return
+            val chosen = identityRepository.ownProfileUsername(owned.map { it.label }) ?: return
+            val normalized = Names.normalizeString(chosen)
+            owned.firstOrNull { Names.normalizeString(it.label) == normalized }?.let { nameById[ownId] = it }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("could not apply the record's primary to the own profile name", e)
         }
     }
 

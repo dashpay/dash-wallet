@@ -142,4 +142,20 @@ class UsernameDisplayTest {
             )
         )
     }
+
+    @Test
+    fun `the profile shows the record's primary when the identity owns it`() {
+        // a replacement registered next to the old instant secondary: whichever order the owned
+        // names come in, the record's chosen primary is the profile's name
+        assertEquals("replacement22", ownedRecordPrimary("replacement22", listOf("br1m0ztest3", "rep1acement22"), normalize))
+        assertEquals("replacement22", ownedRecordPrimary("replacement22", listOf("replacement22", "brimoztest3"), normalize))
+    }
+
+    @Test
+    fun `a record primary the identity does not own yet selects nothing`() {
+        // the dual create's contested primary during its vote: only the instant name is owned
+        assertEquals(null, ownedRecordPrimary("brimoztest", listOf("br1m0ztest3"), normalize))
+        assertEquals(null, ownedRecordPrimary(null, listOf("br1m0ztest3"), normalize))
+        assertEquals(null, ownedRecordPrimary("brimoztest", emptyList(), normalize))
+    }
 }

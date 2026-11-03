@@ -108,3 +108,29 @@ internal fun recoveredPrimaryIsPendingDualSecondary(
         false
     }
 }
+
+/**
+ * The single rule for which name this wallet's OWN profile carries when the identity owns more
+ * than one DPNS name: the identity record's chosen primary ([recordPrimary], the requested name,
+ * a replacement after a lost or locked vote included), as long as the identity owns it.
+ *
+ * Returns the element of [ownedNames] that names the same DPNS entry as [recordPrimary] (compared
+ * on [normalize]d forms, so normalized and display labels both match), or null when the identity
+ * does not own it (yet): the dual create's contested primary during its vote, for instance. The
+ * caller then keeps its own candidate. Without this, every profile writer picked independently
+ * (dashj's adopted "primary", the first domain document), and a registered replacement could
+ * stay hidden behind the old instant secondary on the More screen.
+ */
+internal fun ownedRecordPrimary(
+    recordPrimary: String?,
+    ownedNames: Collection<String>,
+    normalize: (String) -> String
+): String? {
+    if (recordPrimary.isNullOrEmpty()) return null
+    return try {
+        val primary = normalize(recordPrimary)
+        if (ownedNames.any { normalize(it) == primary }) recordPrimary else null
+    } catch (e: Exception) {
+        null
+    }
+}
