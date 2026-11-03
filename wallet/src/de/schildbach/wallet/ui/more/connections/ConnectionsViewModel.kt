@@ -244,17 +244,13 @@ class ConnectionsViewModel @Inject constructor(
                 _uiState.update { it.copy(recordsStatus = ConnectionRecordsStatus.LOADING, connections = emptyList()) }
                 when (availability) {
                     ConnectIdentityStatus.LOADING -> return@collectLatest
-                    ConnectIdentityStatus.NO_IDENTITY -> {
-                        _uiState.update { it.copy(recordsStatus = ConnectionRecordsStatus.NO_IDENTITY) }
-                        return@collectLatest
-                    }
                     ConnectIdentityStatus.UNAVAILABLE -> {
                         _uiState.update { it.copy(recordsStatus = ConnectionRecordsStatus.UNAVAILABLE) }
                         return@collectLatest
                     }
-                    ConnectIdentityStatus.AVAILABLE -> {
-                        // The version is read with the identity. An unread one is not proof the network
-                        // is too old: it leaves the screen retryable.
+                    ConnectIdentityStatus.NO_IDENTITY, ConnectIdentityStatus.AVAILABLE -> {
+                        // Checked before offering a username too. An unread version is not proof the
+                        // network is too old: it leaves the screen retryable.
                         val available = try { repository.isAvailable() } catch (error: Exception) {
                             if (error is CancellationException) throw error
                             log.warn("Cannot read the Platform protocol version", error)
@@ -264,6 +260,10 @@ class ConnectionsViewModel @Inject constructor(
                         _uiState.update { it.copy(featureUnavailable = available == false) }
                         if (available != true) {
                             _uiState.update { it.copy(recordsStatus = ConnectionRecordsStatus.UNAVAILABLE) }
+                            return@collectLatest
+                        }
+                        if (availability == ConnectIdentityStatus.NO_IDENTITY) {
+                            _uiState.update { it.copy(recordsStatus = ConnectionRecordsStatus.NO_IDENTITY) }
                             return@collectLatest
                         }
                         loadSharedProfileKeys()
@@ -307,14 +307,10 @@ class ConnectionsViewModel @Inject constructor(
                         error(ConnectAvailability.VERSION_TOO_OLD_ERROR)
                     }
                 }
-                // A known answer needs no identity; the version is read with one, so an unread one waits for it.
-                val known = repository.isAvailable().also(::requireAvailable)
+                checkNotNull(repository.isAvailable().also(::requireAvailable)) { ConnectAvailability.VERSION_UNKNOWN_ERROR }
                 uiState.first { it.recordsStatus != ConnectionRecordsStatus.LOADING }
                 // Without a username the screen offers to create one, which is the answer to this request.
                 if (_uiState.value.recordsStatus == ConnectionRecordsStatus.NO_IDENTITY) return@launch
-                if (known == null) {
-                    checkNotNull(repository.isAvailable().also(::requireAvailable)) { ConnectAvailability.VERSION_UNKNOWN_ERROR }
-                }
                 // Keep the URI in this pending coroutine until local identity loading finishes.
                 // A completed load with no identity is handled by the normal preparation error.
                 identityRepository.initializationResult.filterNotNull().first().getOrThrow()

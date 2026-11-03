@@ -101,16 +101,25 @@ class ConnectionsViewModelTest {
         assertFalse(model.uiState.value.featureUnavailable)
     }
 
-    @Test fun `a wallet without a username is offered one before the version is read`() {
+    private fun openWithoutUsername(available: Boolean?) {
         model.viewModelScope.cancel()
-        // The version is read with the identity, so without one it cannot be read.
-        coEvery { repository.isAvailable() } returns null
+        coEvery { repository.isAvailable() } returns available
         every { identityConfig.observeIdentityPresence() } returns MutableStateFlow(false)
         model = ConnectionsViewModel(repository, identities, applicationScope, availability())
         dispatcher.scheduler.runCurrent()
+    }
+
+    @Test fun `a wallet without a username is offered one on a network that runs Connect`() {
+        openWithoutUsername(available = true)
         assertEquals(ConnectionRecordsStatus.NO_IDENTITY, model.uiState.value.recordsStatus)
         assertFalse(model.uiState.value.featureUnavailable)
-        coVerify(exactly = 0) { repository.isAvailable() }
+    }
+
+    @Test fun `a wallet without a username is not offered one on a network too old for Connect`() {
+        // A restored process does not replay the link, so the screen itself must check the version.
+        openWithoutUsername(available = false)
+        assertEquals(ConnectionRecordsStatus.UNAVAILABLE, model.uiState.value.recordsStatus)
+        assertTrue(model.uiState.value.featureUnavailable)
     }
 
     private fun assertUnsupportedRequestRejected(openedFromUrl: Boolean, purchase: Boolean) {
