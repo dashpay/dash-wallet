@@ -102,6 +102,16 @@
     <string name="accepting_contact_request">Accepting Contact Request</string>
     <string name="accepting_contact_request_short">Accepting</string>
     <string name="search_user_no_results">There are no users that match</string>
+    <string name="search_user_my_qr">My QR</string>
+    <string name="search_user_scan_qr">Scan QR</string>
+    <string name="search_user_my_qr_caption">Let another Dash Wallet user scan this code to add you as a contact.</string>
+    <string name="scan_user_qr_invalid_title">This isn\'t a DashPay user QR code.</string>
+    <string name="scan_user_qr_invalid_message">To add a contact, scan the code another Dash Wallet user shows from \"My QR\".</string>
+    <string name="scan_user_qr_own_title">This is your QR code</string>
+    <string name="scan_user_qr_own_message">Scan another user\'s QR code to add them as a contact.</string>
+    <string name="scan_user_qr_verifying">Verifying user…</string>
+    <string name="scan_user_qr_not_verified_title">Unable to verify user</string>
+    <string name="scan_user_qr_not_verified">%s couldn\'t be verified on the Dash network. Check your connection, or the QR code may be outdated.</string>
     <string name="search_user_loading">Searching for username <b>\"%\"</b> on the Dash Network</string>
     <string name="contact_request_pending">Contact Request Pending</string>
     <string name="send_contact_request_short">Send request</string>
