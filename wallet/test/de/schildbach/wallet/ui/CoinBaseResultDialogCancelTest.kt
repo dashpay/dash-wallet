@@ -51,8 +51,11 @@ class CoinBaseResultDialogCancelTest {
 
     private fun idle() = shadowOf(Looper.getMainLooper()).idle()
 
-    private fun showAndPressBack(type: CoinBaseResultDialog.Type): CoinBaseResultDialog {
-        val dialog = CoinBaseResultDialog.newInstance(type, null, dashToCoinbase = true)
+    private fun showAndPressBack(
+        type: CoinBaseResultDialog.Type,
+        answerByButtonOnly: Boolean
+    ): CoinBaseResultDialog {
+        val dialog = CoinBaseResultDialog.newInstance(type, null, dashToCoinbase = true, answerByButtonOnly = answerByButtonOnly)
         dialog.showNow(activity.supportFragmentManager, "result")
         idle()
         dialog.requireDialog().onBackPressed()
@@ -62,16 +65,24 @@ class CoinBaseResultDialogCancelTest {
 
     @Test
     fun back_doesNotDismissASaleSuccess() {
-        assertTrue(showAndPressBack(CoinBaseResultDialog.Type.CONVERSION_SUCCESS).isAdded)
+        assertTrue(showAndPressBack(CoinBaseResultDialog.Type.CONVERSION_SUCCESS, answerByButtonOnly = true).isAdded)
     }
 
     @Test
     fun back_doesNotDismissATransferSuccess() {
-        assertTrue(showAndPressBack(CoinBaseResultDialog.Type.TRANSFER_DASH_SUCCESS).isAdded)
+        assertTrue(showAndPressBack(CoinBaseResultDialog.Type.TRANSFER_DASH_SUCCESS, answerByButtonOnly = true).isAdded)
     }
 
     @Test
     fun back_stillDismissesAnError() {
-        assertFalse(showAndPressBack(CoinBaseResultDialog.Type.TRANSFER_DASH_ERROR).isAdded)
+        assertFalse(showAndPressBack(CoinBaseResultDialog.Type.TRANSFER_DASH_ERROR, answerByButtonOnly = false).isAdded)
+    }
+
+    @Test
+    fun back_stillDismissesASuccessShownWithoutTheFlag_asTheTwoFaScreenShowsIt() {
+        // EnterTwoFaCodeFragment shows purchase/withdrawal successes and does not rebind a
+        // restored copy: it must stay dismissable, or a restored one could never be closed.
+        assertFalse(showAndPressBack(CoinBaseResultDialog.Type.DEPOSIT_SUCCESS, answerByButtonOnly = false).isAdded)
+        assertFalse(showAndPressBack(CoinBaseResultDialog.Type.CONVERSION_SUCCESS, answerByButtonOnly = false).isAdded)
     }
 }

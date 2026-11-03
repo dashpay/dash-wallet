@@ -333,7 +333,9 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
         val dialog = CoinBaseResultDialog.newInstance(
             CoinBaseResultDialog.Type.CONVERSION_SUCCESS,
             null,
-            dashToCoinbase = true
+            dashToCoinbase = true,
+            // Back would dismiss it unanswered, leaving the sale marked and refusing later ones.
+            answerByButtonOnly = true
         ).apply {
             onCoinBaseResultDialogButtonsClickListener = object : CoinBaseResultDialog.CoinBaseResultDialogButtonsClickListener {
                 override fun onPositiveButtonClick(type: CoinBaseResultDialog.Type) {

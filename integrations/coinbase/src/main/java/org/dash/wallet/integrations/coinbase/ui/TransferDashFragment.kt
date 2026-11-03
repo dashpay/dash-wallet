@@ -456,7 +456,13 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
         }
         val pair = Pair(responseState.resultDialogType(), message)
 
-        val transactionStateDialog = CoinBaseResultDialog.newInstance(pair.first, pair.second, dashToCoinbase = true).apply {
+        val transactionStateDialog = CoinBaseResultDialog.newInstance(
+            pair.first,
+            pair.second,
+            dashToCoinbase = true,
+            // A sent transfer's success: Back would dismiss it unanswered, leaving it marked.
+            answerByButtonOnly = responseState is SendDashResponseState.SuccessState
+        ).apply {
             onCoinBaseResultDialogButtonsClickListener = object : CoinBaseResultDialog.CoinBaseResultDialogButtonsClickListener {
                 override fun onPositiveButtonClick(type: CoinBaseResultDialog.Type) {
                     answered = true
