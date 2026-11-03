@@ -26,12 +26,21 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import org.dashj.platform.dashpay.UsernameRequestStatus
 import org.dashj.platform.dashpay.UsernameStatus
 import org.dashj.platform.dpp.document.Document
+import org.dashj.platform.dpp.voting.BlockInfo
+import org.dashj.platform.dpp.voting.Contenders
+import org.dashj.platform.dpp.voting.ContestedDocumentVotePollWinnerInfo
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
+import java.util.Optional
 
 /**
  * Host-JVM tests for [PlatformSynchronizationService]'s username status
@@ -70,6 +79,25 @@ class PlatformUsernameReconcileTest {
     private val identityConfig = mockk<BlockchainIdentityConfig>(relaxed = true)
     private val dashPayProfileDao =
         mockk<de.schildbach.wallet.database.dao.DashPayProfileDao>(relaxed = true)
+
+    private fun copyOf(record: BlockchainIdentityData) = BlockchainIdentityData(
+        record.creationState,
+        record.creationStateErrorMessage,
+        record.username,
+        record.usernameSecondary,
+        record.userId,
+        record.restoring,
+        usernameRequested = record.usernameRequested,
+        votingPeriodStart = record.votingPeriodStart
+    ).also {
+        it.usernameStatus = record.usernameStatus
+        it.usernameSecondaryStatus = record.usernameSecondaryStatus
+    }
+
+    /** [data] is the first load; later loads (the re-read before a write) read the store as it was. */
+    private fun givenStored(data: BlockchainIdentityData) {
+        coEvery { identityConfig.load() } returns data andThen copyOf(data)
+    }
 
     private val transparentUsernameCreation =
         mockk<de.schildbach.wallet.service.platform.sdk.SdkTransparentUsernameCreation>(relaxed = true)
@@ -119,7 +147,7 @@ class PlatformUsernameReconcileTest {
         // identity.
         val data = identityData()
         data.usernameStatus = UsernameStatus.NOT_PRESENT
-        coEvery { identityConfig.load() } returns data
+        givenStored(data)
         every { platformRepo.getUsername("test12345") } returns
             Resource.success(domainDocumentOwnedBy(myUserId))
         coEvery { identityRepository.getLocalUserProfile() } returns
@@ -143,7 +171,7 @@ class PlatformUsernameReconcileTest {
         val data = identityData(username = "alice", usernameSecondary = "alice2")
         data.usernameStatus = UsernameStatus.CONFIRMED
         data.usernameSecondaryStatus = UsernameStatus.NOT_PRESENT
-        coEvery { identityConfig.load() } returns data
+        givenStored(data)
         every { platformRepo.getUsername("alice2") } returns
             Resource.success(domainDocumentOwnedBy(myUserId))
 
@@ -215,5 +243,125 @@ class PlatformUsernameReconcileTest {
         } finally {
             service.stopSync()
         }
+    }
+
+    // ── a lookup that started before a name-only retry replaced the name ──
+
+    /** The durable record: every load reads a copy of it, every whole-record write replaces it. */
+    private inner class Store(initial: BlockchainIdentityData) {
+        @Volatile var record: BlockchainIdentityData = initial
+        val loads = java.util.concurrent.atomic.AtomicInteger()
+        val writes = java.util.concurrent.atomic.AtomicInteger()
+
+        init {
+            coEvery { identityConfig.load() } answers {
+                loads.incrementAndGet()
+                copyOf(record)
+            }
+            coEvery { identityRepository.updateBlockchainIdentityData(any<BlockchainIdentityData>()) } answers {
+                record = copyOf(firstArg())
+                writes.incrementAndGet()
+            }
+        }
+
+        /** Waits until the lookup's write (or its re-read before one) has run. */
+        fun awaitWriteOrReRead() {
+            val deadline = System.currentTimeMillis() + 5_000
+            while (writes.get() == 0 && loads.get() < 2 && System.currentTimeMillis() < deadline) {
+                Thread.sleep(10)
+            }
+            Thread.sleep(100) // a write that would follow the re-read
+        }
+    }
+
+    /** What beginNameOnlyRetry leaves on the record for a replacement [name]. */
+    private fun replacementAccepted(name: String, error: String? = null) =
+        identityData(creationState = IdentityCreationState.USERNAME_REGISTERING, username = name).also {
+            it.creationStateErrorMessage = error
+        }
+
+    private fun votingFor(name: String) = identityData(creationState = IdentityCreationState.VOTING, username = name)
+
+    /** Runs [checkUsernameVotingStatus] with the vote lookup paused; [whilePaused] runs during it. */
+    private fun staleVoteLookup(outcome: ContestedDocumentVotePollWinnerInfo, whilePaused: () -> Unit) = runBlocking {
+        val started = CompletableDeferred<Unit>()
+        val release = java.util.concurrent.CountDownLatch(1)
+        every { platformRepo.getUsername(any()) } returns Resource.success(null)
+        every { platformRepo.getVoteContenders("alice") } answers {
+            started.complete(Unit)
+            release.await()
+            Contenders(Optional.of(Pair(outcome, mockk<BlockInfo>())), mapOf(), 0, 0)
+        }
+        val check = launch(Dispatchers.IO) { service().checkUsernameVotingStatus() }
+        started.await()
+        whilePaused()
+        release.countDown()
+        check.join()
+    }
+
+    private fun finishedVote(isLocked: Boolean): ContestedDocumentVotePollWinnerInfo = mockk {
+        every { this@mockk.isLocked } returns isLocked
+        every { noWinner } returns false
+        every { isWinner(any()) } returns false
+    }
+
+    @Test
+    fun aStaleLockedVoteResult_neverPutsTheOldNameBackOverAnAcceptedReplacement() {
+        val store = Store(votingFor("alice"))
+
+        staleVoteLookup(finishedVote(isLocked = true)) { store.record = replacementAccepted("alice3") }
+        store.awaitWriteOrReRead()
+
+        assertEquals("alice3", store.record.username)
+        assertEquals(IdentityCreationState.USERNAME_REGISTERING, store.record.creationState)
+        assertNull(store.record.usernameRequested)
+        assertEquals("the stale write is skipped", 0, store.writes.get())
+    }
+
+    @Test
+    fun aStaleLostVoteResult_neverErasesTheReplacementsRecordedError() {
+        val error = "name-only retry: DuplicateUniqueIndexError"
+        val store = Store(votingFor("alice"))
+
+        staleVoteLookup(finishedVote(isLocked = false)) { store.record = replacementAccepted("alice3", error) }
+        store.awaitWriteOrReRead()
+
+        assertEquals("alice3", store.record.username)
+        assertEquals(error, store.record.creationStateErrorMessage)
+        assertEquals(IdentityCreationState.USERNAME_REGISTERING, store.record.creationState)
+        assertEquals(0, store.writes.get())
+    }
+
+    @Test
+    fun aVoteResultForTheUnchangedRecord_isStillWritten() {
+        val store = Store(votingFor("alice"))
+
+        staleVoteLookup(finishedVote(isLocked = true)) { }
+        store.awaitWriteOrReRead()
+
+        assertEquals(UsernameRequestStatus.LOCKED, store.record.usernameRequested)
+        assertEquals(1, store.writes.get())
+    }
+
+    @Test
+    fun aStaleReconcile_neverPutsTheOldNameBackOverAnAcceptedReplacement() = runBlocking {
+        val stale = identityData(username = "alice").also { it.usernameStatus = UsernameStatus.NOT_PRESENT }
+        val store = Store(stale)
+        val started = CompletableDeferred<Unit>()
+        val release = java.util.concurrent.CountDownLatch(1)
+        every { platformRepo.getUsername("alice") } answers {
+            started.complete(Unit)
+            release.await()
+            Resource.success(domainDocumentOwnedBy(myUserId))
+        }
+        val check = launch(Dispatchers.IO) { service().checkUsernameVotingStatus() }
+        started.await()
+        store.record = replacementAccepted("alice3")
+        release.countDown()
+        check.join()
+
+        assertEquals("alice3", store.record.username)
+        assertEquals(IdentityCreationState.USERNAME_REGISTERING, store.record.creationState)
+        assertEquals(0, store.writes.get())
     }
 }

@@ -439,7 +439,8 @@ open class BlockchainIdentityConfig @Inject constructor(
             request,
             IdentityCreationState.valueOf(prefs[CREATION_STATE] ?: IdentityCreationState.NONE.name),
             prefs[IDENTITY_ID],
-            prefs[CREATION_STATE_ERROR_MESSAGE]
+            prefs[CREATION_STATE_ERROR_MESSAGE],
+            prefs[USERNAME]
         )
     }
 

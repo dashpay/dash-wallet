@@ -1509,6 +1509,57 @@ class SdkTransparentUsernameCreationTest {
         assertNull("the recorded outcome retires the mark", store.pendingNameOnlyRetry())
     }
 
+    @Test
+    fun `a pending retry whose replacement recovery took to its vote is cleared on restart`() = runTest {
+        val source = source(lockAfterFailure = null)
+        val store = de.schildbach.wallet.service.platform.InMemoryRequestedNameJournal()
+        store.beginNameOnlyRetry(RequestedNameContext(identityIdBase58, "alice3", null))
+        store.creationState = IdentityCreationState.VOTING
+        store.username = "Alice3" // the replacement, as recovery recorded it
+        val run = RetryRun()
+
+        assertFalse(instance(source, store, run).reconcileInterruptedNameRetry())
+
+        assertTrue("nothing written: ${run.states}", run.states.isEmpty() && run.nameContexts.isEmpty())
+        assertTrue(run.handedOff.isEmpty())
+        assertNull("recovery owns it", store.pendingNameOnlyRetry())
+    }
+
+    @Test
+    fun `a pending retry whose record a stale vote check put back to the old name is reconciled, not cleared`() = runTest {
+        // a voting lookup for the old name finished after the replacement was accepted and wrote
+        // its whole snapshot back: VOTING, but for the old name; the replacement never registered
+        val source = source(lockAfterFailure = null)
+        val store = de.schildbach.wallet.service.platform.InMemoryRequestedNameJournal()
+        store.beginNameOnlyRetry(RequestedNameContext(identityIdBase58, "alice3", null))
+        store.creationState = IdentityCreationState.VOTING
+        store.username = "alice"
+        val run = RetryRun()
+
+        assertTrue(instance(source, store, run, nameAlreadyTaken = { _, _ -> false }).reconcileInterruptedNameRetry())
+
+        assertEquals("the replacement is back on the record", listOf(identityIdBase58, "alice3", null, false), run.nameContexts.last())
+        assertTrue("its retryable error: ${run.states}", SdkTransparentUsernameCreation.isNameOnlyRetryError(store.errorMessage))
+        assertTrue(run.handedOff.isEmpty())
+        assertNull(store.pendingNameOnlyRetry())
+    }
+
+    @Test
+    fun `a pending retry whose replacement registered under a stale VOTING record is handed to recovery`() = runTest {
+        val source = source(lockAfterFailure = null)
+        val store = de.schildbach.wallet.service.platform.InMemoryRequestedNameJournal()
+        store.beginNameOnlyRetry(RequestedNameContext(identityIdBase58, "alice3", null))
+        store.creationState = IdentityCreationState.VOTING
+        store.username = "alice"
+        val run = RetryRun()
+
+        assertTrue(instance(source, store, run, nameAlreadyTaken = { _, label -> label == "alice3" }).reconcileInterruptedNameRetry())
+
+        assertEquals(IdentityCreationState.DONE to null, run.states.last())
+        assertEquals(listOf(identityIdBase58), run.handedOff)
+        assertNull(store.pendingNameOnlyRetry())
+    }
+
     // ── per-identity DPNS lock ───────────────────────────────────────────
 
     /** A source whose registerDpnsName blocks on [gate], then records the label as owned. */

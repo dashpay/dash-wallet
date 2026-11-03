@@ -2941,6 +2941,7 @@ class PlatformSynchronizationService @Inject constructor(
         } catch (e: Exception) {
             return
         }
+        val loaded = IdentityRecordKey.of(identityData)
         var confirmedName: String? = null
         var updated = false
 
@@ -2986,7 +2987,9 @@ class PlatformSynchronizationService @Inject constructor(
             identityData.creationState = IdentityCreationState.DONE_AND_DISMISS
             identityData.creationStateErrorMessage = null
         }
-        identityRepository.updateBlockchainIdentityData(identityData)
+        if (!updateIfUnchanged(loaded, identityData)) {
+            return
+        }
 
         // Same follow-up as the won-vote path: the local profile row must
         // carry the confirmed name.
@@ -3019,9 +3022,51 @@ class PlatformSynchronizationService @Inject constructor(
         }
     }
 
+    /** The fields a name-only retry changes when it replaces the name or records its error. */
+    private data class IdentityRecordKey(
+        val userId: String?,
+        val username: String?,
+        val creationState: IdentityCreationState,
+        val errorMessage: String?
+    ) {
+        companion object {
+            fun of(data: BlockchainIdentityData) =
+                IdentityRecordKey(data.userId, data.username, data.creationState, data.creationStateErrorMessage)
+        }
+    }
+
+    /**
+     * Writes [identityData] back only while the stored record is still the one it was [loaded]
+     * as: a name-only retry can replace the name, or record its error, during a lookup for the
+     * old name, and this whole-record write would put the old name back. A re-check right before
+     * the write, not a compare-and-set (#1673). Returns true when it wrote.
+     */
+    private suspend fun updateIfUnchanged(loaded: IdentityRecordKey, identityData: BlockchainIdentityData): Boolean {
+        val stored = try {
+            identityConfig.load()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("could not re-read the identity record; not writing the lookup's result", e)
+            return false
+        }
+        if (stored == null || IdentityRecordKey.of(stored) != loaded) {
+            log.info(
+                "the identity record changed during the lookup for '{}' (now '{}', {}); not writing its result",
+                loaded.username,
+                stored?.username,
+                stored?.creationState
+            )
+            return false
+        }
+        identityRepository.updateBlockchainIdentityData(identityData)
+        return true
+    }
+
     private suspend fun checkVotingStatus(identityData: BlockchainIdentityData) {
         if (identityData.username != null && identityData.creationState == IdentityCreationState.VOTING) {
             log.info("checking the vote status of {}", identityData.username)
+            val loaded = IdentityRecordKey.of(identityData)
             // query username first to load the data contract cache
             val resource = platformRepo.getUsername(identityData.username!!)
             val voteResults = platformRepo.getVoteContenders(identityData.username!!)
@@ -3030,13 +3075,13 @@ class PlatformSynchronizationService @Inject constructor(
                 when {
                     winner.isLocked -> {
                         identityData.usernameRequested = UsernameRequestStatus.LOCKED
-                        syncScope.launch { identityRepository.updateBlockchainIdentityData(identityData) }
+                        syncScope.launch { updateIfUnchanged(loaded, identityData) }
                     }
 
                     winner.isWinner(Identifier.from(identityData.userId)) -> {
                         identityData.usernameRequested = UsernameRequestStatus.APPROVED
                         syncScope.launch {
-                            identityRepository.updateBlockchainIdentityData(identityData)
+                            if (!updateIfUnchanged(loaded, identityData)) return@launch
                             identityRepository.getLocalUserProfile()?.let {
                                 dashPayProfileDao.insert(it.copy(username = identityData.username!!))
                             }
@@ -3049,7 +3094,7 @@ class PlatformSynchronizationService @Inject constructor(
 
                     else -> {
                         identityData.usernameRequested = UsernameRequestStatus.LOST_VOTE
-                        syncScope.launch { identityRepository.updateBlockchainIdentityData(identityData) }
+                        syncScope.launch { updateIfUnchanged(loaded, identityData) }
                     }
                 }
                 if (resource.status == Status.SUCCESS && resource.data != null) {
@@ -3059,7 +3104,7 @@ class PlatformSynchronizationService @Inject constructor(
                         // checkUsernameVotingStatus. This branch is likewise reachable
                         // only from VOTING (guarded at the top of checkVotingStatus).
                         identityData.creationState = IdentityCreationState.DONE
-                        identityRepository.updateBlockchainIdentityData(identityData)
+                        updateIfUnchanged(loaded, identityData)
                     }
                 } else {
 

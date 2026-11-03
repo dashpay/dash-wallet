@@ -35,7 +35,9 @@ data class PendingNameOnlyRetry(
     /** The identity record's identity id now. */
     val recordIdentityId: String?,
     /** The identity record's error now, from the same read. */
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    /** The identity record's username now, from the same read. */
+    val recordUsername: String? = null
 )
 
 /**
@@ -83,6 +85,8 @@ class InMemoryRequestedNameJournal : RequestedNameJournal {
 
     @Volatile var errorMessage: String? = null
 
+    @Volatile var username: String? = null
+
     override suspend fun requestedNames(): RequestedNameContext? = request
 
     override suspend fun recordRequestedNames(request: RequestedNameContext) {
@@ -94,10 +98,11 @@ class InMemoryRequestedNameJournal : RequestedNameJournal {
         pending = true
         creationState = IdentityCreationState.USERNAME_REGISTERING
         errorMessage = null
+        username = request.username
     }
 
     override suspend fun pendingNameOnlyRetry(): PendingNameOnlyRetry? =
-        request?.takeIf { pending }?.let { PendingNameOnlyRetry(it, creationState, it.identityIdBase58, errorMessage) }
+        request?.takeIf { pending }?.let { PendingNameOnlyRetry(it, creationState, it.identityIdBase58, errorMessage, username) }
 
     override suspend fun finishNameOnlyRetry() {
         pending = false

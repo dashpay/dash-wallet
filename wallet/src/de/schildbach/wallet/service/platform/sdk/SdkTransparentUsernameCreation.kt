@@ -1979,7 +1979,8 @@ class SdkTransparentUsernameCreation internal constructor(
      * Reconciles a name-only retry the process lost: one recorded as pending
      * ([RequestedNameJournal.beginNameOnlyRetry]) whose outcome never reached a durable owner, the
      * process having died during its registration. Nothing else would ever finish it: the record
-     * is not restoring, so discovery enqueues no recovery, and it is not VOTING.
+     * is not restoring, so discovery enqueues no recovery, and it is not VOTING for the requested
+     * name.
      *
      * Never registers anything. It reads whether the identity owns or contends for the requested
      * name, under the identity's [DpnsRegistrationLock]:
@@ -2021,7 +2022,11 @@ class SdkTransparentUsernameCreation internal constructor(
     private suspend fun reconcileNow(pending: PendingNameOnlyRetry): Boolean {
         val request = pending.request
         val identityIdBase58 = request.identityIdBase58
-        if (pending.recordIdentityId != identityIdBase58 || pending.creationState == IdentityCreationState.VOTING) {
+        // VOTING proves recovery took the replacement to its vote only when the record carries
+        // the replacement: a vote check for the old name can write its snapshot back over it
+        val replacementVoting = pending.creationState == IdentityCreationState.VOTING &&
+            pending.recordUsername?.let { Names.normalizeString(it) } == Names.normalizeString(request.username)
+        if (pending.recordIdentityId != identityIdBase58 || replacementVoting) {
             // another identity's record, or recovery already took it to its vote
             log.info("pending name-only retry for {}… already finished; clearing it", identityIdBase58.take(8))
             finishPendingNameRetry()
