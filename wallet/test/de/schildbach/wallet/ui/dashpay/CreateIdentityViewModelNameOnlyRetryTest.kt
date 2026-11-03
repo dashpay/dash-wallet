@@ -81,7 +81,7 @@ class CreateIdentityViewModelNameOnlyRetryTest {
 
     @Test
     fun `a name-only error retries the name, never CreateIdentityService`() {
-        coEvery { config.get(BlockchainIdentityConfig.CREATION_STATE_ERROR_MESSAGE) } returns
+        coEvery { config.getPreservingErrors(BlockchainIdentityConfig.CREATION_STATE_ERROR_MESSAGE) } returns
             SdkTransparentUsernameCreation.NAME_ONLY_RETRY_ERROR + ": timeout"
         coEvery { transparentUsernameCreation.retryNameForExistingIdentity(any(), any(), any()) } returns true
 
@@ -96,7 +96,7 @@ class CreateIdentityViewModelNameOnlyRetryTest {
     @Test
     fun `a refused name-only retry is reported once, with the error on record`() = runBlocking {
         val error = SdkTransparentUsernameCreation.NAME_ONLY_RETRY_ERROR + ": timeout"
-        coEvery { config.get(BlockchainIdentityConfig.CREATION_STATE_ERROR_MESSAGE) } returns error
+        coEvery { config.getPreservingErrors(BlockchainIdentityConfig.CREATION_STATE_ERROR_MESSAGE) } returns error
         coEvery { transparentUsernameCreation.retryNameForExistingIdentity(any(), any(), any()) } returns false
 
         val viewModel = viewModel()
@@ -109,7 +109,7 @@ class CreateIdentityViewModelNameOnlyRetryTest {
     @Test
     fun `a name-only retry with no requested name on record is reported as refused`() = runBlocking {
         val error = SdkTransparentUsernameCreation.NAME_ONLY_RETRY_ERROR + ": timeout"
-        coEvery { config.get(BlockchainIdentityConfig.CREATION_STATE_ERROR_MESSAGE) } returns error
+        coEvery { config.getPreservingErrors(BlockchainIdentityConfig.CREATION_STATE_ERROR_MESSAGE) } returns error
         coEvery { config.get(BlockchainIdentityConfig.USERNAME) } returns null
 
         val viewModel = viewModel()
@@ -122,11 +122,27 @@ class CreateIdentityViewModelNameOnlyRetryTest {
 
     @Test
     fun `any other error keeps the legacy retry`() {
-        coEvery { config.get(BlockchainIdentityConfig.CREATION_STATE_ERROR_MESSAGE) } returns "some other failure"
+        coEvery { config.getPreservingErrors(BlockchainIdentityConfig.CREATION_STATE_ERROR_MESSAGE) } returns "some other failure"
 
         viewModel().retryCreateIdentity()
 
         verify(exactly = 1, timeout = 5_000) { walletApplication.startService(any()) }
+        coVerify(exactly = 0) { transparentUsernameCreation.retryNameForExistingIdentity(any(), any(), any()) }
+    }
+
+    @Test
+    fun `an unreadable retry marker refuses the retry, never CreateIdentityService`() = runBlocking {
+        // the lenient read turns a failed read into "no error on record", which routed a
+        // name-only retry's error to the legacy service
+        coEvery { config.getPreservingErrors(BlockchainIdentityConfig.CREATION_STATE_ERROR_MESSAGE) } throws
+            java.io.IOException("datastore unreadable")
+        coEvery { config.get(BlockchainIdentityConfig.CREATION_STATE_ERROR_MESSAGE) } returns null
+
+        val viewModel = viewModel()
+        viewModel.retryCreateIdentity()
+
+        withTimeout(5_000) { viewModel.nameRetryRefused.first() }
+        verify(exactly = 0) { walletApplication.startService(any()) }
         coVerify(exactly = 0) { transparentUsernameCreation.retryNameForExistingIdentity(any(), any(), any()) }
     }
 

@@ -10,6 +10,7 @@ import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.service.platform.sdk.SdkTransparentUsernameCreation
 import de.schildbach.wallet.service.platform.work.RestoreIdentityOperation
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,6 +22,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import javax.inject.Inject
+import org.slf4j.LoggerFactory
 
 @HiltViewModel
 class CreateIdentityViewModel @Inject constructor(
@@ -74,7 +76,17 @@ class CreateIdentityViewModel @Inject constructor(
             // name-only retry with the requested names on record, never to CreateIdentityService,
             // which would reset the identity and fund it again. A name that did land meanwhile is
             // not submitted again there.
-            val error = blockchainIdentityDataDao.get(BlockchainIdentityConfig.CREATION_STATE_ERROR_MESSAGE)
+            // Strict: the lenient read turns an unreadable store into "no error on record", which
+            // would send a name-only retry's error to CreateIdentityService. Unknown refuses.
+            val error = try {
+                blockchainIdentityDataDao.getPreservingErrors(BlockchainIdentityConfig.CREATION_STATE_ERROR_MESSAGE)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                log.warn("retry refused: the creation error on record cannot be read", e)
+                _nameRetryRefused.trySend(_creationException.value)
+                return@launch
+            }
             if (SdkTransparentUsernameCreation.isNameOnlyRetryError(error)) {
                 val identityId = blockchainIdentityDataDao.get(BlockchainIdentityConfig.IDENTITY_ID)
                 val username = blockchainIdentityDataDao.get(BlockchainIdentityConfig.USERNAME)
@@ -116,5 +128,9 @@ class CreateIdentityViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    companion object {
+        private val log = LoggerFactory.getLogger(CreateIdentityViewModel::class.java)
     }
 }
