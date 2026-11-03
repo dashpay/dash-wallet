@@ -11,6 +11,7 @@ import de.schildbach.wallet.database.AppDatabase
 import de.schildbach.wallet.database.entity.BlockchainIdentityBaseData
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
+import de.schildbach.wallet.database.entity.IdentityRecordKey
 import de.schildbach.wallet.database.entity.DashPayContactRequest
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.database.entity.IdentityCreationState
@@ -25,6 +26,7 @@ import de.schildbach.wallet.ui.dashpay.PlatformRepo.Companion.TOP_CONTACT_COUNT
 import de.schildbach.wallet.ui.dashpay.UserAlert
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig.Companion.UPGRADE_IDENTITY_REQUIRED
+import de.schildbach.wallet.ui.dashpay.utils.ownedRecordPrimary
 import de.schildbach.wallet.ui.dashpay.utils.preferDisplayLabel
 import de.schildbach.wallet.ui.dashpay.utils.recoveredPrimaryIsPendingDualSecondary
 import io.grpc.StatusRuntimeException
@@ -140,6 +142,15 @@ interface IdentityRepository {
     fun initBlockchainIdentity(blockchainIdentityData: BlockchainIdentityData, wallet: Wallet): BlockchainIdentity
     suspend fun updateBlockchainIdentityData(blockchainIdentityData: BlockchainIdentityData, blockchainIdentity: BlockchainIdentity)
     suspend fun updateBlockchainIdentityData(blockchainIdentityData: BlockchainIdentityData)
+
+    /**
+     * Writes [blockchainIdentityData] only while the stored record is still the one it was [loaded]
+     * as, compared and written in one store edit; see [BlockchainIdentityConfig.insertIfUnchanged].
+     */
+    suspend fun updateBlockchainIdentityDataIfUnchanged(
+        blockchainIdentityData: BlockchainIdentityData,
+        loaded: IdentityRecordKey
+    ): Boolean
     suspend fun updateBlockchainIdentityData()
     suspend fun updateIdentityCreationState(blockchainIdentityData: BlockchainIdentityData,
                                              state: IdentityCreationState,
@@ -157,6 +168,13 @@ interface IdentityRepository {
     suspend fun updateDashPayProfile(dashPayProfile: DashPayProfile)
     suspend fun updateDashPayContactRequest(dashPayContactRequest: DashPayContactRequest)
     suspend fun recoverDashPayProfile(blockchainIdentity: BlockchainIdentity)
+
+    /**
+     * The name this wallet's own profile carries, chosen from [ownedNames] (names the identity
+     * owns on chain): the identity record's primary when it is one of them, else null, and the
+     * caller keeps its own choice. See [ownedRecordPrimary].
+     */
+    suspend fun ownProfileUsername(ownedNames: Collection<String>): String?
     suspend fun getNotificationCount(date: Long): Int
     suspend fun getLocalUserProfile(): DashPayProfile?
     suspend fun addInviteUserAlert()
@@ -449,6 +467,15 @@ class IdentityRepositoryImpl @Inject constructor(
         blockchainIdentityDataStorage.insert(blockchainIdentityData)
     }
 
+    override suspend fun updateBlockchainIdentityDataIfUnchanged(
+        blockchainIdentityData: BlockchainIdentityData,
+        loaded: IdentityRecordKey
+    ): Boolean {
+        // No separate no-resurrection guard: a cleared store (creation state NONE) never matches
+        // [loaded], so the write is skipped inside the same edit.
+        return blockchainIdentityDataStorage.insertIfUnchanged(blockchainIdentityData, loaded)
+    }
+
     override suspend fun updateBlockchainIdentityData(blockchainIdentityData: BlockchainIdentityData, blockchainIdentity: BlockchainIdentity) {
         blockchainIdentityData.apply {
             creditFundingTxId = blockchainIdentity.assetLockTransaction?.txId
@@ -479,26 +506,23 @@ class IdentityRepositoryImpl @Inject constructor(
                 // — same DPNS name, human spelling; anything else still
                 // loses to the on-chain value.
                 val recoveredPrimary = blockchainIdentity.primaryUsername
-                if (recoveredPrimaryIsPendingDualSecondary(
-                        recordPrimary = username,
-                        recordSecondary = usernameSecondary,
-                        recoveredPrimary = recoveredPrimary,
-                        normalize = Names::normalizeString,
-                        contestable = Names::isUsernameContestable
-                    )
-                ) {
-                    // DUAL flow, contested primary still in its vote: the only
-                    // REGISTERED name is the instant secondary, so dashj
-                    // adopted it as "primary". Copying it over the record's
-                    // requested primary erased the in-flight contest (no
-                    // voting tile, no request row, state DONE, normalized
-                    // name on More — the Mo-972 shape, S21 2026-08-18). Keep
-                    // the requested primary — the contested-name scan reads
-                    // it as its candidate — and route the recovered name's
-                    // status/salt to the SECONDARY fields it belongs to.
+                val keptRequestedPrimary = recoveredPrimaryIsPendingDualSecondary(
+                    recordPrimary = username,
+                    recordSecondary = usernameSecondary,
+                    recoveredPrimary = recoveredPrimary,
+                    normalize = Names::normalizeString
+                )
+                if (keptRequestedPrimary) {
+                    // dashj adopted the record's own secondary as "primary": a
+                    // DUAL create whose contested primary is still in its vote
+                    // (the Mo-972 shape, S21 2026-08-18), or a replacement name
+                    // after a lost or locked vote. Keep the requested primary
+                    // (the contested-name scan and the name step read it) and
+                    // route the recovered name's status/salt to the SECONDARY
+                    // fields it belongs to.
                     log.info(
-                        "recovered primary '{}' is the record's own instant secondary — keeping requested " +
-                            "contested primary '{}' (its contest is pending vote)",
+                        "recovered primary '{}' is the record's own secondary — keeping requested " +
+                            "primary '{}'",
                         recoveredPrimary,
                         username
                     )
@@ -523,7 +547,21 @@ class IdentityRepositoryImpl @Inject constructor(
                 }
 
                 log.info("creation: blockchainIdentity.secondaryUsername = {}", blockchainIdentity.secondaryUsername)
-                blockchainIdentity.secondaryUsername?.let { name ->
+                val recoveredSecondary = blockchainIdentity.secondaryUsername
+                // dashj called the requested primary its "secondary" (it owns both names and
+                // adopted the old secondary as primary): the record already has it right,
+                // primary and secondary, and must not end up with it twice.
+                val recoveredSecondaryIsRequestedPrimary = recoveredSecondary != null &&
+                    username?.let { Names.normalizeString(it) } == Names.normalizeString(recoveredSecondary)
+                if (recoveredSecondary != null && recoveredSecondaryIsRequestedPrimary && keptRequestedPrimary &&
+                    blockchainIdentity.registrationStatus == IdentityStatus.REGISTERED
+                ) {
+                    // The registered replacement's status and salt belong to the primary fields,
+                    // or they keep the lost name's (LOST_VOTE, LOCKED, an old salt).
+                    usernameStatus = blockchainIdentity.statusOfUsername(recoveredSecondary)
+                    preorderSalt = blockchainIdentity.saltForUsername(recoveredSecondary, false)
+                }
+                recoveredSecondary?.takeUnless { recoveredSecondaryIsRequestedPrimary }?.let { name ->
                     usernameSecondary = preferDisplayLabel(usernameSecondary, name, Names::normalizeString)
                     usernameSecondaryStatus = blockchainIdentity.statusOfUsername(name)
                     log.info("creation: secondary username: {}, usernameSecondaryStatus = {}", name, usernameSecondaryStatus)
@@ -1139,7 +1177,12 @@ class IdentityRepositoryImpl @Inject constructor(
     override suspend fun recoverDashPayProfile(blockchainIdentity: BlockchainIdentity) {
         withContext(Dispatchers.IO) {
             if (platform.hasApp("dashpay")) {
-                getUsername()?.let { recovered ->
+                // The record's chosen primary when the recovered identity owns it (a replacement
+                // registered next to the old instant secondary): the cached wrapper's
+                // currentUsername can still be the old name.
+                val confirmedNames = listOfNotNull(blockchainIdentity.primaryUsername, blockchainIdentity.secondaryUsername)
+                    .filter { blockchainIdentity.statusOfUsername(it) == UsernameStatus.CONFIRMED }
+                (ownProfileUsername(confirmedNames) ?: getUsername())?.let { recovered ->
                     // getUsername() returns the wrapper's currentUsername, which
                     // recoverUsernames() left as the DPNS NORMALIZED label. The
                     // profile's `username` is a DISPLAY field (More screen,
@@ -1169,6 +1212,9 @@ class IdentityRepositoryImpl @Inject constructor(
             }
         }
     }
+
+    override suspend fun ownProfileUsername(ownedNames: Collection<String>): String? =
+        ownedRecordPrimary(loadBlockchainIdentityBaseData().username, ownedNames, Names::normalizeString)
 
     override suspend fun updateDashPayProfile(dashPayProfile: DashPayProfile) {
         dashPayProfileDao.insert(dashPayProfile)

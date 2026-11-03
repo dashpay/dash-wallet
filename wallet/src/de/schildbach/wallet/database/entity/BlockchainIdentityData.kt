@@ -19,13 +19,19 @@ package de.schildbach.wallet.database.entity
 
 import android.content.Context
 import android.net.Uri
+import androidx.datastore.preferences.core.MutablePreferences
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.google.common.base.Stopwatch
 import de.schildbach.wallet.data.InvitationLinkData
+import de.schildbach.wallet.service.platform.PendingNameOnlyRetry
 import de.schildbach.wallet.service.platform.PlatformService
+import de.schildbach.wallet.service.platform.RequestedNameContext
+import de.schildbach.wallet.service.platform.RequestedNameJournal
+import de.schildbach.wallet.service.platform.recoverySeedRecord
 import de.schildbach.wallet.service.platform.serializeIdentityToleratingContractBounds
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -188,6 +194,19 @@ class BlockchainIdentityData(
     }
 }
 
+/** The fields a name-only retry changes when it replaces the name or records its error. */
+data class IdentityRecordKey(
+    val userId: String?,
+    val username: String?,
+    val creationState: IdentityCreationState,
+    val errorMessage: String?
+) {
+    companion object {
+        fun of(data: BlockchainIdentityData) =
+            IdentityRecordKey(data.userId, data.username, data.creationState, data.creationStateErrorMessage)
+    }
+}
+
 @Singleton
 open class BlockchainIdentityConfig @Inject constructor(
     private val context: Context,
@@ -198,7 +217,7 @@ open class BlockchainIdentityConfig @Inject constructor(
     PREFERENCES_NAME,
     walletDataProvider,
     migrations = listOf()
-) {
+), RequestedNameJournal {
     companion object {
         const val PREFERENCES_NAME = "platform-identity"
 
@@ -237,34 +256,71 @@ open class BlockchainIdentityConfig @Inject constructor(
          * asset lock (see [SdkTransparentTopUp.topUp]'s newUserIntent).
          */
         val TOP_UP_WORK_SDK_STARTED_ID = stringPreferencesKey("top_up_work_sdk_started_id")
+
+        /**
+         * The names last requested for an identity ([RequestedNameContext]), kept apart from
+         * [USERNAME]/[USERNAME_SECONDARY], which recovery rewrites from the chain.
+         */
+        val REQUESTED_NAMES_IDENTITY_ID = stringPreferencesKey("requested_names_identity_id")
+        val REQUESTED_NAMES_USERNAME = stringPreferencesKey("requested_names_username")
+        val REQUESTED_NAMES_USERNAME_SECONDARY = stringPreferencesKey("requested_names_username_secondary")
+
+        /** A name-only retry of the requested names is in flight; see [RequestedNameJournal]. */
+        val NAME_ONLY_RETRY_PENDING = booleanPreferencesKey("name_only_retry_pending")
         private val log = LoggerFactory.getLogger(BlockchainIdentityConfig::class.java)
+
+        private fun putRequestedNames(prefs: MutablePreferences, request: RequestedNameContext) {
+            prefs[REQUESTED_NAMES_IDENTITY_ID] = request.identityIdBase58
+            prefs[REQUESTED_NAMES_USERNAME] = request.username
+            request.secondaryUsername?.let { prefs[REQUESTED_NAMES_USERNAME_SECONDARY] = it }
+                ?: prefs.remove(REQUESTED_NAMES_USERNAME_SECONDARY)
+        }
+
+        /**
+         * The single edit of [beginNameOnlyRetry]: the record a later "Try again" reads (identity
+         * id, the requested names, restoring, the old name's request status) changes together with
+         * the pending mark, so no partial write can drop the requested secondary.
+         */
+        internal fun writeNameOnlyRetryStart(prefs: MutablePreferences, request: RequestedNameContext) {
+            putRequestedNames(prefs, request)
+            prefs[IDENTITY_ID] = request.identityIdBase58
+            prefs[USERNAME] = request.username
+            // a secondary only when one is requested: a registered secondary stays
+            request.secondaryUsername?.let { prefs[USERNAME_SECONDARY] = it }
+            prefs[RESTORING] = false
+            // the lost or locked status belonged to the old name
+            prefs.remove(USERNAME_REQUESTED)
+            prefs[NAME_ONLY_RETRY_PENDING] = true
+            prefs[CREATION_STATE] = IdentityCreationState.USERNAME_REGISTERING.name
+            prefs.remove(CREATION_STATE_ERROR_MESSAGE)
+        }
     }
 
-    private val identityData: Flow<BlockchainIdentityData> = data
-        .map { prefs ->
-            BlockchainIdentityData(
-                creationState = IdentityCreationState.valueOf(prefs[CREATION_STATE] ?: "NONE"),
-                creationStateErrorMessage = prefs[CREATION_STATE_ERROR_MESSAGE],
-                username = prefs[USERNAME],
-                usernameSecondary = prefs[USERNAME_SECONDARY],
-                userId = prefs[IDENTITY_ID],
-                restoring = prefs[RESTORING] ?: false,
-                creditFundingTxId = prefs[ASSET_LOCK_TXID]?.let { Sha256Hash.wrap(it) },
-                identity = prefs[IDENTITY]?.let { platformService.dpp.identity.createFromBuffer(Converters.fromHex(it)) },
-                usingInvite = prefs[USING_INVITE] ?: false,
-                invite = prefs[INVITE_LINK]?.let { InvitationLinkData(Uri.parse(it), false) },
-                preorderSalt = prefs[PREORDER_SALT]?.let { Converters.fromHex(it) },
-                preorderSaltSecondary = prefs[PREORDER_SALT_SECONDARY]?.let { Converters.fromHex(it) },
-                registrationStatus = prefs[IDENTITY_REGISTRATION_STATUS]?.let { IdentityStatus.valueOf(it) },
-                usernameStatus = prefs[USERNAME_REGISTRATION_STATUS]?.let { UsernameStatus.valueOf(it) },
-                usernameSecondaryStatus = prefs[USERNAME_SECONDARY_REGISTRATION_STATUS]?.let { UsernameStatus.valueOf(it) },
-                creditBalance = prefs[BALANCE]?.let { Coin.valueOf(it) },
-                verificationLink = prefs[REQUESTED_USERNAME_LINK],
-                cancelledVerificationLink = prefs[CANCELED_REQUESTED_USERNAME_LINK],
-                usernameRequested = prefs[USERNAME_REQUESTED]?.let { UsernameRequestStatus.valueOf(it) },
-                votingPeriodStart = prefs[VOTING_PERIOD_START]
-            )
-        }
+    private val identityData: Flow<BlockchainIdentityData> = data.map(::identityDataFrom)
+
+    private fun identityDataFrom(prefs: Preferences): BlockchainIdentityData =
+        BlockchainIdentityData(
+            creationState = IdentityCreationState.valueOf(prefs[CREATION_STATE] ?: "NONE"),
+            creationStateErrorMessage = prefs[CREATION_STATE_ERROR_MESSAGE],
+            username = prefs[USERNAME],
+            usernameSecondary = prefs[USERNAME_SECONDARY],
+            userId = prefs[IDENTITY_ID],
+            restoring = prefs[RESTORING] ?: false,
+            creditFundingTxId = prefs[ASSET_LOCK_TXID]?.let { Sha256Hash.wrap(it) },
+            identity = prefs[IDENTITY]?.let { platformService.dpp.identity.createFromBuffer(Converters.fromHex(it)) },
+            usingInvite = prefs[USING_INVITE] ?: false,
+            invite = prefs[INVITE_LINK]?.let { InvitationLinkData(Uri.parse(it), false) },
+            preorderSalt = prefs[PREORDER_SALT]?.let { Converters.fromHex(it) },
+            preorderSaltSecondary = prefs[PREORDER_SALT_SECONDARY]?.let { Converters.fromHex(it) },
+            registrationStatus = prefs[IDENTITY_REGISTRATION_STATUS]?.let { IdentityStatus.valueOf(it) },
+            usernameStatus = prefs[USERNAME_REGISTRATION_STATUS]?.let { UsernameStatus.valueOf(it) },
+            usernameSecondaryStatus = prefs[USERNAME_SECONDARY_REGISTRATION_STATUS]?.let { UsernameStatus.valueOf(it) },
+            creditBalance = prefs[BALANCE]?.let { Coin.valueOf(it) },
+            verificationLink = prefs[REQUESTED_USERNAME_LINK],
+            cancelledVerificationLink = prefs[CANCELED_REQUESTED_USERNAME_LINK],
+            usernameRequested = prefs[USERNAME_REQUESTED]?.let { UsernameRequestStatus.valueOf(it) },
+            votingPeriodStart = prefs[VOTING_PERIOD_START]
+        )
 
     private val identityBaseData: Flow<BlockchainIdentityBaseData> = data
         .map { prefs ->
@@ -307,33 +363,62 @@ open class BlockchainIdentityConfig @Inject constructor(
     }
 
     private suspend fun saveIdentityPrefs(blockchainIdentityData: BlockchainIdentityData) {
+        // the creation state first, on its own, as before: a failed record write still records it
         updateCreationState(blockchainIdentityData.creationState, blockchainIdentityData.creationStateErrorMessage)
+        context.dataStore.edit { prefs -> writeIdentityPrefs(prefs, blockchainIdentityData) }
+    }
+
+    /**
+     * Writes [blockchainIdentityData] only while the stored record still has the [expected] identity,
+     * name, creation state and error, checked inside the same edit as the write. DataStore edits are
+     * serialized, so a name-only retry ([beginNameOnlyRetry], [failNameOnlyRetry]) either lands before
+     * the check (and the write is skipped) or after the write. Returns true when it wrote.
+     */
+    suspend fun insertIfUnchanged(blockchainIdentityData: BlockchainIdentityData, expected: IdentityRecordKey): Boolean {
+        var written = false
         context.dataStore.edit { prefs ->
-            blockchainIdentityData.username?.let { prefs[USERNAME] = it }
-            blockchainIdentityData.usernameSecondary?.let { prefs[USERNAME_SECONDARY] = it }
-            blockchainIdentityData.userId?.let { prefs[IDENTITY_ID] = it }
-            prefs[RESTORING] = blockchainIdentityData.restoring
-            blockchainIdentityData.creditFundingTxId?.let { prefs[ASSET_LOCK_TXID] = it.toString() }
-            // Serialize tolerantly: the wallet's own 6-key identities carry
-            // contract bounds on keys 4/5 that the legacy dashj CBOR encoder
-            // cannot serialize (`No converter for SingleContractDocumentType`).
-            // A faithful toBuffer() throws here and stalls identity creation at
-            // IDENTITY_REGISTERING. This strips the bounds from the LOCAL cache
-            // blob only; the on-chain registration (SDK path) keeps them.
-            blockchainIdentityData.identity?.let {
-                prefs[IDENTITY] = serializeIdentityToleratingContractBounds(it).toHex()
+            val stored = IdentityRecordKey(
+                prefs[IDENTITY_ID],
+                prefs[USERNAME],
+                IdentityCreationState.valueOf(prefs[CREATION_STATE] ?: IdentityCreationState.NONE.name),
+                prefs[CREATION_STATE_ERROR_MESSAGE]
+            )
+            if (stored.creationState != IdentityCreationState.NONE && stored == expected) {
+                writeIdentityPrefs(prefs, blockchainIdentityData)
+                written = true
             }
-            prefs[USING_INVITE] = blockchainIdentityData.usingInvite
-            blockchainIdentityData.invite?.let { prefs[INVITE_LINK] = it.link.toString() }
-            blockchainIdentityData.registrationStatus?.let { prefs[IDENTITY_REGISTRATION_STATUS] = it.name }
-            blockchainIdentityData.usernameStatus?.let { prefs[USERNAME_REGISTRATION_STATUS] = it.name }
-            blockchainIdentityData.usernameSecondaryStatus?.let { prefs[USERNAME_SECONDARY_REGISTRATION_STATUS] = it.name }
-            blockchainIdentityData.creditBalance?.let { prefs[BALANCE] = it.value }
-            blockchainIdentityData.usernameRequested?.let { prefs[USERNAME_REQUESTED] = it.name}
-            blockchainIdentityData.verificationLink?.let { prefs[REQUESTED_USERNAME_LINK] = it }
-            blockchainIdentityData.votingPeriodStart?.let { prefs[VOTING_PERIOD_START] = it }
-            blockchainIdentityData.cancelledVerificationLink?.let { prefs[CANCELED_REQUESTED_USERNAME_LINK] = it }
         }
+        return written
+    }
+
+    private fun writeIdentityPrefs(prefs: MutablePreferences, blockchainIdentityData: BlockchainIdentityData) {
+        prefs[CREATION_STATE] = blockchainIdentityData.creationState.name
+        val errorMessage = blockchainIdentityData.creationStateErrorMessage
+        if (errorMessage == null) prefs.remove(CREATION_STATE_ERROR_MESSAGE) else prefs[CREATION_STATE_ERROR_MESSAGE] = errorMessage
+        blockchainIdentityData.username?.let { prefs[USERNAME] = it }
+        blockchainIdentityData.usernameSecondary?.let { prefs[USERNAME_SECONDARY] = it }
+        blockchainIdentityData.userId?.let { prefs[IDENTITY_ID] = it }
+        prefs[RESTORING] = blockchainIdentityData.restoring
+        blockchainIdentityData.creditFundingTxId?.let { prefs[ASSET_LOCK_TXID] = it.toString() }
+        // Serialize tolerantly: the wallet's own 6-key identities carry
+        // contract bounds on keys 4/5 that the legacy dashj CBOR encoder
+        // cannot serialize (`No converter for SingleContractDocumentType`).
+        // A faithful toBuffer() throws here and stalls identity creation at
+        // IDENTITY_REGISTERING. This strips the bounds from the LOCAL cache
+        // blob only; the on-chain registration (SDK path) keeps them.
+        blockchainIdentityData.identity?.let {
+            prefs[IDENTITY] = serializeIdentityToleratingContractBounds(it).toHex()
+        }
+        prefs[USING_INVITE] = blockchainIdentityData.usingInvite
+        blockchainIdentityData.invite?.let { prefs[INVITE_LINK] = it.link.toString() }
+        blockchainIdentityData.registrationStatus?.let { prefs[IDENTITY_REGISTRATION_STATUS] = it.name }
+        blockchainIdentityData.usernameStatus?.let { prefs[USERNAME_REGISTRATION_STATUS] = it.name }
+        blockchainIdentityData.usernameSecondaryStatus?.let { prefs[USERNAME_SECONDARY_REGISTRATION_STATUS] = it.name }
+        blockchainIdentityData.creditBalance?.let { prefs[BALANCE] = it.value }
+        blockchainIdentityData.usernameRequested?.let { prefs[USERNAME_REQUESTED] = it.name}
+        blockchainIdentityData.verificationLink?.let { prefs[REQUESTED_USERNAME_LINK] = it }
+        blockchainIdentityData.votingPeriodStart?.let { prefs[VOTING_PERIOD_START] = it }
+        blockchainIdentityData.cancelledVerificationLink?.let { prefs[CANCELED_REQUESTED_USERNAME_LINK] = it }
     }
 
     private suspend fun saveIdentityBasePrefs(blockchainIdentityBaseData: BlockchainIdentityBaseData) {
@@ -369,6 +454,63 @@ open class BlockchainIdentityConfig @Inject constructor(
                 prefs[CREATION_STATE_ERROR_MESSAGE] = creationStateErrorMessage
             }
         }
+    }
+
+    override suspend fun requestedNames(): RequestedNameContext? = requestedNamesIn(data.first())
+
+    private fun requestedNamesIn(prefs: Preferences): RequestedNameContext? {
+        val identityId = prefs[REQUESTED_NAMES_IDENTITY_ID] ?: return null
+        val username = prefs[REQUESTED_NAMES_USERNAME] ?: return null
+        return RequestedNameContext(identityId, username, prefs[REQUESTED_NAMES_USERNAME_SECONDARY])
+    }
+
+    override suspend fun recordRequestedNames(request: RequestedNameContext) {
+        context.dataStore.edit { prefs -> putRequestedNames(prefs, request) }
+    }
+
+    override suspend fun beginNameOnlyRetry(request: RequestedNameContext) {
+        context.dataStore.edit { prefs -> writeNameOnlyRetryStart(prefs, request) }
+    }
+
+    override suspend fun pendingNameOnlyRetry(): PendingNameOnlyRetry? {
+        // one snapshot: the mark, the names and the record's state from the same read
+        val prefs = data.first()
+        if (prefs[NAME_ONLY_RETRY_PENDING] != true) return null
+        val request = requestedNamesIn(prefs) ?: return null
+        return PendingNameOnlyRetry(
+            request,
+            IdentityCreationState.valueOf(prefs[CREATION_STATE] ?: IdentityCreationState.NONE.name),
+            prefs[IDENTITY_ID],
+            prefs[CREATION_STATE_ERROR_MESSAGE],
+            prefs[USERNAME]
+        )
+    }
+
+    override suspend fun failNameOnlyRetry(errorMessage: String) {
+        context.dataStore.edit { prefs ->
+            prefs[CREATION_STATE] = IdentityCreationState.USERNAME_REGISTERING.name
+            prefs[CREATION_STATE_ERROR_MESSAGE] = errorMessage
+            prefs.remove(NAME_ONLY_RETRY_PENDING)
+        }
+    }
+
+    override suspend fun finishNameOnlyRetry() {
+        context.dataStore.edit { prefs -> prefs.remove(NAME_ONLY_RETRY_PENDING) }
+    }
+
+    /** A snapshot of the store that THROWS on a failed read, unlike [data] (which reads as empty). */
+    internal open suspend fun readStrict(): Preferences = context.dataStore.data.first()
+
+    /**
+     * The record a recovery of [identityIdBase58] starts from; see [recoverySeedRecord]. The
+     * record and the requested names come from one strict read: an unreadable store throws, so
+     * the recovery fails and is retried, instead of reading as a fresh restore (an empty record,
+     * whose walk lets the recovered names replace the requested ones).
+     */
+    suspend fun loadRecoverySeed(identityIdBase58: String, fromCreation: Boolean): BlockchainIdentityData? {
+        val prefs = readStrict()
+        val record = identityDataFrom(prefs).takeIf { it.creationState != IdentityCreationState.NONE }
+        return recoverySeedRecord(record, requestedNamesIn(prefs), identityIdBase58, fromCreation)
     }
 
     suspend fun clear() {
