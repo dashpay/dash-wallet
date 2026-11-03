@@ -28,6 +28,8 @@ import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.dashj.platform.dpp.voting.BlockInfo
@@ -90,7 +92,8 @@ class IdentityConditionalWriteTest {
         every { platformRepo.getVoteContenders("alice") } returns
             Contenders(Optional.of(Pair(locked, mockk<BlockInfo>())), mapOf(), 0, 0)
 
-        service(config).checkUsernameVotingStatus()
+        // the check waits at its write (it writes in line, as one conditional write)
+        val check = launch(Dispatchers.IO) { service(config).checkUsernameVotingStatus() }
         withTimeout(5_000) { atWrite.await() }
 
         val error = "name-only retry: DuplicateUniqueIndexError"
@@ -98,6 +101,7 @@ class IdentityConditionalWriteTest {
         config.failNameOnlyRetry(error)
         resume.complete(Unit)
         withTimeout(5_000) { written.await() }
+        withTimeout(5_000) { check.join() }
 
         val stored = requireNotNull(config.load())
         assertEquals("alice3", stored.username)
