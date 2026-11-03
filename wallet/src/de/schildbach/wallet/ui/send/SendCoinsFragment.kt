@@ -188,7 +188,10 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
             viewModel.sendOutcome,
             lockScreenBroadcaster.unlocked,
             viewModel::consumeSendOutcome,
-            viewModel::retainSendOutcome
+            viewModel::retainSendOutcome,
+            // A minimum-balance question restored after process death lost its question.
+            MinimumBalanceDialog.TAG,
+            requireActivity().supportFragmentManager
         ) { onSendOutcome(it, this) }
 
         // The payment may have gone out: Go stays disabled (everythingPlausible() is false from

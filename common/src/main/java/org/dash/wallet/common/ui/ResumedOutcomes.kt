@@ -72,7 +72,8 @@ class OutcomeDelivery internal constructor() {
  * callbacks, so a handler shows its dialog under a fixed tag, replacing a restored one
  * ([showNowReplacing], AdaptiveDialog.showAsync with a tag).
  *
- * [restoredDialogTag] names the dialog [handle] shows in the parent FragmentManager. When this view
+ * [restoredDialogTag] names the dialog [handle] shows in [restoredDialogIn] (the parent
+ * FragmentManager unless given, e.g. the activity's for AdaptiveDialog.showAsync). When this view
  * is created with no outcome to hand out (the process died with the dialog up, and the new view
  * model holds none), a copy of that dialog the FragmentManager restored is dismissed: no one
  * would answer it, and it would stay over the screen.
@@ -83,10 +84,12 @@ fun <T : Any> Fragment.handleWhenResumed(
     take: (T) -> Boolean,
     putBack: (T) -> Unit,
     restoredDialogTag: String? = null,
+    restoredDialogIn: FragmentManager? = null,
     handle: suspend OutcomeDelivery.(T) -> Boolean
 ) {
     if (restoredDialogTag != null && outcomes.value == null) {
-        (parentFragmentManager.findFragmentByTag(restoredDialogTag) as? DialogFragment)?.dismissAllowingStateLoss()
+        ((restoredDialogIn ?: parentFragmentManager).findFragmentByTag(restoredDialogTag) as? DialogFragment)
+            ?.dismissAllowingStateLoss()
     }
     val owner = viewLifecycleOwner
     // Dispatchers.Main, not the scope's Main.immediate: posted, so outside lifecycle dispatch.

@@ -346,7 +346,10 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
             transferDashViewModel.leftoverBalanceWarning,
             lockScreenBroadcaster.unlocked,
             transferDashViewModel::consumeLeftoverBalanceWarning,
-            transferDashViewModel::retainLeftoverBalanceWarning
+            transferDashViewModel::retainLeftoverBalanceWarning,
+            // A question restored after process death lost its pending transfer.
+            MinimumBalanceDialog.TAG,
+            requireActivity().supportFragmentManager
         ) { pending ->
             val sendAnyway = MinimumBalanceDialog().showAsync(requireActivity(), MinimumBalanceDialog.TAG)
                 ?: return@handleWhenResumed false

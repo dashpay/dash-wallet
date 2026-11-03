@@ -86,13 +86,17 @@ class HandleWhenResumedTest {
         /** The tag the screen shows its result dialog under, if it keeps one (see handleWhenResumed). */
         protected open val resultDialogTag: String? = null
 
+        /** Where that dialog is shown: the parent FragmentManager unless the activity's. */
+        protected open val resultDialogInActivity: Boolean = false
+
         override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
             handleWhenResumed(
                 outcomes,
                 unlocked,
                 { outcomes.compareAndSet(it, null) },
                 { outcomes.compareAndSet(null, it) },
-                resultDialogTag
+                resultDialogTag,
+                if (resultDialogInActivity) requireActivity().supportFragmentManager else null
             ) { show(it, this) }
         }
 
@@ -154,6 +158,9 @@ class HandleWhenResumedTest {
 
     /** The minimum-balance question's shape: showAsync under its own tag. */
     class QuestionScreen : Screen() {
+        override val resultDialogTag: String? = QUESTION_TAG
+        override val resultDialogInActivity: Boolean = true
+
         override suspend fun show(outcome: String, delivery: OutcomeDelivery): Boolean {
             val answer = AdaptiveDialog.simple(outcome, "Close", "Continue").showAsync(requireActivity(), QUESTION_TAG)
             answers += answer
@@ -408,6 +415,23 @@ class HandleWhenResumedTest {
         idle()
 
         assertNull("no dead result dialog left over the restored screen", resultDialog())
+    }
+
+    @Test
+    fun aQuestionUpWhenTheProcessDies_isRetired_whenTheRestoredScreenHasNoQuestion() {
+        useScreen(QuestionScreen())
+        screen.outcomes.value = "leftover balance"
+        idle()
+        assertNotNull(dialog())
+
+        // Its pending question died with the process: the restored dialog's Continue would do nothing.
+        val saved = Bundle()
+        controller.saveInstanceState(saved)
+        controller.pause().stop().destroy()
+        activity = Robolectric.buildActivity(HostActivity::class.java).setup(saved).get()
+        idle()
+
+        assertNull("no dead question left over the restored screen", dialog())
     }
 
     private fun recreate() {
