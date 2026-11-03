@@ -437,4 +437,20 @@ class HandleWhenResumedTest {
         assertNull("answered before the screen went: not given back", outcomes.value)
         assertEquals(0, resultDialogs().size)
     }
+
+    @Test
+    fun anUnansweredResult_whoseScreenIsLeftByNavigation_isNotGivenBack() {
+        useScreen(AwaitedResultScreen())
+        val outcomes = screen.outcomes
+        outcomes.value = "transfer sent"
+        idle()
+        assertNotNull(resultDialog())
+
+        // Navigation away (e.g. the session expired), not a recreation: the view is destroyed
+        // with the result still up and unanswered.
+        activity.supportFragmentManager.beginTransaction().remove(screen).commitNow()
+        idle()
+
+        assertNull("left, not recreated: not given back for a later visit", outcomes.value)
+    }
 }

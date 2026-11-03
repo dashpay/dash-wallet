@@ -32,7 +32,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
@@ -68,8 +67,8 @@ class OutcomeDelivery internal constructor() {
  * resumed: a pause while its dialog is up does not cancel it, only the view's destruction does.
  * It returns whether the user answered (or calls [OutcomeDelivery.markAnswered] as soon as they
  * did). An unanswered outcome is given back with [putBack] when the lock screen dismissed its
- * dialog (shown again on unlock), or when the view or activity went away with it up (a
- * recreation: the new screen takes it again). The restored copy of that dialog has lost its
+ * dialog (shown again on unlock), or when the activity is recreated with it up (the new screen
+ * takes it again); not when the screen is left by navigation or the activity finishes. The restored copy of that dialog has lost its
  * callbacks, so a handler shows its dialog under a fixed tag, replacing a restored one
  * ([showNowReplacing], AdaptiveDialog.showAsync with a tag).
  */
@@ -99,10 +98,11 @@ fun <T : Any> Fragment.handleWhenResumed(
                                     delivery.markAnswered()
                                 }
                             } finally {
-                                // Cancelled: the view was destroyed before the handler returned.
-                                val goingAway = !isActive || activity.isChangingConfigurations
+                                // A recreation (not navigation away or finishing, after which a
+                                // later visit must not show a stale outcome): the new screen takes it.
+                                val recreating = activity.isChangingConfigurations
                                 val locked = (activity as? LockScreenHost)?.lockScreenDisplayed == true
-                                if (!delivery.answered && (goingAway || locked)) {
+                                if (!delivery.answered && (recreating || locked)) {
                                     putBack(outcome)
                                 }
                             }
