@@ -681,7 +681,18 @@ class SendCoinsTaskRunner @Inject constructor(
                 // Bridged into the wallet the payment was confirmed on, never re-resolved.
                 when (val bridged = bridgedTransactionFactory.bridge(result.value, originWallet = originWallet)) {
                     is de.schildbach.wallet.service.platform.sdk.BridgedTxResult.Bridged -> {
-                        beforeSending?.accept(bridged.transaction)
+                        try {
+                            beforeSending?.accept(bridged.transaction)
+                        } catch (e: Exception) {
+                            // Sent already: a failing metadata step must not read as a failure
+                            // a retry could pay twice on.
+                            throw PaymentSubmissionPendingException(
+                                result.value,
+                                e,
+                                "payment ${result.value} was broadcast, but recording it failed; " +
+                                    "it appears after the next sync"
+                            )
+                        }
                         bridged.transaction
                     }
                     // Sent, so pending rather than an ordinary failure: a failure would let the

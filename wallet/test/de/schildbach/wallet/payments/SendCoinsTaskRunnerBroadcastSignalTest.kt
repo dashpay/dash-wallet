@@ -200,6 +200,25 @@ class SendCoinsTaskRunnerBroadcastSignalTest {
     }
 
     @Test
+    fun postCutover_broadcastThenAFailingMetadataStep_isPending_notARetryableFailure() = runTest {
+        postCutover(SdkWriteResult.Broadcast(sdkTxid))
+        bridgeReturns(BridgedTxResult.Bridged(mockk(relaxed = true), adoptedWalletInstance = false))
+
+        try {
+            runner.sendCoins(
+                sendRequest(),
+                checkBalanceConditions = false,
+                beforeSending = { throw IllegalStateException("memo could not be written") },
+                intendedRecipient = recipient
+            )
+            fail("the failure still surfaces")
+        } catch (expected: PaymentSubmissionPendingException) {
+            // The payment went out: never an ordinary failure a retry could pay twice on.
+            assertEquals(sdkTxid, expected.txId)
+        }
+    }
+
+    @Test
     fun postCutover_broadcastAndBridged_signalsOnce() = runTest {
         postCutover(SdkWriteResult.Broadcast(sdkTxid))
         bridgeReturns(BridgedTxResult.Bridged(mockk(relaxed = true), adoptedWalletInstance = false))
