@@ -58,7 +58,7 @@ class PiggyCardsRemoteDataSource @Inject constructor(
             .create(api)
     }
 
-    private fun buildTokenApi(): PiggyCardsTokenApi {
+    fun buildTokenApi(): PiggyCardsTokenApi {
         return Retrofit.Builder()
             .baseUrl(
                 if (walletData.networkParameters.id == NetworkParameters.ID_MAINNET) {
