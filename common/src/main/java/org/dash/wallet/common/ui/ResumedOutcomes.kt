@@ -23,33 +23,47 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.withResumed
 import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.launch
 
 /**
  * From the fragment's onViewCreated: hands each outcome a view model retains in [outcomes] to
- * [handle], only while the view and its activity are resumed. AdaptiveDialog.showAsync shows nothing (returns null)
- * unless the activity is resumed, so an outcome taken while the screen is stopped or being
- * recreated would be lost; one that arrives then stays retained until the screen resumes.
+ * [handle], only while the view and its activity are resumed and the wallet is unlocked.
+ *
+ * - AdaptiveDialog.showAsync shows nothing (returns null) unless the activity is resumed, and the
+ *   view resumes before the activity's lifecycle does, so an outcome taken earlier would be lost.
+ * - The lock screen covers a resumed screen without stopping it, and dismisses its dialogs only
+ *   once, when it locks: an outcome (a failure, or a question whose answer sends) is never taken
+ *   while it is up, and is tried again on each [unlocked] emission.
+ * - Delivery runs from its own main-thread message, never inside the FragmentManager's lifecycle
+ *   dispatch, where a synchronous dialog commit (showNow) throws.
  *
  * [take] claims the outcome (true once, e.g. a compare-and-set to null) so it is handled once
  * across recreations. [handle] then runs in the view's scope, started undispatched while still
  * resumed: a pause while its dialog is up does not cancel it, only the view's destruction does.
  */
 fun <T : Any> Fragment.handleWhenResumed(
-    outcomes: Flow<T?>,
+    outcomes: StateFlow<T?>,
+    unlocked: Flow<Unit>,
     take: (T) -> Boolean,
     handle: suspend (T) -> Unit
 ) {
     val owner = viewLifecycleOwner
-    owner.lifecycleScope.launch {
+    // Dispatchers.Main, not the scope's Main.immediate: posted, so outside lifecycle dispatch.
+    owner.lifecycleScope.launch(Dispatchers.Main) {
         owner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
-            outcomes.filterNotNull().collect { outcome ->
-                // The view resumes before the activity's lifecycle does, and showAsync checks the
-                // activity's.
-                requireActivity().lifecycle.withResumed {
-                    if (take(outcome)) {
+            merge(outcomes.map { }, unlocked).collect {
+                val activity = requireActivity()
+                activity.lifecycle.withResumed {
+                    val outcome = outcomes.value
+                    if (outcome != null &&
+                        (activity as? LockScreenHost)?.lockScreenDisplayed != true &&
+                        take(outcome)
+                    ) {
                         owner.lifecycleScope.launch(start = CoroutineStart.UNDISPATCHED) { handle(outcome) }
                     }
                 }

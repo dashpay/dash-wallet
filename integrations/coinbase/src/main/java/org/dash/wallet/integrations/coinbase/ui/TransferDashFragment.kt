@@ -331,13 +331,17 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
             ).show(requireActivity())
         }
 
-        transferDashViewModel.observeSendDashToCoinbaseState.observe(viewLifecycleOwner){
-            setTransactionState(it)
-        }
+        // The transfer's result and the leftover-balance question: once each, only while
+        // resumed and unlocked (see handleWhenResumed).
+        handleWhenResumed(
+            transferDashViewModel.observeSendDashToCoinbaseState,
+            lockScreenBroadcaster.unlocked,
+            transferDashViewModel::consumeSendDashToCoinbaseState
+        ) { setTransactionState(it) }
 
-        // Only once resumed, so that the question can be shown.
         handleWhenResumed(
             transferDashViewModel.leftoverBalanceWarning,
+            lockScreenBroadcaster.unlocked,
             transferDashViewModel::consumeLeftoverBalanceWarning
         ) { pending ->
             if (MinimumBalanceDialog().showAsync(requireActivity()) == true) {

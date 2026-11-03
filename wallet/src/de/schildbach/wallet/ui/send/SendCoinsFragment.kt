@@ -182,8 +182,10 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         }
 
         // A send's outcome, once, whether this screen or one recreated meanwhile started it, and
-        // only once resumed, so that its dialog can be shown.
-        handleWhenResumed(viewModel.sendOutcome, viewModel::consumeSendOutcome) { onSendOutcome(it) }
+        // only while resumed and unlocked, so that its dialog can be shown (see handleWhenResumed).
+        handleWhenResumed(viewModel.sendOutcome, lockScreenBroadcaster.unlocked, viewModel::consumeSendOutcome) {
+            onSendOutcome(it)
+        }
 
         // The payment may have gone out: Go stays disabled (everythingPlausible() is false from
         // now on) and the warning stays up until the user's Close, which leaves the send screen

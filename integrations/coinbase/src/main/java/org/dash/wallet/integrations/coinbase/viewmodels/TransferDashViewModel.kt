@@ -159,9 +159,17 @@ class TransferDashViewModel @Inject constructor(
 
     val onBuildTransactionParamsCallback = SingleLiveEvent<CoinbaseTransactionParams>()
 
-    private val _sendDashToCoinbaseState = MutableLiveData<SendDashResponseState>()
-    val observeSendDashToCoinbaseState: LiveData<SendDashResponseState>
-        get() = _sendDashToCoinbaseState
+    private val _sendDashToCoinbaseState = MutableStateFlow<SendDashResponseState?>(null)
+
+    /**
+     * The transfer's result, kept until the screen takes it ([consumeSendDashToCoinbaseState]):
+     * a send this view model owns can finish while no screen is resumed to show it.
+     */
+    val observeSendDashToCoinbaseState: StateFlow<SendDashResponseState?> = _sendDashToCoinbaseState.asStateFlow()
+
+    /** True for exactly one taker of [state], which then shows it. */
+    fun consumeSendDashToCoinbaseState(state: SendDashResponseState): Boolean =
+        _sendDashToCoinbaseState.compareAndSet(state, null)
 
     private val _userAccountDataWithExchangeRate = MutableLiveData<CoinbaseToDashExchangeRateUIModel>()
     val userAccountOnCoinbaseState: LiveData<CoinbaseToDashExchangeRateUIModel>
