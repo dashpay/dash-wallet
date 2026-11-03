@@ -103,6 +103,11 @@ class TransferDashViewModel @Inject constructor(
     fun consumeLeftoverBalanceWarning(pending: PendingTransfer): Boolean =
         _leftoverBalanceWarning.compareAndSet(pending, null)
 
+    /** Gives back a taken [pending] the user did not answer, unless a newer one arrived. */
+    fun retainLeftoverBalanceWarning(pending: PendingTransfer) {
+        _leftoverBalanceWarning.compareAndSet(null, pending)
+    }
+
     /**
      * Starts the transfer in this view model's scope, so a recreation of the screen (which
      * cancels the screen's own coroutines) cannot cancel a send that may already be on the
@@ -170,6 +175,11 @@ class TransferDashViewModel @Inject constructor(
     /** True for exactly one taker of [state], which then shows it. */
     fun consumeSendDashToCoinbaseState(state: SendDashResponseState): Boolean =
         _sendDashToCoinbaseState.compareAndSet(state, null)
+
+    /** Gives back a taken [state] the user did not answer, unless a newer one arrived. */
+    fun retainSendDashToCoinbaseState(state: SendDashResponseState) {
+        _sendDashToCoinbaseState.compareAndSet(null, state)
+    }
 
     private val _userAccountDataWithExchangeRate = MutableLiveData<CoinbaseToDashExchangeRateUIModel>()
     val userAccountOnCoinbaseState: LiveData<CoinbaseToDashExchangeRateUIModel>

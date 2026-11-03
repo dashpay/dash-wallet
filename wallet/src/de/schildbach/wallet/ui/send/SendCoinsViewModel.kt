@@ -200,6 +200,11 @@ class SendCoinsViewModel @Inject constructor(
     /** Takes [outcome] for handling; false if it was already taken (the screen acts on it once). */
     fun consumeSendOutcome(outcome: SendOutcome): Boolean = _sendOutcome.compareAndSet(outcome, null)
 
+    /** Gives back a taken [outcome] the user did not answer, unless a newer one arrived. */
+    fun retainSendOutcome(outcome: SendOutcome) {
+        _sendOutcome.compareAndSet(null, outcome)
+    }
+
     /** Held while one send is in progress (see [signAndSendPayment]). */
     private val sendInFlight = AtomicBoolean(false)
 

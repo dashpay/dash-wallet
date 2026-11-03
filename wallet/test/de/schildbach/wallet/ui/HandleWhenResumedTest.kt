@@ -79,18 +79,27 @@ class HandleWhenResumedTest {
             FrameLayout(inflater.context)
 
         override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-            handleWhenResumed(outcomes, unlocked, { outcomes.compareAndSet(it, null) }) { show(it) }
+            handleWhenResumed(
+                outcomes,
+                unlocked,
+                { outcomes.compareAndSet(it, null) },
+                { outcomes.compareAndSet(null, it) }
+            ) { show(it) }
         }
 
-        protected open suspend fun show(outcome: String) {
-            answers += AdaptiveDialog.simple(outcome, "Close").showAsync(requireActivity())
+        /** Whether the user answered, as the screens report it. */
+        protected open suspend fun show(outcome: String): Boolean {
+            val answer = AdaptiveDialog.simple(outcome, "Close").showAsync(requireActivity())
+            answers += answer
+            return answer != null
         }
     }
 
     /** Shows its result as the Coinbase transfer screen does: a synchronous commit (showNow). */
     class ShowNowScreen : Screen() {
-        override suspend fun show(outcome: String) {
+        override suspend fun show(outcome: String): Boolean {
             AdaptiveDialog.simple(outcome, "Close").showNow(parentFragmentManager, RESULT_TAG)
+            return true
         }
     }
 
@@ -227,5 +236,52 @@ class HandleWhenResumedTest {
 
         assertNull("taken by the recreated screen", screen.outcomes.value)
         assertEquals("shown once", 1, dialogs().count { it.tag == RESULT_TAG && it.showsDialog })
+    }
+
+    /** What LockScreenActivity does when it locks: shows the PIN screen, then dismisses every dialog. */
+    private fun lock() {
+        activity.lockScreenDisplayed = true
+        dialogs().forEach { it.dismissAllowingStateLoss() }
+        idle()
+    }
+
+    private fun unlock() {
+        activity.lockScreenDisplayed = false
+        unlocked.tryEmit(Unit)
+        idle()
+    }
+
+    @Test
+    fun aQuestionTheLockDismissesUnanswered_isAskedAgainOnUnlock_andAnsweredOnce() {
+        screen.outcomes.value = "leftover balance"
+        idle()
+        assertNotNull(dialog())
+
+        lock()
+
+        assertNull("nothing over the lock screen", dialog())
+        assertEquals("given back, not lost", "leftover balance", screen.outcomes.value)
+
+        unlock()
+
+        val again = requireNotNull(dialog()) { "asked again once unlocked" }
+        again.requireView().findViewById<View>(org.dash.wallet.common.R.id.dialog_negative_button).performClick()
+        idle()
+
+        assertEquals(listOf(null, false), screen.answers)
+        assertNull("answered: not given back", screen.outcomes.value)
+        assertNull(dialog())
+    }
+
+    @Test
+    fun aQuestionTheUserDismisses_isNotAskedAgain() {
+        screen.outcomes.value = "leftover balance"
+        idle()
+
+        requireNotNull(dialog()).dismissAllowingStateLoss()
+        idle()
+
+        assertNull(screen.outcomes.value)
+        assertNull(dialog())
     }
 }

@@ -183,9 +183,12 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
 
         // A send's outcome, once, whether this screen or one recreated meanwhile started it, and
         // only while resumed and unlocked, so that its dialog can be shown (see handleWhenResumed).
-        handleWhenResumed(viewModel.sendOutcome, lockScreenBroadcaster.unlocked, viewModel::consumeSendOutcome) {
-            onSendOutcome(it)
-        }
+        handleWhenResumed(
+            viewModel.sendOutcome,
+            lockScreenBroadcaster.unlocked,
+            viewModel::consumeSendOutcome,
+            viewModel::retainSendOutcome
+        ) { onSendOutcome(it) }
 
         // The payment may have gone out: Go stays disabled (everythingPlausible() is false from
         // now on) and the warning stays up until the user's Close, which leaves the send screen
@@ -287,7 +290,8 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
     }
 
     /** What follows a send the view model ran; the view model is already back to INPUT. */
-    private suspend fun onSendOutcome(outcome: SendCoinsViewModel.SendOutcome) {
+    /** False when the minimum-balance question went unanswered (see handleWhenResumed). */
+    private suspend fun onSendOutcome(outcome: SendCoinsViewModel.SendOutcome): Boolean {
         when (outcome) {
             is SendCoinsViewModel.SendOutcome.Sent ->
                 onSignAndSendPaymentSuccess(outcome.transaction, outcome.autoAcceptContactRequest)
@@ -295,11 +299,12 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
                 val ex = outcome.exception
                 if (ex is LeftoverBalanceException) {
                     val shouldContinue = MinimumBalanceDialog().showAsync(requireActivity())
+                        ?: return false
 
-                    if (shouldContinue == true) {
+                    if (shouldContinue) {
                         handleGo(false, outcome.autoAcceptContactRequest)
                     }
-                    return
+                    return true
                 }
                 viewModel.logSendError(args.paymentIntent.source)
                 log.info("send exception: ", ex)
@@ -311,6 +316,7 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
                 }
             }
         }
+        return true
     }
 
     protected open suspend fun showPaymentConfirmation() {

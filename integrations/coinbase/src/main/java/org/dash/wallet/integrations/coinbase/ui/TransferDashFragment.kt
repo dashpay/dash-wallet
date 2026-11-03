@@ -28,10 +28,15 @@ import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.commit
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.money.MoneyFormat
 import org.dash.wallet.common.money.fiatValue
@@ -336,15 +341,18 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
         handleWhenResumed(
             transferDashViewModel.observeSendDashToCoinbaseState,
             lockScreenBroadcaster.unlocked,
-            transferDashViewModel::consumeSendDashToCoinbaseState
+            transferDashViewModel::consumeSendDashToCoinbaseState,
+            transferDashViewModel::retainSendDashToCoinbaseState
         ) { setTransactionState(it) }
 
         handleWhenResumed(
             transferDashViewModel.leftoverBalanceWarning,
             lockScreenBroadcaster.unlocked,
-            transferDashViewModel::consumeLeftoverBalanceWarning
+            transferDashViewModel::consumeLeftoverBalanceWarning,
+            transferDashViewModel::retainLeftoverBalanceWarning
         ) { pending ->
-            if (MinimumBalanceDialog().showAsync(requireActivity()) == true) {
+            val sendAnyway = MinimumBalanceDialog().showAsync(requireActivity()) ?: return@handleWhenResumed false
+            if (sendAnyway) {
                 transferDashViewModel.submitTransfer(
                     pending.dashValue,
                     pending.isEmptyWallet,
@@ -352,6 +360,7 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
                     session = pending.session
                 )
             }
+            true
         }
 
         transferDashViewModel.onBuildTransactionParamsCallback.observe(viewLifecycleOwner){
@@ -427,11 +436,16 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
         }
     }
 
-    private fun setTransactionState(responseState: SendDashResponseState) {
+    /**
+     * Shows the transfer's result until it is dismissed; false when no button answered it (the
+     * lock screen dismisses every dialog when it locks: see handleWhenResumed).
+     */
+    private suspend fun setTransactionState(responseState: SendDashResponseState): Boolean {
         if (responseState is SendDashResponseState.OutcomeUnknownState) {
             // Shown from paymentOutcomeUnknown, which survives recreation (see onViewCreated).
-            return
+            return true
         }
+        var answered = false
         val pair: Pair<CoinBaseResultDialog.Type, String?> = when(responseState){
             is SendDashResponseState.SuccessState -> {
                 Pair(if (responseState.isTransactionPending) CoinBaseResultDialog.Type.TRANSFER_DASH_SUCCESS else CoinBaseResultDialog.Type.TRANSFER_DASH_ERROR, null)
@@ -444,6 +458,7 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
         val transactionStateDialog = CoinBaseResultDialog.newInstance(pair.first, pair.second, dashToCoinbase = true).apply {
             onCoinBaseResultDialogButtonsClickListener = object : CoinBaseResultDialog.CoinBaseResultDialogButtonsClickListener {
                 override fun onPositiveButtonClick(type: CoinBaseResultDialog.Type) {
+                    answered = true
                     when(type){
                         CoinBaseResultDialog.Type.TRANSFER_DASH_SUCCESS -> {
                             transferDashViewModel.logClose(type)
@@ -461,12 +476,15 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
                 }
 
                 override fun onNegativeButtonClick(type: CoinBaseResultDialog.Type) {
+                    answered = true
                     transferDashViewModel.logClose(type)
                 }
             }
         }
 
         transactionStateDialog.showNow(parentFragmentManager, "TransactionStateDialog")
+        transactionStateDialog.awaitDestroyed()
+        return answered
     }
 
     @SuppressLint("SetTextI18n")
@@ -517,5 +535,24 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
     override fun onDestroy() {
         super.onDestroy()
         onBackPressedCallback?.remove()
+    }
+}
+
+/** Suspends until this fragment is destroyed (a dialog: dismissed). */
+private suspend fun Fragment.awaitDestroyed() {
+    if (lifecycle.currentState == Lifecycle.State.DESTROYED) {
+        return
+    }
+    suspendCancellableCoroutine { continuation ->
+        val observer = object : LifecycleEventObserver {
+            override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
+                if (event == Lifecycle.Event.ON_DESTROY) {
+                    lifecycle.removeObserver(this)
+                    continuation.resume(Unit)
+                }
+            }
+        }
+        lifecycle.addObserver(observer)
+        continuation.invokeOnCancellation { lifecycle.removeObserver(observer) }
     }
 }

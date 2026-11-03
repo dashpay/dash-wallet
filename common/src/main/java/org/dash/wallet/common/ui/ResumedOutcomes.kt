@@ -39,18 +39,21 @@ import kotlinx.coroutines.launch
  * - The lock screen covers a resumed screen without stopping it, and dismisses its dialogs only
  *   once, when it locks: an outcome (a failure, or a question whose answer sends) is never taken
  *   while it is up, and is tried again on each [unlocked] emission.
- * - Delivery runs from its own main-thread message, never inside the FragmentManager's lifecycle
- *   dispatch, where a synchronous dialog commit (showNow) throws.
+ * - Delivery runs from its own main-thread message, outside the FragmentManager's transaction
+ *   execution, where a synchronous dialog commit (showNow) throws.
  *
  * [take] claims the outcome (true once, e.g. a compare-and-set to null) so it is handled once
  * across recreations. [handle] then runs in the view's scope, started undispatched while still
  * resumed: a pause while its dialog is up does not cancel it, only the view's destruction does.
+ * It returns whether the user answered; one the lock screen dismissed unanswered (it dismisses
+ * every dialog when it locks) is given back with [putBack] and shown again on unlock.
  */
 fun <T : Any> Fragment.handleWhenResumed(
     outcomes: StateFlow<T?>,
     unlocked: Flow<Unit>,
     take: (T) -> Boolean,
-    handle: suspend (T) -> Unit
+    putBack: (T) -> Unit,
+    handle: suspend (T) -> Boolean
 ) {
     val owner = viewLifecycleOwner
     // Dispatchers.Main, not the scope's Main.immediate: posted, so outside lifecycle dispatch.
@@ -64,7 +67,11 @@ fun <T : Any> Fragment.handleWhenResumed(
                         (activity as? LockScreenHost)?.lockScreenDisplayed != true &&
                         take(outcome)
                     ) {
-                        owner.lifecycleScope.launch(start = CoroutineStart.UNDISPATCHED) { handle(outcome) }
+                        owner.lifecycleScope.launch(start = CoroutineStart.UNDISPATCHED) {
+                            if (!handle(outcome) && (activity as? LockScreenHost)?.lockScreenDisplayed == true) {
+                                putBack(outcome)
+                            }
+                        }
                     }
                 }
             }
