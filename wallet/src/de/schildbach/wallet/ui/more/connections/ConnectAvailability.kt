@@ -11,7 +11,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
-import org.dashj.platform.dpp.identifier.Identifier
 
 /**
  * DashConnect needs Platform protocol version 14: key funding limits and expiry, contract-group
@@ -38,13 +37,12 @@ object ConnectAvailability {
 
     /**
      * Asks the network for its protocol version unless it already reported one new enough. Null when
-     * the network did not answer, or when there is no identity to read it with, so the caller can offer
-     * a retry instead of calling the network too old.
+     * the network did not answer, so the caller can offer a retry instead of calling the network too old.
      */
-    suspend fun isAvailable(platformRepo: PlatformRepo, identityId: Identifier?): Boolean? {
+    suspend fun isAvailable(platformRepo: PlatformRepo): Boolean? {
         if (!isSupported) return false
         if (reportedVersion.value >= MIN_PROTOCOL_VERSION) return true
-        val version = identityId?.let { platformRepo.readProtocolVersion(it) } ?: return null
+        val version = platformRepo.readProtocolVersion() ?: return null
         reportedVersion.update { maxOf(it, version) }
         return version >= MIN_PROTOCOL_VERSION
     }

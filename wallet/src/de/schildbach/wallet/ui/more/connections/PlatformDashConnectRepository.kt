@@ -33,7 +33,7 @@ class PlatformDashConnectRepository @Inject constructor(
     private val session = AppConnectSession(platform, platformRepo, identityRepository, config)
 
     override suspend fun isAvailable(): Boolean? =
-        ConnectAvailability.isAvailable(platformRepo, identityRepository.blockchainIdentity?.uniqueIdentifier)
+        ConnectAvailability.isAvailable(platformRepo)
 
     override fun observeConnections(): Flow<List<DAppConnection>> = observeConnections(System::currentTimeMillis)
 

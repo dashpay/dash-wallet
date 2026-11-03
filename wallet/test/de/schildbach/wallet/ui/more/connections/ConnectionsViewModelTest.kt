@@ -795,7 +795,7 @@ class ConnectionsViewModelTest {
         val platform = mockk<de.schildbach.wallet.service.platform.PlatformService>(relaxed = true)
         val wallet = mockk<de.schildbach.wallet.ui.dashpay.PlatformRepo>(relaxed = true)
         every { wallet.walletApplication.wallet!!.watchingKey.pubKey } returns ByteArray(33) { 1 }
-        coEvery { wallet.readProtocolVersion(any()) } returns ConnectAvailability.MIN_PROTOCOL_VERSION
+        coEvery { wallet.readProtocolVersion() } returns ConnectAvailability.MIN_PROTOCOL_VERSION
         val config = mockk<DashConnectConfig>()
         val scope = AppConnectSession(platform, wallet, identities, config).scope()
         val record = org.json.JSONObject().put("scope", scope).put("app", "app").put("state", "active")

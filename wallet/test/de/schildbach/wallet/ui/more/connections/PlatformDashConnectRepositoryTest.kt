@@ -63,7 +63,7 @@ class PlatformDashConnectRepositoryTest {
         ConnectAvailability.resetForTest()
         every { identityRepository.blockchainIdentity?.uniqueIdentifier } returns
             org.dashj.platform.dpp.identifier.Identifier.from(ByteArray(32) { 7 })
-        coEvery { platformRepo.readProtocolVersion(any()) } returns ConnectAvailability.MIN_PROTOCOL_VERSION
+        coEvery { platformRepo.readProtocolVersion() } returns ConnectAvailability.MIN_PROTOCOL_VERSION
     }
 
     @After
@@ -154,9 +154,17 @@ class PlatformDashConnectRepositoryTest {
     }
 
     @Test
+    fun isAvailable_readsTheVersionForAWalletWithoutAUsername() {
+        assumeTrue(ConnectAvailability.isSupported)
+        // A wallet without a username still needs the answer, to reach Connections and create one.
+        every { identityRepository.blockchainIdentity } returns null
+        assertEquals(true, runBlocking { repository.isAvailable() })
+    }
+
+    @Test
     fun parseQr_refusesWhilePlatformIsBelowProtocol14() {
         assumeTrue("testnet-only feature", Constants.IS_TESTNET_BUILD)
-        coEvery { platformRepo.readProtocolVersion(any()) } returns 13
+        coEvery { platformRepo.readProtocolVersion() } returns 13
         val error = assertThrows(IllegalStateException::class.java) {
             runBlocking { repository.parseQr(testnetKeyUri()) }
         }
@@ -167,7 +175,7 @@ class PlatformDashConnectRepositoryTest {
     fun parseQr_asksToRetryWhenThePlatformVersionCannotBeRead() {
         assumeTrue("testnet-only feature", Constants.IS_TESTNET_BUILD)
         // The network did not answer, so the SDK's starting version was never confirmed.
-        coEvery { platformRepo.readProtocolVersion(any()) } returns null
+        coEvery { platformRepo.readProtocolVersion() } returns null
         val error = assertThrows(IllegalStateException::class.java) {
             runBlocking { repository.parseQr(testnetKeyUri()) }
         }
