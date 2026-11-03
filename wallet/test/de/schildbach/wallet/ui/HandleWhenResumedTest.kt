@@ -32,9 +32,11 @@ import de.schildbach.wallet_test.R
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.dash.wallet.common.ui.LockScreenHost
+import org.dash.wallet.common.ui.OutcomeDelivery
 import org.dash.wallet.common.ui.awaitDestroyed
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.handleWhenResumed
+import org.dash.wallet.common.ui.showNowReplacing
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -86,11 +88,11 @@ class HandleWhenResumedTest {
                 unlocked,
                 { outcomes.compareAndSet(it, null) },
                 { outcomes.compareAndSet(null, it) }
-            ) { show(it) }
+            ) { show(it, this) }
         }
 
         /** Whether the user answered, as the screens report it. */
-        protected open suspend fun show(outcome: String): Boolean {
+        protected open suspend fun show(outcome: String, delivery: OutcomeDelivery): Boolean {
             val answer = AdaptiveDialog.simple(outcome, "Close").showAsync(requireActivity())
             answers += answer
             return answer != null
@@ -99,34 +101,63 @@ class HandleWhenResumedTest {
 
     /** Shows its result as the Coinbase transfer screen does: a synchronous commit (showNow). */
     class ShowNowScreen : Screen() {
-        override suspend fun show(outcome: String): Boolean {
+        override suspend fun show(outcome: String, delivery: OutcomeDelivery): Boolean {
             AdaptiveDialog.simple(outcome, "Close").showNow(parentFragmentManager, RESULT_TAG)
             return true
         }
     }
 
-    /** The Coinbase transfer result's shape: a showNow dialog awaited until it is destroyed. */
+    /**
+     * The Coinbase transfer result's shape: a showNow dialog awaited until it is destroyed, whose
+     * button only calls a listener the screen sets (lost when the dialog is restored).
+     */
     class ResultDialog : DialogFragment() {
-        var answered = false
+        var onClose: (() -> Unit)? = null
 
         fun answer() {
-            answered = true
-            dismissNow()
+            onClose?.invoke()
+            dismiss()
         }
     }
 
-    class AwaitedResultScreen : Screen() {
-        override suspend fun show(outcome: String): Boolean {
+    open class AwaitedResultScreen : Screen() {
+        override suspend fun show(outcome: String, delivery: OutcomeDelivery): Boolean {
+            var answered = false
             val dialog = ResultDialog()
-            dialog.showNow(parentFragmentManager, RESULT_TAG)
+            dialog.onClose = {
+                answered = true
+                delivery.markAnswered()
+                answers += true
+                onClose()
+            }
+            dialog.showNowReplacing(parentFragmentManager, RESULT_TAG)
             dialog.awaitDestroyed()
-            return dialog.answered
+            return answered
+        }
+
+        protected open fun onClose() {}
+    }
+
+    /** Close leaves the screen, as the transfer's success Close pops back home, before the dialog is gone. */
+    class LeavingResultScreen : AwaitedResultScreen() {
+        override fun onClose() {
+            parentFragmentManager.beginTransaction().remove(this).commitNow()
+        }
+    }
+
+    /** The minimum-balance question's shape: showAsync under its own tag. */
+    class QuestionScreen : Screen() {
+        override suspend fun show(outcome: String, delivery: OutcomeDelivery): Boolean {
+            val answer = AdaptiveDialog.simple(outcome, "Close", "Continue").showAsync(requireActivity(), QUESTION_TAG)
+            answers += answer
+            return answer != null
         }
     }
 
     companion object {
         private const val CONTAINER_ID = 0x7f0f1235
         private const val RESULT_TAG = "result"
+        private const val QUESTION_TAG = "question"
         val unlocked = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     }
 
@@ -338,5 +369,72 @@ class HandleWhenResumedTest {
 
         assertNull("answered: not given back", screen.outcomes.value)
         assertNull(resultDialog())
+    }
+
+    private fun recreate() {
+        controller.recreate()
+        idle()
+        activity = controller.get()
+        screen = activity.supportFragmentManager.findFragmentById(CONTAINER_ID) as Screen
+    }
+
+    private fun resultDialogs(): List<ResultDialog> =
+        activity.supportFragmentManager.fragments.filterIsInstance<ResultDialog>()
+
+    @Test
+    fun aResultUpAtRecreation_isReplaced_andItsCloseReachesTheRecreatedScreen() {
+        useScreen(AwaitedResultScreen())
+        screen.outcomes.value = "transfer sent"
+        idle()
+        assertNotNull(resultDialog())
+
+        recreate()
+
+        assertNull("taken again by the recreated screen", screen.outcomes.value)
+        val shown = resultDialogs()
+        assertEquals("the restored copy replaced, not doubled", 1, shown.size)
+
+        shown.single().answer()
+        idle()
+
+        assertEquals("Close reached the recreated screen", listOf(true), screen.answers)
+        assertNull("answered: not given back", screen.outcomes.value)
+        assertEquals(0, resultDialogs().size)
+    }
+
+    @Test
+    fun aQuestionUpAtRecreation_isReplaced_andItsAnswerReachesTheRecreatedScreen_once() {
+        useScreen(QuestionScreen())
+        screen.outcomes.value = "leftover balance"
+        idle()
+        assertNotNull(dialog())
+
+        recreate()
+
+        assertNull("taken again by the recreated screen", screen.outcomes.value)
+        val shown = dialogs().filter { it.tag == QUESTION_TAG }
+        assertEquals("the restored copy replaced, not doubled", 1, shown.size)
+
+        shown.single().requireView().findViewById<View>(org.dash.wallet.common.R.id.dialog_positive_button).performClick()
+        idle()
+
+        assertEquals("Continue reached the recreated screen, once", listOf<Boolean?>(true), screen.answers)
+        assertNull("answered: not given back", screen.outcomes.value)
+        assertNull(dialog())
+    }
+
+    @Test
+    fun aResultAnswered_whoseCloseLeavesTheScreenBeforeTheDialogIsGone_isNotGivenBack() {
+        useScreen(LeavingResultScreen())
+        val outcomes = screen.outcomes
+        outcomes.value = "transfer sent"
+        idle()
+
+        requireNotNull(resultDialog()).answer()
+        idle()
+
+        assertEquals(listOf(true), screen.answers)
+        assertNull("answered before the screen went: not given back", outcomes.value)
+        assertEquals(0, resultDialogs().size)
     }
 }

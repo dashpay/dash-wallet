@@ -17,7 +17,9 @@
 
 package org.dash.wallet.common.ui
 
+import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
@@ -30,9 +32,24 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
+
+/** Given to a handler of [handleWhenResumed]: lets it record the user's answer before it returns. */
+class OutcomeDelivery internal constructor() {
+    internal var answered = false
+        private set
+
+    /**
+     * The user answered: the outcome is not given back even if the view is destroyed before the
+     * handler returns (e.g. a button that leaves the screen while the handler still awaits its dialog).
+     */
+    fun markAnswered() {
+        answered = true
+    }
+}
 
 /**
  * From the fragment's onViewCreated: hands each outcome a view model retains in [outcomes] to
@@ -49,15 +66,19 @@ import kotlin.coroutines.resume
  * [take] claims the outcome (true once, e.g. a compare-and-set to null) so it is handled once
  * across recreations. [handle] then runs in the view's scope, started undispatched while still
  * resumed: a pause while its dialog is up does not cancel it, only the view's destruction does.
- * It returns whether the user answered; one the lock screen dismissed unanswered (it dismisses
- * every dialog when it locks) is given back with [putBack] and shown again on unlock.
+ * It returns whether the user answered (or calls [OutcomeDelivery.markAnswered] as soon as they
+ * did). An unanswered outcome is given back with [putBack] when the lock screen dismissed its
+ * dialog (shown again on unlock), or when the view or activity went away with it up (a
+ * recreation: the new screen takes it again). The restored copy of that dialog has lost its
+ * callbacks, so a handler shows its dialog under a fixed tag, replacing a restored one
+ * ([showNowReplacing], AdaptiveDialog.showAsync with a tag).
  */
 fun <T : Any> Fragment.handleWhenResumed(
     outcomes: StateFlow<T?>,
     unlocked: Flow<Unit>,
     take: (T) -> Boolean,
     putBack: (T) -> Unit,
-    handle: suspend (T) -> Boolean
+    handle: suspend OutcomeDelivery.(T) -> Boolean
 ) {
     val owner = viewLifecycleOwner
     // Dispatchers.Main, not the scope's Main.immediate: posted, so outside lifecycle dispatch.
@@ -72,8 +93,18 @@ fun <T : Any> Fragment.handleWhenResumed(
                         take(outcome)
                     ) {
                         owner.lifecycleScope.launch(start = CoroutineStart.UNDISPATCHED) {
-                            if (!handle(outcome) && (activity as? LockScreenHost)?.lockScreenDisplayed == true) {
-                                putBack(outcome)
+                            val delivery = OutcomeDelivery()
+                            try {
+                                if (delivery.handle(outcome)) {
+                                    delivery.markAnswered()
+                                }
+                            } finally {
+                                // Cancelled: the view was destroyed before the handler returned.
+                                val goingAway = !isActive || activity.isChangingConfigurations
+                                val locked = (activity as? LockScreenHost)?.lockScreenDisplayed == true
+                                if (!delivery.answered && (goingAway || locked)) {
+                                    putBack(outcome)
+                                }
                             }
                         }
                     }
@@ -81,6 +112,15 @@ fun <T : Any> Fragment.handleWhenResumed(
             }
         }
     }
+}
+
+/**
+ * Shows this dialog now under [tag], first dismissing a copy of it the FragmentManager restored
+ * after a recreation, whose callbacks were lost with the previous screen.
+ */
+fun DialogFragment.showNowReplacing(fragmentManager: FragmentManager, tag: String) {
+    (fragmentManager.findFragmentByTag(tag) as? DialogFragment)?.dismissAllowingStateLoss()
+    showNow(fragmentManager, tag)
 }
 
 /** Suspends until this fragment is destroyed (a dialog: dismissed). */

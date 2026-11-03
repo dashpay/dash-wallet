@@ -56,6 +56,7 @@ import org.dash.wallet.common.ui.dialogs.PaymentOutcomeUnknownWarning
 import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
 import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
+import org.dash.wallet.common.ui.OutcomeDelivery
 import org.dash.wallet.common.ui.handleWhenResumed
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
@@ -188,7 +189,7 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
             lockScreenBroadcaster.unlocked,
             viewModel::consumeSendOutcome,
             viewModel::retainSendOutcome
-        ) { onSendOutcome(it) }
+        ) { onSendOutcome(it, this) }
 
         // The payment may have gone out: Go stays disabled (everythingPlausible() is false from
         // now on) and the warning stays up until the user's Close, which leaves the send screen
@@ -291,14 +292,17 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
 
     /** What follows a send the view model ran; the view model is already back to INPUT. */
     /** False when the minimum-balance question went unanswered (see handleWhenResumed). */
-    private suspend fun onSendOutcome(outcome: SendCoinsViewModel.SendOutcome): Boolean {
+    private suspend fun onSendOutcome(
+        outcome: SendCoinsViewModel.SendOutcome,
+        delivery: OutcomeDelivery
+    ): Boolean {
         when (outcome) {
             is SendCoinsViewModel.SendOutcome.Sent ->
                 onSignAndSendPaymentSuccess(outcome.transaction, outcome.autoAcceptContactRequest)
             is SendCoinsViewModel.SendOutcome.Failed -> {
                 val ex = outcome.exception
                 if (ex is LeftoverBalanceException) {
-                    val shouldContinue = MinimumBalanceDialog().showAsync(requireActivity())
+                    val shouldContinue = MinimumBalanceDialog().showAsync(requireActivity(), MinimumBalanceDialog.TAG)
                         ?: return false
 
                     if (shouldContinue) {
@@ -306,6 +310,9 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
                     }
                     return true
                 }
+                // Reported once: a failure is not shown again after a recreation or the lock,
+                // and a restored copy of its dialog still closes.
+                delivery.markAnswered()
                 viewModel.logSendError(args.paymentIntent.source)
                 log.info("send exception: ", ex)
                 when (ex) {

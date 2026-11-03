@@ -275,9 +275,21 @@ open class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() 
         }
     }
 
-    suspend fun showAsync(activity: FragmentActivity): Boolean? {
+    suspend fun showAsync(activity: FragmentActivity): Boolean? = showAsync(activity, DEFAULT_TAG, false)
+
+    /**
+     * Shows the dialog under [tag], first dismissing a copy of it restored after a recreation:
+     * that copy lost its result listener with the previous screen, so its buttons answer nothing.
+     */
+    suspend fun showAsync(activity: FragmentActivity, tag: String): Boolean? = showAsync(activity, tag, true)
+
+    private suspend fun showAsync(activity: FragmentActivity, tag: String, replaceRestored: Boolean): Boolean? {
         if (!activity.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
             return null
+        }
+        if (replaceRestored) {
+            (activity.supportFragmentManager.findFragmentByTag(tag) as? DialogFragment)
+                ?.dismissAllowingStateLoss()
         }
 
         return suspendCancellableCoroutine { coroutine ->
@@ -288,7 +300,7 @@ open class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() 
             }
 
             try {
-                show(activity, onSuccess)
+                show(activity, tag, onSuccess)
             } catch (ex: Exception) {
                 if (coroutine.isActive) {
                     coroutine.resumeWithException(ex)

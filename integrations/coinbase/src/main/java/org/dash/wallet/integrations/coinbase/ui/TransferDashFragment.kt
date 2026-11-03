@@ -64,6 +64,7 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
 
     companion object {
         private val log = LoggerFactory.getLogger(TransferDashFragment::class.java)
+        private const val TRANSACTION_STATE_DIALOG_TAG = "TransactionStateDialog"
         fun newInstance() = TransferDashFragment()
     }
 
@@ -338,7 +339,7 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
             lockScreenBroadcaster.unlocked,
             transferDashViewModel::consumeSendDashToCoinbaseState,
             transferDashViewModel::retainSendDashToCoinbaseState
-        ) { setTransactionState(it) }
+        ) { setTransactionState(it, this) }
 
         handleWhenResumed(
             transferDashViewModel.leftoverBalanceWarning,
@@ -346,7 +347,8 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
             transferDashViewModel::consumeLeftoverBalanceWarning,
             transferDashViewModel::retainLeftoverBalanceWarning
         ) { pending ->
-            val sendAnyway = MinimumBalanceDialog().showAsync(requireActivity()) ?: return@handleWhenResumed false
+            val sendAnyway = MinimumBalanceDialog().showAsync(requireActivity(), MinimumBalanceDialog.TAG)
+                ?: return@handleWhenResumed false
             if (sendAnyway) {
                 transferDashViewModel.submitTransfer(
                     pending.dashValue,
@@ -433,9 +435,14 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
 
     /**
      * Shows the transfer's result until it is dismissed; false when no button answered it (the
-     * lock screen dismisses every dialog when it locks: see handleWhenResumed).
+     * lock screen dismisses every dialog when it locks; a recreation tears it down: see
+     * handleWhenResumed). A button marks [delivery] answered at once, since its action may leave
+     * the screen before the dialog is gone.
      */
-    private suspend fun setTransactionState(responseState: SendDashResponseState): Boolean {
+    private suspend fun setTransactionState(
+        responseState: SendDashResponseState,
+        delivery: OutcomeDelivery
+    ): Boolean {
         if (responseState is SendDashResponseState.OutcomeUnknownState) {
             // Shown from paymentOutcomeUnknown, which survives recreation (see onViewCreated).
             return true
@@ -454,6 +461,7 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
             onCoinBaseResultDialogButtonsClickListener = object : CoinBaseResultDialog.CoinBaseResultDialogButtonsClickListener {
                 override fun onPositiveButtonClick(type: CoinBaseResultDialog.Type) {
                     answered = true
+                    delivery.markAnswered()
                     when(type){
                         CoinBaseResultDialog.Type.TRANSFER_DASH_SUCCESS -> {
                             transferDashViewModel.logClose(type)
@@ -472,12 +480,14 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
 
                 override fun onNegativeButtonClick(type: CoinBaseResultDialog.Type) {
                     answered = true
+                    delivery.markAnswered()
                     transferDashViewModel.logClose(type)
                 }
             }
         }
 
-        transactionStateDialog.showNow(parentFragmentManager, "TransactionStateDialog")
+        // Replaces a copy restored after a recreation, whose button listener was lost.
+        transactionStateDialog.showNowReplacing(parentFragmentManager, TRANSACTION_STATE_DIALOG_TAG)
         transactionStateDialog.awaitDestroyed()
         return answered
     }
