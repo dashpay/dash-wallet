@@ -625,8 +625,9 @@ class SendCoinsTaskRunner @Inject constructor(
      *   here: the held engine would queue-not-send (see [cutoverSendRoute]).
      * - [SdkWriteResult.Ambiguous] → [SdkSendOutcomeUnknownException], never
      *   retried (double-pay risk).
-     * - broadcast OK but bridge failed → throw with the txid in the message.
-     *   The coins ARE on the network; the wallet reconciles via the next
+     * - broadcast OK but bridge failed → [PaymentSubmissionPendingException]
+     *   naming the txid, never an ordinary failure a retry could pay twice
+     *   on. The coins ARE on the network; the wallet reconciles via the next
      *   sync, and the error text says exactly that.
      *
      * [onBroadcast] is told the txid as soon as the SDK reports
@@ -683,11 +684,16 @@ class SendCoinsTaskRunner @Inject constructor(
                         beforeSending?.accept(bridged.transaction)
                         bridged.transaction
                     }
-                    is de.schildbach.wallet.service.platform.sdk.BridgedTxResult.NotBridged -> throw RuntimeException(
-                        "send broadcast via SDK (txid ${result.value}) but the wallet display bridge " +
-                            "failed (${bridged.reason}) — the funds ARE sent; the transaction appears " +
-                            "after the next sync"
-                    )
+                    // Sent, so pending rather than an ordinary failure: a failure would let the
+                    // user pay again from other coins (as for an acked BIP70 payment's bridge).
+                    is de.schildbach.wallet.service.platform.sdk.BridgedTxResult.NotBridged ->
+                        throw PaymentSubmissionPendingException(
+                            result.value,
+                            bridged.cause,
+                            "send broadcast via SDK (txid ${result.value}) but the wallet display bridge " +
+                                "failed (${bridged.reason}) — the funds ARE sent; the transaction appears " +
+                                "after the next sync"
+                        )
                 }
             }
             is SdkWriteResult.Ambiguous -> {

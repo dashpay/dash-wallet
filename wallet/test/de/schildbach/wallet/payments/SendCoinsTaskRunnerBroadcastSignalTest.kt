@@ -189,7 +189,10 @@ class SendCoinsTaskRunnerBroadcastSignalTest {
         try {
             sendCollecting(signals)
             fail("a bridge failure still surfaces to the UI")
-        } catch (expected: RuntimeException) {
+        } catch (expected: PaymentSubmissionPendingException) {
+            // Pending, not an ordinary failure: the payment went out, so the UI must not offer a
+            // retry that would pay again from other coins.
+            assertEquals(sdkTxid, expected.txId)
             assertTrue(expected.message.orEmpty().contains(sdkTxid))
         }
 
@@ -641,8 +644,8 @@ class SendCoinsTaskRunnerBroadcastSignalTest {
                 )
             }
             fail("the bridge failure still surfaces")
-        } catch (expected: RuntimeException) {
-            // the UI reports "sent, appears after the next sync"
+        } catch (expected: PaymentSubmissionPendingException) {
+            // the UI reports the payment as possibly sent, never as a retryable failure
         }
 
         assertEquals(listOf(recipient), marks)
