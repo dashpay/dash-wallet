@@ -48,12 +48,14 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -159,7 +161,10 @@ class TxDisplayCacheRescanTest {
         // point the combine pipeline hits while _txDataSource is still Empty
         // (RoomLive is set before initializeFactoriesFromCache), so holding it
         // is how a test keeps the source Empty.
-        countReads: (suspend () -> Int)? = null
+        countReads: (suspend () -> Int)? = null,
+        // The dashj stream the incremental collector subscribes; null keeps the
+        // relaxed-mock default (an immediately completing flow).
+        txStream: Flow<Transaction>? = null
     ): TxDisplayCacheService {
         coEvery { displayDao.getAll() } returns emptyList()
         if (firstCountReadThrows) {
@@ -185,6 +190,9 @@ class TxDisplayCacheRescanTest {
             every { observeWallet() } returns walletFlow
             every { observeWalletReset() } returns emptyFlow()
             every { wallet } answers { walletFlow.value }
+            if (txStream != null) {
+                every { observeTransactions(any(), *anyVararg()) } returns txStream
+            }
             every { wrapAllTransactions(any(), any()) } answers {
                 // Record the CoinJoin factory each rebuild wraps with (the vararg may
                 // surface expanded or as one array, so scan rather than index). The
@@ -368,7 +376,7 @@ class TxDisplayCacheRescanTest {
         awaitTrue { replacedRows.isNotEmpty() }
         assertEquals(1, replacedRows.last().size)
         assertEquals(tx.txId.toString(), replacedRows.last().first().rowId)
-        // The rebuild is bound to the emission's wallet: both the factory it wrapped
+        // The rebuild is bound to the current wallet: both the factory it wrapped
         // with and the one it republished hold it (the wrapAllTransactions stub itself
         // ignores its wallet argument, so this is what pins it).
         assertSame(wallet, wrapAllCoinJoinFactories.last().wallet)
@@ -520,6 +528,82 @@ class TxDisplayCacheRescanTest {
         assertEquals(TxDisplayCacheEntry.FLAG_RECEIVED, createdPagingSources[2].filterFlag)
         coVerify(timeout = 5_000, exactly = 3) { groupDao.getActiveGroups(any()) }
         awaitTrue { cache.coinJoinWrapperFactory()?.wallet === wallet }
+        coVerify(exactly = 0) { displayDao.replaceAll(any()) }
+    }
+
+    /**
+     * MO-1109 regression (j): a CAUGHT warm-path hydration failure must skip that
+     * emission's incremental dashj collector (observeTransactions), not only keep the
+     * subscription alive — the hydrated factories are the only thing that keeps
+     * CoinJoin/CrowdNode rows grouped, and a row the collector persists ungrouped is
+     * never regrouped by the retry. So the failed emission must not subscribe the
+     * transaction stream at all, and the next pick, whose hydration succeeds, must
+     * subscribe it and run its rows through the hydrated factories into the cache.
+     */
+    @Test
+    fun hydrationFailureSkipsTheIncrementalCollectorUntilARetryHydrates() = runBlocking {
+        val wallet = mockk<WalletEx>(relaxed = true)
+        val params = TestNet3Params.get()
+        // The collector's toTxInfo runs on the service's worker thread, which fixes
+        // itself up from the last-constructed dashj Context — create it here.
+        Context.getOrCreate(params)
+        val streamStarts = AtomicInteger(0)
+        val txStream = MutableSharedFlow<Transaction>()
+        // CopyOnWriteArrayList: appended on the service's worker thread, read here.
+        val insertedRows = CopyOnWriteArrayList<List<TxDisplayCacheEntry>>()
+        // Stubbed BEFORE the service exists for the same construction-race reason as
+        // the group/count reads above.
+        coEvery { displayDao.insertAll(capture(insertedRows)) } just Runs
+        val groupReadCalls = AtomicInteger(0)
+        val cache = serviceWithWallet(
+            MutableStateFlow(wallet),
+            groupReads = {
+                if (groupReadCalls.incrementAndGet() == 1) {
+                    throw RuntimeException("injected Room failure")
+                } else {
+                    emptyList()
+                }
+            },
+            txStream = txStream.onStart { streamStarts.incrementAndGet() }
+        )
+
+        collectJob = CoroutineScope(Dispatchers.IO).launch { cache.transactions.collect {} }
+
+        // The first emission's hydration throws (and is caught): the live list is up,
+        // but the factories stay unpublished and the dashj stream unsubscribed.
+        coVerify(timeout = 5_000, exactly = 1) { groupDao.getActiveGroups(any()) }
+        awaitTrue { cache.transactionsLoaded.value }
+        awaitTrue { createdPagingSources.isNotEmpty() }
+        assertNull(cache.coinJoinWrapperFactory())
+        assertEquals(0, streamStarts.get())
+        // A tx arriving in this window must have no effect: with no hydrated factories
+        // it could only be persisted as an ungrouped standalone row. With no subscriber
+        // the shared flow drops it; on a subscribed stream it would reach insertAll.
+        txStream.emit(
+            Transaction(params).apply {
+                addOutput(Coin.parseCoin("0.33"), Address.fromBase58(params, "yMY5bqWcknGy5xYBHSsh2xvHZiJsRucjuy"))
+            }
+        )
+
+        // The next pick re-enters the warm path (the factory the failure left
+        // unpublished fails the same-wallet check); its hydration succeeds, publishes
+        // the factories, and only then is the stream subscribed — exactly once.
+        cache.setFilter(TxFilterType.SENT)
+        coVerify(timeout = 5_000, exactly = 2) { groupDao.getActiveGroups(any()) }
+        awaitTrue { cache.coinJoinWrapperFactory()?.wallet === wallet }
+        awaitTrue { streamStarts.get() >= 1 }
+        assertEquals(1, streamStarts.get())
+
+        // A tx on the now-subscribed stream goes through the hydrated factories and
+        // reaches the display cache...
+        val tx = Transaction(params).apply {
+            addOutput(Coin.parseCoin("0.5"), Address.fromBase58(params, "yMY5bqWcknGy5xYBHSsh2xvHZiJsRucjuy"))
+        }
+        txStream.emit(tx)
+        awaitTrue { insertedRows.isNotEmpty() }
+        assertEquals(tx.txId.toString(), insertedRows.last().first().rowId)
+        // ...and nothing was ever persisted from the failed emission's window.
+        assertTrue(insertedRows.flatten().all { it.rowId == tx.txId.toString() })
         coVerify(exactly = 0) { displayDao.replaceAll(any()) }
     }
 

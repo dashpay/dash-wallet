@@ -346,12 +346,16 @@ class TxDisplayCacheService @Inject constructor(
                     // completes the combine, and no later filter pick would ever reach the
                     // Pager again); the factory it leaves unpublished is what makes the next
                     // emission fail the same-wallet check above and retry the hydration here.
+                    // A failed hydration also skips this emission's incremental collector:
+                    // its factories are the only thing that keeps CoinJoin/CrowdNode rows
+                    // grouped, and a row persisted ungrouped is never regrouped by the retry.
                     try {
                         initializeFactoriesFromCache()
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
                         log.warn("group factory hydration from cache failed; the next emission retries it", e)
+                        return@flatMapLatest emptyFlow()
                     }
                 } else {
                     rebuildWrappedList(filter)
