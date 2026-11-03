@@ -153,6 +153,37 @@ data class ShieldedTransferUIState(
     val direction: ShieldedTransferDirection = ShieldedTransferDirection.ToShielded,
     /** Raw keypad text in the currently selected unit. */
     val amountText: String = "0",
+    /**
+     * True from [onMaxClick][ShieldedTransferViewModel.onMaxClick] until keypad input that
+     * actually changes [amountText], a direction swap, a reset or a result dismissal clears it
+     * (a currency toggle keeps it). While set, [amount] is pinned to [availableBalance] instead
+     * of parsed from [amountText], and [onConfirm][ShieldedTransferViewModel.onConfirm] treats it
+     * as the Max intent that allows a fee-adjusted retry — so Max never depends on [amountText]
+     * round-tripping through fiat, unlike a plain Dash/fiat equality check would. Max intent is
+     * never inferred from [amount] equalling [availableBalance]: only this explicit flag counts.
+     * A live balance OR exchange-rate update also re-renders [amountText] from the new [amount]
+     * (see [ShieldedTransferViewModel.applyBalanceUpdate] and
+     * [ShieldedTransferViewModel.refreshMaxAmountText]) — a balance update for the SELECTED
+     * direction in either unit, or a rate update while in fiat mode — so the primary field never
+     * lags what [amount] and the confirm sheet already show.
+     */
+    val maxSelected: Boolean = false,
+    /**
+     * The exact amount [onCurrencySelected][ShieldedTransferViewModel.onCurrencySelected] was
+     * showing when it last re-rendered [amountText] while NOT [maxSelected], or null. A currency
+     * toggle must not change the spent amount, but the fiat text it writes is rounded to two
+     * decimals ([Fiat.toKeypadStringTwoDecimals]) — re-parsing that text would silently drop
+     * precision, so [amount] reads this exact value instead while it is set. Always a
+     * direction-independent absolute value (never set here while [maxSelected], which already
+     * pins to the live balance and takes priority) — so it survives
+     * [onSwapDirection][ShieldedTransferViewModel.onSwapDirection] exactly like a plain typed
+     * [amountText] does. [onSwapDirection] also WRITES it, with the old direction's resolved Max
+     * amount, in the same update that clears [maxSelected], so a Max selection surviving a
+     * currency toggle is not lost to a reparse of the rounded fiat text once the swap clears the
+     * flag. Otherwise only cleared by an event that also invalidates [amountText]: a keypress
+     * that actually changes it, a reset or a result dismissal.
+     */
+    val pinnedAmount: Dash? = null,
     /** True when the primary entry unit is DASH, false when fiat. */
     val dashMode: Boolean = true,
     val fiatCode: String = "USD",
@@ -253,12 +284,17 @@ data class ShieldedTransferUIState(
      */
     val provingDismissed: Boolean = false
 ) {
-    /** The entered amount as Dash, or ZERO when unparseable. */
+    /**
+     * The entered amount as Dash: [availableBalance] while [maxSelected], [pinnedAmount] while
+     * set (a currency toggle's rounded fiat text would otherwise lose precision on re-parse),
+     * else parsed from [amountText] (ZERO when unparseable).
+     */
     val amount: Dash
-        get() = if (dashMode) {
-            parseDashOrNull(amountText) ?: Dash.ZERO
-        } else {
-            parseDecimalOrNull(amountText)?.toFiat(fiatCode)?.toDashAt(rate) ?: Dash.ZERO
+        get() = when {
+            maxSelected -> availableBalance
+            pinnedAmount != null -> pinnedAmount
+            dashMode -> parseDashOrNull(amountText) ?: Dash.ZERO
+            else -> parseDecimalOrNull(amountText)?.toFiat(fiatCode)?.toDashAt(rate) ?: Dash.ZERO
         }
 
     /** The balance the transfer is drawn from. */
@@ -369,7 +405,7 @@ data class ShieldedTransferUIState(
      * True while a transfer operation is in flight ([ShieldedSubmitState
      * .Proving]) — regardless of whether the proving dialog is up or was
      * dismissed. The Continue button shows the in-progress state and a
-     * second submit is impossible ([canContinue] excludes Proving, and
+     * second submit is impossible ([canSubmit] excludes Proving, and
      * [ShieldedTransferExecutor.submit] refuses atomically anyway).
      */
     val transferInFlight: Boolean
@@ -386,12 +422,22 @@ data class ShieldedTransferUIState(
         get() = showConfirm || showTimingInfo ||
             (submitState != ShieldedSubmitState.Idle && submitState !is ShieldedSubmitState.NotSent)
 
-    val canContinue: Boolean
+    /**
+     * The readiness half of [canContinue] — everything EXCEPT the live amount/rate
+     * validation ([insufficientFunds], [amount].isPositive, the fiat-rate gate). [onConfirm]
+     * guards with this, not [canContinue]: the amount it submits was captured BEFORE the
+     * PIN/biometric wait (see [ShieldedTransferViewModel.onConfirm]'s KDoc), so re-validating
+     * it against the LIVE [amount]/[insufficientFunds] here would compare the authorized
+     * amount against a balance/rate that already moved on, rejecting a still-fundable submit
+     * (or, mirror case, waving through one the live numbers would have blocked).
+     */
+    val canSubmit: Boolean
         get() = ready && chainSynced && shieldedPoolReady && directionAvailable &&
-            amount.isPositive && !insufficientFunds &&
-            (dashMode || rate != null) &&
             // NotSent is provably pre-broadcast, so retrying is safe
             (submitState == ShieldedSubmitState.Idle || submitState is ShieldedSubmitState.NotSent)
+
+    val canContinue: Boolean
+        get() = canSubmit && amount.isPositive && !insufficientFunds && (dashMode || rate != null)
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -490,7 +536,9 @@ class ShieldedTransferViewModel @Inject constructor(
             .launchIn(viewModelScope)
 
         shieldedBalanceService.observeShieldedBalance()
-            .onEach { _uiState.value = _uiState.value.copy(shieldedBalance = it) }
+            .onEach { balance ->
+                applyBalanceUpdate(ShieldedTransferDirection.FromShielded) { it.copy(shieldedBalance = balance) }
+            }
             .launchIn(viewModelScope)
 
         // Shielded-pool readiness gate: both directions stay blocked until
@@ -530,7 +578,9 @@ class ShieldedTransferViewModel @Inject constructor(
             .combine(cutoverUiDataService.sdkConfirmedBalance) { chainLocked, sdkConfirmed ->
                 Dash((sdkConfirmed ?: chainLocked).value)
             }
-            .onEach { _uiState.value = _uiState.value.copy(walletBalance = it) }
+            .onEach { balance ->
+                applyBalanceUpdate(ShieldedTransferDirection.ToShielded) { it.copy(walletBalance = balance) }
+            }
             .launchIn(viewModelScope)
 
         // Total balance only feeds the "<amount> pending" explainer line.
@@ -581,11 +631,18 @@ class ShieldedTransferViewModel @Inject constructor(
             .onEach { _uiState.value = _uiState.value.copy(verificationStatus = it) }
             .launchIn(viewModelScope)
 
+        // A rate tick while Max is selected in FIAT mode needs the same refresh as a balance
+        // tick: amountText holds the OLD rate's fiat text, so it diverges from `amount` (which
+        // reads the live balance) the same way a stale balance text would. Dash mode doesn't
+        // depend on the rate, so it never needs this.
         walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
             .filterNotNull()
             .onEach { code -> _uiState.value = _uiState.value.copy(fiatCode = code) }
             .flatMapLatest(exchangeRates::observeExchangeRate)
-            .onEach { rate -> _uiState.value = _uiState.value.copy(rate = rate?.fiat) }
+            .onEach { rate ->
+                val updated = _uiState.value.copy(rate = rate?.fiat)
+                _uiState.value = refreshMaxAmountText(updated, updated.maxSelected && !updated.dashMode)
+            }
             .launchIn(viewModelScope)
     }
 
@@ -600,6 +657,8 @@ class ShieldedTransferViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(
             direction = direction,
             amountText = "0",
+            maxSelected = false,
+            pinnedAmount = null,
             dashMode = true,
             showConfirm = false
         )
@@ -613,8 +672,14 @@ class ShieldedTransferViewModel @Inject constructor(
             return
         }
         val maxDecimals = if (state.dashMode) 8 else 2
+        val newText = processAmountKeyInput(state.amountText, key, maxDecimals)
+        val textChanged = newText != state.amountText
         _uiState.value = state.copy(
-            amountText = processAmountKeyInput(state.amountText, key, maxDecimals)
+            amountText = newText,
+            // A keypress the keypad itself rejected (e.g. past maxDecimalPlaces) leaves the
+            // text unchanged and must not clear the Max intent or the pinned toggle amount.
+            maxSelected = if (textChanged) false else state.maxSelected,
+            pinnedAmount = if (textChanged) null else state.pinnedAmount
         )
         // typing again clears an inline "not sent" error
         transferExecutor.clearRetryableResult()
@@ -622,37 +687,110 @@ class ShieldedTransferViewModel @Inject constructor(
 
     fun onMaxClick() {
         val state = _uiState.value
-        val max = state.availableBalance
-        val text = if (state.dashMode) {
-            max.toKeypadString()
-        } else {
-            max.toFiatAt(state.rate)?.toPlainString() ?: return
-        }
-        _uiState.value = state.copy(amountText = text)
+        val text = maxAmountText(state) ?: return
+        _uiState.value = state.copy(amountText = text, maxSelected = true, pinnedAmount = null)
         transferExecutor.clearRetryableResult()
     }
 
-    /** Toggle DASH ↔ fiat entry, converting the current amount (Figma "Enter in fiat"). */
+    /**
+     * [state.availableBalance] formatted for the editable keypad field in [state]'s current
+     * unit — the same text [onMaxClick] writes. Null when fiat mode has no rate yet (matching
+     * [onMaxClick]'s own early return): the caller leaves [ShieldedTransferUIState.amountText]
+     * as-is rather than writing an unparseable or zero-looking value.
+     */
+    private fun maxAmountText(state: ShieldedTransferUIState): String? =
+        if (state.dashMode) {
+            state.availableBalance.toKeypadString()
+        } else {
+            // Two decimals, like every fiat text this screen writes into the editable keypad
+            // field, locale-neutral.
+            state.availableBalance.toFiatAt(state.rate)?.toKeypadStringTwoDecimals()
+        }
+
+    /**
+     * Re-renders [updated]'s primary [ShieldedTransferUIState.amountText] from [maxAmountText]
+     * when [shouldRefresh] — the shared Max refresh behind a live balance update ([applyBalanceUpdate])
+     * and a live exchange-rate update (the [walletUIConfig] rate observer in `init`), so the
+     * primary field never lags what [ShieldedTransferUIState.amount] (and the confirm sheet)
+     * already show. A null [maxAmountText] (no rate yet) leaves the text as-is.
+     * [ShieldedTransferUIState.maxSelected] and [ShieldedTransferUIState.pinnedAmount] are left
+     * untouched — a keypress still edits the now-current text normally afterwards.
+     */
+    private fun refreshMaxAmountText(
+        updated: ShieldedTransferUIState,
+        shouldRefresh: Boolean
+    ): ShieldedTransferUIState =
+        if (shouldRefresh) {
+            maxAmountText(updated)?.let { updated.copy(amountText = it) } ?: updated
+        } else {
+            updated
+        }
+
+    /**
+     * Applies a live balance update for [direction] via [update], then re-renders the primary
+     * amount text via [refreshMaxAmountText] while [ShieldedTransferUIState.maxSelected] is set
+     * for that SAME direction. A balance update for the direction NOT currently selected only
+     * updates its stored balance; it has no visible amount to refresh yet.
+     */
+    private fun applyBalanceUpdate(
+        direction: ShieldedTransferDirection,
+        update: (ShieldedTransferUIState) -> ShieldedTransferUIState
+    ) {
+        val updated = update(_uiState.value)
+        _uiState.value = refreshMaxAmountText(updated, updated.maxSelected && updated.direction == direction)
+    }
+
+    /**
+     * Toggle DASH ↔ fiat entry, converting the current amount (Figma "Enter in fiat");
+     * keeps [ShieldedTransferUIState.maxSelected]. The fiat text is rounded to two decimals like
+     * the rest of the app, so [ShieldedTransferUIState.pinnedAmount] captures the exact amount
+     * being displayed — a toggle must never change what gets spent. Only set while NOT
+     * [ShieldedTransferUIState.maxSelected] (which already pins to the live balance and takes
+     * priority): that keeps pinnedAmount a direction-independent absolute value whenever it is
+     * set, so [onSwapDirection] can carry it across a swap exactly like it already does for a
+     * plain typed [ShieldedTransferUIState.amountText].
+     */
     fun onCurrencySelected(dashMode: Boolean) {
         val state = _uiState.value
         if (state.dashMode == dashMode) return
         val amount = state.amount
-        val text = when {
-            amount.isZero -> "0"
-            dashMode -> amount.toKeypadString()
-            else -> amount.toFiatAt(state.rate)?.toPlainString() ?: "0"
+        if (amount.isZero) {
+            _uiState.value = state.copy(dashMode = dashMode, amountText = "0", pinnedAmount = null)
+            return
         }
-        _uiState.value = state.copy(dashMode = dashMode, amountText = text)
+        val text = if (dashMode) {
+            amount.toKeypadString()
+        } else {
+            amount.toFiatAt(state.rate)?.toKeypadStringTwoDecimals() ?: return
+        }
+        _uiState.value = state.copy(
+            dashMode = dashMode,
+            amountText = text,
+            pinnedAmount = if (state.maxSelected) null else amount
+        )
     }
 
-    /** The btn-reverse between the From/To rows (Figma 1687:13660). */
+    /**
+     * The btn-reverse between the From/To rows (Figma 1687:13660). [maxSelected] never survives a
+     * swap (Max in one direction must not silently become Max of the other side's balance), but
+     * the amount it resolved to must: while [maxSelected], [pinnedAmount] is pinned to
+     * [ShieldedTransferUIState.amount] (the old direction's resolved Max, i.e. its
+     * [ShieldedTransferUIState.availableBalance]) in the same update that clears the flag,
+     * otherwise clearing [maxSelected] alone would leave a rounded fiat [amountText] to be
+     * re-parsed and silently drift the spent amount. Otherwise [pinnedAmount] is left as-is,
+     * exactly like the plain typed [ShieldedTransferUIState.amountText] it stands in for.
+     */
     fun onSwapDirection() {
         val state = _uiState.value
         val direction = when (state.direction) {
             ShieldedTransferDirection.ToShielded -> ShieldedTransferDirection.FromShielded
             ShieldedTransferDirection.FromShielded -> ShieldedTransferDirection.ToShielded
         }
-        _uiState.value = state.copy(direction = direction)
+        _uiState.value = state.copy(
+            direction = direction,
+            maxSelected = false,
+            pinnedAmount = if (state.maxSelected) state.amount else state.pinnedAmount
+        )
         transferExecutor.clearRetryableResult()
     }
 
@@ -696,19 +834,36 @@ class ShieldedTransferViewModel @Inject constructor(
      * and announces terminal outcomes to a user who left the screen —
      * see the executor KDoc. Single-attempt semantics unchanged: the
      * executor atomically refuses unless it is Idle/NotSent.
+     *
+     * [confirmedAmount] is the amount the user actually authorized — resolved by the caller
+     * BEFORE the PIN/biometric prompt, not re-read from [uiState] here: while [ShieldedTransferUIState
+     * .maxSelected] is set, [ShieldedTransferUIState.amount] tracks the LIVE balance, which can move
+     * during the authentication wait. Submitting a value re-derived after that wait could silently
+     * spend more or less than what the user confirmed.
+     *
+     * The guard below is [ShieldedTransferUIState.canSubmit] (readiness only), NOT
+     * [ShieldedTransferUIState.canContinue]: `canContinue` also re-validates the LIVE editor
+     * proposal (`amount`, `insufficientFunds`, the fiat-rate gate), which can diverge from
+     * [confirmedAmount] by the time authentication returns (a rate/balance tick mid-wait) and
+     * would then silently refuse to submit an amount the user already authorized and that is
+     * still fundable. A [confirmedAmount] that the live balance can no longer cover is instead
+     * rejected pre-broadcast by the executor/service and surfaces as [ShieldedSubmitState.NotSent] —
+     * it must not be re-checked here.
      */
-    fun onConfirm() {
+    fun onConfirm(confirmedAmount: Dash) {
         val state = _uiState.value
-        if (!state.canContinue || !state.showConfirm) return
+        if (!state.canSubmit || !state.showConfirm || !confirmedAmount.isPositive) return
         _uiState.value = state.copy(showConfirm = false)
         // Confirming the full available balance means "spend everything":
         // the exact fee is unknowable here in either direction (the
         // Rust-computed note-selection fee FromShielded; the L1 asset-lock
         // fee ToShielded), so the executor may retry ONCE with a
         // fee-adjusted amount instead of failing the Max flow — see
-        // [ShieldedTransferExecutor.submit].
-        val isMaxSpend = state.amount == state.availableBalance
-        if (!transferExecutor.submit(state.direction, state.amount, isMaxSpend)) {
+        // [ShieldedTransferExecutor.submit]. Max intent comes ONLY from the explicit
+        // [ShieldedTransferUIState.maxSelected] flag, never inferred from an amount equalling
+        // the balance: a manually typed figure is never treated as a Max spend.
+        val isMaxSpend = state.maxSelected
+        if (!transferExecutor.submit(state.direction, confirmedAmount, isMaxSpend)) {
             log.warn("shielded transfer submit refused — an operation is already in flight")
         }
     }
@@ -727,7 +882,7 @@ class ShieldedTransferViewModel @Inject constructor(
     /** Dismisses a terminal result overlay (Success / MayHaveGoneThrough). */
     fun onResultHandled() {
         transferExecutor.acknowledge()
-        _uiState.value = _uiState.value.copy(amountText = "0")
+        _uiState.value = _uiState.value.copy(amountText = "0", maxSelected = false, pinnedAmount = null)
     }
 }
 

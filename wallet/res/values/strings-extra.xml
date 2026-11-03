@@ -427,6 +427,8 @@
     <string name="all_transactions">All</string>
     <string name="received_transactions">Received</string>
     <string name="sent_transactions">Sent</string>
+    <!-- History screen's Filter button label while a non-"All" direction is active, e.g. "Filter: Sent". -->
+    <string name="filter_button_label">Filter: %1$s</string>
     <string name="services_portal_subtitle_error" translatable="false">Keys are missing for these services. See CONFIGURATION FOR UPHOLD AND COINBASE in README.md for more information.</string>
     <string name="serious_error_title">Serious Error</string>
     <string name="serious_error_unknown">Please contact support.</string>
