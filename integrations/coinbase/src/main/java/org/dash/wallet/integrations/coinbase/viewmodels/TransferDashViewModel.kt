@@ -137,7 +137,7 @@ class TransferDashViewModel @Inject constructor(
         checkConditions: Boolean,
         session: WalletSession?
     ): Boolean {
-        if (paymentOutcomeUnknown.value || sendInFlight.get()) {
+        if (paymentOutcomeUnknown.value || sentUnanswered() || sendInFlight.get()) {
             return false
         }
         val generation = transferGeneration.get()
@@ -214,6 +214,8 @@ class TransferDashViewModel @Inject constructor(
             markSentUndelivered(state)
         }
     }
+
+    private fun sentUnanswered(): Boolean = savedStateHandle.get<Boolean>(KEY_SENT_UNDELIVERED) == true
 
     /** A transfer that went out stays marked, in the saved state, until the user answers its result. */
     private fun markSentUndelivered(state: SendDashResponseState) {
@@ -356,7 +358,8 @@ class TransferDashViewModel @Inject constructor(
     suspend fun sendDash(dashValue: Dash, isEmptyWallet: Boolean, checkConditions: Boolean, session: WalletSession?) {
         // Claimed synchronously, before the first suspension, so two rapid confirms cannot both
         // pass and send; refused for good once an earlier send's outcome is unknown.
-        if (paymentOutcomeUnknown.value || !sendInFlight.compareAndSet(false, true)) {
+        // Refused too while a transfer that went out awaits the user's answer to its result.
+        if (paymentOutcomeUnknown.value || sentUnanswered() || !sendInFlight.compareAndSet(false, true)) {
             return
         }
         // Saved with the screen's state: should the process die before this send ends, the

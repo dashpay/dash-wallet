@@ -184,7 +184,7 @@ class SendCoinsViewModel @Inject constructor(
         checkBalance: Boolean,
         autoAcceptContactRequest: Boolean
     ): Boolean {
-        if (paymentOutcomeUnknown.value || sendInFlight.get()) {
+        if (paymentOutcomeUnknown.value || sentUndelivered() || sendInFlight.get()) {
             return false
         }
         // Undispatched: signAndSendPayment claims the send before this returns.
@@ -223,6 +223,9 @@ class SendCoinsViewModel @Inject constructor(
             markSentUndelivered(outcome)
         }
     }
+
+    /** A send went out and the screen has not taken its result yet: no further send is accepted. */
+    private fun sentUndelivered(): Boolean = savedStateHandle.get<Boolean>(KEY_SENT_UNDELIVERED) == true
 
     private fun markSentUndelivered(outcome: SendOutcome) {
         if (outcome is SendOutcome.Sent) {
@@ -619,6 +622,9 @@ class SendCoinsViewModel @Inject constructor(
     ): Transaction {
         if (paymentOutcomeUnknown.value) {
             throw SendRefusedException("an earlier send's outcome is unknown; nothing was sent")
+        }
+        if (sentUndelivered()) {
+            throw SendRefusedException("an earlier send went out and awaits the screen; nothing was sent")
         }
         if (!sendInFlight.compareAndSet(false, true)) {
             throw SendRefusedException("a send is already in progress; nothing was sent")

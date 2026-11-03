@@ -292,6 +292,21 @@ class PaymentOutcomeUnknownTest {
     }
 
     @Test
+    fun transferDash_aSecondContinue_betweenASuccessAndItsAnswer_isRefused() = runTest {
+        coEvery { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any()) } returns "txid"
+        val viewModel = transferViewModel(SavedStateHandle())
+
+        assertTrue(viewModel.submitTransfer(Dash.valueOf(100_000), false, true, null))
+        advanceUntilIdle()
+        assertTrue(viewModel.observeSendDashToCoinbaseState.value is SendDashResponseState.SuccessState)
+
+        assertFalse(viewModel.submitTransfer(Dash.valueOf(100_000), false, true, null))
+        viewModel.sendDash(Dash.valueOf(100_000), false, false, null)
+        advanceUntilIdle()
+        coVerify(exactly = 1) { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any()) }
+    }
+
+    @Test
     fun transferDash_anEarlierTransfersLeftoverWarning_isNotAskedOnANewTransferScreen() = runTest {
         coEvery {
             sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any())

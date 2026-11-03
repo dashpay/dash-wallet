@@ -364,4 +364,20 @@ class SendCoinsViewModelOutcomeUnknownTest {
         val restored = buildViewModel(runner(sends) { mockk(relaxed = true) }, restoredFrom(savedState))
         assertFalse(restored.paymentOutcomeUnknown.value)
     }
+
+    @Test
+    fun aSecondConfirmation_betweenASuccessAndItsDelivery_isRefused() {
+        val sends = AtomicInteger()
+        val viewModel = buildViewModel(runner(sends) { mockk(relaxed = true) }, SavedStateHandle())
+        open(viewModel)
+
+        assertTrue(viewModel.submitPayment(amount, null, checkBalance = true, autoAcceptContactRequest = false))
+        awaitCondition("the send's outcome") { viewModel.sendOutcome.value != null }
+
+        // Sent; its result waits for the screen (e.g. locked). A pending confirmation callback
+        // fires meanwhile: nothing more is sent.
+        assertFalse(viewModel.submitPayment(amount, null, checkBalance = true, autoAcceptContactRequest = false))
+        assertThrows(SendRefusedException::class.java) { send(viewModel) }
+        assertEquals(1, sends.get())
+    }
 }
