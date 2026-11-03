@@ -20,6 +20,7 @@ import org.dash.wallet.common.services.AuthenticationManager
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.ui.main.MainActivity
+import de.schildbach.wallet.ui.main.needsNewName
 import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.service.platform.sdk.SdkTransparentUsernameCreation
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
@@ -537,7 +538,9 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
                 // keeps the two from racing / double-routing. Contested
                 // completions route to the More screen's voting tile instead
                 // of Home (see finishAfterCompletion).
-                if (!requestUserNameViewModel.uiState.value.usernameRequestSubmitting) {
+                // Nor while this session's submit is being routed: a name-only retry's start write
+                // moves the record before it is accepted, and finishing then could cancel it.
+                if (!requestUserNameViewModel.uiState.value.submissionUnderway) {
                     finishAfterCompletion()
                 }
             }
@@ -743,13 +746,18 @@ internal fun Fragment.finishUsernameCreationToCompletionRoute(
 /**
  * Which name a REUSE_TRANSACTION entry asks for, given the record it reuses. A failed name-only
  * retry ([SdkTransparentUsernameCreation.NAME_ONLY_RETRY_ERROR]) always replaces the primary, even
- * when the identity keeps a registered secondary: it is checked before the older heuristic, which
- * reads "a secondary at USERNAME_REGISTERING with an error" as a failed secondary.
+ * when the identity keeps a registered secondary, and so does a taken name on the primary's step
+ * (a dual request's primary rejected as a duplicate). Both are checked before the older heuristic,
+ * which reads "a secondary at USERNAME_REGISTERING with an error" as a failed secondary.
  */
 internal fun reuseUsernameType(identityData: BlockchainIdentityData?, fallback: UsernameType): UsernameType {
     if (identityData == null || !identityData.creationError) return fallback
     return when {
         SdkTransparentUsernameCreation.isNameOnlyRetryError(identityData.creationStateErrorMessage) -> UsernameType.Primary
+        // A taken name on the primary's own step: the primary is what was rejected (the SDK
+        // registers it first, the secondary has its own registering state), so it is replaced.
+        identityData.creationState == IdentityCreationState.USERNAME_REGISTERING &&
+            needsNewName(identityData.creationStateErrorMessage) -> UsernameType.Primary
         identityData.usernameSecondary != null &&
             identityData.creationState == IdentityCreationState.USERNAME_REGISTERING -> UsernameType.Secondary
         identityData.creationState == IdentityCreationState.USERNAME_REGISTERING -> UsernameType.Primary

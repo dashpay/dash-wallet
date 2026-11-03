@@ -58,6 +58,19 @@ class ReuseUsernameTypeTest {
     }
 
     @Test
+    fun `a taken primary on the name step is replaced even when a secondary was requested`() {
+        // a fresh SDK dual-name request: the primary registers first and Platform rejects it as a
+        // duplicate; the secondary is on the record but was never attempted
+        val takenPrimary = identity(
+            IdentityCreationState.USERNAME_REGISTERING,
+            "Document transitions with duplicate unique properties: DuplicateUniqueIndexError",
+            "alice2instant"
+        )
+
+        assertEquals(UsernameType.Primary, reuseUsernameType(takenPrimary, UsernameType.Secondary))
+    }
+
+    @Test
     fun `other errors keep the older heuristic`() {
         val error = "username registration did not complete (retryable): domain document rejected"
 
