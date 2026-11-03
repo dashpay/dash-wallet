@@ -335,6 +335,7 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
                             findNavController().popBackStack()
                         }
                         CoinBaseResultDialog.Type.CONVERSION_SUCCESS -> {
+                            viewModel.acknowledgeSaleResult()
                             viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_SUCCESS_CLOSE)
                             dismiss()
                             val navController = findNavController()

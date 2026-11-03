@@ -506,6 +506,26 @@ class PaymentOutcomeUnknownTest {
     }
 
     @Test
+    fun sellDash_aSentSale_staysMarked_untilItsSuccessIsAnswered() = runTest {
+        coEvery { coinBaseRepository.commitSwapTrade(any()) } returns
+            ResponseResource.Success(SwapTradeUIModel(swapTradeId = "trade", inputCurrency = Constants.DASH_CURRENCY))
+        coEvery { coinBaseRepository.createAddress() } returns ResponseResource.Success("XcoinbaseDepositAddress")
+        coEvery { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any()) } returns "txid"
+        val savedState = SavedStateHandle()
+        val viewModel = previewViewModel(savedState)
+
+        viewModel.commitSwapTrade("trade", Constants.DASH_CURRENCY, "0.01").join()
+
+        // Sent; the success dialog is pending or up (e.g. the screen is stopped) when the process
+        // dies: the restored preview must not sell and send again.
+        val restored = previewViewModel(restoredFrom(savedState))
+        assertTrue(restored.paymentOutcomeUnknown.value)
+
+        viewModel.acknowledgeSaleResult()
+        assertFalse(previewViewModel(restoredFrom(savedState)).paymentOutcomeUnknown.value)
+    }
+
+    @Test
     fun sellDash_aSendThatReturned_isNotUnknown_onRestore() = runTest {
         coEvery { coinBaseRepository.commitSwapTrade(any()) } returns
             ResponseResource.Success(SwapTradeUIModel(swapTradeId = "trade", inputCurrency = Constants.DASH_CURRENCY))

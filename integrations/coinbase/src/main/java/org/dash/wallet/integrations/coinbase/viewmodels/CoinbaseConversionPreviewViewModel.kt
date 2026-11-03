@@ -92,8 +92,9 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
         savedStateHandle.getStateFlow(KEY_PAYMENT_OUTCOME_UNKNOWN, false)
 
     init {
-        // The sale's Dash send was in progress when the process died: it may have gone out, and
-        // nothing is left to say whether it did. (A buy sends no Dash and never sets it.)
+        // The sale's Dash send was in progress, or had gone out with its success not yet
+        // answered, when the process died: the restored preview must not sell and send again.
+        // (A buy sends no Dash and never sets it.)
         if (savedStateHandle.get<Boolean>(KEY_SEND_IN_PROGRESS) == true) {
             savedStateHandle[KEY_PAYMENT_OUTCOME_UNKNOWN] = true
             savedStateHandle[KEY_SEND_IN_PROGRESS] = false
@@ -280,6 +281,15 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
      * been reported) or its outcome is unknown ([paymentOutcomeUnknown] was set); in neither case
      * may the caller report the sale as successful.
      */
+    /**
+     * The user answered the sale's success. Until then the sent Dash stays marked in the saved
+     * state, so a process death before the success is shown or answered restores a preview that
+     * refuses to sell and send again.
+     */
+    fun acknowledgeSaleResult() {
+        savedStateHandle[KEY_SEND_IN_PROGRESS] = false
+    }
+
     private suspend fun sendDashToCoinbase(coin: Dash, addressInfo: String, session: WalletSession?): Boolean {
         val address = addressInfo.trim { it <= ' ' }
         // Saved right before the send: should the process die before it returns, the restored
@@ -291,12 +301,16 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
                 address,
                 ServiceName.Coinbase
             )
+            // Still marked: sent, until the user answers its success (acknowledgeSaleResult).
             true
         } catch (x: PaymentSubmissionPendingException) {
+            savedStateHandle[KEY_SEND_IN_PROGRESS] = false
             savedStateHandle[KEY_PAYMENT_OUTCOME_UNKNOWN] = true
             x.printStackTrace()
             false
         } catch (x: Exception) {
+            // Refused: nothing was sent.
+            savedStateHandle[KEY_SEND_IN_PROGRESS] = false
             if (x.isInsufficientMoney) {
                 onInsufficientMoneyCallback.call()
                 x.printStackTrace()
@@ -305,9 +319,6 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
                 x.printStackTrace()
             }
             false
-        } finally {
-            // Returned (or cancelled with the view model): an unknown outcome is already recorded.
-            savedStateHandle[KEY_SEND_IN_PROGRESS] = false
         }
     }
 }
