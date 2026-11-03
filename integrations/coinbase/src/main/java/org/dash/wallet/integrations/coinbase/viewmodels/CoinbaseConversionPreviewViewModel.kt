@@ -56,6 +56,7 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
 ) : ViewModel() {
     companion object {
         private const val KEY_PAYMENT_OUTCOME_UNKNOWN = "payment_outcome_unknown"
+        private const val KEY_SEND_IN_PROGRESS = "send_in_progress"
     }
 
     private val _showLoading: MutableLiveData<Boolean> = MutableLiveData()
@@ -87,6 +88,15 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
      */
     val paymentOutcomeUnknown: StateFlow<Boolean> =
         savedStateHandle.getStateFlow(KEY_PAYMENT_OUTCOME_UNKNOWN, false)
+
+    init {
+        // The sale's Dash send was in progress when the process died: it may have gone out, and
+        // nothing is left to say whether it did. (A buy sends no Dash and never sets it.)
+        if (savedStateHandle.get<Boolean>(KEY_SEND_IN_PROGRESS) == true) {
+            savedStateHandle[KEY_PAYMENT_OUTCOME_UNKNOWN] = true
+            savedStateHandle[KEY_SEND_IN_PROGRESS] = false
+        }
+    }
 
     var isFirstTime = true
 
@@ -270,6 +280,9 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
      */
     private suspend fun sendDashToCoinbase(coin: Dash, addressInfo: String, session: WalletSession?): Boolean {
         val address = addressInfo.trim { it <= ' ' }
+        // Saved right before the send: should the process die before it returns, the restored
+        // screen treats its outcome as unknown (see init).
+        savedStateHandle[KEY_SEND_IN_PROGRESS] = true
         return try {
             sendPaymentService.sendCoins(address, coin, checkBalanceConditions = false, session = session)
             transactionMetadataProvider.markAddressAsTransferOutAsync(
@@ -290,6 +303,9 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
                 x.printStackTrace()
             }
             false
+        } finally {
+            // Returned (or cancelled with the view model): an unknown outcome is already recorded.
+            savedStateHandle[KEY_SEND_IN_PROGRESS] = false
         }
     }
 }

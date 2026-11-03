@@ -453,6 +453,69 @@ class PaymentOutcomeUnknownTest {
         coVerify(exactly = 2) { coinBaseRepository.commitSwapTrade(any()) }
     }
 
+    @Test
+    fun sellDash_aSendInProgress_whenTheProcessDies_isAnUnknownOutcome_onRestore() = runTest {
+        coEvery { coinBaseRepository.commitSwapTrade(any()) } returns
+            ResponseResource.Success(SwapTradeUIModel(swapTradeId = "trade", inputCurrency = Constants.DASH_CURRENCY))
+        coEvery { coinBaseRepository.createAddress() } returns ResponseResource.Success("XcoinbaseDepositAddress")
+        val held = CompletableDeferred<Unit>()
+        coEvery {
+            sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any())
+        } coAnswers {
+            held.await()
+            "txid"
+        }
+        val savedState = SavedStateHandle()
+        val committing = previewViewModel(savedState).commitSwapTrade("trade", Constants.DASH_CURRENCY, "0.01")
+        runCurrent()
+
+        // The process is killed while the Dash is being sent.
+        val restored = previewViewModel(restoredFrom(savedState))
+        assertTrue(restored.paymentOutcomeUnknown.value)
+        restored.commitSwapTrade("trade", Constants.DASH_CURRENCY, "0.01").join()
+
+        held.complete(Unit)
+        committing.join()
+        coVerify(exactly = 1) { coinBaseRepository.commitSwapTrade(any()) }
+        coVerify(exactly = 1) { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any()) }
+    }
+
+    @Test
+    fun sellDash_aSendThatReturned_isNotUnknown_onRestore() = runTest {
+        coEvery { coinBaseRepository.commitSwapTrade(any()) } returns
+            ResponseResource.Success(SwapTradeUIModel(swapTradeId = "trade", inputCurrency = Constants.DASH_CURRENCY))
+        coEvery { coinBaseRepository.createAddress() } returns ResponseResource.Success("XcoinbaseDepositAddress")
+        coEvery {
+            sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any())
+        } throws IllegalStateException("rejected")
+        val savedState = SavedStateHandle()
+        previewViewModel(savedState).commitSwapTrade("trade", Constants.DASH_CURRENCY, "0.01").join()
+
+        assertFalse(previewViewModel(restoredFrom(savedState)).paymentOutcomeUnknown.value)
+    }
+
+    @Test
+    fun aBuyCommitInProgress_whenTheProcessDies_isNotAPaymentOutcome() = runTest {
+        // A buy commits on Coinbase and sends no Dash from the wallet.
+        val entered = CompletableDeferred<Unit>()
+        val held = CompletableDeferred<Unit>()
+        every { walletDataProvider.freshReceiveAddressStringLive() } returns "XreceiveAddress"
+        coEvery { coinBaseRepository.commitSwapTrade(any()) } coAnswers {
+            entered.complete(Unit)
+            held.await()
+            failure()
+        }
+        val savedState = SavedStateHandle()
+        val committing = previewViewModel(savedState).commitSwapTrade("trade", "USDC", "10")
+        // The receive address is read off the main thread first.
+        entered.await()
+
+        assertFalse(previewViewModel(restoredFrom(savedState)).paymentOutcomeUnknown.value)
+
+        held.complete(Unit)
+        committing.join()
+    }
+
     private fun restoredFrom(savedState: SavedStateHandle) =
         SavedStateHandle(savedState.keys().associateWith { savedState.get<Any>(it) })
 

@@ -84,7 +84,7 @@ class MayaConversionPreviewOutcomeUnknownTest {
 
     private suspend fun stubOutcomeUnknown() {
         whenever(networkState.isConnected).thenReturn(MutableStateFlow(true))
-        whenever(swapProvider.commitSwapTransaction(any(), any())).thenReturn(
+        whenever(swapProvider.commitSwapTransaction(any(), any(), any())).thenReturn(
             ResponseResource.Failure(
                 PaymentSubmissionPendingException("unknown", IllegalStateException("timeout")),
                 false,
@@ -109,7 +109,7 @@ class MayaConversionPreviewOutcomeUnknownTest {
         // Confirm again on the same screen: refused before anything is committed or sent.
         viewModel.commitSwapTrade("trade").join()
 
-        verify(swapProvider, times(1)).commitSwapTransaction(any(), any())
+        verify(swapProvider, times(1)).commitSwapTransaction(any(), any(), any())
     }
 
     @Test
@@ -123,14 +123,14 @@ class MayaConversionPreviewOutcomeUnknownTest {
         assertTrue(restored.paymentOutcomeUnknown.value)
         restored.commitSwapTrade("trade").join()
 
-        verify(swapProvider, times(1)).commitSwapTransaction(any(), any())
+        verify(swapProvider, times(1)).commitSwapTransaction(any(), any(), any())
     }
 
     @Test
     fun concurrentConfirms_onlyOneCommits_andARetryableFailureAllowsAnother() = runTest {
         whenever(networkState.isConnected).thenReturn(MutableStateFlow(true))
         val gate = CompletableDeferred<Unit>()
-        whenever(swapProvider.commitSwapTransaction(any(), any())).doSuspendableAnswer {
+        whenever(swapProvider.commitSwapTransaction(any(), any(), any())).doSuspendableAnswer {
             gate.await()
             ResponseResource.Failure(IllegalStateException("route refused"), false, 0, null)
         }
@@ -143,11 +143,70 @@ class MayaConversionPreviewOutcomeUnknownTest {
         first.join()
         second.join()
 
-        verify(swapProvider, times(1)).commitSwapTransaction(any(), any())
+        verify(swapProvider, times(1)).commitSwapTransaction(any(), any(), any())
         assertFalse(viewModel.paymentOutcomeUnknown.value)
 
         // The commit failed (retryable): a later Confirm is accepted again.
         viewModel.commitSwapTrade("trade").join()
-        verify(swapProvider, times(2)).commitSwapTransaction(any(), any())
+        verify(swapProvider, times(2)).commitSwapTransaction(any(), any(), any())
+    }
+
+    private fun restoredFrom(savedState: SavedStateHandle) =
+        SavedStateHandle(savedState.keys().associateWith { savedState.get<Any>(it) })
+
+    /** The commit is held; when [deposit] is true it has passed the quote refresh and is depositing. */
+    private suspend fun stubHeldCommit(gate: CompletableDeferred<Unit>, deposit: Boolean) {
+        whenever(networkState.isConnected).thenReturn(MutableStateFlow(true))
+        whenever(swapProvider.commitSwapTransaction(any(), any(), any())).doSuspendableAnswer {
+            if (deposit) {
+                @Suppress("UNCHECKED_CAST")
+                (it.arguments[2] as suspend () -> Unit).invoke()
+            }
+            gate.await()
+            ResponseResource.Failure(IllegalStateException("route refused"), false, 0, null)
+        }
+    }
+
+    @Test
+    fun aDepositInProgress_whenTheProcessDies_isAnUnknownOutcome_onRestore() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        stubHeldCommit(gate, deposit = true)
+        val savedState = SavedStateHandle(mapOf("swap_trade_order" to order))
+        val committing = viewModel(savedState).commitSwapTrade("trade")
+
+        // The process is killed now; a new view model starts from the state saved meanwhile.
+        val restored = viewModel(restoredFrom(savedState))
+        assertTrue(restored.paymentOutcomeUnknown.value)
+        restored.commitSwapTrade("trade").join()
+
+        gate.complete(Unit)
+        committing.join()
+        verify(swapProvider, times(1)).commitSwapTransaction(any(), any(), any())
+    }
+
+    @Test
+    fun aCommitStillRefreshingItsQuote_whenTheProcessDies_isNotAnUnknownOutcome() = runTest {
+        // Nothing can have been sent before the deposit starts.
+        val gate = CompletableDeferred<Unit>()
+        stubHeldCommit(gate, deposit = false)
+        val savedState = SavedStateHandle(mapOf("swap_trade_order" to order))
+        val committing = viewModel(savedState).commitSwapTrade("trade")
+
+        assertFalse(viewModel(restoredFrom(savedState)).paymentOutcomeUnknown.value)
+
+        gate.complete(Unit)
+        committing.join()
+    }
+
+    @Test
+    fun aDepositThatReturned_isNoLongerInProgress_onRestore() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        gate.complete(Unit)
+        stubHeldCommit(gate, deposit = true)
+        val savedState = SavedStateHandle(mapOf("swap_trade_order" to order))
+        viewModel(savedState).commitSwapTrade("trade").join()
+
+        // The deposit was refused (a retryable failure): the restored screen may confirm again.
+        assertFalse(viewModel(restoredFrom(savedState)).paymentOutcomeUnknown.value)
     }
 }

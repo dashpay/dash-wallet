@@ -158,9 +158,10 @@ class MayaApiAggregator @Inject constructor(
 
     override suspend fun commitSwapTransaction(
         tradeId: String,
-        swapTradeUIModel: SwapTradeUIModel
+        swapTradeUIModel: SwapTradeUIModel,
+        onDepositing: suspend () -> Unit
     ): ResponseResource<SwapTradeUIModel> {
-        return blockchainApi.commitSwapTransaction(tradeId, swapTradeUIModel)
+        return blockchainApi.commitSwapTransaction(tradeId, swapTradeUIModel, onDepositing = onDepositing)
     }
 
     override suspend fun getUserAccounts(currency: String): List<AccountDataUIModel> {

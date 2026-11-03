@@ -931,7 +931,8 @@ class SwapKitApiAggregator @Inject constructor(
 
     override suspend fun commitSwapTransaction(
         tradeId: String,
-        swapTradeUIModel: SwapTradeUIModel
+        swapTradeUIModel: SwapTradeUIModel,
+        onDepositing: suspend () -> Unit
     ): ResponseResource<SwapTradeUIModel> {
         // The wallet the user confirmed on, before the route refresh below waits (review
         // 4304575003): the deposit is refused, with nothing sent, if a wipe replaces it meanwhile.
@@ -950,6 +951,7 @@ class SwapKitApiAggregator @Inject constructor(
         )
         return if (refreshed is ResponseResource.Success) {
             val model = refreshed.value
+            onDepositing()
             // A MAYAChain vault deposit is matched to its swap *only* by the OP_RETURN memo;
             // sending DASH to a Maya vault without it strands the funds. So the discriminator
             // is NOT just the provider name (which substring-matching can miss — SwapKit may

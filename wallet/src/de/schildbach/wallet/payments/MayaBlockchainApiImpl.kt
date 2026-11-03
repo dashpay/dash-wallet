@@ -195,7 +195,8 @@ class MayaBlockchainApiImpl @Inject constructor(
     override suspend fun commitSwapTransaction(
         tradeId: String,
         swapTradeUIModel: SwapTradeUIModel,
-        session: WalletSession?
+        session: WalletSession?,
+        onDepositing: suspend () -> Unit
     ): ResponseResource<SwapTradeUIModel> {
         // The wallet the swap was confirmed on, before the measurement and the quote below wait.
         val confirmedOn = session ?: walletPayments.get().currentWalletSession()
@@ -252,6 +253,7 @@ class MayaBlockchainApiImpl @Inject constructor(
             )
         )
         return if (resultSwapTrade is ResponseResource.Success) {
+            onDepositing()
             buildAndSendSwapTx(resultSwapTrade.value, confirmedOn)
         } else {
             resultSwapTrade

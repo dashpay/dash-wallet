@@ -113,10 +113,14 @@ interface SwapProvider {
      * builds and broadcasts the DASH transaction. Both backends ultimately delegate
      * to [MayaBlockchainApi] to construct the DASH tx — the only difference is which
      * web API the refresh hits.
+     *
+     * [onDepositing] runs once the refresh is done, right before the deposit is built and
+     * broadcast, and not at all when the commit stops earlier (nothing can have been sent then).
      */
     suspend fun commitSwapTransaction(
         tradeId: String,
-        swapTradeUIModel: SwapTradeUIModel
+        swapTradeUIModel: SwapTradeUIModel,
+        onDepositing: suspend () -> Unit = {}
     ): ResponseResource<SwapTradeUIModel>
 
     /**

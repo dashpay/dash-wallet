@@ -18,11 +18,13 @@ package org.dash.wallet.integrations.maya.ui
 
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ResponseResource
@@ -70,6 +72,7 @@ class MayaConversionPreviewViewModel @Inject constructor(
         private const val KEY_ORDER = "swap_trade_order"
         private const val KEY_QUOTE_CREATED_AT = "quote_created_at"
         private const val KEY_PAYMENT_OUTCOME_UNKNOWN = "payment_outcome_unknown"
+        private const val KEY_DEPOSIT_IN_PROGRESS = "deposit_in_progress"
     }
 
     /**
@@ -126,6 +129,16 @@ class MayaConversionPreviewViewModel @Inject constructor(
     val paymentOutcomeUnknown: StateFlow<Boolean> =
         savedStateHandle.getStateFlow(KEY_PAYMENT_OUTCOME_UNKNOWN, false)
 
+    init {
+        // A deposit was being built or broadcast when the process died: it may have gone out,
+        // and nothing is left to say whether it did.
+        if (savedStateHandle.get<Boolean>(KEY_DEPOSIT_IN_PROGRESS) == true) {
+            log.warn("a swap deposit was in progress when the process died; its outcome is unknown")
+            savedStateHandle[KEY_PAYMENT_OUTCOME_UNKNOWN] = true
+            savedStateHandle[KEY_DEPOSIT_IN_PROGRESS] = false
+        }
+    }
+
     /**
      * The deposit was refused before anything was built: an earlier payment's outcome is still
      * being confirmed and its inputs are not protected from coin selection. Not a swap failure;
@@ -146,7 +159,9 @@ class MayaConversionPreviewViewModel @Inject constructor(
             try {
                 commitAndDeposit(tradeId)
             } finally {
-                // An unknown outcome has already set the terminal flag, which keeps refusing.
+                // The deposit call has returned (or never started): its outcome is known, or
+                // already recorded as unknown, which keeps refusing.
+                savedStateHandle[KEY_DEPOSIT_IN_PROGRESS] = false
                 commitInFlight.set(false)
             }
         }
@@ -159,7 +174,16 @@ class MayaConversionPreviewViewModel @Inject constructor(
 
         // TODO: this is the action to do the swap
         _showLoading.value = true
-        when (val result = swapProvider.commitSwapTransaction(tradeId, swapTradeUIModel)) {
+        // Saved, right before the deposit is built and broadcast (after the quote refresh, which
+        // sends nothing): should the process die before the call returns, the restored screen
+        // treats the deposit's outcome as unknown (see init).
+        val result = swapProvider.commitSwapTransaction(tradeId, swapTradeUIModel) {
+            withContext(Dispatchers.Main.immediate) {
+                savedStateHandle[KEY_DEPOSIT_IN_PROGRESS] = true
+            }
+        }
+        savedStateHandle[KEY_DEPOSIT_IN_PROGRESS] = false
+        when (result) {
             is ResponseResource.Success -> {
                 // Wait for the swap transaction to be IS-locked or confirmed on the network.
                 // This verifies that the transaction was successfully broadcast and seen by peers.

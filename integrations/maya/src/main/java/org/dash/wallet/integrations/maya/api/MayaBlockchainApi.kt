@@ -39,7 +39,9 @@ interface MayaBlockchainApi {
         tradeId: String,
         swapTradeUIModel: SwapTradeUIModel,
         /** The wallet the swap was confirmed on; null takes the one installed on entry. */
-        session: WalletSession? = null
+        session: WalletSession? = null,
+        /** Runs after the quote refresh, right before the deposit is built and broadcast. */
+        onDepositing: suspend () -> Unit = {}
     ): ResponseResource<SwapTradeUIModel>
 
     /**
