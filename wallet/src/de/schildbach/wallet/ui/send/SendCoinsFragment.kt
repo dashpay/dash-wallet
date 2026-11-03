@@ -54,6 +54,7 @@ import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
+import org.dash.wallet.common.util.openCustomTab
 import org.dash.wallet.common.util.toFormattedString
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
@@ -341,6 +342,13 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
 
         showTransactionResult(transaction, autoAcceptContactRequest)
         playSentSound()
+
+        // BIP21 callback=<https-url>: surface the merchant continuation URL after the send.
+        // Already validated as https at parse time in PaymentIntent.fromBitcoinUri.
+        args.paymentIntent.callback?.let { callbackUrl ->
+            requireActivity().openCustomTab(callbackUrl)
+        }
+
         requireActivity().finish()
     }
 
