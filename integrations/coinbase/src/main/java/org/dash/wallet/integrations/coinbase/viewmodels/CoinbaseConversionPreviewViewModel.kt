@@ -59,7 +59,9 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
         private const val KEY_SEND_IN_PROGRESS = "send_in_progress"
     }
 
-    private val _showLoading: MutableLiveData<Boolean> = MutableLiveData()
+    // False from the start: after a process death nothing is loading, and the screen must take
+    // down the progress dialog the FragmentManager restored.
+    private val _showLoading: MutableLiveData<Boolean> = MutableLiveData(false)
     val showLoading: LiveData<Boolean>
         get() = _showLoading
 

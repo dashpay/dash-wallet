@@ -167,7 +167,9 @@ class TransferDashViewModel @Inject constructor(
     private val sendInFlight = AtomicBoolean(false)
 
     val minimumFee: Dash = Dash.valueOf(226)
-    private val _loadingState: MutableLiveData<Boolean> = MutableLiveData()
+    // False from the start: after a process death nothing is loading, and the screen must take
+    // down the progress dialog the FragmentManager restored.
+    private val _loadingState: MutableLiveData<Boolean> = MutableLiveData(false)
     val observeLoadingState: LiveData<Boolean>
         get() = _loadingState
 

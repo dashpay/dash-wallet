@@ -516,6 +516,12 @@ class PaymentOutcomeUnknownTest {
         committing.join()
     }
 
+    @Test
+    fun loading_isFalse_onANewViewModel_soARestoredProgressDialogIsTakenDown() {
+        assertEquals(false, previewViewModel(SavedStateHandle()).showLoading.value)
+        assertEquals(false, transferViewModel(SavedStateHandle()).observeLoadingState.value)
+    }
+
     private fun restoredFrom(savedState: SavedStateHandle) =
         SavedStateHandle(savedState.keys().associateWith { savedState.get<Any>(it) })
 
