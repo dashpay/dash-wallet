@@ -160,7 +160,8 @@ class CoinbaseConversionPreviewFragment : Fragment(R.layout.fragment_coinbase_co
             viewModel.saleSent,
             lockScreenBroadcaster.unlocked,
             viewModel::consumeSaleSent,
-            viewModel::retainSaleSent
+            viewModel::retainSaleSent,
+            SALE_SUCCESS_DIALOG_TAG
         ) { showSaleSuccess(this) }
 
         binding.contentOrderReview.coinbaseFeeInfoContainer.setOnClickListener {

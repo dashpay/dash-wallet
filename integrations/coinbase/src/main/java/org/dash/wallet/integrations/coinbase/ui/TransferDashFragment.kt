@@ -338,7 +338,8 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
             transferDashViewModel.observeSendDashToCoinbaseState,
             lockScreenBroadcaster.unlocked,
             transferDashViewModel::consumeSendDashToCoinbaseState,
-            transferDashViewModel::retainSendDashToCoinbaseState
+            transferDashViewModel::retainSendDashToCoinbaseState,
+            TRANSACTION_STATE_DIALOG_TAG
         ) { setTransactionState(it, this) }
 
         handleWhenResumed(

@@ -83,12 +83,16 @@ class HandleWhenResumedTest {
         override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?) =
             FrameLayout(inflater.context)
 
+        /** The tag the screen shows its result dialog under, if it keeps one (see handleWhenResumed). */
+        protected open val resultDialogTag: String? = null
+
         override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
             handleWhenResumed(
                 outcomes,
                 unlocked,
                 { outcomes.compareAndSet(it, null) },
-                { outcomes.compareAndSet(null, it) }
+                { outcomes.compareAndSet(null, it) },
+                resultDialogTag
             ) { show(it, this) }
         }
 
@@ -122,6 +126,8 @@ class HandleWhenResumedTest {
     }
 
     open class AwaitedResultScreen : Screen() {
+        override val resultDialogTag: String? = RESULT_TAG
+
         override suspend fun show(outcome: String, delivery: OutcomeDelivery): Boolean {
             var answered = false
             val dialog = ResultDialog()
@@ -383,6 +389,25 @@ class HandleWhenResumedTest {
 
         assertNull("answered: not given back", screen.outcomes.value)
         assertNull(resultDialog())
+    }
+
+    @Test
+    fun aResultUpWhenTheProcessDies_isRetired_whenTheRestoredScreenHasNoOutcome() {
+        useScreen(AwaitedResultScreen())
+        screen.outcomes.value = "sale sent"
+        idle()
+        assertNotNull(resultDialog())
+
+        // The process dies: the FragmentManager restores the dialog (without its listener), but
+        // the new view model holds no outcome to rebind it to.
+        val saved = Bundle()
+        controller.saveInstanceState(saved)
+        controller.pause().stop().destroy()
+        val restored = Robolectric.buildActivity(HostActivity::class.java).setup(saved)
+        activity = restored.get()
+        idle()
+
+        assertNull("no dead result dialog left over the restored screen", resultDialog())
     }
 
     private fun recreate() {
