@@ -78,6 +78,11 @@ abstract class BaseConfig(
         return data.map { preferences -> preferences[key] }.first()
     }
 
+    /** Reads a preference without converting an I/O failure into an empty value. */
+    protected suspend fun <T> getPreservingErrors(key: Preferences.Key<T>): T? {
+        return context.dataStore.data.map { preferences -> preferences[key] }.first()
+    }
+
     open suspend fun <T> set(key: Preferences.Key<T>, value: T) {
         context.dataStore.edit { preferences ->
             preferences[key] = value
