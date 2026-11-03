@@ -155,7 +155,7 @@ class SendCoinsViewModelAssetLockTest {
 
         var caught: Exception? = null
         try {
-            viewModel.signAndSendAssetLock(amount, null, false, topUpKey, emptyWallet = true)
+            viewModel.signAndSendAssetLock(amount, null, topUpKey, emptyWallet = true)
             fail("an asset lock was built although the pending payment locks were missing")
         } catch (e: Exception) {
             caught = e
@@ -175,10 +175,10 @@ class SendCoinsViewModelAssetLockTest {
     fun `an asset lock waits for restoration before it is built`() = runBlocking {
         coEvery { sendCoinsTaskRunner.awaitPaymentReadiness() } returns Unit
         coEvery {
-            sendCoinsTaskRunner.sendCoins(any<SendRequest>(), any(), any(), any(), any())
+            sendCoinsTaskRunner.sendCoins(any<SendRequest>(), any(), any(), any())
         } returns Transaction(Constants.NETWORK_PARAMETERS)
 
-        viewModel.signAndSendAssetLock(amount, null, false, topUpKey, emptyWallet = false)
+        viewModel.signAndSendAssetLock(amount, null, topUpKey, emptyWallet = false)
 
         coVerifyOrder {
             sendCoinsTaskRunner.awaitPaymentReadiness()

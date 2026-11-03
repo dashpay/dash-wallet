@@ -416,6 +416,7 @@
     <string name="coinjoin_mixing_level_subtitle">您可以随时改变或停止混币级别</string>
     <string name="coinjoin_mixing_transactions">混币交易</string>
     <string name="coinjoin_transaction_group">这些是与混币相关的交易.</string>
+    <string name="coinjoin_transaction_group_title">为什么我看到所有这些交易?</string>
     <string name="intermediate">常规</string>
     <string name="advanced">进阶</string>
     <string name="intermediate_level_card_decs">具有高水平技术专长的进阶用户可以决定您的交易历史记录</string>

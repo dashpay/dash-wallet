@@ -111,19 +111,19 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                         DashPayUserBottomSheet.newInstance(rowView.contact).show(requireActivity())
                     } else {
                         // For rows loaded from the display cache, txWrapper is null.
-                        // Fall back to the live wrapper list so CoinJoin/CrowdNode groups still open.
+                        // Fall back to the live wrapper list so CoinJoin groups still open.
                         val txWrapper = rowView.txWrapper ?: viewModel.getTransactionWrapper(rowView.id)
                         val fragment = when {
                             txWrapper != null && txWrapper.transactions.size > 1 -> {
-                                // Multi-tx group (CrowdNode / CoinJoin) — open group detail.
+                                // Multi-tx group (CoinJoin) — open group detail.
                                 viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS)
                                 TransactionGroupDetailsFragment(txWrapper)
                             }
 
                             txWrapper != null -> {
                                 // Single-tx wrapper found in memory — open TX detail directly.
-                                // TransactionGroupDetailsFragment would show the wrong (default
-                                // CrowdNode) icon for non-group wrappers, so route here instead.
+                                // TransactionGroupDetailsFragment is only for multi-tx groups,
+                                // so route here instead.
                                 if (ServiceName.isDashSpend(rowView.service)) {
                                     viewModel.logEvent(AnalyticsConstants.DashSpend.DETAILS_GIFT_CARD)
                                     val txId = Sha256Hash.wrap(rowView.id)
@@ -150,8 +150,8 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
 
                             rowView.transactionAmount == 1 && TX_ID_REGEX.matches(rowView.id) -> {
                                 // Individual transaction — rowId is a 64-char txId hex string.
-                                // A CoinJoin/CrowdNode group can also contain a single tx, but its
-                                // rowId is a group id ("coinjoin_<date>", "crowdnode"), not a hash —
+                                // A CoinJoin group can also contain a single tx, but its
+                                // rowId is a group id ("coinjoin_<date>"), not a hash —
                                 // those fall through to the group loader below.
                                 viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS)
                                 TransactionDetailsDialogFragment.newInstance(Sha256Hash.wrap(rowView.id))

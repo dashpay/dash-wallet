@@ -424,6 +424,7 @@ Benutzernamen</b></string>
     <string name="coinjoin_mixing_level_subtitle">Du kannst das Mixing-Level jederzeit ändern oder auch stoppen</string>
     <string name="coinjoin_mixing_transactions">Gemixte Transaktionen</string>
     <string name="coinjoin_transaction_group">Diese Transaktionen wurden gemixt.</string>
+    <string name="coinjoin_transaction_group_title">Warum sehe ich all diese Transaktionen?</string>
     <string name="intermediate">Standard</string>
     <string name="advanced">Erweitert</string>
     <string name="intermediate_level_card_decs">Erfahrene Nutzer, die einen hohen Grad an technischer Expertise haben, können deine Transaktionshistorie bestimmen.</string>
