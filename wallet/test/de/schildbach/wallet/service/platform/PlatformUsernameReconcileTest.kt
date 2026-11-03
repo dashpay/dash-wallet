@@ -20,6 +20,7 @@ import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.database.entity.IdentityCreationState
+import de.schildbach.wallet.database.entity.IdentityRecordKey
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import io.mockk.coEvery
@@ -94,9 +95,10 @@ class PlatformUsernameReconcileTest {
         it.usernameSecondaryStatus = record.usernameSecondaryStatus
     }
 
-    /** [data] is the first load; later loads (the re-read before a write) read the store as it was. */
+    /** [data] is the stored record; the conditional write finds it unchanged. */
     private fun givenStored(data: BlockchainIdentityData) {
-        coEvery { identityConfig.load() } returns data andThen copyOf(data)
+        coEvery { identityConfig.load() } returns data
+        coEvery { identityRepository.updateBlockchainIdentityDataIfUnchanged(any(), any()) } returns true
     }
 
     private val transparentUsernameCreation =
@@ -159,7 +161,7 @@ class PlatformUsernameReconcileTest {
         // The stuck state machine is completed — the name is on chain; a
         // "retry" from USERNAME_REGISTERING would double-register.
         assertEquals(IdentityCreationState.DONE_AND_DISMISS, data.creationState)
-        coVerify(exactly = 1) { identityRepository.updateBlockchainIdentityData(data) }
+        coVerify(exactly = 1) { identityRepository.updateBlockchainIdentityDataIfUnchanged(data, any()) }
         // The local profile row picks up the confirmed name.
         coVerify(exactly = 1) {
             dashPayProfileDao.insert(match<DashPayProfile> { it.username == "test12345" })
@@ -178,7 +180,7 @@ class PlatformUsernameReconcileTest {
         service().checkUsernameVotingStatus()
 
         assertEquals(UsernameStatus.CONFIRMED, data.usernameSecondaryStatus)
-        coVerify(exactly = 1) { identityRepository.updateBlockchainIdentityData(data) }
+        coVerify(exactly = 1) { identityRepository.updateBlockchainIdentityDataIfUnchanged(data, any()) }
     }
 
     @Test
@@ -193,7 +195,7 @@ class PlatformUsernameReconcileTest {
 
         assertEquals(UsernameStatus.NOT_PRESENT, data.usernameStatus)
         assertNotEquals(IdentityCreationState.DONE_AND_DISMISS, data.creationState)
-        coVerify(exactly = 0) { identityRepository.updateBlockchainIdentityData(any()) }
+        coVerify(exactly = 0) { identityRepository.updateBlockchainIdentityDataIfUnchanged(any(), any()) }
     }
 
     @Test
@@ -208,7 +210,7 @@ class PlatformUsernameReconcileTest {
         service().checkUsernameVotingStatus()
 
         assertEquals(UsernameStatus.NOT_PRESENT, data.usernameStatus)
-        coVerify(exactly = 0) { identityRepository.updateBlockchainIdentityData(any()) }
+        coVerify(exactly = 0) { identityRepository.updateBlockchainIdentityDataIfUnchanged(any(), any()) }
     }
 
     @Test
@@ -228,7 +230,7 @@ class PlatformUsernameReconcileTest {
 
         assertEquals(UsernameStatus.NOT_PRESENT, data.usernameStatus)
         assertEquals(IdentityCreationState.VOTING, data.creationState)
-        coVerify(exactly = 0) { identityRepository.updateBlockchainIdentityData(any()) }
+        coVerify(exactly = 0) { identityRepository.updateBlockchainIdentityDataIfUnchanged(any(), any()) }
     }
 
     @Test
@@ -250,27 +252,29 @@ class PlatformUsernameReconcileTest {
     /** The durable record: every load reads a copy of it, every whole-record write replaces it. */
     private inner class Store(initial: BlockchainIdentityData) {
         @Volatile var record: BlockchainIdentityData = initial
-        val loads = java.util.concurrent.atomic.AtomicInteger()
+        val attempts = java.util.concurrent.atomic.AtomicInteger()
         val writes = java.util.concurrent.atomic.AtomicInteger()
 
         init {
-            coEvery { identityConfig.load() } answers {
-                loads.incrementAndGet()
-                copyOf(record)
-            }
-            coEvery { identityRepository.updateBlockchainIdentityData(any<BlockchainIdentityData>()) } answers {
-                record = copyOf(firstArg())
-                writes.incrementAndGet()
+            coEvery { identityConfig.load() } answers { copyOf(record) }
+            coEvery { identityRepository.updateBlockchainIdentityDataIfUnchanged(any(), any()) } answers {
+                attempts.incrementAndGet()
+                // the compare and the write are one store edit (see IdentityConditionalWriteTest)
+                synchronized(this@Store) {
+                    if (IdentityRecordKey.of(record) != secondArg<IdentityRecordKey>()) return@answers false
+                    record = copyOf(firstArg())
+                    writes.incrementAndGet()
+                    true
+                }
             }
         }
 
-        /** Waits until the lookup's write (or its re-read before one) has run. */
-        fun awaitWriteOrReRead() {
+        /** Waits until the lookup's conditional write has run. */
+        fun awaitWriteAttempt() {
             val deadline = System.currentTimeMillis() + 5_000
-            while (writes.get() == 0 && loads.get() < 2 && System.currentTimeMillis() < deadline) {
+            while (attempts.get() == 0 && System.currentTimeMillis() < deadline) {
                 Thread.sleep(10)
             }
-            Thread.sleep(100) // a write that would follow the re-read
         }
     }
 
@@ -310,7 +314,7 @@ class PlatformUsernameReconcileTest {
         val store = Store(votingFor("alice"))
 
         staleVoteLookup(finishedVote(isLocked = true)) { store.record = replacementAccepted("alice3") }
-        store.awaitWriteOrReRead()
+        store.awaitWriteAttempt()
 
         assertEquals("alice3", store.record.username)
         assertEquals(IdentityCreationState.USERNAME_REGISTERING, store.record.creationState)
@@ -324,7 +328,7 @@ class PlatformUsernameReconcileTest {
         val store = Store(votingFor("alice"))
 
         staleVoteLookup(finishedVote(isLocked = false)) { store.record = replacementAccepted("alice3", error) }
-        store.awaitWriteOrReRead()
+        store.awaitWriteAttempt()
 
         assertEquals("alice3", store.record.username)
         assertEquals(error, store.record.creationStateErrorMessage)
@@ -337,7 +341,7 @@ class PlatformUsernameReconcileTest {
         val store = Store(votingFor("alice"))
 
         staleVoteLookup(finishedVote(isLocked = true)) { }
-        store.awaitWriteOrReRead()
+        store.awaitWriteAttempt()
 
         assertEquals(UsernameRequestStatus.LOCKED, store.record.usernameRequested)
         assertEquals(1, store.writes.get())

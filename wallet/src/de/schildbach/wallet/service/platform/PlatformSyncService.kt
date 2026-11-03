@@ -35,6 +35,7 @@ import de.schildbach.wallet.database.dao.UsernameRequestDao
 import de.schildbach.wallet.database.dao.UsernameVoteDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
+import de.schildbach.wallet.database.entity.IdentityRecordKey
 import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.database.entity.DashPayContactRequest
 import de.schildbach.wallet.database.entity.DashPayProfile
@@ -1076,9 +1077,10 @@ class PlatformSynchronizationService @Inject constructor(
                                 // creation showed no card at any point — none during
                                 // voting (deliberate: nothing is usable yet) and none on
                                 // winning.
+                                val loaded = IdentityRecordKey.of(blockchainIdentityData)
                                 blockchainIdentityData.creationState =
                                     IdentityCreationState.DONE
-                                identityRepository.updateBlockchainIdentityData(blockchainIdentityData)
+                                updateIfUnchanged(loaded, blockchainIdentityData)
                             }
                         }
                     }
@@ -3022,45 +3024,29 @@ class PlatformSynchronizationService @Inject constructor(
         }
     }
 
-    /** The fields a name-only retry changes when it replaces the name or records its error. */
-    private data class IdentityRecordKey(
-        val userId: String?,
-        val username: String?,
-        val creationState: IdentityCreationState,
-        val errorMessage: String?
-    ) {
-        companion object {
-            fun of(data: BlockchainIdentityData) =
-                IdentityRecordKey(data.userId, data.username, data.creationState, data.creationStateErrorMessage)
-        }
-    }
-
     /**
      * Writes [identityData] back only while the stored record is still the one it was [loaded]
      * as: a name-only retry can replace the name, or record its error, during a lookup for the
-     * old name, and this whole-record write would put the old name back. A re-check right before
-     * the write, not a compare-and-set (#1673). Returns true when it wrote.
+     * old name, and this whole-record write would put the old name back. The compare and the
+     * write are one store edit, so a retry cannot land between them. Returns true when it wrote.
      */
     private suspend fun updateIfUnchanged(loaded: IdentityRecordKey, identityData: BlockchainIdentityData): Boolean {
-        val stored = try {
-            identityConfig.load()
+        val written = try {
+            identityRepository.updateBlockchainIdentityDataIfUnchanged(identityData, loaded)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            log.warn("could not re-read the identity record; not writing the lookup's result", e)
+            log.warn("could not write the lookup's result for '{}'", loaded.username, e)
             return false
         }
-        if (stored == null || IdentityRecordKey.of(stored) != loaded) {
-            log.info(
-                "the identity record changed during the lookup for '{}' (now '{}', {}); not writing its result",
-                loaded.username,
-                stored?.username,
-                stored?.creationState
-            )
-            return false
+        if (written) {
+            return true
         }
-        identityRepository.updateBlockchainIdentityData(identityData)
-        return true
+        log.info(
+            "the identity record changed during the lookup for '{}'; not writing its result",
+            loaded.username
+        )
+        return false
     }
 
     private suspend fun checkVotingStatus(identityData: BlockchainIdentityData) {

@@ -194,6 +194,19 @@ class BlockchainIdentityData(
     }
 }
 
+/** The fields a name-only retry changes when it replaces the name or records its error. */
+data class IdentityRecordKey(
+    val userId: String?,
+    val username: String?,
+    val creationState: IdentityCreationState,
+    val errorMessage: String?
+) {
+    companion object {
+        fun of(data: BlockchainIdentityData) =
+            IdentityRecordKey(data.userId, data.username, data.creationState, data.creationStateErrorMessage)
+    }
+}
+
 @Singleton
 open class BlockchainIdentityConfig @Inject constructor(
     private val context: Context,
@@ -350,33 +363,62 @@ open class BlockchainIdentityConfig @Inject constructor(
     }
 
     private suspend fun saveIdentityPrefs(blockchainIdentityData: BlockchainIdentityData) {
+        // the creation state first, on its own, as before: a failed record write still records it
         updateCreationState(blockchainIdentityData.creationState, blockchainIdentityData.creationStateErrorMessage)
+        context.dataStore.edit { prefs -> writeIdentityPrefs(prefs, blockchainIdentityData) }
+    }
+
+    /**
+     * Writes [blockchainIdentityData] only while the stored record still has the [expected] identity,
+     * name, creation state and error, checked inside the same edit as the write. DataStore edits are
+     * serialized, so a name-only retry ([beginNameOnlyRetry], [failNameOnlyRetry]) either lands before
+     * the check (and the write is skipped) or after the write. Returns true when it wrote.
+     */
+    suspend fun insertIfUnchanged(blockchainIdentityData: BlockchainIdentityData, expected: IdentityRecordKey): Boolean {
+        var written = false
         context.dataStore.edit { prefs ->
-            blockchainIdentityData.username?.let { prefs[USERNAME] = it }
-            blockchainIdentityData.usernameSecondary?.let { prefs[USERNAME_SECONDARY] = it }
-            blockchainIdentityData.userId?.let { prefs[IDENTITY_ID] = it }
-            prefs[RESTORING] = blockchainIdentityData.restoring
-            blockchainIdentityData.creditFundingTxId?.let { prefs[ASSET_LOCK_TXID] = it.toString() }
-            // Serialize tolerantly: the wallet's own 6-key identities carry
-            // contract bounds on keys 4/5 that the legacy dashj CBOR encoder
-            // cannot serialize (`No converter for SingleContractDocumentType`).
-            // A faithful toBuffer() throws here and stalls identity creation at
-            // IDENTITY_REGISTERING. This strips the bounds from the LOCAL cache
-            // blob only; the on-chain registration (SDK path) keeps them.
-            blockchainIdentityData.identity?.let {
-                prefs[IDENTITY] = serializeIdentityToleratingContractBounds(it).toHex()
+            val stored = IdentityRecordKey(
+                prefs[IDENTITY_ID],
+                prefs[USERNAME],
+                IdentityCreationState.valueOf(prefs[CREATION_STATE] ?: IdentityCreationState.NONE.name),
+                prefs[CREATION_STATE_ERROR_MESSAGE]
+            )
+            if (stored.creationState != IdentityCreationState.NONE && stored == expected) {
+                writeIdentityPrefs(prefs, blockchainIdentityData)
+                written = true
             }
-            prefs[USING_INVITE] = blockchainIdentityData.usingInvite
-            blockchainIdentityData.invite?.let { prefs[INVITE_LINK] = it.link.toString() }
-            blockchainIdentityData.registrationStatus?.let { prefs[IDENTITY_REGISTRATION_STATUS] = it.name }
-            blockchainIdentityData.usernameStatus?.let { prefs[USERNAME_REGISTRATION_STATUS] = it.name }
-            blockchainIdentityData.usernameSecondaryStatus?.let { prefs[USERNAME_SECONDARY_REGISTRATION_STATUS] = it.name }
-            blockchainIdentityData.creditBalance?.let { prefs[BALANCE] = it.value }
-            blockchainIdentityData.usernameRequested?.let { prefs[USERNAME_REQUESTED] = it.name}
-            blockchainIdentityData.verificationLink?.let { prefs[REQUESTED_USERNAME_LINK] = it }
-            blockchainIdentityData.votingPeriodStart?.let { prefs[VOTING_PERIOD_START] = it }
-            blockchainIdentityData.cancelledVerificationLink?.let { prefs[CANCELED_REQUESTED_USERNAME_LINK] = it }
         }
+        return written
+    }
+
+    private fun writeIdentityPrefs(prefs: MutablePreferences, blockchainIdentityData: BlockchainIdentityData) {
+        prefs[CREATION_STATE] = blockchainIdentityData.creationState.name
+        val errorMessage = blockchainIdentityData.creationStateErrorMessage
+        if (errorMessage == null) prefs.remove(CREATION_STATE_ERROR_MESSAGE) else prefs[CREATION_STATE_ERROR_MESSAGE] = errorMessage
+        blockchainIdentityData.username?.let { prefs[USERNAME] = it }
+        blockchainIdentityData.usernameSecondary?.let { prefs[USERNAME_SECONDARY] = it }
+        blockchainIdentityData.userId?.let { prefs[IDENTITY_ID] = it }
+        prefs[RESTORING] = blockchainIdentityData.restoring
+        blockchainIdentityData.creditFundingTxId?.let { prefs[ASSET_LOCK_TXID] = it.toString() }
+        // Serialize tolerantly: the wallet's own 6-key identities carry
+        // contract bounds on keys 4/5 that the legacy dashj CBOR encoder
+        // cannot serialize (`No converter for SingleContractDocumentType`).
+        // A faithful toBuffer() throws here and stalls identity creation at
+        // IDENTITY_REGISTERING. This strips the bounds from the LOCAL cache
+        // blob only; the on-chain registration (SDK path) keeps them.
+        blockchainIdentityData.identity?.let {
+            prefs[IDENTITY] = serializeIdentityToleratingContractBounds(it).toHex()
+        }
+        prefs[USING_INVITE] = blockchainIdentityData.usingInvite
+        blockchainIdentityData.invite?.let { prefs[INVITE_LINK] = it.link.toString() }
+        blockchainIdentityData.registrationStatus?.let { prefs[IDENTITY_REGISTRATION_STATUS] = it.name }
+        blockchainIdentityData.usernameStatus?.let { prefs[USERNAME_REGISTRATION_STATUS] = it.name }
+        blockchainIdentityData.usernameSecondaryStatus?.let { prefs[USERNAME_SECONDARY_REGISTRATION_STATUS] = it.name }
+        blockchainIdentityData.creditBalance?.let { prefs[BALANCE] = it.value }
+        blockchainIdentityData.usernameRequested?.let { prefs[USERNAME_REQUESTED] = it.name}
+        blockchainIdentityData.verificationLink?.let { prefs[REQUESTED_USERNAME_LINK] = it }
+        blockchainIdentityData.votingPeriodStart?.let { prefs[VOTING_PERIOD_START] = it }
+        blockchainIdentityData.cancelledVerificationLink?.let { prefs[CANCELED_REQUESTED_USERNAME_LINK] = it }
     }
 
     private suspend fun saveIdentityBasePrefs(blockchainIdentityBaseData: BlockchainIdentityBaseData) {

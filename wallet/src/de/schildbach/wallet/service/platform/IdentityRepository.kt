@@ -11,6 +11,7 @@ import de.schildbach.wallet.database.AppDatabase
 import de.schildbach.wallet.database.entity.BlockchainIdentityBaseData
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
+import de.schildbach.wallet.database.entity.IdentityRecordKey
 import de.schildbach.wallet.database.entity.DashPayContactRequest
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.database.entity.IdentityCreationState
@@ -140,6 +141,15 @@ interface IdentityRepository {
     fun initBlockchainIdentity(blockchainIdentityData: BlockchainIdentityData, wallet: Wallet): BlockchainIdentity
     suspend fun updateBlockchainIdentityData(blockchainIdentityData: BlockchainIdentityData, blockchainIdentity: BlockchainIdentity)
     suspend fun updateBlockchainIdentityData(blockchainIdentityData: BlockchainIdentityData)
+
+    /**
+     * Writes [blockchainIdentityData] only while the stored record is still the one it was [loaded]
+     * as, compared and written in one store edit; see [BlockchainIdentityConfig.insertIfUnchanged].
+     */
+    suspend fun updateBlockchainIdentityDataIfUnchanged(
+        blockchainIdentityData: BlockchainIdentityData,
+        loaded: IdentityRecordKey
+    ): Boolean
     suspend fun updateBlockchainIdentityData()
     suspend fun updateIdentityCreationState(blockchainIdentityData: BlockchainIdentityData,
                                              state: IdentityCreationState,
@@ -447,6 +457,15 @@ class IdentityRepositoryImpl @Inject constructor(
             }
         }
         blockchainIdentityDataStorage.insert(blockchainIdentityData)
+    }
+
+    override suspend fun updateBlockchainIdentityDataIfUnchanged(
+        blockchainIdentityData: BlockchainIdentityData,
+        loaded: IdentityRecordKey
+    ): Boolean {
+        // No separate no-resurrection guard: a cleared store (creation state NONE) never matches
+        // [loaded], so the write is skipped inside the same edit.
+        return blockchainIdentityDataStorage.insertIfUnchanged(blockchainIdentityData, loaded)
     }
 
     override suspend fun updateBlockchainIdentityData(blockchainIdentityData: BlockchainIdentityData, blockchainIdentity: BlockchainIdentity) {
