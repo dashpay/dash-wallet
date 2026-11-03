@@ -18,13 +18,11 @@ package org.dash.wallet.integrations.maya.ui
 
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ResponseResource
@@ -161,34 +159,44 @@ class MayaConversionPreviewViewModel @Inject constructor(
     fun commitSwapTrade(tradeId: String): Job {
         // Claimed synchronously, before launching, so two rapid Confirms cannot both commit and
         // deposit. Refused for good once an earlier deposit may have gone out.
-        if (paymentOutcomeUnknown.value || !commitInFlight.compareAndSet(false, true)) {
+        // Refused too while a deposit that went out awaits its result's takeover.
+        if (paymentOutcomeUnknown.value ||
+            savedStateHandle.get<Boolean>(KEY_DEPOSIT_IN_PROGRESS) == true ||
+            !commitInFlight.compareAndSet(false, true)
+        ) {
             return Job().apply { complete() }
         }
+        // Armed now, before the first suspension: Android may save the instance state while the
+        // quote refresh runs (backgrounded) and not again before the process dies, so a mark set
+        // only when the deposit starts could miss the saved state. See init.
+        savedStateHandle[KEY_DEPOSIT_IN_PROGRESS] = true
+        val depositStarted = AtomicBoolean(false)
         return viewModelScope.launch {
             try {
-                commitAndDeposit(tradeId)
+                commitAndDeposit(tradeId, depositStarted)
             } finally {
-                // A deposit that went out stays marked until its result is taken over
+                // Stopped before the deposit started (e.g. the quote refresh failed): nothing
+                // was sent. A deposit that went out stays marked until its result is taken over
                 // (acknowledgeDepositResult); a refused one was unmarked where it was refused.
+                if (!depositStarted.get()) {
+                    savedStateHandle[KEY_DEPOSIT_IN_PROGRESS] = false
+                }
                 commitInFlight.set(false)
             }
         }
     }
 
-    private suspend fun commitAndDeposit(tradeId: String) {
+    private suspend fun commitAndDeposit(tradeId: String, depositStarted: AtomicBoolean) {
         analyticsService.logEvent(AnalyticsConstants.Coinbase.CONVERT_QUOTE_CONFIRM, mapOf())
         val inputCurrency = swapTradeUIModel.amount.dashCode
         val inputAmount = swapTradeUIModel.amount.dash
 
         // TODO: this is the action to do the swap
         _showLoading.value = true
-        // Saved, right before the deposit is built and broadcast (after the quote refresh, which
-        // sends nothing): should the process die before the call returns, the restored screen
-        // treats the deposit's outcome as unknown (see init).
+        // Told right before the deposit is built and broadcast (after the quote refresh, which
+        // sends nothing): from then on the mark armed at the tap is kept unless refused.
         val result = swapProvider.commitSwapTransaction(tradeId, swapTradeUIModel) {
-            withContext(Dispatchers.Main.immediate) {
-                savedStateHandle[KEY_DEPOSIT_IN_PROGRESS] = true
-            }
+            depositStarted.set(true)
         }
         when (result) {
             is ResponseResource.Success -> {

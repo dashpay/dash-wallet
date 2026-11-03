@@ -192,17 +192,37 @@ class MayaConversionPreviewOutcomeUnknownTest {
     }
 
     @Test
-    fun aCommitStillRefreshingItsQuote_whenTheProcessDies_isNotAnUnknownOutcome() = runTest {
-        // Nothing can have been sent before the deposit starts.
+    fun theStateSavedAtTheConfirmTap_beforeTheDepositStarts_alreadyRefusesOnRestore() = runTest {
+        // Android may save the instance state while the commit still refreshes its quote (the
+        // app was backgrounded) and never again before the process dies.
         val gate = CompletableDeferred<Unit>()
         stubHeldCommit(gate, deposit = false)
         val savedState = SavedStateHandle(mapOf("swap_trade_order" to order))
         val committing = viewModel(savedState).commitSwapTrade("trade")
+        val savedWhileRefreshing = restoredFrom(savedState)
 
-        assertFalse(viewModel(restoredFrom(savedState)).paymentOutcomeUnknown.value)
+        // The deposit may start and go out after that; the process dies with only that state.
+        val restored = viewModel(savedWhileRefreshing)
+        assertTrue(restored.paymentOutcomeUnknown.value)
 
         gate.complete(Unit)
         committing.join()
+    }
+
+    @Test
+    fun aQuoteRefreshThatFails_sentNothing_andIsNoLongerInProgress() = runTest {
+        // The commit stops before the deposit starts: nothing can have been sent.
+        val gate = CompletableDeferred<Unit>()
+        gate.complete(Unit)
+        stubHeldCommit(gate, deposit = false)
+        val savedState = SavedStateHandle(mapOf("swap_trade_order" to order))
+        val viewModel = viewModel(savedState)
+        viewModel.commitSwapTrade("trade").join()
+
+        assertFalse(viewModel(restoredFrom(savedState)).paymentOutcomeUnknown.value)
+        // And Confirm works again.
+        viewModel.commitSwapTrade("trade").join()
+        verify(swapProvider, times(2)).commitSwapTransaction(any(), any(), any())
     }
 
     @Test
