@@ -348,6 +348,53 @@ class PlatformUsernameReconcileTest {
     }
 
     @Test
+    fun aWonVoteWithItsDomainDocument_writesApprovedAndDoneOnce_thenUpdatesTheProfile() = runBlocking {
+        // the result and the completion are one conditional write: as two writes against the
+        // same loaded key, whichever landed second was refused, and the profile update with it
+        val store = Store(votingFor("alice"))
+        val identity = mockk<org.dashj.platform.dpp.identity.Identity> {
+            every { id } returns org.dashj.platform.dpp.identifier.Identifier.from(myUserId)
+        }
+        coEvery { identityConfig.load() } answers { copyOf(store.record).also { it.identity = identity } }
+        // The first write is slow to land: a second write racing it (the old split result and
+        // completion writes) lands first, and the first is then refused.
+        val secondAttempt = java.util.concurrent.CountDownLatch(1)
+        val attemptNo = java.util.concurrent.atomic.AtomicInteger()
+        coEvery { identityRepository.updateBlockchainIdentityDataIfUnchanged(any(), any()) } answers {
+            store.attempts.incrementAndGet()
+            if (attemptNo.incrementAndGet() == 1) {
+                secondAttempt.await(500, java.util.concurrent.TimeUnit.MILLISECONDS)
+            } else {
+                secondAttempt.countDown()
+            }
+            synchronized(store) {
+                if (IdentityRecordKey.of(store.record) != secondArg<IdentityRecordKey>()) return@answers false
+                store.record = copyOf(firstArg())
+                store.writes.incrementAndGet()
+                true
+            }
+        }
+        every { platformRepo.getUsername("alice") } returns Resource.success(domainDocumentOwnedBy(myUserId))
+        val won: ContestedDocumentVotePollWinnerInfo = mockk {
+            every { isLocked } returns false
+            every { noWinner } returns false
+            every { isWinner(any()) } returns true
+        }
+        every { platformRepo.getVoteContenders("alice") } returns
+            Contenders(Optional.of(Pair(won, mockk<BlockInfo>())), mapOf(), 0, 0)
+        coEvery { identityRepository.getLocalUserProfile() } returns DashPayProfile(myUserId, "alice2instant")
+
+        service().checkUsernameVotingStatus()
+        store.awaitWriteAttempt()
+        coVerify(timeout = 5_000) { dashPayProfileDao.insert(match { it.username == "alice" }) }
+
+        assertEquals(UsernameRequestStatus.APPROVED, store.record.usernameRequested)
+        assertEquals(IdentityCreationState.DONE, store.record.creationState)
+        // (the registration reconcile that follows may write the DONE record once more)
+        assertEquals("no write refused", store.attempts.get(), store.writes.get())
+    }
+
+    @Test
     fun aStaleReconcile_neverPutsTheOldNameBackOverAnAcceptedReplacement() = runBlocking {
         val stale = identityData(username = "alice").also { it.usernameStatus = UsernameStatus.NOT_PRESENT }
         val store = Store(stale)

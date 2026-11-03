@@ -3058,30 +3058,19 @@ class PlatformSynchronizationService @Inject constructor(
             val voteResults = platformRepo.getVoteContenders(identityData.username!!)
             if (voteResults.winner.isPresent) {
                 val winner = voteResults.winner.get().first
+                var changed = true
+                var won = false
                 when {
-                    winner.isLocked -> {
-                        identityData.usernameRequested = UsernameRequestStatus.LOCKED
-                        syncScope.launch { updateIfUnchanged(loaded, identityData) }
-                    }
+                    winner.isLocked -> identityData.usernameRequested = UsernameRequestStatus.LOCKED
 
                     winner.isWinner(Identifier.from(identityData.userId)) -> {
                         identityData.usernameRequested = UsernameRequestStatus.APPROVED
-                        syncScope.launch {
-                            if (!updateIfUnchanged(loaded, identityData)) return@launch
-                            identityRepository.getLocalUserProfile()?.let {
-                                dashPayProfileDao.insert(it.copy(username = identityData.username!!))
-                            }
-                        }
+                        won = true
                     }
 
-                    winner.noWinner -> {
-                        // ?
-                    }
+                    winner.noWinner -> changed = false
 
-                    else -> {
-                        identityData.usernameRequested = UsernameRequestStatus.LOST_VOTE
-                        syncScope.launch { updateIfUnchanged(loaded, identityData) }
-                    }
+                    else -> identityData.usernameRequested = UsernameRequestStatus.LOST_VOTE
                 }
                 if (resource.status == Status.SUCCESS && resource.data != null) {
                     val domainDocument = DomainDocument(resource.data)
@@ -3090,10 +3079,17 @@ class PlatformSynchronizationService @Inject constructor(
                         // checkUsernameVotingStatus. This branch is likewise reachable
                         // only from VOTING (guarded at the top of checkVotingStatus).
                         identityData.creationState = IdentityCreationState.DONE
-                        updateIfUnchanged(loaded, identityData)
+                        changed = true
                     }
-                } else {
-
+                }
+                // The result and the completion in ONE conditional write: as two writes against
+                // the same loaded key, the second was always refused (with the profile update
+                // that followed it).
+                if (!changed || !updateIfUnchanged(loaded, identityData)) return
+                if (won) {
+                    identityRepository.getLocalUserProfile()?.let {
+                        dashPayProfileDao.insert(it.copy(username = identityData.username!!))
+                    }
                 }
             }
         }
