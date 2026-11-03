@@ -23,6 +23,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.viewModels
@@ -31,6 +32,7 @@ import de.schildbach.wallet_test.R
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.dash.wallet.common.ui.LockScreenHost
+import org.dash.wallet.common.ui.awaitDestroyed
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.handleWhenResumed
 import org.junit.Assert.assertEquals
@@ -100,6 +102,25 @@ class HandleWhenResumedTest {
         override suspend fun show(outcome: String): Boolean {
             AdaptiveDialog.simple(outcome, "Close").showNow(parentFragmentManager, RESULT_TAG)
             return true
+        }
+    }
+
+    /** The Coinbase transfer result's shape: a showNow dialog awaited until it is destroyed. */
+    class ResultDialog : DialogFragment() {
+        var answered = false
+
+        fun answer() {
+            answered = true
+            dismissNow()
+        }
+    }
+
+    class AwaitedResultScreen : Screen() {
+        override suspend fun show(outcome: String): Boolean {
+            val dialog = ResultDialog()
+            dialog.showNow(parentFragmentManager, RESULT_TAG)
+            dialog.awaitDestroyed()
+            return dialog.answered
         }
     }
 
@@ -283,5 +304,39 @@ class HandleWhenResumedTest {
 
         assertNull(screen.outcomes.value)
         assertNull(dialog())
+    }
+
+    private fun resultDialog(): ResultDialog? =
+        activity.supportFragmentManager.findFragmentByTag(RESULT_TAG) as? ResultDialog
+
+    private fun useScreen(replacement: Screen) {
+        activity.supportFragmentManager.beginTransaction().remove(screen).commitNow()
+        screen = replacement.also {
+            activity.supportFragmentManager.beginTransaction().add(CONTAINER_ID, it).commitNow()
+        }
+        idle()
+    }
+
+    @Test
+    fun aResultTheLockDismisses_isShownAgainOnUnlock_andAnAnsweredOneIsNot() {
+        useScreen(AwaitedResultScreen())
+        screen.outcomes.value = "transfer sent"
+        idle()
+        assertNotNull(resultDialog())
+
+        activity.lockScreenDisplayed = true
+        requireNotNull(resultDialog()).dismissAllowingStateLoss()
+        idle()
+
+        assertNull(resultDialog())
+        assertEquals("given back, not lost", "transfer sent", screen.outcomes.value)
+
+        unlock()
+
+        requireNotNull(resultDialog()) { "shown again once unlocked" }.answer()
+        idle()
+
+        assertNull("answered: not given back", screen.outcomes.value)
+        assertNull(resultDialog())
     }
 }

@@ -28,15 +28,10 @@ import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.commit
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlin.coroutines.resume
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.money.MoneyFormat
 import org.dash.wallet.common.money.fiatValue
@@ -535,24 +530,5 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
     override fun onDestroy() {
         super.onDestroy()
         onBackPressedCallback?.remove()
-    }
-}
-
-/** Suspends until this fragment is destroyed (a dialog: dismissed). */
-private suspend fun Fragment.awaitDestroyed() {
-    if (lifecycle.currentState == Lifecycle.State.DESTROYED) {
-        return
-    }
-    suspendCancellableCoroutine { continuation ->
-        val observer = object : LifecycleEventObserver {
-            override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
-                if (event == Lifecycle.Event.ON_DESTROY) {
-                    lifecycle.removeObserver(this)
-                    continuation.resume(Unit)
-                }
-            }
-        }
-        lifecycle.addObserver(observer)
-        continuation.invokeOnCancellation { lifecycle.removeObserver(observer) }
     }
 }

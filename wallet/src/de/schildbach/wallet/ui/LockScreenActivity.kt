@@ -699,6 +699,8 @@ open class LockScreenActivity : SecureActivity(), LockScreenHost {
         }
     }
 
+    // Called once the lock screen is displayed (lockScreenDisplayed is true): handleWhenResumed
+    // reads it when a dialog this dismisses reports no answer, to ask again on unlock.
     private fun handleLockScreenActivated() {
         if (this::alertDialog.isInitialized) {
             alertDialog.dismissDialog()

@@ -19,6 +19,8 @@ package org.dash.wallet.common.ui
 
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.withResumed
@@ -29,6 +31,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
 
 /**
  * From the fragment's onViewCreated: hands each outcome a view model retains in [outcomes] to
@@ -76,5 +80,24 @@ fun <T : Any> Fragment.handleWhenResumed(
                 }
             }
         }
+    }
+}
+
+/** Suspends until this fragment is destroyed (a dialog: dismissed). */
+suspend fun Fragment.awaitDestroyed() {
+    if (lifecycle.currentState == Lifecycle.State.DESTROYED) {
+        return
+    }
+    suspendCancellableCoroutine { continuation ->
+        val observer = object : LifecycleEventObserver {
+            override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
+                if (event == Lifecycle.Event.ON_DESTROY) {
+                    lifecycle.removeObserver(this)
+                    continuation.resume(Unit)
+                }
+            }
+        }
+        lifecycle.addObserver(observer)
+        continuation.invokeOnCancellation { lifecycle.removeObserver(observer) }
     }
 }
