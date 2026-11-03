@@ -288,6 +288,42 @@ class PaymentOutcomeUnknownTest {
     }
 
     @Test
+    fun sellDash_aRejectedSend_isAFailure_notASuccess() = runTest {
+        coEvery { coinBaseRepository.commitSwapTrade(any()) } returns
+            ResponseResource.Success(SwapTradeUIModel(swapTradeId = "trade", inputCurrency = Constants.DASH_CURRENCY))
+        coEvery { coinBaseRepository.createAddress() } returns ResponseResource.Success("XcoinbaseDepositAddress")
+        coEvery {
+            sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any())
+        } throws IllegalStateException("rejected")
+        val viewModel = previewViewModel(SavedStateHandle())
+        var failureEvents = 0
+        var successEvents = 0
+        viewModel.onFailure.observeForever { failureEvents++ }
+        viewModel.sellSwapSuccessState.observeForever { successEvents++ }
+
+        viewModel.commitSwapTrade("trade", Constants.DASH_CURRENCY, "0.01").join()
+
+        assertEquals(1, failureEvents)
+        assertEquals("nothing was sent, so the sale is not reported as done", 0, successEvents)
+        assertFalse(viewModel.paymentOutcomeUnknown.value)
+    }
+
+    @Test
+    fun sellDash_aSuccessfulSend_isReportedAsSuccess() = runTest {
+        coEvery { coinBaseRepository.commitSwapTrade(any()) } returns
+            ResponseResource.Success(SwapTradeUIModel(swapTradeId = "trade", inputCurrency = Constants.DASH_CURRENCY))
+        coEvery { coinBaseRepository.createAddress() } returns ResponseResource.Success("XcoinbaseDepositAddress")
+        coEvery { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any()) } returns "txid"
+        val viewModel = previewViewModel(SavedStateHandle())
+        var successEvents = 0
+        viewModel.sellSwapSuccessState.observeForever { successEvents++ }
+
+        viewModel.commitSwapTrade("trade", Constants.DASH_CURRENCY, "0.01").join()
+
+        assertEquals(1, successEvents)
+    }
+
+    @Test
     fun sellDash_outcomeUnknown_survivesRestore_andStillRefusesACommit() = runTest {
         coEvery { coinBaseRepository.commitSwapTrade(any()) } returns
             ResponseResource.Success(SwapTradeUIModel(swapTradeId = "trade", inputCurrency = Constants.DASH_CURRENCY))

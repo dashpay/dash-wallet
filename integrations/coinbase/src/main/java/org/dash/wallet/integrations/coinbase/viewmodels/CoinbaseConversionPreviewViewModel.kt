@@ -248,8 +248,9 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
                     _showLoading.value = false
                     getUserAccountAddressFailedCallback.call()
                 } else {
-                    val outcomeUnknown = sendDashToCoinbase(coin, result.value, session)
-                    if (!outcomeUnknown) {
+                    // Only a send that went out is a completed sale: a rejected one has reported its
+                    // failure, and an unknown outcome shows its own warning.
+                    if (sendDashToCoinbase(coin, result.value, session)) {
                         sellSwapSuccessState.call()
                     }
                     _showLoading.value = false
@@ -263,8 +264,9 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
     }
 
     /**
-     * Returns true when the send's outcome is unknown ([paymentOutcomeUnknown] was set),
-     * so the caller must not report the sale as successful either.
+     * Returns true only when the Dash was sent. False when the send was refused (its failure has
+     * been reported) or its outcome is unknown ([paymentOutcomeUnknown] was set); in neither case
+     * may the caller report the sale as successful.
      */
     private suspend fun sendDashToCoinbase(coin: Dash, addressInfo: String, session: WalletSession?): Boolean {
         val address = addressInfo.trim { it <= ' ' }
@@ -274,11 +276,11 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
                 address,
                 ServiceName.Coinbase
             )
-            false
+            true
         } catch (x: PaymentSubmissionPendingException) {
             savedStateHandle[KEY_PAYMENT_OUTCOME_UNKNOWN] = true
             x.printStackTrace()
-            true
+            false
         } catch (x: Exception) {
             if (x.isInsufficientMoney) {
                 onInsufficientMoneyCallback.call()
