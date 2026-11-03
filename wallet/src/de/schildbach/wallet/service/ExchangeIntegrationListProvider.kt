@@ -83,8 +83,9 @@ class ExchangeIntegrationListProvider @Inject constructor(
                     exchangeIntegrations
                 )
             ) {
-                // determine if we are connected
-                if (coinBaseRepository.isAuthenticated) {
+                // determine if we are connected -- suspending read, so a cold start can't
+                // report "not connected" before the stored token has been read back
+                if (coinBaseRepository.isUserAuthenticated()) {
                     // A failed account/address lookup must not hide Coinbase entirely: log why
                     // and add the row without an address, so a logged-in user still sees the
                     // integration instead of it silently vanishing from the list.

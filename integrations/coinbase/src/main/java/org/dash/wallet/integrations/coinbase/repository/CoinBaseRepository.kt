@@ -18,6 +18,9 @@ package org.dash.wallet.integrations.coinbase.repository
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import org.bitcoinj.core.Coin
@@ -45,7 +48,22 @@ import javax.inject.Inject
 
 interface CoinBaseRepositoryInt {
     val hasValidCredentials: Boolean
+
+    /**
+     * Last known auth state, safe to read from any thread.
+     *
+     * This is a cache of [isAuthenticatedFlow] and can still be `false` in the window
+     * before the stored token has been read back from disk, so prefer
+     * [isAuthenticatedFlow] where the caller can react to a change, or
+     * [isUserAuthenticated] where it can suspend.
+     */
     val isAuthenticated: Boolean
+
+    /** Emits the auth state, starting with the current one and again on every change. */
+    val isAuthenticatedFlow: StateFlow<Boolean>
+
+    /** Authoritative auth state, read straight from storage -- never a startup-race `false`. */
+    suspend fun isUserAuthenticated(): Boolean
 
     suspend fun getUserAccount(): CoinbaseAccount
     suspend fun getUserAccount(cryptoCurrency: String): CoinbaseAccount?
@@ -95,12 +113,22 @@ class CoinBaseRepository @Inject constructor(
         get() = CoinBaseClientConstants.CLIENT_ID.isNotEmpty() &&
             CoinBaseClientConstants.CLIENT_SECRET.isNotEmpty()
 
-    override var isAuthenticated: Boolean = false
-        private set
+    // Backed by a StateFlow rather than a plain var: the write happens on Dispatchers.IO
+    // and every read is on another thread, so a non-volatile field gave readers no
+    // guarantee they would ever observe the value that was stored (MO-995).
+    private val _isAuthenticated = MutableStateFlow(false)
+
+    override val isAuthenticated: Boolean
+        get() = _isAuthenticated.value
+
+    override val isAuthenticatedFlow: StateFlow<Boolean> = _isAuthenticated.asStateFlow()
+
+    override suspend fun isUserAuthenticated(): Boolean =
+        !config.get(CoinbaseConfig.LAST_ACCESS_TOKEN).isNullOrEmpty()
 
     init {
         config.observe(CoinbaseConfig.LAST_ACCESS_TOKEN)
-            .onEach { isAuthenticated = !it.isNullOrEmpty() }
+            .onEach { _isAuthenticated.value = !it.isNullOrEmpty() }
             .launchIn(configScope)
     }
 

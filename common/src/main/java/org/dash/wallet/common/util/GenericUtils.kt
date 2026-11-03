@@ -72,28 +72,55 @@ object GenericUtils {
         return Locale.US
     }
 
+    /** Characters any supported locale may use as a decimal or grouping mark. */
+    private const val SEPARATORS = ".,٫"
+
     /**
-     * To perform some operations on our fiat values (ex: parse to double, convert fiat to Coin), it needs to be properly formatted
-     * In case our fiat value is in a currency that has a comma, we need to strip it away so as to have our value as a decimal
-     * @param fiatValue
-     * @return
+     * Normalises a human-formatted amount into one BigDecimal, Coin.parseCoin and
+     * Fiat.parseFiat will accept: a single '.' decimal mark and no grouping marks.
+     *
+     * Which mark is the decimal one is decided, never guessed. The decimal mark can occur
+     * at most once in a number, so the LAST separator is the decimal mark precisely when
+     * that character appears exactly once; every other separator is grouping and is
+     * dropped. When a character repeats it cannot be a decimal mark, so all its
+     * occurrences are grouping.
+     *
+     * This used to test only "contains a dot AND a comma" and then strip the commas, which
+     * silently mangled every European-formatted amount: "1.234,56" became "1.23456", a
+     * thousandfold error in a value on its way to being parsed and sent. A single
+     * separator is genuinely ambiguous ("1,234" is 1.234 in one locale and 1234 in
+     * another), so that case is left reading as a decimal mark, exactly as before.
      */
     fun formatFiatWithoutComma(fiatValue: String): String {
-        val fiatValueContainsCommaWithDecimal = fiatValue.contains(".") && fiatValue.contains(",")
+        val cleaned = normalizeSeparators(fiatValue)
 
-        val cleaned = if (fiatValueContainsCommaWithDecimal) {
-            fiatValue.replace(",", "")
-        } else {
-            fiatValue.replace(",", ".")
-                .replace("٫", ".")
-        }
-        
         // Limit to 8 decimal places to prevent rounding errors in Coin.parseCoin
         val decimalIndex = cleaned.indexOf('.')
         return if (decimalIndex != -1 && cleaned.length > decimalIndex + 9) {
             cleaned.substring(0, decimalIndex + 9)
         } else {
             cleaned
+        }
+    }
+
+    private fun normalizeSeparators(value: String): String {
+        val lastSeparator = value.indexOfLast { it in SEPARATORS }
+
+        if (lastSeparator < 0) {
+            return value
+        }
+
+        // A repeated character cannot be the decimal mark, so it is grouping throughout.
+        val decimalIndex = if (value.count { it == value[lastSeparator] } == 1) lastSeparator else -1
+
+        return buildString(value.length) {
+            value.forEachIndexed { index, character ->
+                when {
+                    index == decimalIndex -> append('.')
+                    character in SEPARATORS -> Unit // grouping mark: drop it
+                    else -> append(character)
+                }
+            }
         }
     }
 
