@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.updateAndGet
 
 /**
  * DashConnect needs Platform protocol version 14: key funding limits and expiry, contract-group
@@ -43,8 +43,8 @@ object ConnectAvailability {
         if (!isSupported) return false
         if (reportedVersion.value >= MIN_PROTOCOL_VERSION) return true
         val version = platformRepo.readProtocolVersion() ?: return null
-        reportedVersion.update { maxOf(it, version) }
-        return version >= MIN_PROTOCOL_VERSION
+        // An overlapping probe may have read a newer version first; answer with the one kept.
+        return reportedVersion.updateAndGet { maxOf(it, version) } >= MIN_PROTOCOL_VERSION
     }
 
     internal fun resetForTest() {

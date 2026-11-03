@@ -26,6 +26,9 @@ import de.schildbach.wallet.ui.more.connections.protocol.DashConnectUri
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import org.bitcoinj.core.Base58
 import org.bitcoinj.core.ECKey
@@ -159,6 +162,19 @@ class PlatformDashConnectRepositoryTest {
         // A wallet without a username still needs the answer, to reach Connections and create one.
         every { identityRepository.blockchainIdentity } returns null
         assertEquals(true, runBlocking { repository.isAvailable() })
+    }
+
+    @Test
+    fun isAvailable_answersWithTheNewestVersionWhenProbesOverlap() = runBlocking {
+        assumeTrue(ConnectAvailability.isSupported)
+        // An older probe reads 13 but finishes after a newer one has read 14.
+        val olderRead = CompletableDeferred<Int?>()
+        coEvery { platformRepo.readProtocolVersion() } coAnswers { olderRead.await() }
+        val older = async(Dispatchers.Unconfined) { repository.isAvailable() }
+        coEvery { platformRepo.readProtocolVersion() } returns ConnectAvailability.MIN_PROTOCOL_VERSION
+        assertEquals(true, repository.isAvailable())
+        olderRead.complete(13)
+        assertEquals(true, older.await())
     }
 
     @Test
