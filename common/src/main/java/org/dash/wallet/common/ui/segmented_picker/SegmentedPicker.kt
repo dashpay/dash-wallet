@@ -195,10 +195,9 @@ fun SegmentedPicker(
 
         // Draw the animated selection indicator
         if (containerSize > 0 && showSelection) {
-            Surface(
-                shape = RoundedCornerShape((style.thumbCornerRadius ?: (style.cornerRadius - 2)).dp),
+            SelectionThumb(
+                style = style,
                 color = thumbColor,
-                shadowElevation = style.shadowElevation.dp,
                 modifier = Modifier
                     .then(
                         if (isHorizontal) {
@@ -213,7 +212,7 @@ fun SegmentedPicker(
                                 .offset(y = animatedPosition)
                         }
                     )
-            ) { }
+            )
         }
 
         // Draw the options
@@ -318,15 +317,14 @@ private fun FitContentSegmentedPicker(
     ) {
         Box(modifier = Modifier.fillMaxHeight()) {
             if (showSelection && selectedBounds != null) {
-                Surface(
-                    shape = RoundedCornerShape((style.thumbCornerRadius ?: (style.cornerRadius - 2)).dp),
+                SelectionThumb(
+                    style = style,
                     color = thumbColor,
-                    shadowElevation = style.shadowElevation.dp,
                     modifier = Modifier
                         .offset(x = thumbOffset)
                         .width(thumbWidth)
                         .fillMaxHeight()
-                ) { }
+                )
             }
             Row(modifier = Modifier.fillMaxHeight()) {
                 options.forEachIndexed { index, option ->
@@ -355,6 +353,17 @@ private fun FitContentSegmentedPicker(
             }
         }
     }
+}
+
+/** The selected option's background; [modifier] sizes and places it. */
+@Composable
+private fun SelectionThumb(style: SegmentedPickerStyle, color: Color, modifier: Modifier) {
+    Surface(
+        shape = RoundedCornerShape((style.thumbCornerRadius ?: (style.cornerRadius - 2)).dp),
+        color = color,
+        shadowElevation = style.shadowElevation.dp,
+        modifier = modifier
+    ) { }
 }
 
 @Composable

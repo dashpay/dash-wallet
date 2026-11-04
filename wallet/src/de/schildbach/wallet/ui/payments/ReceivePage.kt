@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.ui.payments
 
+import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -36,6 +37,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,6 +57,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.schildbach.wallet_test.R
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.components.LocalDashColors
@@ -189,7 +194,8 @@ private fun BalancePicker(
     onSelectTab: (ReceiveBalanceTab) -> Unit
 ) {
     val colors = LocalDashColors.current
-    val options = tabs.map { SegmentedOption(stringResource(tabTitleFor(it))) }
+    val titles = ReceiveBalanceTab.entries.associateWith { stringResource(tabTitleFor(it)) }
+    val options = remember(tabs, titles) { tabs.map { SegmentedOption(titles.getValue(it)) } }
     SegmentedPicker(
         options = options,
         modifier = Modifier
@@ -228,7 +234,7 @@ private fun QrCode(uiState: ReceiveUIState) {
             .background(if (payload != null) Color.White else colors.backgroundSecondary),
         contentAlignment = Alignment.Center
     ) {
-        val bitmap = remember(payload) { payload?.let { Qr.qrBitmap(it) } }
+        val bitmap = rememberQrBitmap(payload)
         when {
             bitmap != null -> {
                 val description = stringResource(R.string.receive_qr_code_description)
@@ -259,6 +265,21 @@ private fun QrCode(uiState: ReceiveUIState) {
             )
         }
     }
+}
+
+/**
+ * The QR bitmap for [payload], encoded on [Dispatchers.Default]; null until it is ready. The
+ * state is keyed on [payload], so a new payload never shows the previous one's code.
+ */
+@Composable
+private fun rememberQrBitmap(payload: String?): Bitmap? {
+    val bitmap = remember(payload) { mutableStateOf<Bitmap?>(null) }
+    LaunchedEffect(bitmap) {
+        if (payload != null) {
+            bitmap.value = withContext(Dispatchers.Default) { Qr.qrBitmap(payload) }
+        }
+    }
+    return bitmap.value
 }
 
 /** Figma 7062:49320 / 7062:49391: label over value, a gray tinted copy button on the right. */
@@ -312,7 +333,6 @@ private fun ReceivePagePreview() {
                 uiState = ReceiveUIState(
                     tabs = ReceiveBalanceTab.entries,
                     address = "yZ3XpruChNgctwFvCzQ5WpFg7RpytQVwkA",
-                    qrPayload = "dash:yZ3XpruChNgctwFvCzQ5WpFg7RpytQVwkA",
                     username = "johndoe"
                 ),
                 onSelectTab = {},

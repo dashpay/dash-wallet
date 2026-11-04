@@ -22,14 +22,13 @@ import android.content.Context
 import android.os.Bundle
 import android.view.View
 import androidx.annotation.VisibleForTesting
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ViewCompositionStrategy
@@ -42,6 +41,7 @@ import androidx.core.view.updatePadding
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.viewpager2.adapter.FragmentStateAdapter
@@ -71,18 +71,12 @@ import org.dash.wallet.common.ui.viewBinding
  * navigation (`ShowNavBar` on the destination), over the payments pages.
  *
  * Receive is [AdvancedReceiveFragment] (the Compose [ReceivePage]); Internal and Send
- * are the same child pages as [PaymentsFragment]'s.
+ * are the same child pages as [PaymentsFragment]'s. The enter/exit transitions are on
+ * the NavOptions (see [paymentsRoute]). There is no close control: like the other
+ * bottom-nav screens it is left through the bottom navigation or Back.
  *
- * All navigation goes through the NavController; the tab set is (re)applied on the
- * view's lifecycle from [AdvancedPaymentsViewModel], not once in [onViewCreated]; the
- * screen pads itself for the system bars and the IME and never touches status-bar
- * colours; and the enter/exit transitions are on the NavOptions (see [paymentsRoute]),
- * not set here. There is no close control: like the other bottom-nav screens it is
- * left through the bottom navigation or Back.
- *
- * The pages are hosted by ViewPager2 like [PaymentsFragment]'s: ViewPager2 keeps an
- * offscreen page at STARTED and lifts only the selected one to RESUMED, which is when
- * [AdvancedReceiveFragment] (re)reads its address.
+ * ViewPager2 keeps an offscreen page at STARTED and lifts only the selected one to
+ * RESUMED, which is when [AdvancedReceiveFragment] (re)reads its address.
  */
 @AndroidEntryPoint
 class AdvancedPaymentsFragment : Fragment(R.layout.fragment_advanced_payments) {
@@ -101,11 +95,11 @@ class AdvancedPaymentsFragment : Fragment(R.layout.fragment_advanced_payments) {
     private val binding by viewBinding(FragmentAdvancedPaymentsBinding::bind)
     private val viewModel by viewModels<AdvancedPaymentsViewModel>()
 
-    private var tabIds by mutableStateOf<List<Int>>(emptyList())
-    private var selectedPosition by mutableIntStateOf(0)
-
-    /** The logical tab the user is on; kept across view recreation and tab-set changes. */
-    private var selectedTabId: Int? = null
+    /**
+     * The logical tab the user is on, and the only selection state: the picker and the pager
+     * positions follow from it ([positionOf]). Kept across view recreation and tab-set changes.
+     */
+    private var selectedTabId by mutableStateOf<Int?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -147,7 +141,6 @@ class AdvancedPaymentsFragment : Fragment(R.layout.fragment_advanced_payments) {
         binding.pager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
             override fun onPageSelected(position: Int) {
                 val tabId = adapter.tabIds.getOrNull(position) ?: return
-                selectedPosition = position
                 selectedTabId = tabId
 
                 if (arguments?.containsKey(ARG_ACTIVE_TAB) != true) {
@@ -179,8 +172,6 @@ class AdvancedPaymentsFragment : Fragment(R.layout.fragment_advanced_payments) {
         val wanted = selectedTabId ?: initialTabId()
         val position = positionOf(newTabIds, wanted)
         adapter.submit(newTabIds)
-        tabIds = newTabIds
-        selectedPosition = position
         selectedTabId = newTabIds[position]
         binding.pager.setCurrentItem(position, false)
     }
@@ -196,47 +187,45 @@ class AdvancedPaymentsFragment : Fragment(R.layout.fragment_advanced_payments) {
     @Composable
     private fun Header() {
         val colors = LocalDashColors.current
-        Column(modifier = Modifier.fillMaxWidth()) {
-            val ids = tabIds
-            if (ids.isNotEmpty()) {
-                val options = ids.map { tabId ->
-                    when (tabId) {
-                        ACTIVE_TAB_RECEIVE -> SegmentedOption(
-                            stringResource(R.string.payments_tab_receive_label),
-                            R.drawable.ic_arrow_down
-                        )
-                        ACTIVE_TAB_INTERNAL -> SegmentedOption(
-                            stringResource(R.string.shielded_tab_internal),
-                            R.drawable.ic_arrows_internal
-                        )
-                        else -> SegmentedOption(
-                            stringResource(R.string.payments_tab_pay_label),
-                            R.drawable.ic_arrow_up
-                        )
-                    }
-                }
-                // Figma 7062:49306 (20dp margins, 7062:49303): 70dp, 20dp corners, 4dp inset, 16dp thumb corners,
-                // icon above the title, no dividers, gray300 @ 20% track.
-                SegmentedPicker(
-                    options = options,
-                    modifier = Modifier
-                        .padding(20.dp)
-                        .fillMaxWidth()
-                        .height(70.dp),
-                    selectedIndex = selectedPosition,
-                    style = SegmentedPickerStyle(
-                        backgroundColor = colors.gray300.copy(alpha = 0.2f),
-                        cornerRadius = 20f,
-                        containerPadding = 4f,
-                        thumbCornerRadius = 16f,
-                        showDividers = false,
-                        iconAboveTitle = true
-                    )
-                ) { _, index ->
-                    selectedPosition = index
-                    binding.pager.currentItem = index
+        val ids = viewModel.uiState.collectAsStateWithLifecycle().value.tabIds
+        // Null until showTabs has picked a tab for this tab set.
+        val selected = selectedTabId
+        if (ids.isNullOrEmpty() || selected == null) return
+
+        val receiveLabel = stringResource(R.string.payments_tab_receive_label)
+        val internalLabel = stringResource(R.string.shielded_tab_internal)
+        val payLabel = stringResource(R.string.payments_tab_pay_label)
+        val options = remember(ids, receiveLabel, internalLabel, payLabel) {
+            ids.map { tabId ->
+                when (tabId) {
+                    ACTIVE_TAB_RECEIVE -> SegmentedOption(receiveLabel, R.drawable.ic_arrow_down)
+                    ACTIVE_TAB_INTERNAL -> SegmentedOption(internalLabel, R.drawable.ic_arrows_internal)
+                    else -> SegmentedOption(payLabel, R.drawable.ic_arrow_up)
                 }
             }
+        }
+        // Figma 7062:49306 (20dp margins, 7062:49303): 70dp, 20dp corners, 4dp inset, 16dp thumb corners,
+        // icon above the title, no dividers, gray300 @ 20% track.
+        SegmentedPicker(
+            options = options,
+            modifier = Modifier
+                .padding(20.dp)
+                .fillMaxWidth()
+                .height(70.dp),
+            selectedIndex = positionOf(ids, selected),
+            style = SegmentedPickerStyle(
+                backgroundColor = colors.gray300.copy(alpha = 0.2f),
+                cornerRadius = 20f,
+                containerPadding = 4f,
+                thumbCornerRadius = 16f,
+                showDividers = false,
+                iconAboveTitle = true
+            )
+        ) { _, index ->
+            val tabId = ids.getOrNull(index) ?: return@SegmentedPicker
+            selectedTabId = tabId
+            val pagerTabIds = (binding.pager.adapter as? TabsAdapter)?.tabIds.orEmpty()
+            binding.pager.currentItem = positionOf(pagerTabIds, tabId)
         }
     }
 

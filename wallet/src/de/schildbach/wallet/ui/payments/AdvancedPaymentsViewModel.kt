@@ -21,6 +21,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
+import org.dash.wallet.common.util.readRetryDelayMs
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -68,22 +69,35 @@ class AdvancedPaymentsViewModel @Inject constructor(
 }
 
 /**
+ * The shielded flag as a never-failing flow: a failed read counts as off (as
+ * [DashPayConfig.get] reading absent does for [PaymentsFragment]), is reported to
+ * [onError] and is retried, so the flow never completes on an error. Shared by the
+ * Advanced payments tabs ([advancedPaymentsTabsFlow]) and the Receive balance tabs.
+ */
+internal fun shieldedEnabledFlow(
+    shieldedFlag: Flow<Boolean?>,
+    onError: (Throwable, Long) -> Unit = { _, _ -> },
+    retryDelayMs: (Long) -> Long = ::readRetryDelayMs
+): Flow<Boolean> = shieldedFlag
+    .map { it == true }
+    .retryWhen { e, attempt ->
+        onError(e, attempt)
+        emit(false)
+        delay(retryDelayMs(attempt))
+        true
+    }
+    .distinctUntilChanged()
+
+/**
  * The tab set for the Advanced payments screen. Same gating as [PaymentsFragment]: the
- * "Internal" tab needs `SUPPORTS_PLATFORM` and `USE_KOTLIN_SDK_SHIELDED`. A failed read
- * hides it (as [DashPayConfig.get] reading absent does for [PaymentsFragment]) and keeps
- * retrying, so the flow never completes on an error.
+ * "Internal" tab needs `SUPPORTS_PLATFORM` and `USE_KOTLIN_SDK_SHIELDED`; a failed read
+ * hides it (see [shieldedEnabledFlow]).
  */
 internal fun advancedPaymentsTabsFlow(
     shieldedFlag: Flow<Boolean?>,
     supportsPlatform: Boolean,
     onError: (Throwable, Long) -> Unit = { _, _ -> },
-    retryDelayMs: (Long) -> Long = { attempt -> (attempt.coerceIn(0L, 11L) + 1) * 5_000L }
-): Flow<List<Int>> = shieldedFlag
-    .map { PaymentsFragment.tabIdsFor(supportsPlatform && it == true) }
-    .retryWhen { e, attempt ->
-        onError(e, attempt)
-        emit(PaymentsFragment.tabIdsFor(false))
-        delay(retryDelayMs(attempt))
-        true
-    }
+    retryDelayMs: (Long) -> Long = ::readRetryDelayMs
+): Flow<List<Int>> = shieldedEnabledFlow(shieldedFlag, onError, retryDelayMs)
+    .map { PaymentsFragment.tabIdsFor(supportsPlatform && it) }
     .distinctUntilChanged()

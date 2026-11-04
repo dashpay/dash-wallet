@@ -29,18 +29,13 @@ import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.money.Coin
@@ -63,22 +58,26 @@ enum class ReceiveBalanceTab {
  * @property selectedTab the tab whose [address] is on show.
  * @property address what [selectedTab] advertises, or null when there is nothing safe to show
  *   (still loading, or unavailable — see [unavailable]).
- * @property qrPayload the QR content for [address]: a `dash:` URI on Core, the bare address or
- *   ID elsewhere.
- * @property loading a read for [selectedTab] is in flight. [address] may still hold the value
- *   being revalidated, so a resume does not blank the QR.
- * @property unavailable the last read for [selectedTab] could not produce an address.
+ * @property loading [selectedTab] has no read result on show yet: true until its first read
+ *   completes, so a fresh page shows progress rather than "unavailable". A re-read leaves the
+ *   last result up until it answers: [address] keeps the value being revalidated (a resume
+ *   does not blank the QR), and after a failed read this stays false (still [unavailable]).
  * @property username the user's username, or null when they have none.
  */
 data class ReceiveUIState(
     val tabs: List<ReceiveBalanceTab> = listOf(ReceiveBalanceTab.CORE),
     val selectedTab: ReceiveBalanceTab = ReceiveBalanceTab.CORE,
     val address: String? = null,
-    val qrPayload: String? = null,
-    val loading: Boolean = false,
-    val unavailable: Boolean = false,
+    val loading: Boolean = true,
     val username: String? = null
 ) {
+    /** The QR content for [address]: a `dash:` URI on Core, the bare address or ID elsewhere. */
+    val qrPayload: String? = address?.let { ReceiveViewModel.qrPayloadOrNull(selectedTab, it, username) }
+
+    /** The last read for [selectedTab] could not produce an address. */
+    val unavailable: Boolean
+        get() = !loading && address == null
+
     /**
      * Specify amount is on every tab. Core reads a fresh address itself once the amount is
      * entered (as it always has), so it is always enabled; the other tabs put [address] in
@@ -171,23 +170,14 @@ class ReceiveViewModel internal constructor(
             return "${AddressNetwork.DASH_SCHEME}:$address?amount=${amount.toPlainString()}"
         }
 
-        /**
-         * The shielded flag as a never-failing flow: a failed read hides the
-         * Shield and Platform tabs and is retried, like the Internal tab
-         * ([advancedPaymentsTabsFlow]).
-         */
-        internal fun shieldedEnabledFlow(
-            shieldedFlag: Flow<Boolean?>,
-            retryDelayMs: (Long) -> Long = { attempt -> (attempt.coerceIn(0L, 11L) + 1) * 5_000L }
-        ): Flow<Boolean> = shieldedFlag
-            .map { it == true }
-            .retryWhen { e, attempt ->
-                log.warn("shielded flag read failed (attempt {})", attempt, e)
-                emit(false)
-                delay(retryDelayMs(attempt))
-                true
+        /** [qrPayloadFor], or null (fail closed) when the URI builder rejects [address]. */
+        internal fun qrPayloadOrNull(tab: ReceiveBalanceTab, address: String, username: String?): String? =
+            try {
+                qrPayloadFor(tab, address, username)
+            } catch (e: IllegalArgumentException) {
+                log.warn("cannot build the receive QR payload for {}", tab, e)
+                null
             }
-            .distinctUntilChanged()
     }
 
     private val _uiState = MutableStateFlow(ReceiveUIState())
@@ -203,7 +193,11 @@ class ReceiveViewModel internal constructor(
     private var loadGeneration = 0
 
     init {
-        shieldedEnabledFlow(dashPayConfig.observePreservingErrors(DashPayConfig.USE_KOTLIN_SDK_SHIELDED))
+        // A failed read hides the Shield and Platform tabs and is retried, like the Internal tab.
+        shieldedEnabledFlow(
+            shieldedFlag = dashPayConfig.observePreservingErrors(DashPayConfig.USE_KOTLIN_SDK_SHIELDED),
+            onError = { e, attempt -> log.warn("shielded flag read failed (attempt {})", attempt, e) }
+        )
             .onEach {
                 shieldedEnabled = it
                 applyTabs()
@@ -243,9 +237,7 @@ class ReceiveViewModel internal constructor(
     fun selectTab(tab: ReceiveBalanceTab) {
         val state = _uiState.value
         if (tab == state.selectedTab || tab !in state.tabs) return
-        _uiState.update {
-            it.copy(selectedTab = tab, address = null, qrPayload = null, loading = false, unavailable = false)
-        }
+        _uiState.update { it.copy(selectedTab = tab, address = null, loading = true) }
         load(tab, force = true)
     }
 
@@ -257,35 +249,22 @@ class ReceiveViewModel internal constructor(
 
     private fun publishUsername() {
         val username = if (hasUsername()) profileUsername ?: identity?.activeUsername else null
-        _uiState.update { state ->
-            val payload = state.address?.let { qrPayloadOrNull(state.selectedTab, it, username) }
-            state.copy(username = username, qrPayload = payload)
-        }
+        _uiState.update { it.copy(username = username) }
     }
 
     private fun applyTabs() {
         val tabs = tabsFor(supportsPlatform, shieldedEnabled, hasUsername())
-        val state = _uiState.value
-        if (tabs == state.tabs) {
-            publishUsername()
-            return
-        }
-        if (state.selectedTab in tabs) {
-            _uiState.update { it.copy(tabs = tabs) }
-            publishUsername()
-        } else {
-            // The selected balance went away (flag off, username gone): back to Core.
-            _uiState.update {
-                it.copy(
-                    tabs = tabs,
-                    selectedTab = ReceiveBalanceTab.CORE,
-                    address = null,
-                    qrPayload = null,
-                    loading = false,
-                    unavailable = false
-                )
+        // The selected balance went away (flag off, username gone): back to Core.
+        val lostSelection = _uiState.value.selectedTab !in tabs
+        _uiState.update {
+            if (lostSelection) {
+                it.copy(tabs = tabs, selectedTab = ReceiveBalanceTab.CORE, address = null, loading = true)
+            } else {
+                it.copy(tabs = tabs)
             }
-            publishUsername()
+        }
+        publishUsername()
+        if (lostSelection) {
             load(ReceiveBalanceTab.CORE, force = true)
         }
     }
@@ -306,8 +285,9 @@ class ReceiveViewModel internal constructor(
         loadJob?.cancel()
         val generation = ++loadGeneration
         loadingTab = tab
-        // Keep what is on screen while revalidating it; a failure below takes it down.
-        _uiState.update { it.copy(loading = true) }
+        // Keep what is on screen while revalidating it — the address, or the "unavailable" of
+        // the last failed read — until this read replaces it; a failure below takes it down.
+        _uiState.update { if (it.unavailable) it else it.copy(loading = true) }
         loadJob = viewModelScope.launch {
             val address = try {
                 sourceFor(tab).address()
@@ -322,25 +302,11 @@ class ReceiveViewModel internal constructor(
                 if (state.selectedTab != tab) {
                     state
                 } else {
-                    val payload = address?.let { qrPayloadOrNull(tab, it, state.username) }
-                    val shown = address.takeIf { payload != null }
-                    state.copy(
-                        address = shown,
-                        qrPayload = payload,
-                        loading = false,
-                        unavailable = shown == null
-                    )
+                    // Fail closed: an address the URI builder rejects is not advertised.
+                    val shown = address?.takeIf { qrPayloadOrNull(tab, it, state.username) != null }
+                    state.copy(address = shown, loading = false)
                 }
             }
         }
     }
-
-    private fun qrPayloadOrNull(tab: ReceiveBalanceTab, address: String, username: String?): String? =
-        try {
-            qrPayloadFor(tab, address, username)
-        } catch (e: IllegalArgumentException) {
-            // Fail closed: an address the URI builder rejects is not advertised.
-            log.warn("cannot build the receive QR payload for {}", tab, e)
-            null
-        }
 }
