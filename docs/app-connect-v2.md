@@ -7,7 +7,7 @@ not a real user's keys or a pinned production app ID.
 
 ## Requirements
 
-- The rebuilt `org.dashj.platform` Android SDK `5.0.0-SNAPSHOT`, including V1 key
+- The published `org.dashj.platform` Android SDK `5.0.1`, including V1 key
   limits, DIP-13 application derivation, complete proof-verified contract-group
   scope and remaining-budget queries,
   identity updates and index-only document deletion.
@@ -23,10 +23,10 @@ not a real user's keys or a pinned production app ID.
   Bound, disabled, expiring or foreign CRITICAL keys do not suppress explicit
   provisioning; the pinned SDK checks wallet ownership and these key properties.
 
-CI builds the exact kotlin-platform commit in `platform-sdk-revision.txt`, and
-that SDK pins its Ferment-patched Platform rc.7 commit. The resulting artifacts
-are consumed from an exclusive, isolated Maven repository; old central snapshots
-and the runner's Maven-local contents cannot satisfy Platform dependencies.
+The wallet consumes the released `dash-sdk-java`, `dash-sdk-kotlin` (the `dpp`
+publication), and `dash-sdk-android` artifacts from Maven Central. Wallet CI does
+not clone or build Kotlin Platform or Platform, run native SDK tests, or publish
+SDK artifacts. SDK builds, native tests, and publication belong to the SDK project.
 
 The wallet and Kotlin SDK use DashJ `24.0.0-SNAPSHOT` for networks running Core 24.
 
