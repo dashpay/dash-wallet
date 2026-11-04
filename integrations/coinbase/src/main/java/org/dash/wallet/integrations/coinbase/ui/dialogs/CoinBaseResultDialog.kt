@@ -43,6 +43,10 @@ class CoinBaseResultDialog : DialogFragment() {
         super.onCreate(savedInstanceState)
 
         setStyle(STYLE_NO_FRAME, R.style.FullScreenDialog)
+        // Answered only by its button, which acknowledges the result (see newInstance).
+        if (arguments?.getBoolean(ARG_ANSWER_BY_BUTTON_ONLY) == true) {
+            isCancelable = false
+        }
     }
 
     override fun onCreateView(
@@ -226,13 +230,23 @@ class CoinBaseResultDialog : DialogFragment() {
         const val ARG_MESSAGE: String = "ARG_RESPONSE_MESSAGE"
         const val ARG_COINBASE_WALLET_NAME: String = "ARG_COINBASE_WALLET_NAME"
         const val ARG_DASH_TO_COINBASE: String = "ARG_DASH_TO_COINBASE"
+        private const val ARG_ANSWER_BY_BUTTON_ONLY: String = "ARG_ANSWER_BY_BUTTON_ONLY"
+
+        /**
+         * [answerByButtonOnly]: Back and outside taps do not dismiss it. For a result whose
+         * button acknowledges a sent payment, shown by an owner that rebinds or retires a
+         * restored copy (handleWhenResumed with its tag); otherwise a restored copy, whose
+         * listener is lost, could never be closed.
+         */
         fun newInstance(
             type: Type,
             responseMessage: String?,
             coinbaseWalletName: String? = null,
-            dashToCoinbase: Boolean = false
+            dashToCoinbase: Boolean = false,
+            answerByButtonOnly: Boolean = false
         ): CoinBaseResultDialog {
             val args = Bundle().apply {
+                putBoolean(ARG_ANSWER_BY_BUTTON_ONLY, answerByButtonOnly)
                 putInt("Type", type.ordinal)
                 putString(ARG_MESSAGE, responseMessage)
                 putString(ARG_COINBASE_WALLET_NAME, coinbaseWalletName)

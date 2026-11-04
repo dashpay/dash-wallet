@@ -18,6 +18,7 @@ package de.schildbach.wallet.ui.send
 
 import android.app.Application
 import android.os.Looper
+import androidx.lifecycle.SavedStateHandle
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.WalletData
@@ -199,7 +200,8 @@ class SendCoinsViewModelStaleDryRunTest {
             identityRepository,
             mockk(relaxed = true),
             mockk(relaxed = true),
-            provider
+            provider,
+            SavedStateHandle()
         )
     }
 

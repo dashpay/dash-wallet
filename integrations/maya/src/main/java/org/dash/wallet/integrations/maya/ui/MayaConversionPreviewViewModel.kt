@@ -18,6 +18,7 @@ package org.dash.wallet.integrations.maya.ui
 
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -34,6 +35,7 @@ import org.dash.wallet.common.money.TxIds
 import org.dash.wallet.common.services.InsufficientFundsException
 import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.common.services.PaymentStillConfirmingException
+import org.dash.wallet.common.services.PaymentSubmissionPendingException
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -48,6 +50,7 @@ import org.dash.wallet.integrations.maya.ui.convert_currency.model.SendTransacti
 import org.dash.wallet.integrations.maya.utils.MayaConstants
 import org.dash.wallet.integrations.maya.utils.SwapBackend
 import org.slf4j.LoggerFactory
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 
 @HiltViewModel
@@ -66,6 +69,8 @@ class MayaConversionPreviewViewModel @Inject constructor(
         private const val IS_LOCK_TIMEOUT_MS = 10_000L
         private const val KEY_ORDER = "swap_trade_order"
         private const val KEY_QUOTE_CREATED_AT = "quote_created_at"
+        private const val KEY_PAYMENT_OUTCOME_UNKNOWN = "payment_outcome_unknown"
+        private const val KEY_DEPOSIT_IN_PROGRESS = "deposit_in_progress"
     }
 
     /**
@@ -115,20 +120,106 @@ class MayaConversionPreviewViewModel @Inject constructor(
     val onInsufficientMoneyCallback = SingleLiveEvent<Unit>()
 
     /**
+     * True once the deposit may have gone out with its outcome unknown. Terminal: no further
+     * commit is accepted, and it is kept in [savedStateHandle] so a recreated screen (or process)
+     * still shows the warning instead of a Confirm button that could pay twice.
+     */
+    val paymentOutcomeUnknown: StateFlow<Boolean> =
+        savedStateHandle.getStateFlow(KEY_PAYMENT_OUTCOME_UNKNOWN, false)
+
+    /** This view model was restored with the deposit mark set (see [reconcileRestoredDeposit]). */
+    private var restoredFromDepositMark = false
+
+    init {
+        // A deposit was being built or broadcast, or had gone out with its result not yet taken
+        // over by the flow ([acknowledgeDepositResult]), when the process died: the restored
+        // screen must not offer it again, and nothing is left to say how it ended.
+        // (Unless the flow saved the deposit's result: see reconcileRestoredDeposit.)
+        if (savedStateHandle.get<Boolean>(KEY_DEPOSIT_IN_PROGRESS) == true) {
+            log.warn("a swap deposit was in progress when the process died; its outcome is unknown")
+            restoredFromDepositMark = true
+            savedStateHandle[KEY_PAYMENT_OUTCOME_UNKNOWN] = true
+            savedStateHandle[KEY_DEPOSIT_IN_PROGRESS] = false
+        }
+    }
+
+    /**
+     * Called by the screen once on creation, before it presents anything: whether the flow still
+     * holds this deposit's saved result (ConvertViewViewModel's pending result). After a restore
+     * from the deposit mark, a saved result means the deposit went out and succeeded: it is shown
+     * instead of the payment status warning, and the mark is kept as the submission guard until
+     * the result is acknowledged ([acknowledgeDepositResult]).
+     */
+    fun reconcileRestoredDeposit(resultSaved: Boolean) {
+        if (restoredFromDepositMark && resultSaved) {
+            savedStateHandle[KEY_PAYMENT_OUTCOME_UNKNOWN] = false
+            savedStateHandle[KEY_DEPOSIT_IN_PROGRESS] = true
+        }
+        restoredFromDepositMark = false
+    }
+
+    /**
      * The deposit was refused before anything was built: an earlier payment's outcome is still
      * being confirmed and its inputs are not protected from coin selection. Not a swap failure;
      * the screen says to try again once that payment is confirmed.
      */
     val onPaymentStillConfirmingCallback = SingleLiveEvent<Unit>()
 
-    fun commitSwapTrade(tradeId: String) = viewModelScope.launch {
+    /** Held while one commit (and its deposit) is in progress (see [commitSwapTrade]). */
+    private val commitInFlight = AtomicBoolean(false)
+
+    /**
+     * The flow has taken over the sent deposit's result (ConvertViewViewModel's saved pending
+     * result), which shows it again after a restore: the preview no longer needs to refuse it.
+     */
+    fun acknowledgeDepositResult() {
+        savedStateHandle[KEY_DEPOSIT_IN_PROGRESS] = false
+        savedStateHandle[KEY_PAYMENT_OUTCOME_UNKNOWN] = false
+    }
+
+    fun commitSwapTrade(tradeId: String): Job {
+        // Claimed synchronously, before launching, so two rapid Confirms cannot both commit and
+        // deposit. Refused for good once an earlier deposit may have gone out.
+        // Refused too while a deposit that went out awaits its result's takeover.
+        if (paymentOutcomeUnknown.value ||
+            savedStateHandle.get<Boolean>(KEY_DEPOSIT_IN_PROGRESS) == true ||
+            !commitInFlight.compareAndSet(false, true)
+        ) {
+            return Job().apply { complete() }
+        }
+        // Armed now, before the first suspension: Android may save the instance state while the
+        // quote refresh runs (backgrounded) and not again before the process dies, so a mark set
+        // only when the deposit starts could miss the saved state. See init.
+        savedStateHandle[KEY_DEPOSIT_IN_PROGRESS] = true
+        val depositStarted = AtomicBoolean(false)
+        return viewModelScope.launch {
+            try {
+                commitAndDeposit(tradeId, depositStarted)
+            } finally {
+                // Stopped before the deposit started (e.g. the quote refresh failed): nothing
+                // was sent. A deposit that went out stays marked until its result is taken over
+                // (acknowledgeDepositResult); a refused one was unmarked where it was refused.
+                if (!depositStarted.get()) {
+                    savedStateHandle[KEY_DEPOSIT_IN_PROGRESS] = false
+                }
+                commitInFlight.set(false)
+            }
+        }
+    }
+
+    private suspend fun commitAndDeposit(tradeId: String, depositStarted: AtomicBoolean) {
         analyticsService.logEvent(AnalyticsConstants.Coinbase.CONVERT_QUOTE_CONFIRM, mapOf())
         val inputCurrency = swapTradeUIModel.amount.dashCode
         val inputAmount = swapTradeUIModel.amount.dash
 
         // TODO: this is the action to do the swap
         _showLoading.value = true
-        when (val result = swapProvider.commitSwapTransaction(tradeId, swapTradeUIModel)) {
+        // Told right before the deposit is built and broadcast (after the quote refresh, which
+        // sends nothing): from then on the mark armed at the tap is kept unless refused.
+        val result = swapProvider.commitSwapTransaction(tradeId, swapTradeUIModel) {
+            depositStarted.set(true)
+        }
+        when (result) {
             is ResponseResource.Success -> {
                 // Wait for the swap transaction to be IS-locked or confirmed on the network.
                 // This verifies that the transaction was successfully broadcast and seen by peers.
@@ -160,6 +251,7 @@ class MayaConversionPreviewViewModel @Inject constructor(
 
                 _showLoading.value = false
                 if (result.value == SwapTradeResponse.EMPTY_SWAP_TRADE) {
+                    savedStateHandle[KEY_DEPOSIT_IN_PROGRESS] = false
                     commitSwapTradeFailureState.call()
                 } else {
                     // commitSwapTransaction refreshes the route before broadcasting, and on
@@ -215,13 +307,20 @@ class MayaConversionPreviewViewModel @Inject constructor(
             }
             is ResponseResource.Failure -> {
                 _showLoading.value = false
+                // Refused, or its outcome unknown (recorded below as the terminal flag): either
+                // way no longer a deposit in progress.
+                savedStateHandle[KEY_DEPOSIT_IN_PROGRESS] = false
                 if (result.throwable is InsufficientFundsException) {
                     onInsufficientMoneyCallback.call()
-                    return@launch
+                    return
+                }
+                if (result.throwable is PaymentSubmissionPendingException) {
+                    savedStateHandle[KEY_PAYMENT_OUTCOME_UNKNOWN] = true
+                    return
                 }
                 if (result.throwable is PaymentStillConfirmingException) {
                     onPaymentStillConfirmingCallback.call()
-                    return@launch
+                    return
                 }
                 val error = result.errorBody
                 if (error.isNullOrEmpty()) {

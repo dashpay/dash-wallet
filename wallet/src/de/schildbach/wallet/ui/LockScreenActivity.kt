@@ -29,11 +29,8 @@ import androidx.activity.addCallback
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.core.view.isVisible
-import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.lifecycleScope
-import androidx.navigation.fragment.NavHostFragment
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.AutoLogout
 import de.schildbach.wallet.WalletApplication
@@ -63,7 +60,8 @@ import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.LockScreenBroadcaster
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.common.ui.LockScreenAware
+import org.dash.wallet.common.ui.LockScreenHost
+import org.dash.wallet.common.ui.dismissDialogsForLockScreen
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dismissDialog
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
@@ -73,7 +71,7 @@ import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 @AndroidEntryPoint
-open class LockScreenActivity : SecureActivity() {
+open class LockScreenActivity : SecureActivity(), LockScreenHost {
 
     companion object {
         const val INTENT_EXTRA_KEEP_UNLOCKED = "LockScreenActivity.keep_unlocked"
@@ -135,7 +133,7 @@ open class LockScreenActivity : SecureActivity() {
      * unlocked, so this reports locked: callers then skip the work meant for
      * an unlocked wallet screen.
      */
-    val lockScreenDisplayed: Boolean
+    override val lockScreenDisplayed: Boolean
         get() = !lockScreenUiReady || binding.rootViewSwitcher.displayedChild == 0
 
     private val temporaryLockCheckHandler = Handler()
@@ -544,6 +542,8 @@ open class LockScreenActivity : SecureActivity() {
             overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
         } else {
             binding.rootViewSwitcher.displayedChild = 1
+            // After the content is shown again: a listener may now re-show what the lock dismissed.
+            lockScreenBroadcaster.notifyUnlocked()
         }
     }
 
@@ -696,12 +696,14 @@ open class LockScreenActivity : SecureActivity() {
         }
     }
 
+    // Called once the lock screen is displayed (lockScreenDisplayed is true): handleWhenResumed
+    // reads it when a dialog this dismisses reports no answer, to ask again on unlock.
     private fun handleLockScreenActivated() {
         if (this::alertDialog.isInitialized) {
             alertDialog.dismissDialog()
         }
         lockScreenBroadcaster.activatingLockScreen.call()
-        notifyAndDismissFragments(supportFragmentManager)
+        dismissDialogsForLockScreen(supportFragmentManager)
         onLockScreenActivated()
     }
 
@@ -712,25 +714,6 @@ open class LockScreenActivity : SecureActivity() {
         lockScreenDeactivatedListeners.forEach {
             it.invoke()
         }
-    }
-
-    private fun notifyAndDismissFragments(fragmentManager: FragmentManager) {
-        fragmentManager.fragments
-            .takeIf { it.isNotEmpty() }
-            ?.forEach { fragment ->
-                // check to see if the activity is valid and fragment is added to its activity
-                if (fragment.activity != null && fragment.isAdded) {
-                    if (fragment is LockScreenAware) {
-                        fragment.onLockScreenActivated()
-                    }
-
-                    if (fragment is DialogFragment) {
-                        fragment.dismissAllowingStateLoss()
-                    } else if (fragment is NavHostFragment) {
-                        notifyAndDismissFragments(fragment.childFragmentManager)
-                    }
-                }
-            }
     }
 
     private fun dismissKeyboard() {

@@ -30,6 +30,7 @@ import kotlinx.coroutines.ensureActive
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.services.InsufficientFundsException
+import org.dash.wallet.common.services.PaymentSubmissionPendingException
 import org.dash.wallet.common.services.WalletSession
 import org.dash.wallet.integrations.maya.api.MayaBlockchainApi
 import org.dash.wallet.integrations.maya.api.MayaException
@@ -194,7 +195,8 @@ class MayaBlockchainApiImpl @Inject constructor(
     override suspend fun commitSwapTransaction(
         tradeId: String,
         swapTradeUIModel: SwapTradeUIModel,
-        session: WalletSession?
+        session: WalletSession?,
+        onDepositing: suspend () -> Unit
     ): ResponseResource<SwapTradeUIModel> {
         // The wallet the swap was confirmed on, before the measurement and the quote below wait.
         val confirmedOn = session ?: walletPayments.get().currentWalletSession()
@@ -251,6 +253,7 @@ class MayaBlockchainApiImpl @Inject constructor(
             )
         )
         return if (resultSwapTrade is ResponseResource.Success) {
+            onDepositing()
             buildAndSendSwapTx(resultSwapTrade.value, confirmedOn)
         } else {
             resultSwapTrade
@@ -530,10 +533,13 @@ class MayaBlockchainApiImpl @Inject constructor(
                         "maya swap deposit {} outcome unconfirmed — inputs stay reserved; NOT retryable",
                         payment.txidHex, result.cause
                     )
+                    // A PaymentSubmissionPendingException, so the preview reports "may have
+                    // been sent" and withholds a retry instead of showing a conversion error.
                     ResponseResource.Failure(
-                        MayaException(
-                            "swap deposit outcome is unconfirmed — it may already be on the " +
-                                "network; check the transaction list before retrying"
+                        PaymentSubmissionPendingException(
+                            payment.txidHex,
+                            result.cause,
+                            "swap deposit ${payment.txidHex} outcome is unconfirmed; it may already be on the network"
                         ),
                         false,
                         0,

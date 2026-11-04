@@ -20,6 +20,7 @@ package org.dash.wallet.integrations.maya.ui.convert_currency
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
@@ -95,6 +96,13 @@ class ConvertViewViewModel @Inject constructor(
         }
 
     /**
+     * [pendingConversionResult] as it changes, for the screen that presents it. The key is only
+     * ever set (to null when cleared), never removed: removing it would detach this flow.
+     */
+    val pendingConversionResults: StateFlow<MayaTransactionParams?> =
+        savedStateHandle.getStateFlow<MayaTransactionParams?>(KEY_PENDING_RESULT, null)
+
+    /**
      * The parameters of a conversion-result sheet the user hasn't acknowledged yet. The lock
      * screen auto-dismisses all dialogs, so the sheet is re-shown from these when the lock screen
      * goes away; persisted via [savedStateHandle] (this ViewModel is nav-graph scoped) so it also
@@ -113,7 +121,8 @@ class ConvertViewViewModel @Inject constructor(
      */
     fun clearSavedState() {
         savedStateHandle.remove<Amount>(KEY_AMOUNT)
-        savedStateHandle.remove<MayaTransactionParams>(KEY_PENDING_RESULT)
+        // Set to null, not removed, so [pendingConversionResults] stays attached.
+        savedStateHandle[KEY_PENDING_RESULT] = null
         savedStateHandle.remove<Boolean>(KEY_MAX_SELECTED)
     }
     var destinationCurrency: String? = null

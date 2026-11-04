@@ -30,6 +30,7 @@ import org.dash.wallet.common.currentReceiveAddressStringOffMain
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.money.FiatValue
 import org.dash.wallet.common.services.InsufficientFundsException
+import org.dash.wallet.common.services.PaymentSubmissionPendingException
 import org.dash.wallet.common.services.ReceiveAddressUnavailableException
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.WalletSession
@@ -930,7 +931,8 @@ class SwapKitApiAggregator @Inject constructor(
 
     override suspend fun commitSwapTransaction(
         tradeId: String,
-        swapTradeUIModel: SwapTradeUIModel
+        swapTradeUIModel: SwapTradeUIModel,
+        onDepositing: suspend () -> Unit
     ): ResponseResource<SwapTradeUIModel> {
         // The wallet the user confirmed on, before the route refresh below waits (review
         // 4304575003): the deposit is refused, with nothing sent, if a wipe replaces it meanwhile.
@@ -949,6 +951,7 @@ class SwapKitApiAggregator @Inject constructor(
         )
         return if (refreshed is ResponseResource.Success) {
             val model = refreshed.value
+            onDepositing()
             // A MAYAChain vault deposit is matched to its swap *only* by the OP_RETURN memo;
             // sending DASH to a Maya vault without it strands the funds. So the discriminator
             // is NOT just the provider name (which substring-matching can miss — SwapKit may
@@ -1063,6 +1066,11 @@ class SwapKitApiAggregator @Inject constructor(
             ResponseResource.Success(swapTradeUIModel)
         } catch (e: InsufficientFundsException) {
             ResponseResource.Failure(e, false, 0, e.message)
+        } catch (e: PaymentSubmissionPendingException) {
+            // The deposit may be on the network. Keep the exception as the throwable so the
+            // preview screen reports "may have been sent" and withholds a retry.
+            log.error("swapkit deposit outcome unknown; it may have been sent, NOT retryable", e)
+            ResponseResource.Failure(e, false, 0, null)
         } catch (e: Exception) {
             log.error("failed to build/send swapkit deposit transaction", e)
             ResponseResource.Failure(e, false, 0, e.message)

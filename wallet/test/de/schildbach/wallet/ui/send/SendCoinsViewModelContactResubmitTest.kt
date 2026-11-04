@@ -18,6 +18,7 @@ package de.schildbach.wallet.ui.send
 
 import android.app.Application
 import android.os.Looper
+import androidx.lifecycle.SavedStateHandle
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.UsernameSearchResult
@@ -52,6 +53,7 @@ import org.dash.wallet.common.data.PaymentIntent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThrows
+import org.dash.wallet.common.services.PaymentSubmissionPendingException
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -66,11 +68,15 @@ import kotlin.concurrent.thread
 
 /**
  * PR #1608 review: once a contact payment's broadcast signal fires, the
- * resolved contact intent must not be submitted again. The scenario: the SDK
- * reports Broadcast, the display bridge then fails, SendCoinsFragment.handleGo
- * shows the error and calls resetState(), and the user confirms again — that
- * second confirmation must pay a NEW address (fresh contact resolution), never
- * the one just paid.
+ * resolved contact intent must not be submitted again.
+ *
+ * A display-bridge failure after the broadcast is now reported as
+ * [PaymentSubmissionPendingException] (SendCoinsTaskRunner.sendViaSdkBridged),
+ * which makes the screen terminal: nothing can be confirmed again at all.
+ * The address guard below stays as defense in depth: should any ordinary
+ * failure still follow the broadcast signal, SendCoinsFragment shows it and
+ * calls resetState(), and the user's next confirmation must pay a NEW address
+ * (fresh contact resolution), never the one just paid.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(application = Application::class, sdk = [29], manifest = Config.NONE)
@@ -240,7 +246,8 @@ class SendCoinsViewModelContactResubmitTest {
             identityRepository,
             platformRepo,
             contactRequestDao,
-            provider
+            provider,
+            SavedStateHandle()
         )
     }
 
@@ -312,10 +319,15 @@ class SendCoinsViewModelContactResubmitTest {
     }
 
     /**
-     * A send runner whose first send is broadcast and then fails in the display
-     * bridge (the broadcast signal fires, then it throws); later sends succeed.
+     * A send runner whose first send is broadcast and then fails (the broadcast
+     * signal fires, then it throws [failure]); later sends succeed. By default an
+     * ordinary failure, which the runner no longer produces after a broadcast:
+     * the defense-in-depth case.
      */
-    private fun runner(sends: Sends): SendCoinsTaskRunner {
+    private fun runner(
+        sends: Sends,
+        failure: () -> Exception = { RuntimeException("an ordinary failure after the broadcast signal") }
+    ): SendCoinsTaskRunner {
         val runner = mockk<SendCoinsTaskRunner>(relaxed = true)
         coEvery { runner.isCutoverCommitted() } returns false
         stubCreateSendRequest(runner, sends)
@@ -338,7 +350,7 @@ class SendCoinsViewModelContactResubmitTest {
             sends.recipients += args[5] as Address?
             if (sends.recipients.size == 1) {
                 onBroadcast?.invoke("aa".repeat(32))
-                throw RuntimeException("broadcast, but bridging into the dashj wallet failed")
+                throw failure()
             }
             mockk<Transaction>(relaxed = true)
         }
@@ -423,14 +435,40 @@ class SendCoinsViewModelContactResubmitTest {
     }
 
     @Test
-    fun broadcastThenBridgeFailure_errorDismissed_nextConfirmationPaysANewAddress() {
+    fun broadcastThenBridgeFailure_isPending_andTheScreenCannotConfirmOrSendAgain() {
+        val chain = FakeDashjChain(keys)
+        val sends = Sends()
+        val txid = "aa".repeat(32)
+        val viewModel = buildViewModel(
+            chain,
+            runner(sends) { PaymentSubmissionPendingException(txid, null, "broadcast, but the display bridge failed") }
+        )
+        open(viewModel)
+
+        assertThrows(PaymentSubmissionPendingException::class.java) {
+            runBlocking { viewModel.signAndSendPayment(Coin.COIN, null, true) }
+        }
+        assertTrue(viewModel.paymentOutcomeUnknown.value)
+
+        // What the screen does after the warning: never back to a confirmable INPUT.
+        viewModel.resetState()
+        idle()
+        assertFalse(viewModel.everythingPlausible())
+        assertThrows(SendRefusedException::class.java) {
+            runBlocking { viewModel.signAndSendPayment(Coin.COIN, null, true) }
+        }
+        assertEquals(listOf<Address?>(keys[0]), sends.recipients)
+    }
+
+    @Test
+    fun ordinaryFailureAfterTheBroadcastSignal_errorDismissed_nextConfirmationPaysANewAddress() {
         val chain = FakeDashjChain(keys)
         val sends = Sends()
         val viewModel = buildViewModel(chain, runner(sends))
         open(viewModel)
         assertEquals(keys[0].toBase58(), viewModel.resolvedAddress())
 
-        // 1st confirmation: broadcast, then the bridge fails.
+        // 1st confirmation: broadcast, then an ordinary failure.
         assertThrows(RuntimeException::class.java) {
             runBlocking { viewModel.signAndSendPayment(Coin.COIN, null, true) }
         }

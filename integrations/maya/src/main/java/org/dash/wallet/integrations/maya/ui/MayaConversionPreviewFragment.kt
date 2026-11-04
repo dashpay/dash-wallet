@@ -32,10 +32,15 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
 import org.dash.wallet.common.services.LockScreenBroadcaster
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.common.ui.dialogs.PaymentOutcomeUnknownWarning
+import org.dash.wallet.common.ui.handleWhenResumed
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.observe
@@ -216,26 +221,46 @@ class MayaConversionPreviewFragment : Fragment() {
             // Remember the result until the user acknowledges it: the lock screen auto-dismisses
             // the result sheet, and this lets us re-show it once the lock screen goes away.
             convertViewModel.pendingConversionResult = transactionParams
-            safeNavigate(
-                MayaConversionPreviewFragmentDirections.mayaOrderPreviewToOrderExecution(transactionParams)
-            )
         }
 
-        // Re-show the result sheet after an unlock if it's still pending — the lock screen
-        // dismissed it (dialogs are torn down on lock), or the OS killed and restored the app
-        // while it was locked.
-        lockScreenBroadcaster.deactivatingLockScreen.observe(viewLifecycleOwner) {
-            val pending = convertViewModel.pendingConversionResult
-            if (pending != null &&
-                findNavController().currentDestination?.id == R.id.mayaConversionPreviewFragment
-            ) {
-                safeNavigate(
-                    MayaConversionPreviewFragmentDirections.mayaOrderPreviewToOrderExecution(pending)
-                )
-            }
+        // The saved result, shown through the shared delivery policy: only while this view and
+        // the activity are resumed and the wallet is unlocked (never above the PIN screen), tried
+        // again on unlock and whenever navigation returns to this preview (the fee information
+        // dialog destination closing does not pause or resume this fragment). It stays saved
+        // until the result sheet acknowledges it, so the lock dismissing the sheet, or the OS
+        // killing the app, shows it again.
+        // After a restore, a saved result for the deposit wins over the payment status warning.
+        viewModel.reconcileRestoredDeposit(convertViewModel.pendingConversionResult != null)
+        val navController = findNavController()
+        val backToPreview = navController.currentBackStackEntryFlow
+            .filter { it.destination.id == R.id.mayaConversionPreviewFragment }
+            .map { }
+        handleWhenResumed(
+            convertViewModel.pendingConversionResults,
+            merge(lockScreenBroadcaster.unlocked, backToPreview),
+            { navController.currentDestination?.id == R.id.mayaConversionPreviewFragment },
+            { }
+        ) { pending ->
+            navController.navigate(MayaConversionPreviewFragmentDirections.mayaOrderPreviewToOrderExecution(pending))
+            // Shown: the result sheet answers for the deposit from here (see acknowledgeDepositResult).
+            viewModel.acknowledgeDepositResult()
+            true
         }
 
         observeNavigationCallBack()
+
+        // The deposit may have gone out: Confirm stays disabled and the warning stays up until
+        // the user's Close, which leaves the flow for home and its history.
+        val outcomeUnknownWarning = PaymentOutcomeUnknownWarning(this) {
+            // The flow ends here: nothing it saved, a stale result included, outlives it.
+            convertViewModel.clearSavedState()
+            val navController = findNavController()
+            navController.popBackStack(navController.graph.startDestinationId, false)
+        }
+        outcomeUnknownWarning.keepShownWhile(viewModel.paymentOutcomeUnknown, lockScreenBroadcaster.unlocked) {
+            countDownTimer?.cancel()
+            uiState = uiState.copy(isConfirmBlocked = true)
+        }
 
         viewModel.onInsufficientMoneyCallback.observe(viewLifecycleOwner) {
             AdaptiveDialog.create(
@@ -275,6 +300,14 @@ class MayaConversionPreviewFragment : Fragment() {
     }
 
     private fun onConfirmClick() {
+        if (viewModel.paymentOutcomeUnknown.value) {
+            return
+        }
+        // A deposit went out and its result was not acknowledged: never deposit again (the
+        // result is shown once the screen may show it).
+        if (convertViewModel.pendingConversionResult != null) {
+            return
+        }
         countDownTimer?.cancel()
         if (isRefreshing) {
             getNewCommitOrder()

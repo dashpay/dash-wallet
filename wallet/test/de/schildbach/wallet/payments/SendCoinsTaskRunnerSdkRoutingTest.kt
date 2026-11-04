@@ -44,6 +44,7 @@ import org.bitcoinj.wallet.WalletProtobufSerializer
 import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.services.LeftoverBalanceException
+import org.dash.wallet.common.services.PaymentSubmissionPendingException
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.junit.Assert.assertEquals
@@ -172,7 +173,7 @@ class SendCoinsTaskRunnerSdkRoutingTest {
     }
 
     @Test
-    fun sdkAmbiguous_surfacesTheError_andNeverRetriesViaDashj() = runTest {
+    fun sdkAmbiguous_surfacesAsPending_andNeverRetriesViaDashj() = runTest {
         stubDashjSend()
         val cause = RuntimeException("broadcast outcome unknown")
         coEvery {
@@ -182,8 +183,9 @@ class SendCoinsTaskRunnerSdkRoutingTest {
         try {
             runner.sendCoins(recipientAddress, amount)
             fail("an ambiguous SDK outcome must surface as an error")
-        } catch (e: RuntimeException) {
-            assertSame(cause, e)
+        } catch (e: PaymentSubmissionPendingException) {
+            // "may have been sent", never a plain failure the caller would retry
+            assertSame(cause, e.cause)
         }
         coVerify(exactly = 0) {
             runner.sendCoins(any<Address>(), any<Coin>(), any(), any(), any(), any(), any(), any())

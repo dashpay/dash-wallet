@@ -18,13 +18,17 @@ package org.dash.wallet.integrations.coinbase.viewmodels
 
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.freshReceiveAddressStringOffMain
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.SingleLiveEvent
-import org.dash.wallet.common.isTransactionPending
 import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.services.PaymentSubmissionPendingException
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.WalletSession
 import org.dash.wallet.common.services.TransactionMetadataProvider
@@ -38,6 +42,7 @@ import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.integrations.coinbase.repository.CoinBaseRepositoryInt
 import java.util.*
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import org.dash.wallet.common.services.ReceiveAddressUnavailableException
 
@@ -48,9 +53,17 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
     private val sendPaymentService: SendPaymentService,
     private val analyticsService: AnalyticsService,
     networkState: NetworkStateInt,
-    private val transactionMetadataProvider: TransactionMetadataProvider
+    private val transactionMetadataProvider: TransactionMetadataProvider,
+    private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
-    private val _showLoading: MutableLiveData<Boolean> = MutableLiveData()
+    companion object {
+        private const val KEY_PAYMENT_OUTCOME_UNKNOWN = "payment_outcome_unknown"
+        private const val KEY_SEND_IN_PROGRESS = "send_in_progress"
+    }
+
+    // False from the start: after a process death nothing is loading, and the screen must take
+    // down the progress dialog the FragmentManager restored.
+    private val _showLoading: MutableLiveData<Boolean> = MutableLiveData(false)
     val showLoading: LiveData<Boolean>
         get() = _showLoading
 
@@ -65,16 +78,94 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
     val isDeviceConnectedToInternet: LiveData<Boolean> = networkState.isConnected.asLiveData()
 
     val commitSwapTradeSuccessState = SingleLiveEvent<SendTransactionToWalletParams>()
-    val sellSwapSuccessState = SingleLiveEvent<Unit>()
+
+    /** A sale whose Dash went out ([txId]), until the user answers its success. */
+    data class SaleSent(val txId: String)
+
+    private val _saleSent = MutableStateFlow<SaleSent?>(null)
+
+    /**
+     * The sale's success, kept until the screen takes it ([consumeSaleSent]): the lock screen
+     * dismisses its dialog (given back with [retainSaleSent]) and a recreation tears it down, so
+     * it is shown again until answered ([acknowledgeSaleResult]).
+     */
+    val saleSent: StateFlow<SaleSent?> = _saleSent.asStateFlow()
+
+    /** True for exactly one taker of [sent], which then shows it. */
+    fun consumeSaleSent(sent: SaleSent): Boolean = _saleSent.compareAndSet(sent, null)
+
+    /** Gives back a taken [sent] the user did not answer, unless a newer one arrived. */
+    fun retainSaleSent(sent: SaleSent) {
+        _saleSent.compareAndSet(null, sent)
+    }
     val swapTradeFailureState = SingleLiveEvent<String?>()
 
     val getUserAccountAddressFailedCallback = SingleLiveEvent<Unit>()
     val onFailure = SingleLiveEvent<String?>()
     val onInsufficientMoneyCallback = SingleLiveEvent<Unit>()
 
+    /**
+     * True once the sale's Dash send may have gone out with its outcome unknown. Terminal: no
+     * further commit is accepted, and it is kept in [savedStateHandle] so a recreated screen (or
+     * process) still shows the warning instead of a Confirm button that could pay twice.
+     */
+    val paymentOutcomeUnknown: StateFlow<Boolean> =
+        savedStateHandle.getStateFlow(KEY_PAYMENT_OUTCOME_UNKNOWN, false)
+
+    init {
+        // The sale's Dash send was in progress, or had gone out with its success not yet
+        // answered, when the process died: the restored preview must not sell and send again.
+        // (A buy sends no Dash and never sets it.)
+        if (savedStateHandle.get<Boolean>(KEY_SEND_IN_PROGRESS) == true) {
+            savedStateHandle[KEY_PAYMENT_OUTCOME_UNKNOWN] = true
+            savedStateHandle[KEY_SEND_IN_PROGRESS] = false
+        }
+    }
+
     var isFirstTime = true
 
-    fun commitSwapTrade(tradeId: String, inputCurrency: String, inputAmount: String) = viewModelScope.launch {
+    /** Held while one commit (and its send) is in progress (see [commitSwapTrade]). */
+    private val commitInFlight = AtomicBoolean(false)
+
+    fun commitSwapTrade(tradeId: String, inputCurrency: String, inputAmount: String): Job {
+        // Claimed synchronously, before launching, so two rapid Confirms cannot both commit and
+        // send. Refused for good once an earlier send may have gone out.
+        // Refused too while a sale that went out awaits the user's answer to its success.
+        if (paymentOutcomeUnknown.value ||
+            savedStateHandle.get<Boolean>(KEY_SEND_IN_PROGRESS) == true ||
+            !commitInFlight.compareAndSet(false, true)
+        ) {
+            return Job().apply { complete() }
+        }
+        // A sale is armed now, before the first suspension: Android may save the instance state
+        // while the commit and address requests run (backgrounded) and not again before the
+        // process dies, so a mark set only at the send could miss the saved state. A buy sends
+        // no Dash and is never armed. See init.
+        if (inputCurrency == Constants.DASH_CURRENCY) {
+            savedStateHandle[KEY_SEND_IN_PROGRESS] = true
+        }
+        val sendStarted = AtomicBoolean(false)
+        return viewModelScope.launch {
+            try {
+                commitAndSend(tradeId, inputCurrency, inputAmount, sendStarted)
+            } finally {
+                // Stopped before the send started (a refused commit or address): nothing was
+                // sent. A sent sale stays marked until acknowledgeSaleResult; a refused or
+                // outcome-unknown send was unmarked where it ended.
+                if (!sendStarted.get()) {
+                    savedStateHandle[KEY_SEND_IN_PROGRESS] = false
+                }
+                commitInFlight.set(false)
+            }
+        }
+    }
+
+    private suspend fun commitAndSend(
+        tradeId: String,
+        inputCurrency: String,
+        inputAmount: String,
+        sendStarted: AtomicBoolean
+    ) {
         // The wallet the user confirmed on, before the address and trade calls below wait (review
         // 4304575003): a DASH sale is refused, with nothing sent, if a wipe replaces it meanwhile.
         val session = sendPaymentService.currentWalletSession()
@@ -95,7 +186,7 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
             } catch (ex: ReceiveAddressUnavailableException) {
                 _showLoading.value = false
                 commitSwapTradeFailureState.call()
-                return@launch
+                return
             }
         }
 
@@ -108,7 +199,7 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
                     if (inputCurrency == Constants.DASH_CURRENCY) {
                         try {
                             val coin = Dash.parse(inputAmount)
-                            sellDashToCoinBase(coin, session)
+                            sellDashToCoinBase(coin, session, sendStarted)
                         } catch (x: Exception) {
                             Dash.ZERO
                         }
@@ -120,7 +211,7 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
                         // fails the commit instead of throwing on a null address.
                         val to = depositAddress ?: run {
                             commitSwapTradeFailureState.call()
-                            return@launch
+                            return
                         }
                         sendFundToWalletParams = SendTransactionToWalletParams(
                             amount = result.value.displayInputAmount,
@@ -204,7 +295,7 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
         analyticsService.logEvent(eventName, mapOf())
     }
 
-    private suspend fun sellDashToCoinBase(coin: Dash, session: WalletSession?) {
+    private suspend fun sellDashToCoinBase(coin: Dash, session: WalletSession?, sendStarted: AtomicBoolean) {
         _showLoading.value = true
 
         when (val result = coinBaseRepository.createAddress()) {
@@ -213,8 +304,11 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
                     _showLoading.value = false
                     getUserAccountAddressFailedCallback.call()
                 } else {
-                    sendDashToCoinbase(coin, result.value, session)
-                    sellSwapSuccessState.call()
+                    // Only a send that went out is a completed sale: a rejected one has reported its
+                    // failure, and an unknown outcome shows its own warning.
+                    sendDashToCoinbase(coin, result.value, session, sendStarted)?.let { txId ->
+                        _saleSent.value = SaleSent(txId)
+                    }
                     _showLoading.value = false
                 }
             }
@@ -225,16 +319,45 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
         }
     }
 
-    private suspend fun sendDashToCoinbase(coin: Dash, addressInfo: String, session: WalletSession?): Boolean {
+    /**
+     * The user answered the sale's success. Until then the sent Dash stays marked in the saved
+     * state, so a process death before the success is shown or answered restores a preview that
+     * refuses to sell and send again.
+     */
+    fun acknowledgeSaleResult() {
+        savedStateHandle[KEY_SEND_IN_PROGRESS] = false
+    }
+
+    /**
+     * Returns the txid only when the Dash was sent. Null when the send was refused (its failure
+     * has been reported) or its outcome is unknown ([paymentOutcomeUnknown] was set); in neither
+     * case may the caller report the sale as successful.
+     */
+    private suspend fun sendDashToCoinbase(
+        coin: Dash,
+        addressInfo: String,
+        session: WalletSession?,
+        sendStarted: AtomicBoolean
+    ): String? {
         val address = addressInfo.trim { it <= ' ' }
+        // From here the mark armed at the tap is kept unless the send is refused.
+        sendStarted.set(true)
         return try {
             val txId = sendPaymentService.sendCoins(address, coin, checkBalanceConditions = false, session = session)
             transactionMetadataProvider.markAddressAsTransferOutAsync(
                 address,
                 ServiceName.Coinbase
             )
-            walletDataProvider.isTransactionPending(txId)
+            // Still marked: sent, until the user answers its success (acknowledgeSaleResult).
+            txId
+        } catch (x: PaymentSubmissionPendingException) {
+            savedStateHandle[KEY_SEND_IN_PROGRESS] = false
+            savedStateHandle[KEY_PAYMENT_OUTCOME_UNKNOWN] = true
+            x.printStackTrace()
+            null
         } catch (x: Exception) {
+            // Refused: nothing was sent.
+            savedStateHandle[KEY_SEND_IN_PROGRESS] = false
             if (x.isInsufficientMoney) {
                 onInsufficientMoneyCallback.call()
                 x.printStackTrace()
@@ -242,7 +365,7 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
                 onFailure.value = x.message
                 x.printStackTrace()
             }
-            false
+            null
         }
     }
 }
