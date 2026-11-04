@@ -125,6 +125,12 @@ data class DashConnectQr(val request: DashKeyRequest)
  * placeholder data for tests and Compose previews.
  */
 interface DashConnectRepository {
+    /**
+     * Whether this build supports DashConnect and the network runs Platform protocol version 14 or later;
+     * null when the network's version could not be read.
+     */
+    suspend fun isAvailable(): Boolean?
+
     fun observeConnections(): Flow<List<DAppConnection>>
 
     /** Decodes and validates a scanned QR into a login request. */
@@ -206,6 +212,8 @@ data class AppDisplay(
 @Singleton
 class MockDashConnectRepository @Inject constructor() : DashConnectRepository {
     private val connections = MutableStateFlow<List<DAppConnection>>(emptyList())
+
+    override suspend fun isAvailable(): Boolean? = ConnectAvailability.isSupported
 
     override fun observeConnections(): Flow<List<DAppConnection>> = connections.asStateFlow()
 

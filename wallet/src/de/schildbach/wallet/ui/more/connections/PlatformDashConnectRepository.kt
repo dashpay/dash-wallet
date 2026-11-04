@@ -32,6 +32,9 @@ class PlatformDashConnectRepository @Inject constructor(
     companion object { const val KEY_EXCHANGE_CONTRACT_ID = AppConnectSession.RESPONSE_CONTRACT }
     private val session = AppConnectSession(platform, platformRepo, identityRepository, config)
 
+    override suspend fun isAvailable(): Boolean? =
+        ConnectAvailability.isAvailable(platformRepo)
+
     override fun observeConnections(): Flow<List<DAppConnection>> = observeConnections(System::currentTimeMillis)
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -113,9 +116,7 @@ class PlatformDashConnectRepository @Inject constructor(
         checkNetwork()
         // Either carrier (dash-key: or dashpay://connect) carries the same request body.
         val request = DashConnectUri.parseRequest(qrContent.trim())
-        val expected = if (Constants.NETWORK_PARAMETERS.id == NetworkParameters.ID_TESTNET)
-            DashConnectNetwork.TESTNET else DashConnectNetwork.DEVNET
-        if (request.network != expected) throw DashConnectUriException("QR network does not match wallet network")
+        if (request.network != walletNetwork()) throw DashConnectUriException("QR network does not match wallet network")
         request.appConnect?.requireFresh(System.currentTimeMillis())
         return DashConnectQr(request)
     }
@@ -127,9 +128,7 @@ class PlatformDashConnectRepository @Inject constructor(
 
     override suspend fun prepareTokenPurchase(request: de.schildbach.wallet.ui.more.connections.protocol.DashStRequest): TokenPurchaseApproval {
         checkNetwork()
-        val expected = if (Constants.NETWORK_PARAMETERS.id == NetworkParameters.ID_TESTNET)
-            DashConnectNetwork.TESTNET else DashConnectNetwork.DEVNET
-        check(request.network == expected) { "QR network does not match wallet network" }
+        check(request.network == walletNetwork()) { "QR network does not match wallet network" }
         return session.prepareTokenPurchase(request)
     }
 
@@ -198,9 +197,16 @@ class PlatformDashConnectRepository @Inject constructor(
         // There are no pinned brand IDs yet. Neither a QR label nor an editable profile proves a brand.
         AppDisplay("\"${qrLabel.ifBlank { "Unknown app" }}\"", "")
 
-    private fun checkNetwork() {
-        check(!Constants.IS_PROD_BUILD && Constants.NETWORK_PARAMETERS.id != NetworkParameters.ID_MAINNET) {
-            "App Connect is unavailable in production or on mainnet"
-        }
+    private suspend fun checkNetwork() {
+        val available = isAvailable()
+        checkNotNull(available) { ConnectAvailability.VERSION_UNKNOWN_ERROR }
+        check(available) { ConnectAvailability.VERSION_TOO_OLD_ERROR }
+    }
+
+    /** The network selector a request for this wallet must carry. */
+    private fun walletNetwork() = when (Constants.NETWORK_PARAMETERS.id) {
+        NetworkParameters.ID_MAINNET -> DashConnectNetwork.MAINNET
+        NetworkParameters.ID_TESTNET -> DashConnectNetwork.TESTNET
+        else -> DashConnectNetwork.DEVNET
     }
 }

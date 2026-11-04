@@ -43,7 +43,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.withContext
-import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.core.Base58
 import java.math.BigInteger
 import javax.inject.Inject
@@ -81,9 +80,8 @@ data class ConnectionsUIState(
     val connections: List<DAppConnection> = emptyList(),
     val recordsStatus: ConnectionRecordsStatus = ConnectionRecordsStatus.LOADING,
     val pendingRequest: ConnectionRequest? = null,
-    /** Connect requires Platform support and is disabled in production/on mainnet. */
-    val featureUnavailable: Boolean = !Constants.SUPPORTS_PLATFORM || Constants.IS_PROD_BUILD ||
-        Constants.NETWORK_PARAMETERS.id == NetworkParameters.ID_MAINNET,
+    /** Connect requires Platform support and a network running Platform protocol version 14 or later. */
+    val featureUnavailable: Boolean = !ConnectAvailability.isSupported,
     val isLoading: Boolean = false,
     val requiresRevocation: Boolean = false,
     val pendingPurchase: TokenPurchaseApproval? = null,
@@ -236,8 +234,7 @@ class ConnectionsViewModel @Inject constructor(
     fun refreshConnections() {
         connectionsJob?.cancel()
         _uiState.update { it.copy(recordsStatus = ConnectionRecordsStatus.LOADING, connections = emptyList()) }
-        if (!Constants.SUPPORTS_PLATFORM || Constants.IS_PROD_BUILD ||
-            Constants.NETWORK_PARAMETERS.id == NetworkParameters.ID_MAINNET) {
+        if (!ConnectAvailability.isSupported) {
             _uiState.update { it.copy(featureUnavailable = true, recordsStatus = ConnectionRecordsStatus.UNAVAILABLE) }
             return
         }
@@ -247,15 +244,30 @@ class ConnectionsViewModel @Inject constructor(
                 _uiState.update { it.copy(recordsStatus = ConnectionRecordsStatus.LOADING, connections = emptyList()) }
                 when (availability) {
                     ConnectIdentityStatus.LOADING -> return@collectLatest
-                    ConnectIdentityStatus.NO_IDENTITY -> {
-                        _uiState.update { it.copy(recordsStatus = ConnectionRecordsStatus.NO_IDENTITY) }
-                        return@collectLatest
-                    }
                     ConnectIdentityStatus.UNAVAILABLE -> {
                         _uiState.update { it.copy(recordsStatus = ConnectionRecordsStatus.UNAVAILABLE) }
                         return@collectLatest
                     }
-                    ConnectIdentityStatus.AVAILABLE -> loadSharedProfileKeys()
+                    ConnectIdentityStatus.NO_IDENTITY, ConnectIdentityStatus.AVAILABLE -> {
+                        // Checked before offering a username too. An unread version is not proof the
+                        // network is too old: it leaves the screen retryable.
+                        val available = try { repository.isAvailable() } catch (error: Exception) {
+                            if (error is CancellationException) throw error
+                            log.warn("Cannot read the Platform protocol version", error)
+                            null
+                        }
+                        kotlin.coroutines.coroutineContext.ensureActive()
+                        _uiState.update { it.copy(featureUnavailable = available == false) }
+                        if (available != true) {
+                            _uiState.update { it.copy(recordsStatus = ConnectionRecordsStatus.UNAVAILABLE) }
+                            return@collectLatest
+                        }
+                        if (availability == ConnectIdentityStatus.NO_IDENTITY) {
+                            _uiState.update { it.copy(recordsStatus = ConnectionRecordsStatus.NO_IDENTITY) }
+                            return@collectLatest
+                        }
+                        loadSharedProfileKeys()
+                    }
                 }
                 try {
                     // Keep rows and availability in this cancellable observation, not separate buffered consumers.
@@ -288,9 +300,14 @@ class ConnectionsViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 check(Constants.SUPPORTS_PLATFORM) { "App Connect is unavailable on this device" }
-                check(!Constants.IS_PROD_BUILD && Constants.NETWORK_PARAMETERS.id != NetworkParameters.ID_MAINNET) {
-                    "App Connect is unavailable in production or on mainnet"
+                fun requireAvailable(available: Boolean?) = when (available) {
+                    true, null -> {}
+                    false -> {
+                        _uiState.update { it.copy(featureUnavailable = true) }
+                        error(ConnectAvailability.VERSION_TOO_OLD_ERROR)
+                    }
                 }
+                checkNotNull(repository.isAvailable().also(::requireAvailable)) { ConnectAvailability.VERSION_UNKNOWN_ERROR }
                 uiState.first { it.recordsStatus != ConnectionRecordsStatus.LOADING }
                 // Without a username the screen offers to create one, which is the answer to this request.
                 if (_uiState.value.recordsStatus == ConnectionRecordsStatus.NO_IDENTITY) return@launch
