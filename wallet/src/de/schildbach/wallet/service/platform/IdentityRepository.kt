@@ -506,13 +506,34 @@ class IdentityRepositoryImpl @Inject constructor(
                 // — same DPNS name, human spelling; anything else still
                 // loses to the on-chain value.
                 val recoveredPrimary = blockchainIdentity.primaryUsername
-                val keptRequestedPrimary = recoveredPrimaryIsPendingDualSecondary(
+                val recoveredIsRecordSecondary = recoveredPrimaryIsPendingDualSecondary(
                     recordPrimary = username,
                     recordSecondary = usernameSecondary,
                     recoveredPrimary = recoveredPrimary,
                     normalize = Names::normalizeString
                 )
-                if (keptRequestedPrimary) {
+                // The record's primary is the name requested for this identity (a replacement
+                // in its vote or not landed yet) and recovery adopted another owned name: an
+                // older instant name that is not the record's secondary (the replacement's own
+                // instant secondary failed). Keep the requested primary either way.
+                // (not once it lost or was locked: then the on-chain name is the one to show)
+                val requestedPrimaryPending = !recoveredIsRecordSecondary && recoveredPrimary != null &&
+                    usernameRequested != UsernameRequestStatus.LOST_VOTE &&
+                    usernameRequested != UsernameRequestStatus.LOCKED &&
+                    requestedPrimaryNotRecovered(
+                        requested = blockchainIdentityDataStorage.requestedNames(),
+                        identityId = userId,
+                        recordPrimary = username,
+                        recoveredPrimary = recoveredPrimary
+                    )
+                val keptRequestedPrimary = recoveredIsRecordSecondary || requestedPrimaryPending
+                if (requestedPrimaryPending) {
+                    log.info(
+                        "recovered primary '{}' is not the requested primary '{}' — keeping the request",
+                        recoveredPrimary,
+                        username
+                    )
+                } else if (keptRequestedPrimary) {
                     // dashj adopted the record's own secondary as "primary": a
                     // DUAL create whose contested primary is still in its vote
                     // (the Mo-972 shape, S21 2026-08-18), or a replacement name
@@ -1274,4 +1295,22 @@ class IdentityRepositoryImpl @Inject constructor(
             null
         }
     }
+}
+
+/**
+ * True when [recordPrimary] is the name requested for [identityId] ([requested], the durable
+ * requested names a creation or a name-only retry recorded) and dashj recovered a different
+ * [recoveredPrimary]: the request is still pending (in its vote, or not landed), and adopting the
+ * recovered name would drop it. Compared on DPNS-normalized forms.
+ */
+internal fun requestedPrimaryNotRecovered(
+    requested: RequestedNameContext?,
+    identityId: String?,
+    recordPrimary: String?,
+    recoveredPrimary: String
+): Boolean {
+    if (requested == null || recordPrimary == null || identityId == null) return false
+    if (requested.identityIdBase58 != identityId) return false
+    val primary = Names.normalizeString(recordPrimary)
+    return Names.normalizeString(requested.username) == primary && Names.normalizeString(recoveredPrimary) != primary
 }

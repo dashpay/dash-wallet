@@ -53,6 +53,7 @@ class IdentityReplacementNameRecordTest {
     private fun repository(): IdentityRepositoryImpl {
         val storage = mockk<BlockchainIdentityConfig>(relaxed = true)
         coEvery { storage.get(BlockchainIdentityConfig.CREATION_STATE) } returns IdentityCreationState.USERNAME_REGISTERING.name
+        coEvery { storage.requestedNames() } returns null
         return IdentityRepositoryImpl(
             walletApplication = mockk<WalletApplication>(relaxed = true),
             appDatabase = mockk<AppDatabase>(relaxed = true),
@@ -149,6 +150,42 @@ class IdentityReplacementNameRecordTest {
         assertArrayEquals(replacementSalt, data.preorderSalt)
         assertEquals("not duplicated into the secondary", "brimoztest3", data.usernameSecondary)
         assertArrayEquals(secondarySalt, data.preorderSaltSecondary)
+    }
+
+    @Test
+    fun `a dual replacement in its vote is kept when recovery only finds the old instant name`() = runBlocking {
+        // lost primary + registered instant alice2; the replacement is bobby (contested) + bobby2
+        // (instant). bobby is in its vote, bobby2 failed: recovery sees only alice2, which is not
+        // the record's secondary, and adopting it would drop the paid contest
+        val storage = mockk<BlockchainIdentityConfig>(relaxed = true)
+        coEvery { storage.get(BlockchainIdentityConfig.CREATION_STATE) } returns IdentityCreationState.USERNAME_REGISTERING.name
+        coEvery { storage.requestedNames() } returns RequestedNameContext(identityId, "bobby", "bobby2")
+        val repository = IdentityRepositoryImpl(
+            walletApplication = mockk<WalletApplication>(relaxed = true),
+            appDatabase = mockk<AppDatabase>(relaxed = true),
+            blockchainIdentityDataStorage = storage,
+            walletDataProvider = mockk<WalletData>(relaxed = true),
+            platformRepo = mockk<PlatformRepo>(relaxed = true),
+            dashPayConfig = mockk<DashPayConfig>(relaxed = true),
+            dashSystemService = mockk<DashSystemService>(relaxed = true),
+            sdkUsernameQueries = mockk<SdkUsernameQueries>(relaxed = true),
+            sdkProfileQueries = mockk<SdkProfileQueries>(relaxed = true)
+        )
+        val data = record(primary = "bobby", secondary = "bobby2")
+
+        repository.updateBlockchainIdentityData(data, recovered(primary = "alice2", secondary = null))
+
+        assertEquals("the requested replacement stays the name", "bobby", data.username)
+        assertEquals("bobby2", data.usernameSecondary)
+    }
+
+    @Test
+    fun `a genuine restore still adopts the recovered name`() = runBlocking {
+        // no requested names on record: the on-chain name wins, as before
+        val data = record(primary = "bobby", secondary = "bobby2")
+        repository().updateBlockchainIdentityData(data, recovered(primary = "alice2", secondary = null))
+
+        assertEquals("the recovered (normalized) name", Names.normalizeString("alice2"), data.username)
     }
 
     @Test
