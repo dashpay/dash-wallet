@@ -236,19 +236,19 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
         }
 
         Toast.makeText(context, R.string.copied, Toast.LENGTH_SHORT).show()
-        log.info("address copied to clipboard: {}", address)
+        log.info("address copied to clipboard")
     }
 
     private fun handleCopyUsername(username: String) {
         val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         clipboardManager.setPrimaryClip(ClipData.newPlainText("Dash Username", username))
         Toast.makeText(context, R.string.copied, Toast.LENGTH_SHORT).show()
-        log.info("username copied to clipboard: {}", username)
+        log.info("username copied to clipboard")
     }
 
     private fun handleShare(paymentRequestUri: String) {
         val title = resources.getString(R.string.request_coins_share_dialog_title)
         context.shareText(paymentRequestUri, title)
-        log.info("payment request shared via intent: {}", paymentRequestUri)
+        log.info("payment request shared via intent")
     }
 }
