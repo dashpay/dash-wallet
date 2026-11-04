@@ -416,6 +416,7 @@ používateľské meno</b></string>
     <string name="coinjoin_mixing_level_subtitle">Miešanie môžete kedykoľvek zastaviť, alebo zmeniť jeho úroveň</string>
     <string name="coinjoin_mixing_transactions">Miešacie transakcie</string>
     <string name="coinjoin_transaction_group">Tieto transakcie majú súvis s miešaním.</string>
+    <string name="coinjoin_transaction_group_title">Prečo sa mi zobrazujú všetky tieto transakcie?</string>
     <string name="intermediate">Stredne pokročilá</string>
     <string name="advanced">Pokročilá</string>
     <string name="intermediate_level_card_decs">Pokročilí používatelia, ktorí majú veľmi vysokú úroveň technických znalostí, môžu určiť vašu históriu transakcií</string>

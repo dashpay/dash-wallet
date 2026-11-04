@@ -18,9 +18,7 @@ import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.MonetaryFormat
 import org.bitcoinj.wallet.Wallet
-import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
-import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
 import org.slf4j.LoggerFactory
 
 class BuyCreditsFragment : SendCoinsFragment() {
@@ -109,13 +107,13 @@ class BuyCreditsFragment : SendCoinsFragment() {
         dialog.show(requireActivity()) { confirmed ->
             if (confirmed) {
                 lifecycleScope.launch {
-                    handleGo(true)
+                    handleGo()
                 }
             }
         }
     }
 
-    private suspend fun handleGo(checkBalance: Boolean) {
+    private suspend fun handleGo() {
         if (viewModel.dryrunSendRequest == null) {
             log.error("illegal state dryrunSendRequest == null")
             return
@@ -137,16 +135,10 @@ class BuyCreditsFragment : SendCoinsFragment() {
                 }
                 // buy do an asset lock transaction or we do this in the worker?
                 val topUpKey = viewModel.getNextKey()
-                val tx = viewModel.signAndSendAssetLock(editedAmount, exchangeRate, checkBalance, topUpKey, maxSelected)
+                val tx = viewModel.signAndSendAssetLock(editedAmount, exchangeRate, topUpKey, maxSelected)
                 buyCreditsViewModel.topUpTransaction = tx
 
                 onSignAndSendPaymentSuccess(tx)
-            } catch (ex: LeftoverBalanceException) {
-                val shouldContinue = MinimumBalanceDialog().showAsync(requireActivity())
-
-                if (shouldContinue == true) {
-                    handleGo(false)
-                }
             } catch (ex: InsufficientMoneyException) {
                 showInsufficientMoneyDialog(ex.missing ?: Coin.ZERO)
             } catch (ex: KeyCrypterException) {

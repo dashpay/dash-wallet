@@ -356,6 +356,7 @@
     <string name="coinjoin_mixing_level_subtitle">Karıştırma seviyesini istediğiniz zaman değiştirebilir veya durdurabilirsiniz</string>
     <string name="coinjoin_mixing_transactions">Karıştırma İşlemleri</string>
     <string name="coinjoin_transaction_group">Bunlar birbiriyle ilişkili karıştırma işlemleri.</string>
+    <string name="coinjoin_transaction_group_title">Neden tüm bu işlemleri görüyorum?</string>
     <string name="intermediate">Orta seviye</string>
     <string name="advanced">Gelişmiş</string>
     <string name="intermediate_level_card_decs">Yüksek düzeyde teknik uzmanlığa sahip ileri düzey kullanıcılar, işlem geçmişinizi belirleyebilir.</string>

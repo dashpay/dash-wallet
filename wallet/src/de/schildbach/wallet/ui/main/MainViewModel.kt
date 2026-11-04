@@ -97,8 +97,6 @@ import org.dash.wallet.common.services.analytics.AnalyticsTimer
 import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.integrations.maya.api.DispatchingSwapProvider
 import org.dash.wallet.integrations.maya.utils.SwapBackend
-import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
-import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
 import org.slf4j.LoggerFactory
 import java.util.Currency
 import java.util.Locale
@@ -131,7 +129,6 @@ class MainViewModel @Inject constructor(
     private val coinJoinConfig: CoinJoinConfig,
     private val coinJoinService: CoinJoinService,
     private val txDisplayCacheService: TxDisplayCacheService,
-    private val crowdNodeApi: CrowdNodeApi,
     private val swapProvider: DispatchingSwapProvider
 ) : BaseContactsViewModel(blockchainIdentityDataDao, dashPayProfileDao, dashPayContactRequestDao) {
     var restoringBackup: Boolean = false
@@ -258,8 +255,6 @@ class MainViewModel @Inject constructor(
 
     val showCreateUsernameEvent = SingleLiveEvent<Unit>()
 
-    // One-time-per-launch nudge to withdraw a remaining CrowdNode balance after sync.
-    val showCrowdNodeWithdrawalReminder = SingleLiveEvent<Unit>()
     val sendContactRequestState = SendContactRequestOperation.allOperationsStatus(walletApplication)
     val seriousErrorLiveData = SeriousErrorLiveData(platformRepo)
     var processingSeriousError = false
@@ -320,27 +315,6 @@ class MainViewModel @Inject constructor(
             }
             .flowOn(Dispatchers.IO)
             .catch { e -> log.error("blockchain state flow error", e) }
-            .launchIn(viewModelScope)
-
-        // Once per launch, after sync, remind the user to withdraw any remaining CrowdNode balance.
-        combine(
-            blockchainStateProvider.observeState().filterNotNull(),
-            crowdNodeApi.signUpStatus,
-            crowdNodeApi.balance
-        ) { state, signUpStatus, balance ->
-            Triple(state.isSynced(), signUpStatus, balance.data)
-        }
-            .onEach { (isSynced, signUpStatus, balance) ->
-                val hasAccount = signUpStatus != SignUpStatus.NotStarted
-                val hasBalance = balance?.isPositive == true
-                val alreadyShown: Boolean = savedStateHandle[CROWDNODE_REMINDER_SHOWN_KEY] ?: false
-
-                if (isSynced && hasAccount && hasBalance && !alreadyShown) {
-                    savedStateHandle[CROWDNODE_REMINDER_SHOWN_KEY] = true
-                    showCrowdNodeWithdrawalReminder.postCall()
-                }
-            }
-            .catch { e -> log.error("crowdnode withdrawal reminder flow error", e) }
             .launchIn(viewModelScope)
 
         // we need the total wallet balance for mixing progress,
@@ -738,7 +712,6 @@ class MainViewModel @Inject constructor(
 
     companion object {
         private const val DIRECTION_KEY = "tx_direction"
-        private const val CROWDNODE_REMINDER_SHOWN_KEY = "crowdnode_withdrawal_reminder_shown"
         private const val TIME_SKEW_TOLERANCE = 3600000L // 1 hour
 
         private val log = LoggerFactory.getLogger(MainViewModel::class.java)

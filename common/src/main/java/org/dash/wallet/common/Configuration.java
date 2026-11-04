@@ -88,11 +88,7 @@ public class Configuration {
     public static final String PREFS_KEY_SHOW_TAX_CATEGORY_INSTALLTIME = "show_tax_catagory_install_time";
     public static final String PREFS_KEY_RESET_BLOCKCHAIN_PENDING = "reset_blockchain_pending";
     private static final long DISABLE_NOTIFICATIONS = -1;
-    
-    // CrowdNode
-    public static final String PREFS_KEY_CROWDNODE_ACCOUNT_ADDRESS = "crowdnode_account_address";
-    public static final String PREFS_KEY_CROWDNODE_PRIMARY_ADDRESS = "crowdnode_primary_address";
-    public static final String PREFS_KEY_CROWDNODE_STAKING_APY = "crowdnode_staking_apy_last";
+
 
     // UUID
     public static final String PREFS_UUID = "prefs_uuid";
@@ -475,33 +471,24 @@ public class Configuration {
         prefs.edit().putBoolean(PREFS_KEY_RESET_BLOCKCHAIN_PENDING, false).apply();
     }
 
-    // CrowdNode
+    // CrowdNode was removed; these keys may remain from older versions
+    private static final String[] OBSOLETE_CROWDNODE_KEYS = {
+            "crowdnode_account_address", "crowdnode_primary_address", "crowdnode_staking_apy_last"
+    };
 
-    @NonNull
-    public String getCrowdNodeAccountAddress() {
-        return prefs.getString(PREFS_KEY_CROWDNODE_ACCOUNT_ADDRESS, "");
-    }
-
-    public void setCrowdNodeAccountAddress(@NonNull String address) {
-        prefs.edit().putString(PREFS_KEY_CROWDNODE_ACCOUNT_ADDRESS, address).apply();
-    }
-
-    @NonNull
-    public String getCrowdNodePrimaryAddress() {
-        return prefs.getString(PREFS_KEY_CROWDNODE_PRIMARY_ADDRESS, "");
-    }
-
-    public void setCrowdNodePrimaryAddress(@NonNull String address) {
-        prefs.edit().putString(PREFS_KEY_CROWDNODE_PRIMARY_ADDRESS, address).apply();
-    }
-
-    @NonNull
-    public Float getPrefsKeyCrowdNodeStakingApy() {
-        return prefs.getFloat(PREFS_KEY_CROWDNODE_STAKING_APY, 0.0f);
-    }
-
-    public void setPrefsKeyCrowdNodeStakingApy(float apy) {
-        prefs.edit().putFloat(PREFS_KEY_CROWDNODE_STAKING_APY, apy).apply();
+    public boolean removeObsoleteCrowdNodePrefs() {
+        boolean found = false;
+        final SharedPreferences.Editor editor = prefs.edit();
+        for (String key : OBSOLETE_CROWDNODE_KEYS) {
+            if (prefs.contains(key)) {
+                editor.remove(key);
+                found = true;
+            }
+        }
+        if (found) {
+            editor.apply();
+        }
+        return found;
     }
 
     public String getUniqueId() {

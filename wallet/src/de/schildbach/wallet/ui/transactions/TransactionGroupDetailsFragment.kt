@@ -34,7 +34,6 @@ import org.dash.wallet.common.ui.decorators.ListDividerDecorator
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.currencySymbol
-import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
 
 @AndroidEntryPoint
 class TransactionGroupDetailsFragment() : OffsetDialogFragment(R.layout.transaction_group_details) {
@@ -56,16 +55,10 @@ class TransactionGroupDetailsFragment() : OffsetDialogFragment(R.layout.transact
         binding.dashAmount.setFormat(viewModel.dashFormat)
 
         when (transactionWrapper) {
-            is FullCrowdNodeSignUpTxSet -> {
-                binding.groupTitle.text = getString(R.string.crowdnode_account)
-                binding.icon.setImageResource(R.drawable.ic_crowdnode_logo)
-                binding.detailsTitle.text = getString(R.string.crowdnode_tx_set_title)
-                binding.detailsMessage.text = getString(R.string.crowdnode_tx_set_explainer)
-            }
             is CoinJoinMixingTxSet -> {
                 binding.groupTitle.text = getString(R.string.coinjoin_mixing_transactions)
                 binding.icon.setImageResource(R.drawable.ic_coinjoin)
-                binding.detailsTitle.text = getString(R.string.crowdnode_tx_set_title)
+                binding.detailsTitle.text = getString(R.string.coinjoin_transaction_group_title)
                 binding.detailsMessage.text = getString(R.string.coinjoin_transaction_group)
             }
         }

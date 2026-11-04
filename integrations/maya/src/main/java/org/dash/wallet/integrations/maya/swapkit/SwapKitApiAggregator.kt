@@ -1021,9 +1021,7 @@ class SwapKitApiAggregator @Inject constructor(
             val sentTransaction = sendPaymentService.sendCoins(
                 depositAddress,
                 amount,
-                emptyWallet = swapTradeUIModel.maximum,
-                // Mirror the Maya builder, which bypasses leftover-balance checks for swaps.
-                checkBalanceConditions = false
+                emptyWallet = swapTradeUIModel.maximum
             )
             swapTradeUIModel.txid = sentTransaction.txId
             ResponseResource.Success(swapTradeUIModel)
