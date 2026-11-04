@@ -321,7 +321,7 @@ private fun FitContentSegmentedPicker(
                     style = style,
                     color = thumbColor,
                     modifier = Modifier
-                        .offset(x = thumbOffset)
+                        .absoluteOffset(x = thumbOffset)
                         .width(thumbWidth)
                         .fillMaxHeight()
                 )
