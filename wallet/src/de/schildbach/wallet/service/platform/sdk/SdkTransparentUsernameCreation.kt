@@ -609,7 +609,9 @@ class SdkTransparentUsernameCreation internal constructor(
         // Lazy: Constants untouched at construction (inert-until-called).
         feeDuffs = { contested -> transparentUsernameFeeDuffs(contested, sdkService) },
         handOffToLegacy = awaitingEnqueue { identityId ->
-            RestoreIdentityOperation(walletApplication).create(identityId, fromCreation = true).enqueue()
+            // chained after a recovery still running for this identity (it may predate the
+            // requested name), never absorbed by it
+            RestoreIdentityOperation(walletApplication).create(identityId, fromCreation = true, afterInFlight = true).enqueue()
         },
         persistFundingTxid = { displayHex ->
             blockchainIdentityConfig.set(BlockchainIdentityConfig.ASSET_LOCK_TXID, displayHex)
