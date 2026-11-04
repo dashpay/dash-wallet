@@ -2170,6 +2170,23 @@ class SdkTransparentUsernameCreation internal constructor(
             persistNameContext(identityIdBase58, request.username, request.secondaryUsername, false)
             clearPreviousNameRequest()
             if (ours) {
+                // A dual retry killed after its primary landed: the requested secondary is
+                // submitted now (re-checked first: never twice), or its failure recorded for the
+                // tile's retry; never silently dropped by retiring the retry.
+                val secondary = request.secondaryUsername
+                if (secondary != null) {
+                    val secondaryLanded = registerInterruptedSecondary(identityIdBase58, secondary)
+                        ?: return false // the wallet is not bound yet: retried later
+                    if (!secondaryLanded) {
+                        log.info(
+                            "interrupted name-only retry for {}…: secondary '{}' did not register; offering a retry",
+                            identityIdBase58.take(8),
+                            secondary
+                        )
+                        failPendingNameRetry("$NAME_ONLY_RETRY_ERROR: secondary '$secondary' did not register")
+                        return true
+                    }
+                }
                 log.info(
                     "interrupted name-only retry for {}…: '{}' is the identity's; handing it to recovery",
                     identityIdBase58.take(8),
@@ -2198,6 +2215,36 @@ class SdkTransparentUsernameCreation internal constructor(
         }
         finishPendingNameRetry()
         return true
+    }
+
+    /**
+     * The requested [secondary] of an interrupted dual retry whose primary landed: true when it is
+     * (now) the identity's, false when it did not register (rejected, unknown outcome, or its
+     * ownership unreadable, as in the live run), null when the wallet is not bound (nothing tried).
+     * Submitted through the same tracked path as the live run, ownership re-checked under the
+     * identity's DPNS lock first; a failure is not stamped there (the caller records it).
+     */
+    private suspend fun registerInterruptedSecondary(identityIdBase58: String, secondary: String): Boolean? {
+        val walletId = try {
+            source.boundWalletIdOrNull()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("interrupted name-only retry: wallet binding unreadable; retrying later", e)
+            null
+        } ?: return null
+        val registration = registerNameTracked(
+            walletId,
+            Identifier.from(identityIdBase58).toBuffer(),
+            identityIdBase58,
+            secondary,
+            balanceBefore = null,
+            preorderState = IdentityCreationState.PREORDER_SECONDARY_REGISTERING,
+            registeringState = IdentityCreationState.USERNAME_SECONDARY_REGISTERING,
+            registeredState = IdentityCreationState.USERNAME_SECONDARY_REGISTERED,
+            recheckOwnership = true
+        )
+        return registration.status == ShieldedUsernameNameStatus.REGISTERED
     }
 
     private suspend fun retryNameNow(

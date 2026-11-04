@@ -1195,6 +1195,67 @@ class SdkTransparentUsernameCreationTest {
         assertNull(journal.pendingNameOnlyRetry())
     }
 
+    /** A dual retry killed after its primary landed: pending, on the name step, no error. */
+    private suspend fun killedAfterThePrimaryLanded(): de.schildbach.wallet.service.platform.InMemoryRequestedNameJournal {
+        val journal = de.schildbach.wallet.service.platform.InMemoryRequestedNameJournal()
+        journal.beginNameOnlyRetry(RequestedNameContext(identityIdBase58, "alice3", "alice4"))
+        return journal
+    }
+
+    @Test
+    fun `a dual retry killed after its primary landed submits the secondary on restart`() = runTest {
+        val source = source(lockAfterFailure = null)
+        coEvery { source.registerDpnsName(walletIdHex, identityId, "alice4") } returns "alice4.dash"
+        val journal = killedAfterThePrimaryLanded()
+        val restart = RetryRun()
+
+        assertTrue(
+            instance(source, journal, restart, nameAlreadyTaken = { _, label -> label == "alice3" })
+                .reconcileInterruptedNameRetry()
+        )
+
+        coVerify(exactly = 1) { source.registerDpnsName(walletIdHex, identityId, "alice4") }
+        coVerify(exactly = 0) { source.registerDpnsName(any(), any(), "alice3") }
+        assertEquals("handed to recovery", listOf(identityIdBase58), restart.handedOff)
+        assertNull(journal.pendingNameOnlyRetry())
+    }
+
+    @Test
+    fun `a dual retry whose secondary is rejected on restart records the retryable error`() = runTest {
+        val source = source(lockAfterFailure = null)
+        coEvery { source.registerDpnsName(walletIdHex, identityId, "alice4") } throws
+            DashSdkError.InvalidParameter("DuplicateUniqueIndexError: alice4 is taken")
+        val journal = killedAfterThePrimaryLanded()
+        val restart = RetryRun()
+
+        assertTrue(
+            instance(source, journal, restart, nameAlreadyTaken = { _, label -> label == "alice3" })
+                .reconcileInterruptedNameRetry()
+        )
+
+        assertTrue(
+            "the name-only retry's error, for the tile's retry: ${journal.errorMessage}",
+            SdkTransparentUsernameCreation.isNameOnlyRetryError(journal.errorMessage) &&
+                journal.errorMessage?.contains("alice4") == true
+        )
+        assertTrue("not silently retired into recovery", restart.handedOff.isEmpty())
+        assertNull(journal.pendingNameOnlyRetry())
+        val plain = restart.states.filter { it.second != null && !SdkTransparentUsernameCreation.isNameOnlyRetryError(it.second) }
+        assertTrue("no plain error: $plain", plain.isEmpty())
+    }
+
+    @Test
+    fun `a dual retry whose secondary already landed is completed on restart without submitting it`() = runTest {
+        val source = source(lockAfterFailure = null)
+        val journal = killedAfterThePrimaryLanded()
+        val restart = RetryRun()
+
+        assertTrue(instance(source, journal, restart, nameAlreadyTaken = { _, _ -> true }).reconcileInterruptedNameRetry())
+
+        coVerify(exactly = 0) { source.registerDpnsName(any(), any(), any()) }
+        assertEquals(listOf(identityIdBase58), restart.handedOff)
+    }
+
     @Test
     fun `a killed retry whose name registered is completed on restart`() = runTest {
         val source = source(lockAfterFailure = null)
