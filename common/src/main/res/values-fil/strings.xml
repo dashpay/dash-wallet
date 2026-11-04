@@ -153,4 +153,5 @@
     <string name="from_dash_wallet_on_this_device">Mula sa Dash wallet sa device na ito</string>
     <string name="preposition_at">sa</string>
     <string name="info">Impormasyon</string>
+    <string name="scan_qr">I-scan ang QR</string>
 </resources>

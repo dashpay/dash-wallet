@@ -4,7 +4,7 @@ buildscript {
         coroutinesVersion = '1.6.4'
         ok_http_version = '4.12.0'
         dashjVersion = '24.0.0-20261024.220449-1'
-        dppVersion = "5.0.1-SNAPSHOT"
+        dppVersion = "5.0.1"
         hiltVersion = '2.53'
         hiltCompilerVersion = '1.2.0'
         hiltWorkVersion = '1.2.0'
@@ -76,14 +76,7 @@ allprojects {
     }
     repositories {
         google()
-        if (rootProject.hasProperty('platformSdkRepository')) {
-            exclusiveContent {
-                forRepository { maven { url rootProject.property('platformSdkRepository') } }
-                filter { includeGroup('org.dashj.platform') }
-            }
-        } else {
-            mavenLocal()
-        }
+        mavenLocal()
         mavenCentral()
         maven { url 'https://jitpack.io' }
         maven { url 'https://s01.oss.sonatype.org/content/repositories/snapshots/' }

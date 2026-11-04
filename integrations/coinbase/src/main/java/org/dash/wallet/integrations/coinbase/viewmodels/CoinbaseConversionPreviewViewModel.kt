@@ -195,7 +195,7 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
     private suspend fun sendDashToCoinbase(coin: Coin, addressInfo: String): Boolean {
         val address = Address.fromString(walletDataProvider.networkParameters, addressInfo.trim { it <= ' ' })
         return try {
-            val transaction = sendPaymentService.sendCoins(address, coin, checkBalanceConditions = false)
+            val transaction = sendPaymentService.sendCoins(address, coin)
             transactionMetadataProvider.markAddressAsTransferOutAsync(
                 address.toBase58(),
                 ServiceName.Coinbase

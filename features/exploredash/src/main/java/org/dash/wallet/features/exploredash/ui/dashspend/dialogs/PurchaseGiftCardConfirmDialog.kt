@@ -62,7 +62,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.bitcoinj.core.Coin
 import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.uri.BitcoinURIParseException
@@ -79,7 +78,6 @@ import org.dash.wallet.common.ui.components.Size
 import org.dash.wallet.common.ui.components.Style
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.ComposeBottomSheet
-import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.features.exploredash.R
@@ -473,29 +471,6 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
                         }
                     }
                     return@launch
-                }
-
-                val totalAmount = Coin.valueOf(
-                    data.sumOf {
-                        if (!it.cryptoAmount.isNullOrEmpty()) {
-                            Coin.parseCoin(it.cryptoAmount).value
-                        } else {
-                            0L
-                        }
-                    }
-                )
-
-                if (!totalAmount.isZero && viewModel.needsCrowdNodeWarning(totalAmount)) {
-                    if (!isAdded) {
-                        hideLoading()
-                        return@launch
-                    }
-                    val shouldContinue = MinimumBalanceDialog().showAsync(requireActivity())
-
-                    if (shouldContinue != true) {
-                        hideLoading()
-                        return@launch
-                    }
                 }
 
                 val dashPaymentUrl = data.first().paymentUrls?.get("DASH.DASH")

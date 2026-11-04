@@ -153,4 +153,5 @@
     <string name="from_dash_wallet_on_this_device">从此设备的 Dash钱包</string>
     <string name="preposition_at">在</string>
     <string name="info">资讯</string>
+    <string name="scan_qr">扫描二维码</string>
 </resources>

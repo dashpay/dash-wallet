@@ -59,7 +59,6 @@ import de.schildbach.wallet.data.AddressBookProvider
 import de.schildbach.wallet.database.dao.BlockchainStateDao
 import de.schildbach.wallet.database.dao.ExchangeRatesDao
 import de.schildbach.wallet.payments.PendingDirectPaymentVerifier
-import de.schildbach.wallet.service.extensions.registerCrowdNodeConfirmedAddressFilter
 import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.transactions.WalletObserver.Companion.CONFIRMED_DEPTH
@@ -69,7 +68,6 @@ import de.schildbach.wallet.ui.dashpay.OnPreBlockProgressListener
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.PreBlockStage
 import de.schildbach.wallet.ui.main.MainActivity
-import de.schildbach.wallet.ui.staking.StakingActivity
 import de.schildbach.wallet.util.AllowLockTimeRiskAnalysis
 import de.schildbach.wallet.util.AllowLockTimeRiskAnalysis.OfflineAnalyzer
 import de.schildbach.wallet.util.AnrException
@@ -154,12 +152,6 @@ import org.dash.wallet.common.transactions.filters.NotFromAddressTxFilter
 import org.dash.wallet.common.util.Constants.PREFIX_ALMOST_EQUAL_TO
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.toBigDecimal
-import org.dash.wallet.integrations.crowdnode.api.CrowdNodeAPIConfirmationHandler
-import org.dash.wallet.integrations.crowdnode.api.CrowdNodeBlockchainApi
-import org.dash.wallet.integrations.crowdnode.transactions.CrowdNodeDepositReceivedResponse
-import org.dash.wallet.integrations.crowdnode.transactions.CrowdNodeWithdrawalReceivedTx
-import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig
-import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants.getCrowdNodeAddress
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.io.IOException
@@ -313,10 +305,6 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
     @Inject lateinit var  notificationService: NotificationService
 
-    @Inject lateinit var  crowdNodeBlockchainApi: CrowdNodeBlockchainApi
-
-    @Inject lateinit var  crowdNodeConfig: CrowdNodeConfig
-
     @Inject lateinit var  blockchainStateDao: BlockchainStateDao
 
     @Inject lateinit var  exchangeRatesDao: ExchangeRatesDao
@@ -393,13 +381,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     // Risk Analyser for Transactions that is PeerGroup Aware
     private var riskAnalyzer: AllowLockTimeRiskAnalysis.Analyzer? = null
     private var defaultRiskAnalyzer = DefaultRiskAnalysis.FACTORY
-    private val crowdnodeFilters = listOf(
-        NotFromAddressTxFilter(getCrowdNodeAddress(Constants.NETWORK_PARAMETERS)),
-        CrowdNodeWithdrawalReceivedTx(Constants.NETWORK_PARAMETERS)
-    )
-    private val depositReceivedResponse =
-        CrowdNodeDepositReceivedResponse(Constants.NETWORK_PARAMETERS)
-    private var apiConfirmationHandler: CrowdNodeAPIConfirmationHandler? = null
+
     private fun handleMetadata(tx: Transaction) {
         serviceScope.launch {
             transactionMetadataProvider.syncTransaction(tx)
@@ -471,21 +453,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     val isReplayedTx =
                         confidenceType == TransactionConfidence.ConfidenceType.BUILDING && (replaying || isRestoringBackup)
                     if (!isReplayedTx) {
-                        if (depositReceivedResponse.matches(tx)) {
-                            notificationService.showNotification(
-                                "deposit_received",
-                                getString(R.string.crowdnode_deposit_received),
-                                null,
-                                null,
-                                Intent(this@BlockchainServiceImpl, StakingActivity::class.java),
-                                null
-                            )
-                        } else if (apiConfirmationHandler != null && apiConfirmationHandler!!.matches(
-                                tx
-                            )
-                        ) {
-                            apiConfirmationHandler!!.handle(tx)
-                        } else if (passFilters(tx, wallet)) {
+                        if (passFilters(tx, wallet)) {
                             notifyCoinsReceived(address, amount, tx.exchangeRate)
                         }
                     }
@@ -518,26 +486,10 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
             private fun passFilters(tx: Transaction, wallet: Wallet): Boolean {
                 val amount = tx.getValue(wallet)
-                val isReceived = amount.signum() > 0
-                if (!isReceived) {
-                    return false
-                }
-                var passFilters = false
-                for (filter in crowdnodeFilters) {
-                    if (filter.matches(tx)) {
-                        passFilters = true
-                        break
-                    }
-                }
-                return passFilters
+                return amount.signum() > 0
             }
         }
-    private val sharedPrefsChangeListener =
-        SharedPreferences.OnSharedPreferenceChangeListener { _: SharedPreferences?, key: String? ->
-            if (key == Configuration.PREFS_KEY_CROWDNODE_PRIMARY_ADDRESS) {
-                apiConfirmationHandler = registerCrowdNodeConfirmedAddressFilter()
-            }
-        }
+
     private var resetMNListsOnPeerGroupStart = false
     @SuppressLint("WrongConstant")
     private fun notifyCoinsReceived(
@@ -1696,7 +1648,6 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 wallet.addCoinsSentEventListener(Threading.SAME_THREAD, walletEventListener)
                 wallet.addChangeEventListener(Threading.SAME_THREAD, walletEventListener)
                 blockChain?.addNewBestBlockListener(newBestBlockListener)
-                config.registerOnSharedPreferenceChangeListener(sharedPrefsChangeListener)
                 withContext(Dispatchers.Main) {
                     registerReceiver(tickReceiver, IntentFilter(Intent.ACTION_TIME_TICK))
                     tickRecieverRegistered = true
@@ -1707,7 +1658,6 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 blockchainStateDao.observeState().observe(this@BlockchainServiceImpl) { blockchainState ->
                     handleBlockchainStateNotification(blockchainState, mixingStatus, mixingProgress)
                 }
-                apiConfirmationHandler = registerCrowdNodeConfirmedAddressFilter()
                 coinJoinService.observeMixingState().observe(this@BlockchainServiceImpl) { mixingStatus ->
                     handleBlockchainStateNotification(blockchainState, mixingStatus, mixingProgress)
                 }
@@ -1995,7 +1945,6 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
                     stopMonitoringOlderTransactions(wallet)
                 }
-                config.unregisterOnSharedPreferenceChangeListener(sharedPrefsChangeListener)
                 platformSyncService.shutdown()
                 // Snapshot peerGroup into a local. onDestroy() may proceed without the check()
                 // mutex (after the 5s timeout above), so a concurrent checkService() can set the

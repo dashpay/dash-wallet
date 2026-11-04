@@ -38,7 +38,6 @@ import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
-import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.observe
@@ -268,13 +267,13 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
         }
     }
 
-    private fun proceedWithSwap(request: SwapRequest, checkSendingConditions: Boolean = true) {
+    private fun proceedWithSwap(request: SwapRequest) {
         if (request.fiatAmount == null && request.amount != null) {
             showSwapValueErrorView(SwapValueErrorType.ExchangeRateMissing)
             return
         }
 
-        val swapValueErrorType = convertViewModel.checkEnteredAmountValue(checkSendingConditions)
+        val swapValueErrorType = convertViewModel.checkEnteredAmountValue()
 
         lifecycleScope.launch {
             if (swapValueErrorType == SwapValueErrorType.NOError) {
@@ -318,7 +317,6 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
             SwapValueErrorType.LessThanMin -> setMinAmountErrorMessage()
             SwapValueErrorType.MoreThanMax -> setMaxAmountError()
             SwapValueErrorType.NotEnoughBalance -> setNoEnoughBalanceError()
-            SwapValueErrorType.SendingConditionsUnmet -> showMinimumBalanceWarning()
             SwapValueErrorType.ExchangeRateMissing -> showExchangeRateMissing()
             else -> { }
         }
@@ -327,16 +325,6 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
     @SuppressLint("SetTextI18n")
     private fun setNoEnoughBalanceError() {
         binding.limitDesc.setText(R.string.you_dont_have_enough_balance)
-    }
-
-    private fun showMinimumBalanceWarning() {
-        MinimumBalanceDialog().show(requireActivity()) { isOkToContinue ->
-            val request = convertViewModel.onContinueEvent.value
-
-            if (isOkToContinue == true && request != null) {
-                proceedWithSwap(request, false)
-            }
-        }
     }
 
     @SuppressLint("SetTextI18n")

@@ -417,6 +417,7 @@ gebruikersnaam</b></string>
     <string name="coinjoin_mixing_level_subtitle">Je kunt het niveau van mixen op elk moment wijzigen of stoppen.</string>
     <string name="coinjoin_mixing_transactions">Transacties mixen</string>
     <string name="coinjoin_transaction_group">Dit zijn mix gerelateerde transacties.</string>
+    <string name="coinjoin_transaction_group_title">Waarom zie ik al deze transacties?</string>
     <string name="intermediate">Gemiddeld</string>
     <string name="advanced">Gevanceerd</string>
     <string name="intermediate_level_card_decs">Gevorderde gebruikers met een zeer hoog niveau van technische expertise kunnen je transactiegeschiedenis achterhalen</string>

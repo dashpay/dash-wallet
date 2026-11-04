@@ -980,7 +980,6 @@ class SendCoinsTaskRunnerBIP70Test {
             sendCoinsTaskRunner.sendCoins(
                 any<SendRequest>(),
                 any<Boolean>(),
-                any<Boolean>(),
                 isNull(),
                 isNull(),
                 // the signing wallet, threaded through since a late acknowledgement must not

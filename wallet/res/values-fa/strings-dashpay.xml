@@ -415,6 +415,7 @@
     <string name="coinjoin_mixing_level_subtitle">می‌توانید سطح ترکیب را هر زمانی تغییر داده یا متوقف کنید</string>
     <string name="coinjoin_mixing_transactions">ترکیب تراکنش‌ها</string>
     <string name="coinjoin_transaction_group">اینها تراکنش‌های ترکیب‌شده هستند</string>
+    <string name="coinjoin_transaction_group_title">چرا همه این تراکنش‌ها را می‌بینم؟ </string>
     <string name="intermediate">متوسط</string>
     <string name="advanced">پیشرفته</string>
     <string name="intermediate_level_card_decs">کاربران پیشرفته که سطح بالایی از تخصص فنی را دارند می‌توانند سابقه تراکنش شما را تعیین کنند.</string>

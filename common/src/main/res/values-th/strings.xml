@@ -138,4 +138,5 @@
     <string name="insufficient_money_title">เหรียญไม่เพียงพอ</string>
     <string name="send_coins_error_msg">การส่งเหรียญมีปัญหา!</string>
     <string name="from_dash_wallet_on_this_device">จากกระเป๋าเงิน Dash ในอุปกรณ์นี้</string>
-    </resources>
+    <string name="scan_qr">สแกน QR</string>
+</resources>

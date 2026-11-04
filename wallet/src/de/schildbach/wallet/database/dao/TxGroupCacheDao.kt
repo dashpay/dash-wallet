@@ -46,16 +46,14 @@ interface TxGroupCacheDao {
 
     /**
      * Returns only the "active" groups that may still receive new transactions:
-     * - CoinJoin groups dated [today] (today's mixing sessions)
-     * - All CrowdNode groups (signup flow may be in progress)
+     * CoinJoin groups dated [today] (today's mixing sessions).
      *
      * Used by [MainViewModel.initializeFactoriesFromCache] to seed factory state
      * at startup without loading the entire group history.
      */
     @Query(
         "SELECT * FROM tx_group_cache " +
-            "WHERE (wrapperType = 'coinjoin' AND groupDate = :today) " +
-            "   OR wrapperType = 'crowdnode' " +
+            "WHERE wrapperType = 'coinjoin' AND groupDate = :today " +
             "ORDER BY groupId, sortOrder ASC"
     )
     suspend fun getActiveGroups(today: String): List<TxGroupCacheEntry>

@@ -416,6 +416,7 @@
     <string name="coinjoin_mixing_level_subtitle">Μπορείτε να αλλάξετε ή να σταματήσετε το επίπεδο ανάμειξης ανά πάσα στιγμή.</string>
     <string name="coinjoin_mixing_transactions">Ανάμειξη συναλλαγών</string>
     <string name="coinjoin_transaction_group">Πρόκειται για συναφείς αναμειγμένες συναλλαγές.</string>
+    <string name="coinjoin_transaction_group_title">Γιατί βλέπω όλες αυτές τις συναλλαγές;</string>
     <string name="intermediate">Intermediate</string>
     <string name="advanced">Προηγμένα</string>
     <string name="intermediate_level_card_decs">Οι προχωρημένοι χρήστες που έχουν πολύ υψηλό επίπεδο τεχνικής εξειδίκευσης μπορούν να προσδιορίσουν το ιστορικό των συναλλαγών σας.</string>
