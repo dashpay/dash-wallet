@@ -25,7 +25,6 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
-import androidx.navigation.fragment.FragmentNavigator
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -108,13 +107,12 @@ class PaymentsPayFragment : Fragment(R.layout.fragment_payments_pay), OnContactI
 
         binding.sendBtn.setOnClickListener {
             analytics.logEvent(AnalyticsConstants.SendReceive.SEND_TO_ADDRESS, mapOf())
-            val destination = findNavController().currentDestination as? FragmentNavigator.Destination
+            val navController = findNavController()
 
-            // Either payments screen hosts this page; both declare payments_to_addressInput.
-            if (destination?.className == PaymentsFragment::class.java.name ||
-                destination?.className == AdvancedPaymentsFragment::class.java.name
-            ) {
-                findNavController().navigate(PaymentsFragmentDirections.paymentsToAddressInput())
+            // Only from a host that declares the action (either payments screen), so a
+            // second tap after navigating away does nothing.
+            if (navController.currentDestination?.getAction(R.id.payments_to_addressInput) != null) {
+                navController.navigate(PaymentsFragmentDirections.paymentsToAddressInput())
             }
         }
 

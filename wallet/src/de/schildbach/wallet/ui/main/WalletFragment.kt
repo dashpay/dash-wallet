@@ -391,7 +391,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
 
     /** Opens the payments screen the Advanced mode setting picks, on [activeTab]. */
     private fun navigateToPayments(activeTab: Int) {
-        val route = paymentsRoute(viewModel.advancedMode.value, activeTab)
+        val route = paymentsRoute(viewModel.advancedMode.value)
         findNavController().navigate(
             route.destinationId,
             bundleOf(PaymentsFragment.ARG_ACTIVE_TAB to activeTab),

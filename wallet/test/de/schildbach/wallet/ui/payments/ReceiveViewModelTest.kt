@@ -161,7 +161,7 @@ class ReceiveViewModelTest {
             if (attempts == 1) throw IOException("datastore")
             emit(true)
         }
-        val values = ReceiveViewModel.shieldedEnabledFlow(failingThenTrue, retryDelayMs = { 0L })
+        val values = shieldedEnabledFlow(failingThenTrue, retryDelayMs = { 0L })
             .take(2)
             .toList()
         assertEquals(listOf(false, true), values)
@@ -279,6 +279,35 @@ class ReceiveViewModelTest {
     }
 
     @Test
+    fun `a fresh page shows progress, not unavailable`() {
+        val state = ReceiveUIState()
+        assertTrue(state.loading)
+        assertFalse(state.unavailable)
+        assertNull(state.qrPayload)
+    }
+
+    @Test
+    fun `a re-read after a failed read keeps unavailable on show until it answers`() {
+        val gate = CompletableDeferred<String?>()
+        var coreReads = 0
+        val gatedSources = ReceiveAddressSources(
+            core = ReceiveAddressSource { if (coreReads++ == 0) null else gate.await() },
+            shielded = ReceiveAddressSource { null },
+            platform = ReceiveAddressSource { null }
+        )
+        val viewModel = buildViewModel(receiveSources = gatedSources)
+        viewModel.refresh()
+        assertTrue(viewModel.uiState.value.unavailable)
+
+        viewModel.refresh()
+        assertTrue(viewModel.uiState.value.unavailable)
+
+        gate.complete(CORE_ADDRESS)
+        assertFalse(viewModel.uiState.value.unavailable)
+        assertEquals(CORE_ADDRESS, viewModel.uiState.value.address)
+    }
+
+    @Test
     fun `a source that throws gives no QR`() {
         val throwingSources = ReceiveAddressSources(
             core = ReceiveAddressSource { throw IllegalStateException("Wallet not yet initialised") },
@@ -323,7 +352,7 @@ class ReceiveViewModelTest {
         assertTrue(ReceiveUIState(selectedTab = IDENTITY, address = IDENTITY_ID).specifyAmountEnabled)
         // No address on show: nothing to put in the request.
         assertFalse(ReceiveUIState(selectedTab = SHIELD).specifyAmountEnabled)
-        assertFalse(ReceiveUIState(selectedTab = PLATFORM, unavailable = true).specifyAmountEnabled)
+        assertFalse(ReceiveUIState(selectedTab = PLATFORM, loading = false).specifyAmountEnabled)
         assertFalse(ReceiveUIState(selectedTab = IDENTITY, loading = true).specifyAmountEnabled)
     }
 
