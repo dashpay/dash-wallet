@@ -22,6 +22,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -94,6 +95,10 @@ class SettingsViewModel @Inject constructor(
 
     private val _analyticsSaveFailures = Channel<AnalyticsSaveFailure>(Channel.BUFFERED)
     val analyticsSaveFailures: Flow<AnalyticsSaveFailure> = _analyticsSaveFailures.receiveAsFlow()
+
+    /** One-shot: the "Advanced mode" value that could not be saved (the fragment shows a Toast). */
+    private val _advancedModeSaveFailures = Channel<Boolean>(Channel.BUFFERED)
+    val advancedModeSaveFailures: Flow<Boolean> = _advancedModeSaveFailures.receiveAsFlow()
 
     init {
         // Initialize with current battery optimization status
@@ -168,13 +173,20 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    /** Saves the "Advanced mode" choice; the switch follows the saved value. */
+    /**
+     * Saves the "Advanced mode" choice; the switch follows the saved value, so after a
+     * failure toggling it again retries. A failed save is reported through
+     * [advancedModeSaveFailures] with the value that was not saved.
+     */
     fun setAdvancedModeEnabled(enabled: Boolean) {
         viewModelScope.launch {
             try {
                 walletUIConfig.setAdvancedMode(enabled)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 log.error("Error saving the advanced mode setting", e)
+                _advancedModeSaveFailures.trySend(enabled)
             }
         }
     }
