@@ -32,11 +32,15 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
 import org.dash.wallet.common.services.LockScreenBroadcaster
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.PaymentOutcomeUnknownWarning
+import org.dash.wallet.common.ui.handleWhenResumed
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.observe
@@ -217,14 +221,28 @@ class MayaConversionPreviewFragment : Fragment() {
             // Remember the result until the user acknowledges it: the lock screen auto-dismisses
             // the result sheet, and this lets us re-show it once the lock screen goes away.
             convertViewModel.pendingConversionResult = transactionParams
-            presentPendingResult()
         }
 
-        // Re-show the result sheet after an unlock if it's still pending — the lock screen
-        // dismissed it (dialogs are torn down on lock), or the OS killed and restored the app
-        // while it was locked. (Also on resume: see onResume.)
-        lockScreenBroadcaster.deactivatingLockScreen.observe(viewLifecycleOwner) {
-            presentPendingResult()
+        // The saved result, shown through the shared delivery policy: only while this view and
+        // the activity are resumed and the wallet is unlocked (never above the PIN screen), tried
+        // again on unlock and whenever navigation returns to this preview (the fee information
+        // dialog destination closing does not pause or resume this fragment). It stays saved
+        // until the result sheet acknowledges it, so the lock dismissing the sheet, or the OS
+        // killing the app, shows it again.
+        val navController = findNavController()
+        val backToPreview = navController.currentBackStackEntryFlow
+            .filter { it.destination.id == R.id.mayaConversionPreviewFragment }
+            .map { }
+        handleWhenResumed(
+            convertViewModel.pendingConversionResults,
+            merge(lockScreenBroadcaster.unlocked, backToPreview),
+            { navController.currentDestination?.id == R.id.mayaConversionPreviewFragment },
+            { }
+        ) { pending ->
+            navController.navigate(MayaConversionPreviewFragmentDirections.mayaOrderPreviewToOrderExecution(pending))
+            // Shown: the result sheet answers for the deposit from here (see acknowledgeDepositResult).
+            viewModel.acknowledgeDepositResult()
+            true
         }
 
         observeNavigationCallBack()
@@ -277,30 +295,13 @@ class MayaConversionPreviewFragment : Fragment() {
         }
     }
 
-    /**
-     * Shows the deposit's saved result when this preview is the current destination. Navigation
-     * is skipped while another destination (e.g. the fee information dialog) is on top: the
-     * result is then shown when the preview resumes. Only once it is shown does the result sheet
-     * answer for the deposit ([MayaConversionPreviewViewModel.acknowledgeDepositResult]); until
-     * then the view model refuses another commit.
-     */
-    private fun presentPendingResult() {
-        val pending = convertViewModel.pendingConversionResult ?: return
-        val navController = findNavController()
-        if (navController.currentDestination?.id != R.id.mayaConversionPreviewFragment) {
-            return
-        }
-        navController.navigate(MayaConversionPreviewFragmentDirections.mayaOrderPreviewToOrderExecution(pending))
-        viewModel.acknowledgeDepositResult()
-    }
-
     private fun onConfirmClick() {
         if (viewModel.paymentOutcomeUnknown.value) {
             return
         }
-        // A deposit went out and its result was not acknowledged: show it, never deposit again.
+        // A deposit went out and its result was not acknowledged: never deposit again (the
+        // result is shown once the screen may show it).
         if (convertViewModel.pendingConversionResult != null) {
-            presentPendingResult()
             return
         }
         countDownTimer?.cancel()
@@ -490,8 +491,6 @@ class MayaConversionPreviewFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        // Back on top (e.g. the fee information dialog closed): a result that arrived meanwhile.
-        presentPendingResult()
         if (viewModel.quoteCreatedAt == null) {
             // First display of this quote: start the full countdown (and stamp the fetch time).
             startQuoteExpiryCountdown()

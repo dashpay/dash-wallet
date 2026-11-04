@@ -20,6 +20,7 @@ package org.dash.wallet.integrations.maya.ui.convert_currency
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
@@ -100,6 +101,11 @@ class ConvertViewViewModel @Inject constructor(
      * goes away; persisted via [savedStateHandle] (this ViewModel is nav-graph scoped) so it also
      * survives the OS killing the process. Cleared when the user acts on the result.
      */
+    /** [pendingConversionResult] as it changes, for the screen that presents it. */
+    val pendingConversionResults: StateFlow<MayaTransactionParams?> by lazy {
+        savedStateHandle.getStateFlow<MayaTransactionParams?>(KEY_PENDING_RESULT, null)
+    }
+
     var pendingConversionResult: MayaTransactionParams?
         get() = savedStateHandle[KEY_PENDING_RESULT]
         set(value) {

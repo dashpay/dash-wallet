@@ -31,6 +31,7 @@ import androidx.lifecycle.ViewModel
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.merge
 import org.dash.wallet.common.ui.LockScreenHost
 import org.dash.wallet.common.ui.OutcomeDelivery
 import org.dash.wallet.common.ui.awaitDestroyed
@@ -168,7 +169,42 @@ class HandleWhenResumedTest {
         }
     }
 
+    /**
+     * The Maya preview's shape: a saved result kept until the result screen acknowledges it (not
+     * taken), presented by navigating only while this screen is the current destination, and
+     * tried again on unlock and when navigation returns here.
+     */
+    class NavigatedResultScreen : Fragment() {
+        private val state by viewModels<Outcomes>()
+        val pending: MutableStateFlow<String?> get() = state.outcomes
+        var currentDestination = "preview"
+        val presented = mutableListOf<String>()
+
+        override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?) =
+            FrameLayout(inflater.context)
+
+        override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+            handleWhenResumed(
+                pending,
+                merge(unlocked, backToPreview),
+                { currentDestination == "preview" },
+                { }
+            ) { result ->
+                presented += result
+                currentDestination = "result"
+                true
+            }
+        }
+
+        /** The result screen was dismissed (the lock, or Back) with the result still pending. */
+        fun resultDismissed() {
+            currentDestination = "preview"
+            backToPreview.tryEmit(Unit)
+        }
+    }
+
     companion object {
+        val backToPreview = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
         private const val CONTAINER_ID = 0x7f0f1235
         private const val RESULT_TAG = "result"
         private const val QUESTION_TAG = "question"
@@ -432,6 +468,52 @@ class HandleWhenResumedTest {
         idle()
 
         assertNull("no dead question left over the restored screen", dialog())
+    }
+
+    private fun useNavigatedResultScreen(): NavigatedResultScreen {
+        activity.supportFragmentManager.beginTransaction().remove(screen).commitNow()
+        return NavigatedResultScreen().also {
+            activity.supportFragmentManager.beginTransaction().add(CONTAINER_ID, it).commitNow()
+            idle()
+        }
+    }
+
+    @Test
+    fun aPendingResult_isNotPresentedOverTheLockScreen_acrossBackgroundAndForeground_onlyOnUnlock() {
+        val preview = useNavigatedResultScreen()
+        preview.pending.value = "converted"
+        idle()
+        assertEquals(listOf("converted"), preview.presented)
+
+        // Auto-logout dismisses the result sheet; the result stays pending. The app is
+        // backgrounded and foregrounded without unlocking.
+        activity.lockScreenDisplayed = true
+        preview.resultDismissed()
+        idle()
+        controller.pause().stop()
+        idle()
+        controller.start().resume()
+        idle()
+
+        assertEquals("never shown above the PIN screen", listOf("converted"), preview.presented)
+
+        unlock()
+        assertEquals("shown again once unlocked", listOf("converted", "converted"), preview.presented)
+    }
+
+    @Test
+    fun aResultArrivingUnderAnotherDestination_isPresentedWhenNavigationReturns() {
+        val preview = useNavigatedResultScreen()
+        // The fee information dialog destination is on top (it does not pause this screen).
+        preview.currentDestination = "feeInfo"
+        preview.pending.value = "converted"
+        idle()
+        assertEquals("not presented under another destination", emptyList<String>(), preview.presented)
+
+        // The fee information closes: navigation returns to the preview.
+        preview.resultDismissed()
+        idle()
+        assertEquals(listOf("converted"), preview.presented)
     }
 
     private fun recreate() {
