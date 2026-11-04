@@ -19,9 +19,15 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 
@@ -45,6 +51,11 @@ fun DashButton(
     stretch: Boolean = true,
     isEnabled: Boolean = true,
     isLoading: Boolean = false,
+    // Overrides [size]'s side padding when set; null keeps the size's own (every existing use).
+    horizontalPadding: Dp? = null,
+    // Keep the label on one line and shrink its font until it fits instead of ellipsizing it,
+    // for buttons that share a narrow row (large font scales). Off by default.
+    shrinkTextToFit: Boolean = false,
     onClick: () -> Unit
 ) {
     val colors = LocalDashColors.current
@@ -109,7 +120,10 @@ fun DashButton(
             contentColor = contentColor,
             disabledContainerColor = Color.Transparent
         ),
-        contentPadding = PaddingValues(horizontal = size.paddingHorizontal, vertical = size.paddingVertical),
+        contentPadding = PaddingValues(
+            horizontal = horizontalPadding ?: size.paddingHorizontal,
+            vertical = size.paddingVertical
+        ),
         elevation = null
     ) {
         if (leadingIcon != null) {
@@ -131,7 +145,9 @@ fun DashButton(
             )
             Spacer(modifier = Modifier.width(size.iconSpacing))
         }
-        if (text != null) {
+        if (text != null && shrinkTextToFit) {
+            ShrinkToFitText(text, size, contentColor)
+        } else if (text != null) {
             Text(
                 text,
                 fontSize = size.fontSize,
@@ -153,6 +169,32 @@ fun DashButton(
             )
         }
     }
+}
+
+/** One-line label whose font steps down (to at most half of [size]'s) until it fits. */
+@Composable
+private fun ShrinkToFitText(text: String, size: Size, color: Color) {
+    var scale by remember(text, size) { mutableFloatStateOf(1f) }
+    var fits by remember(text, size) { mutableStateOf(false) }
+    Text(
+        text,
+        fontSize = size.fontSize * scale,
+        lineHeight = size.lineSize * scale,
+        style = OverlineSemibold,
+        color = color,
+        maxLines = 1,
+        softWrap = false,
+        overflow = TextOverflow.Clip,
+        onTextLayout = { result ->
+            if (result.hasVisualOverflow && scale > 0.5f) {
+                scale -= 0.05f
+            } else {
+                fits = true
+            }
+        },
+        // Draw only the size that fits, so the steps down never flash on screen.
+        modifier = Modifier.drawWithContent { if (fits) drawContent() }
+    )
 }
 
 enum class Style {

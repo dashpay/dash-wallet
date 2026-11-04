@@ -2050,6 +2050,18 @@ class ShieldedBalanceServiceImpl internal constructor(
         }
     }
 
+    override suspend fun platformReceiveAddress(): String? {
+        if (!ensureShieldedReady()) return null
+        val walletId = readyWalletIdHex.value?.let(::walletIdFromHex) ?: return null
+        return try {
+            source.ownPlatformAddressOrNull(walletId)
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("failed to read the platform receive address", t)
+            null
+        }
+    }
+
     override suspend fun shieldFromCredits(amount: Dash): SdkWriteResult<Unit> =
         runShieldedWrite("shieldFromCredits", amount) { walletId, credits ->
             source.shield(walletId, credits)

@@ -23,7 +23,9 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -35,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.colorResource
@@ -82,7 +85,12 @@ data class SegmentedPickerStyle(
     val showDividers: Boolean = true,
     // Stack each option's icon above its title (e.g. the Advanced payments tabs, Figma 7062:49306)
     // instead of placing it to the left.
-    val iconAboveTitle: Boolean = false
+    val iconAboveTitle: Boolean = false,
+    // Size each option to its own content (plus optionPaddingHorizontal) and start-align them,
+    // scrolling horizontally when they overflow, instead of splitting the width equally. The
+    // thumb then follows the selected option's measured bounds (e.g. the Receive balance tabs,
+    // Figma 7062:49313). Horizontal mode only; off by default.
+    val fitOptionsToContent: Boolean = false
 )
 
 @Composable
@@ -97,6 +105,10 @@ fun SegmentedPicker(
     onOptionSelected: (SegmentedOption, Int) -> Unit = { _, _ -> },
 ) {
     if (options.isEmpty()) return
+    if (style.fitOptionsToContent && style.displayMode == PickerDisplayMode.Horizontal) {
+        FitContentSegmentedPicker(options, modifier, selectedIndex, showSelection, style, onOptionSelected)
+        return
+    }
     var internalSelectedIndex by remember { mutableIntStateOf(selectedIndex) }
     var isInitialPosition by remember { mutableStateOf(true) }
 
@@ -244,6 +256,97 @@ fun SegmentedPicker(
                         },
                         modifier = Modifier.weight(1f),
                         isHorizontal = false,
+                        paddingHorizontal = style.optionPaddingHorizontal.dp,
+                        paddingVertical = style.optionPaddingVertical.dp,
+                        iconAboveTitle = style.iconAboveTitle
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * [SegmentedPicker] with [SegmentedPickerStyle.fitOptionsToContent]: options keep their own
+ * width, start-aligned, and scroll horizontally when they do not fit. The thumb is drawn under
+ * the selected option's measured bounds.
+ */
+@Composable
+private fun FitContentSegmentedPicker(
+    options: List<SegmentedOption>,
+    modifier: Modifier,
+    selectedIndex: Int,
+    showSelection: Boolean,
+    style: SegmentedPickerStyle,
+    onOptionSelected: (SegmentedOption, Int) -> Unit
+) {
+    var internalSelectedIndex by remember { mutableIntStateOf(selectedIndex) }
+    LaunchedEffect(selectedIndex) {
+        internalSelectedIndex = selectedIndex
+    }
+
+    val density = LocalDensity.current
+    val colors = LocalDashColors.current
+    val backgroundColor = style.backgroundColor ?: colors.gray400.copy(alpha = 0.1f)
+    val thumbColor = style.thumbColor ?: colors.backgroundSecondary
+
+    // Each option's x offset and width inside the row, in px; filled in on layout.
+    val bounds = remember(options.size) {
+        mutableStateListOf<Pair<Int, Int>?>().apply { repeat(options.size) { add(null) } }
+    }
+    val selectedBounds = bounds.getOrNull(internalSelectedIndex)
+    var hasPlacedThumb by remember { mutableStateOf(false) }
+    val animationSpec = tween<Dp>(durationMillis = if (hasPlacedThumb) 200 else 0)
+    val thumbOffset by animateDpAsState(
+        targetValue = with(density) { (selectedBounds?.first ?: 0).toDp() },
+        animationSpec = animationSpec,
+        label = "fitThumbOffset",
+        finishedListener = { hasPlacedThumb = true }
+    )
+    val thumbWidth by animateDpAsState(
+        targetValue = with(density) { (selectedBounds?.second ?: 0).toDp() },
+        animationSpec = animationSpec,
+        label = "fitThumbWidth"
+    )
+
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(style.cornerRadius.dp))
+            .background(backgroundColor)
+            .padding(style.containerPadding.dp)
+            .horizontalScroll(rememberScrollState())
+    ) {
+        Box(modifier = Modifier.fillMaxHeight()) {
+            if (showSelection && selectedBounds != null) {
+                Surface(
+                    shape = RoundedCornerShape((style.thumbCornerRadius ?: (style.cornerRadius - 2)).dp),
+                    color = thumbColor,
+                    shadowElevation = style.shadowElevation.dp,
+                    modifier = Modifier
+                        .offset(x = thumbOffset)
+                        .width(thumbWidth)
+                        .fillMaxHeight()
+                ) { }
+            }
+            Row(modifier = Modifier.fillMaxHeight()) {
+                options.forEachIndexed { index, option ->
+                    OptionContent(
+                        option = option,
+                        isSelected = showSelection && index == internalSelectedIndex,
+                        textStyle = style.textStyle,
+                        onSelect = {
+                            hasPlacedThumb = true
+                            internalSelectedIndex = index
+                            onOptionSelected(option, index)
+                        },
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .onGloballyPositioned { coordinates ->
+                                val entry = coordinates.positionInParent().x.toInt() to coordinates.size.width
+                                if (index < bounds.size && bounds[index] != entry) {
+                                    bounds[index] = entry
+                                }
+                            },
                         paddingHorizontal = style.optionPaddingHorizontal.dp,
                         paddingVertical = style.optionPaddingVertical.dp,
                         iconAboveTitle = style.iconAboveTitle
