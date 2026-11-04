@@ -73,7 +73,7 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
         
         // Get username type from arguments if provided. Consider error states
         usernameType = if (dashPayViewModel.createUsernameArgs?.actions == CreateUsernameActions.REUSE_TRANSACTION) {
-            reuseUsernameType(requestUserNameViewModel.identity, args.usernameType)
+            reuseEntryUsernameType(requestUserNameViewModel.identity, args.usernameType)
         } else {
             args.usernameType
         }
@@ -764,3 +764,12 @@ internal fun reuseUsernameType(identityData: BlockchainIdentityData?, fallback: 
         else -> fallback
     }
 }
+
+/**
+ * The name a REUSE_TRANSACTION screen asks for: the instant-name screen ([requested] Secondary,
+ * reached from the confirmation of a replacement primary) always asks for the secondary; only the
+ * primary entry follows the reused record ([reuseUsernameType]). Letting the record's old error
+ * flip the instant screen to Primary made the typed instant name overwrite the replacement.
+ */
+internal fun reuseEntryUsernameType(identityData: BlockchainIdentityData?, requested: UsernameType): UsernameType =
+    if (requested == UsernameType.Secondary) UsernameType.Secondary else reuseUsernameType(identityData, requested)

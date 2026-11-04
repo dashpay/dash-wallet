@@ -96,4 +96,26 @@ class ReuseUsernameTypeTest {
             reuseUsernameType(identity(IdentityCreationState.USERNAME_REGISTERING, null, "alice2instant"), UsernameType.Secondary)
         )
     }
+
+    @Test
+    fun `the instant-name screen of a replacement asks for the secondary whatever the record says`() {
+        // a dual request whose primary was taken: the user picked a replacement contested primary,
+        // then the confirmation offers the instant name; that screen requests Secondary and the
+        // record's old error must not flip it back to Primary (overwriting the replacement)
+        val takenPrimary = identity(
+            IdentityCreationState.USERNAME_REGISTERING,
+            "Document transitions with duplicate unique properties: DuplicateUniqueIndexError",
+            "alice2instant"
+        )
+        val failedRetry = identity(
+            IdentityCreationState.USERNAME_REGISTERING,
+            "${SdkTransparentUsernameCreation.NAME_ONLY_RETRY_ERROR}: NOT_REGISTERED",
+            "alice2instant"
+        )
+
+        assertEquals(UsernameType.Secondary, reuseEntryUsernameType(takenPrimary, UsernameType.Secondary))
+        assertEquals(UsernameType.Secondary, reuseEntryUsernameType(failedRetry, UsernameType.Secondary))
+        // the primary entry still follows the record
+        assertEquals(UsernameType.Primary, reuseEntryUsernameType(takenPrimary, UsernameType.Primary))
+    }
 }
