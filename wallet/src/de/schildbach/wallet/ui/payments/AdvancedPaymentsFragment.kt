@@ -1,0 +1,283 @@
+/*
+ * Copyright 2026 Dash Core Group.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package de.schildbach.wallet.ui.payments
+
+import android.annotation.SuppressLint
+import android.content.Context
+import android.os.Bundle
+import android.view.View
+import androidx.annotation.VisibleForTesting
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.core.content.edit
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updatePadding
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.navigation.fragment.findNavController
+import androidx.viewpager2.adapter.FragmentStateAdapter
+import androidx.viewpager2.widget.ViewPager2
+import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.ui.payments.PaymentsFragment.Companion.ACTIVE_TAB_INTERNAL
+import de.schildbach.wallet.ui.payments.PaymentsFragment.Companion.ACTIVE_TAB_RECEIVE
+import de.schildbach.wallet.ui.payments.PaymentsFragment.Companion.ARG_ACTIVE_TAB
+import de.schildbach.wallet.ui.payments.PaymentsFragment.Companion.ARG_SOURCE
+import de.schildbach.wallet_test.R
+import de.schildbach.wallet_test.databinding.FragmentAdvancedPaymentsBinding
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+import org.dash.wallet.common.ui.components.DashWalletTheme
+import org.dash.wallet.common.ui.components.LocalDashColors
+import org.dash.wallet.common.ui.components.MyImages
+import org.dash.wallet.common.ui.components.TopNavBase
+import org.dash.wallet.common.ui.observeOnDestroy
+import org.dash.wallet.common.ui.segmented_picker.SegmentedOption
+import org.dash.wallet.common.ui.segmented_picker.SegmentedPicker
+import org.dash.wallet.common.ui.segmented_picker.SegmentedPickerStyle
+import org.dash.wallet.common.ui.viewBinding
+
+/**
+ * The Advanced mode payments screen (MO-1123, Figma 6860:47472): a close button and a
+ * Receive / Internal / Send picker over the same child pages as [PaymentsFragment].
+ *
+ * It is a plain `<fragment>` destination for now and is meant to become a sheet, so:
+ * all navigation goes through the NavController; the tab set is (re)applied on the
+ * view's lifecycle from [AdvancedPaymentsViewModel], not once in [onViewCreated]; the
+ * screen pads itself for the system bars and the IME and never touches status-bar
+ * colours; the close control is in the screen's own content; and the enter/exit
+ * transitions are on the NavOptions (see [paymentsRoute]), not set here.
+ *
+ * The pages are hosted by ViewPager2 like [PaymentsFragment]'s:
+ * [PaymentsReceiveFragment] relies on ViewPager2 keeping an offscreen page at STARTED
+ * and only the selected one at RESUMED (see its `shouldSurfaceAddressFailure`).
+ */
+@AndroidEntryPoint
+class AdvancedPaymentsFragment : Fragment(R.layout.fragment_advanced_payments) {
+
+    companion object {
+        // Separate from PaymentsFragment's recent tab, which is private to it.
+        private const val PREFS_RECENT_TAB = "advanced_payments_recent_tab"
+        private const val STATE_SELECTED_TAB = "selected_tab"
+
+        /** The pager position of [tabId] in [tabIds]; the first page if it is not shown. */
+        @VisibleForTesting
+        fun positionOf(tabIds: List<Int>, tabId: Int): Int =
+            tabIds.indexOf(tabId).takeIf { it >= 0 } ?: 0
+    }
+
+    private val binding by viewBinding(FragmentAdvancedPaymentsBinding::bind)
+    private val viewModel by viewModels<AdvancedPaymentsViewModel>()
+
+    private var tabIds by mutableStateOf<List<Int>>(emptyList())
+    private var selectedPosition by mutableIntStateOf(0)
+
+    /** The logical tab the user is on; kept across view recreation and tab-set changes. */
+    private var selectedTabId: Int? = null
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        if (savedInstanceState?.containsKey(STATE_SELECTED_TAB) == true) {
+            selectedTabId = savedInstanceState.getInt(STATE_SELECTED_TAB)
+        }
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        val binding = this.binding
+
+        // Own insets: under MainActivity's fitsSystemWindows container these arrive
+        // already consumed (zero), so nothing is doubled; hosted anywhere else (a
+        // sheet), the screen still clears the system bars and the keyboard.
+        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { root, insets ->
+            val bars = insets.getInsets(
+                WindowInsetsCompat.Type.systemBars() or
+                    WindowInsetsCompat.Type.displayCutout() or
+                    WindowInsetsCompat.Type.ime()
+            )
+            root.updatePadding(left = bars.left, top = bars.top, right = bars.right, bottom = bars.bottom)
+            WindowInsetsCompat.CONSUMED
+        }
+
+        binding.header.setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+        binding.header.setContent {
+            DashWalletTheme {
+                Header()
+            }
+        }
+
+        val adapter = TabsAdapter(this, source = arguments?.getString(ARG_SOURCE) ?: "")
+        binding.pager.adapter = adapter
+        viewLifecycleOwner.observeOnDestroy { binding.pager.adapter = null }
+        binding.pager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+            override fun onPageSelected(position: Int) {
+                val tabId = adapter.tabIds.getOrNull(position) ?: return
+                selectedPosition = position
+                selectedTabId = tabId
+
+                if (arguments?.containsKey(ARG_ACTIVE_TAB) != true) {
+                    requireActivity().getPreferences(Context.MODE_PRIVATE)
+                        .edit { putInt(PREFS_RECENT_TAB, tabId) }
+                }
+            }
+        })
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.uiState
+                    .map { it.tabIds }
+                    .filterNotNull()
+                    .distinctUntilChanged()
+                    .collect { showTabs(adapter, it) }
+            }
+        }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        selectedTabId?.let { outState.putInt(STATE_SELECTED_TAB, it) }
+    }
+
+    private fun showTabs(adapter: TabsAdapter, newTabIds: List<Int>) {
+        // Decide the tab before the adapter changes: a data-set change can report a
+        // page selection of its own.
+        val wanted = selectedTabId ?: initialTabId()
+        val position = positionOf(newTabIds, wanted)
+        adapter.submit(newTabIds)
+        tabIds = newTabIds
+        selectedPosition = position
+        selectedTabId = newTabIds[position]
+        binding.pager.setCurrentItem(position, false)
+    }
+
+    private fun initialTabId(): Int =
+        if (arguments?.containsKey(ARG_ACTIVE_TAB) == true) {
+            requireArguments().getInt(ARG_ACTIVE_TAB, ACTIVE_TAB_RECEIVE)
+        } else {
+            requireActivity().getPreferences(Context.MODE_PRIVATE)
+                .getInt(PREFS_RECENT_TAB, ACTIVE_TAB_RECEIVE)
+        }
+
+    private fun close() {
+        findNavController().popBackStack()
+    }
+
+    @Composable
+    private fun Header() {
+        val colors = LocalDashColors.current
+        Column(modifier = Modifier.fillMaxWidth()) {
+            // Figma 7062:49304: no title, a circled close button on the right.
+            TopNavBase(
+                leadingPart = false,
+                centralPart = false,
+                trailingIcon = MyImages.NavBarClose,
+                trailingContentDescription = stringResource(org.dash.wallet.common.R.string.button_close),
+                onTrailingClick = ::close
+            )
+
+            val ids = tabIds
+            if (ids.isNotEmpty()) {
+                val options = ids.map { tabId ->
+                    when (tabId) {
+                        ACTIVE_TAB_RECEIVE -> SegmentedOption(
+                            stringResource(R.string.payments_tab_receive_label),
+                            R.drawable.ic_arrow_down
+                        )
+                        ACTIVE_TAB_INTERNAL -> SegmentedOption(
+                            stringResource(R.string.shielded_tab_internal),
+                            R.drawable.ic_arrows_internal
+                        )
+                        else -> SegmentedOption(
+                            stringResource(R.string.payments_tab_pay_label),
+                            R.drawable.ic_arrow_up
+                        )
+                    }
+                }
+                // Figma 7062:49306: 70dp, 20dp corners, 4dp inset, 16dp thumb corners,
+                // icon above the title, no dividers, gray300 @ 20% track.
+                SegmentedPicker(
+                    options = options,
+                    modifier = Modifier
+                        .padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 20.dp)
+                        .fillMaxWidth()
+                        .height(70.dp),
+                    selectedIndex = selectedPosition,
+                    style = SegmentedPickerStyle(
+                        backgroundColor = colors.gray300.copy(alpha = 0.2f),
+                        cornerRadius = 20f,
+                        containerPadding = 4f,
+                        thumbCornerRadius = 16f,
+                        showDividers = false,
+                        iconAboveTitle = true
+                    )
+                ) { _, index ->
+                    selectedPosition = index
+                    binding.pager.currentItem = index
+                }
+            }
+        }
+    }
+
+    /**
+     * Pages keyed by logical tab id (stable ids), so a change of tab set — the
+     * shielded flag flipping — keeps the pages that remain and drops only the
+     * one that went away.
+     */
+    private class TabsAdapter(
+        fragment: Fragment,
+        private val source: String
+    ) : FragmentStateAdapter(fragment) {
+        var tabIds: List<Int> = emptyList()
+            private set
+
+        @SuppressLint("NotifyDataSetChanged")
+        fun submit(newTabIds: List<Int>) {
+            if (newTabIds == tabIds) return
+            tabIds = newTabIds
+            notifyDataSetChanged()
+        }
+
+        override fun getItemCount(): Int = tabIds.size
+
+        override fun getItemId(position: Int): Long = tabIds[position].toLong()
+
+        override fun containsItem(itemId: Long): Boolean = tabIds.any { it.toLong() == itemId }
+
+        override fun createFragment(position: Int): Fragment = when (tabIds[position]) {
+            ACTIVE_TAB_RECEIVE -> PaymentsReceiveFragment.newInstance()
+            ACTIVE_TAB_INTERNAL -> PaymentsInternalFragment.newInstance()
+            else -> PaymentsPayFragment.newInstance(source = source)
+        }
+    }
+}

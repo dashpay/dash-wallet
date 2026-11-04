@@ -55,6 +55,8 @@ import com.google.android.material.bottomnavigation.BottomNavigationView
 import de.schildbach.wallet.WalletBalanceWidgetProvider
 import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.ui.more.MoreFragment
+import de.schildbach.wallet.ui.payments.isPaymentsDestination
+import de.schildbach.wallet.ui.payments.paymentsRoute
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -114,10 +116,13 @@ object MainActivityExt {
                 }
                 R.id.paymentsFragment -> {
                     viewModel.logEvent(AnalyticsConstants.Home.SEND_RECEIVE_BUTTON)
+                    // The menu item id stays paymentsFragment; Advanced mode opens
+                    // advancedPaymentsFragment instead (see paymentsRoute).
+                    val route = paymentsRoute(viewModel.advancedMode.value)
                     navController.navigate(
-                        R.id.paymentsFragment,
+                        route.destinationId,
                         null,
-                        NavOptions.Builder()
+                        route.applyAnimations(NavOptions.Builder())
                             .setLaunchSingleTop(true)
                             .setPopUpTo(navController.graph.startDestinationId, false, true)
                             .setRestoreState(true)
@@ -194,8 +199,14 @@ object MainActivityExt {
                 }
             }
         }
-        navController.addOnDestinationChangedListener { _, _, arguments ->
+        navController.addOnDestinationChangedListener { _, destination, arguments ->
             navView.isVisible = arguments?.getBoolean("ShowNavBar", false) == true
+            // NavigationUI only highlights an item whose id matches the destination;
+            // the Advanced payments screen belongs to the payments item too, so
+            // reselect then behaves as it does on paymentsFragment.
+            if (isPaymentsDestination(destination.id)) {
+                navView.menu.findItem(R.id.paymentsFragment)?.isChecked = true
+            }
         }
     }
 

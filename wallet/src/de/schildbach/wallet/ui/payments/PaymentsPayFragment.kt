@@ -110,7 +110,10 @@ class PaymentsPayFragment : Fragment(R.layout.fragment_payments_pay), OnContactI
             analytics.logEvent(AnalyticsConstants.SendReceive.SEND_TO_ADDRESS, mapOf())
             val destination = findNavController().currentDestination as? FragmentNavigator.Destination
 
-            if (destination?.className == PaymentsFragment::class.java.name) {
+            // Either payments screen hosts this page; both declare payments_to_addressInput.
+            if (destination?.className == PaymentsFragment::class.java.name ||
+                destination?.className == AdvancedPaymentsFragment::class.java.name
+            ) {
                 findNavController().navigate(PaymentsFragmentDirections.paymentsToAddressInput())
             }
         }

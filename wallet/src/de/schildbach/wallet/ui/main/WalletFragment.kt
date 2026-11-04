@@ -57,6 +57,7 @@ import de.schildbach.wallet.ui.main.shortcuts.ShortcutsViewModel
 import org.dash.wallet.common.data.PaymentIntent
 import de.schildbach.wallet.ui.*
 import de.schildbach.wallet.ui.payments.PaymentsFragment
+import de.schildbach.wallet.ui.payments.paymentsRoute
 import de.schildbach.wallet.ui.payments.SweepWalletActivity
 import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet.ui.staking.StakingActivity
@@ -388,6 +389,19 @@ class WalletFragment : Fragment(R.layout.home_content) {
         )
     }
 
+    /** Opens the payments screen the Advanced mode setting picks, on [activeTab]. */
+    private fun navigateToPayments(activeTab: Int) {
+        val route = paymentsRoute(viewModel.advancedMode.value, activeTab)
+        findNavController().navigate(
+            route.destinationId,
+            bundleOf(PaymentsFragment.ARG_ACTIVE_TAB to activeTab),
+            route.applyAnimations(NavOptions.Builder())
+                .setLaunchSingleTop(true)
+                .setPopUpTo(R.id.walletFragment, false)
+                .build()
+        )
+    }
+
     private fun onShortcutTap(shortcut: ShortcutOption) {
         when (shortcut) {
             ShortcutOption.SECURE_NOW -> {
@@ -415,29 +429,11 @@ class WalletFragment : Fragment(R.layout.home_content) {
             }
             ShortcutOption.SEND -> {
                 viewModel.logEvent(AnalyticsConstants.Home.SHORTCUT_SEND)
-                findNavController().navigate(
-                    R.id.paymentsFragment,
-                    bundleOf(
-                        PaymentsFragment.ARG_ACTIVE_TAB to PaymentsFragment.ACTIVE_TAB_PAY
-                    ),
-                    NavOptions.Builder()
-                        .setLaunchSingleTop(true)
-                        .setPopUpTo(R.id.walletFragment, false)
-                        .build()
-                )
+                navigateToPayments(PaymentsFragment.ACTIVE_TAB_PAY)
             }
             ShortcutOption.RECEIVE -> {
                 viewModel.logEvent(AnalyticsConstants.Home.SHORTCUT_RECEIVE)
-                findNavController().navigate(
-                    R.id.paymentsFragment,
-                    bundleOf(
-                        PaymentsFragment.ARG_ACTIVE_TAB to PaymentsFragment.ACTIVE_TAB_RECEIVE
-                    ),
-                    NavOptions.Builder()
-                        .setLaunchSingleTop(true)
-                        .setPopUpTo(R.id.walletFragment, false)
-                        .build()
-                )
+                navigateToPayments(PaymentsFragment.ACTIVE_TAB_RECEIVE)
             }
             ShortcutOption.EXPLORE -> {
                 viewModel.logEvent(AnalyticsConstants.Home.SHORTCUT_EXPLORE)

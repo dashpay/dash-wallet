@@ -73,7 +73,16 @@ data class SegmentedPickerStyle(
     // slot. Zero by default so existing fixed-height horizontal/vertical toggles are unaffected;
     // set this for pickers whose options should have visible breathing room between them.
     val optionPaddingHorizontal: Float = 0f,
-    val optionPaddingVertical: Float = 0f
+    val optionPaddingVertical: Float = 0f,
+    // Inset between the container edge and the thumb/options. The defaults below keep the
+    // original look (1dp inset, thumb corner = cornerRadius - 2, dividers, icon left of title).
+    val containerPadding: Float = 1f,
+    // Null means cornerRadius - 2, the original thumb shape.
+    val thumbCornerRadius: Float? = null,
+    val showDividers: Boolean = true,
+    // Stack each option's icon above its title (e.g. the Advanced payments tabs, Figma 7062:49306)
+    // instead of placing it to the left.
+    val iconAboveTitle: Boolean = false
 )
 
 @Composable
@@ -110,7 +119,7 @@ fun SegmentedPicker(
         modifier = modifier
             .clip(RoundedCornerShape(style.cornerRadius.dp))
             .background(backgroundColor)
-            .padding(1.dp)
+            .padding(style.containerPadding.dp)
             .onGloballyPositioned { coordinates ->
                 containerWidth = coordinates.size.width
                 containerHeight = coordinates.size.height
@@ -152,7 +161,7 @@ fun SegmentedPicker(
             }
         )
         // Draw dividers between options
-        if (isHorizontal) {
+        if (isHorizontal && style.showDividers) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
@@ -175,7 +184,7 @@ fun SegmentedPicker(
         // Draw the animated selection indicator
         if (containerSize > 0 && showSelection) {
             Surface(
-                shape = RoundedCornerShape((style.cornerRadius - 2).dp),
+                shape = RoundedCornerShape((style.thumbCornerRadius ?: (style.cornerRadius - 2)).dp),
                 color = thumbColor,
                 shadowElevation = style.shadowElevation.dp,
                 modifier = Modifier
@@ -213,7 +222,8 @@ fun SegmentedPicker(
                         },
                         modifier = Modifier.weight(1f),
                         paddingHorizontal = style.optionPaddingHorizontal.dp,
-                        paddingVertical = style.optionPaddingVertical.dp
+                        paddingVertical = style.optionPaddingVertical.dp,
+                        iconAboveTitle = style.iconAboveTitle
                     )
                 }
             }
@@ -235,7 +245,8 @@ fun SegmentedPicker(
                         modifier = Modifier.weight(1f),
                         isHorizontal = false,
                         paddingHorizontal = style.optionPaddingHorizontal.dp,
-                        paddingVertical = style.optionPaddingVertical.dp
+                        paddingVertical = style.optionPaddingVertical.dp,
+                        iconAboveTitle = style.iconAboveTitle
                     )
                 }
             }
@@ -252,7 +263,8 @@ private fun OptionContent(
     modifier: Modifier = Modifier,
     isHorizontal: Boolean = true,
     paddingHorizontal: Dp = 0.dp,
-    paddingVertical: Dp = 0.dp
+    paddingVertical: Dp = 0.dp,
+    iconAboveTitle: Boolean = false
 ) {
     Box(
         modifier = modifier
@@ -263,29 +275,47 @@ private fun OptionContent(
             ),
         contentAlignment = Alignment.Center
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
-            modifier = Modifier
-                .then(if (isHorizontal) Modifier.fillMaxHeight() else Modifier.fillMaxWidth())
-                .padding(horizontal = paddingHorizontal, vertical = paddingVertical)
-        ) {
-            val colors = LocalDashColors.current
+        val colors = LocalDashColors.current
+        val icon: @Composable (Modifier) -> Unit = { iconModifier ->
             option.icon?.let {
                 Icon(
                     painter = painterResource(id = it),
                     contentDescription = null,
                     tint = if (isSelected) Color.Unspecified else colors.textPrimary.copy(alpha = 0.4f),
-                    modifier = Modifier.padding(end = 6.dp)
+                    modifier = iconModifier
                 )
             }
-
+        }
+        val title: @Composable () -> Unit = {
             Text(
                 text = option.title,
                 color = if (isSelected) colors.textPrimary else colors.textPrimary.copy(alpha = 0.4f),
                 style = textStyle,
                 textAlign = TextAlign.Center
             )
+        }
+        val contentModifier = Modifier
+            .then(if (isHorizontal) Modifier.fillMaxHeight() else Modifier.fillMaxWidth())
+            .padding(horizontal = paddingHorizontal, vertical = paddingVertical)
+
+        if (iconAboveTitle) {
+            Column(
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = contentModifier
+            ) {
+                icon(Modifier.padding(bottom = 6.dp))
+                title()
+            }
+        } else {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+                modifier = contentModifier
+            ) {
+                icon(Modifier.padding(end = 6.dp))
+                title()
+            }
         }
     }
 }
