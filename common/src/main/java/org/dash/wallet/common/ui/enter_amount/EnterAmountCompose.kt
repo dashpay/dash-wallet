@@ -47,6 +47,9 @@ import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.MyTheme
 
+// Opacity applied to the keys when the keyboard is disabled, so it reads as inactive.
+private const val DISABLED_KEY_ALPHA = 0.4f
+
 /**
  * Updates an amount string based on a keyboard key press.
  *
@@ -54,9 +57,6 @@ import org.dash.wallet.common.ui.components.MyTheme
  * and exceeding [maxDecimalPlaces]); "back" removes the last character (floor to "0"); "back_long"
  * resets to "0".
  */
-// Opacity applied to the keys when the keyboard is disabled, so it reads as inactive.
-private const val DISABLED_KEY_ALPHA = 0.4f
-
 fun processAmountKeyInput(current: String, key: String, maxDecimalPlaces: Int = 2): String {
     return when (key) {
         "back" -> if (current.length > 1) current.dropLast(1) else "0"
