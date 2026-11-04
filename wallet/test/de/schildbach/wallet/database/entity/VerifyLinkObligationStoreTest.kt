@@ -68,4 +68,16 @@ class VerifyLinkObligationStoreTest {
 
         assertEquals(VerifyLinkObligation(identityId, "bobby", link), config.verifyObligation())
     }
+
+    @Test
+    fun `a settled request is remembered after its obligation is gone`() = runBlocking {
+        val config = config()
+        config.recordVerifyObligation(identityId, "alice", link)
+        val pending = requireNotNull(config.verifyObligation())
+
+        config.settleVerifyObligation(pending)
+
+        assertNull(config.verifyObligation())
+        assertEquals(VerifyLinkObligation(identityId, "alice", link), config.settledVerifyRequest())
+    }
 }

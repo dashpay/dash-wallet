@@ -65,6 +65,15 @@ interface VerifyLinkObligationStore {
 
     /** Clears the obligation, when it is still [expected]'s request. */
     suspend fun clearVerifyObligation(expected: VerifyLinkObligation)
+
+    /**
+     * In one write: clears the obligation, when it is still [expected]'s request, and remembers
+     * the request as settled (its document was found), so it is never rebuilt.
+     */
+    suspend fun settleVerifyObligation(expected: VerifyLinkObligation)
+
+    /** The last request whose document was found, or null; throws when unreadable. */
+    suspend fun settledVerifyRequest(): VerifyLinkObligation?
 }
 
 /** In-memory [VerifyLinkObligationStore] for host tests; not durable. */
@@ -94,4 +103,15 @@ class InMemoryVerifyLinkObligationStore : VerifyLinkObligationStore {
     override suspend fun clearVerifyObligation(expected: VerifyLinkObligation) = synchronized(lock) {
         if (obligation?.sameRequest(expected) == true) obligation = null
     }
+
+    @Volatile var settled: VerifyLinkObligation? = null
+
+    override suspend fun settleVerifyObligation(expected: VerifyLinkObligation) = synchronized(lock) {
+        if (obligation?.sameRequest(expected) == true) {
+            obligation = null
+            settled = VerifyLinkObligation(expected.identityIdBase58, expected.label, expected.link)
+        }
+    }
+
+    override suspend fun settledVerifyRequest(): VerifyLinkObligation? = settled
 }

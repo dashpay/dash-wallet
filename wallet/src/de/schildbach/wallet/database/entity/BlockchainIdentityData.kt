@@ -277,6 +277,9 @@ open class BlockchainIdentityConfig @Inject constructor(
         val VERIFY_LINK_URL = stringPreferencesKey("verify_link_url")
         val VERIFY_LINK_ATTEMPT_AT = longPreferencesKey("verify_link_attempt_at")
         val VERIFY_LINK_UNCERTAIN = booleanPreferencesKey("verify_link_uncertain")
+        val VERIFY_LINK_SETTLED_IDENTITY_ID = stringPreferencesKey("verify_link_settled_identity_id")
+        val VERIFY_LINK_SETTLED_LABEL = stringPreferencesKey("verify_link_settled_label")
+        val VERIFY_LINK_SETTLED_URL = stringPreferencesKey("verify_link_settled_url")
         private val log = LoggerFactory.getLogger(BlockchainIdentityConfig::class.java)
 
         private fun putRequestedNames(prefs: MutablePreferences, request: RequestedNameContext) {
@@ -560,6 +563,50 @@ open class BlockchainIdentityConfig @Inject constructor(
             prefs.remove(VERIFY_LINK_UNCERTAIN)
         }
     }
+
+    override suspend fun settleVerifyObligation(expected: VerifyLinkObligation) {
+        context.dataStore.edit { prefs ->
+            if (verifyObligationIn(prefs)?.sameRequest(expected) != true) return@edit
+            prefs.remove(VERIFY_LINK_IDENTITY_ID)
+            prefs.remove(VERIFY_LINK_LABEL)
+            prefs.remove(VERIFY_LINK_URL)
+            prefs.remove(VERIFY_LINK_ATTEMPT_AT)
+            prefs.remove(VERIFY_LINK_UNCERTAIN)
+            prefs[VERIFY_LINK_SETTLED_IDENTITY_ID] = expected.identityIdBase58
+            prefs[VERIFY_LINK_SETTLED_LABEL] = expected.label
+            prefs[VERIFY_LINK_SETTLED_URL] = expected.link
+        }
+    }
+
+    override suspend fun settledVerifyRequest(): VerifyLinkObligation? {
+        val prefs = readStrict()
+        val identityId = prefs[VERIFY_LINK_SETTLED_IDENTITY_ID] ?: return null
+        val label = prefs[VERIFY_LINK_SETTLED_LABEL] ?: return null
+        val link = prefs[VERIFY_LINK_SETTLED_URL] ?: return null
+        return VerifyLinkObligation(identityId, label, link)
+    }
+
+    /** The fields the verification-link reconcile reads from the identity record, from one strict read. */
+    suspend fun verifyLinkRecord(): VerifyLinkRecord {
+        val prefs = readStrict()
+        return VerifyLinkRecord(
+            identityId = prefs[IDENTITY_ID],
+            username = prefs[USERNAME],
+            link = prefs[REQUESTED_USERNAME_LINK],
+            creationState = IdentityCreationState.valueOf(prefs[CREATION_STATE] ?: IdentityCreationState.NONE.name),
+            errorMessage = prefs[CREATION_STATE_ERROR_MESSAGE],
+            usernameRequested = prefs[USERNAME_REQUESTED]?.let { UsernameRequestStatus.valueOf(it) }
+        )
+    }
+
+    data class VerifyLinkRecord(
+        val identityId: String?,
+        val username: String?,
+        val link: String?,
+        val creationState: IdentityCreationState,
+        val errorMessage: String?,
+        val usernameRequested: UsernameRequestStatus?
+    )
 
     /** A snapshot of the store that THROWS on a failed read, unlike [data] (which reads as empty). */
     internal open suspend fun readStrict(): Preferences = context.dataStore.data.first()

@@ -21,11 +21,13 @@ import android.app.Application
 import androidx.work.WorkManager
 import androidx.work.await
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
+import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.service.platform.VerifyLinkObligation
 import de.schildbach.wallet.service.platform.VerifyLinkObligationStore
 import de.schildbach.wallet.ui.dashpay.work.BroadcastIdentityVerifyOperation
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
+import org.dashj.platform.dashpay.UsernameRequestStatus
 import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.sdk.platform.Names
 import org.dashj.platform.wallet.IdentityVerify
@@ -78,11 +80,14 @@ class VerifyLinkReconciler internal constructor(
     ) : this(
         store = config,
         currentRequest = {
-            val routing = config.retryRouting()
+            val record = config.verifyLinkRecord()
             CurrentRequest(
-                routing.identityId,
-                routing.username,
-                config.getPreservingErrors(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK)
+                record.identityId,
+                record.username,
+                record.link,
+                record.creationState,
+                record.errorMessage,
+                record.usernameRequested
             )
         },
         ownsOrContends = { identityId, label -> identityOwnsOrContendsFor(platformRepo.get(), identityId, label) },
@@ -105,7 +110,15 @@ class VerifyLinkReconciler internal constructor(
         }
     )
 
-    data class CurrentRequest(val identityId: String?, val username: String?, val link: String?)
+    /** The identity record as the reconcile reads it, from one strict read. */
+    data class CurrentRequest(
+        val identityId: String?,
+        val username: String?,
+        val link: String?,
+        val creationState: IdentityCreationState = IdentityCreationState.NONE,
+        val errorMessage: String? = null,
+        val usernameRequested: UsernameRequestStatus? = null
+    )
 
     private val running = Mutex()
 
@@ -128,14 +141,23 @@ class VerifyLinkReconciler internal constructor(
     }
 
     private suspend fun reconcileNow(): Boolean {
-        val obligation = store.verifyObligation() ?: return false
         val current = currentRequest()
+        val obligation = store.verifyObligation() ?: rebuilt(current) ?: return false
         if (current.identityId != obligation.identityIdBase58 ||
             current.username?.let { Names.normalizeString(it) } != obligation.normalizedLabel ||
             current.link.isNullOrBlank()
         ) {
             log.info("verification link for '{}' no longer requested; dropping it", obligation.label)
             store.clearVerifyObligation(obligation)
+            return false
+        }
+        if (current.link != obligation.link) {
+            // the user verified again with another link: the older one is never published
+            log.info("verification link for '{}' changed; replacing the pending one", obligation.label)
+            store.clearVerifyObligation(obligation)
+            if (SdkTransparentUsernameCreation.isVerificationLink(current.link)) {
+                store.recordVerifyObligation(obligation.identityIdBase58, obligation.label, current.link)
+            }
             return false
         }
         val now = clock()
@@ -149,7 +171,7 @@ class VerifyLinkReconciler internal constructor(
         when (documentPresent(obligation.identityIdBase58, obligation.normalizedLabel)) {
             true -> {
                 log.info("verification link for '{}' is published; done", obligation.label)
-                store.clearVerifyObligation(obligation)
+                store.settleVerifyObligation(obligation)
                 return false
             }
             null -> return false
@@ -162,6 +184,33 @@ class VerifyLinkReconciler internal constructor(
         store.markVerifyAttempt(obligation, now)
         enqueuePublication(obligation.label, obligation.link)
         return true
+    }
+
+    /**
+     * The obligation a registration path failed to record (its store write is best effort on a
+     * funded creation), rebuilt from the identity record: a contested name with a valid link on
+     * record, past the creation flow's own link step (the legacy path publishes it inline at
+     * REQUESTED_NAME_LINK_SAVING), not failed, lost or locked, and not already settled. Null
+     * otherwise, without any Platform read.
+     */
+    private suspend fun rebuilt(current: CurrentRequest): VerifyLinkObligation? {
+        val identityId = current.identityId ?: return null
+        val username = current.username ?: return null
+        val link = current.link ?: return null
+        if (!SdkTransparentUsernameCreation.isVerificationLink(link) ||
+            !Names.isUsernameContestable(username) ||
+            current.creationState < IdentityCreationState.REQUESTED_NAME_LINK_SAVED ||
+            current.errorMessage != null ||
+            current.usernameRequested == UsernameRequestStatus.LOST_VOTE ||
+            current.usernameRequested == UsernameRequestStatus.LOCKED
+        ) {
+            return null
+        }
+        val candidate = VerifyLinkObligation(identityId, username, link)
+        if (store.settledVerifyRequest()?.sameRequest(candidate) == true) return null
+        log.info("rebuilding the verification-link obligation for '{}' from the identity record", username)
+        store.recordVerifyObligation(identityId, username, link)
+        return store.verifyObligation()
     }
 
     companion object {

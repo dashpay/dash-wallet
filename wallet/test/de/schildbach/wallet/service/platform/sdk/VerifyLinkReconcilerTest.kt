@@ -38,7 +38,13 @@ class VerifyLinkReconcilerTest {
 
     private inner class World {
         val store = InMemoryVerifyLinkObligationStore()
-        var current = VerifyLinkReconciler.CurrentRequest(identityId, "alice", link)
+        var current = VerifyLinkReconciler.CurrentRequest(
+            identityId,
+            "alice",
+            link,
+            creationState = de.schildbach.wallet.database.entity.IdentityCreationState.VOTING
+        )
+        var platformReads = 0
         var owned = true
         var present: Boolean? = false
         var inFlight = false
@@ -48,7 +54,7 @@ class VerifyLinkReconcilerTest {
         val reconciler = VerifyLinkReconciler(
             store = store,
             currentRequest = { current },
-            ownsOrContends = { _, _ -> owned },
+            ownsOrContends = { _, _ -> platformReads++; owned },
             documentPresent = { _, _ -> present },
             publicationInFlight = { inFlight },
             enqueuePublication = { label, url -> enqueued += label to url },
@@ -274,5 +280,76 @@ class VerifyLinkReconcilerTest {
         assertFalse(requestVerificationLinkPublication(identityId, null, link, {}, store, {}))
         assertFalse(requestVerificationLinkPublication(identityId, "alice", "not a link", {}, store, {}))
         assertNull(store.obligation)
+    }
+
+    // ── an obligation whose record write was lost (a swallowed store failure) ──
+
+    @Test
+    fun `a lost obligation is rebuilt from the record and published`() {
+        val w = World() // nothing stored: the registration's write failed
+
+        assertTrue(w.pass())
+
+        assertEquals(listOf("alice" to link), w.enqueued)
+        assertNotNull(w.store.obligation)
+    }
+
+    @Test
+    fun `nothing is rebuilt for a request that does not need a link published`() {
+        val vote = de.schildbach.wallet.database.entity.IdentityCreationState.VOTING
+        for (current in listOf(
+            // the creation flow still owns its link step (the legacy path publishes it inline)
+            VerifyLinkReconciler.CurrentRequest(
+                identityId, "alice", link,
+                creationState = de.schildbach.wallet.database.entity.IdentityCreationState.USERNAME_REGISTERING
+            ),
+            VerifyLinkReconciler.CurrentRequest(identityId, "alice3", link, creationState = vote), // not contested
+            VerifyLinkReconciler.CurrentRequest(identityId, "alice", "", creationState = vote), // no link
+            VerifyLinkReconciler.CurrentRequest(identityId, "alice", link, creationState = vote, errorMessage = "failed"),
+            VerifyLinkReconciler.CurrentRequest(
+                identityId, "alice", link, creationState = vote,
+                usernameRequested = org.dashj.platform.dashpay.UsernameRequestStatus.LOST_VOTE
+            ),
+            VerifyLinkReconciler.CurrentRequest(null, "alice", link, creationState = vote)
+        )) {
+            val w = World()
+            w.current = current
+
+            assertFalse("$current", w.pass())
+
+            assertNull("$current", w.store.obligation)
+            assertEquals("no Platform read for $current", 0, w.platformReads)
+        }
+    }
+
+    @Test
+    fun `a request whose document was found is settled and never rebuilt`() {
+        val w = World()
+        w.present = true
+        w.pass() // rebuilt, found: settled
+
+        assertNull(w.store.obligation)
+        val reads = w.platformReads
+        w.later()
+        assertFalse(w.pass())
+        assertEquals("no more Platform reads for a settled request", reads, w.platformReads)
+        assertTrue(w.enqueued.isEmpty())
+    }
+
+    // ── a newer link for the same name ──
+
+    @Test
+    fun `an obligation for an older link is replaced by the link on record, never published`() {
+        val w = World()
+        w.record() // URL A
+        val newer = "https://example.com/newer"
+        w.current = w.current.copy(link = newer) // the user verified again with URL B
+
+        w.pass()
+        w.now += VerifyLinkReconciler.MIN_PASS_INTERVAL_MS
+        w.pass()
+
+        assertEquals("only the newer link is published", listOf("alice" to newer), w.enqueued)
+        assertEquals(newer, w.store.obligation?.link)
     }
 }
