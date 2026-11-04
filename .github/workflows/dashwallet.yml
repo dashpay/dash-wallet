@@ -24,8 +24,6 @@ jobs:
         distribution: 'adopt'
         cache: gradle
 
-    - uses: ./.github/actions/platform-sdk
-
     - name: Get the support email
       env:
         SUPPORT_EMAIL: "${{ secrets.INTERNAL_SUPPORT_EMAIL }}"
