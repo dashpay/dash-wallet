@@ -12,7 +12,6 @@
     <string name="zero_fiat_balance_with_currency" translatable="false">%s 0.00</string>
     <string name="buy_dash">Buy Dash</string>
     <string name="copied">Copied</string>
-    <string name="staking_title">Staking</string>
     <string name="spend_title">Spend</string>
     <string name="email">Email</string>
     <string name="email_placeholder">e.g. johndoe@mail.com</string>
@@ -101,10 +100,6 @@
     <string name="no_connection">No internet connection</string>
     <string name="rate_not_available">Not available</string>
 
-    <!-- CrowdNode warning -->
-    <string name="empty_wallet_warning_title">Looks like you are emptying your Dash Wallet</string>
-    <string name="empty_wallet_crowdnode_warning">Please note, you will not be able to withdraw your funds from CrowdNode to this wallet until you increase your balance to 0.0003 Dash.</string>
-
     <!-- Send coins -->
     <string name="payment_request_problem_title">Payment was not acknowledged</string>
     <string name="payment_protocol_default_error_title">Payment error</string>
@@ -168,4 +163,5 @@
     <string name="from_dash_wallet_on_this_device">From Dash wallet on this device</string>
     <string name="preposition_at">at</string>
     <string name="info">Info</string>
+    <string name="scan_qr">Scan QR</string>
 </resources>

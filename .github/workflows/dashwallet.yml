@@ -38,7 +38,7 @@ jobs:
     - name: Set up Ruby
       uses: ruby/setup-ruby@v1
       with:
-        ruby-version: '3.0.3'
+        ruby-version: '3.3'
         
     - name: Generate cache key
       run: bash .deploy/checksum.sh checksum.txt
@@ -48,14 +48,12 @@ jobs:
       continue-on-error: true
       with:
         path: vendor/bundle
-        key: ${{ runner.os }}-gems-${{ hashFiles('**/Gemfile.lock') }}
+        key: ${{ runner.os }}-gems-ruby-3.3-${{ hashFiles('**/Gemfile.lock') }}
         restore-keys: |
-            ${{ runner.os }}-gems-
+            ${{ runner.os }}-gems-ruby-3.3-
             
     - name: Setup fastlane
       run: |
-        gem install bundler:2.2.26
-        gem install google-cloud-storage
         bundle config path vendor/bundle
         bundle install --jobs 4 --retry 3
         

@@ -424,6 +424,7 @@ Dash</b></string>
     <string name="coinjoin_mixing_level_subtitle">Вы можете остановить или сменить уровень перемешивания в любое время</string>
     <string name="coinjoin_mixing_transactions">Перемешивание транзакций</string>
     <string name="coinjoin_transaction_group">Эти транзакции участвовали в перемешивании.</string>
+    <string name="coinjoin_transaction_group_title">Почему я вижу все эти транзакции?</string>
     <string name="intermediate">Средний</string>
     <string name="advanced">Продвинутый</string>
     <string name="intermediate_level_card_decs">Продвинутые пользователи с высоким уровнем знаний в области технологий могут определить вашу историю транзакций</string>

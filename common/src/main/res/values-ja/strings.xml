@@ -153,4 +153,5 @@
     <string name="from_dash_wallet_on_this_device">この端末のDashウォレットから</string>
     <string name="preposition_at">で</string>
     <string name="info">情報</string>
+    <string name="scan_qr">QRをスキャンする</string>
 </resources>

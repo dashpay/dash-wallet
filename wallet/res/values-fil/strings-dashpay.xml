@@ -416,6 +416,7 @@ Username</b></string>
     <string name="coinjoin_mixing_level_subtitle">Maaari mong baguhin o ihinto ang antas ng paghahalo anumang oras</string>
     <string name="coinjoin_mixing_transactions">Paghahalo ng mga Transaksyon</string>
     <string name="coinjoin_transaction_group">Ito ay paghahalo ng mga kaugnay na transaksyon.</string>
+    <string name="coinjoin_transaction_group_title">Bakit ko nakikita ang lahat ng mga transaksyong ito?</string>
     <string name="intermediate">Intermediate</string>
     <string name="advanced">Advanced</string>
     <string name="intermediate_level_card_decs">Maaaring matukoy ng mga advanced na user na may napakataas na antas ng teknikal na kadalubhasaan ang iyong history ng transaksyon</string>

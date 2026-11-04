@@ -78,8 +78,6 @@ import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.RateRetrievalState
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
-import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
 import org.junit.Before
 import org.junit.Ignore
 import org.junit.Rule
@@ -176,7 +174,6 @@ class MainViewModelTest {
     }
 
     private val blockchainStateMock = mockk<BlockchainStateProvider> {
-        //every { getMasternodeAPY() } returns 5.9
     }
 
     private val transactionMetadataMock = mockk<TransactionMetadataProvider> {
@@ -220,10 +217,6 @@ class MainViewModelTest {
     private val deviceInfoProvider = mockk<DeviceInfoProvider>()
     private val coinJoinConfig = mockk<CoinJoinConfig>()
     private val coinJoinService = mockk<CoinJoinService>()
-    private val crowdNodeApi = mockk<CrowdNodeApi> {
-        every { signUpStatus } returns MutableStateFlow(SignUpStatus.NotStarted)
-        every { balance } returns MutableStateFlow(Resource.success(Coin.ZERO))
-    }
 
     @get:Rule
     var rule: TestRule = InstantTaskExecutorRule()
@@ -279,7 +272,6 @@ class MainViewModelTest {
         mockkStatic(WorkManager::class)
         every { WorkManager.getInstance(any()) } returns workManagerMock
         every { savedStateMock.get<TxFilterType>(eq("tx_direction")) } returns TxFilterType.ALL
-        every { savedStateMock.get<Boolean>(eq("crowdnode_withdrawal_reminder_shown")) } returns false
         every { savedStateMock.set<TxFilterType>(any(), any()) } just runs
     }
 
@@ -312,7 +304,6 @@ class MainViewModelTest {
                 coinJoinConfig,
                 coinJoinService,
                 txDisplayCacheService,
-                crowdNodeApi,
                 mockk<DispatchingSwapProvider>(relaxed = true)
             )
         )
@@ -353,7 +344,6 @@ class MainViewModelTest {
                 coinJoinConfig,
                 coinJoinService,
                 txDisplayCacheService,
-                crowdNodeApi,
                 mockk<DispatchingSwapProvider>(relaxed = true)
             )
         )

@@ -153,4 +153,5 @@
     <string name="from_dash_wallet_on_this_device">Στο πορτοφόλι Dash σε αυτή τη συσκευή</string>
     <string name="preposition_at">σε</string>
     <string name="info">πληροφορίες</string>
+    <string name="scan_qr">Σάρωση QR</string>
 </resources>

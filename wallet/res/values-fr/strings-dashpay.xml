@@ -423,6 +423,7 @@
     <string name="coinjoin_mixing_level_subtitle">Vous pouvez à tout moment modifier ou arrêter le niveau de mélange</string>
     <string name="coinjoin_mixing_transactions">Transactions de mélange</string>
     <string name="coinjoin_transaction_group">Ce sont des transactions de mélange.</string>
+    <string name="coinjoin_transaction_group_title">Pourquoi vois-je toutes ces transactions ?</string>
     <string name="intermediate">Intermédiaire</string>
     <string name="advanced">Avancé</string>
     <string name="intermediate_level_card_decs">Les utilisateurs avancés, ceux qui ont un très haut niveau d\'expertise technique, peuvent déterminer votre historique de transaction</string>

@@ -221,10 +221,6 @@ class PaymentProtocolViewModel @Inject constructor(
      * Commits and broadcasts a transaction that has already been acknowledged.
      */
     suspend fun commitAndBroadcast(sendRequest: SendRequest): Transaction {
-        return sendCoinsTaskRunner.sendCoins(
-            sendRequest,
-            txCompleted = true,
-            checkBalanceConditions = true
-        )
+        return sendCoinsTaskRunner.sendCoins(sendRequest, txCompleted = true)
     }
 }

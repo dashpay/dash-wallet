@@ -415,6 +415,7 @@
     <string name="coinjoin_mixing_level_subtitle">Ви можете будь-коли змінити або зупинити рівень змішування</string>
     <string name="coinjoin_mixing_transactions">Змішування транзакцій</string>
     <string name="coinjoin_transaction_group">Це сумісні операції.</string>
+    <string name="coinjoin_transaction_group_title">Чому я бачу всі ці транзакціїї?</string>
     <string name="intermediate">Проміжний</string>
     <string name="advanced">Продвинуті</string>
     <string name="intermediate_level_card_decs">Досвідчені користувачі, які мають дуже високий рівень технічних знань, можуть визначити вашу історію транзакцій</string>
