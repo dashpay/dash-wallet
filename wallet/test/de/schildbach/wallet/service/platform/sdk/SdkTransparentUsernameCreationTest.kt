@@ -1114,13 +1114,14 @@ class SdkTransparentUsernameCreationTest {
         run: RetryRun,
         appScope: CoroutineScope? = null,
         nameAlreadyTaken: suspend (String, String) -> Boolean = { _, _ -> false },
-        publishVerificationLink: suspend (String) -> Unit = { run.published += it to run.handedOff.isNotEmpty() }
+        publishVerificationLink: suspend (String) -> Unit = { run.published += it to run.handedOff.isNotEmpty() },
+        driveCreationState: suspend (IdentityCreationState, String?) -> Unit = { state, error -> run.states += state to error }
     ) = SdkTransparentUsernameCreation(
         source = source,
         cutoverCommitted = { true },
         feeDuffs = { feeDuffs },
         handOffToLegacy = { run.handedOff += it },
-        driveCreationState = { state, error -> run.states += state to error },
+        driveCreationState = driveCreationState,
         persistNameContext = { id, name, second, restoring -> run.nameContexts += listOf(id, name, second, restoring) },
         executorScope = appScope,
         nameAlreadyTaken = nameAlreadyTaken,
@@ -1410,6 +1411,76 @@ class SdkTransparentUsernameCreationTest {
 
         assertTrue(run.published.isEmpty())
         assertEquals(listOf(identityIdBase58), run.handedOff)
+        appScope.cancel()
+    }
+
+    /** A name-only retry whose process dies the moment any unprefixed (legacy-route) error is written. */
+    private suspend fun TestScope.diesOnAPlainError(
+        source: TransparentUsernameSource,
+        store: de.schildbach.wallet.service.platform.InMemoryRequestedNameJournal,
+        run: RetryRun,
+        nameAlreadyTaken: suspend (String, String) -> Boolean = { _, _ -> false }
+    ): CoroutineScope {
+        val appScope = CoroutineScope(SupervisorJob() + kotlinx.coroutines.test.StandardTestDispatcher(testScheduler))
+        val creation = instance(
+            source,
+            store,
+            run,
+            appScope,
+            nameAlreadyTaken = nameAlreadyTaken,
+            driveCreationState = { state, error ->
+                run.states += state to error
+                if (error != null && !SdkTransparentUsernameCreation.isNameOnlyRetryError(error)) {
+                    appScope.cancel() // the process dies right after the plain error landed
+                    awaitCancellation()
+                }
+            }
+        )
+        assertTrue(creation.retryNameForExistingIdentity(identityIdBase58, "alice3", null))
+        return appScope
+    }
+
+    @Test
+    fun `a rejected replacement never writes a plain error before its prefixed one`() = runTest {
+        // a plain error on disk with the retry still pending routes to the legacy service, and
+        // the restart reconcile would replace a taken name's rejection with "interrupted"
+        val source = source(lockAfterFailure = null)
+        coEvery { source.registerDpnsName(walletIdHex, identityId, "alice3") } throws
+            DashSdkError.InvalidParameter("DuplicateUniqueIndexError: alice3 is taken")
+        val store = de.schildbach.wallet.service.platform.InMemoryRequestedNameJournal()
+        val run = RetryRun()
+
+        val appScope = diesOnAPlainError(source, store, run)
+        advanceUntilIdle()
+
+        val plain = run.states.filter { it.second != null && !SdkTransparentUsernameCreation.isNameOnlyRetryError(it.second) }
+        assertTrue("no plain error written: $plain", plain.isEmpty())
+        assertTrue(
+            "the rejection is committed with the mark's retirement: ${store.errorMessage}",
+            SdkTransparentUsernameCreation.isNameOnlyRetryError(store.errorMessage) &&
+                store.errorMessage?.contains("DuplicateUniqueIndexError") == true
+        )
+        assertNull(store.pendingNameOnlyRetry())
+        appScope.cancel()
+    }
+
+    @Test
+    fun `an unreadable ownership re-check never writes a plain error before its prefixed one`() = runTest {
+        val source = source(lockAfterFailure = null)
+        val store = de.schildbach.wallet.service.platform.InMemoryRequestedNameJournal()
+        val run = RetryRun()
+        var reads = 0
+        // the read before accepting succeeds; the re-check right before submitting cannot be read
+        val appScope = diesOnAPlainError(source, store, run, nameAlreadyTaken = { _, _ ->
+            if (reads++ == 0) false else throw java.io.IOException("platform unreachable")
+        })
+        advanceUntilIdle()
+
+        val plain = run.states.filter { it.second != null && !SdkTransparentUsernameCreation.isNameOnlyRetryError(it.second) }
+        assertTrue("no plain error written: $plain", plain.isEmpty())
+        assertTrue(SdkTransparentUsernameCreation.isNameOnlyRetryError(store.errorMessage))
+        assertNull(store.pendingNameOnlyRetry())
+        coVerify(exactly = 0) { source.registerDpnsName(any(), any(), any()) }
         appScope.cancel()
     }
 

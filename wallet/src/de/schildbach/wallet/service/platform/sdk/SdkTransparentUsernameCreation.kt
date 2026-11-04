@@ -1517,7 +1517,10 @@ class SdkTransparentUsernameCreation internal constructor(
         registeredState: IdentityCreationState,
         // The identity already owns or contends for [label]: never submitted again, counted as registered.
         taken: Boolean = false,
-        // A name-only retry: re-read [nameAlreadyTaken] right before submitting (fail closed).
+        // A name-only retry: re-read [nameAlreadyTaken] right before submitting (fail closed),
+        // and never stamp a failure here: the retry owns its terminal error, committed with the
+        // pending mark's retirement in one write ([failPendingNameRetry]). A plain error written
+        // first would, until then, route the record to the legacy service.
         recheckOwnership: Boolean = false
     ): NameRegistration {
         // Re-check → submit → record under the identity's DPNS lock, so no other in-app
@@ -1527,7 +1530,12 @@ class SdkTransparentUsernameCreation internal constructor(
             val alreadyOurs = when {
                 taken -> true
                 recheckOwnership || waited -> ownershipRecheck(identityIdBase58, label)
-                    ?: return@withIdentityLock ownershipRecheckFailed(label, registeringState, balanceBefore)
+                    ?: return@withIdentityLock ownershipRecheckFailed(
+                        label,
+                        registeringState,
+                        balanceBefore,
+                        stampError = !recheckOwnership
+                    )
                 else -> false
             }
             if (alreadyOurs) {
@@ -1535,7 +1543,15 @@ class SdkTransparentUsernameCreation internal constructor(
                 driveCreationState(registeredState, null)
                 return@withIdentityLock NameRegistration(ShieldedUsernameNameStatus.REGISTERED, null, balanceBefore)
             }
-            submitNameTracked(walletId, identityId, label, preorderState, registeringState, registeredState)
+            submitNameTracked(
+                walletId,
+                identityId,
+                label,
+                preorderState,
+                registeringState,
+                registeredState,
+                stampError = !recheckOwnership
+            )
         }
         // Not submitted (skipped as ours, or refused): nothing was spent.
         if (!locked.submitted) return locked
@@ -1558,7 +1574,9 @@ class SdkTransparentUsernameCreation internal constructor(
         label: String,
         preorderState: IdentityCreationState,
         registeringState: IdentityCreationState,
-        registeredState: IdentityCreationState
+        registeredState: IdentityCreationState,
+        // false for a name-only retry, which owns its terminal error (see [registerNameTracked])
+        stampError: Boolean = true
     ): NameRegistration {
         try {
             driveCreationState(preorderState, null)
@@ -1601,11 +1619,13 @@ class SdkTransparentUsernameCreation internal constructor(
             // which likewise stays sticky without surfacing a hard error. The
             // ambiguous reason is still returned in the outcome for logging.
             val errorForTile = if (status == ShieldedUsernameNameStatus.AMBIGUOUS) null else reason
-            try {
-                driveCreationState(registeringState, errorForTile)
-            } catch (e: Throwable) {
-                if (e is CancellationException) throw e
-                log.warn("failed to stamp DPNS registration state for '{}'", label, e)
+            if (stampError) {
+                try {
+                    driveCreationState(registeringState, errorForTile)
+                } catch (e: Throwable) {
+                    if (e is CancellationException) throw e
+                    log.warn("failed to stamp DPNS registration state for '{}'", label, e)
+                }
             }
             status to reason
         }
@@ -1635,14 +1655,18 @@ class SdkTransparentUsernameCreation internal constructor(
     private suspend fun ownershipRecheckFailed(
         label: String,
         registeringState: IdentityCreationState,
-        balanceBefore: Long?
+        balanceBefore: Long?,
+        // false for a name-only retry, which owns its terminal error (see [registerNameTracked])
+        stampError: Boolean = true
     ): NameRegistration {
         val reason = "could not check '$label' before registering it"
-        try {
-            driveCreationState(registeringState, reason)
-        } catch (e: Throwable) {
-            if (e is CancellationException) throw e
-            log.warn("failed to stamp DPNS registration state for '{}'", label, e)
+        if (stampError) {
+            try {
+                driveCreationState(registeringState, reason)
+            } catch (e: Throwable) {
+                if (e is CancellationException) throw e
+                log.warn("failed to stamp DPNS registration state for '{}'", label, e)
+            }
         }
         return NameRegistration(ShieldedUsernameNameStatus.NOT_REGISTERED, reason, balanceBefore)
     }
