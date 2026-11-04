@@ -217,7 +217,8 @@ internal class AppConnectSession(
         AppConnectPlan(requestHash(request), scope, identity.id.toString(), grants, text,
             selectedAuth, encChoices,
             prior?.let { indices(it, "encIndices") } ?: encChoices.indices.toSet(), prior != null, blockTime,
-            groupScopes = groupScopes, previousGroupScopes = readApprovedGroupScopes(prior))
+            groupScopes = groupScopes, previousGroupScopes = readApprovedGroupScopes(prior), requestedAt = parsed.createdAt)
+            .let { if (it.recovering) it else it.withRequestedLimits() }
     }
 
     private fun validateOwnership(request: DashKeyRequest, grants: List<AuthBinding>): Map<String, VerifiedContractGroup> {
@@ -581,12 +582,7 @@ internal class AppConnectSession(
         WalletSignerCallback(wallet, keyParameter, { authorize(); checkScope(scope) }).use { signer ->
             if (disable.isNotEmpty() || fences.isNotEmpty()) {
                 identity = updateIdentityInBatches(fences, disable, read = { checkScope(scope); readIdentity() }) { current, add, ids ->
-                    val master = signingKey(current, SecurityLevel.MASTER, platform.client.getPlatformTime(current.id))
-                    checkScope(scope)
-                    current.revision++
-                    authorize()
-                    dashsdk.platformMobilePutPutIdentityUpdateSdk(platform.rustSdk, current.toNative(), KeyID(master.id),
-                        add.map { it.toNative() }, ids.map { KeyID(it) }, signer.nativeContext, BigInteger.valueOf(signer.signerCallback)).unwrap()
+                    submitIdentityUpdate(current, add, ids, signer, scope, authorize)
                 }
             }
             records.forEach { deleteResponse(identity, it, signer, scope, authorize) }
@@ -610,11 +606,66 @@ internal class AppConnectSession(
         }
     }
 
+    private fun submitIdentityUpdate(current: Identity, add: List<IdentityPublicKey>, ids: List<Int>,
+                                     signer: WalletSignerCallback, scope: String, authorize: () -> Unit) {
+        val master = signingKey(current, SecurityLevel.MASTER, platform.client.getPlatformTime(current.id))
+        checkScope(scope)
+        current.revision++
+        authorize()
+        dashsdk.platformMobilePutPutIdentityUpdateSdk(platform.rustSdk, current.toNative(), KeyID(master.id),
+            add.map { it.toNative() }, ids.map { KeyID(it) }, signer.nativeContext, BigInteger.valueOf(signer.signerCallback)).unwrap()
+    }
+
+    /**
+     * Enabled keys that can edit the DashPay profile but that no local grant record holds, e.g. after
+     * a wallet restore, or from another wallet with the same identity.
+     */
+    suspend fun sharedProfileKeys(expectedScope: String): List<Int> = withContext(Dispatchers.IO) {
+        checkScope(expectedScope)
+        sharedProfileKeyIds(readIdentity(), expectedScope)
+    }
+
+    private suspend fun sharedProfileKeyIds(identity: Identity, scope: String): List<Int> {
+        // Prepared records count, so a key from an approval still in flight is never listed.
+        val recorded = config.getGrants().filter { it.getString("scope") == scope }.flatMap { decodeKeys(it) }
+        return AppConnectKeyState.unrecordedKeys(identity.publicKeys, recorded) { key ->
+            val bounds = key.contractBounds
+            bounds is SingleContractDocumentType && bounds.identifier.toString() == DASHPAY && bounds.documentType == "profile"
+        }
+    }
+
+    /** Disables those of [ids] that are still unlinked profile keys; a key recorded since is left alone. */
+    suspend fun revokeSharedProfileKeys(ids: List<Int>, expectedScope: String) = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            val scope = expectedScope
+            val authorize = kotlin.coroutines.coroutineContext.connectionAuthorization()
+            val wallet = walletRepo.walletApplication.wallet ?: error("Wallet unavailable")
+            val keyParameter = walletRepo.getWalletEncryptionKey()
+            check(!wallet.isEncrypted || keyParameter != null) { "Wallet password unavailable. Unlock the wallet and try again." }
+            checkScope(scope)
+            val identity = readIdentity()
+            val disable = sharedProfileKeyIds(identity, scope).filter { it in ids }
+            if (disable.isEmpty()) return@withLock
+            rememberIdentity(identity)
+            val updated = WalletSignerCallback(wallet, keyParameter, { authorize(); checkScope(scope) }).use { signer ->
+                updateIdentityInBatches(emptyList(), disable, read = { checkScope(scope); readIdentity() }) { current, add, keys ->
+                    submitIdentityUpdate(current, add, keys, signer, scope, authorize)
+                }
+            }
+            checkScope(scope)
+            rememberIdentity(updated)
+        }
+    }
+
     internal suspend fun unrecordedAppKeys(identity: Identity, app: String, scope: String): List<Int> {
+        // Only an enabled authentication key with contract bounds can belong to an app.
+        if (identity.publicKeys.none { it.purpose == Purpose.AUTHENTICATION && it.contractBounds != null &&
+                it.disabledAt == null }) return emptyList()
         // Other locally recorded apps may legitimately have the same DashPay profile bounds.
         val recorded = config.getGrants().filter { it.getString("scope") == scope }.flatMap { decodeKeys(it) }
-        val appId = Identifier.from(app)
-        val owner = platform.client.getDataContract(appId.toBuffer(), true)?.ownerId ?: error("App contract not found")
+        // Read only when a key needs them: an identity with no unrecorded key needs no contract reads.
+        val appId by lazy { Identifier.from(app) }
+        val owner by lazy { platform.client.getDataContract(appId.toBuffer(), true)?.ownerId ?: error("App contract not found") }
         return AppConnectKeyState.unrecordedKeys(identity.publicKeys, recorded) { key ->
             val target = key.contractBounds!!.identifier
             when (val bounds = key.contractBounds) {
@@ -634,6 +685,97 @@ internal class AppConnectSession(
         checkNotNull(platform.client.getDataContract(target.toBuffer(), true)) {
             "Contract ownership could not be established. Complete revocation is not confirmed."
         }.ownerId
+
+    /** Platform time and, per app, the expiry of each authentication key that may still authorize it. */
+    internal class PlatformAuthorization(val time: Long, val expiries: Map<String, List<Long>?>)
+
+    /**
+     * What Platform holds now for each app in [activeRecords]: its recorded keys still enabled, and any
+     * enabled key of the app this wallet has no record of (e.g. registered on another device). An app whose
+     * ownership cannot be established maps to null; the result is null when the identity cannot be read.
+     */
+    internal suspend fun platformAuthorization(
+        expectedScope: String,
+        activeRecords: Map<String, List<JSONObject>>
+    ): PlatformAuthorization? = withContext(Dispatchers.IO) {
+        try {
+            checkScope(expectedScope)
+            val identity = readIdentity()
+            val time = platform.client.getPlatformTime(identity.id)
+            val expiries = activeRecords.mapValues { (app, records) ->
+                try {
+                    val unrecorded = unrecordedAppKeys(identity, app, expectedScope)
+                    enabledAuthenticationExpiries(records, identity.publicKeys) + identity.publicKeys
+                        .filter { it.id in unrecorded }.map { it.expiresAt ?: Long.MAX_VALUE }
+                } catch (e: Exception) {
+                    if (e is kotlinx.coroutines.CancellationException) throw e
+                    null
+                }
+            }
+            checkScope(expectedScope)
+            PlatformAuthorization(time, expiries)
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            null
+        }
+    }
+
+    /**
+     * Platform expiry of each authentication key in [records] that is still enabled in [current]; a key
+     * without an expiry counts as never expiring. Limits can change on Platform without changing the key.
+     */
+    internal fun enabledAuthenticationExpiries(records: List<JSONObject>, current: List<IdentityPublicKey>): List<Long> =
+        records.flatMap { record ->
+            val keys = record.getJSONArray("keys")
+            (0 until keys.length()).map { keys.getJSONObject(it) }
+        }.filter { it.getInt("purpose") == 0 }.mapNotNull { json ->
+            // Decode only keys still on the identity; a matching ID alone does not prove it is the same key.
+            current.firstOrNull { it.id == json.optInt("id", -1) && it.disabledAt == null }
+                ?.takeIf { AppConnectKeyState.sameKeyIdentity(it, IdentityPublicKey(jsonMap(json))) }
+                ?.let { it.expiresAt ?: Long.MAX_VALUE }
+        }
+
+    /** The terms the recorded keys grant, with their current Platform limits; null when no key is recorded. */
+    suspend fun terms(app: String, expectedScope: String): ConnectionTerms? = withContext(Dispatchers.IO) {
+        checkScope(expectedScope)
+        // Each login adds a grant record. Every one that may still authorize access counts; fully
+        // revoked logins are history, so they describe the connection only when nothing else is left.
+        val records = matchingRecords(expectedScope, app)
+        val live = records.filter { it.optString("state") != "disabled" ||
+            !it.optBoolean("permanentRevocationConfirmed") || !it.optBoolean("appRevocationConfirmed") }
+        val recorded = live.ifEmpty { listOfNotNull(records.maxByOrNull { it.optLong("updatedAt") }) }
+            .flatMap { decodeKeys(it) }
+        if (recorded.isEmpty()) return@withContext null
+        // Platform can change a key's budget or expiry without changing the key, so describe each one
+        // as Platform holds it now; a key no longer on the identity keeps its recorded terms.
+        val identity = readIdentity()
+        val current = identity.publicKeys
+        val keys = recorded.map { key -> current.firstOrNull { AppConnectKeyState.sameKeyIdentity(it, key) } ?: key }
+        // What is left on each key still enabled on the identity; an unreadable one shows as unavailable.
+        val funding = keys.filter { key -> key.purpose == Purpose.AUTHENTICATION && key.disabledAt == null &&
+            key.totalBudget != null && current.any { AppConnectKeyState.sameKeyIdentity(it, key) } }
+            .distinctBy { it.id }
+            .map { key ->
+                val remaining = try {
+                    platform.client.getIdentityKeyRemainingBudget(identity.id, key.id)
+                } catch (error: Exception) {
+                    if (error is kotlinx.coroutines.CancellationException) throw error
+                    org.slf4j.LoggerFactory.getLogger(AppConnectSession::class.java)
+                        .warn("Cannot read the remaining budget of key {}", key.id, error)
+                    null
+                }
+                KeyFunding(capabilityKind(key),
+                    (key.contractBounds as? org.dashj.platform.dpp.identity.SingleContractDocumentType)?.documentType,
+                    key.totalBudget!!, remaining)
+            }
+        checkScope(expectedScope)
+        // A renewal disables the previous login's keys before the app confirms; they authorize nothing now.
+        // A disconnect disables every authentication key but keeps encryption keys, so with no authentication
+        // key left enabled the recorded keys describe what the app could do.
+        val enabled = keys.filter { it.disabledAt == null }
+        recordedTerms(if (enabled.any { it.purpose == Purpose.AUTHENTICATION }) enabled else keys)
+            .copy(keyFunding = funding)
+    }
 
     suspend fun details(app: String, expectedScope: String): String = withContext(Dispatchers.IO) {
         mutex.withLock {

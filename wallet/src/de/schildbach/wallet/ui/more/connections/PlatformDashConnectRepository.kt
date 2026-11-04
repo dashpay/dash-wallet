@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.NetworkParameters
 import org.dashj.platform.sdk.platform.DomainDocument
+import org.json.JSONObject
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -41,33 +42,56 @@ class PlatformDashConnectRepository @Inject constructor(
         while (true) {
             val currentTime = now()
             val scope = session.scope()
-            val current = records.filter { it.getString("scope") == scope }.groupBy { it.getString("app") }.map { (app, grants) ->
-                val latest = grants.maxBy { it.optLong("updatedAt") }
-                val authenticationExpiries = grants.filter { it.optString("state") == "active" }.flatMap { record ->
-                    record.getJSONArray("keys").let { keys ->
-                        (0 until keys.length()).map { keys.getJSONObject(it) }
-                            .filter { it.getInt("purpose") == 0 }
-                            .map { it.optLong("expiresAt", Long.MAX_VALUE) }
-                    }
+            val byApp = records.filter { it.getString("scope") == scope }.groupBy { it.getString("app") }
+            fun activeRecords(grants: List<JSONObject>) = grants.filter { it.optString("state") == "active" }
+            fun savedExpiries(grants: List<JSONObject>) = activeRecords(grants).flatMap { record ->
+                record.getJSONArray("keys").let { keys ->
+                    (0 until keys.length()).map { keys.getJSONObject(it) }
+                        .filter { it.getInt("purpose") == 0 }
+                        .map { it.optLong("expiresAt", Long.MAX_VALUE) }
                 }
-                val active = authenticationExpiries.any { it > currentTime }
+            }
+            // Expired keys stay enabled until revoked, so this is not a disconnection. A login still
+            // registering, or a revocation not yet confirmed, may hold live access.
+            fun expiredCandidate(grants: List<JSONObject>) = savedExpiries(grants).let { saved ->
+                saved.isNotEmpty() && saved.none { it > currentTime }
+            } && grants.all { it.optString("state") == "active" || (it.optString("state") == "disabled" &&
+                it.optBoolean("permanentRevocationConfirmed") && it.optBoolean("appRevocationConfirmed")) }
+            // Another device can extend a key's expiry or add a key on Platform, so the saved expiry is only a
+            // hint: before calling a connection expired, read the identity once for every such connection and
+            // judge its keys by Platform time, not the device clock.
+            val candidates = byApp.filterValues { expiredCandidate(it) }.mapValues { (_, grants) -> activeRecords(grants) }
+            val platform = if (candidates.isNotEmpty()) session.platformAuthorization(scope, candidates) else null
+            val verifiedExpiries = candidates.mapValues { (app, _) -> platform?.expiries?.get(app) }
+            val current = byApp.map { (app, grants) ->
+                val latest = grants.maxBy { it.optLong("updatedAt") }
+                val authenticationExpiries = savedExpiries(grants)
+                val verified = verifiedExpiries[app]
+                val active = authenticationExpiries.any { it > currentTime } ||
+                    (platform != null && verified.orEmpty().any { it > platform.time })
                 val lastExpiry = authenticationExpiries.maxOrNull()
                 val updatedAt = if (!active && lastExpiry != null && lastExpiry <= currentTime) {
                     maxOf(latest.optLong("updatedAt"), lastExpiry)
                 } else latest.optLong("updatedAt")
+                // Records saved before connectedAt existed became active when last updated.
+                val connectedAt = grants.filter { it.has("connectedAt") || it.optString("state") == "active" }
+                    .maxOfOrNull { it.optLong("connectedAt", it.optLong("updatedAt")) }?.takeIf { it > 0 }
                 DAppConnection(app, connectionDisplayName(latest.optString("label")), "",
                     when {
                         active -> ConnectionStatus.ACTIVE
+                        // Unverified (Platform unreadable): neither live nor expired is established.
+                        expiredCandidate(grants) && verified == null -> ConnectionStatus.APPROVED
+                        expiredCandidate(grants) -> ConnectionStatus.EXPIRED
                         // Revoked request keys do not prove that the app has no surviving access.
                         grants.any { it.optString("state") != "disabled" || !it.optBoolean("permanentRevocationConfirmed") ||
                             !it.optBoolean("appRevocationConfirmed") } -> ConnectionStatus.APPROVED
                         else -> ConnectionStatus.DISCONNECTED
-                    }, updatedAt, scope)
+                    }, updatedAt, scope, connectedAt = connectedAt)
             }
             emit((current + legacy.filter { old -> current.none { it.id == old.contractId } }.map {
                 DAppConnection(it.contractId, it.label, it.url, ConnectionStatus.APPROVED, it.updatedAt, scope, legacyOnly = true)
             }).sortedByDescending { it.updatedAt })
-            val nextExpiry = records.asSequence()
+            val untilSaved = records.asSequence()
                 .filter { it.getString("scope") == scope && it.optString("state") == "active" }
                 .flatMap { record -> record.getJSONArray("keys").let { keys ->
                     (0 until keys.length()).asSequence().map { keys.getJSONObject(it) }
@@ -75,8 +99,13 @@ class PlatformDashConnectRepository @Inject constructor(
                 .filter { it.getInt("purpose") == 0 }
                 .map { it.optLong("expiresAt", Long.MAX_VALUE) }
                 .filter { it > currentTime && it != Long.MAX_VALUE }
-                .minOrNull() ?: break
-            delay((nextExpiry - now()).coerceAtLeast(1L))
+                .minOrNull()?.let { it - now() }
+            // A verified expiry is due when Platform time reaches it.
+            val untilVerified = platform?.let { p ->
+                verifiedExpiries.values.flatMap { it.orEmpty() }.filter { it > p.time && it != Long.MAX_VALUE }
+                    .minOrNull()?.let { it - p.time }
+            }
+            delay((listOfNotNull(untilSaved, untilVerified).minOrNull() ?: break).coerceAtLeast(1L))
         }
     }
 
@@ -134,6 +163,21 @@ class PlatformDashConnectRepository @Inject constructor(
         if (config.getGrants().none { it.getString("scope") == scope && it.getString("app") == connectionId }) {
             "This legacy connection has no recorded grant keys. Removing it from this list does not revoke any Platform authorization."
         } else session.details(connectionId, requireNotNull(scope) { "Refresh connections before viewing grants" })
+    override suspend fun connectionTerms(connectionId: String, scope: String?): ConnectionTerms? =
+        session.terms(connectionId, requireNotNull(scope) { "Refresh connections before viewing grants" })
+    override suspend fun sharedProfileKeys(): SharedProfileKeys? {
+        checkNetwork()
+        val scope = session.scope()
+        val dismissed = config.getDismissedProfileKeys()
+        return session.sharedProfileKeys(scope).filter { "$scope:$it" !in dismissed }
+            .takeIf { it.isNotEmpty() }?.let { SharedProfileKeys(scope, it) }
+    }
+    override suspend fun dismissSharedProfileKeys(keys: SharedProfileKeys) =
+        config.dismissProfileKeys(keys.keyIds.map { "${keys.scope}:$it" })
+    override suspend fun revokeSharedProfileKeys(keys: SharedProfileKeys) {
+        checkNetwork()
+        session.revokeSharedProfileKeys(keys.keyIds, keys.scope)
+    }
     override suspend fun removeConnection(connectionId: String, scope: String?) {
         check(scope == runCatching { session.scope() }.getOrNull()) { "Wallet, identity or network changed" }
         config.removeLegacyConnection(connectionId, scope)

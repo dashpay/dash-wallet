@@ -30,11 +30,14 @@ import javax.inject.Singleton
  *  - [APPROVED] — connection approved, awaiting login ("Scan the QR code to complete your login")
  *  - [ACTIVE] — session is active ("Touch to disconnect at any time")
  *  - [DISCONNECTED] — session ended ("Scan the QR code to log back in")
+ *  - [EXPIRED] — every authentication key passed its expiry but none was revoked, so they stay
+ *    enabled on Platform until the user disconnects
  */
 enum class ConnectionStatus {
     APPROVED,
     ACTIVE,
-    DISCONNECTED
+    DISCONNECTED,
+    EXPIRED
 }
 
 /**
@@ -50,7 +53,9 @@ data class DAppConnection(
     /** Millis since epoch of the last status change. */
     val updatedAt: Long,
     val scope: String? = null,
-    val legacyOnly: Boolean = false
+    val legacyOnly: Boolean = false,
+    /** When the latest login became active, millis since epoch; null when unknown (e.g. never approved). */
+    val connectedAt: Long? = null
 )
 
 /**
@@ -74,10 +79,23 @@ data class ConnectionRequest(
     val permissionText: String = "",
     val grantChoices: List<GrantChoice> = emptyList(),
     val recovering: Boolean = false,
-    val budgetPreset: Int = 0,
-    val lifetimePreset: Int = 0,
+    /** The funding-limit preset matching [fundingLimit], or -1 for a custom limit. */
+    val budgetPreset: Int = -1,
+    /** The expiration preset matching [expiresAt], or -1 for a custom date. */
+    val lifetimePreset: Int = -1,
+    /** Platform time the limits are measured from; the latest custom expiry is a year after it. */
+    val blockTime: Long = 0,
     val requiresGroupReapproval: Boolean = false,
-    val groupScopeChangeApproved: Boolean = false
+    val groupScopeChangeApproved: Boolean = false,
+    /** Plain-language lines for the approved grants; empty for a legacy login. */
+    val capabilities: List<AppCapability> = emptyList(),
+    /** Credits the app's keys may spend together; null when unlimited or nothing is budgeted. */
+    val fundingLimit: java.math.BigInteger? = null,
+    val expiresAt: Long? = null,
+    /** When the app created the request, millis since epoch; 0 when unknown. */
+    val requestedAt: Long = 0,
+    /** True when no connection to this app is on record. */
+    val firstConnection: Boolean = false
 )
 
 /**
@@ -140,6 +158,18 @@ interface DashConnectRepository {
 
     suspend fun connectionDetails(connectionId: String, scope: String? = null): String = ""
 
+    /** What the recorded keys of a connection allow, with their current Platform limits; null if none are recorded. */
+    suspend fun connectionTerms(connectionId: String, scope: String? = null): ConnectionTerms? = null
+
+    /** Unlinked DashPay profile keys the user has not dismissed; null when there are none. */
+    suspend fun sharedProfileKeys(): SharedProfileKeys? = null
+
+    suspend fun dismissSharedProfileKeys(keys: SharedProfileKeys) {}
+
+    suspend fun revokeSharedProfileKeys(keys: SharedProfileKeys) {
+        error("Key revocation is unavailable")
+    }
+
     /** Revoke before removal; the real repository retains the public grant audit record. */
     suspend fun removeConnection(connectionId: String, scope: String? = null)
 
@@ -159,6 +189,9 @@ interface DashConnectRepository {
      */
     suspend fun resolveAppDisplay(contractId: ByteArray, qrLabel: String): AppDisplay
 }
+
+/** Enabled identity keys that can edit the DashPay profile but belong to no connection on record. */
+data class SharedProfileKeys(val scope: String, val keyIds: List<Int>)
 
 /** Display name and website for an app, as resolved by [DashConnectRepository.resolveAppDisplay]. */
 data class AppDisplay(

@@ -46,24 +46,11 @@ internal fun connectionCallbackDialog(context: Context, host: String): AdaptiveD
     context.getString(R.string.dash_connect_return_open)
 )
 
-internal fun connectionDetailsDialog(
-    context: Context,
-    name: String,
-    details: String,
-    status: ConnectionStatus,
-    legacyOnly: Boolean = false
-): AdaptiveDialog = AdaptiveDialog.create(
-    null,
-    name,
-    details,
-    context.getString(R.string.button_close),
-    context.getString(when {
-        legacyOnly -> R.string.dash_connect_remove_local
-        status == ConnectionStatus.DISCONNECTED -> R.string.dash_connect_scan_qr
-        else -> R.string.dash_connect_revoke
-    })
-).apply {
-    if (status != ConnectionStatus.DISCONNECTED) {
-        requireArguments().putInt(AdaptiveDialog.POS_BUTTON_COLOR_ARG, R.style.PrimaryButtonTheme_Large_Red)
-    }
-}
+/** Disconnecting revokes the app's keys on Platform for good, so it is confirmed first. */
+internal fun disconnectConfirmationDialog(context: Context, appName: String): AdaptiveDialog = AdaptiveDialog.create(
+    R.drawable.ic_warning_yellow_circle,
+    context.getString(R.string.dash_connect_disconnect_confirm_title, appName),
+    context.getString(R.string.dash_connect_disconnect_confirm_message, appName),
+    context.getString(android.R.string.cancel),
+    context.getString(R.string.dash_connect_disconnect_action)
+)

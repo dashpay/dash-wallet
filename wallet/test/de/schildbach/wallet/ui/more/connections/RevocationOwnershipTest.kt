@@ -74,19 +74,6 @@ class RevocationOwnershipTest {
         val details = runBlocking { session.details(appId.toString(), session.scope()) }
         assertTrue(details.contains("Revoke access is still available"))
         assertTrue(details.contains("Complete revocation cannot be verified"))
-        val controller = org.robolectric.Robolectric.buildActivity(androidx.fragment.app.FragmentActivity::class.java)
-        controller.get().setTheme(org.dash.wallet.common.R.style.My_Theme)
-        val activity = controller.setup().get()
-        val dialog = connectionDetailsDialog(activity, "App", details, ConnectionStatus.APPROVED)
-        try {
-            dialog.showNow(activity.supportFragmentManager, "ownership-unavailable")
-            assertTrue(dialog.requireDialog().isShowing)
-            assertEquals(activity.getString(de.schildbach.wallet_test.R.string.dash_connect_revoke),
-                dialog.requireView().findViewById<android.widget.TextView>(org.dash.wallet.common.R.id.dialog_positive_button).text.toString())
-        } finally {
-            dialog.dismissNow()
-            controller.pause().stop().destroy()
-        }
         coVerify(exactly = 0) { config.saveGrant(any()) }
     }
 

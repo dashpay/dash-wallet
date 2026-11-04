@@ -30,6 +30,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -38,7 +39,10 @@ import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.compose_views.ApproveConnectionDialog
 import de.schildbach.wallet.ui.compose_views.ApproveTokenPurchaseDialog
+import de.schildbach.wallet.ui.compose_views.ConnectionDetailsDialog
 import de.schildbach.wallet.ui.LockScreenActivity
+import de.schildbach.wallet.ui.main.MainViewModel
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -51,6 +55,8 @@ import org.dash.wallet.common.ui.scan.ScanActivity
 @AndroidEntryPoint
 class ConnectionsFragment : Fragment() {
     private val viewModel: ConnectionsViewModel by viewModels()
+    // Hosts the shared create-username flow (and its mix-first prompt), as Join DashPay does.
+    private val mainViewModel: MainViewModel by activityViewModels()
 
     private val scanLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -74,32 +80,13 @@ class ConnectionsFragment : Fragment() {
                         onRetryClick = viewModel::retryConnections,
                         onBackClick = { findNavController().popBackStack() },
                         onScanClick = { launchScanner() },
-                        onConnectionClick = { connection ->
-                            viewLifecycleOwner.lifecycleScope.launch {
-                                if (!viewModel.isWalletUnlocked || !viewModel.canUseConnections) return@launch
-                                try {
-                                    val details = viewModel.connectionDetails(connection)
-                                    val confirmed = showUnlockedDialog {
-                                        connectionDetailsDialog(requireContext(), connection.name, details, connection.status, connection.legacyOnly)
-                                    }
-                                    if (confirmed == true && viewModel.isWalletUnlocked && viewModel.canUseConnections) {
-                                        if (connection.legacyOnly) viewModel.removeConnection(connection)
-                                        else if (connection.status == ConnectionStatus.DISCONNECTED) launchScanner()
-                                        else viewModel.disconnect(connection)
-                                    }
-                                } catch (e: Exception) {
-                                    if (e is kotlinx.coroutines.CancellationException) throw e
-                                    if (viewModel.isWalletUnlocked) Toast.makeText(requireContext(), e.message, Toast.LENGTH_LONG).show()
-                                }
-                            }
-                        },
-                        onConnectionQrClick = { launchScanner() },
-                        onConnectionToggle = { connection, enabled ->
-                            // The switch is only ON for active connections; moving it OFF disconnects
-                            // directly (no confirmation dialog — the toggle itself is the action).
-                            if (!enabled && viewModel.isWalletUnlocked && viewModel.canUseConnections) {
-                                viewModel.disconnect(connection)
-                            }
+                        onConnectionClick = viewModel::openConnection,
+                        onDismissSharedKeys = viewModel::dismissSharedProfileKeys,
+                        onRevokeSharedKeys = viewModel::revokeSharedProfileKeys,
+                        onTabSelected = viewModel::selectTab,
+                        onCreateUsernameClick = {
+                            mainViewModel.logEvent(AnalyticsConstants.UsersContacts.JOIN_DASHPAY)
+                            mainViewModel.joinDashPay()
                         }
                     )
                 }
@@ -155,7 +142,7 @@ class ConnectionsFragment : Fragment() {
                 combine(viewModel.uiState, lockState) { state, locked -> state to locked }.collect { (state, locked) ->
                     if (locked || !viewModel.isWalletUnlocked || state.recordsStatus == ConnectionRecordsStatus.UNAVAILABLE ||
                         state.recordsStatus == ConnectionRecordsStatus.NO_IDENTITY) {
-                        listOf(APPROVAL_DIALOG, PURCHASE_DIALOG).forEach { tag ->
+                        listOf(APPROVAL_DIALOG, PURCHASE_DIALOG, DETAILS_DIALOG).forEach { tag ->
                             (childFragmentManager.findFragmentByTag(tag) as? androidx.fragment.app.DialogFragment)?.let {
                                 it.dialog?.hide()
                                 it.dismissAllowingStateLoss()
@@ -167,6 +154,11 @@ class ConnectionsFragment : Fragment() {
                         childFragmentManager.findFragmentByTag(APPROVAL_DIALOG) == null &&
                         !childFragmentManager.isStateSaved) {
                         ApproveConnectionDialog().showNow(childFragmentManager, APPROVAL_DIALOG)
+                    }
+                    if (state.recordsStatus == ConnectionRecordsStatus.READY && state.selectedConnection != null &&
+                        state.pendingRequest == null && childFragmentManager.findFragmentByTag(DETAILS_DIALOG) == null &&
+                        !childFragmentManager.isStateSaved) {
+                        ConnectionDetailsDialog().showNow(childFragmentManager, DETAILS_DIALOG)
                     }
                     if (state.recordsStatus == ConnectionRecordsStatus.READY && state.pendingPurchase != null &&
                         childFragmentManager.findFragmentByTag(PURCHASE_DIALOG) == null &&
@@ -203,7 +195,7 @@ class ConnectionsFragment : Fragment() {
         viewModel.refreshConnections()
     }
 
-    private fun launchScanner() {
+    internal fun launchScanner() {
         if (!viewModel.isWalletUnlocked || !viewModel.canUseConnections) return
         scanLauncher.launch(ScanActivity.getIntent(requireActivity()))
     }
@@ -222,6 +214,7 @@ class ConnectionsFragment : Fragment() {
     companion object {
         private const val APPROVAL_DIALOG = "approve_connection_dialog"
         private const val PURCHASE_DIALOG = "approve_token_purchase_dialog"
+        private const val DETAILS_DIALOG = "connection_details_dialog"
         /** Matches the `scannedUri` argument in nav_home.xml. */
         const val ARG_SCANNED_URI = "scannedUri"
         const val ARG_OPENED_FROM_URL = "openedFromUrl"

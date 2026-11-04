@@ -84,7 +84,7 @@ class AppConnectOwnershipTest {
         Unit
     }
 
-    @Test fun `omitted optional expiry cannot block approval but selected expiry still does`() = runBlocking {
+    @Test fun `an omitted grant cannot block approval but the chosen expiry still does`() = runBlocking {
         nonMainnetOnly()
         val start = System.currentTimeMillis()
         every { service.platform.client.getPlatformTime(any()) } returns start
@@ -107,8 +107,10 @@ class AppConnectOwnershipTest {
                 runBlocking(ConnectionAuthorization { true }) { session.approve(bounded, prepared.copy(selectedAuth = setOf(0))) }
             }
             assertEquals(reached.message, selectedOnly.message)
+            // All keys share the chosen expiry, so a short one blocks approval like a short request did.
+            val shortExpiry = prepared.withLimits(prepared.fundingTotal!!, start + 65L * 60_000)
             val expired = assertThrows(IllegalStateException::class.java) {
-                runBlocking(ConnectionAuthorization { true }) { session.approve(bounded, prepared) }
+                runBlocking(ConnectionAuthorization { true }) { session.approve(bounded, shortExpiry) }
             }
             assertEquals("Grant expired. Scan again.", expired.message)
             verify(exactly = 1) { derivation.sessionAuthentication(any(), any(), any(), any()) }
@@ -344,12 +346,13 @@ class AppConnectOwnershipTest {
         }
     }
 
-    @Test fun `consent cannot remove limits raise budgets or broaden bounds`() = runBlocking {
+    @Test fun `consent cannot remove limits exceed the wallet maximums or broaden bounds`() = runBlocking {
         nonMainnetOnly()
         val plan = session.prepare(request)
         val primary = plan.grants.first()
-        for (bad in listOf(primary.copy(totalBudget = null), primary.copy(totalBudget = primary.totalBudget!! + java.math.BigInteger.ONE),
-            primary.copy(expiresAt = null), primary.copy(kind = 1, documentType = "profile"))) {
+        for (bad in listOf(primary.copy(totalBudget = null), primary.copy(totalBudget = AppConnectLimits.MAX_BUDGET + java.math.BigInteger.ONE),
+            primary.copy(expiresAt = null), primary.copy(expiresAt = plan.blockTime + AppConnectLimits.MAX_LIFETIME + 1),
+            primary.copy(kind = 1, documentType = "profile"))) {
             assertThrows(IllegalArgumentException::class.java) {
                 plan.copy(grants = listOf(bad) + plan.grants.drop(1)).requireMatches(request)
             }

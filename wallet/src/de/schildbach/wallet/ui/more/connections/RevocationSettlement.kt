@@ -29,5 +29,7 @@ internal fun settleConfirmedRevocation(record: JSONObject, appWideRemainingKeys:
 
 internal fun JSONObject.withGrantState(state: String, now: Long = System.currentTimeMillis()): JSONObject {
     if (optString("state") != state) put("updatedAt", now)
+    // When the connection was made, shown on its details; set once, when the keys are confirmed.
+    if (state == "active" && !has("connectedAt")) put("connectedAt", now)
     return put("state", state)
 }
