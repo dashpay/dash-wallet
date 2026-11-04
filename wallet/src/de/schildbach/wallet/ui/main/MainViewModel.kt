@@ -50,7 +50,6 @@ import de.schildbach.wallet.service.platform.sdk.CoinJoinFundsMigrationService
 import de.schildbach.wallet.service.platform.sdk.MIXED_FUNDS_PROMPT_HARD_SUPPRESSED
 import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
 import de.schildbach.wallet.service.platform.sdk.ShieldedSyncStatus
-import de.schildbach.wallet.service.platform.sdk.shieldedReadRetryDelayMs
 import de.schildbach.wallet.service.L1SyncStatusService
 import de.schildbach.wallet.service.L1SyncUiStatus
 import de.schildbach.wallet.transactions.TxFilterType
@@ -103,6 +102,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.AnalyticsTimer
 import org.dash.wallet.common.transactions.TransactionWrapper
+import org.dash.wallet.common.util.readRetryDelayMs
 import org.dash.wallet.integrations.maya.api.DispatchingSwapProvider
 import org.dash.wallet.integrations.maya.utils.SwapBackend
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
@@ -257,7 +257,7 @@ class MainViewModel @Inject constructor(
         .retryWhen { e, attempt ->
             log.warn("hideBalance read failed (attempt {})", attempt, e)
             emit(true)
-            delay(shieldedReadRetryDelayMs(attempt))
+            delay(readRetryDelayMs(attempt))
             true
         }
         .stateIn(
@@ -1050,7 +1050,7 @@ internal fun homeShieldedBalanceFlow(
     status: () -> Flow<ShieldedSyncStatus>,
     maybeStale: () -> Flow<Boolean>,
     onError: (Throwable, Long) -> Unit,
-    retryDelayMs: (Long) -> Long = ::shieldedReadRetryDelayMs
+    retryDelayMs: (Long) -> Long = ::readRetryDelayMs
 ): Flow<Dash?> = enabledFlag
     .distinctUntilChanged()
     .flatMapLatest { enabled ->

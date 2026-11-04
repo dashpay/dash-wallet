@@ -130,7 +130,8 @@ class SettingsFragment : Fragment() {
                     },
                     onBatteryOptimizationClick = { batteryOptimization() },
                     onAnalyticsToggle = { viewModel.setAnalyticsEnabled(it) },
-                    onAnalyticsInfoClick = { showAnalyticsInfo() }
+                    onAnalyticsInfoClick = { showAnalyticsInfo() },
+                    onAdvancedModeToggle = { viewModel.setAdvancedModeEnabled(it) }
                 )
                 }
             }
@@ -251,6 +252,14 @@ class SettingsFragment : Fragment() {
                     AnalyticsSaveFailure.TURNING_ON -> R.string.settings_analytics_save_failed_on
                     AnalyticsSaveFailure.TURNING_OFF -> R.string.settings_analytics_save_failed_off
                 },
+                Toast.LENGTH_LONG
+            ).show()
+        }
+        viewModel.advancedModeSaveFailures.observe(viewLifecycleOwner) { attempted ->
+            // The switch is back on the saved value, so toggling it again retries.
+            Toast.makeText(
+                requireContext(),
+                if (attempted) R.string.settings_analytics_save_failed_on else R.string.settings_analytics_save_failed_off,
                 Toast.LENGTH_LONG
             ).show()
         }

@@ -21,10 +21,15 @@ import android.content.Context
 import androidx.datastore.core.DataMigration
 import androidx.datastore.preferences.SharedPreferencesMigration
 import androidx.datastore.preferences.core.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.util.Constants
+import org.dash.wallet.common.util.readRetryDelayMs
 import javax.inject.Inject
 import javax.inject.Singleton
 import androidx.core.content.edit
@@ -67,7 +72,22 @@ open class WalletUIConfig @Inject constructor(
         val LAST_TOTAL_BALANCE = longPreferencesKey("last_total_balance")
         val CUSTOMIZED_SHORTCUTS = stringPreferencesKey("customized_shortcuts")
         val IS_SHORTCUT_INFO_HIDDEN = booleanPreferencesKey("is_shortcut_info_hidden")
+
+        /** The Settings "Advanced mode" switch. Off unless the user turns it on. */
+        val ADVANCED_MODE = booleanPreferencesKey("advanced_mode")
     }
+
+    /**
+     * Emits the "Advanced mode" setting; false until the user turns it on.
+     *
+     * observePreservingErrors, not observe: observe() turns a failed read into one
+     * empty emission and then completes, so a collector held for a screen's
+     * lifetime would stop seeing later saves. See [advancedModeFlow].
+     */
+    fun observeAdvancedMode(): Flow<Boolean> =
+        advancedModeFlow(observePreservingErrors(ADVANCED_MODE))
+
+    suspend fun setAdvancedMode(enabled: Boolean) = set(ADVANCED_MODE, enabled)
 
     suspend fun getExchangeCurrencyCode(): String {
         return get(SELECTED_CURRENCY) ?: Constants.DEFAULT_EXCHANGE_CURRENCY
@@ -77,6 +97,25 @@ open class WalletUIConfig @Inject constructor(
         return runBlocking { getExchangeCurrencyCode() }
     }
 }
+
+private val advancedModeLog = org.slf4j.LoggerFactory.getLogger("WalletUIConfig.advancedMode")
+
+/**
+ * The saved Advanced mode value as a flow that never completes on a failed read:
+ * an error emits false (basic mode) and re-subscribes to [source] after
+ * [retryDelayMs], so a save made once storage recovers still reaches collectors.
+ */
+fun advancedModeFlow(
+    source: Flow<Boolean?>,
+    retryDelayMs: (Long) -> Long = ::readRetryDelayMs
+): Flow<Boolean> = source
+    .map { it ?: false }
+    .retryWhen { e, attempt ->
+        advancedModeLog.warn("advanced mode read failed (attempt {})", attempt, e)
+        emit(false)
+        delay(retryDelayMs(attempt))
+        true
+    }
 
 class ExchangeCurrencyMigration(
     private val context: Context,
