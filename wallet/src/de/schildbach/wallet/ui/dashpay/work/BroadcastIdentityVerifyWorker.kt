@@ -48,6 +48,12 @@ class BroadcastIdentityVerifyWorker @AssistedInject constructor(
         const val KEY_URL = "BroadcastIdentityVerifyWorker.URL"
 
         /**
+         * Set on a failure after the document was submitted: its outcome is unknown (the SDK's
+         * Ambiguous, a timeout), so it must not be published again without reconciliation.
+         */
+        const val KEY_PUBLICATION_UNCERTAIN = "BroadcastIdentityVerifyWorker.PUBLICATION_UNCERTAIN"
+
+        /**
          * Runs (with WorkManager's backoff) this worker waits for the identity to be loaded
          * before it gives up: an SDK registration enqueues it next to recovery, which loads the
          * identity only when it finishes.
@@ -97,8 +103,11 @@ class BroadcastIdentityVerifyWorker @AssistedInject constructor(
             ))
         } catch (ex: Exception) {
             analytics.logError(ex, "Identity Verify: failed to broadcast identity verify document")
+            // Fail safe: past this point the document may have been submitted (the SDK throws
+            // for an Ambiguous outcome), so this failure never authorizes another create.
             Result.failure(workDataOf(
-                    KEY_ERROR_MESSAGE to formatExceptionMessage("broadcast identity verify", ex)))
+                    KEY_ERROR_MESSAGE to formatExceptionMessage("broadcast identity verify", ex),
+                    KEY_PUBLICATION_UNCERTAIN to true))
         }
     }
 }

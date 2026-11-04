@@ -129,13 +129,35 @@ internal fun verificationLinkPublisher(
     application: android.app.Application
 ): suspend (String) -> Unit = { label ->
     val link = config.getPreservingErrors(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK)
-    if (link != null && SdkTransparentUsernameCreation.isVerificationLink(link)) {
-        val operation = de.schildbach.wallet.ui.dashpay.work.BroadcastIdentityVerifyOperation(application)
-        // a re-publish (a reconcile after the first one was enqueued) never broadcasts twice
-        if (!de.schildbach.wallet.ui.dashpay.work.BroadcastIdentityVerifyOperation.publishedOrPending(operation.states(label))) {
-            operation.create(label, link).enqueue().await()
+    val operation = de.schildbach.wallet.ui.dashpay.work.BroadcastIdentityVerifyOperation(application)
+    publishVerificationLinkOnce(
+        link,
+        pastRuns = { operation.pastRuns(label) },
+        enqueue = { link?.let { operation.create(label, it).enqueue().await() } }
+    )
+}
+
+/**
+ * Enqueues [link]'s publication unless an earlier run of it succeeded, is still queued or
+ * running, or failed with an unknown outcome: a re-publish (a reconcile while the name retry is
+ * still pending) never pays for a second document that may duplicate one already landed. A run
+ * whose outcome is unknown is not re-published here at all (fail safe; logged).
+ */
+internal suspend fun publishVerificationLinkOnce(
+    link: String?,
+    pastRuns: suspend () -> List<de.schildbach.wallet.ui.dashpay.work.BroadcastIdentityVerifyOperation.PastRun>,
+    enqueue: suspend () -> Unit
+) {
+    if (link == null || !SdkTransparentUsernameCreation.isVerificationLink(link)) return
+    val runs = pastRuns()
+    if (de.schildbach.wallet.ui.dashpay.work.BroadcastIdentityVerifyOperation.publishedOrPending(runs)) {
+        if (runs.any { it.uncertain }) {
+            LoggerFactory.getLogger(SdkTransparentUsernameCreation::class.java)
+                .warn("an earlier verification-link publication has an unknown outcome; not publishing it again")
         }
+        return
     }
+    enqueue()
 }
 
 internal fun registrationRowsFor(keys: List<IdentityKeyPreview>): List<IdentityPubkey> =

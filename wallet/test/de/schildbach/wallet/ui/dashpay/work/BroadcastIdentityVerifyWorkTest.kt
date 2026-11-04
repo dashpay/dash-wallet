@@ -21,6 +21,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import de.schildbach.wallet.service.platform.sdk.publishVerificationLinkOnce
 
 /**
  * A verification link published right after an SDK registration: its worker can run before
@@ -58,13 +59,59 @@ class BroadcastIdentityVerifyWorkTest {
         )
     }
 
+    private fun run(state: WorkInfo.State, uncertain: Boolean = false) =
+        BroadcastIdentityVerifyOperation.PastRun(state, uncertain)
+
     @Test
     fun `a link already published or still queued for the name is not published again`() {
-        assertTrue(BroadcastIdentityVerifyOperation.publishedOrPending(listOf(WorkInfo.State.SUCCEEDED)))
-        assertTrue(BroadcastIdentityVerifyOperation.publishedOrPending(listOf(WorkInfo.State.ENQUEUED)))
-        assertTrue(BroadcastIdentityVerifyOperation.publishedOrPending(listOf(WorkInfo.State.RUNNING)))
+        assertTrue(BroadcastIdentityVerifyOperation.publishedOrPending(listOf(run(WorkInfo.State.SUCCEEDED))))
+        assertTrue(BroadcastIdentityVerifyOperation.publishedOrPending(listOf(run(WorkInfo.State.ENQUEUED))))
+        assertTrue(BroadcastIdentityVerifyOperation.publishedOrPending(listOf(run(WorkInfo.State.RUNNING))))
         assertFalse(BroadcastIdentityVerifyOperation.publishedOrPending(emptyList()))
-        assertFalse(BroadcastIdentityVerifyOperation.publishedOrPending(listOf(WorkInfo.State.FAILED)))
-        assertFalse(BroadcastIdentityVerifyOperation.publishedOrPending(listOf(WorkInfo.State.CANCELLED)))
+        assertFalse(BroadcastIdentityVerifyOperation.publishedOrPending(listOf(run(WorkInfo.State.FAILED))))
+        assertFalse(BroadcastIdentityVerifyOperation.publishedOrPending(listOf(run(WorkInfo.State.CANCELLED))))
+    }
+
+    @Test
+    fun `a publication whose outcome is unknown is never published again`() {
+        // the SDK's Ambiguous outcome (a submission timeout) fails the worker, but the document
+        // may have landed: another create could pay for a second one
+        assertTrue(BroadcastIdentityVerifyOperation.publishedOrPending(listOf(run(WorkInfo.State.FAILED, uncertain = true))))
+        assertTrue(
+            BroadcastIdentityVerifyOperation.publishedOrPending(
+                listOf(run(WorkInfo.State.FAILED), run(WorkInfo.State.FAILED, uncertain = true))
+            )
+        )
+    }
+
+    @Test
+    fun `a timed-out publication reconciled while the name retry is still pending creates nothing more`() =
+        kotlinx.coroutines.runBlocking {
+            val runs = mutableListOf<BroadcastIdentityVerifyOperation.PastRun>()
+            var enqueued = 0
+            val publish: suspend (String) -> Unit = {
+                publishVerificationLinkOnce(
+                    link = "https://example.com/proof",
+                    pastRuns = { runs.toList() },
+                    enqueue = { enqueued++ }
+                )
+            }
+
+            publish("alice") // the retry's own publication
+            assertEquals(1, enqueued)
+            runs += run(WorkInfo.State.FAILED, uncertain = true) // its submission timed out
+            publish("alice") // the restart reconcile: the retry's mark survived
+
+            assertEquals("no second create while the first may have landed", 1, enqueued)
+        }
+
+    @Test
+    fun `a definite failure, or no valid link, decides the re-publish`() = kotlinx.coroutines.runBlocking {
+        var enqueued = 0
+        publishVerificationLinkOnce("https://example.com/proof", { listOf(run(WorkInfo.State.FAILED)) }, { enqueued++ })
+        assertEquals("a failure that submitted nothing is published again", 1, enqueued)
+        publishVerificationLinkOnce(null, { emptyList() }, { enqueued++ })
+        publishVerificationLinkOnce("not a link", { emptyList() }, { enqueued++ })
+        assertEquals(1, enqueued)
     }
 }

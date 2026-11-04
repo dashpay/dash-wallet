@@ -35,12 +35,13 @@ class BroadcastIdentityVerifyOperation(val application: Application) {
         fun uniqueWorkName(toUserId: String) = WORK_NAME + toUserId
 
         /**
-         * The name's verification work already published its document, or is still queued or
-         * running: publishing again would broadcast a second document (KEEP only covers work
-         * that has not finished).
+         * The name's verification work already published its document, is still queued or
+         * running, or failed after submitting with an unknown outcome (it may have landed):
+         * publishing again could broadcast a second document (KEEP only covers work that has not
+         * finished). Only a definite failure, or no earlier run, allows another create.
          */
-        fun publishedOrPending(states: List<WorkInfo.State>): Boolean =
-            states.any { it == WorkInfo.State.SUCCEEDED || !it.isFinished }
+        fun publishedOrPending(runs: List<PastRun>): Boolean =
+            runs.any { it.state == WorkInfo.State.SUCCEEDED || !it.state.isFinished || it.uncertain }
     }
 
     private val workManager: WorkManager = WorkManager.getInstance(application)
@@ -50,9 +51,18 @@ class BroadcastIdentityVerifyOperation(val application: Application) {
      */
     val allOperationsData = workManager.getWorkInfosByTagLiveData(BroadcastIdentityVerifyWorker::class.qualifiedName!!)
 
-    /** The states of [username]'s verification work WorkManager still remembers. */
-    suspend fun states(username: String): List<WorkInfo.State> =
-        workManager.getWorkInfosForUniqueWork(uniqueWorkName(username)).await().map { it.state }
+    /** One earlier run of a name's verification work, as WorkManager still remembers it. */
+    data class PastRun(
+        val state: WorkInfo.State,
+        /** It failed after submitting, with an unknown outcome: the document may have landed. */
+        val uncertain: Boolean
+    )
+
+    /** The runs of [username]'s verification work WorkManager still remembers. */
+    suspend fun pastRuns(username: String): List<PastRun> =
+        workManager.getWorkInfosForUniqueWork(uniqueWorkName(username)).await().map {
+            PastRun(it.state, it.outputData.getBoolean(BroadcastIdentityVerifyWorker.KEY_PUBLICATION_UNCERTAIN, false))
+        }
 
     @SuppressLint("EnqueueWork")
     fun create(username: String, url: String): WorkContinuation {
