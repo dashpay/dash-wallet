@@ -178,6 +178,14 @@ internal fun isDualPrimaryClobbered(primary: String?, secondary: String?): Boole
  * clobber broke). A CONTESTED primary is left unstamped: its request status
  * is owned by the voting tail (REQUESTED_NAME_* → VOTING), not CONFIRMED.
  */
+/**
+ * Whether CreateIdentityService publishes a contested name's verification link itself (the legacy
+ * dashj creation). Not for an SDK-claimed invite: its names register through the SDK, which
+ * records the obligation [de.schildbach.wallet.service.platform.sdk.VerifyLinkReconciler]
+ * publishes, so a second, inline publisher would create the document twice.
+ */
+internal fun publishesVerifyLinkInline(sdkClaimedInvite: Boolean): Boolean = !sdkClaimedInvite
+
 internal fun advanceRecordForSdkDpnsBroadcast(
     record: BlockchainIdentityData,
     usernameType: UsernameType,
@@ -1035,6 +1043,11 @@ class CreateIdentityService : LifecycleService() {
      * cutover is committed. A false result keeps the dashj claim, byte-identical
      * to before. Mirrors [isShieldedEnabled] for the shielded claim branch.
      */
+    /** The invite was claimed by the SDK: its names register through the SDK (see registerUsername). */
+    private suspend fun isSdkClaimedInvite(): Boolean = blockchainIdentityData.invite?.let {
+        (it.isShielded && isShieldedEnabled()) || (!it.isShielded && isL1InviteSdkRoutable())
+    } == true
+
     private suspend fun isL1InviteSdkRoutable(): Boolean = try {
         sdkL1InviteCreation.isEnabledAndCommitted()
     } catch (e: Exception) {
@@ -1450,7 +1463,9 @@ class CreateIdentityService : LifecycleService() {
                 identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.REQUESTED_NAME_LINK_SAVING)
                 identityRepository.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
 
-                blockchainIdentityData.verificationLink?.let { verificationLink ->
+                // An SDK-claimed invite registered its name through the SDK, which recorded the
+                // link's obligation: VerifyLinkReconciler is its one publisher.
+                blockchainIdentityData.verificationLink?.takeIf { publishesVerifyLinkInline(isSdkClaimedInvite()) }?.let { verificationLink ->
                     if (verificationLink.matches(Regex("^https?:\\/\\/.+\$"))) {
                         IdentityVerify(platformRepo.platform.platform).createForDashDomain(
                             blockchainIdentityData.username!!,
@@ -1545,9 +1560,7 @@ class CreateIdentityService : LifecycleService() {
         // PREORDER_SECONDARY_REGISTERING). A NotBroadcast/Ambiguous leaves the
         // state at the type's registering state for a retryable tile /
         // RestoreIdentityWorker reconcile (never a re-fund).
-        val sdkClaimedInvite = blockchainIdentityData.invite?.let {
-            (it.isShielded && isShieldedEnabled()) || (!it.isShielded && isL1InviteSdkRoutable())
-        } == true
+        val sdkClaimedInvite = isSdkClaimedInvite()
         if (sdkClaimedInvite) {
             // Per-type completion guard, mirroring the legacy tail's `<=` gates:
             // finishRegistration calls this for BOTH names on every resume, and
