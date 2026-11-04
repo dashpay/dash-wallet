@@ -120,45 +120,19 @@ internal fun awaitingEnqueue(enqueue: (identityIdBase58: String) -> androidx.wor
     { identityIdBase58 -> enqueue(identityIdBase58).await() }
 
 /**
- * The production verification-link publisher of the SDK registration owners: the requested link
- * on record (read strictly: an unreadable link is not "no link") handed to the existing
- * IdentityVerify publisher, awaiting the enqueue. Nothing when no valid link is on record.
+ * The production verification-link obligation recorder of the SDK registration owners: the
+ * requested link on record (read strictly: an unreadable link is not "no link"), when it is a
+ * valid link, becomes the durable [de.schildbach.wallet.service.platform.VerifyLinkObligation]
+ * for [identityIdBase58]'s contested label. [VerifyLinkReconciler] publishes it. Nothing when no
+ * valid link is on record.
  */
-internal fun verificationLinkPublisher(
-    config: BlockchainIdentityConfig,
-    application: android.app.Application
-): suspend (String) -> Unit = { label ->
-    val link = config.getPreservingErrors(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK)
-    val operation = de.schildbach.wallet.ui.dashpay.work.BroadcastIdentityVerifyOperation(application)
-    publishVerificationLinkOnce(
-        link,
-        pastRuns = { operation.pastRuns(label) },
-        enqueue = { link?.let { operation.create(label, it).enqueue().await() } }
-    )
-}
-
-/**
- * Enqueues [link]'s publication unless an earlier run of it succeeded, is still queued or
- * running, or failed with an unknown outcome: a re-publish (a reconcile while the name retry is
- * still pending) never pays for a second document that may duplicate one already landed. A run
- * whose outcome is unknown is not re-published here at all (fail safe; logged).
- */
-internal suspend fun publishVerificationLinkOnce(
-    link: String?,
-    pastRuns: suspend () -> List<de.schildbach.wallet.ui.dashpay.work.BroadcastIdentityVerifyOperation.PastRun>,
-    enqueue: suspend () -> Unit
-) {
-    if (link == null || !SdkTransparentUsernameCreation.isVerificationLink(link)) return
-    val runs = pastRuns()
-    if (de.schildbach.wallet.ui.dashpay.work.BroadcastIdentityVerifyOperation.publishedOrPending(runs)) {
-        if (runs.any { it.uncertain }) {
-            LoggerFactory.getLogger(SdkTransparentUsernameCreation::class.java)
-                .warn("an earlier verification-link publication has an unknown outcome; not publishing it again")
+internal fun verifyObligationRecorder(config: BlockchainIdentityConfig): suspend (String, String) -> Unit =
+    { identityIdBase58, label ->
+        val link = config.getPreservingErrors(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK)
+        if (link != null && SdkTransparentUsernameCreation.isVerificationLink(link)) {
+            config.recordVerifyObligation(identityIdBase58, label, link)
         }
-        return
     }
-    enqueue()
-}
 
 internal fun registrationRowsFor(keys: List<IdentityKeyPreview>): List<IdentityPubkey> =
     RegistrationKeys.buildRegistrationRows(
@@ -604,13 +578,15 @@ class SdkTransparentUsernameCreation internal constructor(
      */
     private val nameJournal: RequestedNameJournal = InMemoryRequestedNameJournal(),
     /**
-     * Publishes the verification link the user gave for a contested [label] (its IdentityVerify
-     * document), durably handed to its worker before it returns; nothing when no valid link is on
-     * record. Throws when that cannot be established: the caller's retry then stays pending.
-     * The legacy creation publishes it in CreateIdentityService; recovery only reads it back.
-     * No-op by default.
+     * Records the durable obligation to publish the verification link the user gave for a
+     * contested [label] (its IdentityVerify document), when a valid link is on record; the
+     * [VerifyLinkReconciler] publishes it once the name is the identity's, whichever path
+     * registered it. Throws when it cannot be read or written. The legacy creation publishes the
+     * link in CreateIdentityService; recovery only reads it back. No-op by default.
      */
-    private val publishVerificationLink: suspend (label: String) -> Unit = {}
+    private val recordVerifyObligation: suspend (identityIdBase58: String, label: String) -> Unit = { _, _ -> },
+    /** One pass of the verification-link reconcile ([VerifyLinkReconciler]). No-op by default. */
+    private val reconcileVerifyLink: suspend () -> Unit = {}
 ) {
     @Inject
     constructor(
@@ -624,7 +600,8 @@ class SdkTransparentUsernameCreation internal constructor(
         fundingGate: de.schildbach.wallet.payments.PendingPaymentFundingGate,
         dpnsLock: DpnsRegistrationLock,
         // A Provider: only a name-only retry reads it, and it pulls in the platform services.
-        platformRepo: javax.inject.Provider<de.schildbach.wallet.ui.dashpay.PlatformRepo>
+        platformRepo: javax.inject.Provider<de.schildbach.wallet.ui.dashpay.PlatformRepo>,
+        verifyLinkReconciler: javax.inject.Provider<VerifyLinkReconciler>
     ) : this(
         source = DashSdkTransparentUsernameSource(sdkService),
         cutoverCommitted = { sdkL1SendService.cutoverCommitted() },
@@ -664,7 +641,8 @@ class SdkTransparentUsernameCreation internal constructor(
         },
         dpnsLock = dpnsLock,
         nameJournal = blockchainIdentityConfig,
-        publishVerificationLink = verificationLinkPublisher(blockchainIdentityConfig, walletApplication)
+        recordVerifyObligation = verifyObligationRecorder(blockchainIdentityConfig),
+        reconcileVerifyLink = { verifyLinkReconciler.get().reconcile() }
     )
 
     /** Test seam: the funding call blocks on network I/O — keep it off main. */
@@ -1161,6 +1139,22 @@ class SdkTransparentUsernameCreation internal constructor(
         // processing card while it lands, and GATES the terminal outcome on
         // the name — a failure is surfaced as a RETRYABLE error, never a false
         // success.
+        // A contested name's verification link: durable before the name is submitted, so no
+        // process death between the two loses it; the reconcile publishes it once the name is
+        // the identity's. A name-only retry refuses on a failed write (nothing is spent yet,
+        // its retryable error is recorded); a funded creation goes on with its name.
+        if (Names.isUsernameContestable(label)) {
+            if (nameOnlyRetry) {
+                recordVerifyObligation(identityIdBase58, label)
+            } else {
+                try {
+                    recordVerifyObligation(identityIdBase58, label)
+                } catch (t: Throwable) {
+                    if (t is CancellationException) throw t
+                    log.error("could not record the verification link of '{}'", label, t)
+                }
+            }
+        }
         val primary = registerNameTracked(
             walletId,
             identityId,
@@ -1237,8 +1231,6 @@ class SdkTransparentUsernameCreation internal constructor(
             // VOTING advance).
             try {
                 handOffToLegacy(identityIdBase58)
-                // a contested request's verification link, which recovery never publishes
-                if (Names.isUsernameContestable(label)) publishVerificationLink(label)
                 // the recovery worker owns the outcome now
                 if (nameOnlyRetry) finishPendingNameRetry()
             } catch (t: Throwable) {
@@ -1837,6 +1829,17 @@ class SdkTransparentUsernameCreation internal constructor(
         ) {
             source.identityCreditBalance(identityIdBase58)
         }
+        // The recovery's registration of a contested name: its verification link, best effort
+        // (the name is still registered; the reconcile publishes the link once it is the
+        // identity's).
+        if (Names.isUsernameContestable(label)) {
+            try {
+                recordVerifyObligation(identityIdBase58, label)
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                log.error("could not record the verification link of '{}'", label, t)
+            }
+        }
         // Re-check → submit under the identity's DPNS lock: the caller's own on-chain check ran
         // before it, so another in-app registration may have landed this name since. A label the
         // identity already owns or contends for is reported as broadcast and not submitted again.
@@ -2018,6 +2021,9 @@ class SdkTransparentUsernameCreation internal constructor(
         }
     }
 
+    /** One pass of the verification-link reconcile, for the platform sync tick. */
+    suspend fun reconcileVerificationLink() = reconcileVerifyLink()
+
     /**
      * Best effort: if the state write fails as well, the failure is only logged and false is
      * returned (the retry then stays pending for [reconcileInterruptedNameRetry]).
@@ -2122,19 +2128,8 @@ class SdkTransparentUsernameCreation internal constructor(
             return false
         }
         if (replacementVoting) {
-            // Recovery took it to its vote, which proves the name, not the separate verification
-            // link publication (its enqueue can have failed, or the process died before it): that
-            // keeps the retry pending until it is done. The publisher never publishes twice.
-            if (Names.isUsernameContestable(request.username)) {
-                try {
-                    publishVerificationLink(request.username)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    log.warn("could not publish the voting replacement's verification link; retrying later", e)
-                    return false
-                }
-            }
+            // Recovery took it to its vote. Its verification link is not this retry's to keep:
+            // the obligation recorded before the name was submitted is the reconcile's.
             log.info("pending name-only retry for {}… reached its vote; clearing it", identityIdBase58.take(8))
             finishPendingNameRetry()
             return false
@@ -2183,8 +2178,6 @@ class SdkTransparentUsernameCreation internal constructor(
                     null
                 )
                 handOffToLegacy(identityIdBase58)
-                // the run may have died before publishing it
-                if (Names.isUsernameContestable(request.username)) publishVerificationLink(request.username)
             } else {
                 log.info(
                     "interrupted name-only retry for {}…: '{}' did not register; offering a retry",

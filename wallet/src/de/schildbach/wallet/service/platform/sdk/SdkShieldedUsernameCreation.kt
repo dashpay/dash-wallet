@@ -768,8 +768,8 @@ class SdkShieldedUsernameCreation internal constructor(
      * only when another registration held [dpnsLock] first (the identity is new otherwise).
      */
     private val nameAlreadyTaken: suspend (identityIdBase58: String, label: String) -> Boolean = { _, _ -> false },
-    /** As [SdkTransparentUsernameCreation]'s: a contested name's verification link. No-op by default. */
-    private val publishVerificationLink: suspend (label: String) -> Unit = {}
+    /** As [SdkTransparentUsernameCreation]'s: a contested name's verification-link obligation. No-op by default. */
+    private val recordVerifyObligation: suspend (identityIdBase58: String, label: String) -> Unit = { _, _ -> }
 ) {
     @Inject
     constructor(
@@ -813,7 +813,7 @@ class SdkShieldedUsernameCreation internal constructor(
         nameAlreadyTaken = { identityIdBase58, label ->
             identityOwnsOrContendsFor(platformRepo.get(), identityIdBase58, label)
         },
-        publishVerificationLink = verificationLinkPublisher(blockchainIdentityConfig, walletApplication)
+        recordVerifyObligation = verifyObligationRecorder(blockchainIdentityConfig)
     )
 
     /** Test seam: the pipeline blocks for a ~30s proof — keep it off main. */
@@ -1114,6 +1114,16 @@ class SdkShieldedUsernameCreation internal constructor(
         // (dual-username flow) is registered independently of the primary's
         // outcome: each name that can land should land, and the legacy handoff
         // below reconciles whatever is on chain.
+        // A contested name's verification link, durable before the name is submitted; the
+        // reconcile (VerifyLinkReconciler) publishes it once the name is the identity's.
+        if (Names.isUsernameContestable(label)) {
+            try {
+                recordVerifyObligation(identityIdBase58, label)
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                log.error("could not record the verification link of '{}'", label, t)
+            }
+        }
         val (nameStatus, nameFailure) = registerNameTracked(
             walletId,
             identityId,
@@ -1186,16 +1196,6 @@ class SdkShieldedUsernameCreation internal constructor(
                 identityIdBase58.take(8),
                 t
             )
-        }
-        // A contested primary's verification link: recovery only reads it back. Best effort,
-        // like the handoff: the identity and its contest are on chain either way.
-        if (primaryConfirmed && Names.isUsernameContestable(label)) {
-            try {
-                publishVerificationLink(label)
-            } catch (t: Throwable) {
-                if (t is CancellationException) throw t
-                log.error("could not publish the verification link of '{}'", label, t)
-            }
         }
 
         return SdkWriteResult.Broadcast(

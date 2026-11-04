@@ -22,7 +22,10 @@ import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.service.platform.IdentityRepository
+import de.schildbach.wallet.service.platform.uniqueIdStringOrNull
+import org.slf4j.LoggerFactory
 import de.schildbach.wallet.service.platform.PlatformBroadcastService
 import de.schildbach.wallet.service.work.BaseWorker
 import org.bitcoinj.crypto.KeyCrypterException
@@ -37,35 +40,16 @@ class BroadcastIdentityVerifyWorker @AssistedInject constructor(
     val analytics: AnalyticsService,
     val platformBroadcastService: PlatformBroadcastService,
     val walletDataProvider: WalletData,
-    val identityRepository: IdentityRepository
+    val identityRepository: IdentityRepository,
+    val identityConfig: BlockchainIdentityConfig
 ) : BaseWorker(context, parameters) {
+    private val log = LoggerFactory.getLogger(BroadcastIdentityVerifyWorker::class.java)
 
-    enum class IdentityWait { PUBLISH, RETRY, GIVE_UP }
 
     companion object {
         const val KEY_PASSWORD = "BroadcastIdentityVerifyWorker.PASSWORD"
         const val KEY_USERNAME = "BroadcastIdentityVerifyWorker.USERNAME"
         const val KEY_URL = "BroadcastIdentityVerifyWorker.URL"
-
-        /**
-         * Set on a failure after the document was submitted: its outcome is unknown (the SDK's
-         * Ambiguous, a timeout), so it must not be published again without reconciliation.
-         */
-        const val KEY_PUBLICATION_UNCERTAIN = "BroadcastIdentityVerifyWorker.PUBLICATION_UNCERTAIN"
-
-        /**
-         * Runs (with WorkManager's backoff) this worker waits for the identity to be loaded
-         * before it gives up: an SDK registration enqueues it next to recovery, which loads the
-         * identity only when it finishes.
-         */
-        const val MAX_IDENTITY_WAIT_ATTEMPTS = 12
-
-        /** Whether to publish now, wait for recovery to load the identity, or stop waiting. */
-        fun identityWait(identityLoaded: Boolean, runAttemptCount: Int): IdentityWait = when {
-            identityLoaded -> IdentityWait.PUBLISH
-            runAttemptCount < MAX_IDENTITY_WAIT_ATTEMPTS -> IdentityWait.RETRY
-            else -> IdentityWait.GIVE_UP
-        }
     }
 
     override suspend fun doWorkWithBaseProgress(): Result {
@@ -85,14 +69,12 @@ class BroadcastIdentityVerifyWorker @AssistedInject constructor(
             return Result.failure(workDataOf(KEY_ERROR_MESSAGE to msg))
         }
 
-        // Not loaded yet (recovery still running): retry later instead of failing for good,
-        // which would leave the name's contest without its verification link.
-        when (identityWait(identityRepository.blockchainIdentity?.identity != null, runAttemptCount)) {
-            IdentityWait.PUBLISH -> Unit
-            IdentityWait.RETRY -> return Result.retry()
-            IdentityWait.GIVE_UP -> return Result.failure(
-                workDataOf(KEY_ERROR_MESSAGE to "the identity was never loaded; verification link not published")
-            )
+        // Not loaded yet (recovery still running): nothing was submitted. A registration's
+        // obligation stays pending, and the verification-link reconcile publishes it later
+        // (VerifyLinkReconciler); no retry budget to run out.
+        val identity = identityRepository.blockchainIdentity
+        if (identity?.identity == null) {
+            return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "the identity is not loaded yet; nothing published"))
         }
 
         return try {
@@ -104,10 +86,17 @@ class BroadcastIdentityVerifyWorker @AssistedInject constructor(
         } catch (ex: Exception) {
             analytics.logError(ex, "Identity Verify: failed to broadcast identity verify document")
             // Fail safe: past this point the document may have been submitted (the SDK throws
-            // for an Ambiguous outcome), so this failure never authorizes another create.
+            // for an Ambiguous outcome). Recorded on the obligation, so the reconcile publishes
+            // again only once a lookup proves the document absent.
+            try {
+                identity.uniqueIdStringOrNull()?.let {
+                    identityConfig.markVerifyUncertain(it, username, System.currentTimeMillis())
+                }
+            } catch (e: Exception) {
+                log.warn("could not record the uncertain verification-link publication", e)
+            }
             Result.failure(workDataOf(
-                    KEY_ERROR_MESSAGE to formatExceptionMessage("broadcast identity verify", ex),
-                    KEY_PUBLICATION_UNCERTAIN to true))
+                    KEY_ERROR_MESSAGE to formatExceptionMessage("broadcast identity verify", ex)))
         }
     }
 }

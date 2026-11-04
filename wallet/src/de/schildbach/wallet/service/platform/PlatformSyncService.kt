@@ -696,6 +696,17 @@ class PlatformSynchronizationService @Inject constructor(
                 // retried here. A DataStore read and nothing more when nothing is pending; off
                 // this pass, and single-flight inside, so a slow Platform read never stacks.
                 syncScope.launch { reconcileInterruptedNameRetry("sync tick") }
+                // a contested name's pending verification link (single-flight and best effort
+                // inside; nothing but a DataStore read when none is pending)
+                syncScope.launch {
+                    try {
+                        transparentUsernameCreation.get().reconcileVerificationLink()
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        log.warn("sync tick: could not reconcile the verification link", e)
+                    }
+                }
                 // Background-aware cadence (docs/upgrade-memory-and-sync-plan.md
                 // §10.4, emulator finding 11): the full contact/profile/invite/
                 // metadata cycle every 15 s is for a user looking at the app.

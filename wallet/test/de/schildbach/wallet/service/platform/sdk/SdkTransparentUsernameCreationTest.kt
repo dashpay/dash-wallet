@@ -666,8 +666,8 @@ class SdkTransparentUsernameCreationTest {
         val handedOff = mutableListOf<String>()
         val nameContexts = mutableListOf<List<Any?>>()
         val uncaught = mutableListOf<Throwable>()
-        /** Verification-link publications, each with whether the run was handed off by then. */
-        val published = mutableListOf<Pair<String, Boolean>>()
+        /** Verification-link obligations recorded, each with whether a name was submitted by then. */
+        val obligations = mutableListOf<Pair<String, Boolean>>()
     }
 
     /**
@@ -1114,7 +1114,7 @@ class SdkTransparentUsernameCreationTest {
         run: RetryRun,
         appScope: CoroutineScope? = null,
         nameAlreadyTaken: suspend (String, String) -> Boolean = { _, _ -> false },
-        publishVerificationLink: suspend (String) -> Unit = { run.published += it to run.handedOff.isNotEmpty() },
+        recordVerifyObligation: suspend (String, String) -> Unit = { _, label -> run.obligations += label to false },
         driveCreationState: suspend (IdentityCreationState, String?) -> Unit = { state, error -> run.states += state to error }
     ) = SdkTransparentUsernameCreation(
         source = source,
@@ -1127,7 +1127,7 @@ class SdkTransparentUsernameCreationTest {
         nameAlreadyTaken = nameAlreadyTaken,
         fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock(),
         nameJournal = journal,
-        publishVerificationLink = publishVerificationLink
+        recordVerifyObligation = recordVerifyObligation
     ).also { it.ioDispatcher = kotlinx.coroutines.test.StandardTestDispatcher(testScheduler) }
 
     /** A name-only retry whose process dies while its name is being submitted. */
@@ -1191,7 +1191,6 @@ class SdkTransparentUsernameCreationTest {
         )
         assertFalse(restart.states.any { it.first == IdentityCreationState.DONE })
         assertEquals(listOf(identityIdBase58), restart.handedOff)
-        assertEquals("its verification link is published too", listOf("alice" to true), restart.published)
         coVerify(exactly = 1) { source.registerDpnsName(any(), any(), "alice") }
         assertNull(journal.pendingNameOnlyRetry())
     }
@@ -1359,47 +1358,55 @@ class SdkTransparentUsernameCreationTest {
     }
 
     @Test
-    fun `a contested replacement publishes its verification link before the retry is retired`() = runTest {
+    fun `a contested replacement records its verification link before its name is submitted`() = runTest {
+        // durable before the submit: no process death between the two can lose it; the
+        // VerifyLinkReconciler publishes it once the name is the identity's
         val source = source(lockAfterFailure = null)
-        coEvery { source.registerDpnsName(walletIdHex, identityId, "alice") } returns "alice.dash"
+        var submitted = false
+        coEvery { source.registerDpnsName(walletIdHex, identityId, "alice") } coAnswers {
+            submitted = true
+            "alice.dash"
+        }
         val store = de.schildbach.wallet.service.platform.InMemoryRequestedNameJournal()
-        var pendingWhenPublished: Boolean? = null
         val run = RetryRun()
         val appScope = CoroutineScope(SupervisorJob() + kotlinx.coroutines.test.StandardTestDispatcher(testScheduler))
-        val creation = instance(source, store, run, appScope, publishVerificationLink = { label ->
-            pendingWhenPublished = store.pendingNameOnlyRetry() != null
-            run.published += label to run.handedOff.isNotEmpty()
+        val creation = instance(source, store, run, appScope, recordVerifyObligation = { id, label ->
+            assertEquals(identityIdBase58, id)
+            run.obligations += label to submitted
         })
 
         assertTrue(creation.retryNameForExistingIdentity(identityIdBase58, "alice", null))
         advanceUntilIdle()
 
-        assertEquals("published once, for the replacement, after the handoff", listOf("alice" to true), run.published)
-        assertEquals("before the retry was retired", true, pendingWhenPublished)
+        assertEquals("recorded once, before the submit", listOf("alice" to false), run.obligations)
+        assertEquals(listOf(identityIdBase58), run.handedOff)
         assertNull(store.pendingNameOnlyRetry())
         appScope.cancel()
     }
 
     @Test
-    fun `a replacement whose verification link cannot be published stays pending`() = runTest {
+    fun `a replacement whose verification link cannot be recorded is not submitted`() = runTest {
         val source = source(lockAfterFailure = null)
-        coEvery { source.registerDpnsName(walletIdHex, identityId, "alice") } returns "alice.dash"
         val store = de.schildbach.wallet.service.platform.InMemoryRequestedNameJournal()
         val run = RetryRun()
         val appScope = CoroutineScope(SupervisorJob() + kotlinx.coroutines.test.StandardTestDispatcher(testScheduler))
-        val creation = instance(source, store, run, appScope, publishVerificationLink = {
+        val creation = instance(source, store, run, appScope, recordVerifyObligation = { _, _ ->
             throw java.io.IOException("link unreadable")
         })
 
         assertTrue(creation.retryNameForExistingIdentity(identityIdBase58, "alice", null))
         advanceUntilIdle()
 
-        assertTrue("the restart reconcile publishes it", store.pendingNameOnlyRetry() != null)
+        coVerify(exactly = 0) { source.registerDpnsName(any(), any(), any()) }
+        assertTrue(
+            "its retryable error: ${store.errorMessage}",
+            SdkTransparentUsernameCreation.isNameOnlyRetryError(store.errorMessage)
+        )
         appScope.cancel()
     }
 
     @Test
-    fun `a non-contested replacement publishes no verification link`() = runTest {
+    fun `a non-contested replacement records no verification link`() = runTest {
         val source = source(lockAfterFailure = null)
         coEvery { source.registerDpnsName(walletIdHex, identityId, "alice3") } returns "alice3.dash"
         val store = de.schildbach.wallet.service.platform.InMemoryRequestedNameJournal()
@@ -1409,9 +1416,24 @@ class SdkTransparentUsernameCreationTest {
         assertTrue(instance(source, store, run, appScope).retryNameForExistingIdentity(identityIdBase58, "alice3", null))
         advanceUntilIdle()
 
-        assertTrue(run.published.isEmpty())
+        assertTrue(run.obligations.isEmpty())
         assertEquals(listOf(identityIdBase58), run.handedOff)
         appScope.cancel()
+    }
+
+    @Test
+    fun `a recovery's registration of a contested name records its verification link`() = runTest {
+        // RestoreIdentityWorker registers through registerDpnsNameForExistingIdentity; the
+        // obligation recorded there is what the reconcile publishes (no code in the worker)
+        val source = source(lockAfterFailure = null)
+        coEvery { source.registerDpnsName(walletIdHex, identityId, "alice") } returns "alice.dash"
+        val run = RetryRun()
+
+        val result = instance(source, de.schildbach.wallet.service.platform.InMemoryRequestedNameJournal(), run)
+            .registerDpnsNameForExistingIdentity(identityIdBase58, "alice")
+
+        assertTrue(result is SdkWriteResult.Broadcast)
+        assertEquals(listOf("alice" to false), run.obligations)
     }
 
     /** A name-only retry whose process dies the moment any unprefixed (legacy-route) error is written. */
@@ -1686,42 +1708,6 @@ class SdkTransparentUsernameCreationTest {
         assertTrue("nothing written: ${run.states}", run.states.isEmpty() && run.nameContexts.isEmpty())
         assertTrue(run.handedOff.isEmpty())
         assertNull("recovery owns it", store.pendingNameOnlyRetry())
-    }
-
-    @Test
-    fun `a contested replacement recovery took to its vote still publishes its link before it is cleared`() = runTest {
-        // recovery's enqueue landed, the verification enqueue did not (a failed link read, or a
-        // process death between the two): reaching VOTING does not discharge the publication
-        val source = source(lockAfterFailure = null)
-        val store = de.schildbach.wallet.service.platform.InMemoryRequestedNameJournal()
-        store.beginNameOnlyRetry(RequestedNameContext(identityIdBase58, "alice", null))
-        store.creationState = IdentityCreationState.VOTING
-        store.username = "alice"
-        val run = RetryRun()
-
-        instance(source, store, run).reconcileInterruptedNameRetry()
-
-        assertEquals(listOf("alice"), run.published.map { it.first })
-        assertNull("cleared once published", store.pendingNameOnlyRetry())
-        assertTrue("nothing registered or handed off again", run.handedOff.isEmpty())
-        coVerify(exactly = 0) { source.registerDpnsName(any(), any(), any()) }
-    }
-
-    @Test
-    fun `a voting replacement whose link cannot be published yet stays pending`() = runTest {
-        val source = source(lockAfterFailure = null)
-        val store = de.schildbach.wallet.service.platform.InMemoryRequestedNameJournal()
-        store.beginNameOnlyRetry(RequestedNameContext(identityIdBase58, "alice", null))
-        store.creationState = IdentityCreationState.VOTING
-        store.username = "alice"
-        val run = RetryRun()
-
-        assertFalse(
-            instance(source, store, run, publishVerificationLink = { throw java.io.IOException("link unreadable") })
-                .reconcileInterruptedNameRetry()
-        )
-
-        assertTrue("the next trigger publishes it", store.pendingNameOnlyRetry() != null)
     }
 
     @Test

@@ -174,7 +174,7 @@ class SdkShieldedUsernameCreationTest {
         handoff: HandoffRecorder = HandoffRecorder(),
         overages: OverageRecorder = OverageRecorder(),
         scope: TestScope? = null,
-        published: MutableList<String> = mutableListOf()
+        obligations: MutableList<String> = mutableListOf()
     ) = SdkShieldedUsernameCreation(
         source = source,
         dashPayConfig = config(flag),
@@ -186,7 +186,7 @@ class SdkShieldedUsernameCreationTest {
         handOffToLegacy = handoff::invoke,
         recordInviteOverage = overages::invoke,
         executorScope = scope,
-        publishVerificationLink = { published += it }
+        recordVerifyObligation = { _, label -> obligations += label }
     )
 
     // ── Fee → denomination mapping ────────────────────────────────────────
@@ -434,25 +434,26 @@ class SdkShieldedUsernameCreationTest {
     }
 
     @Test
-    fun contestedUsername_publishesItsVerificationLink_aNonContestedOneDoesNot() = runTest {
-        // recovery only reads a verification link back: the registration owner publishes it
+    fun contestedUsername_recordsItsVerificationLink_aNonContestedOneDoesNot() = runTest {
+        // recovery only reads a verification link back: the registration owner records the
+        // obligation the VerifyLinkReconciler publishes
         balanceFlow.value = contestedDenomination
         try {
             val source = happySource()
             coEvery {
                 source.createIdentityFromPool(walletIdHex, 0, registrationKeys, contestedDenominationCredits, any())
             } returns identityId
-            val published = mutableListOf<String>()
+            val obligations = mutableListOf<String>()
 
-            assertTrue(service(source = source, published = published).createUsernameFromShielded("alice") is SdkWriteResult.Broadcast)
+            assertTrue(service(source = source, obligations = obligations).createUsernameFromShielded("alice") is SdkWriteResult.Broadcast)
 
-            assertEquals(listOf("alice"), published)
+            assertEquals(listOf("alice"), obligations)
         } finally {
             balanceFlow.value = denomination
         }
-        val published = mutableListOf<String>()
-        assertTrue(service(published = published).createUsernameFromShielded("alice2") is SdkWriteResult.Broadcast)
-        assertTrue(published.isEmpty())
+        val obligations = mutableListOf<String>()
+        assertTrue(service(obligations = obligations).createUsernameFromShielded("alice2") is SdkWriteResult.Broadcast)
+        assertTrue(obligations.isEmpty())
     }
 
     @Test

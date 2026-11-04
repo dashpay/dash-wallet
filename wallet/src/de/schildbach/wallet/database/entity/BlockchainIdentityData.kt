@@ -31,6 +31,9 @@ import de.schildbach.wallet.service.platform.PendingNameOnlyRetry
 import de.schildbach.wallet.service.platform.PlatformService
 import de.schildbach.wallet.service.platform.RequestedNameContext
 import de.schildbach.wallet.service.platform.RequestedNameJournal
+import de.schildbach.wallet.service.platform.VerifyLinkObligation
+import de.schildbach.wallet.service.platform.VerifyLinkObligationStore
+import org.dashj.platform.sdk.platform.Names
 import de.schildbach.wallet.service.platform.recoverySeedRecord
 import de.schildbach.wallet.service.platform.serializeIdentityToleratingContractBounds
 import kotlinx.coroutines.flow.Flow
@@ -217,7 +220,7 @@ open class BlockchainIdentityConfig @Inject constructor(
     PREFERENCES_NAME,
     walletDataProvider,
     migrations = listOf()
-), RequestedNameJournal {
+), RequestedNameJournal, VerifyLinkObligationStore {
     companion object {
         const val PREFERENCES_NAME = "platform-identity"
 
@@ -267,6 +270,13 @@ open class BlockchainIdentityConfig @Inject constructor(
 
         /** A name-only retry of the requested names is in flight; see [RequestedNameJournal]. */
         val NAME_ONLY_RETRY_PENDING = booleanPreferencesKey("name_only_retry_pending")
+
+        /** The pending [VerifyLinkObligation] (see [VerifyLinkObligationStore]). */
+        val VERIFY_LINK_IDENTITY_ID = stringPreferencesKey("verify_link_identity_id")
+        val VERIFY_LINK_LABEL = stringPreferencesKey("verify_link_label")
+        val VERIFY_LINK_URL = stringPreferencesKey("verify_link_url")
+        val VERIFY_LINK_ATTEMPT_AT = longPreferencesKey("verify_link_attempt_at")
+        val VERIFY_LINK_UNCERTAIN = booleanPreferencesKey("verify_link_uncertain")
         private val log = LoggerFactory.getLogger(BlockchainIdentityConfig::class.java)
 
         private fun putRequestedNames(prefs: MutablePreferences, request: RequestedNameContext) {
@@ -496,6 +506,59 @@ open class BlockchainIdentityConfig @Inject constructor(
 
     override suspend fun finishNameOnlyRetry() {
         context.dataStore.edit { prefs -> prefs.remove(NAME_ONLY_RETRY_PENDING) }
+    }
+
+    private fun verifyObligationIn(prefs: Preferences): VerifyLinkObligation? {
+        val identityId = prefs[VERIFY_LINK_IDENTITY_ID] ?: return null
+        val label = prefs[VERIFY_LINK_LABEL] ?: return null
+        val link = prefs[VERIFY_LINK_URL] ?: return null
+        return VerifyLinkObligation(identityId, label, link, prefs[VERIFY_LINK_ATTEMPT_AT], prefs[VERIFY_LINK_UNCERTAIN] ?: false)
+    }
+
+    override suspend fun recordVerifyObligation(identityIdBase58: String, label: String, link: String) {
+        val recorded = VerifyLinkObligation(identityIdBase58, label, link)
+        context.dataStore.edit { prefs ->
+            if (verifyObligationIn(prefs)?.sameRequest(recorded) == true) return@edit
+            prefs[VERIFY_LINK_IDENTITY_ID] = identityIdBase58
+            prefs[VERIFY_LINK_LABEL] = label
+            prefs[VERIFY_LINK_URL] = link
+            prefs.remove(VERIFY_LINK_ATTEMPT_AT)
+            prefs.remove(VERIFY_LINK_UNCERTAIN)
+        }
+    }
+
+    override suspend fun verifyObligation(): VerifyLinkObligation? = verifyObligationIn(readStrict())
+
+    override suspend fun markVerifyAttempt(expected: VerifyLinkObligation, atMs: Long) {
+        context.dataStore.edit { prefs ->
+            if (verifyObligationIn(prefs)?.sameRequest(expected) != true) return@edit
+            prefs[VERIFY_LINK_ATTEMPT_AT] = atMs
+            prefs.remove(VERIFY_LINK_UNCERTAIN)
+        }
+    }
+
+    override suspend fun markVerifyUncertain(identityIdBase58: String, label: String, atMs: Long) {
+        context.dataStore.edit { prefs ->
+            val pending = verifyObligationIn(prefs) ?: return@edit
+            if (pending.identityIdBase58 != identityIdBase58 ||
+                pending.normalizedLabel != Names.normalizeString(label)
+            ) {
+                return@edit
+            }
+            prefs[VERIFY_LINK_ATTEMPT_AT] = atMs
+            prefs[VERIFY_LINK_UNCERTAIN] = true
+        }
+    }
+
+    override suspend fun clearVerifyObligation(expected: VerifyLinkObligation) {
+        context.dataStore.edit { prefs ->
+            if (verifyObligationIn(prefs)?.sameRequest(expected) != true) return@edit
+            prefs.remove(VERIFY_LINK_IDENTITY_ID)
+            prefs.remove(VERIFY_LINK_LABEL)
+            prefs.remove(VERIFY_LINK_URL)
+            prefs.remove(VERIFY_LINK_ATTEMPT_AT)
+            prefs.remove(VERIFY_LINK_UNCERTAIN)
+        }
     }
 
     /** A snapshot of the store that THROWS on a failed read, unlike [data] (which reads as empty). */
