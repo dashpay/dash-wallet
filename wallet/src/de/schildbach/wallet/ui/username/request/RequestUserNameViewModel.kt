@@ -2021,3 +2021,31 @@ internal fun usernameCheckResultIsCurrent(checkedToken: Long, currentToken: Long
 internal fun secondaryNameCollidesWithPrimary(secondary: String, primary: String?): Boolean =
     !primary.isNullOrBlank() && secondary.isNotBlank() &&
         Names.normalizeString(secondary) == Names.normalizeString(primary)
+
+/** What the Verify button of the request flow does; see [verifyRoute]. */
+internal enum class VerifyRoute { SUBMIT_NEW, SUBMIT_REPLACEMENT, UPDATE_EXISTING_REQUEST }
+
+/**
+ * The Verify button: an identity still being created SUBMITS a new request; an existing identity
+ * SUBMITS a replacement (the same name-only route [RequestUserNameViewModel.submit] takes) when its
+ * name lost or was locked in its vote, failed or was taken (an error on record), or when the
+ * requested name is not the one on record; only the request already in its vote is merely
+ * verified (its IdentityVerify document published). The record of a lost vote stays VOTING or
+ * DONE, so the state alone cannot tell a replacement from a verification update.
+ */
+internal fun verifyRoute(identity: BlockchainIdentityData?, requestedUsername: String?): VerifyRoute {
+    if (identity == null || identity.creationState < IdentityCreationState.VOTING &&
+        identity.creationStateErrorMessage == null
+    ) {
+        return VerifyRoute.SUBMIT_NEW
+    }
+    val lostOrLocked = identity.usernameRequested == UsernameRequestStatus.LOST_VOTE ||
+        identity.usernameRequested == UsernameRequestStatus.LOCKED
+    val sameName = requestedUsername != null && identity.username != null &&
+        Names.normalizeString(requestedUsername) == Names.normalizeString(identity.username!!)
+    return if (lostOrLocked || identity.creationStateErrorMessage != null || !sameName) {
+        VerifyRoute.SUBMIT_REPLACEMENT
+    } else {
+        VerifyRoute.UPDATE_EXISTING_REQUEST
+    }
+}

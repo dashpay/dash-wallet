@@ -74,8 +74,17 @@ class VerifyIdentityFragment : Fragment(R.layout.fragment_verfiy_identity) {
             requestUserNameViewModel.setRequestedUserNameLink(binding.linkInput.text.toString())
             requestUserNameViewModel.verify()
             lifecycleScope.launch {
-                val creationState = dashPayViewModel.blockchainIdentity.value?.creationState ?: IdentityCreationState.NONE
-                if (creationState.ordinal < IdentityCreationState.VOTING.ordinal) {
+                val route = verifyRoute(
+                    dashPayViewModel.blockchainIdentity.value,
+                    requestUserNameViewModel.requestedUserName
+                )
+                if (route == VerifyRoute.SUBMIT_REPLACEMENT) {
+                    // A replacement for a lost, locked or taken name: submitted like any request
+                    // (the name-only retry), never only verified. No identity-state observer: the
+                    // existing record is already past NONE and would close the screen at once;
+                    // the submit's own status handler below closes it.
+                    checkViewConfirmDialog()
+                } else if (route == VerifyRoute.SUBMIT_NEW) {
                     checkViewConfirmDialog()
                     dashPayViewModel.blockchainIdentity.observe(viewLifecycleOwner) {
                         if (it?.creationStateErrorMessage != null) {
