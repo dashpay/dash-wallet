@@ -50,6 +50,8 @@ class ReceiveDetailsDialog : OffsetDialogFragment(R.layout.dialog_receive_detail
         private const val ARG_DASH_AMOUNT = "arg_dash_amount"
         private const val ARG_FIAT_AMOUNT = "arg_fiat_amount"
         private const val ARG_ADDRESS = "arg_address"
+        private const val ARG_REQUEST_ADDRESS = "arg_request_address"
+        private const val ARG_REQUEST_ADDRESS_LABEL = "arg_request_address_label"
 
         @JvmStatic
         fun createDialog(address: Address, dashAmount: Coin, fiatAmount: Fiat?): OffsetDialogFragment {
@@ -59,6 +61,28 @@ class ReceiveDetailsDialog : OffsetDialogFragment(R.layout.dialog_receive_detail
             bundle.putSerializable(ARG_DASH_AMOUNT, dashAmount)
             bundle.putSerializable(ARG_FIAT_AMOUNT, fiatAmount)
             dialog.arguments = bundle
+            return dialog
+        }
+
+        /**
+         * The same dialog for an address [PaymentURI][org.dash.wallet.common.payments.parsers.PaymentURI]
+         * cannot carry (Advanced Receive's shielded and Platform addresses and identity ID):
+         * the QR holds [ReceiveViewModel.amountRequestPayload] and the address shows under
+         * [addressLabel]. There is no username row.
+         */
+        fun createAmountRequestDialog(
+            addressLabel: String,
+            address: String,
+            dashAmount: Coin,
+            fiatAmount: Fiat?
+        ): OffsetDialogFragment {
+            val dialog = ReceiveDetailsDialog()
+            dialog.arguments = Bundle().apply {
+                putString(ARG_REQUEST_ADDRESS, address)
+                putString(ARG_REQUEST_ADDRESS_LABEL, addressLabel)
+                putSerializable(ARG_DASH_AMOUNT, dashAmount)
+                putSerializable(ARG_FIAT_AMOUNT, fiatAmount)
+            }
             return dialog
         }
     }
@@ -72,23 +96,42 @@ class ReceiveDetailsDialog : OffsetDialogFragment(R.layout.dialog_receive_detail
         super.onViewCreated(view, savedInstanceState)
 
         requireArguments().apply {
+            val requestAddress = getString(ARG_REQUEST_ADDRESS)
+            if (requestAddress != null) {
+                showAmountRequest(this, requestAddress)
+                return
+            }
             val address = getSerializable(ARG_ADDRESS) as Address
             val dashAmount = getSerializable(ARG_DASH_AMOUNT) as Coin
             val fiatAmount = getSerializable(ARG_FIAT_AMOUNT) as Fiat?
 
             binding.receiveInfo.setInfo(address.toBase58(), dashAmount?.let { org.dash.wallet.common.money.Dash(it.value) })
-            binding.amount.inputValue.text = MonetaryFormat.BTC
-                .repeatOptionalDecimals(1, Configuration.PREFS_DEFAULT_BTC_PRECISION)
-                .minDecimals(0).noCode().format(dashAmount)
-
-            if (fiatAmount != null) {
-                binding.amount.fiatValue.text = fiatAmount.toFormattedString()
-            } else {
-                binding.amount.fiatValue.isVisible = false
-            }
+            showAmount(dashAmount, fiatAmount)
             viewModel.dashPayProfile.observe(viewLifecycleOwner) {
                 binding.receiveInfo.setProfile(it?.username, it?.displayName, it?.avatarUrl, it?.avatarHash)
             }
+        }
+    }
+
+    /** [createAmountRequestDialog]: never through PaymentURI, and no DashPay profile. */
+    private fun showAmountRequest(args: Bundle, address: String) {
+        val label = args.getString(ARG_REQUEST_ADDRESS_LABEL).orEmpty()
+        val dashAmount = checkNotNull(args.getSerializable(ARG_DASH_AMOUNT) as? Coin) { "no amount" }
+        val fiatAmount = args.getSerializable(ARG_FIAT_AMOUNT) as? Fiat
+        val payload = ReceiveViewModel.amountRequestPayload(address, dashAmount.toNeutralCoin())
+        binding.receiveInfo.setPaymentRequest(label, address, payload)
+        showAmount(dashAmount, fiatAmount)
+    }
+
+    private fun showAmount(dashAmount: Coin, fiatAmount: Fiat?) {
+        binding.amount.inputValue.text = MonetaryFormat.BTC
+            .repeatOptionalDecimals(1, Configuration.PREFS_DEFAULT_BTC_PRECISION)
+            .minDecimals(0).noCode().format(dashAmount)
+
+        if (fiatAmount != null) {
+            binding.amount.fiatValue.text = fiatAmount.toFormattedString()
+        } else {
+            binding.amount.fiatValue.isVisible = false
         }
     }
 }
