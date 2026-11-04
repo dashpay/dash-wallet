@@ -99,11 +99,26 @@ class AdvancedReceiveFragment : Fragment() {
         }
     }
 
-    private fun specifyAmount() {
+    /**
+     * Core opens the amount screen as it always has: [ReceiveFragment] reads a fresh address
+     * once the amount is entered. The other tabs hand it the [address] on show, and their
+     * request is a bare `dash:` URI ([ReceiveViewModel.amountRequestPayload]).
+     */
+    private fun specifyAmount(tab: ReceiveBalanceTab, address: String?) {
         val navController = findNavController()
         // A second tap while the transition runs would find the action missing.
         if (navController.currentDestination?.id != R.id.advancedPaymentsFragment) return
+        val directions = if (tab == ReceiveBalanceTab.CORE) {
+            PaymentsFragmentDirections.paymentsToReceive()
+        } else {
+            // The button is disabled without an address; nothing to request otherwise.
+            if (address == null) return
+            PaymentsFragmentDirections.paymentsToReceive(
+                requestAddress = address,
+                requestAddressLabel = addressLabelFor(tab)
+            )
+        }
         viewModel.logEvent(AnalyticsConstants.SendReceive.SPECIFY_AMOUNT)
-        navController.navigate(PaymentsFragmentDirections.paymentsToReceive())
+        navController.navigate(directions)
     }
 }

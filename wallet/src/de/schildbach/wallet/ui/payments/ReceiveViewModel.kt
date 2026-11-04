@@ -43,6 +43,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.dash.wallet.common.money.Coin
 import org.dash.wallet.common.payments.parsers.AddressNetwork
 import org.dash.wallet.common.payments.parsers.PaymentURI
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -78,8 +79,13 @@ data class ReceiveUIState(
     val unavailable: Boolean = false,
     val username: String? = null
 ) {
-    /** Specify amount builds a `dash:` payment request, so only Core offers it. */
-    val showSpecifyAmount: Boolean get() = selectedTab == ReceiveBalanceTab.CORE
+    /**
+     * Specify amount is on every tab. Core reads a fresh address itself once the amount is
+     * entered (as it always has), so it is always enabled; the other tabs put [address] in
+     * the request, so they need one on show.
+     */
+    val specifyAmountEnabled: Boolean
+        get() = selectedTab == ReceiveBalanceTab.CORE || address != null
 
     /** A username identifies a DashPay user, who is paid on Core; the Identity tab is theirs too. */
     val showUsername: Boolean
@@ -151,6 +157,19 @@ class ReceiveViewModel internal constructor(
                 )
                 else -> address
             }
+
+        /**
+         * The Specify amount request for a tab other than Core: exactly
+         * `dash:<address>?amount=<amount>`, the amount in DASH formatted as Core's `dash:` URI
+         * formats it ([Coin.toPlainString], as [PaymentURI.convertToPaymentURI] does). Built
+         * by hand because [PaymentURI] and [AddressNetwork] accept only base58 L1 addresses,
+         * not bech32 shielded/Platform addresses or identity IDs.
+         */
+        fun amountRequestPayload(address: String, amount: Coin): String {
+            require(address.isNotEmpty()) { "no address for the payment request" }
+            require(amount.signum() >= 0) { "the requested amount must not be negative" }
+            return "${AddressNetwork.DASH_SCHEME}:$address?amount=${amount.toPlainString()}"
+        }
 
         /**
          * The shielded flag as a never-failing flow: a failed read hides the

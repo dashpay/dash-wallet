@@ -44,6 +44,9 @@ import kotlinx.coroutines.test.setMain
 import org.bitcoinj.core.Context
 import org.bitcoinj.params.TestNet3Params
 import org.bitcoinj.wallet.Wallet
+import org.dash.wallet.common.money.Coin
+import org.dash.wallet.common.payments.parsers.AddressNetwork
+import org.dash.wallet.common.payments.parsers.PaymentURI
 import org.dash.wallet.common.services.ReceiveAddressUnavailableException
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.junit.After
@@ -311,11 +314,93 @@ class ReceiveViewModelTest {
     // ── specify amount, username, QR payload ─────────────────────────────────
 
     @Test
-    fun `Specify amount is offered only on Core`() {
-        assertTrue(ReceiveUIState(selectedTab = CORE).showSpecifyAmount)
-        assertFalse(ReceiveUIState(selectedTab = SHIELD).showSpecifyAmount)
-        assertFalse(ReceiveUIState(selectedTab = PLATFORM).showSpecifyAmount)
-        assertFalse(ReceiveUIState(selectedTab = IDENTITY).showSpecifyAmount)
+    fun `Specify amount is enabled on every tab with an address, and always on Core`() {
+        // Core reads its own fresh address after the amount is entered, as it always has.
+        assertTrue(ReceiveUIState(selectedTab = CORE).specifyAmountEnabled)
+        assertTrue(ReceiveUIState(selectedTab = CORE, address = CORE_ADDRESS).specifyAmountEnabled)
+        assertTrue(ReceiveUIState(selectedTab = SHIELD, address = SHIELDED_ADDRESS).specifyAmountEnabled)
+        assertTrue(ReceiveUIState(selectedTab = PLATFORM, address = PLATFORM_ADDRESS).specifyAmountEnabled)
+        assertTrue(ReceiveUIState(selectedTab = IDENTITY, address = IDENTITY_ID).specifyAmountEnabled)
+        // No address on show: nothing to put in the request.
+        assertFalse(ReceiveUIState(selectedTab = SHIELD).specifyAmountEnabled)
+        assertFalse(ReceiveUIState(selectedTab = PLATFORM, unavailable = true).specifyAmountEnabled)
+        assertFalse(ReceiveUIState(selectedTab = IDENTITY, loading = true).specifyAmountEnabled)
+    }
+
+    @Test
+    fun `the view model enables Specify amount on each tab once its address is read`() {
+        shieldedFlag.value = true
+        identity.value = identityData(hasUsername = true)
+        val viewModel = buildViewModel()
+        viewModel.refresh()
+        assertTrue(viewModel.uiState.value.specifyAmountEnabled)
+        for (tab in listOf(SHIELD, PLATFORM, IDENTITY)) {
+            viewModel.selectTab(tab)
+            assertEquals(tab, viewModel.uiState.value.selectedTab)
+            assertTrue("Specify amount on $tab", viewModel.uiState.value.specifyAmountEnabled)
+        }
+    }
+
+    @Test
+    fun `a tab whose address read fails disables Specify amount`() {
+        shieldedFlag.value = true
+        val failing = ReceiveAddressSources(
+            core = sources.core,
+            shielded = ReceiveAddressSource { null },
+            platform = sources.platform
+        )
+        val viewModel = buildViewModel(receiveSources = failing)
+        viewModel.selectTab(SHIELD)
+        assertTrue(viewModel.uiState.value.unavailable)
+        assertFalse(viewModel.uiState.value.specifyAmountEnabled)
+    }
+
+    @Test
+    fun `the amount request is exactly a dash URI with the amount in DASH`() {
+        val shielded = "tdash1zq2ksj5u7v5f0pn6lyl4m5k6c3l8wl3x9g0e7v"
+        assertEquals(
+            "dash:$shielded?amount=0.5",
+            ReceiveViewModel.amountRequestPayload(shielded, Coin.valueOf(50_000_000L))
+        )
+        assertEquals(
+            "dash:$PLATFORM_ADDRESS?amount=1",
+            ReceiveViewModel.amountRequestPayload(PLATFORM_ADDRESS, Coin.COIN)
+        )
+        assertEquals(
+            "dash:$IDENTITY_ID?amount=12.3456789",
+            ReceiveViewModel.amountRequestPayload(IDENTITY_ID, Coin.valueOf(1_234_567_890L))
+        )
+        // Small amounts: the smallest unit, no exponent, no trailing zeros.
+        assertEquals(
+            "dash:$SHIELDED_ADDRESS?amount=0.00000001",
+            ReceiveViewModel.amountRequestPayload(SHIELDED_ADDRESS, Coin.SATOSHI)
+        )
+        assertEquals(
+            "dash:$SHIELDED_ADDRESS?amount=0.0001",
+            ReceiveViewModel.amountRequestPayload(SHIELDED_ADDRESS, Coin.valueOf(10_000L))
+        )
+    }
+
+    @Test
+    fun `the amount request formats the amount as Core's dash URI does`() {
+        for (duffs in listOf(1L, 10_000L, 50_000_000L, 100_000_000L, 1_234_567_890L, 2_100_000_000_000L)) {
+            val amount = Coin.valueOf(duffs)
+            val core = PaymentURI.convertToPaymentURI(
+                AddressNetwork.DASH_TESTNET,
+                CORE_ADDRESS,
+                amount,
+                null,
+                null,
+                null
+            )
+            val request = ReceiveViewModel.amountRequestPayload(CORE_ADDRESS, amount)
+            assertEquals(core, request)
+        }
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `the amount request rejects a negative amount`() {
+        ReceiveViewModel.amountRequestPayload(SHIELDED_ADDRESS, Coin.valueOf(-1L))
     }
 
     @Test

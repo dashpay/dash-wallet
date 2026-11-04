@@ -77,7 +77,7 @@ fun ReceivePage(
     onCopyUsername: (String) -> Unit,
     onCopyAddress: (String) -> Unit,
     onShareAddress: (String) -> Unit,
-    onSpecifyAmount: () -> Unit,
+    onSpecifyAmount: (tab: ReceiveBalanceTab, address: String?) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val colors = LocalDashColors.current
@@ -152,21 +152,22 @@ fun ReceivePage(
                     isEnabled = address != null,
                     onClick = { address?.let(onShareAddress) }
                 )
-                if (uiState.showSpecifyAmount) {
-                    DashButton(
-                        modifier = Modifier.weight(1f),
-                        text = stringResource(R.string.receive_specify_amount),
-                        style = Style.TintedGray,
-                        size = Size.Medium,
-                        onClick = onSpecifyAmount
-                    )
-                }
+                DashButton(
+                    modifier = Modifier.weight(1f),
+                    text = stringResource(R.string.receive_specify_amount),
+                    style = Style.TintedGray,
+                    size = Size.Medium,
+                    isEnabled = uiState.specifyAmountEnabled,
+                    // The tab and address on show, so the request is for what the user saw.
+                    onClick = { onSpecifyAmount(uiState.selectedTab, address) }
+                )
             }
         }
     }
 }
 
-private fun addressLabelFor(tab: ReceiveBalanceTab): Int = when (tab) {
+/** The label of [tab]'s address or ID, here and in the Specify amount result. */
+internal fun addressLabelFor(tab: ReceiveBalanceTab): Int = when (tab) {
     ReceiveBalanceTab.CORE -> R.string.receive_core_address_label
     ReceiveBalanceTab.SHIELD -> R.string.receive_shielded_address_label
     ReceiveBalanceTab.PLATFORM -> R.string.receive_platform_address_label
@@ -318,7 +319,7 @@ private fun ReceivePagePreview() {
                 onCopyUsername = {},
                 onCopyAddress = {},
                 onShareAddress = {},
-                onSpecifyAmount = {}
+                onSpecifyAmount = { _, _ -> }
             )
         }
     }
