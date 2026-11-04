@@ -149,7 +149,10 @@ class RestoreIdentityWorker @AssistedInject constructor(
             // not-yet-completed creation (e.g. a contested primary still at
             // USERNAME_REGISTERED, which must route to VOTING) both keep the
             // historic empty/restoring reset unchanged.
-            val persistedRecord = if (fromCreation) identityConfig.load() else null
+            // A retry of a recovery that failed before it finished (not fromCreation) starts
+            // from the persisted record too when it holds this identity's requested names
+            // (review r4301924854); see recoverySeedRecord.
+            val persistedRecord = identityConfig.loadRecoverySeed(Identifier.from(identity).toString(), fromCreation)
             val alreadyCompletedFromCreation = persistedRecord?.takeIf { it.creationState >= IdentityCreationState.DONE }
             // use an "empty" state for a genuine device restore (nothing local
             // worth keeping) — but NEVER for a fromCreation run: the persisted
