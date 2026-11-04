@@ -89,12 +89,10 @@ class VerifyLinkReconciler internal constructor(
         documentPresent = { identityId, normalizedLabel ->
             // the lookup recovery and the voting sync use: the SDK search, else dashj
             val owner = Identifier.from(identityId)
-            val sdk = sdkIdentityVerifyQueries.getVerificationUrl(owner, normalizedLabel)
-            if (sdk != null) {
-                sdk.isPresent
-            } else {
-                IdentityVerify(platformRepo.get().platform.platform).get(owner, normalizedLabel) != null
-            }
+            verifyDocumentPresence(
+                { sdkIdentityVerifyQueries.getVerificationUrl(owner, normalizedLabel) },
+                { IdentityVerify(platformRepo.get().platform.platform).get(owner, normalizedLabel) }
+            )
         },
         publicationInFlight = { label ->
             WorkManager.getInstance(application)
@@ -175,4 +173,61 @@ class VerifyLinkReconciler internal constructor(
         /** The least time between two passes that read Platform. */
         const val MIN_PASS_INTERVAL_MS = 60 * 1000L
     }
+}
+
+/**
+ * Whether the IdentityVerify document exists: true or false only from a read that completed,
+ * null when it is unknown (the caller must not take it as absent).
+ *
+ * The SDK search's own answer is definite. Without one (its flag off, or the SDK read failed)
+ * the dashj query decides: it returns null only for a query that succeeded with no document, and
+ * throws on any failed read (dash-sdk-kotlin 5.0.0: `DapiClient.getDocuments` rethrows or ends in
+ * `MaxRetriesReachedException`, `Result.Failure.unwrap` throws, and `Documents.get` rethrows after
+ * logging), which is unknown here.
+ */
+internal suspend fun verifyDocumentPresence(
+    sdkSearch: suspend () -> java.util.Optional<String>?,
+    dashjQuery: suspend () -> Any?
+): Boolean? = try {
+    val sdk = sdkSearch()
+    if (sdk != null) sdk.isPresent else dashjQuery() != null
+} catch (e: CancellationException) {
+    throw e
+} catch (e: Exception) {
+    LoggerFactory.getLogger(VerifyLinkReconciler::class.java).warn("verification document lookup failed", e)
+    null
+}
+
+/**
+ * "Update the verification" of a name already in its vote, through the same obligation the
+ * registrations record: the link is put on record (the reconcile drops an obligation whose link is
+ * gone), the obligation recorded, and one reconcile pass kicked (best effort; the sync tick runs
+ * it anyway). The reconcile publishes only when no document is found, so a request that already
+ * has one is not published twice. False, recording nothing, without an identity, a name or a
+ * valid link.
+ */
+internal suspend fun requestVerificationLinkPublication(
+    identityIdBase58: String?,
+    username: String?,
+    link: String?,
+    saveLink: suspend (String) -> Unit,
+    store: VerifyLinkObligationStore,
+    reconcile: suspend () -> Unit
+): Boolean {
+    if (identityIdBase58 == null || username == null || link == null ||
+        !SdkTransparentUsernameCreation.isVerificationLink(link)
+    ) {
+        return false
+    }
+    saveLink(link)
+    store.recordVerifyObligation(identityIdBase58, username, link)
+    try {
+        reconcile()
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        LoggerFactory.getLogger(VerifyLinkReconciler::class.java)
+            .warn("verification-link reconcile kick failed; the sync tick runs it", e)
+    }
+    return true
 }

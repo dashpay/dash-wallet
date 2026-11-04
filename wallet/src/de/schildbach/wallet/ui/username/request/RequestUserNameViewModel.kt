@@ -52,7 +52,7 @@ import de.schildbach.wallet.service.platform.sdk.shieldedIdentityFundingRequirem
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.IdentityCreationStatusHolder
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
-import de.schildbach.wallet.ui.dashpay.work.BroadcastIdentityVerifyOperation
+import de.schildbach.wallet.service.platform.sdk.requestVerificationLinkPublication
 import de.schildbach.wallet.ui.main.resolveRequestedUsernameDisplay
 import de.schildbach.wallet.ui.username.CreateUsernameArgs
 import de.schildbach.wallet.ui.username.UsernameType
@@ -1894,12 +1894,33 @@ class RequestUserNameViewModel @Inject constructor(
         return Names.isUsernameContestable(requestedUserName!!)
     }
 
+    /**
+     * Verifies the request already in its vote: through the verification-link obligation, which
+     * the [de.schildbach.wallet.service.platform.sdk.VerifyLinkReconciler] publishes once (never
+     * when the document already exists), not a direct enqueue that could publish it twice.
+     */
     fun publishIdentityVerifyDocument() {
-        _requestedUserNameLink.value?.let { url ->
-            BroadcastIdentityVerifyOperation(walletApplication).create(
-                requestedUserName!!,
-                url
-            ).enqueue()
+        val identityId = identity?.userId
+        val username = requestedUserName
+        val url = _requestedUserNameLink.value
+        viewModelScope.launch {
+            try {
+                val recorded = withContext(Dispatchers.IO) {
+                    requestVerificationLinkPublication(
+                        identityId,
+                        username,
+                        url,
+                        { identityConfig.set(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK, it) },
+                        identityConfig,
+                        { transparentUsernameCreation.reconcileVerificationLink() }
+                    )
+                }
+                if (!recorded) log.warn("verification link not recorded: no identity, name or valid link")
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                log.warn("could not record the verification link", e)
+            }
         }
     }
 

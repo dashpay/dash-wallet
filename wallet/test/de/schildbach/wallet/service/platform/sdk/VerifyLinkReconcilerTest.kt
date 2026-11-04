@@ -216,4 +216,63 @@ class VerifyLinkReconcilerTest {
 
         assertEquals(VerifyLinkObligation(identityId, "alice", link, t0, uncertain = true), store.obligation)
     }
+
+    @Test
+    fun `only a read that completed proves the document absent`() = runBlocking {
+        // the SDK search's own answer is definite; without it (flag off, failed) the dashj query,
+        // which returns null only for an empty result and throws on any failed read
+        assertEquals(true, verifyDocumentPresence({ java.util.Optional.of(link) }, { error("not reached") }))
+        assertEquals(false, verifyDocumentPresence({ java.util.Optional.empty() }, { error("not reached") }))
+        assertEquals(true, verifyDocumentPresence({ null }, { Any() }))
+        assertEquals(false, verifyDocumentPresence({ null }, { null }))
+        assertNull(
+            "a failed read is unknown, never absent",
+            verifyDocumentPresence({ null }, { throw org.dashj.platform.dapiclient.MaxRetriesReachedException(emptyList<Exception>()) })
+        )
+        assertNull(verifyDocumentPresence({ throw java.io.IOException("search failed") }, { null }))
+    }
+
+    @Test
+    fun `a lookup that cannot be read never enqueues`() {
+        val w = World()
+        w.record()
+        val failing = VerifyLinkReconciler(
+            store = w.store,
+            currentRequest = { w.current },
+            ownsOrContends = { _, _ -> true },
+            documentPresent = { _, _ -> verifyDocumentPresence({ null }, { throw java.io.IOException("DAPI down") }) },
+            publicationInFlight = { false },
+            enqueuePublication = { label, url -> w.enqueued += label to url },
+            clock = { w.now }
+        )
+
+        assertFalse(runBlocking { failing.reconcile() })
+
+        assertTrue(w.enqueued.isEmpty())
+        assertNotNull("kept for a later pass", w.store.obligation)
+    }
+
+    @Test
+    fun `updating the verification of a request in its vote goes through the obligation`() = runBlocking {
+        val store = InMemoryVerifyLinkObligationStore()
+        val savedLinks = mutableListOf<String>()
+        var kicked = 0
+
+        assertTrue(
+            requestVerificationLinkPublication(identityId, "alice", link, { savedLinks += it }, store, { kicked++ })
+        )
+
+        assertEquals(VerifyLinkObligation(identityId, "alice", link), store.obligation)
+        assertEquals("the link is on record, so the reconcile keeps the request", listOf(link), savedLinks)
+        assertEquals(1, kicked)
+    }
+
+    @Test
+    fun `a verification update without an identity, a name or a valid link records nothing`() = runBlocking {
+        val store = InMemoryVerifyLinkObligationStore()
+        assertFalse(requestVerificationLinkPublication(null, "alice", link, {}, store, {}))
+        assertFalse(requestVerificationLinkPublication(identityId, null, link, {}, store, {}))
+        assertFalse(requestVerificationLinkPublication(identityId, "alice", "not a link", {}, store, {}))
+        assertNull(store.obligation)
+    }
 }
