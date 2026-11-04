@@ -149,9 +149,6 @@ fun ReceivePage(
                     text = stringResource(R.string.receive_share_address),
                     style = Style.TintedGray,
                     size = Size.Medium,
-                    // Two buttons share the row: Figma 160dp each; keep the full label at large font scales.
-                    horizontalPadding = 8.dp,
-                    shrinkTextToFit = true,
                     isEnabled = address != null,
                     onClick = { address?.let(onShareAddress) }
                 )
@@ -161,9 +158,6 @@ fun ReceivePage(
                         text = stringResource(R.string.receive_specify_amount),
                         style = Style.TintedGray,
                         size = Size.Medium,
-                        // Two buttons share the row: Figma 160dp each; keep the full label at large font scales.
-                        horizontalPadding = 8.dp,
-                        shrinkTextToFit = true,
                         onClick = onSpecifyAmount
                     )
                 }
