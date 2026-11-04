@@ -23,6 +23,7 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,6 +39,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.dash.wallet.common.Configuration
 import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.BlockchainServiceConfig
@@ -177,11 +179,15 @@ class SettingsViewModel @Inject constructor(
      * Saves the "Advanced mode" choice; the switch follows the saved value, so after a
      * failure toggling it again retries. A failed save is reported through
      * [advancedModeSaveFailures] with the value that was not saved.
+     *
+     * The save runs under [NonCancellable]: leaving Settings right after a tap clears this
+     * ViewModel, and a DataStore update still queued when [viewModelScope] is cancelled
+     * would otherwise be skipped, silently losing the toggle.
      */
     fun setAdvancedModeEnabled(enabled: Boolean) {
         viewModelScope.launch {
             try {
-                walletUIConfig.setAdvancedMode(enabled)
+                withContext(NonCancellable) { walletUIConfig.setAdvancedMode(enabled) }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
