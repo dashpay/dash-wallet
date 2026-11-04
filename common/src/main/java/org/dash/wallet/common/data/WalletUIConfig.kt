@@ -29,6 +29,7 @@ import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.util.Constants
+import org.dash.wallet.common.util.readRetryDelayMs
 import javax.inject.Inject
 import javax.inject.Singleton
 import androidx.core.content.edit
@@ -106,7 +107,7 @@ private val advancedModeLog = org.slf4j.LoggerFactory.getLogger("WalletUIConfig.
  */
 fun advancedModeFlow(
     source: Flow<Boolean?>,
-    retryDelayMs: (Long) -> Long = { attempt -> (attempt.coerceIn(0L, 11L) + 1) * 5_000L }
+    retryDelayMs: (Long) -> Long = ::readRetryDelayMs
 ): Flow<Boolean> = source
     .map { it ?: false }
     .retryWhen { e, attempt ->

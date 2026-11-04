@@ -60,7 +60,6 @@ import de.schildbach.wallet.ui.EditProfileActivity
 import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
 import de.schildbach.wallet.service.platform.sdk.ShieldedSyncStatus
-import de.schildbach.wallet.service.platform.sdk.shieldedReadRetryDelayMs
 import de.schildbach.wallet.ui.dashpay.CreateIdentityViewModel
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
@@ -83,6 +82,7 @@ import org.dash.wallet.common.ui.components.ComposeHostFrameLayout
 import org.dash.wallet.common.ui.components.ToastImageResource
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
+import org.dash.wallet.common.util.readRetryDelayMs
 import org.dash.wallet.common.util.safeNavigate
 import org.dashj.platform.sdk.platform.Names
 import org.dashj.platform.dashpay.UsernameRequestStatus
@@ -525,7 +525,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
                     log.error("shielded balance card flow error (attempt {})", attempt, e)
                     balanceUnreadable = true
                     render()
-                    delay(shieldedReadRetryDelayMs(attempt))
+                    delay(readRetryDelayMs(attempt))
                     true
                 }
                 .observe(viewLifecycleOwner) { balance ->

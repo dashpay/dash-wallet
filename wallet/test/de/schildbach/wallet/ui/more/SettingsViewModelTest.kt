@@ -18,6 +18,7 @@
 package de.schildbach.wallet.ui.more
 
 import android.os.PowerManager
+import androidx.lifecycle.viewModelScope
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
@@ -28,8 +29,10 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flow
@@ -316,6 +319,25 @@ class SettingsViewModelTest {
         viewModel.setAdvancedModeEnabled(true)
 
         assertFalse(viewModel.uiState.value.advancedModeEnabled)
+        assertEquals(emptyList<Boolean>(), failures)
+    }
+
+    @Test
+    fun setAdvancedModeEnabled_leavingSettingsMidSave_stillSaves() = runTest(dispatcher) {
+        // The DataStore update is still queued when the user leaves Settings
+        val writeReady = CompletableDeferred<Unit>()
+        coEvery { walletUIConfig.setAdvancedMode(any()) } coAnswers {
+            writeReady.await()
+            savedAdvancedMode.value = firstArg()
+        }
+        val viewModel = viewModel()
+        val failures = advancedModeFailuresOf(viewModel)
+
+        viewModel.setAdvancedModeEnabled(true)
+        viewModel.viewModelScope.cancel() // onCleared(): Settings was closed
+        writeReady.complete(Unit)
+
+        assertTrue("the toggle is saved after the ViewModel is cleared", savedAdvancedMode.value)
         assertEquals(emptyList<Boolean>(), failures)
     }
 

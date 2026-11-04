@@ -32,6 +32,13 @@ class TickerFlow(
 }
 
 /**
+ * Back-off before a flow re-subscribes after a failed read, for use in
+ * `retryWhen` ([attempt] counts from 0): 5 s, growing by 5 s per retry, capped
+ * at 60 s.
+ */
+fun readRetryDelayMs(attempt: Long): Long = (attempt.coerceIn(0L, 11L) + 1) * 5_000L
+
+/**
  * @author Tobias Preuss @johnjohndoe
  * https://github.com/EventFahrplan/EventFahrplan/blob/master/commons/src/main/java/info/metadude/android/eventfahrplan/commons/flow/FlowExtensions.kt
  */
