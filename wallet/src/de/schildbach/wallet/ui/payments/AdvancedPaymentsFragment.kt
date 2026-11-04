@@ -132,8 +132,8 @@ class AdvancedPaymentsFragment : Fragment(R.layout.fragment_advanced_payments) {
             }
         }
 
+        // Attached by showTabs once the first tab set is in, not here: see there.
         val adapter = TabsAdapter(this, source = arguments?.getString(ARG_SOURCE) ?: "")
-        binding.pager.adapter = adapter
         // Only the top picker changes tabs: a sideways drag belongs to the page's own
         // content (the Receive balance switch scrolls sideways), never to the pager.
         binding.pager.isUserInputEnabled = false
@@ -172,6 +172,14 @@ class AdvancedPaymentsFragment : Fragment(R.layout.fragment_advanced_payments) {
         val wanted = selectedTabId ?: initialTabId()
         val position = positionOf(newTabIds, wanted)
         adapter.submit(newTabIds)
+        // Attach only once populated, as PaymentsFragment does. ViewPager2 hands the adapter
+        // its saved pages when it is attached (or, if already attached, when the view state is
+        // restored), and FragmentStateAdapter drops every restored page that containsItem()
+        // rejects. Attached empty, that is every page: after a rotation the retained Receive
+        // child and its ViewModel would be recreated and the selected balance reset to Core.
+        if (binding.pager.adapter == null) {
+            binding.pager.adapter = adapter
+        }
         selectedTabId = newTabIds[position]
         binding.pager.setCurrentItem(position, false)
     }
