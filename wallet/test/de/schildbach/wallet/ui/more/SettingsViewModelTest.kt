@@ -31,7 +31,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
@@ -43,6 +45,7 @@ import org.dash.wallet.common.Configuration
 import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.BlockchainServiceConfig
 import org.dash.wallet.common.data.WalletUIConfig
+import org.dash.wallet.common.data.advancedModeFlow
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -284,5 +287,23 @@ class SettingsViewModelTest {
         viewModel.setAdvancedModeEnabled(true)
 
         assertFalse(viewModel.uiState.value.advancedModeEnabled)
+    }
+
+    @Test
+    fun advancedModeFlow_failedRead_emitsOffThenRecoversToTheSavedValue() = runTest(dispatcher) {
+        var reads = 0
+        val source = flow<Boolean?> {
+            if (reads++ == 0) throw java.io.IOException("unreadable")
+            emit(true)
+        }
+
+        val values = advancedModeFlow(source, retryDelayMs = { 0L }).take(2).toList()
+
+        assertEquals(listOf(false, true), values)
+    }
+
+    @Test
+    fun advancedModeFlow_unsetKey_isOff() = runTest(dispatcher) {
+        assertEquals(listOf(false), advancedModeFlow(flowOf(null)).toList())
     }
 }
