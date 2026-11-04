@@ -81,9 +81,25 @@ class ReceiveFragment : Fragment(R.layout.fragment_receive) {
         }
         enterAmountViewModel.setMaxAmount(org.dash.wallet.common.money.Coin.ZERO)
         enterAmountViewModel.setMinAmount(org.dash.wallet.common.money.Coin.ZERO)
+        // Set only by Advanced Receive's Shield/Platform/Identity tabs; every other caller
+        // leaves it null and gets a fresh Core address below.
+        val args = ReceiveFragmentArgs.fromBundle(arguments ?: Bundle())
+        val requestAddress = args.requestAddress
         enterAmountViewModel.onContinueEvent.observe(viewLifecycleOwner) {
             val dashAmount = it.first
             val fiatAmount = it.second
+            if (requestAddress != null) {
+                // Both arguments are set together; the generic label covers a caller that did not.
+                val label = args.requestAddressLabel.takeIf { label -> label != 0 }
+                    ?: org.dash.wallet.common.R.string.dash_address
+                ReceiveDetailsDialog.createAmountRequestDialog(
+                    getString(label),
+                    requestAddress,
+                    dashAmount.toDashjCoin(),
+                    fiatAmount?.toDashjFiat()
+                ).show(requireActivity())
+                return@observe
+            }
             // OFF THE MAIN THREAD: this observer runs on Main, and dashj's
             // freshReceiveAddress() forces a synchronous full-wallet save
             // (measured 1.2s at 215 friend chains) — see freshReceiveAddressOffMain.

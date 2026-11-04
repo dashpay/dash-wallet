@@ -53,5 +53,22 @@
         android:id="@+id/receiveFragment"
         android:name="de.schildbach.wallet.ui.payments.ReceiveFragment"
         android:label="Receive"
-        tools:layout="@layout/fragment_receive"/>
+        tools:layout="@layout/fragment_receive">
+
+        <!--
+            Advanced Receive's Specify amount on a tab other than Core (Shield, Platform,
+            Identity): the tab's address or identity ID and the string resource of its label.
+            Null (every other caller) keeps the Core flow, which reads a fresh address.
+        -->
+        <argument
+            android:name="request_address"
+            android:defaultValue="@null"
+            app:argType="string"
+            app:nullable="true" />
+
+        <argument
+            android:name="request_address_label"
+            android:defaultValue="0"
+            app:argType="reference" />
+    </fragment>
 </navigation>

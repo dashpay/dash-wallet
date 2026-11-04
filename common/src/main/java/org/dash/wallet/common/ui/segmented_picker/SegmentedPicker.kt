@@ -23,7 +23,9 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -35,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.colorResource
@@ -73,7 +76,21 @@ data class SegmentedPickerStyle(
     // slot. Zero by default so existing fixed-height horizontal/vertical toggles are unaffected;
     // set this for pickers whose options should have visible breathing room between them.
     val optionPaddingHorizontal: Float = 0f,
-    val optionPaddingVertical: Float = 0f
+    val optionPaddingVertical: Float = 0f,
+    // Inset between the container edge and the thumb/options. The defaults below keep the
+    // original look (1dp inset, thumb corner = cornerRadius - 2, dividers, icon left of title).
+    val containerPadding: Float = 1f,
+    // Null means cornerRadius - 2, the original thumb shape.
+    val thumbCornerRadius: Float? = null,
+    val showDividers: Boolean = true,
+    // Stack each option's icon above its title (e.g. the Advanced payments tabs, Figma 7062:49306)
+    // instead of placing it to the left.
+    val iconAboveTitle: Boolean = false,
+    // Size each option to its own content (plus optionPaddingHorizontal) and start-align them,
+    // scrolling horizontally when they overflow, instead of splitting the width equally. The
+    // thumb then follows the selected option's measured bounds (e.g. the Receive balance tabs,
+    // Figma 7062:49313). Horizontal mode only; off by default.
+    val fitOptionsToContent: Boolean = false
 )
 
 @Composable
@@ -88,6 +105,10 @@ fun SegmentedPicker(
     onOptionSelected: (SegmentedOption, Int) -> Unit = { _, _ -> },
 ) {
     if (options.isEmpty()) return
+    if (style.fitOptionsToContent && style.displayMode == PickerDisplayMode.Horizontal) {
+        FitContentSegmentedPicker(options, modifier, selectedIndex, showSelection, style, onOptionSelected)
+        return
+    }
     var internalSelectedIndex by remember { mutableIntStateOf(selectedIndex) }
     var isInitialPosition by remember { mutableStateOf(true) }
 
@@ -110,7 +131,7 @@ fun SegmentedPicker(
         modifier = modifier
             .clip(RoundedCornerShape(style.cornerRadius.dp))
             .background(backgroundColor)
-            .padding(1.dp)
+            .padding(style.containerPadding.dp)
             .onGloballyPositioned { coordinates ->
                 containerWidth = coordinates.size.width
                 containerHeight = coordinates.size.height
@@ -152,7 +173,7 @@ fun SegmentedPicker(
             }
         )
         // Draw dividers between options
-        if (isHorizontal) {
+        if (isHorizontal && style.showDividers) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
@@ -174,10 +195,9 @@ fun SegmentedPicker(
 
         // Draw the animated selection indicator
         if (containerSize > 0 && showSelection) {
-            Surface(
-                shape = RoundedCornerShape((style.cornerRadius - 2).dp),
+            SelectionThumb(
+                style = style,
                 color = thumbColor,
-                shadowElevation = style.shadowElevation.dp,
                 modifier = Modifier
                     .then(
                         if (isHorizontal) {
@@ -192,7 +212,7 @@ fun SegmentedPicker(
                                 .offset(y = animatedPosition)
                         }
                     )
-            ) { }
+            )
         }
 
         // Draw the options
@@ -213,7 +233,8 @@ fun SegmentedPicker(
                         },
                         modifier = Modifier.weight(1f),
                         paddingHorizontal = style.optionPaddingHorizontal.dp,
-                        paddingVertical = style.optionPaddingVertical.dp
+                        paddingVertical = style.optionPaddingVertical.dp,
+                        iconAboveTitle = style.iconAboveTitle
                     )
                 }
             }
@@ -235,12 +256,114 @@ fun SegmentedPicker(
                         modifier = Modifier.weight(1f),
                         isHorizontal = false,
                         paddingHorizontal = style.optionPaddingHorizontal.dp,
-                        paddingVertical = style.optionPaddingVertical.dp
+                        paddingVertical = style.optionPaddingVertical.dp,
+                        iconAboveTitle = style.iconAboveTitle
                     )
                 }
             }
         }
     }
+}
+
+/**
+ * [SegmentedPicker] with [SegmentedPickerStyle.fitOptionsToContent]: options keep their own
+ * width, start-aligned, and scroll horizontally when they do not fit. The thumb is drawn under
+ * the selected option's measured bounds.
+ */
+@Composable
+private fun FitContentSegmentedPicker(
+    options: List<SegmentedOption>,
+    modifier: Modifier,
+    selectedIndex: Int,
+    showSelection: Boolean,
+    style: SegmentedPickerStyle,
+    onOptionSelected: (SegmentedOption, Int) -> Unit
+) {
+    var internalSelectedIndex by remember { mutableIntStateOf(selectedIndex) }
+    LaunchedEffect(selectedIndex) {
+        internalSelectedIndex = selectedIndex
+    }
+
+    val density = LocalDensity.current
+    val colors = LocalDashColors.current
+    val backgroundColor = style.backgroundColor ?: colors.gray400.copy(alpha = 0.1f)
+    val thumbColor = style.thumbColor ?: colors.backgroundSecondary
+
+    // Each option's x offset and width inside the row, in px; filled in on layout.
+    val bounds = remember(options.size) {
+        mutableStateListOf<Pair<Int, Int>?>().apply { repeat(options.size) { add(null) } }
+    }
+    val selectedBounds = bounds.getOrNull(internalSelectedIndex)
+    var hasPlacedThumb by remember { mutableStateOf(false) }
+    val animationSpec = tween<Dp>(durationMillis = if (hasPlacedThumb) 200 else 0)
+    val thumbOffset by animateDpAsState(
+        targetValue = with(density) { (selectedBounds?.first ?: 0).toDp() },
+        animationSpec = animationSpec,
+        label = "fitThumbOffset",
+        finishedListener = { hasPlacedThumb = true }
+    )
+    val thumbWidth by animateDpAsState(
+        targetValue = with(density) { (selectedBounds?.second ?: 0).toDp() },
+        animationSpec = animationSpec,
+        label = "fitThumbWidth"
+    )
+
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(style.cornerRadius.dp))
+            .background(backgroundColor)
+            .padding(style.containerPadding.dp)
+            .horizontalScroll(rememberScrollState())
+    ) {
+        Box(modifier = Modifier.fillMaxHeight()) {
+            if (showSelection && selectedBounds != null) {
+                SelectionThumb(
+                    style = style,
+                    color = thumbColor,
+                    modifier = Modifier
+                        .absoluteOffset(x = thumbOffset)
+                        .width(thumbWidth)
+                        .fillMaxHeight()
+                )
+            }
+            Row(modifier = Modifier.fillMaxHeight()) {
+                options.forEachIndexed { index, option ->
+                    OptionContent(
+                        option = option,
+                        isSelected = showSelection && index == internalSelectedIndex,
+                        textStyle = style.textStyle,
+                        onSelect = {
+                            hasPlacedThumb = true
+                            internalSelectedIndex = index
+                            onOptionSelected(option, index)
+                        },
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .onGloballyPositioned { coordinates ->
+                                val entry = coordinates.positionInParent().x.toInt() to coordinates.size.width
+                                if (index < bounds.size && bounds[index] != entry) {
+                                    bounds[index] = entry
+                                }
+                            },
+                        paddingHorizontal = style.optionPaddingHorizontal.dp,
+                        paddingVertical = style.optionPaddingVertical.dp,
+                        iconAboveTitle = style.iconAboveTitle
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** The selected option's background; [modifier] sizes and places it. */
+@Composable
+private fun SelectionThumb(style: SegmentedPickerStyle, color: Color, modifier: Modifier) {
+    Surface(
+        shape = RoundedCornerShape((style.thumbCornerRadius ?: (style.cornerRadius - 2)).dp),
+        color = color,
+        shadowElevation = style.shadowElevation.dp,
+        modifier = modifier
+    ) { }
 }
 
 @Composable
@@ -252,7 +375,8 @@ private fun OptionContent(
     modifier: Modifier = Modifier,
     isHorizontal: Boolean = true,
     paddingHorizontal: Dp = 0.dp,
-    paddingVertical: Dp = 0.dp
+    paddingVertical: Dp = 0.dp,
+    iconAboveTitle: Boolean = false
 ) {
     Box(
         modifier = modifier
@@ -263,29 +387,47 @@ private fun OptionContent(
             ),
         contentAlignment = Alignment.Center
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
-            modifier = Modifier
-                .then(if (isHorizontal) Modifier.fillMaxHeight() else Modifier.fillMaxWidth())
-                .padding(horizontal = paddingHorizontal, vertical = paddingVertical)
-        ) {
-            val colors = LocalDashColors.current
+        val colors = LocalDashColors.current
+        val icon: @Composable (Modifier) -> Unit = { iconModifier ->
             option.icon?.let {
                 Icon(
                     painter = painterResource(id = it),
                     contentDescription = null,
                     tint = if (isSelected) Color.Unspecified else colors.textPrimary.copy(alpha = 0.4f),
-                    modifier = Modifier.padding(end = 6.dp)
+                    modifier = iconModifier
                 )
             }
-
+        }
+        val title: @Composable () -> Unit = {
             Text(
                 text = option.title,
                 color = if (isSelected) colors.textPrimary else colors.textPrimary.copy(alpha = 0.4f),
                 style = textStyle,
                 textAlign = TextAlign.Center
             )
+        }
+        val contentModifier = Modifier
+            .then(if (isHorizontal) Modifier.fillMaxHeight() else Modifier.fillMaxWidth())
+            .padding(horizontal = paddingHorizontal, vertical = paddingVertical)
+
+        if (iconAboveTitle) {
+            Column(
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = contentModifier
+            ) {
+                icon(Modifier.padding(bottom = 6.dp))
+                title()
+            }
+        } else {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+                modifier = contentModifier
+            ) {
+                icon(Modifier.padding(end = 6.dp))
+                title()
+            }
         }
     }
 }

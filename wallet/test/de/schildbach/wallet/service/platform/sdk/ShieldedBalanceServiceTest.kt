@@ -1463,6 +1463,27 @@ class ShieldedBalanceServiceTest {
         assertNull(service(source).shieldedReceiveAddress())
     }
 
+    @Test
+    fun platformReceiveAddress_isTheSourcesOwnPlatformAddress() = runBlocking {
+        val source = readySource().apply { platformAddress = { "tdash1qown" } }
+        assertEquals("tdash1qown", service(source).platformReceiveAddress())
+    }
+
+    @Test
+    fun platformReceiveAddress_nullWhenFlagOffOrNotReady() = runBlocking {
+        assertNull(service(readySource(), enabled = false).platformReceiveAddress())
+        val notBound = FakeSource(hasSupport = true, boundWalletId = { null })
+        assertNull(service(notBound).platformReceiveAddress())
+    }
+
+    @Test
+    fun platformReceiveAddress_lookupFailure_isNullNotThrown() = runBlocking {
+        val source = readySource().apply {
+            platformAddress = { throw DashSdkError.InternalError("room read failed") }
+        }
+        assertNull(service(source).platformReceiveAddress())
+    }
+
     // ── Writes: preflights are NotBroadcast without a broadcast attempt ───
 
     @Test

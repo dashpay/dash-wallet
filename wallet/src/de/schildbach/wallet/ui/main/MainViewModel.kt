@@ -265,6 +265,21 @@ class MainViewModel @Inject constructor(
             started = SharingStarted.Eagerly,
             initialValue = true
         )
+    /**
+     * The Settings "Advanced mode" switch, which picks the payments screen (see
+     * [de.schildbach.wallet.ui.payments.paymentsRoute]). Held here so a tap on the
+     * bottom-nav payments item or a Home shortcut reads it without touching disk.
+     * False (basic mode) until the first read lands and while a read is failing:
+     * observeAdvancedMode() emits false on an error and keeps retrying, so this
+     * Eagerly-collected flow never completes.
+     */
+    val advancedMode: StateFlow<Boolean> = walletUIConfig.observeAdvancedMode()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Eagerly,
+            initialValue = false
+        )
+
     private val _remindMetadata = MutableStateFlow(false)
     val remindMetadata = _remindMetadata.asStateFlow()
     val showTapToHideHint = walletUIConfig.observe(WalletUIConfig.SHOW_TAP_TO_HIDE_HINT).asLiveData()
