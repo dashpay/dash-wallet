@@ -27,6 +27,7 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -177,6 +178,13 @@ class SettingsViewModelTest {
         return events
     }
 
+    /** Collects every "Advanced mode" save-failure event (the unsaved value) for the rest of the test. */
+    private fun TestScope.advancedModeFailuresOf(viewModel: SettingsViewModel): List<Boolean> {
+        val events = mutableListOf<Boolean>()
+        backgroundScope.launch { viewModel.advancedModeSaveFailures.toList(events) }
+        return events
+    }
+
     @Test
     fun setAnalyticsEnabled_false_updatesServiceAndState() = runTest(dispatcher) {
         val analytics = analyticsService(enabled = true, available = true)
@@ -266,6 +274,7 @@ class SettingsViewModelTest {
     @Test
     fun setAdvancedModeEnabled_savesAndUpdatesState() = runTest(dispatcher) {
         val viewModel = viewModel()
+        val failures = advancedModeFailuresOf(viewModel)
 
         viewModel.setAdvancedModeEnabled(true)
 
@@ -277,16 +286,37 @@ class SettingsViewModelTest {
 
         coVerify { walletUIConfig.setAdvancedMode(false) }
         assertFalse(viewModel.uiState.value.advancedModeEnabled)
+        assertEquals(emptyList<Boolean>(), failures)
     }
 
     @Test
     fun setAdvancedModeEnabled_failedSave_keepsTheSavedValue() = runTest(dispatcher) {
         coEvery { walletUIConfig.setAdvancedMode(any()) } throws java.io.IOException("disk full")
         val viewModel = viewModel()
+        val failures = advancedModeFailuresOf(viewModel)
 
         viewModel.setAdvancedModeEnabled(true)
 
         assertFalse(viewModel.uiState.value.advancedModeEnabled)
+        assertEquals("the unsaved turn-on is reported once", listOf(true), failures)
+
+        savedAdvancedMode.value = true
+        viewModel.setAdvancedModeEnabled(false)
+
+        assertTrue("the switch shows the still-saved on", viewModel.uiState.value.advancedModeEnabled)
+        assertEquals("the unsaved turn-off is reported once", listOf(true, false), failures)
+    }
+
+    @Test
+    fun setAdvancedModeEnabled_cancelledSave_isNotReportedAsAFailure() = runTest(dispatcher) {
+        coEvery { walletUIConfig.setAdvancedMode(any()) } throws CancellationException("screen closed")
+        val viewModel = viewModel()
+        val failures = advancedModeFailuresOf(viewModel)
+
+        viewModel.setAdvancedModeEnabled(true)
+
+        assertFalse(viewModel.uiState.value.advancedModeEnabled)
+        assertEquals(emptyList<Boolean>(), failures)
     }
 
     @Test
