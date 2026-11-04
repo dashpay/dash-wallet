@@ -310,4 +310,39 @@ class MayaConversionPreviewOutcomeUnknownTest {
         viewModel.commitSwapTrade("trade").join()
         verify(swapProvider, times(2)).commitSwapTransaction(any(), any(), any())
     }
+
+    @Test
+    fun restore_withTheDepositsResultSaved_showsTheResult_notUnknown_andStillRefusesUntilAcknowledged() = runTest {
+        // Died locked after a successful deposit: the flow's pending result and the preview's
+        // deposit mark both survive. The result wins; the mark stays the submission guard.
+        stubOutcomeUnknown()
+        val savedState = SavedStateHandle(mapOf("swap_trade_order" to order, "deposit_in_progress" to true))
+        val restored = viewModel(savedState)
+
+        restored.reconcileRestoredDeposit(resultSaved = true)
+
+        assertFalse("the saved success is shown, not a payment status warning", restored.paymentOutcomeUnknown.value)
+        restored.commitSwapTrade("trade").join()
+        verify(swapProvider, times(0)).commitSwapTransaction(any(), any(), any())
+
+        // Shown and acknowledged: the preview is clear again.
+        restored.acknowledgeDepositResult()
+        assertFalse(restored.paymentOutcomeUnknown.value)
+        restored.commitSwapTrade("trade").join()
+        verify(swapProvider, times(1)).commitSwapTransaction(any(), any(), any())
+    }
+
+    @Test
+    fun restore_withNoResultSaved_isUnknown() = runTest {
+        // Died before the result was saved (e.g. during the IS-lock wait): unknown, terminal.
+        stubOutcomeUnknown()
+        val savedState = SavedStateHandle(mapOf("swap_trade_order" to order, "deposit_in_progress" to true))
+        val restored = viewModel(savedState)
+
+        restored.reconcileRestoredDeposit(resultSaved = false)
+
+        assertTrue(restored.paymentOutcomeUnknown.value)
+        restored.commitSwapTrade("trade").join()
+        verify(swapProvider, times(0)).commitSwapTransaction(any(), any(), any())
+    }
 }

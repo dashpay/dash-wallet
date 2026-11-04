@@ -96,16 +96,18 @@ class ConvertViewViewModel @Inject constructor(
         }
 
     /**
+     * [pendingConversionResult] as it changes, for the screen that presents it. The key is only
+     * ever set (to null when cleared), never removed: removing it would detach this flow.
+     */
+    val pendingConversionResults: StateFlow<MayaTransactionParams?> =
+        savedStateHandle.getStateFlow<MayaTransactionParams?>(KEY_PENDING_RESULT, null)
+
+    /**
      * The parameters of a conversion-result sheet the user hasn't acknowledged yet. The lock
      * screen auto-dismisses all dialogs, so the sheet is re-shown from these when the lock screen
      * goes away; persisted via [savedStateHandle] (this ViewModel is nav-graph scoped) so it also
      * survives the OS killing the process. Cleared when the user acts on the result.
      */
-    /** [pendingConversionResult] as it changes, for the screen that presents it. */
-    val pendingConversionResults: StateFlow<MayaTransactionParams?> by lazy {
-        savedStateHandle.getStateFlow<MayaTransactionParams?>(KEY_PENDING_RESULT, null)
-    }
-
     var pendingConversionResult: MayaTransactionParams?
         get() = savedStateHandle[KEY_PENDING_RESULT]
         set(value) {
@@ -119,7 +121,8 @@ class ConvertViewViewModel @Inject constructor(
      */
     fun clearSavedState() {
         savedStateHandle.remove<Amount>(KEY_AMOUNT)
-        savedStateHandle.remove<MayaTransactionParams>(KEY_PENDING_RESULT)
+        // Set to null, not removed, so [pendingConversionResults] stays attached.
+        savedStateHandle[KEY_PENDING_RESULT] = null
         savedStateHandle.remove<Boolean>(KEY_MAX_SELECTED)
     }
     var destinationCurrency: String? = null

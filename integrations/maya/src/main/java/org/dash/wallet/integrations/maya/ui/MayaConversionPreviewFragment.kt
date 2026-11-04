@@ -229,6 +229,8 @@ class MayaConversionPreviewFragment : Fragment() {
         // dialog destination closing does not pause or resume this fragment). It stays saved
         // until the result sheet acknowledges it, so the lock dismissing the sheet, or the OS
         // killing the app, shows it again.
+        // After a restore, a saved result for the deposit wins over the payment status warning.
+        viewModel.reconcileRestoredDeposit(convertViewModel.pendingConversionResult != null)
         val navController = findNavController()
         val backToPreview = navController.currentBackStackEntryFlow
             .filter { it.destination.id == R.id.mayaConversionPreviewFragment }
@@ -250,6 +252,8 @@ class MayaConversionPreviewFragment : Fragment() {
         // The deposit may have gone out: Confirm stays disabled and the warning stays up until
         // the user's Close, which leaves the flow for home and its history.
         val outcomeUnknownWarning = PaymentOutcomeUnknownWarning(this) {
+            // The flow ends here: nothing it saved, a stale result included, outlives it.
+            convertViewModel.clearSavedState()
             val navController = findNavController()
             navController.popBackStack(navController.graph.startDestinationId, false)
         }

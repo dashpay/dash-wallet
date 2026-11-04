@@ -127,15 +127,35 @@ class MayaConversionPreviewViewModel @Inject constructor(
     val paymentOutcomeUnknown: StateFlow<Boolean> =
         savedStateHandle.getStateFlow(KEY_PAYMENT_OUTCOME_UNKNOWN, false)
 
+    /** This view model was restored with the deposit mark set (see [reconcileRestoredDeposit]). */
+    private var restoredFromDepositMark = false
+
     init {
         // A deposit was being built or broadcast, or had gone out with its result not yet taken
         // over by the flow ([acknowledgeDepositResult]), when the process died: the restored
         // screen must not offer it again, and nothing is left to say how it ended.
+        // (Unless the flow saved the deposit's result: see reconcileRestoredDeposit.)
         if (savedStateHandle.get<Boolean>(KEY_DEPOSIT_IN_PROGRESS) == true) {
             log.warn("a swap deposit was in progress when the process died; its outcome is unknown")
+            restoredFromDepositMark = true
             savedStateHandle[KEY_PAYMENT_OUTCOME_UNKNOWN] = true
             savedStateHandle[KEY_DEPOSIT_IN_PROGRESS] = false
         }
+    }
+
+    /**
+     * Called by the screen once on creation, before it presents anything: whether the flow still
+     * holds this deposit's saved result (ConvertViewViewModel's pending result). After a restore
+     * from the deposit mark, a saved result means the deposit went out and succeeded: it is shown
+     * instead of the payment status warning, and the mark is kept as the submission guard until
+     * the result is acknowledged ([acknowledgeDepositResult]).
+     */
+    fun reconcileRestoredDeposit(resultSaved: Boolean) {
+        if (restoredFromDepositMark && resultSaved) {
+            savedStateHandle[KEY_PAYMENT_OUTCOME_UNKNOWN] = false
+            savedStateHandle[KEY_DEPOSIT_IN_PROGRESS] = true
+        }
+        restoredFromDepositMark = false
     }
 
     /**
@@ -154,6 +174,7 @@ class MayaConversionPreviewViewModel @Inject constructor(
      */
     fun acknowledgeDepositResult() {
         savedStateHandle[KEY_DEPOSIT_IN_PROGRESS] = false
+        savedStateHandle[KEY_PAYMENT_OUTCOME_UNKNOWN] = false
     }
 
     fun commitSwapTrade(tradeId: String): Job {
