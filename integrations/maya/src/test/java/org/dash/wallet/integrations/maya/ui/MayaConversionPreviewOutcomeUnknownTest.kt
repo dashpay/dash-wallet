@@ -287,4 +287,27 @@ class MayaConversionPreviewOutcomeUnknownTest {
         viewModel.acknowledgeDepositResult()
         assertFalse(viewModel(restoredFrom(savedState)).paymentOutcomeUnknown.value)
     }
+
+    @Test
+    fun aSentDeposit_whoseResultIsNotYetPresented_refusesAnotherCommit_untilAcknowledged() = runTest {
+        // The success arrives while the fee information dialog is on top: the result is not
+        // shown, so it is not acknowledged; a Refresh and Confirm meanwhile must not deposit again.
+        val lock = CompletableDeferred<Unit>()
+        lock.complete(Unit)
+        stubSentDeposit(lock)
+        val viewModel = viewModel(SavedStateHandle(mapOf("swap_trade_order" to order)))
+        var delivered = 0
+        viewModel.commitSwapTradeSuccessState.observeForever { delivered++ }
+
+        viewModel.commitSwapTrade("trade").join()
+        assertEquals(1, delivered)
+
+        viewModel.commitSwapTrade("trade").join()
+        verify(swapProvider, times(1)).commitSwapTransaction(any(), any(), any())
+
+        // Presented and acknowledged: the flow's result sheet answers for it from here.
+        viewModel.acknowledgeDepositResult()
+        viewModel.commitSwapTrade("trade").join()
+        verify(swapProvider, times(2)).commitSwapTransaction(any(), any(), any())
+    }
 }

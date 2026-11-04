@@ -217,25 +217,14 @@ class MayaConversionPreviewFragment : Fragment() {
             // Remember the result until the user acknowledges it: the lock screen auto-dismisses
             // the result sheet, and this lets us re-show it once the lock screen goes away.
             convertViewModel.pendingConversionResult = transactionParams
-            // That saved result now answers for the deposit after a restore.
-            viewModel.acknowledgeDepositResult()
-            safeNavigate(
-                MayaConversionPreviewFragmentDirections.mayaOrderPreviewToOrderExecution(transactionParams)
-            )
+            presentPendingResult()
         }
 
         // Re-show the result sheet after an unlock if it's still pending — the lock screen
         // dismissed it (dialogs are torn down on lock), or the OS killed and restored the app
-        // while it was locked.
+        // while it was locked. (Also on resume: see onResume.)
         lockScreenBroadcaster.deactivatingLockScreen.observe(viewLifecycleOwner) {
-            val pending = convertViewModel.pendingConversionResult
-            if (pending != null &&
-                findNavController().currentDestination?.id == R.id.mayaConversionPreviewFragment
-            ) {
-                safeNavigate(
-                    MayaConversionPreviewFragmentDirections.mayaOrderPreviewToOrderExecution(pending)
-                )
-            }
+            presentPendingResult()
         }
 
         observeNavigationCallBack()
@@ -288,8 +277,30 @@ class MayaConversionPreviewFragment : Fragment() {
         }
     }
 
+    /**
+     * Shows the deposit's saved result when this preview is the current destination. Navigation
+     * is skipped while another destination (e.g. the fee information dialog) is on top: the
+     * result is then shown when the preview resumes. Only once it is shown does the result sheet
+     * answer for the deposit ([MayaConversionPreviewViewModel.acknowledgeDepositResult]); until
+     * then the view model refuses another commit.
+     */
+    private fun presentPendingResult() {
+        val pending = convertViewModel.pendingConversionResult ?: return
+        val navController = findNavController()
+        if (navController.currentDestination?.id != R.id.mayaConversionPreviewFragment) {
+            return
+        }
+        navController.navigate(MayaConversionPreviewFragmentDirections.mayaOrderPreviewToOrderExecution(pending))
+        viewModel.acknowledgeDepositResult()
+    }
+
     private fun onConfirmClick() {
         if (viewModel.paymentOutcomeUnknown.value) {
+            return
+        }
+        // A deposit went out and its result was not acknowledged: show it, never deposit again.
+        if (convertViewModel.pendingConversionResult != null) {
+            presentPendingResult()
             return
         }
         countDownTimer?.cancel()
@@ -479,6 +490,8 @@ class MayaConversionPreviewFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
+        // Back on top (e.g. the fee information dialog closed): a result that arrived meanwhile.
+        presentPendingResult()
         if (viewModel.quoteCreatedAt == null) {
             // First display of this quote: start the full countdown (and stamp the fetch time).
             startQuoteExpiryCountdown()
