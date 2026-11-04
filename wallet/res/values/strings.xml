@@ -475,6 +475,7 @@
 
     <!-- Analytics opt-out (Settings) -->
     <string name="settings_analytics_title">Share usage data</string>
+    <string name="settings_advanced_mode_title">Advanced mode</string>
     <!-- PLACEHOLDER COPY: needs product sign-off -->
     <string name="settings_analytics_info_title">About usage data</string>
     <!-- PLACEHOLDER COPY: needs product sign-off -->

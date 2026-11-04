@@ -130,7 +130,8 @@ class SettingsFragment : Fragment() {
                     },
                     onBatteryOptimizationClick = { batteryOptimization() },
                     onAnalyticsToggle = { viewModel.setAnalyticsEnabled(it) },
-                    onAnalyticsInfoClick = { showAnalyticsInfo() }
+                    onAnalyticsInfoClick = { showAnalyticsInfo() },
+                    onAdvancedModeToggle = { viewModel.setAdvancedModeEnabled(it) }
                 )
                 }
             }
