@@ -44,7 +44,6 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import androidx.navigation.fragment.findNavController
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import dagger.hilt.android.AndroidEntryPoint
@@ -60,8 +59,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.components.LocalDashColors
-import org.dash.wallet.common.ui.components.MyImages
-import org.dash.wallet.common.ui.components.TopNavBase
 import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.common.ui.segmented_picker.SegmentedOption
 import org.dash.wallet.common.ui.segmented_picker.SegmentedPicker
@@ -69,19 +66,23 @@ import org.dash.wallet.common.ui.segmented_picker.SegmentedPickerStyle
 import org.dash.wallet.common.ui.viewBinding
 
 /**
- * The Advanced mode payments screen (MO-1123, Figma 6860:47472): a close button and a
- * Receive / Internal / Send picker over the same child pages as [PaymentsFragment].
+ * The Advanced mode payments screen (MO-1123, Figma 6860:47472 / 7062:49303): a
+ * Receive / Internal / Send picker right under the status bar, above the bottom
+ * navigation (`ShowNavBar` on the destination), over the payments pages.
  *
- * It is a plain `<fragment>` destination for now and is meant to become a sheet, so:
- * all navigation goes through the NavController; the tab set is (re)applied on the
+ * Receive is [AdvancedReceiveFragment] (the Compose [ReceivePage]); Internal and Send
+ * are the same child pages as [PaymentsFragment]'s.
+ *
+ * All navigation goes through the NavController; the tab set is (re)applied on the
  * view's lifecycle from [AdvancedPaymentsViewModel], not once in [onViewCreated]; the
  * screen pads itself for the system bars and the IME and never touches status-bar
- * colours; the close control is in the screen's own content; and the enter/exit
- * transitions are on the NavOptions (see [paymentsRoute]), not set here.
+ * colours; and the enter/exit transitions are on the NavOptions (see [paymentsRoute]),
+ * not set here. There is no close control: like the other bottom-nav screens it is
+ * left through the bottom navigation or Back.
  *
- * The pages are hosted by ViewPager2 like [PaymentsFragment]'s:
- * [PaymentsReceiveFragment] relies on ViewPager2 keeping an offscreen page at STARTED
- * and only the selected one at RESUMED (see its `shouldSurfaceAddressFailure`).
+ * The pages are hosted by ViewPager2 like [PaymentsFragment]'s: ViewPager2 keeps an
+ * offscreen page at STARTED and lifts only the selected one to RESUMED, which is when
+ * [AdvancedReceiveFragment] (re)reads its address.
  */
 @AndroidEntryPoint
 class AdvancedPaymentsFragment : Fragment(R.layout.fragment_advanced_payments) {
@@ -139,6 +140,9 @@ class AdvancedPaymentsFragment : Fragment(R.layout.fragment_advanced_payments) {
 
         val adapter = TabsAdapter(this, source = arguments?.getString(ARG_SOURCE) ?: "")
         binding.pager.adapter = adapter
+        // Only the top picker changes tabs: a sideways drag belongs to the page's own
+        // content (the Receive balance switch scrolls sideways), never to the pager.
+        binding.pager.isUserInputEnabled = false
         viewLifecycleOwner.observeOnDestroy { binding.pager.adapter = null }
         binding.pager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
             override fun onPageSelected(position: Int) {
@@ -189,23 +193,10 @@ class AdvancedPaymentsFragment : Fragment(R.layout.fragment_advanced_payments) {
                 .getInt(PREFS_RECENT_TAB, ACTIVE_TAB_RECEIVE)
         }
 
-    private fun close() {
-        findNavController().popBackStack()
-    }
-
     @Composable
     private fun Header() {
         val colors = LocalDashColors.current
         Column(modifier = Modifier.fillMaxWidth()) {
-            // Figma 7062:49304: no title, a circled close button on the right.
-            TopNavBase(
-                leadingPart = false,
-                centralPart = false,
-                trailingIcon = MyImages.NavBarClose,
-                trailingContentDescription = stringResource(org.dash.wallet.common.R.string.button_close),
-                onTrailingClick = ::close
-            )
-
             val ids = tabIds
             if (ids.isNotEmpty()) {
                 val options = ids.map { tabId ->
@@ -224,12 +215,12 @@ class AdvancedPaymentsFragment : Fragment(R.layout.fragment_advanced_payments) {
                         )
                     }
                 }
-                // Figma 7062:49306: 70dp, 20dp corners, 4dp inset, 16dp thumb corners,
+                // Figma 7062:49306 (20dp margins, 7062:49303): 70dp, 20dp corners, 4dp inset, 16dp thumb corners,
                 // icon above the title, no dividers, gray300 @ 20% track.
                 SegmentedPicker(
                     options = options,
                     modifier = Modifier
-                        .padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 20.dp)
+                        .padding(20.dp)
                         .fillMaxWidth()
                         .height(70.dp),
                     selectedIndex = selectedPosition,
@@ -275,7 +266,7 @@ class AdvancedPaymentsFragment : Fragment(R.layout.fragment_advanced_payments) {
         override fun containsItem(itemId: Long): Boolean = tabIds.any { it.toLong() == itemId }
 
         override fun createFragment(position: Int): Fragment = when (tabIds[position]) {
-            ACTIVE_TAB_RECEIVE -> PaymentsReceiveFragment.newInstance()
+            ACTIVE_TAB_RECEIVE -> AdvancedReceiveFragment.newInstance()
             ACTIVE_TAB_INTERNAL -> PaymentsInternalFragment.newInstance()
             else -> PaymentsPayFragment.newInstance(source = source)
         }

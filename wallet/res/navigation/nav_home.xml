@@ -163,7 +163,8 @@
     </fragment>
 
     <!--
-        Advanced mode payments (MO-1123, Figma 6860:47472). Opened instead of
+        Advanced mode payments (MO-1123, Figma 6860:47472 / 7062:49303, with the
+        bottom navigation). Opened instead of
         paymentsFragment when WalletUIConfig.ADVANCED_MODE is on (see
         PaymentsRoute.kt). Its tabs host the same child fragments as
         paymentsFragment, which navigate with PaymentsFragmentDirections, so
@@ -177,6 +178,10 @@
         <argument
             android:name="active_tab"
             app:argType="integer" />
+
+        <argument
+            android:name="ShowNavBar"
+            android:defaultValue="true" />
 
         <action
             android:id="@+id/payments_to_contacts"

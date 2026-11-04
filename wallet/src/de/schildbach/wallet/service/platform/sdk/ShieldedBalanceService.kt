@@ -333,6 +333,15 @@ interface ShieldedBalanceService {
     suspend fun shieldedReceiveAddress(): String?
 
     /**
+     * The wallet's own Platform (DIP-17) receive address as stored by the SDK
+     * — the lowest unused index, else the lowest index of any state, the same
+     * row [unshieldToCredits] pays itself to — or null when the flag is off,
+     * the runtime is not ready, or the SDK's address store has no row for the
+     * wallet yet. Never throws (except cancellation).
+     */
+    suspend fun platformReceiveAddress(): String?
+
+    /**
      * Shield [amount] from the wallet's own Platform credit balance into
      * its own shielded pool (Type 15). Self-shield only — Rust always
      * targets this wallet's default Orchard address. Blocks for the ~30s

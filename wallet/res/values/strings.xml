@@ -505,5 +505,20 @@
     <string name="buy_credits_current_identity_balance">Current Identity Balance: %1$s</string>
     <string name="buy_credits_current_identity_balance_unavailable">unavailable</string>
     <string name="payment_request_resending_earlier_payment">This request was paid before, but that payment was never confirmed. Confirming sends the same payment again, so you cannot be charged twice.</string>
+    <!-- Advanced payments, Receive tab (Figma 7062:49303) -->
+    <string name="receive_balance_core">Core</string>
+    <string name="receive_balance_shield">Shield</string>
+    <string name="receive_balance_platform">Platform</string>
+    <string name="receive_balance_identity">Identity</string>
+    <string name="receive_core_address_label">DASH address</string>
+    <string name="receive_shielded_address_label">Shielded address</string>
+    <string name="receive_platform_address_label">Platform address</string>
+    <string name="receive_identity_id_label">Identity ID</string>
+    <string name="receive_share_address">Share address</string>
+    <string name="receive_specify_amount">Specify amount</string>
+    <string name="receive_copy_username">Copy username</string>
+    <string name="receive_copy_address">Copy address</string>
+    <string name="receive_qr_code_description">QR code for the address below</string>
+    <string name="receive_address_unavailable">This address is not available right now</string>
     <string name="dash_connect_revoke_access">Revoke access</string>
 </resources>
