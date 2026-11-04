@@ -30,6 +30,7 @@ import de.schildbach.wallet.ui.dashpay.utils.ownedRecordPrimary
 import de.schildbach.wallet.ui.dashpay.utils.preferDisplayLabel
 import de.schildbach.wallet.ui.dashpay.utils.recoveredPrimaryIsPendingDualSecondary
 import io.grpc.StatusRuntimeException
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -520,12 +521,20 @@ class IdentityRepositoryImpl @Inject constructor(
                 val requestedPrimaryPending = !recoveredIsRecordSecondary && recoveredPrimary != null &&
                     usernameRequested != UsernameRequestStatus.LOST_VOTE &&
                     usernameRequested != UsernameRequestStatus.LOCKED &&
-                    requestedPrimaryNotRecovered(
-                        requested = blockchainIdentityDataStorage.requestedNames(),
-                        identityId = userId,
-                        recordPrimary = username,
-                        recoveredPrimary = recoveredPrimary
-                    )
+                    try {
+                        requestedPrimaryNotRecovered(
+                            requested = blockchainIdentityDataStorage.requestedNames(),
+                            identityId = userId,
+                            recordPrimary = username,
+                            recoveredPrimary = recoveredPrimary
+                        )
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        // unknown is not "nothing requested": keep the record's primary
+                        log.warn("requested names unreadable; keeping the record's primary", e)
+                        true
+                    }
                 val keptRequestedPrimary = recoveredIsRecordSecondary || requestedPrimaryPending
                 if (requestedPrimaryPending) {
                     log.info(

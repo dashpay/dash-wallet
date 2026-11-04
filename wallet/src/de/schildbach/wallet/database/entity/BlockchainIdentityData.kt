@@ -469,7 +469,8 @@ open class BlockchainIdentityConfig @Inject constructor(
         }
     }
 
-    override suspend fun requestedNames(): RequestedNameContext? = requestedNamesIn(data.first())
+    /** Strict: an unreadable store throws, never reads as "nothing requested". */
+    override suspend fun requestedNames(): RequestedNameContext? = requestedNamesIn(readStrict())
 
     private fun requestedNamesIn(prefs: Preferences): RequestedNameContext? {
         val identityId = prefs[REQUESTED_NAMES_IDENTITY_ID] ?: return null
@@ -532,12 +533,16 @@ open class BlockchainIdentityConfig @Inject constructor(
 
     override suspend fun verifyObligation(): VerifyLinkObligation? = verifyObligationIn(readStrict())
 
-    override suspend fun markVerifyAttempt(expected: VerifyLinkObligation, atMs: Long) {
+    override suspend fun markVerifyAttempt(expected: VerifyLinkObligation, atMs: Long): Boolean {
+        var applied = false
         context.dataStore.edit { prefs ->
+            applied = false
             if (verifyObligationIn(prefs)?.sameRequest(expected) != true) return@edit
             prefs[VERIFY_LINK_ATTEMPT_AT] = atMs
             prefs.remove(VERIFY_LINK_UNCERTAIN)
+            applied = true
         }
+        return applied
     }
 
     override suspend fun markVerifyUncertain(identityIdBase58: String, label: String, atMs: Long) {

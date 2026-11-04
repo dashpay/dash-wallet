@@ -18,6 +18,7 @@ package de.schildbach.wallet.service.platform.sdk
 
 import de.schildbach.wallet.service.platform.InMemoryVerifyLinkObligationStore
 import de.schildbach.wallet.service.platform.VerifyLinkObligation
+import de.schildbach.wallet.service.platform.verifyWorkStillCurrent
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -47,6 +48,7 @@ class VerifyLinkReconcilerTest {
         var platformReads = 0
         var owned = true
         var present: Boolean? = false
+        var documentUrl: String? = link
         var inFlight = false
         var now = t0
         val enqueued = mutableListOf<Pair<String, String>>()
@@ -55,7 +57,13 @@ class VerifyLinkReconcilerTest {
             store = store,
             currentRequest = { current },
             ownsOrContends = { _, _ -> platformReads++; owned },
-            documentPresent = { _, _ -> present },
+            documentPresent = { _, _ ->
+                when (present) {
+                    true -> VerifyDocument.Present(documentUrl)
+                    false -> VerifyDocument.Absent
+                    null -> null
+                }
+            },
             publicationInFlight = { inFlight },
             enqueuePublication = { label, url -> enqueued += label to url },
             clock = { now }
@@ -198,7 +206,7 @@ class VerifyLinkReconcilerTest {
             store = w.store,
             currentRequest = { w.current },
             ownsOrContends = { _, _ -> reads++; false },
-            documentPresent = { _, _ -> false },
+            documentPresent = { _, _ -> VerifyDocument.Absent },
             publicationInFlight = { false },
             enqueuePublication = { _, _ -> },
             clock = { w.now }
@@ -227,15 +235,18 @@ class VerifyLinkReconcilerTest {
     fun `only a read that completed proves the document absent`() = runBlocking {
         // the SDK search's own answer is definite; without it (flag off, failed) the dashj query,
         // which returns null only for an empty result and throws on any failed read
-        assertEquals(true, verifyDocumentPresence({ java.util.Optional.of(link) }, { error("not reached") }))
-        assertEquals(false, verifyDocumentPresence({ java.util.Optional.empty() }, { error("not reached") }))
-        assertEquals(true, verifyDocumentPresence({ null }, { Any() }))
-        assertEquals(false, verifyDocumentPresence({ null }, { null }))
+        assertEquals(
+            VerifyDocument.Present(link),
+            verifyDocumentPresence({ java.util.Optional.of(link) }, { error("not reached") })
+        )
+        assertEquals(VerifyDocument.Absent, verifyDocumentPresence({ java.util.Optional.empty() }, { error("not reached") }))
+        assertEquals(VerifyDocument.Present(link), verifyDocumentPresence({ null }, { VerifyDocument.Present(link) }))
+        assertEquals(VerifyDocument.Absent, verifyDocumentPresence({ null }, { VerifyDocument.Absent }))
         assertNull(
             "a failed read is unknown, never absent",
             verifyDocumentPresence({ null }, { throw org.dashj.platform.dapiclient.MaxRetriesReachedException(emptyList<Exception>()) })
         )
-        assertNull(verifyDocumentPresence({ throw java.io.IOException("search failed") }, { null }))
+        assertNull(verifyDocumentPresence({ throw java.io.IOException("search failed") }, { VerifyDocument.Absent }))
     }
 
     @Test
@@ -246,7 +257,9 @@ class VerifyLinkReconcilerTest {
             store = w.store,
             currentRequest = { w.current },
             ownsOrContends = { _, _ -> true },
-            documentPresent = { _, _ -> verifyDocumentPresence({ null }, { throw java.io.IOException("DAPI down") }) },
+            documentPresent = { _, _ ->
+                verifyDocumentPresence({ null }, { throw java.io.IOException("DAPI down") })
+            },
             publicationInFlight = { false },
             enqueuePublication = { label, url -> w.enqueued += label to url },
             clock = { w.now }
@@ -351,5 +364,55 @@ class VerifyLinkReconcilerTest {
 
         assertEquals("only the newer link is published", listOf("alice" to newer), w.enqueued)
         assertEquals(newer, w.store.obligation?.link)
+    }
+
+    // ── a link replaced while a pass was reading Platform ──
+
+    @Test
+    fun `a pass whose link was replaced meanwhile does not enqueue the older link`() {
+        val w = World()
+        w.record() // URL A
+        val newer = "https://example.com/newer"
+        val racing = VerifyLinkReconciler(
+            store = w.store,
+            currentRequest = { w.current },
+            ownsOrContends = { _, _ -> true },
+            documentPresent = { _, _ ->
+                // the user saves URL B while this pass waits on Platform
+                w.store.recordVerifyObligation(identityId, "alice", newer)
+                VerifyDocument.Absent
+            },
+            publicationInFlight = { false },
+            enqueuePublication = { label, url -> w.enqueued += label to url },
+            clock = { w.now }
+        )
+
+        assertFalse(runBlocking { racing.reconcile() })
+
+        assertTrue("URL A is never enqueued", w.enqueued.isEmpty())
+        assertEquals(newer, w.store.obligation?.link)
+    }
+
+    @Test
+    fun `a document carrying another link does not settle the obligation`() {
+        val w = World()
+        w.record()
+        w.present = true
+        w.documentUrl = "https://example.com/older"
+
+        assertFalse(w.pass())
+
+        assertNotNull("left for a follow-up, not settled", w.store.obligation)
+        assertNull(w.store.settled)
+        assertTrue(w.enqueued.isEmpty())
+    }
+
+    @Test
+    fun `the worker publishes only the link the pending obligation still carries`() {
+        val pending = VerifyLinkObligation(identityId, "alice", link)
+        assertTrue(verifyWorkStillCurrent(pending, "Alice", link))
+        assertFalse("a newer link replaced it", verifyWorkStillCurrent(pending, "alice", "https://example.com/older"))
+        assertFalse("another name", verifyWorkStillCurrent(pending, "bobby", link))
+        assertFalse("settled or dropped meanwhile", verifyWorkStillCurrent(null, "alice", link))
     }
 }

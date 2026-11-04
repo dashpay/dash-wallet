@@ -79,4 +79,14 @@ class RecoverySeedStrictReadTest {
             config.retryRouting()
         )
     }
+
+    @Test
+    fun `the requested names are read strictly`() {
+        val config = mockk<BlockchainIdentityConfig> {
+            coEvery { readStrict() } throws java.io.IOException("datastore unreadable")
+            coEvery { requestedNames() } answers { callOriginal() }
+        }
+
+        assertThrows(java.io.IOException::class.java) { runBlocking { config.requestedNames() } }
+    }
 }

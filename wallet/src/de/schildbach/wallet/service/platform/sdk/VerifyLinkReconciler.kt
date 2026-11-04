@@ -63,8 +63,8 @@ class VerifyLinkReconciler internal constructor(
     private val currentRequest: suspend () -> CurrentRequest,
     /** True when the identity owns or contends for the label; throws when unreadable. */
     private val ownsOrContends: suspend (identityIdBase58: String, label: String) -> Boolean,
-    /** Whether the IdentityVerify document exists: null when it cannot be read. */
-    private val documentPresent: suspend (identityIdBase58: String, normalizedLabel: String) -> Boolean?,
+    /** The IdentityVerify document, or its absence: null when it cannot be read. */
+    private val documentPresent: suspend (identityIdBase58: String, normalizedLabel: String) -> VerifyDocument?,
     /** Whether a publication for the label is queued or running; throws when unreadable. */
     private val publicationInFlight: suspend (label: String) -> Boolean,
     /** Enqueues one publication, returning once it is durably enqueued. */
@@ -96,7 +96,10 @@ class VerifyLinkReconciler internal constructor(
             val owner = Identifier.from(identityId)
             verifyDocumentPresence(
                 { sdkIdentityVerifyQueries.getVerificationUrl(owner, normalizedLabel) },
-                { IdentityVerify(platformRepo.get().platform.platform).get(owner, normalizedLabel) }
+                {
+                    IdentityVerify(platformRepo.get().platform.platform).get(owner, normalizedLabel)
+                        ?.let { VerifyDocument.Present(it.url) } ?: VerifyDocument.Absent
+                }
             )
         },
         publicationInFlight = { label ->
@@ -168,20 +171,30 @@ class VerifyLinkReconciler internal constructor(
         lastPlatformPassAt = now
         if (!ownsOrContends(obligation.identityIdBase58, obligation.label)) return false
         if (publicationInFlight(obligation.label)) return false
-        when (documentPresent(obligation.identityIdBase58, obligation.normalizedLabel)) {
-            true -> {
+        when (val document = documentPresent(obligation.identityIdBase58, obligation.normalizedLabel)) {
+            is VerifyDocument.Present -> {
+                if (document.url != null && document.url != obligation.link) {
+                    // another link is published for the name; not this obligation's (follow-up)
+                    log.warn("a verification document for '{}' carries another link; not settling it", obligation.label)
+                    return false
+                }
                 log.info("verification link for '{}' is published; done", obligation.label)
                 store.settleVerifyObligation(obligation)
                 return false
             }
             null -> return false
-            false -> Unit
+            VerifyDocument.Absent -> Unit
         }
         if (obligation.uncertain) {
             log.info("the uncertain publication for '{}' did not land; publishing it again", obligation.label)
         }
-        // recorded first: a death after the enqueue still counts the attempt (and settles)
-        store.markVerifyAttempt(obligation, now)
+        // recorded first: a death after the enqueue still counts the attempt (and settles); and
+        // only while the obligation is still this one (a newer link may have replaced it while
+        // this pass read Platform)
+        if (!store.markVerifyAttempt(obligation, now)) {
+            log.info("verification link for '{}' changed during the pass; not publishing it", obligation.label)
+            return false
+        }
         enqueuePublication(obligation.label, obligation.link)
         return true
     }
@@ -224,8 +237,14 @@ class VerifyLinkReconciler internal constructor(
     }
 }
 
+/** An IdentityVerify document lookup that completed: found (with its link, when read) or absent. */
+sealed class VerifyDocument {
+    data class Present(val url: String?) : VerifyDocument()
+    object Absent : VerifyDocument()
+}
+
 /**
- * Whether the IdentityVerify document exists: true or false only from a read that completed,
+ * Whether the IdentityVerify document exists: [VerifyDocument] only from a read that completed,
  * null when it is unknown (the caller must not take it as absent).
  *
  * The SDK search's own answer is definite. Without one (its flag off, or the SDK read failed)
@@ -236,10 +255,14 @@ class VerifyLinkReconciler internal constructor(
  */
 internal suspend fun verifyDocumentPresence(
     sdkSearch: suspend () -> java.util.Optional<String>?,
-    dashjQuery: suspend () -> Any?
-): Boolean? = try {
+    dashjQuery: suspend () -> VerifyDocument
+): VerifyDocument? = try {
     val sdk = sdkSearch()
-    if (sdk != null) sdk.isPresent else dashjQuery() != null
+    when {
+        sdk == null -> dashjQuery()
+        sdk.isPresent -> VerifyDocument.Present(sdk.get())
+        else -> VerifyDocument.Absent
+    }
 } catch (e: CancellationException) {
     throw e
 } catch (e: Exception) {

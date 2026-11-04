@@ -54,8 +54,12 @@ interface VerifyLinkObligationStore {
     /** The pending obligation, or null; throws when the store cannot be read. */
     suspend fun verifyObligation(): VerifyLinkObligation?
 
-    /** Records an enqueued publication of [expected], when it is still the pending one. */
-    suspend fun markVerifyAttempt(expected: VerifyLinkObligation, atMs: Long)
+    /**
+     * Records an enqueued publication of [expected], when it is still the pending one (identity,
+     * name and link). Returns whether it was: a false answer means the request changed meanwhile
+     * and must not be published.
+     */
+    suspend fun markVerifyAttempt(expected: VerifyLinkObligation, atMs: Long): Boolean
 
     /**
      * The publication for [identityIdBase58]'s [label] failed after submitting (its outcome is
@@ -88,9 +92,10 @@ class InMemoryVerifyLinkObligationStore : VerifyLinkObligationStore {
 
     override suspend fun verifyObligation(): VerifyLinkObligation? = obligation
 
-    override suspend fun markVerifyAttempt(expected: VerifyLinkObligation, atMs: Long) = synchronized(lock) {
-        obligation?.takeIf { it.sameRequest(expected) }?.let { obligation = it.copy(attemptAtMs = atMs, uncertain = false) }
-        Unit
+    override suspend fun markVerifyAttempt(expected: VerifyLinkObligation, atMs: Long): Boolean = synchronized(lock) {
+        val pending = obligation?.takeIf { it.sameRequest(expected) } ?: return@synchronized false
+        obligation = pending.copy(attemptAtMs = atMs, uncertain = false)
+        true
     }
 
     override suspend fun markVerifyUncertain(identityIdBase58: String, label: String, atMs: Long) = synchronized(lock) {
@@ -115,3 +120,11 @@ class InMemoryVerifyLinkObligationStore : VerifyLinkObligationStore {
 
     override suspend fun settledVerifyRequest(): VerifyLinkObligation? = settled
 }
+
+/**
+ * Whether a verification-link publication for [label] and [link] is still the pending
+ * [obligation]'s: the worker re-reads it right before submitting, and publishes nothing for a
+ * request that was replaced (a newer link), settled or dropped since it was enqueued.
+ */
+fun verifyWorkStillCurrent(obligation: VerifyLinkObligation?, label: String, link: String): Boolean =
+    obligation != null && obligation.normalizedLabel == Names.normalizeString(label) && obligation.link == link

@@ -180,6 +180,30 @@ class IdentityReplacementNameRecordTest {
     }
 
     @Test
+    fun `an unreadable requested-names read keeps the record's primary`() = runBlocking {
+        // a failed read is not "nothing requested": adopting would drop a pending replacement
+        val storage = mockk<BlockchainIdentityConfig>(relaxed = true)
+        coEvery { storage.get(BlockchainIdentityConfig.CREATION_STATE) } returns IdentityCreationState.USERNAME_REGISTERING.name
+        coEvery { storage.requestedNames() } throws java.io.IOException("datastore unreadable")
+        val repository = IdentityRepositoryImpl(
+            walletApplication = mockk<WalletApplication>(relaxed = true),
+            appDatabase = mockk<AppDatabase>(relaxed = true),
+            blockchainIdentityDataStorage = storage,
+            walletDataProvider = mockk<WalletData>(relaxed = true),
+            platformRepo = mockk<PlatformRepo>(relaxed = true),
+            dashPayConfig = mockk<DashPayConfig>(relaxed = true),
+            dashSystemService = mockk<DashSystemService>(relaxed = true),
+            sdkUsernameQueries = mockk<SdkUsernameQueries>(relaxed = true),
+            sdkProfileQueries = mockk<SdkProfileQueries>(relaxed = true)
+        )
+        val data = record(primary = "bobby", secondary = "bobby2")
+
+        repository.updateBlockchainIdentityData(data, recovered(primary = "alice2", secondary = null))
+
+        assertEquals("bobby", data.username)
+    }
+
+    @Test
     fun `a genuine restore still adopts the recovered name`() = runBlocking {
         // no requested names on record: the on-chain name wins, as before
         val data = record(primary = "bobby", secondary = "bobby2")

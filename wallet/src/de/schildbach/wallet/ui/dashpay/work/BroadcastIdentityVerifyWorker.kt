@@ -24,6 +24,7 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.service.platform.IdentityRepository
+import de.schildbach.wallet.service.platform.verifyWorkStillCurrent
 import de.schildbach.wallet.service.platform.uniqueIdStringOrNull
 import org.slf4j.LoggerFactory
 import de.schildbach.wallet.service.platform.PlatformBroadcastService
@@ -75,6 +76,18 @@ class BroadcastIdentityVerifyWorker @AssistedInject constructor(
         val identity = identityRepository.blockchainIdentity
         if (identity?.identity == null) {
             return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "the identity is not loaded yet; nothing published"))
+        }
+
+        // Only the link the pending obligation still carries: it may have been replaced by a newer
+        // link, or settled, since this work was enqueued. Unreadable: retried by the reconcile.
+        val current = try {
+            verifyWorkStillCurrent(identityConfig.verifyObligation(), username, url)
+        } catch (e: Exception) {
+            log.warn("verification-link obligation unreadable; not publishing", e)
+            false
+        }
+        if (!current) {
+            return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "the verification link is no longer pending; nothing published"))
         }
 
         return try {
