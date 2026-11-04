@@ -1,4 +1,30 @@
 DashPay Wallet
+v11.9.2
+  DashConnect
+  - Available on mainnet: every entry point and operation is gated on the network running Platform protocol 14, with Retry when the version cannot be read (#1670)
+  - DashConnect v2: one QR per request, DIP-13 session keys, a funding limit and expiry for each connection, and requests on dashpay://connect (#1604, #1656)
+  - Redesigned approve sheet: details card, funding limit and expiration pickers, what the app can and cannot do, and a first-connection warning (#1662)
+  - Connections page: Active, Disconnected and Expired tabs, a details sheet with each key's current Platform limits, and Disconnect, Reconnect or Remove from list (#1662)
+  - Approve token purchases, offer to buy credits when the identity cannot pay, and offer to create a username from Connections (#1604, #1662)
+  - Warn about DashPay profile keys that no connection on this device holds, with Dismiss or Revoke (#1662)
+  - Require a wallet unlock to approve and drop signing authority when the wallet locks or the screen leaves the foreground (#1604)
+  - Not offered on 32-bit devices (#1604)
+  - Translated into German, Polish, Italian, Spanish, Brazilian Portuguese, Russian and French
+
+  DashPay
+  - Contested username fee follows the Platform protocol version: 0.15 DASH from protocol 14, down from 0.25 (#1583)
+  - Share invite links the iOS wallet can open (#1587)
+  - Show the Cancel button in the profile picture upload dialog in dark mode (#1660)
+
+  CrowdNode
+  - Removed the CrowdNode integration: Staking in Explore and the home-screen shortcut, the leftover-balance check on sends, and CrowdNode transaction grouping; saved CrowdNode settings and cached history are cleared on upgrade (#1664)
+
+  Explore Dash
+  - Corrected the inner curve of the C in the CTX logo (#1665)
+
+  Maintenance
+  - Updated to dashj 24.0.0 and dpp 5.0.1
+
 v11.9.1
   New features & redesigns
   - Dark mode support across the app: dialogs, PIN entry, DashPay cards, payment request details and Dash DEX screens (#1480)

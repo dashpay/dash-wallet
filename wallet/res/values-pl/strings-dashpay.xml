@@ -588,4 +588,6 @@
     <string name="dash_connect_confirm">Potwierdź</string>
     <string name="dash_connect_testnet_only_heading">Dostępne tylko w sieci testowej</string>
     <string name="dash_connect_testnet_only_message">Logowanie DashConnect nie jest jeszcze dostępne w sieci głównej</string>
+    <string name="dash_connect_group_scope_changed">Zakres tej grupy zmienił się od Twojego poprzedniego zatwierdzenia lub jej poprzedni zakres nie został zapisany. Przed kontynuowaniem przejrzyj poniżej obecnych członków i administratorów. Wcześniej zarejestrowane klucze mogą być nadal aktywne; opcja Cofnij dostęp pozostaje dostępna.</string>
+    <string name="dash_connect_group_scope_approve">Zatwierdzam zaktualizowany zakres grupy pokazany powyżej.</string>
     </resources>

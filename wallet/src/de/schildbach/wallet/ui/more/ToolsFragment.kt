@@ -74,6 +74,7 @@ class ToolsFragment : Fragment() {
             setContent {
                 DashWalletTheme {
                     ToolsScreen(
+                        uiStateFlow = viewModel.uiState,
                         onBackClick = { findNavController().popBackStack() },
                         onAddressBookClick = { onAddressBook() },
                         onImportPrivateKeyClick = { onImportKeys() },
@@ -89,6 +90,11 @@ class ToolsFragment : Fragment() {
                 }
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        viewModel.refreshConnectionsAvailability()
     }
 
     private fun onZenLedgerExport() {
