@@ -10,6 +10,12 @@ import kotlinx.coroutines.runBlocking
 import org.bitcoinj.core.Coin
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
+import io.mockk.verify
+import de.schildbach.wallet.security.SecurityGuard
+import de.schildbach.wallet.security.SecurityGuardException
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -63,5 +69,21 @@ class PlatformRepoProtocolVersionTest {
         every { platform.client.refreshProtocolVersion() } throws CancellationException("cancelled")
         repository.refreshProtocolVersion()
         Unit
+    }
+
+    @Test fun encryptedWalletWithoutPasswordDoesNotDeriveAKey() {
+        val wallet = mockk<org.bitcoinj.wallet.WalletEx>(relaxed = true)
+        val crypter = mockk<org.bitcoinj.crypto.KeyCrypter>(relaxed = true)
+        val guard = mockk<SecurityGuard>()
+        every { repository.walletApplication.wallet } returns wallet
+        every { wallet.isEncrypted } returns true
+        every { wallet.keyCrypter } returns crypter
+        mockkStatic(SecurityGuard::class)
+        try {
+            every { SecurityGuard.getInstance() } returns guard
+            every { guard.retrievePassword() } throws SecurityGuardException("Locked")
+            assertNull(repository.getWalletSeed())
+            verify(exactly = 0) { crypter.deriveKey(any()) }
+        } finally { unmockkStatic(SecurityGuard::class) }
     }
 }

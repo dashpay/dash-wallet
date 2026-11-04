@@ -451,4 +451,5 @@
     <string name="upgrade_pin_title">You need to upgrade your PIN</string>
     <string name="upgrade_pin_description">Set up a new PIN</string>
     <string name="upgrade_pin_continue">Continue</string>
+    <string name="dash_connect_revoke_access">Revoke access</string>
 </resources>

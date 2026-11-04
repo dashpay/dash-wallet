@@ -66,8 +66,12 @@ abstract class BaseConfig(
 
     init {
         walletDataProvider.attachOnWalletWipedListener {
-            clearAll()
+            onWalletWiped()
         }
+    }
+
+    protected open suspend fun onWalletWiped() {
+        clearAll()
     }
 
     fun <T> observe(key: Preferences.Key<T>): Flow<T?> {

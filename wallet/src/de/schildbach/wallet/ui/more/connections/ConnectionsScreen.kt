@@ -34,6 +34,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -45,7 +46,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.flow.StateFlow
 import org.dash.wallet.common.ui.components.DashButton
@@ -69,27 +69,8 @@ import java.util.Locale
  */
 @Composable
 fun ConnectionsScreen(
-    onBackClick: () -> Unit = {},
-    onScanClick: () -> Unit = {},
-    onConnectionClick: (DAppConnection) -> Unit = {},
-    onConnectionQrClick: (DAppConnection) -> Unit = {},
-    onConnectionToggle: (DAppConnection, Boolean) -> Unit = { _, _ -> }
-) {
-    val viewModel: ConnectionsViewModel = hiltViewModel()
-
-    ConnectionsScreen(
-        uiStateFlow = viewModel.uiState,
-        onBackClick = onBackClick,
-        onScanClick = onScanClick,
-        onConnectionClick = onConnectionClick,
-        onConnectionQrClick = onConnectionQrClick,
-        onConnectionToggle = onConnectionToggle
-    )
-}
-
-@Composable
-fun ConnectionsScreen(
     uiStateFlow: StateFlow<ConnectionsUIState>,
+    onRetryClick: () -> Unit = {},
     onBackClick: () -> Unit = {},
     onScanClick: () -> Unit = {},
     onConnectionClick: (DAppConnection) -> Unit = {},
@@ -100,6 +81,7 @@ fun ConnectionsScreen(
 
     ConnectionsScreenContent(
         uiState = uiState,
+        onRetryClick = onRetryClick,
         onBackClick = onBackClick,
         onScanClick = onScanClick,
         onConnectionClick = onConnectionClick,
@@ -111,6 +93,7 @@ fun ConnectionsScreen(
 @Composable
 private fun ConnectionsScreenContent(
     uiState: ConnectionsUIState,
+    onRetryClick: () -> Unit = {},
     onBackClick: () -> Unit = {},
     onScanClick: () -> Unit = {},
     onConnectionClick: (DAppConnection) -> Unit = {},
@@ -131,6 +114,27 @@ private fun ConnectionsScreenContent(
 
         if (uiState.featureUnavailable) {
             ConnectionsUnavailableState(modifier = Modifier.weight(1f))
+        } else if (uiState.recordsStatus == ConnectionRecordsStatus.LOADING) {
+            Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = colors.dashBlue)
+            }
+        } else if (uiState.recordsStatus == ConnectionRecordsStatus.NO_IDENTITY) {
+            Box(Modifier.weight(1f).fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) {
+                Text(stringResource(R.string.dash_connect_identity_required),
+                    style = MyTheme.Typography.TitleMediumSemibold, color = colors.textPrimary,
+                    textAlign = TextAlign.Center)
+            }
+        } else if (uiState.recordsStatus == ConnectionRecordsStatus.UNAVAILABLE) {
+            Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(40.dp),
+                verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(stringResource(R.string.dash_connect_records_unavailable),
+                    style = MyTheme.Typography.TitleMediumSemibold, color = colors.textPrimary)
+                Text(stringResource(R.string.dash_connect_records_unavailable_message),
+                    style = MyTheme.Typography.BodyMedium, color = colors.textSecondary,
+                    modifier = Modifier.padding(vertical = 20.dp))
+                DashButton(text = stringResource(R.string.dash_connect_records_retry),
+                    style = Style.FilledBlue, size = Size.Large, onClick = onRetryClick)
+            }
         } else if (uiState.connections.isEmpty()) {
             ConnectionsEmptyState(
                 onScanClick = onScanClick,
@@ -151,10 +155,9 @@ private fun ConnectionsScreenContent(
                             onQrClick = { onConnectionQrClick(connection) },
                             onToggle = { enabled -> onConnectionToggle(connection, enabled) }
                         )
-                        // Blue-tint banner attached inside the card, under an APPROVED connection
-                        // awaiting login (Figma 5802:51517 SystemMessage): prompts the login scan.
-                        if (connection.status == ConnectionStatus.APPROVED) {
-                            ScanToCompleteBanner(onScanClick = onScanClick)
+                        // Both pending and revoked connections need a fresh login QR.
+                        if (connection.status != ConnectionStatus.ACTIVE) {
+                            ScanToCompleteBanner(onScanClick = { onConnectionQrClick(connection) })
                         }
                     }
                 }
@@ -183,8 +186,8 @@ private fun ConnectionsUnavailableState(
                         .size(80.dp)
                 )
             },
-            heading = stringResource(R.string.dash_connect_testnet_only_heading),
-            body = stringResource(R.string.dash_connect_testnet_only_message)
+            heading = stringResource(R.string.dash_connect_unavailable_heading),
+            body = stringResource(R.string.dash_connect_unavailable_message)
         )
     }
 }
@@ -250,7 +253,7 @@ private fun ConnectionsEmptyState(
 
 /**
  * Blue-tint SystemMessage banner (Figma 5802:51517): info icon + prompt text + a small
- * filled-blue "Scan QR" button. Shown for APPROVED connections awaiting login.
+ * filled-blue "Scan QR" button. Shown for pending and disconnected connections.
  */
 @Composable
 private fun ScanToCompleteBanner(
@@ -371,7 +374,7 @@ private fun previewConnection(status: ConnectionStatus) = DAppConnection(
 @Composable
 @Preview
 private fun ConnectionsScreenEmptyPreview() {
-    ConnectionsScreenContent(uiState = ConnectionsUIState())
+    ConnectionsScreenContent(uiState = ConnectionsUIState(recordsStatus = ConnectionRecordsStatus.READY))
 }
 
 @Composable
@@ -379,6 +382,7 @@ private fun ConnectionsScreenEmptyPreview() {
 private fun ConnectionsScreenApprovedPreview() {
     ConnectionsScreenContent(
         uiState = ConnectionsUIState(
+            recordsStatus = ConnectionRecordsStatus.READY,
             connections = listOf(previewConnection(ConnectionStatus.APPROVED))
         )
     )
@@ -389,6 +393,7 @@ private fun ConnectionsScreenApprovedPreview() {
 private fun ConnectionsScreenActivePreview() {
     ConnectionsScreenContent(
         uiState = ConnectionsUIState(
+            recordsStatus = ConnectionRecordsStatus.READY,
             connections = listOf(previewConnection(ConnectionStatus.ACTIVE))
         )
     )
@@ -399,6 +404,7 @@ private fun ConnectionsScreenActivePreview() {
 private fun ConnectionsScreenDisconnectedPreview() {
     ConnectionsScreenContent(
         uiState = ConnectionsUIState(
+            recordsStatus = ConnectionRecordsStatus.READY,
             connections = listOf(previewConnection(ConnectionStatus.DISCONNECTED))
         )
     )
