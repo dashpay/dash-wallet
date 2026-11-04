@@ -21,6 +21,8 @@ import android.content.Context
 import androidx.datastore.core.DataMigration
 import androidx.datastore.preferences.SharedPreferencesMigration
 import androidx.datastore.preferences.core.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
@@ -67,7 +69,15 @@ open class WalletUIConfig @Inject constructor(
         val LAST_TOTAL_BALANCE = longPreferencesKey("last_total_balance")
         val CUSTOMIZED_SHORTCUTS = stringPreferencesKey("customized_shortcuts")
         val IS_SHORTCUT_INFO_HIDDEN = booleanPreferencesKey("is_shortcut_info_hidden")
+
+        /** The Settings "Advanced mode" switch. Off unless the user turns it on. */
+        val ADVANCED_MODE = booleanPreferencesKey("advanced_mode")
     }
+
+    /** Emits the "Advanced mode" setting; false until the user turns it on. */
+    fun observeAdvancedMode(): Flow<Boolean> = observe(ADVANCED_MODE).map { it ?: false }
+
+    suspend fun setAdvancedMode(enabled: Boolean) = set(ADVANCED_MODE, enabled)
 
     suspend fun getExchangeCurrencyCode(): String {
         return get(SELECTED_CURRENCY) ?: Constants.DEFAULT_EXCHANGE_CURRENCY

@@ -22,11 +22,14 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
@@ -66,8 +69,12 @@ class SettingsViewModelTest {
         every { getSystemService(PowerManager::class.java) } returns powerManager
         every { packageName } returns "hashengineering.darkcoin.wallet_test"
     }
+    // Stands in for the DataStore value behind WalletUIConfig.ADVANCED_MODE
+    private val savedAdvancedMode = MutableStateFlow(false)
     private val walletUIConfig = mockk<WalletUIConfig> {
         every { observe(WalletUIConfig.SELECTED_CURRENCY) } returns flowOf("USD")
+        every { observeAdvancedMode() } returns savedAdvancedMode
+        coEvery { setAdvancedMode(any()) } coAnswers { savedAdvancedMode.value = firstArg() }
     }
     private val dashPayConfig = mockk<DashPayConfig>()
     private val blockchainIdentityConfig = mockk<BlockchainIdentityConfig> {
@@ -239,5 +246,43 @@ class SettingsViewModelTest {
         assertFalse("the last toggle is what is saved", analytics.isEnabled)
         assertFalse(second.uiState.value.analyticsEnabled)
         assertEquals(emptyList<AnalyticsSaveFailure>(), firstFailures + secondFailures)
+    }
+
+    @Test
+    fun advancedMode_isOffByDefault() = runTest(dispatcher) {
+        assertFalse(viewModel().uiState.value.advancedModeEnabled)
+    }
+
+    @Test
+    fun advancedMode_reflectsTheSavedValue() = runTest(dispatcher) {
+        savedAdvancedMode.value = true
+
+        assertTrue(viewModel().uiState.value.advancedModeEnabled)
+    }
+
+    @Test
+    fun setAdvancedModeEnabled_savesAndUpdatesState() = runTest(dispatcher) {
+        val viewModel = viewModel()
+
+        viewModel.setAdvancedModeEnabled(true)
+
+        coVerify { walletUIConfig.setAdvancedMode(true) }
+        assertTrue(viewModel.uiState.value.advancedModeEnabled)
+        assertTrue("a reopened Settings screen shows the saved value", viewModel().uiState.value.advancedModeEnabled)
+
+        viewModel.setAdvancedModeEnabled(false)
+
+        coVerify { walletUIConfig.setAdvancedMode(false) }
+        assertFalse(viewModel.uiState.value.advancedModeEnabled)
+    }
+
+    @Test
+    fun setAdvancedModeEnabled_failedSave_keepsTheSavedValue() = runTest(dispatcher) {
+        coEvery { walletUIConfig.setAdvancedMode(any()) } throws java.io.IOException("disk full")
+        val viewModel = viewModel()
+
+        viewModel.setAdvancedModeEnabled(true)
+
+        assertFalse(viewModel.uiState.value.advancedModeEnabled)
     }
 }

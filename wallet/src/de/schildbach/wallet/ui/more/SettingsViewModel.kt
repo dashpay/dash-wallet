@@ -36,6 +36,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import org.dash.wallet.common.Configuration
 import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.BlockchainServiceConfig
@@ -51,7 +52,8 @@ data class SettingsUIState(
     val transactionMetadataVisible: Boolean = false,
     val transactionMetadataSubtitle: String? = null,
     val analyticsEnabled: Boolean = true,
-    val analyticsAvailable: Boolean = true
+    val analyticsAvailable: Boolean = true,
+    val advancedModeEnabled: Boolean = false
 )
 
 /** A Settings analytics choice that could not be saved (one-shot; the fragment shows a Toast). */
@@ -118,6 +120,13 @@ class SettingsViewModel @Inject constructor(
             .onEach { isVisible ->
                 _uiState.update { it.copy(transactionMetadataVisible = isVisible) }
             }.launchIn(viewModelScope)
+
+        // The saved setting drives the switch, so it shows what is actually stored
+        walletUIConfig.observeAdvancedMode()
+            .distinctUntilChanged()
+            .onEach { enabled ->
+                _uiState.update { it.copy(advancedModeEnabled = enabled) }
+            }.launchIn(viewModelScope)
     }
 
     private fun isIgnoringBatteryOptimizations(): Boolean {
@@ -156,6 +165,17 @@ class SettingsViewModel @Inject constructor(
             _analyticsSaveFailures.trySend(
                 if (enabled) AnalyticsSaveFailure.TURNING_ON else AnalyticsSaveFailure.TURNING_OFF
             )
+        }
+    }
+
+    /** Saves the "Advanced mode" choice; the switch follows the saved value. */
+    fun setAdvancedModeEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            try {
+                walletUIConfig.setAdvancedMode(enabled)
+            } catch (e: Exception) {
+                log.error("Error saving the advanced mode setting", e)
+            }
         }
     }
 
