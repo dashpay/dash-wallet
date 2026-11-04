@@ -203,6 +203,7 @@ class MainViewModelTest {
         every { observe(any<Preferences.Key<Boolean>>()) } returns MutableStateFlow(false)
         every { observe(WalletUIConfig.SELECTED_CURRENCY) } returns MutableStateFlow("USD")
         every { observePreservingErrors(any<Preferences.Key<Boolean>>()) } returns MutableStateFlow(false)
+        every { observeAdvancedMode() } returns MutableStateFlow(false)
     }
 
     private val identityRepository = mockk<IdentityRepository>() {
@@ -550,6 +551,54 @@ class MainViewModelTest {
         )
 
         assertEquals(true, viewModel.hideBalance.value)
+    }
+
+    /**
+     * [MainViewModel.advancedMode] is what the payments entry points route on: it must
+     * start as basic mode before the read lands and then mirror the saved setting,
+     * including a later change, without anyone collecting it (Eagerly).
+     */
+    @Test(timeout = 1000)
+    fun `advancedMode starts basic, then mirrors the saved setting`() {
+        val saved = MutableStateFlow(false)
+        every { uiConfigMock.observeAdvancedMode() } returns saved
+
+        val viewModel = MainViewModel(
+            analyticsService,
+            configMock,
+            uiConfigMock,
+            exchangeRatesMock,
+            walletDataMock,
+            walletApp,
+            identityRepository,
+            platformRepo,
+            platformService,
+            platformSyncService,
+            blockchainIdentityConfigMock,
+            savedStateMock,
+            blockchainStateMock,
+            biometricHelper,
+            deviceInfoProvider,
+            invitationsDaoMock,
+            usernameRequestDaoMock,
+            userAgentDaoMock,
+            dashPayProfileDaoMock,
+            mockDashPayConfig,
+            dashPayContactRequestDao,
+            txDisplayCacheService,
+            coinJoinFundsMigrationService,
+            l1SyncStatusService,
+            contactRequestNotificationService,
+            swapProvider,
+            sdkBindRetryService,
+            shieldedBalanceService
+        )
+
+        assertEquals(false, viewModel.advancedMode.value)
+        saved.value = true
+        assertEquals(true, viewModel.advancedMode.value)
+        saved.value = false
+        assertEquals(false, viewModel.advancedMode.value)
     }
 
     /**
