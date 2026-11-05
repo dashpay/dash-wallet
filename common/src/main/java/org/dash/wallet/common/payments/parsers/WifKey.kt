@@ -62,6 +62,15 @@ class WifKey private constructor(
     override fun toString(): String = toBase58()
 
     companion object {
+        /** [Base58.decodeChecked], refusing a checksum-valid EMPTY payload (no version byte). */
+        private fun decodeCheckedWithVersion(wif: String): ByteArray {
+            val versionAndDataBytes = Base58.decodeChecked(wif)
+            if (versionAndDataBytes.isEmpty()) {
+                throw AddressFormatException.InvalidDataLength("WIF keys need a version byte, but got 0 bytes")
+            }
+            return versionAndDataBytes
+        }
+
         /**
          * Decodes a WIF string without any network check (checksum still enforced).
          *
@@ -70,7 +79,7 @@ class WifKey private constructor(
         @JvmStatic
         @Throws(AddressFormatException::class)
         fun decode(wif: String): WifKey {
-            val versionAndDataBytes = Base58.decodeChecked(wif)
+            val versionAndDataBytes = decodeCheckedWithVersion(wif)
             val version = versionAndDataBytes[0].toInt() and 0xFF
             val bytes = versionAndDataBytes.copyOfRange(1, versionAndDataBytes.size)
             return WifKey(version, bytes)
@@ -89,7 +98,7 @@ class WifKey private constructor(
         @JvmStatic
         @Throws(AddressFormatException::class)
         fun decode(wif: String, network: AddressNetwork): WifKey {
-            val versionAndDataBytes = Base58.decodeChecked(wif)
+            val versionAndDataBytes = decodeCheckedWithVersion(wif)
             val version = versionAndDataBytes[0].toInt() and 0xFF
             if (version != network.dumpedPrivateKeyHeader) {
                 throw AddressFormatException.WrongNetwork(version)
@@ -112,7 +121,7 @@ class WifKey private constructor(
         @JvmStatic
         @Throws(AddressFormatException::class)
         fun decodeDash(wif: String): Pair<WifKey, AddressNetwork> {
-            val versionAndDataBytes = Base58.decodeChecked(wif)
+            val versionAndDataBytes = decodeCheckedWithVersion(wif)
             val version = versionAndDataBytes[0].toInt() and 0xFF
             for (network in listOf(AddressNetwork.DASH_TESTNET, AddressNetwork.DASH_MAINNET)) {
                 if (version == network.dumpedPrivateKeyHeader) {

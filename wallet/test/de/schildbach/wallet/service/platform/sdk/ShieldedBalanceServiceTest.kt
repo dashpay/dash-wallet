@@ -3554,6 +3554,78 @@ class ShieldedBalanceServiceTest {
         )
     }
 
+    // ── shieldFromWalletToAddress (External Send, Core → Shielded) ─────────
+
+    @Test
+    fun shieldFromWalletToAddress_paysTheExternalRecipient_notTheOwnAddress() = runBlocking {
+        val source = readySource()
+        val service = service(source, progress = { caughtUpProgress() })
+
+        val result = service.shieldFromWalletToAddress(recipientAddress, Dash.COIN, walletIdHex)
+
+        assertEquals(SdkWriteResult.Broadcast(ShieldFromWalletOutcome.COMPLETED), result)
+        assertArrayEquals(recipientRaw43, source.lastFundRecipient)
+        assertEquals(Dash.COIN.duffs, source.lastFundAmountDuffs)
+    }
+
+    @Test
+    fun shieldFromWalletToAddress_otherWallet_isNotBroadcast_beforeFunding() = runBlocking {
+        val source = readySource()
+        val service = service(source, progress = { caughtUpProgress() })
+
+        val result = service.shieldFromWalletToAddress(recipientAddress, Dash.COIN, "cd".repeat(32))
+
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertEquals(0, source.fundCalls)
+    }
+
+    @Test
+    fun shieldFromWalletToAddress_lockOut_stageBMayHaveSubmitted_isAmbiguous() = runBlocking {
+        val source = readySource()
+        val service = service(source, progress = { caughtUpProgress() })
+        var funded = false
+        source.shieldLocks = {
+            if (funded) listOf(PendingWalletShieldLock("aa".repeat(32) + ":0", 1, 100_000)) else emptyList()
+        }
+        source.onFund = { funded = true; throw RuntimeException("transition timed out") }
+
+        // The self-shield calls this SHIELD_PENDING_RETRY; to an external recipient the
+        // timed-out Type 18 may have paid them, so "it comes back to you" is not known.
+        val result = service.shieldFromWalletToAddress(recipientAddress, Dash.COIN, walletIdHex)
+
+        assertTrue(result is SdkWriteResult.Ambiguous)
+    }
+
+    @Test
+    fun shieldFromWalletToAddress_lockOut_stageBDefinitivelyRejected_isPendingRetry_resumedToOwnAddress() =
+        runBlocking {
+            val source = readySource()
+            val service = service(source, progress = { caughtUpProgress() })
+            var funded = false
+            source.shieldLocks = {
+                if (funded) listOf(PendingWalletShieldLock("aa".repeat(32) + ":0", 1, 100_000)) else emptyList()
+            }
+            source.onFund = { funded = true; throw DashSdkError.InvalidParameter("shield transition rejected") }
+
+            val result = service.shieldFromWalletToAddress(recipientAddress, Dash.COIN, walletIdHex)
+            assertEquals(SdkWriteResult.Broadcast(ShieldFromWalletOutcome.SHIELD_PENDING_RETRY), result)
+
+            // The sweep finishes the externally-addressed lock to the SENDER's own address.
+            assertEquals(1, service.resumePendingWalletShields())
+            assertArrayEquals(source.defaultAddress, source.lastResumeRecipient)
+            assertFalse(recipientRaw43.contentEquals(source.lastResumeRecipient))
+        }
+
+    @Test
+    fun shieldFromWalletToAddress_malformedAddress_isNotBroadcast() = runBlocking {
+        val source = readySource()
+        val service = service(source, progress = { caughtUpProgress() })
+
+        val result = service.shieldFromWalletToAddress("tdash1notanaddress", Dash.COIN, walletIdHex)
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertEquals(0, source.fundCalls)
+    }
+
     @Test
     fun shieldFromWallet_definitiveRejection_noNewLock_isNotBroadcast() = runBlocking {
         val source = readySource()
