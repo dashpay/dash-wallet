@@ -75,6 +75,8 @@ class ExternalSendServiceImplTest {
         var cutover: () -> Boolean = { true }
         var shieldedOn: () -> Boolean = { true }
         var coreMax: Long? = 5_000_000L
+        var coreEligible: Long? = 5_000_000L
+        var utxoCount: Int? = 2
         var shieldedBalance: Dash? = Dash(1_000_000L)
         var platformBalances: () -> List<FundingInput> = { emptyList() }
         var shieldedResult: (Dash) -> SdkWriteResult<Unit> = { SdkWriteResult.Broadcast(Unit) }
@@ -105,6 +107,7 @@ class ExternalSendServiceImplTest {
         override fun observeOwnIdentityId(): Flow<Result<String?>> = identityFlow ?: flowOf(Result.success(ownIdentity))
         override suspend fun managedIdentityIds(walletIdHex: String): List<ByteArray> = managed
         override fun observeCoreMaxSendableDuffs(): Flow<Long?> = flowOf(coreMax)
+        override suspend fun coreAssetLockEligibleDuffs(): Long? = coreEligible
         var shieldedFlow: Flow<Dash?>? = null
         override fun observeShieldedBalance(): Flow<Dash?> = shieldedFlow ?: flowOf(shieldedBalance)
         override suspend fun platformAddressBalances(walletIdHex: String): List<FundingInput> = platformBalances()
@@ -112,7 +115,7 @@ class ExternalSendServiceImplTest {
         override suspend fun identityExists(identityIdBase58: String): Boolean = identityIdBase58 == ownIdentity
         override suspend fun usernameOf(identityIdBase58: String): String? = "alice"
         override suspend fun shieldedFeeCredits(kind: ShieldedFeeKind): Long? = 2_000_500L
-        override suspend fun spendableUtxoCount(): Int? = 2
+        override suspend fun spendableUtxoCount(): Int? = utxoCount
 
         override suspend fun sendCore(address: String, amount: Dash, emptyWallet: Boolean, session: WalletSession?): String {
             calls += "sendCore"
@@ -541,7 +544,8 @@ class ExternalSendServiceImplTest {
     @Test
     fun fees_areNullWhereNoPreSendFigureExists() = runBlocking {
         val service = service(source())
-        assertEquals(FeeEstimate(Dash(SEND_ALL_FEE_RESERVE_DUFFS), exact = false), service.estimateFee(SendBalance.CORE, core, amount))
+        // The size-based reserve over the spendable UTXO count (2).
+        assertEquals(FeeEstimate(Dash(sendAllFeeReserveDuffs(2)), exact = false), service.estimateFee(SendBalance.CORE, core, amount))
         assertEquals(FeeEstimate(Dash(2_001L), exact = false), service.estimateFee(SendBalance.SHIELDED, core, amount))
         assertNull(service.estimateFee(SendBalance.PLATFORM, platform, amount))
         assertNull(service.estimateFee(SendBalance.IDENTITY, core, amount))
@@ -568,29 +572,76 @@ class ExternalSendServiceImplTest {
         val poolFee = Dash(52_001L)
         // The fee shown is exactly what the lock adds on top of the amount.
         assertEquals(FeeEstimate(poolFee, exact = false), service.estimateFee(SendBalance.CORE, shielded, amount))
-        // Max: the whole Core max is locked, the recipient receives it minus the pool fee.
+        // Max: the eligible balance less the L1 reserve is locked; the recipient receives it
+        // minus the pool fee.
         val max = requireNotNull(service.maxSendable(SendBalance.CORE, shielded))
-        assertEquals(Dash(5_000_000L) - poolFee, max)
+        assertEquals(Dash(5_000_000L) - assetLockMaxFeeReserve(2) - poolFee, max)
         assertEquals(ExternalSendResult.Sent(null), service.send(SendBalance.CORE, shielded, max, isMax = true))
-        assertEquals(listOf(Dash(5_000_000L)), source.shieldedAmounts)
+        assertEquals(listOf(Dash(5_000_000L) - assetLockMaxFeeReserve(2)), source.shieldedAmounts)
     }
 
     @Test
-    fun coreToShieldedMax_selectionShort_retriesWithTheReserveOffTheLock() = runBlocking {
+    fun coreToShieldedMax_comesFromTheAssetLockEligibleBalance_notThePooledCoreFigure() = runBlocking {
+        val poolFee = Dash(52_001L)
+        // Unconfirmed / receival-account funds inflate the pooled figure; Max ignores them.
         val source = source().apply {
-            shieldFromCoreResult = { value ->
-                if (value == Dash(5_000_000L)) {
-                    SdkWriteResult.NotBroadcast("asset lock coin selection is short")
-                } else {
-                    SdkWriteResult.Broadcast(ShieldFromWalletOutcome.COMPLETED)
-                }
-            }
+            coreMax = 9_000_000L
+            coreEligible = 3_000_000L
+        }
+        val service = service(source)
+        assertEquals(
+            Dash(3_000_000L) - assetLockMaxFeeReserve(2) - poolFee,
+            service.maxSendable(SendBalance.CORE, shielded)
+        )
+        // Fail closed: an unknown eligible balance or UTXO count is no Max.
+        source.coreEligible = null
+        assertNull(service.maxSendable(SendBalance.CORE, shielded))
+        source.coreEligible = 3_000_000L
+        source.utxoCount = null
+        assertNull(service.maxSendable(SendBalance.CORE, shielded))
+        // Too small to cover the reserve and the pool fee: no Max, never negative.
+        source.utxoCount = 2
+        source.coreEligible = assetLockMaxFeeReserve(2).duffs + poolFee.duffs
+        assertNull(service.maxSendable(SendBalance.CORE, shielded))
+    }
+
+    @Test
+    fun coreToShieldedMax_selectionShort_isNotSent_withoutARetry() = runBlocking {
+        val source = source().apply {
+            shieldFromCoreResult = { SdkWriteResult.NotBroadcast("asset lock coin selection is short") }
         }
         val service = service(source)
         val max = requireNotNull(service.maxSendable(SendBalance.CORE, shielded))
-        assertEquals(ExternalSendResult.Sent(null), service.send(SendBalance.CORE, shielded, max, isMax = true))
-        assertEquals(2, source.shieldedAmounts.size)
-        assertEquals(Dash(5_000_000L) - assetLockMaxFeeReserve(2), source.shieldedAmounts[1])
+        assertEquals(
+            ExternalSendResult.NotSent(NotSentReason.INSUFFICIENT_FUNDS),
+            service.send(SendBalance.CORE, shielded, max, isMax = true)
+        )
+        assertEquals(1, source.shieldedAmounts.size)
+    }
+
+    @Test
+    fun coreToCoreMax_tinyBalance_isUnavailable_soTheRecipientAmountIsNeverZeroOrNegative() = runBlocking {
+        val source = source()
+        val service = service(source)
+        val reserve = sendAllFeeReserveDuffs(2)
+        source.coreMax = reserve
+        assertNull(service.maxSendable(SendBalance.CORE, core))
+        source.coreMax = 1L
+        assertNull(service.maxSendable(SendBalance.CORE, core))
+        // Just above the reserve: Max is the gross figure, and amount − fee stays positive.
+        source.coreMax = reserve + 1
+        val max = requireNotNull(service.maxSendable(SendBalance.CORE, core))
+        val fee = requireNotNull(service.estimateFee(SendBalance.CORE, core, max)).fee
+        assertEquals(Dash(reserve + 1), max)
+        assertTrue((max - fee).isPositive)
+        // Unknown UTXO count: the flat reserve applies to both the fee and the Max gate.
+        source.utxoCount = null
+        source.coreMax = SEND_ALL_FEE_RESERVE_DUFFS
+        assertNull(service.maxSendable(SendBalance.CORE, core))
+        assertEquals(
+            FeeEstimate(Dash(SEND_ALL_FEE_RESERVE_DUFFS), exact = false),
+            service.estimateFee(SendBalance.CORE, core, amount)
+        )
     }
 
     @Test

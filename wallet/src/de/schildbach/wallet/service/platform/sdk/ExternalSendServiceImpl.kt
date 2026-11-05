@@ -27,7 +27,6 @@ import de.schildbach.wallet.payments.SendSignerLockedException
 import de.schildbach.wallet.payments.isCompleteTxFailure
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.shielded.assetLockMaxFeeReserve
-import de.schildbach.wallet.ui.shielded.isAssetLockSelectionShort
 import de.schildbach.wallet.ui.shielded.shieldedMaxFeeAdjustment
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -215,6 +214,14 @@ internal interface ExternalSendSource {
 
     // Reads
     fun observeCoreMaxSendableDuffs(): Flow<Long?>
+
+    /**
+     * The Core balance an asset lock can spend — the SDK's CONFIRMED balance (in a block or
+     * InstantSend-locked), the figure the internal shield-from-wallet Max uses — in duffs;
+     * null when unknown or the cutover is not committed (fail closed).
+     */
+    suspend fun coreAssetLockEligibleDuffs(): Long?
+
     fun observeShieldedBalance(): Flow<Dash?>
     suspend fun platformAddressBalances(walletIdHex: String): List<FundingInput>
     suspend fun identityBalanceCredits(identityIdBase58: String): Long?
@@ -318,6 +325,16 @@ internal class DashSdkExternalSendSource(
             // Only the SDK's own figures; never the frozen dashj balance.
             if (committed == true) (maxSendable ?: total)?.value else null
         }
+
+    override suspend fun coreAssetLockEligibleDuffs(): Long? =
+        combine(
+            sdkL1SendService.cutoverCommittedFlow(),
+            cutoverUiDataService.sdkConfirmedBalance
+        ) { committed, confirmed ->
+            // Only the SDK's own confirmed figure (ShieldedTransferViewModel's post-cutover
+            // source); never the frozen dashj ChainLocked fallback.
+            if (committed == true) confirmed?.value else null
+        }.first()
 
     override fun observeShieldedBalance(): Flow<Dash?> =
         flow { emitAll(dashPayConfig.observePreservingErrors(DashPayConfig.USE_KOTLIN_SDK_SHIELDED)) }
@@ -601,9 +618,10 @@ class ExternalSendServiceImpl internal constructor(
         }
 
     /**
-     * - Core → Core: the SDK send's fee reserve ([SEND_ALL_FEE_RESERVE_DUFFS]), an upper
-     *   bound the real (smaller) fee never exceeds — the same figure the Basic send shows.
-     *   A Max (drain) takes it OUT of the amount; any other send pays it on top.
+     * - Core → Core: the SDK send's size-based fee reserve ([sendAllFeeReserveDuffs] over the
+     *   spendable UTXO count; the flat [SEND_ALL_FEE_RESERVE_DUFFS] when unknown), an upper
+     *   bound the real (smaller) fee never exceeds. A Max (drain) takes it OUT of the amount;
+     *   any other send pays it on top.
      * - Core → Shielded: the shield pool fee ([shieldPoolFeeDuffs]), paid ON TOP of the
      *   amount ([send] locks `amount + pool fee`, the recipient receives `amount`); the L1
      *   fee of the lock is extra and unknown, so not exact.
@@ -614,7 +632,7 @@ class ExternalSendServiceImpl internal constructor(
     private suspend fun estimateFeeInner(source: SendBalance, destination: SendDestination): FeeEstimate? =
         when (source) {
             SendBalance.CORE -> when (destination) {
-                is SendDestination.Core -> FeeEstimate(Dash(SEND_ALL_FEE_RESERVE_DUFFS), exact = false)
+                is SendDestination.Core -> FeeEstimate(Dash(coreSendFeeReserveDuffs()), exact = false)
                 is SendDestination.Shielded -> this.source.shieldedFeeCredits(ShieldedFeeKind.TRANSFER)?.let {
                     FeeEstimate(Dash(shieldPoolFeeDuffs(it)), exact = false)
                 }
@@ -628,10 +646,11 @@ class ExternalSendServiceImpl internal constructor(
 
     /**
      * - Core → Core: the SDK's max-sendable L1 figure, GROSS of the drain fee (the drain
-     *   delivers it minus the fee — the Basic send's `sendAllBalance` semantics).
-     * - Core → Shielded: that figure minus the shield pool fee (what the recipient receives
-     *   when the whole balance is locked); a Max send retries once with an L1 reserve if
-     *   the lock selection comes up short.
+     *   delivers it minus the fee — the Basic send's `sendAllBalance` semantics). Null (Max
+     *   unavailable) unless it exceeds the fee reserve [estimateFee] shows, so the confirmed
+     *   recipient amount (amount − fee) is always positive.
+     * - Core → Shielded: [coreToShieldedMaxDuffs] — from the asset-lock-eligible balance,
+     *   less the L1 fee reserve and the shield pool fee.
      * - Shielded → *: the READY balance minus the single-note pool fee; a Max send also
      *   retries once with the exact deficit the note selection reports.
      * - Everything else: null (no pre-send fee figure).
@@ -639,19 +658,8 @@ class ExternalSendServiceImpl internal constructor(
     override suspend fun maxSendable(source: SendBalance, destination: SendDestination): Dash? = try {
         when (source) {
             SendBalance.CORE -> when (destination) {
-                is SendDestination.Core ->
-                    this.source.observeCoreMaxSendableDuffs().first()?.takeIf { it > 0 }?.let(::Dash)
-                is SendDestination.Shielded -> {
-                    val max = this.source.observeCoreMaxSendableDuffs().first()
-                    val feeCredits = withContext(ioDispatcher) {
-                        this@ExternalSendServiceImpl.source.shieldedFeeCredits(ShieldedFeeKind.TRANSFER)
-                    }
-                    if (max == null || feeCredits == null) {
-                        null
-                    } else {
-                        (max - shieldPoolFeeDuffs(feeCredits)).takeIf { it > 0 }?.let(::Dash)
-                    }
-                }
+                is SendDestination.Core -> withContext(ioDispatcher) { coreToCoreMaxDuffs() }?.let(::Dash)
+                is SendDestination.Shielded -> withContext(ioDispatcher) { coreToShieldedMaxDuffs() }?.let(::Dash)
                 else -> null
             }
             SendBalance.SHIELDED -> {
@@ -672,6 +680,33 @@ class ExternalSendServiceImpl internal constructor(
     } catch (e: Exception) {
         log.warn("external send: max sendable unreadable", e)
         null
+    }
+
+    /** The Core send fee reserve: size-based, the flat reserve when the UTXO count is unknown. */
+    private suspend fun coreSendFeeReserveDuffs(): Long = sendAllFeeReserveDuffs(source.spendableUtxoCount())
+
+    /**
+     * The Core → Core Max (gross, drained): the pooled max sendable, null when unknown or not
+     * above the fee reserve (Max unavailable — the drain would deliver nothing). Throws when a
+     * read fails.
+     */
+    private suspend fun coreToCoreMaxDuffs(): Long? {
+        val pooled = source.observeCoreMaxSendableDuffs().first() ?: return null
+        return pooled.takeIf { it > coreSendFeeReserveDuffs() }
+    }
+
+    /**
+     * The Core → Shielded Max, mirroring the internal shield-from-wallet Max's source
+     * ([ExternalSendSource.coreAssetLockEligibleDuffs]): eligible − the L1 asset-lock fee
+     * reserve ([assetLockMaxFeeReserve], reserved up front) − the shield pool fee. Null when
+     * any figure is unknown or the result is not positive. Throws when a read fails.
+     */
+    private suspend fun coreToShieldedMaxDuffs(): Long? {
+        val eligible = source.coreAssetLockEligibleDuffs() ?: return null
+        val utxoCount = source.spendableUtxoCount() ?: return null
+        val feeCredits = source.shieldedFeeCredits(ShieldedFeeKind.TRANSFER) ?: return null
+        val max = eligible - assetLockMaxFeeReserve(utxoCount).duffs - shieldPoolFeeDuffs(feeCredits)
+        return max.takeIf { it > 0 }
     }
 
     // ── Send ──────────────────────────────────────────────────────────
@@ -806,7 +841,7 @@ class ExternalSendServiceImpl internal constructor(
     ): ExternalSendResult {
         return when (destination) {
             is SendDestination.Core -> sendCoreToCore(pair, walletIdHex, destination, amount, isMax, coreSession)
-            is SendDestination.Shielded -> sendCoreToShielded(pair, walletIdHex, destination, amount, isMax)
+            is SendDestination.Shielded -> sendCoreToShielded(pair, walletIdHex, destination, amount)
             is SendDestination.Identity -> {
                 if (!stillBound(pair, walletIdHex)) {
                     ExternalSendResult.NotSent(NotSentReason.GENERIC)
@@ -859,16 +894,14 @@ class ExternalSendServiceImpl internal constructor(
 
     /**
      * The recipient receives the confirmed [amount]: the lock is `amount + pool fee`
-     * ([shieldPoolFeeDuffs]), the fee Rust carves out of the lock. A Max whose lock
-     * selection comes up short (the L1 fee) retries once with an L1 reserve taken off the
-     * lock, so the recipient then receives that much less (never more than confirmed).
+     * ([shieldPoolFeeDuffs]), the fee Rust carves out of the lock. A Max already left the L1
+     * fee reserve out of [amount] ([coreToShieldedMaxDuffs]), so there is no Max retry.
      */
     private suspend fun sendCoreToShielded(
         pair: String,
         walletIdHex: String,
         destination: SendDestination.Shielded,
-        amount: Dash,
-        isMax: Boolean
+        amount: Dash
     ): ExternalSendResult {
         val feeCredits = readOrNull("shield pool fee") { this.source.shieldedFeeCredits(ShieldedFeeKind.TRANSFER) }
             ?: return notSent(pair, NotSentReason.GENERIC, "shield pool fee unknown")
@@ -877,17 +910,7 @@ class ExternalSendServiceImpl internal constructor(
         } catch (e: ArithmeticException) {
             return notSent(pair, NotSentReason.GENERIC, "amount out of range")
         }
-        var result = shieldFromCoreChecked(pair, walletIdHex, destination.address, lock)
-        val first = result
-        if (isMax && first is SdkWriteResult.NotBroadcast && isAssetLockSelectionShort(first)) {
-            val reserve = this.source.spendableUtxoCount()?.let(::assetLockMaxFeeReserve)
-            val adjusted = reserve?.let { lock - it }
-            if (adjusted != null && adjusted.isPositive) {
-                log.info("external send {}: max shield short; retrying once with an L1 fee reserve", pair)
-                result = shieldFromCoreChecked(pair, walletIdHex, destination.address, adjusted)
-            }
-        }
-        return when (result) {
+        return when (val result = shieldFromCoreChecked(pair, walletIdHex, destination.address, lock)) {
             is SdkWriteResult.Broadcast -> when (result.value) {
                 ShieldFromWalletOutcome.COMPLETED -> ExternalSendResult.Sent(null)
                 ShieldFromWalletOutcome.SHIELD_PENDING_RETRY -> {
