@@ -291,6 +291,16 @@ open class DashPayConfig @Inject constructor(
         val MIXED_FUNDS_CONSOLIDATION = stringPreferencesKey("mixed_funds_consolidation")
 
         /**
+         * An Advanced-mode external send MAY be in flight or its outcome was never
+         * acknowledged: set (one DataStore write) before the send is handed to the SDK,
+         * cleared on a definitive Sent / Not sent, kept on an unknown outcome until the user
+         * acknowledges it. Present on a fresh process = show "may have gone through" instead
+         * of the editable form ([de.schildbach.wallet.ui.payments.send.ExternalSendExecutor]).
+         * A bare flag: no amount, address or id.
+         */
+        val EXTERNAL_SEND_IN_FLIGHT = booleanPreferencesKey("external_send_in_flight")
+
+        /**
          * `startedAtMillis` of the in-flight marker whose "could not confirm"
          * guidance the user closed. While it matches the current marker the
          * automatic triggers (startup, resume) stop re-presenting the sheet;

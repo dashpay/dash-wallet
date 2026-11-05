@@ -18,12 +18,16 @@
 package de.schildbach.wallet.service.platform.sdk
 
 import de.schildbach.wallet.payments.SendEngineNotSyncedException
+import de.schildbach.wallet.ui.shielded.assetLockMaxFeeReserve
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.money.Dash
@@ -93,13 +97,16 @@ class ExternalSendServiceImplTest {
 
         override fun currentCoreSession(): WalletSession? = session
         override suspend fun boundWalletIdOrNull(): String? = nextBound()
+        override fun currentBoundWalletIdOrNull(): String? = bound.firstOrNull()
         override suspend fun cutoverCommittedOrThrow(): Boolean = cutover()
         override suspend fun shieldedEnabledOrThrow(): Boolean = shieldedOn()
         override suspend fun ownIdentityIdOrThrow(): String? = ownIdentity
-        override fun observeOwnIdentityId(): Flow<Result<String?>> = flowOf(Result.success(ownIdentity))
+        var identityFlow: Flow<Result<String?>>? = null
+        override fun observeOwnIdentityId(): Flow<Result<String?>> = identityFlow ?: flowOf(Result.success(ownIdentity))
         override suspend fun managedIdentityIds(walletIdHex: String): List<ByteArray> = managed
         override fun observeCoreMaxSendableDuffs(): Flow<Long?> = flowOf(coreMax)
-        override fun observeShieldedBalance(): Flow<Dash?> = flowOf(shieldedBalance)
+        var shieldedFlow: Flow<Dash?>? = null
+        override fun observeShieldedBalance(): Flow<Dash?> = shieldedFlow ?: flowOf(shieldedBalance)
         override suspend fun platformAddressBalances(walletIdHex: String): List<FundingInput> = platformBalances()
         override suspend fun identityBalanceCredits(identityIdBase58: String): Long? = 2_000_000_000L
         override suspend fun identityExists(identityIdBase58: String): Boolean = identityIdBase58 == ownIdentity
@@ -195,12 +202,21 @@ class ExternalSendServiceImplTest {
     private fun service(source: FakeSource) =
         ExternalSendServiceImpl(source, AddressNetwork.DASH_TESTNET, ioDispatcher = Dispatchers.Unconfined)
 
+    /** A send confirmed while [walletA] was bound (the ViewModel's capture). */
+    private suspend fun ExternalSendServiceImpl.send(
+        source: SendBalance,
+        destination: SendDestination,
+        amount: Dash,
+        isMax: Boolean
+    ): ExternalSendResult = send(source, destination, amount, isMax, walletA)
+
     // ── Each supported pair: right seam, right units ──────────────────
 
     @Test
     fun coreToCore_sendsThroughTheCoreFunnel_withTheCapturedSession_andMaxAsSendAll() = runBlocking {
         val source = source()
-        val result = service(source).send(SendBalance.CORE, core, amount, isMax = true)
+        // A Max is the whole max-sendable balance the user confirmed.
+        val result = service(source).send(SendBalance.CORE, core, Dash(5_000_000L), isMax = true)
         assertEquals(ExternalSendResult.Sent("txid"), result)
         assertEquals(listOf("sendCore"), source.calls)
         assertEquals(true, source.lastCoreEmptyWallet)
@@ -211,7 +227,8 @@ class ExternalSendServiceImplTest {
     fun coreToShielded_completed_isSent_pendingRetry_isInterrupted() = runBlocking {
         val source = source()
         assertEquals(ExternalSendResult.Sent(null), service(source).send(SendBalance.CORE, shielded, amount, false))
-        assertEquals(listOf(amount), source.shieldedAmounts)
+        // The lock is the amount plus the pool fee (ceil(2_000_500 credits) + 50_000 duffs).
+        assertEquals(listOf(amount + Dash(52_001L)), source.shieldedAmounts)
 
         source.shieldFromCoreResult = { SdkWriteResult.Broadcast(ShieldFromWalletOutcome.SHIELD_PENDING_RETRY) }
         assertEquals(
@@ -540,5 +557,143 @@ class ExternalSendServiceImplTest {
         assertEquals(false, service.isOwnIdentity(otherIdBase58))
         assertEquals(true, service.observeHasIdentity().first())
         assertEquals(false, service(source(ownIdentity = null)).observeHasIdentity().first())
+    }
+
+    // ── Review round 1 regressions ────────────────────────────────────
+
+    @Test
+    fun coreToShielded_theRecipientReceivesTheConfirmedAmount_feeAndMaxAreConsistent() = runBlocking {
+        val source = source()
+        val service = service(source)
+        val poolFee = Dash(52_001L)
+        // The fee shown is exactly what the lock adds on top of the amount.
+        assertEquals(FeeEstimate(poolFee, exact = false), service.estimateFee(SendBalance.CORE, shielded, amount))
+        // Max: the whole Core max is locked, the recipient receives it minus the pool fee.
+        val max = requireNotNull(service.maxSendable(SendBalance.CORE, shielded))
+        assertEquals(Dash(5_000_000L) - poolFee, max)
+        assertEquals(ExternalSendResult.Sent(null), service.send(SendBalance.CORE, shielded, max, isMax = true))
+        assertEquals(listOf(Dash(5_000_000L)), source.shieldedAmounts)
+    }
+
+    @Test
+    fun coreToShieldedMax_selectionShort_retriesWithTheReserveOffTheLock() = runBlocking {
+        val source = source().apply {
+            shieldFromCoreResult = { value ->
+                if (value == Dash(5_000_000L)) {
+                    SdkWriteResult.NotBroadcast("asset lock coin selection is short")
+                } else {
+                    SdkWriteResult.Broadcast(ShieldFromWalletOutcome.COMPLETED)
+                }
+            }
+        }
+        val service = service(source)
+        val max = requireNotNull(service.maxSendable(SendBalance.CORE, shielded))
+        assertEquals(ExternalSendResult.Sent(null), service.send(SendBalance.CORE, shielded, max, isMax = true))
+        assertEquals(2, source.shieldedAmounts.size)
+        assertEquals(Dash(5_000_000L) - assetLockMaxFeeReserve(2), source.shieldedAmounts[1])
+    }
+
+    @Test
+    fun coreToShielded_poolFeeUnknown_isNotSent_withNoCall() = runBlocking {
+        val source = object : ExternalSendSource by source() {
+            override suspend fun shieldedFeeCredits(kind: ShieldedFeeKind): Long? = null
+        }
+        val result = ExternalSendServiceImpl(source, AddressNetwork.DASH_TESTNET, ioDispatcher = Dispatchers.Unconfined)
+            .send(SendBalance.CORE, shielded, amount, false, walletA)
+        assertEquals(ExternalSendResult.NotSent(NotSentReason.GENERIC), result)
+    }
+
+    @Test
+    fun coreMax_drainsOnlyWhileTheBalanceIsWhatTheUserConfirmed() = runBlocking {
+        // Confirmed 1 DASH as Max; 5 DASH more arrived meanwhile: nothing is drained.
+        val source = source().apply { coreMax = 600_000_000L }
+        assertEquals(
+            ExternalSendResult.NotSent(NotSentReason.BALANCE_CHANGED),
+            service(source).send(SendBalance.CORE, core, Dash(100_000_000L), isMax = true)
+        )
+        assertTrue(source.calls.isEmpty())
+
+        source.coreMax = null
+        assertEquals(
+            ExternalSendResult.NotSent(NotSentReason.BALANCE_CHANGED),
+            service(source).send(SendBalance.CORE, core, Dash(100_000_000L), isMax = true)
+        )
+        assertTrue(source.calls.isEmpty())
+
+        // A non-Max send of the same amount is not a drain and is not gated on it.
+        source.coreMax = 600_000_000L
+        assertEquals(ExternalSendResult.Sent("txid"), service(source).send(SendBalance.CORE, core, amount, isMax = false))
+        assertEquals(false, source.lastCoreEmptyWallet)
+    }
+
+    @Test
+    fun theWalletCapturedAtConfirmation_mustBeTheBoundOne_beforeAnything() = runBlocking {
+        val pairs = listOf(
+            SendBalance.CORE to core,
+            SendBalance.CORE to shielded,
+            SendBalance.CORE to ownIdentity,
+            SendBalance.SHIELDED to core,
+            SendBalance.PLATFORM to platform,
+            SendBalance.PLATFORM to otherIdentity,
+            SendBalance.IDENTITY to core
+        )
+        for ((from, to) in pairs) {
+            // Confirmed with wallet A; B is bound by the time the send runs (and stays bound).
+            val replaced = source(bound = listOf(walletB))
+            assertEquals(
+                "$from → $to",
+                ExternalSendResult.NotSent(NotSentReason.GENERIC),
+                service(replaced).send(from, to, amount, false, walletA)
+            )
+            assertTrue("$from → $to", replaced.calls.isEmpty())
+
+            val none = source()
+            assertEquals(
+                "$from → $to",
+                ExternalSendResult.NotSent(NotSentReason.GENERIC),
+                service(none).send(from, to, amount, false, null)
+            )
+            assertTrue("$from → $to", none.calls.isEmpty())
+        }
+        assertEquals(walletA, service(source()).currentWalletIdOrNull())
+    }
+
+    @Test
+    fun observations_recoverAfterATransientReadError() = runBlocking {
+        var identityReads = 0
+        var shieldedReads = 0
+        val source = source().apply {
+            identityFlow = flow {
+                if (identityReads++ == 0) throw java.io.IOException("datastore")
+                emit(Result.success(ownIdBase58))
+            }
+            shieldedFlow = flow {
+                if (shieldedReads++ == 0) throw java.io.IOException("datastore")
+                emit(Dash(7L))
+            }
+        }
+        val service = ExternalSendServiceImpl(
+            source,
+            AddressNetwork.DASH_TESTNET,
+            ioDispatcher = Dispatchers.Unconfined,
+            retryDelayMs = { 0L }
+        )
+        assertEquals(listOf(null, true), service.observeHasIdentity().take(2).toList())
+        assertEquals(listOf(null, Dash(7L)), service.observeBalance(SendBalance.SHIELDED).take(2).toList())
+    }
+
+    @Test
+    fun retryReadErrors_emitsUnknown_thenResubscribes_andNeverCompletesOnAnError() = runBlocking {
+        var reads = 0
+        val values = flow {
+            reads++
+            if (reads <= 2) throw IllegalStateException("unknown creation state")
+            emit(Result.success<String?>("id"))
+        }.retryReadErrors("identity record", Result.failure(IllegalStateException("unknown")), retryDelayMs = { 0L })
+            .take(3)
+            .toList()
+        assertTrue(values[0].isFailure)
+        assertTrue(values[1].isFailure)
+        assertEquals("id", values[2].getOrNull())
     }
 }

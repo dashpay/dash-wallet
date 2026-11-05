@@ -19,15 +19,19 @@ package de.schildbach.wallet.ui.payments.send
 
 import de.schildbach.wallet.service.platform.sdk.ExternalSendResult
 import de.schildbach.wallet.service.platform.sdk.ExternalSendService
+import de.schildbach.wallet.service.platform.sdk.NotSentReason
 import de.schildbach.wallet.service.platform.sdk.SendBalance
 import de.schildbach.wallet.service.platform.sdk.SendDestination
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.dash.wallet.common.money.Dash
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
@@ -35,25 +39,55 @@ import javax.inject.Singleton
 
 /**
  * Exactly what the user confirmed on the confirm sheet: captured BEFORE authentication and
- * passed to [ExternalSendService.send] unchanged. [toString] is redacted.
+ * passed to [ExternalSendService.send] unchanged. [expectedWalletIdHex] is the SDK wallet bound
+ * when the confirm sheet opened ([ExternalSendService.currentWalletIdOrNull]); the send is
+ * refused unless it is still the bound one. [toString] is redacted.
  */
 data class ExternalSendRequest(
     val source: SendBalance,
     val destination: SendDestination,
     val amount: Dash,
-    val isMax: Boolean
+    val isMax: Boolean,
+    val expectedWalletIdHex: String?
 ) {
     override fun toString(): String = "ExternalSendRequest($source → $destination, <redacted>, isMax=$isMax)"
 }
 
 /** The one external send the app runs at a time, as [ExternalSendExecutor] reports it. */
 sealed class ExternalSendExecution {
+    /** The in-flight marker of a previous process is still being read; nothing can be sent yet. */
+    object Restoring : ExternalSendExecution()
+
     object Idle : ExternalSendExecution()
 
     data class Sending(val request: ExternalSendRequest) : ExternalSendExecution()
 
     /** Terminal until the screen [ExternalSendExecutor.acknowledge]s it. */
     data class Finished(val request: ExternalSendRequest, val result: ExternalSendResult) : ExternalSendExecution()
+
+    /**
+     * A previous process died with an external send possibly submitted (or its unknown outcome
+     * unacknowledged), or the marker could not be read: "may have gone through — check your
+     * history". Terminal until acknowledged.
+     */
+    object InterruptedByRestart : ExternalSendExecution()
+}
+
+/**
+ * The persisted "an external send may be in flight" flag ([DashPayConfig.EXTERNAL_SEND_IN_FLIGHT]).
+ * Every call throws when the store cannot be read or written.
+ */
+internal interface ExternalSendInFlightMarker {
+    suspend fun isSet(): Boolean
+    suspend fun set()
+    suspend fun clear()
+}
+
+/** [ExternalSendInFlightMarker] over [DashPayConfig] (error-preserving reads). */
+internal class DashPayConfigInFlightMarker(private val config: DashPayConfig) : ExternalSendInFlightMarker {
+    override suspend fun isSet(): Boolean = config.getPreservingErrors(DashPayConfig.EXTERNAL_SEND_IN_FLIGHT) == true
+    override suspend fun set() = config.set(DashPayConfig.EXTERNAL_SEND_IN_FLIGHT, true)
+    override suspend fun clear() = config.set(DashPayConfig.EXTERNAL_SEND_IN_FLIGHT, false)
 }
 
 /**
@@ -63,25 +97,59 @@ sealed class ExternalSendExecution {
  * [ExternalSendViewModel] of any later visit mirrors it, so a user who left during the send
  * sees the outcome when they open the external send again.
  *
+ * Process death: before the request is handed to the service the in-flight marker is written
+ * (a failed write sends nothing). It is cleared only on a definitive Sent / Not sent, and on an
+ * unknown outcome only when the user acknowledges it. A fresh process that finds it set (or
+ * cannot read it) starts in [ExternalSendExecution.InterruptedByRestart].
+ *
  * Deliberately simpler than the shielded [de.schildbach.wallet.ui.shielded.ShieldedTransferExecutor]:
  * no system notification and no stall watchdog. The service is itself single-flight.
  */
 @Singleton
-class ExternalSendExecutor @Inject constructor(
+class ExternalSendExecutor internal constructor(
     private val service: ExternalSendService,
+    private val marker: ExternalSendInFlightMarker,
     private val applicationScope: CoroutineScope
 ) {
+    @Inject
+    constructor(
+        service: ExternalSendService,
+        dashPayConfig: DashPayConfig,
+        applicationScope: CoroutineScope
+    ) : this(service, DashPayConfigInFlightMarker(dashPayConfig), applicationScope)
+
     companion object {
         private val log = LoggerFactory.getLogger(ExternalSendExecutor::class.java)
     }
 
-    private val _state = MutableStateFlow<ExternalSendExecution>(ExternalSendExecution.Idle)
+    private val _state = MutableStateFlow<ExternalSendExecution>(ExternalSendExecution.Restoring)
     val state: StateFlow<ExternalSendExecution> = _state.asStateFlow()
 
+    init {
+        applicationScope.launch {
+            val interrupted = try {
+                marker.isSet()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                log.warn("external send in-flight marker unreadable; assuming a send may have gone through", e)
+                true
+            }
+            if (interrupted) log.warn("external send: a previous process may have left a send in flight")
+            _state.update {
+                if (it is ExternalSendExecution.Restoring) {
+                    if (interrupted) ExternalSendExecution.InterruptedByRestart else ExternalSendExecution.Idle
+                } else {
+                    it
+                }
+            }
+        }
+    }
+
     /**
-     * Start sending [request]. Refused (false) while another send is running or an earlier
-     * outcome has not been acknowledged: one attempt per confirmation, and a terminal result
-     * is never silently replaced.
+     * Start sending [request]. Refused (false) while another send is running, an earlier
+     * outcome has not been acknowledged, or the previous process's marker is not yet read: one
+     * attempt per confirmation, and a terminal result is never silently replaced.
      */
     fun submit(request: ExternalSendRequest): Boolean {
         var accepted = false
@@ -100,8 +168,27 @@ class ExternalSendExecutor @Inject constructor(
         }
         applicationScope.launch {
             var result: ExternalSendResult = ExternalSendResult.MayHaveGoneThrough
+            var marked = false
             try {
-                result = service.send(request.source, request.destination, request.amount, request.isMax)
+                try {
+                    marker.set()
+                    marked = true
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    // Nothing handed to the service: provably nothing spent.
+                    log.warn("external send: could not record the in-flight marker; not sent", e)
+                    result = ExternalSendResult.NotSent(NotSentReason.GENERIC)
+                }
+                if (marked) {
+                    result = service.send(
+                        request.source,
+                        request.destination,
+                        request.amount,
+                        request.isMax,
+                        request.expectedWalletIdHex
+                    )
+                }
             } catch (e: CancellationException) {
                 // The application scope is never cancelled in practice; if it is, the outcome
                 // is unknown and stays "may have gone through".
@@ -110,16 +197,53 @@ class ExternalSendExecutor @Inject constructor(
                 log.error("external send threw; outcome unknown", e)
             } finally {
                 log.info("external send {} → {} finished: {}", request.source, kindOf(request.destination), kindOf(result))
+                // Cleared BEFORE the outcome is published: a later submit (only after this
+                // one is acknowledged) can never have its own marker cleared by this one.
+                if (marked && isDefinitive(result)) {
+                    withContext(NonCancellable) { clearMarker() }
+                }
                 _state.value = ExternalSendExecution.Finished(request, result)
             }
         }
         return true
     }
 
-    /** The screen showed [ExternalSendExecution.Finished]; the executor is free again. */
+    /**
+     * The screen showed the outcome; the executor is free again. An unknown outcome (or a
+     * restart-interrupted one) clears the marker first, and only then becomes Idle, so the
+     * clear can never race a new send's marker.
+     */
     fun acknowledge() {
-        _state.update { if (it is ExternalSendExecution.Finished) ExternalSendExecution.Idle else it }
+        val current = _state.value
+        val needsClear = when (current) {
+            is ExternalSendExecution.Finished -> !isDefinitive(current.result)
+            ExternalSendExecution.InterruptedByRestart -> true
+            else -> return
+        }
+        if (!needsClear) {
+            _state.update { if (it === current) ExternalSendExecution.Idle else it }
+            return
+        }
+        applicationScope.launch {
+            clearMarker()
+            _state.update { if (it === current) ExternalSendExecution.Idle else it }
+        }
     }
+
+    private suspend fun clearMarker() {
+        try {
+            marker.clear()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Left set: the next process warns once more (conservative).
+            log.warn("external send: could not clear the in-flight marker", e)
+        }
+    }
+
+    /** Sent and Not sent are definitive; anything else may have moved money. */
+    private fun isDefinitive(result: ExternalSendResult): Boolean =
+        result is ExternalSendResult.Sent || result is ExternalSendResult.NotSent
 
     private fun kindOf(destination: SendDestination): String = destination::class.java.simpleName
 

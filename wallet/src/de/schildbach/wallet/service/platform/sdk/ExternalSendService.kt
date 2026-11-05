@@ -56,6 +56,12 @@ enum class NotSentReason {
     /** Another external send is already running. */
     IN_PROGRESS,
 
+    /**
+     * A Max (whole-balance) send: the spendable balance is no longer what the user confirmed
+     * (funds arrived or left meanwhile), so nothing was drained; review and confirm again.
+     */
+    BALANCE_CHANGED,
+
     /** Anything else refused before submission (including the wallet changing under the send). */
     GENERIC
 }
@@ -102,6 +108,13 @@ interface ExternalSendService {
      */
     fun observeHasIdentity(): Flow<Boolean?>
 
+    /**
+     * The SDK wallet bound right now, read WITHOUT suspending (null = none, or unknown). The
+     * confirm step captures it into the request and [send] refuses unless the same wallet is
+     * still bound at every check and right before each write.
+     */
+    fun currentWalletIdOrNull(): String?
+
     /** Whether this wallet manages the identity; null = could not tell (fail closed). */
     suspend fun isOwnIdentity(identityIdBase58: String): Boolean?
 
@@ -111,17 +124,25 @@ interface ExternalSendService {
     /** Fee for this exact send, or null when it cannot be known before the send (never fabricated). */
     suspend fun estimateFee(source: SendBalance, destination: SendDestination, amount: Dash): FeeEstimate?
 
-    /** Balance minus fee for Max, or null when unknown. */
+    /**
+     * The Max amount, or null when unknown: for Core → Core the whole spendable balance,
+     * GROSS of the drain fee (the drain delivers it minus the fee); for every other pair the
+     * amount the recipient receives (balance minus the fee paid on top).
+     */
     suspend fun maxSendable(source: SendBalance, destination: SendDestination): Dash?
 
     /**
      * Send [amount] from [source] to [destination]. The caller has ALREADY
      * authenticated (PIN/biometric) for this send and passes exactly what the user
-     * confirmed. The implementation captures the wallet before its first suspension
-     * and re-checks it right before the native call (a change → NotSent, nothing
-     * submitted), enforces [externalSendSupport] itself, and runs one attempt (plus, for
-     * a shielded-funded or Core→Shielded [isMax] send, one fee-adjusted retry after a
-     * provably pre-broadcast shortfall).
+     * confirmed, including [expectedWalletIdHex] ([currentWalletIdOrNull] at confirmation).
+     * The implementation refuses unless that wallet is the bound one, and re-checks it
+     * right before each native call (a change or null → NotSent, nothing submitted),
+     * enforces [externalSendSupport] itself, and runs one attempt (plus, for a
+     * shielded-funded or Core→Shielded [isMax] send, one fee-adjusted retry after a
+     * provably pre-broadcast shortfall). A Core → Core [isMax] send is the SDK drain and
+     * runs only while the max-sendable balance still equals [amount]
+     * ([NotSentReason.BALANCE_CHANGED] otherwise). The recipient of a Core → Shielded send
+     * receives [amount]; the shield pool fee is paid on top.
      *
      * Shielded legs block for a ~30s proof: run this on an application-scoped owner so
      * leaving the screen does not cancel it.
@@ -130,6 +151,7 @@ interface ExternalSendService {
         source: SendBalance,
         destination: SendDestination,
         amount: Dash,
-        isMax: Boolean
+        isMax: Boolean,
+        expectedWalletIdHex: String?
     ): ExternalSendResult
 }

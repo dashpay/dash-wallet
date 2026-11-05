@@ -584,6 +584,8 @@
     <string name="external_send_not_sent_in_progress">Another payment is still being sent. Nothing was sent; try again once it has finished.</string>
     <string name="external_send_not_sent_generic">The payment could not be sent. Nothing was sent.</string>
     <string name="external_send_ambiguous_title">Payment status unknown</string>
+    <string name="external_send_not_sent_balance_changed">Your balance changed after you confirmed. Nothing was sent; review the amount and try again.</string>
+    <string name="external_send_ambiguous_after_restart_message">The app was closed while a payment was being sent. It may have gone through: check your history before sending again.</string>
     <string name="external_send_ambiguous_message">Your payment may have gone through. Do not send it again; your balances will update after the next sync.</string>
     <string name="external_send_interrupted_title">Payment not completed</string>
     <string name="external_send_interrupted_message">The payment could not be completed. The funds will arrive in your Shielded balance instead; the recipient was not paid.</string>

@@ -277,4 +277,83 @@ class ExternalSendModelsTest {
             assertEquals(SendSupport.NO_IDENTITY, support(SendBalance.IDENTITY, dest, hasIdentity = false))
         }
     }
+
+    // ── Review round 1 regressions ────────────────────────────────────
+
+    @Test
+    fun dashUri_ofAShieldedPlatformOrIdentityDestination_isThatDestination_withItsAmount() {
+        val cases = listOf(
+            shieldedTest to SendDestination.Shielded(shieldedTest),
+            platformTestP2pkh to SendDestination.Platform(platformTestP2pkh),
+            platformTestP2sh to SendDestination.Platform(platformTestP2sh),
+            identityId to SendDestination.Identity(identityId)
+        )
+        for ((address, destination) in cases) {
+            assertEquals(
+                DestinationParse.Valid(destination, Dash(12_345_678L)),
+                detectSendDestination("dash:$address?amount=0.12345678", test)
+            )
+            assertEquals(DestinationParse.Valid(destination, null), detectSendDestination("dash:$address", test))
+            // Optional parameters are ignored; a zero amount is no amount.
+            assertEquals(
+                DestinationParse.Valid(destination, null),
+                detectSendDestination("dash:$address?label=x&amount=0", test)
+            )
+        }
+        assertEquals(
+            DestinationParse.Valid(SendDestination.Shielded(shieldedTest), Dash(100_000_000L)),
+            detectSendDestination("DASH:${shieldedTest.uppercase()}?amount=1", test)
+        )
+    }
+
+    @Test
+    fun dashUri_ofANonCoreDestination_isReadStrictly() {
+        for (query in listOf(
+            "amount=1&amount=2",
+            "amount=-1",
+            "amount=1.123456789",
+            "amount=1e3",
+            "amount=abc",
+            "amount=",
+            "amount=99999999",
+            "r=https%3A%2F%2Fexample.com%2Fi",
+            "req-foo=1"
+        )) {
+            assertEquals(query, DestinationParse.Invalid, detectSendDestination("dash:$shieldedTest?$query", test))
+        }
+        assertEquals(DestinationParse.WrongNetwork, detectSendDestination("dash:$shieldedMain?amount=1", test))
+        assertEquals(DestinationParse.Invalid, detectSendDestination("dash:tdash1notanaddress?amount=1", test))
+    }
+
+    @Test
+    fun dashUri_roundTripsAdvancedReceivesAmountRequests() {
+        val amount = org.dash.wallet.common.money.Coin.valueOf(123_456_789L)
+        for (address in listOf(shieldedTest, platformTestP2pkh, identityId, coreTestP2pkh)) {
+            val payload = de.schildbach.wallet.ui.payments.ReceiveViewModel.amountRequestPayload(address, amount)
+            val parsed = detectSendDestination(payload, test)
+            assertTrue("$parsed", parsed is DestinationParse.Valid)
+            parsed as DestinationParse.Valid
+            assertEquals(address, parsed.destination.display)
+            assertEquals(Dash(123_456_789L), parsed.amount)
+        }
+    }
+
+    @Test
+    fun anEmptyBase58CheckPayload_isInvalid_neverACrash() {
+        // "3QJmnh" is the Base58Check encoding of zero bytes: a valid checksum, no version byte.
+        for (input in listOf("3QJmnh", "dash:3QJmnh", "dash:3QJmnh?amount=1")) {
+            assertEquals(input, DestinationParse.Invalid, detectSendDestination(input, test))
+        }
+    }
+
+    @Test
+    fun detectSendDestination_neverThrows() {
+        val random = java.util.Random(7)
+        val alphabet = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz0OIl:?&=-.%+ tdash1z"
+        repeat(5_000) {
+            val input = buildString { repeat(random.nextInt(60)) { append(alphabet[random.nextInt(alphabet.length)]) } }
+            detectSendDestination(input, test)
+            detectSendDestination("dash:$input", test)
+        }
+    }
 }
