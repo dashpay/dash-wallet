@@ -30,7 +30,8 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import org.dash.wallet.common.payments.parsers.AddressNetwork
-import org.dash.wallet.common.payments.parsers.PaymentURI
+import org.dash.wallet.common.payments.parsers.DashPaymentIntentParser
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import javax.inject.Inject
 
@@ -42,7 +43,12 @@ sealed class AdvancedScanAction {
     /** A DashConnect `dash-key:` / `dash-st:` code, for the Connections screen. */
     data class DashConnect(val input: String) : AdvancedScanAction()
 
-    /** A `dash:` URI with a BIP70 payment request (`r=`): the Basic invoice flow, as today. */
+    /**
+     * A payment request the Basic Send tab handles and that is not a plain destination — a
+     * BIP70 `dash:?r=` link, an AnyPay `pay:?r=` link, a serialized `DASH:-` request, or any
+     * other `dash:` URI the external flow cannot use: [DashPaymentIntentParser] →
+     * `SendCoinsActivity`, exactly as the Basic Send tab.
+     */
     data class PaymentRequest(val input: String) : AdvancedScanAction()
 
     /** A destination of this network: the external send flow, pre-filled with [input]. */
@@ -61,9 +67,12 @@ class AdvancedSendViewModel @Inject constructor(
 
     companion object {
         /**
-         * Route a scanned [input]. [isDashConnect] is only consulted when [supportsConnect]; a
-         * BIP70 `dash:` link keeps the merchant invoice flow, everything else goes through
-         * [detectSendDestination].
+         * Route a scanned [input], in order: a DashConnect code ([isDashConnect], only when
+         * [supportsConnect]); a plain destination of this network, including a `dash:` URI
+         * without `r=` ([detectSendDestination] Valid) → the external flow; a wrong-network
+         * one → that error; anything else the Basic Send tab's [DashPaymentIntentParser] owns
+         * (`dash:`/`DASH:-` URIs and AnyPay `pay:` links that are not a plain destination, e.g.
+         * BIP70 `r=` invoices) → the Basic path; everything else → invalid QR.
          */
         fun scanActionFor(
             input: String,
@@ -72,23 +81,24 @@ class AdvancedSendViewModel @Inject constructor(
             isDashConnect: (String) -> Boolean
         ): AdvancedScanAction {
             if (supportsConnect && isDashConnect(input)) return AdvancedScanAction.DashConnect(input)
-            if (isPaymentRequestUri(input)) return AdvancedScanAction.PaymentRequest(input)
-            return when (detectSendDestination(input, network)) {
-                is DestinationParse.Valid -> AdvancedScanAction.ExternalSend(input)
-                DestinationParse.WrongNetwork -> AdvancedScanAction.Error(wrongNetwork = true)
-                DestinationParse.Empty, DestinationParse.Invalid -> AdvancedScanAction.Error(wrongNetwork = false)
+            val parse = detectSendDestination(input, network)
+            return when {
+                parse is DestinationParse.Valid -> AdvancedScanAction.ExternalSend(input)
+                // Never carries `r=` (an invoice link is Invalid there), so no invoice is lost.
+                parse is DestinationParse.WrongNetwork -> AdvancedScanAction.Error(wrongNetwork = true)
+                isBasicPaymentRequest(input) -> AdvancedScanAction.PaymentRequest(input)
+                else -> AdvancedScanAction.Error(wrongNetwork = false)
             }
         }
 
-        private fun isPaymentRequestUri(input: String): Boolean {
-            val trimmed = input.trim()
-            if (!trimmed.startsWith("${AddressNetwork.DASH_SCHEME}:", ignoreCase = true)) return false
-            return try {
-                PaymentURI(null, trimmed).paymentRequestUrl != null
-            } catch (e: PaymentURI.ParseException) {
-                false
-            }
-        }
+        /**
+         * The schemes [DashPaymentIntentParser.parse] (`supportAnypayUrls = true`) handles
+         * besides a bare address: `pay:` (AnyPay), `DASH:-` (serialized BIP70 request) and
+         * `dash:` URIs. It decides itself (and reports its own error) for these.
+         */
+        private fun isBasicPaymentRequest(input: String): Boolean =
+            input.startsWith("${Constants.ANYPAY_SCHEME}:") ||
+                input.startsWith("${Constants.DASH_SCHEME}:", ignoreCase = true)
     }
 
     private val _uiState = MutableStateFlow(AdvancedSendUIState())

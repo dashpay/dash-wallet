@@ -149,8 +149,9 @@ fun ExternalSendScreen(uiState: ExternalSendUIState, actions: ExternalSendAction
 
         when (val status = uiState.status) {
             is ExternalSendStatus.Sending -> SendingOverlay(status.shieldedLeg, actions.onLeave)
-            is ExternalSendStatus.Done -> ResultDialog(status.result) { actions.onResultClosed(status.result) }
-            ExternalSendStatus.Idle -> {}
+            is ExternalSendStatus.Done ->
+                ResultDialog(status.result, status.afterRestart) { actions.onResultClosed(status.result) }
+            ExternalSendStatus.Idle, ExternalSendStatus.Restoring -> {}
         }
     }
 }
@@ -581,7 +582,8 @@ private fun ConfirmSheet(uiState: ExternalSendUIState, confirm: ExternalSendConf
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
         ) {
-            ConfirmAmount(request.amount, uiState.rate, uiState.fiatCode)
+            // What the recipient receives (a Core Max drain: the amount minus the fee).
+            ConfirmAmount(confirm.recipientAmount, uiState.rate, uiState.fiatCode)
             Spacer(modifier = Modifier.height(20.dp))
             Menu {
                 ListItem1(
@@ -604,8 +606,9 @@ private fun ConfirmSheet(uiState: ExternalSendUIState, confirm: ExternalSendConf
                 )
                 DashValueRow(
                     label = stringResource(R.string.external_send_total),
-                    value = confirm.total?.takeIf { fee != null }?.let { total ->
-                        approximate(total.toDisplayString(), fee?.exact != true)
+                    // A drain's total is the confirmed amount itself (exact); otherwise amount + fee.
+                    value = confirm.total?.takeIf { fee != null || confirm.feeIncluded }?.let { total ->
+                        approximate(total.toDisplayString(), !confirm.feeIncluded && fee?.exact != true)
                     },
                     unknown = unknown
                 )
@@ -771,8 +774,8 @@ private fun SendingOverlay(shieldedLeg: Boolean, onLeave: () -> Unit) {
 
 /** The terminal outcome. Only Not sent offers to go back and edit; nothing offers a retry. */
 @Composable
-private fun ResultDialog(result: ExternalSendResult, onClose: () -> Unit) {
-    val content = resultContentFor(result)
+private fun ResultDialog(result: ExternalSendResult, afterRestart: Boolean, onClose: () -> Unit) {
+    val content = resultContentFor(result, afterRestart)
     ModalDialog(
         showDialog = true,
         onDismissRequest = onClose,
@@ -798,7 +801,7 @@ internal data class ResultContent(
     @StringRes val button: Int
 )
 
-internal fun resultContentFor(result: ExternalSendResult): ResultContent = when (result) {
+internal fun resultContentFor(result: ExternalSendResult, afterRestart: Boolean = false): ResultContent = when (result) {
     is ExternalSendResult.Sent -> ResultContent(
         org.dash.wallet.common.R.drawable.ic_success_green,
         R.string.external_send_sent_title,
@@ -814,7 +817,7 @@ internal fun resultContentFor(result: ExternalSendResult): ResultContent = when 
     ExternalSendResult.MayHaveGoneThrough -> ResultContent(
         org.dash.wallet.common.R.drawable.ic_toast_info_warning,
         R.string.external_send_ambiguous_title,
-        R.string.external_send_ambiguous_message,
+        if (afterRestart) R.string.external_send_ambiguous_after_restart_message else R.string.external_send_ambiguous_message,
         R.string.external_send_close
     )
     ExternalSendResult.InterruptedFundsReturnToShielded -> ResultContent(
@@ -833,6 +836,7 @@ internal fun notSentMessageFor(reason: NotSentReason): Int = when (reason) {
     NotSentReason.NOT_SUPPORTED -> R.string.external_send_not_sent_not_supported
     NotSentReason.PAYMENT_STILL_CONFIRMING -> R.string.external_send_not_sent_still_confirming
     NotSentReason.IN_PROGRESS -> R.string.external_send_not_sent_in_progress
+    NotSentReason.BALANCE_CHANGED -> R.string.external_send_not_sent_balance_changed
     NotSentReason.GENERIC -> R.string.external_send_not_sent_generic
 }
 

@@ -148,6 +148,10 @@ object AddressUtils {
     @Throws(AddressFormatException::class)
     fun decode(address: String): DecodedAddress {
         val versionAndDataBytes = Base58.decodeChecked(address)
+        // A valid checksum over an EMPTY payload (e.g. "3QJmnh") has no version byte.
+        if (versionAndDataBytes.isEmpty()) {
+            throw AddressFormatException.InvalidDataLength("Legacy addresses need a version byte, but got 0 bytes")
+        }
         val version = versionAndDataBytes[0].toInt() and 0xFF
         val payload = versionAndDataBytes.copyOfRange(1, versionAndDataBytes.size)
         if (payload.size != 20) {

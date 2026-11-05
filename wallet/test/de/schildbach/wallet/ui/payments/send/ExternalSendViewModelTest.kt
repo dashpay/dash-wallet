@@ -41,6 +41,7 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.dash.wallet.common.data.WalletUIConfig
+import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.payments.parsers.AddressNetwork
 import org.dash.wallet.common.payments.parsers.Base58
@@ -80,7 +81,9 @@ class ExternalSendViewModelTest {
         var sendGate: CompletableDeferred<ExternalSendResult>? = null
         var sendResult: ExternalSendResult = ExternalSendResult.Sent(null)
         val sends = mutableListOf<ExternalSendRequest>()
+        var walletId: String? = WALLET_A
 
+        override fun currentWalletIdOrNull(): String? = walletId
         override fun observeBalance(source: SendBalance): Flow<Dash?> = balances.getValue(source)
         override fun observeHasIdentity(): Flow<Boolean?> = hasIdentity
         override suspend fun isOwnIdentity(identityIdBase58: String): Boolean? = ownIdentity
@@ -91,33 +94,69 @@ class ExternalSendViewModelTest {
             source: SendBalance,
             destination: SendDestination,
             amount: Dash,
-            isMax: Boolean
+            isMax: Boolean,
+            expectedWalletIdHex: String?
         ): ExternalSendResult {
-            sends += ExternalSendRequest(source, destination, amount, isMax)
+            sends += ExternalSendRequest(source, destination, amount, isMax, expectedWalletIdHex)
             return sendGate?.await() ?: sendResult
         }
     }
 
+    /** The persisted in-flight flag; [failReads]/[failWrites] make the store throw. */
+    private class FakeMarker : ExternalSendInFlightMarker {
+        var value = false
+        var failReads = false
+        var failWrites = false
+        val log = mutableListOf<String>()
+
+        override suspend fun isSet(): Boolean {
+            if (failReads) throw java.io.IOException("datastore")
+            return value
+        }
+
+        override suspend fun set() {
+            if (failWrites) throw java.io.IOException("datastore")
+            log += "set"
+            value = true
+        }
+
+        override suspend fun clear() {
+            if (failWrites) throw java.io.IOException("datastore")
+            log += "clear"
+            value = false
+        }
+    }
+
+    private companion object {
+        const val WALLET_A = "wallet-a"
+    }
+
     private val service = FakeService()
+    private val marker = FakeMarker()
     private lateinit var executor: ExternalSendExecutor
 
     @Before
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
-        executor = ExternalSendExecutor(service, CoroutineScope(UnconfinedTestDispatcher()))
+        executor = newExecutor()
     }
+
+    private fun newExecutor() = ExternalSendExecutor(service, marker, CoroutineScope(UnconfinedTestDispatcher()))
 
     @After
     fun tearDown() {
         Dispatchers.resetMain()
     }
 
-    private fun buildViewModel(savedState: SavedStateHandle = SavedStateHandle()): ExternalSendViewModel {
+    private fun buildViewModel(
+        savedState: SavedStateHandle = SavedStateHandle(),
+        rate: ExchangeRate? = null
+    ): ExternalSendViewModel {
         val walletUIConfig = mockk<WalletUIConfig> {
             every { observe(WalletUIConfig.SELECTED_CURRENCY) } returns flowOf("USD")
         }
         val rates = mockk<ExchangeRatesProvider> {
-            every { observeExchangeRate(any()) } returns flowOf(null)
+            every { observeExchangeRate(any()) } returns flowOf(rate)
         }
         return ExternalSendViewModel(service, executor, walletUIConfig, rates, savedState, network)
     }
@@ -341,12 +380,15 @@ class ExternalSendViewModelTest {
 
         val confirm = requireNotNull(viewModel.uiState.value.confirm)
         assertEquals(
-            ExternalSendRequest(SendBalance.CORE, SendDestination.Core(coreAddress), twoDash, isMax = true),
+            ExternalSendRequest(SendBalance.CORE, SendDestination.Core(coreAddress), twoDash, isMax = true, WALLET_A),
             confirm.request
         )
         assertEquals(service.fee, confirm.fee)
         assertFalse(confirm.feeLoading)
-        assertEquals(twoDash + Dash(1_000), confirm.total)
+        // A Core Max is the drain: the fee comes out of the amount (Basic's sendAllBalance).
+        assertTrue(confirm.feeIncluded)
+        assertEquals(twoDash - Dash(1_000), confirm.recipientAmount)
+        assertEquals(twoDash, confirm.total)
         assertEquals(confirm.request, viewModel.confirmedRequest())
     }
 
@@ -564,6 +606,231 @@ class ExternalSendViewModelTest {
         assertEquals(
             AdvancedScanAction.Error(wrongNetwork = true),
             AdvancedSendViewModel.scanActionFor(mainnetCoreAddress, network, true, connect)
+        )
+    }
+
+    // ── review round 1 regressions ───────────────────────────────────────────
+
+    @Test
+    fun confirm_aNonMaxSend_paysTheFeeOnTop_andOnlyACoreMaxIsFeeInclusive() {
+        service.balances.getValue(SendBalance.CORE).value = twoDash
+        service.fee = FeeEstimate(Dash(1_000), exact = false)
+        val viewModel = buildViewModel()
+        viewModel.goToAmount(coreAddress)
+        viewModel.type("1")
+        viewModel.onAmountContinue()
+        val confirm = requireNotNull(viewModel.uiState.value.confirm)
+        assertFalse(confirm.feeIncluded)
+        assertEquals(oneDash, confirm.recipientAmount)
+        assertEquals(oneDash + Dash(1_000), confirm.total)
+
+        // A Max to a Shielded address is not a drain: the pool fee is paid on top.
+        val shieldMax = ExternalSendConfirm(
+            ExternalSendRequest(SendBalance.CORE, SendDestination.Shielded(shieldedAddress), oneDash, true, WALLET_A),
+            FeeEstimate(Dash(52_001), exact = false),
+            feeLoading = false
+        )
+        assertFalse(shieldMax.feeIncluded)
+        assertEquals(oneDash, shieldMax.recipientAmount)
+        assertEquals(oneDash + Dash(52_001), shieldMax.total)
+    }
+
+    @Test
+    fun confirm_capturesTheBoundWallet_andTheSendCarriesIt_evenIfAnotherIsBoundLater() {
+        service.balances.getValue(SendBalance.CORE).value = twoDash
+        val viewModel = buildViewModel()
+        viewModel.goToAmount(coreAddress)
+        viewModel.type("1")
+        viewModel.onAmountContinue()
+        val request = requireNotNull(viewModel.confirmedRequest())
+        assertEquals(WALLET_A, request.expectedWalletIdHex)
+
+        service.walletId = "wallet-b"
+        assertTrue(viewModel.submit(request))
+        assertEquals(WALLET_A, service.sends.single().expectedWalletIdHex)
+    }
+
+    private fun sendOnce(viewModel: ExternalSendViewModel = buildViewModel()): ExternalSendViewModel {
+        service.balances.getValue(SendBalance.CORE).value = twoDash
+        viewModel.goToAmount(coreAddress)
+        viewModel.type("1")
+        viewModel.onAmountContinue()
+        assertTrue(viewModel.submit(requireNotNull(viewModel.confirmedRequest())))
+        return viewModel
+    }
+
+    @Test
+    fun inFlightMarker_isWrittenBeforeTheSend_andClearedOnADefinitiveResult() {
+        val gate = CompletableDeferred<ExternalSendResult>()
+        service.sendGate = gate
+        sendOnce()
+        assertEquals(1, service.sends.size)
+        assertTrue("set before the service runs", marker.value)
+        gate.complete(ExternalSendResult.Sent("txid"))
+        assertFalse(marker.value)
+        assertEquals(listOf("set", "clear"), marker.log)
+
+        executor.acknowledge()
+        service.sendGate = null
+        service.sendResult = ExternalSendResult.NotSent(NotSentReason.NOT_SYNCED)
+        marker.log.clear()
+        sendOnce()
+        assertFalse(marker.value)
+        assertEquals(listOf("set", "clear"), marker.log)
+    }
+
+    @Test
+    fun inFlightMarker_survivesAnUnknownOutcome_untilAcknowledged() {
+        for (result in listOf(ExternalSendResult.MayHaveGoneThrough, ExternalSendResult.InterruptedFundsReturnToShielded)) {
+            marker.value = false
+            executor = newExecutor()
+            service.sendResult = result
+            val viewModel = sendOnce()
+            assertTrue(marker.value)
+            viewModel.onResultAcknowledged()
+            assertFalse(marker.value)
+            assertEquals(ExternalSendExecution.Idle, executor.state.value)
+        }
+    }
+
+    @Test
+    fun inFlightMarker_unwritable_sendsNothing() {
+        marker.failWrites = true
+        sendOnce()
+        assertTrue(service.sends.isEmpty())
+        assertEquals(
+            ExternalSendExecution.Finished(
+                ExternalSendRequest(SendBalance.CORE, SendDestination.Core(coreAddress), oneDash, false, WALLET_A),
+                ExternalSendResult.NotSent(NotSentReason.GENERIC)
+            ),
+            executor.state.value
+        )
+    }
+
+    @Test
+    fun aFreshProcess_withTheMarkerSet_showsMayHaveGoneThrough_insteadOfTheEditableForm() {
+        // The previous process restored the form; the send it ran left the marker behind.
+        val saved = SavedStateHandle()
+        service.balances.getValue(SendBalance.CORE).value = twoDash
+        buildViewModel(saved).apply {
+            goToAmount(coreAddress)
+            type("1")
+        }
+        marker.value = true
+        executor = newExecutor()
+
+        val restored = buildViewModel(saved)
+        assertEquals(
+            ExternalSendStatus.Done(ExternalSendResult.MayHaveGoneThrough, afterRestart = true),
+            restored.uiState.value.status
+        )
+        assertFalse(restored.uiState.value.canContinueAmount)
+        restored.onAmountContinue()
+        assertNull(restored.confirmedRequest())
+        assertEquals(
+            R.string.external_send_ambiguous_after_restart_message,
+            resultContentFor(ExternalSendResult.MayHaveGoneThrough, afterRestart = true).message
+        )
+
+        restored.onResultAcknowledged()
+        assertFalse(marker.value)
+        assertEquals(ExternalSendStatus.Idle, restored.uiState.value.status)
+    }
+
+    @Test
+    fun aFreshProcess_withAnUnreadableMarker_failsClosed() {
+        marker.failReads = true
+        executor = newExecutor()
+        assertEquals(ExternalSendExecution.InterruptedByRestart, executor.state.value)
+    }
+
+    private val usd100 = ExchangeRate("USD", "100")
+
+    @Test
+    fun switchingCurrency_neverChangesTheAmount_untilTheUserEditsIt() {
+        val viewModel = buildViewModel(rate = usd100)
+        viewModel.goToAmount(coreAddress)
+        viewModel.type("0.12345678")
+        val exact = Dash(12_345_678)
+        assertEquals(exact, viewModel.uiState.value.amount)
+
+        viewModel.onCurrencySelected(dashMode = false)
+        assertEquals("12.35", viewModel.uiState.value.amountText)
+        assertEquals(exact, viewModel.uiState.value.amount)
+        viewModel.onCurrencySelected(dashMode = true)
+        assertEquals(exact, viewModel.uiState.value.amount)
+        assertEquals("0.12345678", viewModel.uiState.value.amountText)
+
+        // An edit re-parses what is on show.
+        viewModel.onCurrencySelected(dashMode = false)
+        viewModel.onKeyInput("back")
+        assertNull(viewModel.uiState.value.pinnedAmount)
+        assertEquals(Dash(12_300_000), viewModel.uiState.value.amount)
+    }
+
+    @Test
+    fun aUriAmount_staysExactAcrossACurrencySwitch() {
+        val viewModel = buildViewModel(
+            SavedStateHandle(mapOf(ExternalSendViewModel.ARG_PREFILL to "dash:$coreAddress?amount=0.12345678")),
+            rate = usd100
+        )
+        viewModel.onCurrencySelected(dashMode = false)
+        assertEquals(Dash(12_345_678), viewModel.uiState.value.amount)
+    }
+
+    @Test
+    fun aDroppedMax_keepsItsExactAmount() {
+        val max = Dash(123_456_789)
+        service.balances.getValue(SendBalance.SHIELDED).value = twoDash
+        service.balances.getValue(SendBalance.PLATFORM).value = twoDash
+        service.max[SendBalance.SHIELDED] = max
+        val viewModel = buildViewModel(rate = usd100)
+        viewModel.goToAmount(platformAddress)
+        viewModel.onMaxClick()
+        viewModel.onCurrencySelected(dashMode = false)
+        assertEquals(max, viewModel.uiState.value.amount)
+
+        viewModel.onSourceSelected(SendBalance.PLATFORM)
+        assertFalse(viewModel.uiState.value.isMax)
+        assertEquals(max, viewModel.uiState.value.amount)
+    }
+
+    @Test
+    fun aNonCoreAmountRequest_opensTheAmountStep_withItsAmount() {
+        val viewModel = buildViewModel(
+            SavedStateHandle(mapOf(ExternalSendViewModel.ARG_PREFILL to "dash:$platformAddress?amount=0.5"))
+        )
+        with(viewModel.uiState.value) {
+            assertEquals(ExternalSendStep.AMOUNT, step)
+            assertEquals(SendDestination.Platform(platformAddress), destination)
+            assertEquals(Dash(50_000_000), amount)
+        }
+    }
+
+    @Test
+    fun scanAction_keepsEveryInvoiceFormatOnTheBasicPath() {
+        val connect = { _: String -> false }
+        for (invoice in listOf(
+            "pay:?r=https://example.com/invoice",
+            "DASH:-ABCDEF",
+            "dash:?r=https://example.com/invoice",
+            "dash:$shieldedAddress?r=https://example.com/invoice"
+        )) {
+            assertEquals(invoice, AdvancedScanAction.PaymentRequest(invoice), AdvancedSendViewModel.scanActionFor(invoice, network, true, connect))
+        }
+        val request = "dash:$shieldedAddress?amount=1"
+        assertEquals(AdvancedScanAction.ExternalSend(request), AdvancedSendViewModel.scanActionFor(request, network, true, connect))
+        assertEquals(
+            AdvancedScanAction.Error(wrongNetwork = true),
+            AdvancedSendViewModel.scanActionFor("dash:$mainnetCoreAddress", network, true, connect)
+        )
+        assertEquals(
+            AdvancedScanAction.Error(wrongNetwork = false),
+            AdvancedSendViewModel.scanActionFor("bitcoin:abc", network, true, connect)
+        )
+        assertEquals(
+            AdvancedScanAction.Error(wrongNetwork = false),
+            AdvancedSendViewModel.scanActionFor("3QJmnh", network, true, connect)
         )
     }
 }
