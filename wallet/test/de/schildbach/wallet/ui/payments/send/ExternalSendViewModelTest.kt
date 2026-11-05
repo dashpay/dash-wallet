@@ -514,7 +514,63 @@ class ExternalSendViewModelTest {
 
         viewModel.onResultAcknowledged()
         assertEquals(ExternalSendStep.AMOUNT, viewModel.uiState.value.step)
+        assertFalse(viewModel.uiState.value.finished)
+        assertTrue(viewModel.uiState.value.formEditable)
         assertTrue(viewModel.uiState.value.canContinueAmount)
+    }
+
+    @Test
+    fun anAcknowledgedOutcome_endsTheFlow_andTheFormStaysInert_onceTheExecutorIsIdle() {
+        for (result in listOf(
+            ExternalSendResult.Sent("txid"),
+            ExternalSendResult.MayHaveGoneThrough,
+            ExternalSendResult.InterruptedFundsReturnToShielded
+        )) {
+            executor = newExecutor()
+            service.sendResult = result
+            service.max[SendBalance.CORE] = oneDash
+            val saved = SavedStateHandle()
+            val clearGate = CompletableDeferred<Unit>()
+            marker.clearGate = clearGate
+            val viewModel = sendOnce(buildViewModel(saved))
+            assertEquals(ExternalSendStatus.Done(result), viewModel.uiState.value.status)
+
+            viewModel.onResultAcknowledged()
+            // Acknowledging (the marker still clearing): inert.
+            assertTrue(viewModel.uiState.value.finished)
+            assertFalse(viewModel.uiState.value.canContinueAmount)
+
+            clearGate.complete(Unit)
+            marker.clearGate = null
+            assertEquals(ExternalSendExecution.Idle, executor.state.value)
+            with(viewModel.uiState.value) {
+                assertEquals(ExternalSendStatus.Idle, status)
+                assertFalse(formEditable)
+                assertFalse(canContinueAmount)
+                assertFalse(canContinueAddress)
+            }
+            // Nothing in the form reacts, and back leaves instead of reopening the address page.
+            val amountText = viewModel.uiState.value.amountText
+            viewModel.onKeyInput("5")
+            viewModel.onMaxClick()
+            viewModel.onShowSourceSheet()
+            viewModel.onAmountContinue()
+            with(viewModel.uiState.value) {
+                assertEquals(amountText, this.amountText)
+                assertFalse(isMax)
+                assertFalse(showSourceSheet)
+                assertNull(confirm)
+            }
+            assertNull(viewModel.confirmedRequest())
+            assertFalse(viewModel.onBack())
+
+            // A process restore after acknowledging cannot re-enable the form.
+            val restored = buildViewModel(saved)
+            assertTrue(restored.uiState.value.finished)
+            assertFalse(restored.uiState.value.canContinueAmount)
+            service.sends.clear()
+            marker.value = false
+        }
     }
 
     // ── prefill and restore ──────────────────────────────────────────────────

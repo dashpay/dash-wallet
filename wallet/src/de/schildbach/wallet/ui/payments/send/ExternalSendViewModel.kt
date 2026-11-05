@@ -115,6 +115,9 @@ data class ExternalSendConfirm(
  * @property identityResolution for an identity destination: null while checking.
  * @property sourceChosenByUser the user picked [source] in the sheet; until then the first
  *   supported source is chosen automatically as the inputs arrive.
+ * @property finished the user acknowledged a terminal outcome other than not-sent: the flow is
+ *   over and the form, which still holds the sent amount, stays inert while the screen leaves
+ *   (the executor returning to Idle must not re-enable it).
  */
 data class ExternalSendUIState(
     val step: ExternalSendStep = ExternalSendStep.ADDRESS,
@@ -138,14 +141,19 @@ data class ExternalSendUIState(
     val maxSendable: Dash? = null,
     val showSourceSheet: Boolean = false,
     val confirm: ExternalSendConfirm? = null,
-    val status: ExternalSendStatus = ExternalSendStatus.Idle
+    val status: ExternalSendStatus = ExternalSendStatus.Idle,
+    val finished: Boolean = false
 ) {
+    /** The form can be edited: no send running or unacknowledged, and the flow not over. */
+    val formEditable: Boolean
+        get() = status == ExternalSendStatus.Idle && !finished
+
     /** A non-blank input that is not a destination of this network. */
     val addressError: Boolean
         get() = addressParse is DestinationParse.WrongNetwork || addressParse is DestinationParse.Invalid
 
     val canContinueAddress: Boolean
-        get() = addressParse is DestinationParse.Valid
+        get() = addressParse is DestinationParse.Valid && !finished
 
     /** The sources the sheet lists, in order; Identity only for a user who has one. */
     val sources: List<SendBalance>
@@ -197,7 +205,7 @@ data class ExternalSendUIState(
             !exceedsBalance &&
             (dashMode || rate != null || pinnedAmount != null || maxAmount != null) &&
             !identityBlocks &&
-            status == ExternalSendStatus.Idle
+            formEditable
 }
 
 /**
@@ -245,6 +253,7 @@ class ExternalSendViewModel internal constructor(
         internal const val KEY_PINNED_DUFFS = "external_send_pinned_duffs"
         internal const val KEY_SOURCE = "external_send_source"
         internal const val KEY_SOURCE_CHOSEN = "external_send_source_chosen"
+        internal const val KEY_FINISHED = "external_send_finished"
 
         private const val DASH_DECIMALS = 8
         private const val FIAT_DECIMALS = 2
@@ -270,6 +279,9 @@ class ExternalSendViewModel internal constructor(
 
     init {
         restoreOrSeed()
+        if (savedState.get<Boolean>(KEY_FINISHED) == true) {
+            _uiState.update { it.copy(finished = true) }
+        }
 
         service.observeHasIdentity()
             .onEach { has ->
@@ -375,6 +387,7 @@ class ExternalSendViewModel internal constructor(
     }
 
     fun onAddressContinue() {
+        if (!_uiState.value.canContinueAddress) return
         val parse = _uiState.value.addressParse
         if (parse is DestinationParse.Valid) {
             enterAmountStep(parse.destination, parse.amount)
@@ -414,7 +427,7 @@ class ExternalSendViewModel internal constructor(
 
     fun onKeyInput(key: String) {
         val state = _uiState.value
-        if (state.status != ExternalSendStatus.Idle) return
+        if (!state.formEditable) return
         // Editing a Max amount edits what is on show.
         val base = if (state.isMax) displayTextFor(state.amount, state.dashMode, state.rate) else state.amountText
         val decimals = if (state.dashMode) DASH_DECIMALS else FIAT_DECIMALS
@@ -446,7 +459,7 @@ class ExternalSendViewModel internal constructor(
     fun onMaxClick() {
         val state = _uiState.value
         val max = state.maxSendable ?: return
-        if (state.status != ExternalSendStatus.Idle) return
+        if (!state.formEditable) return
         _uiState.update {
             it.copy(maxAmount = max, pinnedAmount = null, amountText = displayTextFor(max, it.dashMode, it.rate))
         }
@@ -454,6 +467,7 @@ class ExternalSendViewModel internal constructor(
     }
 
     fun onShowSourceSheet() {
+        if (_uiState.value.finished) return
         _uiState.update { it.copy(showSourceSheet = true) }
     }
 
@@ -464,6 +478,7 @@ class ExternalSendViewModel internal constructor(
     /** Only a source that is listed and can pay the destination can be picked. */
     fun onSourceSelected(source: SendBalance) {
         val state = _uiState.value
+        if (state.finished) return
         if (source !in state.sources || state.supportOf(source) != SendSupport.SUPPORTED) return
         selectSource(source, byUser = true)
         _uiState.update { it.copy(showSourceSheet = false) }
@@ -614,11 +629,16 @@ class ExternalSendViewModel internal constructor(
      */
     fun onResultAcknowledged() {
         val status = _uiState.value.status as? ExternalSendStatus.Done ?: return
-        executor.acknowledge()
         if (status.result is ExternalSendResult.NotSent) {
+            executor.acknowledge()
             // Max is chosen again deliberately; the amount it was stays exact.
             _uiState.update { it.copy(maxAmount = null, pinnedAmount = if (it.isMax) it.amount else it.pinnedAmount) }
             saveAmount()
+        } else {
+            // Set before the executor can reach Idle, so the form never lights up in between.
+            savedState[KEY_FINISHED] = true
+            _uiState.update { it.copy(finished = true, showSourceSheet = false, confirm = null) }
+            executor.acknowledge()
         }
     }
 
@@ -630,6 +650,8 @@ class ExternalSendViewModel internal constructor(
         val state = _uiState.value
         return when {
             state.status is ExternalSendStatus.Sending -> false
+            // The flow is over: leave, never back to an editable address page.
+            state.finished -> false
             state.confirm != null -> {
                 onDismissConfirm()
                 true
