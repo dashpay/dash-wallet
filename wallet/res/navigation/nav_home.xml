@@ -206,6 +206,30 @@
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
+
+        <action
+            android:id="@+id/payments_to_externalSend"
+            app:destination="@id/externalSendFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+    </fragment>
+
+    <!-- Advanced mode external send (MO-1121); prefill = an already-validated scanned destination. -->
+    <fragment
+        android:id="@+id/externalSendFragment"
+        android:name="de.schildbach.wallet.ui.payments.send.ExternalSendFragment"
+        android:label="External send">
+
+        <argument
+            android:name="prefill"
+            android:defaultValue="@null"
+            app:argType="string"
+            app:nullable="true" />
+
+        <argument
+            android:name="ShowNavBar"
+            android:defaultValue="false" />
     </fragment>
 
     <fragment

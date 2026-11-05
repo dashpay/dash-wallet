@@ -1,0 +1,569 @@
+/*
+ * Copyright 2026 Dash Core Group.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package de.schildbach.wallet.ui.payments.send
+
+import androidx.lifecycle.SavedStateHandle
+import de.schildbach.wallet.service.platform.sdk.Bech32m
+import de.schildbach.wallet.service.platform.sdk.DestinationParse
+import de.schildbach.wallet.service.platform.sdk.ExternalSendResult
+import de.schildbach.wallet.service.platform.sdk.ExternalSendService
+import de.schildbach.wallet.service.platform.sdk.FeeEstimate
+import de.schildbach.wallet.service.platform.sdk.IdentityResolution
+import de.schildbach.wallet.service.platform.sdk.NotSentReason
+import de.schildbach.wallet.service.platform.sdk.SendBalance
+import de.schildbach.wallet.service.platform.sdk.SendDestination
+import de.schildbach.wallet_test.R
+import io.mockk.every
+import io.mockk.mockk
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
+import org.dash.wallet.common.data.WalletUIConfig
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.payments.parsers.AddressNetwork
+import org.dash.wallet.common.payments.parsers.Base58
+import org.dash.wallet.common.services.ExchangeRatesProvider
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class ExternalSendViewModelTest {
+
+    private val network = AddressNetwork.DASH_TESTNET
+    private val hash20 = ByteArray(20) { (it + 1).toByte() }
+    private val coreAddress = Base58.encodeChecked(network.addressHeader, hash20)
+    private val mainnetCoreAddress = Base58.encodeChecked(AddressNetwork.DASH_MAINNET.addressHeader, hash20)
+    private val platformAddress = requireNotNull(Bech32m.encode("tdash", byteArrayOf(0xb0.toByte()) + hash20))
+    private val shieldedAddress =
+        requireNotNull(Bech32m.encode("tdash", byteArrayOf(0x10) + ByteArray(43) { (it * 3 + 7).toByte() }))
+    private val identityId = Base58.encode(ByteArray(32) { (255 - it).toByte() })
+
+    private val oneDash = Dash.COIN
+    private val twoDash = Dash.COIN * 2L
+
+    /** A fake service: every answer is a field the test sets; every send is recorded. */
+    private class FakeService : ExternalSendService {
+        val balances = SendBalance.entries.associateWith { MutableStateFlow<Dash?>(null) }
+        val hasIdentity = MutableStateFlow<Boolean?>(false)
+        var ownIdentity: Boolean? = false
+        var resolution: IdentityResolution = IdentityResolution.Found("alice")
+        var fee: FeeEstimate? = null
+        val max = mutableMapOf<SendBalance, Dash?>()
+        var sendGate: CompletableDeferred<ExternalSendResult>? = null
+        var sendResult: ExternalSendResult = ExternalSendResult.Sent(null)
+        val sends = mutableListOf<ExternalSendRequest>()
+
+        override fun observeBalance(source: SendBalance): Flow<Dash?> = balances.getValue(source)
+        override fun observeHasIdentity(): Flow<Boolean?> = hasIdentity
+        override suspend fun isOwnIdentity(identityIdBase58: String): Boolean? = ownIdentity
+        override suspend fun resolveIdentity(identityIdBase58: String): IdentityResolution = resolution
+        override suspend fun estimateFee(source: SendBalance, destination: SendDestination, amount: Dash) = fee
+        override suspend fun maxSendable(source: SendBalance, destination: SendDestination): Dash? = max[source]
+        override suspend fun send(
+            source: SendBalance,
+            destination: SendDestination,
+            amount: Dash,
+            isMax: Boolean
+        ): ExternalSendResult {
+            sends += ExternalSendRequest(source, destination, amount, isMax)
+            return sendGate?.await() ?: sendResult
+        }
+    }
+
+    private val service = FakeService()
+    private lateinit var executor: ExternalSendExecutor
+
+    @Before
+    fun setUp() {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+        executor = ExternalSendExecutor(service, CoroutineScope(UnconfinedTestDispatcher()))
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
+    private fun buildViewModel(savedState: SavedStateHandle = SavedStateHandle()): ExternalSendViewModel {
+        val walletUIConfig = mockk<WalletUIConfig> {
+            every { observe(WalletUIConfig.SELECTED_CURRENCY) } returns flowOf("USD")
+        }
+        val rates = mockk<ExchangeRatesProvider> {
+            every { observeExchangeRate(any()) } returns flowOf(null)
+        }
+        return ExternalSendViewModel(service, executor, walletUIConfig, rates, savedState, network)
+    }
+
+    private fun ExternalSendViewModel.goToAmount(address: String) {
+        onAddressChanged(address)
+        onAddressContinue()
+    }
+
+    private fun ExternalSendViewModel.type(amount: String) {
+        amount.forEach { onKeyInput(it.toString()) }
+    }
+
+    // ── address step ─────────────────────────────────────────────────────────
+
+    @Test
+    fun address_states_gateContinue_andShowAnErrorOnlyForBadInput() {
+        val viewModel = buildViewModel()
+        with(viewModel.uiState.value) {
+            assertEquals(DestinationParse.Empty, addressParse)
+            assertFalse(addressError)
+            assertFalse(canContinueAddress)
+        }
+
+        viewModel.onAddressChanged("not an address")
+        assertTrue(viewModel.uiState.value.addressError)
+        assertFalse(viewModel.uiState.value.canContinueAddress)
+
+        viewModel.onAddressChanged(mainnetCoreAddress)
+        assertEquals(DestinationParse.WrongNetwork, viewModel.uiState.value.addressParse)
+        assertTrue(viewModel.uiState.value.addressError)
+        assertFalse(viewModel.uiState.value.canContinueAddress)
+
+        viewModel.onAddressContinue()
+        assertEquals(ExternalSendStep.ADDRESS, viewModel.uiState.value.step)
+
+        viewModel.onAddressChanged(coreAddress)
+        assertFalse(viewModel.uiState.value.addressError)
+        assertTrue(viewModel.uiState.value.canContinueAddress)
+        viewModel.onAddressContinue()
+        assertEquals(ExternalSendStep.AMOUNT, viewModel.uiState.value.step)
+        assertEquals(SendDestination.Core(coreAddress), viewModel.uiState.value.destination)
+    }
+
+    @Test
+    fun clipboard_offersOnlyDestinationsOfThisNetwork_andPastesTheTappedOne() {
+        val viewModel = buildViewModel()
+        viewModel.onClipboardRead("pay $shieldedAddress or $mainnetCoreAddress please")
+        assertTrue(viewModel.uiState.value.clipboardShown)
+        assertEquals(listOf(shieldedAddress), viewModel.uiState.value.clipboardEntries)
+
+        viewModel.onClipboardEntrySelected(shieldedAddress)
+        assertEquals(shieldedAddress, viewModel.uiState.value.addressInput)
+        assertFalse(viewModel.uiState.value.clipboardShown)
+        assertTrue(viewModel.uiState.value.canContinueAddress)
+    }
+
+    @Test
+    fun clipboard_withNoAddress_showsNoEntries() {
+        val viewModel = buildViewModel()
+        viewModel.onClipboardRead(null)
+        assertTrue(viewModel.uiState.value.clipboardShown)
+        assertTrue(viewModel.uiState.value.clipboardEntries.isEmpty())
+    }
+
+    // ── source choice ────────────────────────────────────────────────────────
+
+    @Test
+    fun initialSource_isTheFirstSupported_inCoreShieldedPlatformIdentityOrder() {
+        val core = buildViewModel().apply { goToAmount(coreAddress) }
+        assertEquals(SendBalance.CORE, core.uiState.value.source)
+
+        // Core cannot pay a Platform address; Shielded can.
+        val platform = buildViewModel().apply { goToAmount(platformAddress) }
+        assertEquals(SendBalance.SHIELDED, platform.uiState.value.source)
+    }
+
+    @Test
+    fun initialSource_forAnIdentity_isCoreOnlyWhenTheIdentityIsOurOwn() {
+        service.hasIdentity.value = true
+        service.ownIdentity = false
+        val other = buildViewModel().apply { goToAmount(identityId) }
+        assertEquals(SendBalance.SHIELDED, other.uiState.value.source)
+
+        service.ownIdentity = true
+        val own = buildViewModel().apply { goToAmount(identityId) }
+        assertEquals(SendBalance.CORE, own.uiState.value.source)
+    }
+
+    @Test
+    fun sourceSelection_ignoresUnsupportedAndUnlistedSources() {
+        val viewModel = buildViewModel()
+        viewModel.goToAmount(platformAddress)
+
+        viewModel.onSourceSelected(SendBalance.CORE)
+        assertEquals(SendBalance.SHIELDED, viewModel.uiState.value.source)
+
+        // No identity: the Identity row is not listed and cannot be picked.
+        assertFalse(SendBalance.IDENTITY in viewModel.uiState.value.sources)
+        viewModel.onSourceSelected(SendBalance.IDENTITY)
+        assertEquals(SendBalance.SHIELDED, viewModel.uiState.value.source)
+
+        viewModel.onSourceSelected(SendBalance.PLATFORM)
+        assertEquals(SendBalance.PLATFORM, viewModel.uiState.value.source)
+        assertTrue(viewModel.uiState.value.sourceChosenByUser)
+
+        service.hasIdentity.value = true
+        assertTrue(SendBalance.IDENTITY in viewModel.uiState.value.sources)
+        viewModel.onSourceSelected(SendBalance.IDENTITY)
+        assertEquals(SendBalance.IDENTITY, viewModel.uiState.value.source)
+    }
+
+    @Test
+    fun switchingSource_dropsTheOldBalanceAndMax() {
+        service.balances.getValue(SendBalance.SHIELDED).value = twoDash
+        service.max[SendBalance.SHIELDED] = oneDash
+        val viewModel = buildViewModel()
+        viewModel.goToAmount(platformAddress)
+        assertEquals(twoDash, viewModel.uiState.value.balance)
+        assertEquals(oneDash, viewModel.uiState.value.maxSendable)
+
+        viewModel.onSourceSelected(SendBalance.PLATFORM)
+        assertNull(viewModel.uiState.value.balance)
+        assertNull(viewModel.uiState.value.maxSendable)
+    }
+
+    // ── Max ──────────────────────────────────────────────────────────────────
+
+    @Test
+    fun max_isUnavailableWhileUnknown_andSetsTheExactMaxWhenKnown() {
+        service.balances.getValue(SendBalance.CORE).value = twoDash
+        service.max[SendBalance.CORE] = null
+        val viewModel = buildViewModel()
+        viewModel.goToAmount(coreAddress)
+        assertNull(viewModel.uiState.value.maxSendable)
+        viewModel.onMaxClick()
+        assertFalse(viewModel.uiState.value.isMax)
+        assertEquals(Dash.ZERO, viewModel.uiState.value.amount)
+
+        service.max[SendBalance.CORE] = Dash(199_990_000)
+        service.balances.getValue(SendBalance.CORE).value = Dash(200_000_001)
+        viewModel.onMaxClick()
+        assertTrue(viewModel.uiState.value.isMax)
+        assertEquals(Dash(199_990_000), viewModel.uiState.value.amount)
+
+        viewModel.onKeyInput("back")
+        assertFalse(viewModel.uiState.value.isMax)
+    }
+
+    // ── Continue gating ──────────────────────────────────────────────────────
+
+    @Test
+    fun continue_needsAKnownBalance_andAnAmountWithinIt() {
+        val viewModel = buildViewModel()
+        viewModel.goToAmount(coreAddress)
+        viewModel.type("1")
+        assertFalse("unknown balance", viewModel.uiState.value.canContinueAmount)
+
+        service.balances.getValue(SendBalance.CORE).value = twoDash
+        assertTrue(viewModel.uiState.value.canContinueAmount)
+
+        viewModel.type("0")
+        assertEquals(Dash.COIN * 10L, viewModel.uiState.value.amount)
+        assertFalse("over the balance", viewModel.uiState.value.canContinueAmount)
+    }
+
+    @Test
+    fun continue_isBoundedByTheMaxSendable_whenKnown() {
+        service.balances.getValue(SendBalance.CORE).value = twoDash
+        service.max[SendBalance.CORE] = oneDash
+        val viewModel = buildViewModel()
+        viewModel.goToAmount(coreAddress)
+        viewModel.type("1.5")
+        assertFalse(viewModel.uiState.value.canContinueAmount)
+    }
+
+    @Test
+    fun continue_isBlockedForAnUnsupportedPair() {
+        val state = ExternalSendUIState(
+            step = ExternalSendStep.AMOUNT,
+            destination = SendDestination.Platform(platformAddress),
+            source = SendBalance.CORE,
+            amountText = "1",
+            balance = twoDash
+        )
+        assertFalse(state.canContinueAmount)
+        assertTrue(state.copy(source = SendBalance.SHIELDED).canContinueAmount)
+    }
+
+    @Test
+    fun continue_toAnIdentity_needsItToBeFound_andUnknownCanBeRetried() {
+        service.balances.getValue(SendBalance.SHIELDED).value = twoDash
+        service.resolution = IdentityResolution.NotFound
+        val viewModel = buildViewModel()
+        viewModel.goToAmount(identityId)
+        viewModel.type("1")
+        assertEquals(IdentityResolution.NotFound, viewModel.uiState.value.identityResolution)
+        assertFalse(viewModel.uiState.value.canContinueAmount)
+
+        service.resolution = IdentityResolution.Unknown
+        viewModel.onRetryIdentity()
+        assertEquals(IdentityResolution.Unknown, viewModel.uiState.value.identityResolution)
+        assertFalse(viewModel.uiState.value.canContinueAmount)
+
+        service.resolution = IdentityResolution.Found(null)
+        viewModel.onRetryIdentity()
+        assertTrue(viewModel.uiState.value.canContinueAmount)
+    }
+
+    // ── confirm and send ─────────────────────────────────────────────────────
+
+    @Test
+    fun confirm_carriesTheExactRequest_andTheFee() {
+        service.balances.getValue(SendBalance.CORE).value = twoDash
+        service.max[SendBalance.CORE] = twoDash
+        service.fee = FeeEstimate(Dash(1_000), exact = false)
+        val viewModel = buildViewModel()
+        viewModel.goToAmount(coreAddress)
+        viewModel.onMaxClick()
+        viewModel.onAmountContinue()
+
+        val confirm = requireNotNull(viewModel.uiState.value.confirm)
+        assertEquals(
+            ExternalSendRequest(SendBalance.CORE, SendDestination.Core(coreAddress), twoDash, isMax = true),
+            confirm.request
+        )
+        assertEquals(service.fee, confirm.fee)
+        assertFalse(confirm.feeLoading)
+        assertEquals(twoDash + Dash(1_000), confirm.total)
+        assertEquals(confirm.request, viewModel.confirmedRequest())
+    }
+
+    @Test
+    fun anUnknownFee_hasNoTotal() {
+        service.balances.getValue(SendBalance.PLATFORM).value = twoDash
+        service.fee = null
+        val viewModel = buildViewModel()
+        viewModel.goToAmount(platformAddress)
+        viewModel.onSourceSelected(SendBalance.PLATFORM)
+        viewModel.type("1")
+        viewModel.onAmountContinue()
+        val confirm = requireNotNull(viewModel.uiState.value.confirm)
+        assertNull(confirm.fee)
+        assertFalse(confirm.feeLoading)
+        assertNull(confirm.total)
+    }
+
+    @Test
+    fun submit_sendsTheCapturedRequest_andRefusesAnyOther() {
+        service.balances.getValue(SendBalance.CORE).value = twoDash
+        val viewModel = buildViewModel()
+        viewModel.goToAmount(coreAddress)
+        viewModel.type("1")
+        viewModel.onAmountContinue()
+        val captured = requireNotNull(viewModel.confirmedRequest())
+
+        assertFalse(viewModel.submit(captured.copy(amount = twoDash)))
+        assertTrue(service.sends.isEmpty())
+
+        assertTrue(viewModel.submit(captured))
+        assertEquals(listOf(captured), service.sends)
+        assertNull(viewModel.uiState.value.confirm)
+    }
+
+    @Test
+    fun aRunningSend_showsSending_andTheResultWhenItLands_evenOnALaterVisit() {
+        service.balances.getValue(SendBalance.SHIELDED).value = twoDash
+        val gate = CompletableDeferred<ExternalSendResult>()
+        service.sendGate = gate
+        val viewModel = buildViewModel()
+        viewModel.goToAmount(shieldedAddress)
+        viewModel.onSourceSelected(SendBalance.SHIELDED)
+        viewModel.type("1")
+        viewModel.onAmountContinue()
+        assertTrue(viewModel.submit(requireNotNull(viewModel.confirmedRequest())))
+        assertEquals(ExternalSendStatus.Sending(shieldedLeg = true), viewModel.uiState.value.status)
+        assertFalse(viewModel.uiState.value.canContinueAmount)
+        // Leaving while sending is allowed; it does not cancel the send.
+        assertFalse(viewModel.onBack())
+
+        // A later visit (new ViewModel) picks the same send up.
+        val later = buildViewModel()
+        assertEquals(ExternalSendStatus.Sending(shieldedLeg = true), later.uiState.value.status)
+        gate.complete(ExternalSendResult.Sent("txid"))
+        assertEquals(ExternalSendStatus.Done(ExternalSendResult.Sent("txid")), later.uiState.value.status)
+    }
+
+    @Test
+    fun eachResult_mapsToItsOwnOutcome() {
+        val results = listOf(
+            ExternalSendResult.Sent(null),
+            ExternalSendResult.NotSent(NotSentReason.INSUFFICIENT_FUNDS),
+            ExternalSendResult.MayHaveGoneThrough,
+            ExternalSendResult.InterruptedFundsReturnToShielded
+        )
+        results.forEach { result ->
+            service.sendResult = result
+            service.balances.getValue(SendBalance.CORE).value = twoDash
+            val viewModel = buildViewModel()
+            viewModel.goToAmount(coreAddress)
+            viewModel.type("1")
+            viewModel.onAmountContinue()
+            assertTrue(viewModel.submit(requireNotNull(viewModel.confirmedRequest())))
+            assertEquals(ExternalSendStatus.Done(result), viewModel.uiState.value.status)
+            viewModel.onResultAcknowledged()
+            assertEquals(ExternalSendStatus.Idle, viewModel.uiState.value.status)
+        }
+
+        assertEquals(R.string.external_send_sent_title, resultContentFor(results[0]).title)
+        assertEquals(R.string.external_send_not_sent_insufficient_funds, resultContentFor(results[1]).message)
+        assertEquals(R.string.external_send_interrupted_message, resultContentFor(results[3]).message)
+    }
+
+    @Test
+    fun mayHaveGoneThrough_isTerminal_withNoRetry() {
+        service.sendResult = ExternalSendResult.MayHaveGoneThrough
+        service.balances.getValue(SendBalance.CORE).value = twoDash
+        val viewModel = buildViewModel()
+        viewModel.goToAmount(coreAddress)
+        viewModel.type("1")
+        viewModel.onAmountContinue()
+        val request = requireNotNull(viewModel.confirmedRequest())
+        assertTrue(viewModel.submit(request))
+
+        val content = resultContentFor(ExternalSendResult.MayHaveGoneThrough)
+        assertEquals(R.string.external_send_ambiguous_message, content.message)
+        assertEquals(R.string.external_send_close, content.button)
+        assertNotEquals(R.string.button_retry, content.button)
+        // Unacknowledged: nothing can be confirmed or sent again.
+        assertFalse(viewModel.uiState.value.canContinueAmount)
+        assertNull(viewModel.confirmedRequest())
+        assertFalse(executor.submit(request))
+        assertEquals(1, service.sends.size)
+    }
+
+    @Test
+    fun notSent_returnsToEditing() {
+        service.sendResult = ExternalSendResult.NotSent(NotSentReason.NOT_SYNCED)
+        service.balances.getValue(SendBalance.CORE).value = twoDash
+        val viewModel = buildViewModel()
+        viewModel.goToAmount(coreAddress)
+        viewModel.type("1")
+        viewModel.onAmountContinue()
+        viewModel.submit(requireNotNull(viewModel.confirmedRequest()))
+        assertEquals(R.string.external_send_edit, resultContentFor(ExternalSendResult.NotSent(NotSentReason.NOT_SYNCED)).button)
+
+        viewModel.onResultAcknowledged()
+        assertEquals(ExternalSendStep.AMOUNT, viewModel.uiState.value.step)
+        assertTrue(viewModel.uiState.value.canContinueAmount)
+    }
+
+    // ── prefill and restore ──────────────────────────────────────────────────
+
+    @Test
+    fun aScannedDashUri_opensTheAmountStep_withItsAmount() {
+        val viewModel = buildViewModel(
+            SavedStateHandle(mapOf(ExternalSendViewModel.ARG_PREFILL to "dash:$coreAddress?amount=0.5"))
+        )
+        with(viewModel.uiState.value) {
+            assertEquals(ExternalSendStep.AMOUNT, step)
+            assertEquals(SendDestination.Core(coreAddress), destination)
+            assertEquals(Dash(50_000_000), amount)
+        }
+    }
+
+    @Test
+    fun savedState_restoresAddressAmountAndSource() {
+        val saved = SavedStateHandle()
+        val first = buildViewModel(saved)
+        first.goToAmount(platformAddress)
+        first.onSourceSelected(SendBalance.PLATFORM)
+        first.type("1.25")
+
+        val restored = buildViewModel(saved)
+        with(restored.uiState.value) {
+            assertEquals(ExternalSendStep.AMOUNT, step)
+            assertEquals(platformAddress, addressInput)
+            assertEquals(SendDestination.Platform(platformAddress), destination)
+            assertEquals("1.25", amountText)
+            assertEquals(SendBalance.PLATFORM, source)
+            assertTrue(sourceChosenByUser)
+        }
+    }
+
+    @Test
+    fun savedState_restoresAMaxAmountOnAUserChosenSource() {
+        service.balances.getValue(SendBalance.PLATFORM).value = twoDash
+        service.max[SendBalance.PLATFORM] = oneDash
+        val saved = SavedStateHandle()
+        val first = buildViewModel(saved)
+        first.goToAmount(platformAddress)
+        first.onSourceSelected(SendBalance.PLATFORM)
+        first.onMaxClick()
+
+        val restored = buildViewModel(saved)
+        assertEquals(SendBalance.PLATFORM, restored.uiState.value.source)
+        assertTrue(restored.uiState.value.isMax)
+        assertEquals(oneDash, restored.uiState.value.amount)
+    }
+
+    @Test
+    fun back_closesSheets_thenReturnsToTheAddress_thenLeaves() {
+        service.balances.getValue(SendBalance.CORE).value = twoDash
+        val viewModel = buildViewModel()
+        viewModel.goToAmount(coreAddress)
+        viewModel.onShowSourceSheet()
+        assertTrue(viewModel.onBack())
+        assertFalse(viewModel.uiState.value.showSourceSheet)
+        assertTrue(viewModel.onBack())
+        assertEquals(ExternalSendStep.ADDRESS, viewModel.uiState.value.step)
+        assertFalse(viewModel.onBack())
+    }
+
+    // ── helpers ──────────────────────────────────────────────────────────────
+
+    @Test
+    fun shorten_keepsTheFirst7AndLast8() {
+        assertEquals("tdash1z...lrs27eg4", ExternalSendViewModel.shorten("tdash1zqumn3c48sdenak7qr0f8jplrs27eg4"))
+        assertEquals("short", ExternalSendViewModel.shorten("short"))
+    }
+
+    @Test
+    fun scanAction_routesEachKindOfCode() {
+        val connect = { input: String -> input.startsWith("dash-key:") }
+        assertEquals(
+            AdvancedScanAction.DashConnect("dash-key:abc"),
+            AdvancedSendViewModel.scanActionFor("dash-key:abc", network, supportsConnect = true, isDashConnect = connect)
+        )
+        assertEquals(
+            AdvancedScanAction.Error(wrongNetwork = false),
+            AdvancedSendViewModel.scanActionFor("dash-key:abc", network, supportsConnect = false, isDashConnect = connect)
+        )
+        val bip70 = "dash:$coreAddress?r=https://example.com/invoice"
+        assertEquals(
+            AdvancedScanAction.PaymentRequest(bip70),
+            AdvancedSendViewModel.scanActionFor(bip70, network, true, connect)
+        )
+        val uri = "dash:$coreAddress?amount=1"
+        assertEquals(AdvancedScanAction.ExternalSend(uri), AdvancedSendViewModel.scanActionFor(uri, network, true, connect))
+        assertEquals(
+            AdvancedScanAction.ExternalSend(identityId),
+            AdvancedSendViewModel.scanActionFor(identityId, network, true, connect)
+        )
+        assertEquals(
+            AdvancedScanAction.Error(wrongNetwork = true),
+            AdvancedSendViewModel.scanActionFor(mainnetCoreAddress, network, true, connect)
+        )
+    }
+}
