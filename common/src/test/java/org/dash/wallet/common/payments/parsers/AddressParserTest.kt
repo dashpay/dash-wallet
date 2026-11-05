@@ -184,4 +184,11 @@ class AddressParserTest {
             ).size
         )
     }
+
+    @Test
+    fun checksumValidEmptyPayload_isAFormatError_notACrash() {
+        // "3QJmnh" is the Base58Check encoding of ZERO bytes: a valid checksum, no version byte.
+        org.junit.Assert.assertThrows(AddressFormatException::class.java) { AddressUtils.decode("3QJmnh") }
+        assertFalse(AddressUtils.isValid(AddressNetwork.DASH_MAINNET, "3QJmnh"))
+    }
 }

@@ -67,7 +67,7 @@ sealed class SendDestination {
 sealed class DestinationParse {
     /**
      * A destination of the wallet's network. [amount] is set only for a `dash:` payment
-     * URI that carried one (always a [SendDestination.Core]).
+     * URI that carried a positive one (any destination type, see [detectSendDestination]).
      */
     data class Valid(val destination: SendDestination, val amount: Dash? = null) : DestinationParse() {
         override fun toString(): String = "Valid($destination, amount=${if (amount == null) "none" else "<redacted>"})"
@@ -155,23 +155,41 @@ private val DASH_NETWORKS = listOf(AddressNetwork.DASH_MAINNET, AddressNetwork.D
  * whitespace is ignored; bech32m must be all-lowercase or all-uppercase (BIP-350) and
  * is returned lowercase.
  *
- * A `dash:` payment URI with an address resolves to [SendDestination.Core] plus its
- * optional amount, through the shared [PaymentURI] parser. A URI that carries a BIP70
- * payment request (`r=`) is [DestinationParse.Invalid] here: the merchant's invoice
- * flow owns it, and paying the fallback address would bypass the invoice.
+ * A `dash:` payment URI resolves to its destination plus its optional amount: a Core
+ * address through the shared [PaymentURI] parser; a Shielded, Platform or identity path
+ * (what Advanced Receive's amount requests produce,
+ * `ReceiveViewModel.amountRequestPayload`) through [detectNonCoreDashUri]. A URI that
+ * carries a BIP70 payment request (`r=`) is [DestinationParse.Invalid] here: the
+ * merchant's invoice flow owns it, and paying the fallback address would bypass the
+ * invoice.
+ *
+ * Pure and total: it never throws, whatever the input (anything unexpected is
+ * [DestinationParse.Invalid]).
  */
-fun detectSendDestination(input: String, network: AddressNetwork): DestinationParse {
+fun detectSendDestination(input: String, network: AddressNetwork): DestinationParse = try {
+    detectSendDestinationOrThrow(input, network)
+} catch (e: Exception) {
+    // A decoder bug on hostile input (scanned, typed or on the clipboard) must never
+    // crash the screen; the input is simply not a destination.
+    DestinationParse.Invalid
+}
+
+private fun detectSendDestinationOrThrow(input: String, network: AddressNetwork): DestinationParse {
     val trimmed = input.trim()
     if (trimmed.isEmpty()) return DestinationParse.Empty
 
     if (trimmed.startsWith("${AddressNetwork.DASH_SCHEME}:", ignoreCase = true)) {
         return detectDashUri(trimmed, network)
     }
+    return detectPlainDestination(trimmed, network)
+}
 
-    detectCoreAddress(trimmed, network)?.let { return it }
-    detectBech32mAddress(trimmed, network)?.let { return it }
-    decodeIdentityId(trimmed)?.let {
-        return DestinationParse.Valid(SendDestination.Identity(trimmed))
+/** A bare (non-URI) destination: Core, then bech32m Platform/Orchard, then an identity id. */
+private fun detectPlainDestination(input: String, network: AddressNetwork): DestinationParse {
+    detectCoreAddress(input, network)?.let { return it }
+    detectBech32mAddress(input, network)?.let { return it }
+    decodeIdentityId(input)?.let {
+        return DestinationParse.Valid(SendDestination.Identity(input))
     }
     return DestinationParse.Invalid
 }
@@ -216,6 +234,57 @@ private fun detectBech32mAddress(input: String, network: AddressNetwork): Destin
 }
 
 private fun detectDashUri(input: String, network: AddressNetwork): DestinationParse {
+    val body = input.substring(AddressNetwork.DASH_SCHEME.length + 1)
+    val path = body.substringBefore('?')
+    // A Core address (or no address at all) keeps the shared PaymentURI parser, unchanged.
+    if (path.isEmpty() || detectCoreAddress(path, network) != null) {
+        return detectCoreDashUri(input, network)
+    }
+    val query = if ('?' in body) body.substringAfter('?') else ""
+    return detectNonCoreDashUri(path, query, network)
+}
+
+/**
+ * `dash:<shielded|platform|identity>[?amount=<DASH>]`. The query is read strictly (BIP21
+ * rules): a BIP70 `r` or any unknown required (`req-…`) parameter is
+ * [DestinationParse.Invalid], as is a repeated or malformed `amount`; other optional
+ * parameters (label, message, …) are ignored.
+ */
+private fun detectNonCoreDashUri(path: String, query: String, network: AddressNetwork): DestinationParse {
+    var amount: Dash? = null
+    var amountSeen = false
+    for (param in query.split('&')) {
+        if (param.isEmpty()) continue
+        val key = param.substringBefore('=')
+        val value = param.substringAfter('=', missingDelimiterValue = "")
+        when {
+            key == "amount" -> {
+                if (amountSeen) return DestinationParse.Invalid
+                amountSeen = true
+                val duffs = parseUriAmountDuffs(value, network) ?: return DestinationParse.Invalid
+                amount = Dash(duffs).takeIf { it.isPositive }
+            }
+            key == "r" || key.startsWith("req-") -> return DestinationParse.Invalid
+            else -> Unit
+        }
+    }
+    return when (val destination = detectPlainDestination(path, network)) {
+        is DestinationParse.Valid -> DestinationParse.Valid(destination.destination, amount)
+        DestinationParse.WrongNetwork -> DestinationParse.WrongNetwork
+        DestinationParse.Empty, DestinationParse.Invalid -> DestinationParse.Invalid
+    }
+}
+
+private val URI_AMOUNT = Regex("^[0-9]{1,8}(\\.[0-9]{1,8})?$")
+
+/** A BIP21 `amount` (decimal DASH, at most 8 places, at most [AddressNetwork.maxMoney]) in duffs, or null. */
+private fun parseUriAmountDuffs(value: String, network: AddressNetwork): Long? {
+    if (!URI_AMOUNT.matches(value)) return null
+    val duffs = java.math.BigDecimal(value).movePointRight(8).longValueExact()
+    return duffs.takeIf { it <= network.maxMoney }
+}
+
+private fun detectCoreDashUri(input: String, network: AddressNetwork): DestinationParse {
     // Parsed without a network expectation, so a wrong-network address is reported
     // as such instead of as a generic parse failure.
     val uri = try {

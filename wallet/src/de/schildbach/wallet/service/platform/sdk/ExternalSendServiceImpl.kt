@@ -34,7 +34,6 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emitAll
@@ -43,6 +42,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.withContext
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.payments.parsers.AddressNetwork
@@ -51,6 +51,7 @@ import org.dash.wallet.common.services.PaymentStillConfirmingException
 import org.dash.wallet.common.services.PaymentSubmissionPendingException
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.WalletSession
+import org.dash.wallet.common.util.readRetryDelayMs
 import org.dashfoundation.dashsdk.credits.FundingInput
 import org.slf4j.LoggerFactory
 import java.util.concurrent.atomic.AtomicBoolean
@@ -136,6 +137,42 @@ internal fun selectPlatformInputs(candidates: List<FundingInput>, targetCredits:
     return picked.takeIf { covered == targetCredits }
 }
 
+/**
+ * The pool fee, in duffs, a Core → Shielded asset lock pays on top of what the recipient
+ * receives: Rust derives `shield_amount = lock_value − pool_fee` with
+ * `pool_fee = compute_minimum_shielded_fee(2) + asset_lock_base_cost`
+ * (rs-platform-wallet `fund_from_asset_lock.rs`), both versioned consensus constants — so
+ * for a given protocol version it does not depend on the request. [shieldFeeCredits] is the
+ * SDK's 2-action shield fee ([ShieldedFeeKind.TRANSFER], `FeeKind.TransferOrShield`), rounded
+ * UP to whole duffs, so a lock of `amount + poolFee` pays the recipient at least `amount`
+ * (exactly, or less than one duff more).
+ */
+internal fun shieldPoolFeeDuffs(shieldFeeCredits: Long): Long =
+    Math.addExact(ceilCreditsToDuffs(shieldFeeCredits), ShieldedBalanceServiceImpl.ASSET_LOCK_BASE_COST_DUFFS)
+
+/**
+ * Keep a live observation alive across read failures: on a (non-cancellation) [Exception]
+ * emit [unknown] and re-subscribe after [retryDelayMs] (attempt counted from 0) — never
+ * complete on a transient error. A [Throwable] that is not an [Exception] is rethrown.
+ */
+internal fun <T> Flow<T>.retryReadErrors(
+    what: String,
+    unknown: T,
+    retryDelayMs: (Long) -> Long = ::readRetryDelayMs
+): Flow<T> = retryWhen { cause, attempt ->
+    if (cause is CancellationException || cause !is Exception) {
+        false
+    } else {
+        val delayMs = retryDelayMs(attempt)
+        retryLog.warn("external send: {} unreadable; unknown, retrying in {} ms", what, delayMs, cause)
+        emit(unknown)
+        delay(delayMs)
+        true
+    }
+}
+
+private val retryLog = LoggerFactory.getLogger("de.schildbach.wallet.service.platform.sdk.ExternalSendRetry")
+
 // ── Source seam ───────────────────────────────────────────────────────
 
 /**
@@ -152,6 +189,12 @@ internal interface ExternalSendSource {
     /** Same contract as [SdkDashPayWriteSource.boundWalletIdOrNull]. */
     suspend fun boundWalletIdOrNull(): String?
 
+    /**
+     * The SDK wallet bound right now, WITHOUT suspending or starting the SDK (null when none,
+     * or not exactly one, is loaded): what the confirm step captures.
+     */
+    fun currentBoundWalletIdOrNull(): String?
+
     /** [SdkL1SendService.cutoverCommittedOrThrow]: throws when unreadable. */
     suspend fun cutoverCommittedOrThrow(): Boolean
 
@@ -161,7 +204,10 @@ internal interface ExternalSendSource {
     /** The user's registered identity (base58), null when there is none; throws when unreadable. */
     suspend fun ownIdentityIdOrThrow(): String?
 
-    /** [ownIdentityIdOrThrow] as it changes; emits null-wrapped [Result.failure] on read errors. */
+    /**
+     * [ownIdentityIdOrThrow] as it changes; emits [Result.failure] on a read error and keeps
+     * observing (re-subscribes with back-off), never completing on a transient failure.
+     */
     fun observeOwnIdentityId(): Flow<Result<String?>>
 
     /** The 32-byte ids of the identities [walletIdHex] MANAGES (watched identities excluded). */
@@ -235,6 +281,8 @@ internal class DashSdkExternalSendSource(
 
     override suspend fun boundWalletIdOrNull(): String? = manager().wallets.value.keys.singleOrNull()
 
+    override fun currentBoundWalletIdOrNull(): String? = sdkService.loadedWalletIds().singleOrNull()
+
     override suspend fun cutoverCommittedOrThrow(): Boolean = sdkL1SendService.cutoverCommittedOrThrow()
 
     override suspend fun shieldedEnabledOrThrow(): Boolean =
@@ -250,11 +298,7 @@ internal class DashSdkExternalSendSource(
             identityConfig.observePreservingErrors(BlockchainIdentityConfig.IDENTITY_ID),
             identityConfig.observePreservingErrors(BlockchainIdentityConfig.CREATION_STATE)
         ) { id, state -> Result.success(ownIdentity(id, state)) }
-            .catch { e ->
-                if (e is CancellationException) throw e
-                log.warn("identity record unreadable; identity unknown", e)
-                emit(Result.failure(e))
-            }
+            .retryReadErrors("identity record", Result.failure(IllegalStateException("identity record unreadable")))
 
     /** A registered identity; an unknown creation state throws (unknown, not "none"). */
     private fun ownIdentity(id: String?, state: String?): String? {
@@ -290,11 +334,7 @@ internal class DashSdkExternalSendSource(
                     }
                 }
             }
-            .catch { e ->
-                if (e is CancellationException) throw e
-                log.warn("shielded balance unreadable", e)
-                emit(null)
-            }
+            .retryReadErrors("shielded balance", null)
 
     override suspend fun platformAddressBalances(walletIdHex: String): List<FundingInput> =
         wallet(walletIdHex).addressesWithBalances()
@@ -415,11 +455,15 @@ internal class DashSdkExternalSendSource(
  * [classifyBroadcastFailure].
  *
  * Funds safety, in order, for every [send]:
- * 1. the Core [WalletSession] is captured before anything suspends;
+ * 1. the Core [WalletSession] is captured before anything suspends (and the SDK wallet id
+ *    by the caller, at confirmation);
  * 2. single-flight: a concurrent send is refused ([NotSentReason.IN_PROGRESS]);
  * 3. cutover committed (and the shielded flag for a shielded leg), error-preserving;
- * 4. the SDK wallet id is captured, then [externalSendSupport] is enforced here (not
- *    only in the UI) with the own-identity facts read from the SDK;
+ * 4. the SDK wallet the caller captured at confirmation (non-suspending,
+ *    [ExternalSendService.currentWalletIdOrNull]) must be the bound one — a different or
+ *    missing wallet is [NotSentReason.GENERIC] with nothing called; then
+ *    [externalSendSupport] is enforced here (not only in the UI) with the own-identity
+ *    facts read from the SDK;
  * 5. right before the one write, the bound wallet is read again — a different wallet
  *    is [NotSentReason.GENERIC] with nothing called — and the write is pinned to the
  *    captured id;
@@ -431,7 +475,8 @@ class ExternalSendServiceImpl internal constructor(
     private val source: ExternalSendSource,
     private val network: AddressNetwork,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
-    private val balancePollMs: Long = BALANCE_POLL_MS
+    private val balancePollMs: Long = BALANCE_POLL_MS,
+    private val retryDelayMs: (Long) -> Long = ::readRetryDelayMs
 ) : ExternalSendService {
 
     @Inject
@@ -475,11 +520,7 @@ class ExternalSendServiceImpl internal constructor(
                 polled { _ -> this.source.identityBalanceCredits(id)?.takeIf { it >= 0 }?.let(::creditsToDash) }
             }
         }
-    }.catch { e ->
-        if (e is CancellationException) throw e
-        log.warn("external send: {} balance unreadable", source, e)
-        emit(null)
-    }.distinctUntilChanged()
+    }.retryReadErrors("$source balance", null, retryDelayMs).distinctUntilChanged()
 
     /** Poll [read] (null on failure) on IO every [balancePollMs] while collected. */
     private fun polled(read: suspend (walletIdHex: String) -> Dash?): Flow<Dash?> = flow {
@@ -499,8 +540,16 @@ class ExternalSendServiceImpl internal constructor(
 
     override fun observeHasIdentity(): Flow<Boolean?> =
         source.observeOwnIdentityId()
-            .map { result -> if (result.isFailure) null else result.getOrNull() != null }
+            .map<Result<String?>, Boolean?> { result -> if (result.isFailure) null else result.getOrNull() != null }
+            .retryReadErrors("identity record", null, retryDelayMs)
             .distinctUntilChanged()
+
+    override fun currentWalletIdOrNull(): String? = try {
+        source.currentBoundWalletIdOrNull()
+    } catch (e: Exception) {
+        log.warn("external send: bound wallet unreadable", e)
+        null
+    }
 
     override suspend fun isOwnIdentity(identityIdBase58: String): Boolean? {
         val target = decodeIdentityId(identityIdBase58) ?: return false
@@ -554,8 +603,10 @@ class ExternalSendServiceImpl internal constructor(
     /**
      * - Core → Core: the SDK send's fee reserve ([SEND_ALL_FEE_RESERVE_DUFFS]), an upper
      *   bound the real (smaller) fee never exceeds — the same figure the Basic send shows.
-     * - Core → Shielded: the shield pool fee (flat shielded fee + asset-lock base cost),
-     *   carved out of the locked amount; the L1 fee is extra and unknown, so not exact.
+     *   A Max (drain) takes it OUT of the amount; any other send pays it on top.
+     * - Core → Shielded: the shield pool fee ([shieldPoolFeeDuffs]), paid ON TOP of the
+     *   amount ([send] locks `amount + pool fee`, the recipient receives `amount`); the L1
+     *   fee of the lock is extra and unknown, so not exact.
      * - Shielded → *: the flat single-note pool fee of the transition; more notes cost more.
      * - Core → Identity, Platform → *, Identity → *: Rust meters these at execution; no
      *   pre-send figure exists, so null.
@@ -565,10 +616,7 @@ class ExternalSendServiceImpl internal constructor(
             SendBalance.CORE -> when (destination) {
                 is SendDestination.Core -> FeeEstimate(Dash(SEND_ALL_FEE_RESERVE_DUFFS), exact = false)
                 is SendDestination.Shielded -> this.source.shieldedFeeCredits(ShieldedFeeKind.TRANSFER)?.let {
-                    FeeEstimate(
-                        Dash(Math.addExact(ceilCreditsToDuffs(it), ShieldedBalanceServiceImpl.ASSET_LOCK_BASE_COST_DUFFS)),
-                        exact = false
-                    )
+                    FeeEstimate(Dash(shieldPoolFeeDuffs(it)), exact = false)
                 }
                 else -> null
             }
@@ -579,9 +627,11 @@ class ExternalSendServiceImpl internal constructor(
         }
 
     /**
-     * - Core → Core / Shielded: the SDK's max-sendable L1 figure (already net of the
-     *   send-all fee headroom); a Max Core→Shielded send retries once with an L1 reserve
-     *   if the lock selection comes up short.
+     * - Core → Core: the SDK's max-sendable L1 figure, GROSS of the drain fee (the drain
+     *   delivers it minus the fee — the Basic send's `sendAllBalance` semantics).
+     * - Core → Shielded: that figure minus the shield pool fee (what the recipient receives
+     *   when the whole balance is locked); a Max send retries once with an L1 reserve if
+     *   the lock selection comes up short.
      * - Shielded → *: the READY balance minus the single-note pool fee; a Max send also
      *   retries once with the exact deficit the note selection reports.
      * - Everything else: null (no pre-send fee figure).
@@ -589,8 +639,19 @@ class ExternalSendServiceImpl internal constructor(
     override suspend fun maxSendable(source: SendBalance, destination: SendDestination): Dash? = try {
         when (source) {
             SendBalance.CORE -> when (destination) {
-                is SendDestination.Core, is SendDestination.Shielded ->
+                is SendDestination.Core ->
                     this.source.observeCoreMaxSendableDuffs().first()?.takeIf { it > 0 }?.let(::Dash)
+                is SendDestination.Shielded -> {
+                    val max = this.source.observeCoreMaxSendableDuffs().first()
+                    val feeCredits = withContext(ioDispatcher) {
+                        this@ExternalSendServiceImpl.source.shieldedFeeCredits(ShieldedFeeKind.TRANSFER)
+                    }
+                    if (max == null || feeCredits == null) {
+                        null
+                    } else {
+                        (max - shieldPoolFeeDuffs(feeCredits)).takeIf { it > 0 }?.let(::Dash)
+                    }
+                }
                 else -> null
             }
             SendBalance.SHIELDED -> {
@@ -619,7 +680,8 @@ class ExternalSendServiceImpl internal constructor(
         source: SendBalance,
         destination: SendDestination,
         amount: Dash,
-        isMax: Boolean
+        isMax: Boolean,
+        expectedWalletIdHex: String?
     ): ExternalSendResult {
         // (1) Captured before anything can suspend.
         val coreSession = if (source == SendBalance.CORE && destination is SendDestination.Core) {
@@ -633,7 +695,9 @@ class ExternalSendServiceImpl internal constructor(
             return ExternalSendResult.NotSent(NotSentReason.IN_PROGRESS)
         }
         return try {
-            withContext(ioDispatcher) { sendInner(source, destination, amount, isMax, coreSession) }
+            withContext(ioDispatcher) {
+                sendInner(source, destination, amount, isMax, coreSession, expectedWalletIdHex)
+            }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -651,7 +715,8 @@ class ExternalSendServiceImpl internal constructor(
         destination: SendDestination,
         amount: Dash,
         isMax: Boolean,
-        coreSession: WalletSession?
+        coreSession: WalletSession?,
+        expectedWalletIdHex: String?
     ): ExternalSendResult {
         val pair = "$source → ${kindOf(destination)}"
         if (!amount.isPositive) return notSent(pair, NotSentReason.GENERIC, "non-positive amount")
@@ -669,9 +734,11 @@ class ExternalSendServiceImpl internal constructor(
             if (!shielded) return notSent(pair, NotSentReason.NOT_SUPPORTED, "shielded flag off")
         }
 
-        // (4) Wallet captured, support gate enforced here.
-        val walletIdHex = readOrNull("bound wallet") { this.source.boundWalletIdOrNull() }
-            ?: return notSent(pair, NotSentReason.GENERIC, "no bound SDK wallet")
+        // (4) The wallet the user confirmed with (captured by the caller without suspending)
+        // must be the one bound now; every later check and write is pinned to it.
+        val walletIdHex = expectedWalletIdHex
+            ?: return notSent(pair, NotSentReason.GENERIC, "no SDK wallet captured at confirmation")
+        if (!stillBound(pair, walletIdHex)) return ExternalSendResult.NotSent(NotSentReason.GENERIC)
         val ownIdentity = readOrNull("own identity") { Result.success(this.source.ownIdentityIdOrThrow()) }
             ?: return notSent(pair, NotSentReason.GENERIC, "identity record unreadable")
         val ownIdentityId = ownIdentity.getOrNull()
@@ -736,52 +803,100 @@ class ExternalSendServiceImpl internal constructor(
         amount: Dash,
         isMax: Boolean,
         coreSession: WalletSession?
-    ): ExternalSendResult = when (destination) {
-        is SendDestination.Core -> {
-            if (!stillBound(pair, walletIdHex)) {
-                ExternalSendResult.NotSent(NotSentReason.GENERIC)
-            } else {
-                try {
-                    val txId = this.source.sendCore(destination.address, amount, emptyWallet = isMax, session = coreSession)
-                    log.info("external send {}: sent", pair)
-                    ExternalSendResult.Sent(txId)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    classifyCoreSendThrowable(e).also { log.warn("external send {}: {}", pair, it, e) }
+    ): ExternalSendResult {
+        return when (destination) {
+            is SendDestination.Core -> sendCoreToCore(pair, walletIdHex, destination, amount, isMax, coreSession)
+            is SendDestination.Shielded -> sendCoreToShielded(pair, walletIdHex, destination, amount, isMax)
+            is SendDestination.Identity -> {
+                if (!stillBound(pair, walletIdHex)) {
+                    ExternalSendResult.NotSent(NotSentReason.GENERIC)
+                } else {
+                    mapWrite(pair, this.source.coreTopUpIdentity(destination.identityIdBase58, amount.duffs))
                 }
             }
+            is SendDestination.Platform -> notSent(pair, NotSentReason.NOT_SUPPORTED, "unreachable: gated")
         }
-        is SendDestination.Shielded -> {
-            var result = shieldFromCoreChecked(pair, walletIdHex, destination.address, amount)
-            val first = result
-            if (isMax && first is SdkWriteResult.NotBroadcast && isAssetLockSelectionShort(first)) {
-                val reserve = this.source.spendableUtxoCount()?.let(::assetLockMaxFeeReserve)
-                val adjusted = reserve?.let { amount - it }
-                if (adjusted != null && adjusted.isPositive) {
-                    log.info("external send {}: max shield short; retrying once with an L1 fee reserve", pair)
-                    result = shieldFromCoreChecked(pair, walletIdHex, destination.address, adjusted)
+    }
+
+    /**
+     * A Max is the SDK drain (`emptyWallet`), whose amount is display-only: it spends
+     * whatever is spendable when it runs. So the drain is only started while the SDK's
+     * max-sendable figure is still exactly the [amount] the user confirmed; anything else
+     * (funds arrived or left in between, or unreadable) is NotSent with nothing spent.
+     */
+    private suspend fun sendCoreToCore(
+        pair: String,
+        walletIdHex: String,
+        destination: SendDestination.Core,
+        amount: Dash,
+        isMax: Boolean,
+        coreSession: WalletSession?
+    ): ExternalSendResult {
+        if (isMax) {
+            val maxNow = try {
+                this.source.observeCoreMaxSendableDuffs().first()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                log.warn("external send {}: max sendable unreadable before the drain; not sent", pair, e)
+                return ExternalSendResult.NotSent(NotSentReason.GENERIC)
+            }
+            if (maxNow != amount.duffs) {
+                return notSent(pair, NotSentReason.BALANCE_CHANGED, "the balance changed since the Max was confirmed")
+            }
+        }
+        if (!stillBound(pair, walletIdHex)) return ExternalSendResult.NotSent(NotSentReason.GENERIC)
+        return try {
+            val txId = this.source.sendCore(destination.address, amount, emptyWallet = isMax, session = coreSession)
+            log.info("external send {}: sent", pair)
+            ExternalSendResult.Sent(txId)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            classifyCoreSendThrowable(e).also { log.warn("external send {}: {}", pair, it, e) }
+        }
+    }
+
+    /**
+     * The recipient receives the confirmed [amount]: the lock is `amount + pool fee`
+     * ([shieldPoolFeeDuffs]), the fee Rust carves out of the lock. A Max whose lock
+     * selection comes up short (the L1 fee) retries once with an L1 reserve taken off the
+     * lock, so the recipient then receives that much less (never more than confirmed).
+     */
+    private suspend fun sendCoreToShielded(
+        pair: String,
+        walletIdHex: String,
+        destination: SendDestination.Shielded,
+        amount: Dash,
+        isMax: Boolean
+    ): ExternalSendResult {
+        val feeCredits = readOrNull("shield pool fee") { this.source.shieldedFeeCredits(ShieldedFeeKind.TRANSFER) }
+            ?: return notSent(pair, NotSentReason.GENERIC, "shield pool fee unknown")
+        val lock = try {
+            Dash(Math.addExact(amount.duffs, shieldPoolFeeDuffs(feeCredits)))
+        } catch (e: ArithmeticException) {
+            return notSent(pair, NotSentReason.GENERIC, "amount out of range")
+        }
+        var result = shieldFromCoreChecked(pair, walletIdHex, destination.address, lock)
+        val first = result
+        if (isMax && first is SdkWriteResult.NotBroadcast && isAssetLockSelectionShort(first)) {
+            val reserve = this.source.spendableUtxoCount()?.let(::assetLockMaxFeeReserve)
+            val adjusted = reserve?.let { lock - it }
+            if (adjusted != null && adjusted.isPositive) {
+                log.info("external send {}: max shield short; retrying once with an L1 fee reserve", pair)
+                result = shieldFromCoreChecked(pair, walletIdHex, destination.address, adjusted)
+            }
+        }
+        return when (result) {
+            is SdkWriteResult.Broadcast -> when (result.value) {
+                ShieldFromWalletOutcome.COMPLETED -> ExternalSendResult.Sent(null)
+                ShieldFromWalletOutcome.SHIELD_PENDING_RETRY -> {
+                    log.warn("external send {}: lock out, shield not submitted — returns to own shielded", pair)
+                    ExternalSendResult.InterruptedFundsReturnToShielded
                 }
             }
-            when (result) {
-                is SdkWriteResult.Broadcast -> when (result.value) {
-                    ShieldFromWalletOutcome.COMPLETED -> ExternalSendResult.Sent(null)
-                    ShieldFromWalletOutcome.SHIELD_PENDING_RETRY -> {
-                        log.warn("external send {}: lock out, shield not submitted — returns to own shielded", pair)
-                        ExternalSendResult.InterruptedFundsReturnToShielded
-                    }
-                }
-                else -> mapWrite(pair, result)
-            }
+            else -> mapWrite(pair, result)
         }
-        is SendDestination.Identity -> {
-            if (!stillBound(pair, walletIdHex)) {
-                ExternalSendResult.NotSent(NotSentReason.GENERIC)
-            } else {
-                mapWrite(pair, this.source.coreTopUpIdentity(destination.identityIdBase58, amount.duffs))
-            }
-        }
-        is SendDestination.Platform -> notSent(pair, NotSentReason.NOT_SUPPORTED, "unreachable: gated")
     }
 
     private suspend fun shieldFromCoreChecked(
@@ -837,23 +952,25 @@ class ExternalSendServiceImpl internal constructor(
         walletIdHex: String,
         destination: SendDestination,
         amountCredits: Long
-    ): ExternalSendResult = when (destination) {
-        is SendDestination.Platform -> {
-            val to = decodePlatformAddress(destination.address, network)
-                ?: return notSent(pair, NotSentReason.GENERIC, "invalid platform address")
-            nativeWrite(pair, walletIdHex) { this.source.platformTransfer(walletIdHex, to, amountCredits) }
+    ): ExternalSendResult {
+        return when (destination) {
+            is SendDestination.Platform -> {
+                val to = decodePlatformAddress(destination.address, network)
+                    ?: return notSent(pair, NotSentReason.GENERIC, "invalid platform address")
+                nativeWrite(pair, walletIdHex) { this.source.platformTransfer(walletIdHex, to, amountCredits) }
+            }
+            is SendDestination.Identity -> {
+                val identityId = decodeIdentityId(destination.identityIdBase58)
+                    ?: return notSent(pair, NotSentReason.GENERIC, "invalid identity id")
+                val candidates = readOrNull("platform address balances") {
+                    this.source.platformAddressBalances(walletIdHex)
+                } ?: return notSent(pair, NotSentReason.GENERIC, "platform address balances unreadable")
+                val inputs = selectPlatformInputs(candidates, amountCredits)
+                    ?: return notSent(pair, NotSentReason.INSUFFICIENT_FUNDS, "platform addresses cannot cover the amount")
+                nativeWrite(pair, walletIdHex) { this.source.platformTopUpIdentity(walletIdHex, identityId, inputs) }
+            }
+            else -> notSent(pair, NotSentReason.NOT_SUPPORTED, "unreachable: gated")
         }
-        is SendDestination.Identity -> {
-            val identityId = decodeIdentityId(destination.identityIdBase58)
-                ?: return notSent(pair, NotSentReason.GENERIC, "invalid identity id")
-            val candidates = readOrNull("platform address balances") {
-                this.source.platformAddressBalances(walletIdHex)
-            } ?: return notSent(pair, NotSentReason.GENERIC, "platform address balances unreadable")
-            val inputs = selectPlatformInputs(candidates, amountCredits)
-                ?: return notSent(pair, NotSentReason.INSUFFICIENT_FUNDS, "platform addresses cannot cover the amount")
-            nativeWrite(pair, walletIdHex) { this.source.platformTopUpIdentity(walletIdHex, identityId, inputs) }
-        }
-        else -> notSent(pair, NotSentReason.NOT_SUPPORTED, "unreachable: gated")
     }
 
     private suspend fun sendFromIdentity(
@@ -862,24 +979,26 @@ class ExternalSendServiceImpl internal constructor(
         fromId: ByteArray,
         destination: SendDestination,
         amountCredits: Long
-    ): ExternalSendResult = when (destination) {
-        is SendDestination.Core ->
-            nativeWrite(pair, walletIdHex) {
-                this.source.identityWithdraw(walletIdHex, fromId, amountCredits, destination.address)
+    ): ExternalSendResult {
+        return when (destination) {
+            is SendDestination.Core ->
+                nativeWrite(pair, walletIdHex) {
+                    this.source.identityWithdraw(walletIdHex, fromId, amountCredits, destination.address)
+                }
+            is SendDestination.Platform -> {
+                val to = decodePlatformAddress(destination.address, network)
+                    ?: return notSent(pair, NotSentReason.GENERIC, "invalid platform address")
+                nativeWrite(pair, walletIdHex) {
+                    this.source.identityTransferToAddress(walletIdHex, fromId, to, amountCredits)
+                }
             }
-        is SendDestination.Platform -> {
-            val to = decodePlatformAddress(destination.address, network)
-                ?: return notSent(pair, NotSentReason.GENERIC, "invalid platform address")
-            nativeWrite(pair, walletIdHex) {
-                this.source.identityTransferToAddress(walletIdHex, fromId, to, amountCredits)
+            is SendDestination.Identity -> {
+                val toId = decodeIdentityId(destination.identityIdBase58)
+                    ?: return notSent(pair, NotSentReason.GENERIC, "invalid identity id")
+                nativeWrite(pair, walletIdHex) { this.source.identityTransfer(walletIdHex, fromId, toId, amountCredits) }
             }
+            is SendDestination.Shielded -> notSent(pair, NotSentReason.NOT_SUPPORTED, "unreachable: gated")
         }
-        is SendDestination.Identity -> {
-            val toId = decodeIdentityId(destination.identityIdBase58)
-                ?: return notSent(pair, NotSentReason.GENERIC, "invalid identity id")
-            nativeWrite(pair, walletIdHex) { this.source.identityTransfer(walletIdHex, fromId, toId, amountCredits) }
-        }
-        is SendDestination.Shielded -> notSent(pair, NotSentReason.NOT_SUPPORTED, "unreachable: gated")
     }
 
     /** One raw SDK credits call, after the wallet re-check, classified by [classifyBroadcastFailure]. */
