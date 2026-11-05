@@ -109,6 +109,10 @@ class ExternalSendViewModelTest {
         var failWrites = false
         val log = mutableListOf<String>()
 
+        /** When set, [clear] suspends on it (after counting the call in [clearCalls]). */
+        var clearGate: CompletableDeferred<Unit>? = null
+        var clearCalls = 0
+
         override suspend fun isSet(): Boolean {
             if (failReads) throw java.io.IOException("datastore")
             return value
@@ -121,6 +125,8 @@ class ExternalSendViewModelTest {
         }
 
         override suspend fun clear() {
+            clearCalls++
+            clearGate?.await()
             if (failWrites) throw java.io.IOException("datastore")
             log += "clear"
             value = false
@@ -660,17 +666,23 @@ class ExternalSendViewModelTest {
     }
 
     @Test
-    fun inFlightMarker_isWrittenBeforeTheSend_andClearedOnADefinitiveResult() {
+    fun inFlightMarker_isWrittenBeforeTheSend_keptOnSentUntilAcknowledged_clearedOnNotSent() {
         val gate = CompletableDeferred<ExternalSendResult>()
         service.sendGate = gate
-        sendOnce()
+        val viewModel = sendOnce()
         assertEquals(1, service.sends.size)
         assertTrue("set before the service runs", marker.value)
         gate.complete(ExternalSendResult.Sent("txid"))
+        // Sent keeps the restart protection until the user has seen it.
+        assertTrue(marker.value)
+        assertEquals(listOf("set"), marker.log)
+        // A process death now restarts into the conservative warning, never the editable form.
+        assertEquals(ExternalSendExecution.InterruptedByRestart, newExecutor().state.value)
+
+        viewModel.onResultAcknowledged()
         assertFalse(marker.value)
         assertEquals(listOf("set", "clear"), marker.log)
-
-        executor.acknowledge()
+        assertEquals(ExternalSendExecution.Idle, executor.state.value)
         service.sendGate = null
         service.sendResult = ExternalSendResult.NotSent(NotSentReason.NOT_SYNCED)
         marker.log.clear()
@@ -691,6 +703,38 @@ class ExternalSendViewModelTest {
             assertFalse(marker.value)
             assertEquals(ExternalSendExecution.Idle, executor.state.value)
         }
+    }
+
+    @Test
+    fun aDoubleAcknowledgement_clearsOnce_andCannotClearALaterSendsMarker() {
+        service.sendResult = ExternalSendResult.Sent("txid")
+        val viewModel = sendOnce()
+        val clearGate = CompletableDeferred<Unit>()
+        marker.clearGate = clearGate
+
+        executor.acknowledge()
+        // Claimed: not Idle (no new send yet), no result dialog, the form inert.
+        assertEquals(ExternalSendExecution.Acknowledging, executor.state.value)
+        assertEquals(ExternalSendStatus.Restoring, viewModel.uiState.value.status)
+        executor.acknowledge()
+        viewModel.onResultAcknowledged()
+        assertEquals(1, marker.clearCalls)
+        assertFalse(executor.submit(service.sends.single()))
+
+        clearGate.complete(Unit)
+        marker.clearGate = null
+        assertEquals(ExternalSendExecution.Idle, executor.state.value)
+        assertEquals(1, marker.clearCalls)
+
+        // A later send's marker survives a stale acknowledgement.
+        val gate = CompletableDeferred<ExternalSendResult>()
+        service.sendGate = gate
+        assertTrue(executor.submit(service.sends.single()))
+        executor.acknowledge()
+        assertTrue(marker.value)
+        assertEquals(1, marker.clearCalls)
+        gate.complete(ExternalSendResult.MayHaveGoneThrough)
+        assertTrue(marker.value)
     }
 
     @Test
