@@ -286,7 +286,7 @@ private fun AmountPage(uiState: ExternalSendUIState, actions: ExternalSendAction
                 .weight(1f),
             secondaryAmount = uiState.secondaryAmountText,
             showPrimaryChevron = false,
-            keypadEnabled = uiState.status == ExternalSendStatus.Idle,
+            keypadEnabled = uiState.formEditable,
             onCurrencySelected = if (fiatCode != null && uiState.rate != null) {
                 { index -> actions.onCurrencySelected(index == 0) }
             } else {
@@ -325,7 +325,11 @@ private fun FromToCards(uiState: ExternalSendUIState, actions: ExternalSendActio
                     label = stringResource(R.string.external_send_from),
                     title = stringResource(titleFor(uiState.source)),
                     modifier = Modifier
-                        .clickable(role = Role.Button, onClick = actions.onShowSourceSheet)
+                        .clickable(
+                            enabled = !uiState.finished,
+                            role = Role.Button,
+                            onClick = actions.onShowSourceSheet
+                        )
                         .semantics { contentDescription = changeDescription },
                     trailing = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
