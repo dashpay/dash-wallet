@@ -33,24 +33,37 @@ after a clean review is instant. The push gate (below) checks that cache.
 The report is printed and kept in `~/.cache/prereview/<sha>.md`; `--status` shows the verdict of HEAD.
 
 - **Verify every finding** against the code at HEAD: open the lines and walk the sequence it describes. Drop a
-  finding the code does not support, and say why. Keep one even if it looks unlikely.
+  finding the code does not support, and say why. Keep one even if it looks unlikely. **Never lower a severity**:
+  the bot's verifier is this model, and on #1645/#1654/#1666 four of its seven blockers were findings our reports
+  carried as suggestions, two of them downgraded from the model's own blocking. A finding is dropped only on
+  evidence: a test its sequence cannot make pass, or the bytecode of the dependency the module resolves —
+  `./gradlew :wallet:dependencyInsight --dependency <artifact>`, then `javap` on that jar, version noted. Not the
+  newest jar in the Gradle cache (#1666: refuted twice from `paging-runtime 3.3.2` while `wallet` resolves `3.1.1`;
+  the bot blocked on it after the push). An argument is not evidence.
 - **Fix the class, not the line.** Name the rule each finding breaks, then `git grep` every other place it must
   hold: callers, legacy / resume / retry / restore / background paths, the other screen that shows the same value.
   A sibling the review did not name is the next round's finding.
 - **Prefer narrowing or reverting to adding a mechanism.** A new cap, latch, mutex or persistence layer is
-  reviewed again at funds-safety depth.
+  reviewed again at funds-safety depth. A fix that needs a new field, flag, captured value or latch is a design
+  decision, not a fix round: write the alternative down and ask the user to take it to the maintainer on the PR
+  before coding it (#1653: one cache, four rounds, a count → an id set → a v3 fingerprint → a v4 digest; #1654:
+  "two decimals" → 21 commits, one mechanism per round; the maintainer's stated design was the one that held).
 - **Suggestions and nitpicks count.** Any open one withholds the bot's approval, and most are cheap.
 - Show the user a table (severity · file:line · finding · verified? · fix) before you change code, and follow the
   repository's conventions (CLAUDE.md, `.claude/agents/DEVELOPMENT-PATTERNS.md`).
-- After the fixes, commit and run the review again. The new commit is a new range. **At most two rounds per
-  push.** A fix adds code, and the next round reads that code with the same eyes: on a long-running change the
+- After the fixes, commit and run the review again. The new commit is a new range, and this second round is not
+  optional once the first found a blocker: on #1670 round 1 found three blockers, the fix went out unreviewed, and
+  the bot's first blocker sat on a line of that fix commit (`ConnectAvailability.kt`, `1d216ed3e`). **At most two
+  rounds per push.** A fix adds code, and the next round reads that code with the same eyes: on a long-running change the
   rounds stop converging (this skill's own branch took 9 rounds on one of the bot's findings, each round a real
   but smaller hole in the previous fix). After the second round, push what is there and let thepastaclaw be the
   judge — its round is cheaper than ours, it runs four passes, and it carries findings forward anyway. Say in
   the PR what the last round still listed.
 - A pre-existing problem the change neither introduced nor is responsible for is not a finding: the bot leaves
   those out too, so drop it. A finding that IS in scope but that the user decides to defer needs a tracking issue
-  linked on the PR, or the bot keeps reporting it. Draft that issue for the user; do not open it yourself.
+  linked on the PR, or the bot keeps reporting it — an "open items" list in the PR description is not a deferral
+  (#1662: four of the bot's eight blockers were the items the description had listed as known and not addressed).
+  Draft that issue for the user; do not open it yourself.
 
 ## Scope
 
@@ -69,13 +82,17 @@ login) is in scope and gets fixed.
    path it affects — then either fix that path or argue the point, on the thread.)
 2. **At most two local rounds per push** (a third only when the user asks for it). When each round finds holes in
    the previous fix, get out with the smallest change, or ask the user what to do next.
-3. **Locally, blocking and major only.** Suggestions and nitpicks wait for the bot's own round, where they are
-   cheap to close and where its approval needs them closed.
+3. **Locally, every blocking finding and every suggestion that is a few lines of existing code.** The bot approves
+   only at zero findings of every severity, and its verifier upgrades about half of what this report calls a
+   suggestion (4 of 7 blockers on #1645/#1654/#1666 were our suggestions). A larger suggestion is deferred with a
+   tracking issue linked on the PR, in the same push. Nitpicks wait for the bot's own round.
 4. **Push back when a comment is not about our code or does not matter in our case**: reply with the reasons,
    do not resolve the thread — the bot re-checks on reply.
 5. **The narrowest fix, never a new mechanism for a suggestion.** Fix a bot's suggestion only when it is a line or
    two of the existing code; otherwise answer it and defer. On this skill's own PR, two of the three blockers of a
    round came from the previous round's suggestion fixes.
+6. **A new mechanism is a design decision.** A fix that needs a new field, flag, captured value or latch stops here:
+   the alternative goes to the user, and to the maintainer on the PR, before anyone codes it (see "Act on it").
 
 Pushing is the user's call. Push only when asked.
 
