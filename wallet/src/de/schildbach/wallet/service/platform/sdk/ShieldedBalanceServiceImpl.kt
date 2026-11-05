@@ -746,6 +746,20 @@ interface ShieldedSource {
 
     /** Type 19: shielded → Core L1. Blocks for the proof. */
     suspend fun withdraw(walletId: ByteArray, toCoreAddress: String, amountCredits: Long, coreFeePerByte: Int)
+
+    /**
+     * Type 22: shielded → existing identity [identityId] (32 bytes). Blocks for the proof.
+     * Default throws: only the production source (and fakes that exercise it) need it.
+     */
+    suspend fun identityTopUpFromPool(walletId: ByteArray, identityId: ByteArray, amountCredits: Long): Unit =
+        throw UnsupportedOperationException("identity top-up from the pool not supported by this source")
+
+    /**
+     * The flat 2-action pool fee in credits for [kind]. Default throws: only the
+     * production source (and fakes that exercise it) need it.
+     */
+    suspend fun estimateSpendFeeCredits(kind: ShieldedFeeKind): Long =
+        throw UnsupportedOperationException("fee estimate not supported by this source")
 }
 
 /** Production [ShieldedSource]: boots the SDK on demand. */
@@ -959,6 +973,24 @@ internal class DashSdkShieldedSource(
         amount = amountCredits,
         coreFeePerByte = coreFeePerByte
     )
+
+    override suspend fun identityTopUpFromPool(walletId: ByteArray, identityId: ByteArray, amountCredits: Long) =
+        manager().shieldedIdentityTopUpFromPool(
+            walletId = walletId,
+            identityId = identityId,
+            amount = amountCredits
+        )
+
+    override suspend fun estimateSpendFeeCredits(kind: ShieldedFeeKind): Long =
+        manager().estimateShieldedFee(
+            when (kind) {
+                ShieldedFeeKind.TRANSFER -> ShieldedProver.FeeKind.TransferOrShield
+                ShieldedFeeKind.UNSHIELD -> ShieldedProver.FeeKind.Unshield
+                ShieldedFeeKind.WITHDRAWAL -> ShieldedProver.FeeKind.Withdrawal
+                ShieldedFeeKind.IDENTITY_TOP_UP -> ShieldedProver.FeeKind.IdentityTopUpFromPool
+            },
+            SHIELD_NUM_ACTIONS
+        )
 }
 
 /**
@@ -2179,7 +2211,13 @@ class ShieldedBalanceServiceImpl internal constructor(
         amount: Dash,
         fundingPath: String?,
         expectedWalletIdHex: String? = null,
-        onSubmitting: suspend () -> Unit = {}
+        onSubmitting: suspend () -> Unit = {},
+        /**
+         * An external Orchard recipient (raw 43 bytes) instead of the wallet's own default
+         * address — [shieldFromWalletToAddress]. Changes the stage (b) classification, see
+         * [classifyWalletShieldFailure].
+         */
+        externalRecipientRaw43: ByteArray? = null
     ): SdkWriteResult<ShieldFromWalletOutcome> {
         val operation = if (fundingPath == null) "shieldFromWallet" else "shieldMixedFundsFromWallet"
         if (!isEnabled()) return SdkWriteResult.NotBroadcast("flag off")
@@ -2236,7 +2274,7 @@ class ShieldedBalanceServiceImpl internal constructor(
             )
         }
 
-        val recipient = try {
+        val recipient = externalRecipientRaw43 ?: try {
             source.shieldedDefaultAddress(walletId)
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
@@ -2393,7 +2431,10 @@ class ShieldedBalanceServiceImpl internal constructor(
                             SdkWriteResult.Broadcast(ShieldFromWalletOutcome.COMPLETED)
                         } catch (t: Throwable) {
                             if (t is CancellationException) throw t
-                            classifyWalletShieldFailure(operation, walletId, lockedBefore, t)
+                            classifyWalletShieldFailure(
+                                operation, walletId, lockedBefore, t,
+                                externalRecipient = externalRecipientRaw43 != null
+                            )
                         }
                     }
                     )
@@ -2418,13 +2459,31 @@ class ShieldedBalanceServiceImpl internal constructor(
         operation: String,
         walletId: ByteArray,
         lockedBefore: Set<String>,
-        failure: Throwable
+        failure: Throwable,
+        /**
+         * The lock pays someone else ([shieldFromWalletToAddress]). The resume sweep always
+         * pays the sender's own address, so SHIELD_PENDING_RETRY ("the funds come back to
+         * you") is only true when stage (b) provably did not submit; a stage (b) failure that
+         * may have reached Platform is Ambiguous (the recipient may have been paid).
+         */
+        externalRecipient: Boolean = false
     ): SdkWriteResult<ShieldFromWalletOutcome> {
         val newLocks = try {
             trackedShieldLocks(walletId).filter { it.outPointHex !in lockedBefore && it.resumable }
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             log.error("shielded {} failed and the tracked-lock evidence is unreadable", operation, failure)
+            return SdkWriteResult.Ambiguous(failure)
+        }
+        if (newLocks.isNotEmpty() && externalRecipient &&
+            classifyBroadcastFailure(failure) !is SdkWriteResult.NotBroadcast
+        ) {
+            log.error(
+                "shielded {}: the L1 asset lock is out and the shield transition to the external " +
+                    "recipient may have been submitted — outcome unconfirmed; if it was not, the " +
+                    "pending-shield sweep returns the lock to this wallet's own shielded balance",
+                operation, failure
+            )
             return SdkWriteResult.Ambiguous(failure)
         }
         if (newLocks.isNotEmpty()) {
@@ -2593,6 +2652,79 @@ class ShieldedBalanceServiceImpl internal constructor(
         toAddress: String,
         amount: Dash,
         memo: String?
+    ): SdkWriteResult<Unit> = transferShieldedInternal(toAddress, amount, memo, expectedWalletIdHex = null)
+
+    override suspend fun transferShieldedExternal(
+        toAddress: String,
+        amount: Dash,
+        expectedWalletIdHex: String
+    ): SdkWriteResult<Unit> = transferShieldedInternal(toAddress, amount, memo = null, expectedWalletIdHex)
+
+    override suspend fun withdrawToCoreExternal(
+        addressBase58: String,
+        amount: Dash,
+        expectedWalletIdHex: String
+    ): SdkWriteResult<Unit> = withdrawToCoreInternal(addressBase58, amount, expectedWalletIdHex)
+
+    override suspend fun unshieldToPlatformAddress(
+        toPlatformAddress: String,
+        amount: Dash,
+        expectedWalletIdHex: String
+    ): SdkWriteResult<Unit> {
+        val target = toPlatformAddress.trim()
+        if (target.isEmpty()) {
+            return notBroadcast("unshieldToPlatformAddress", "empty platform address", null)
+        }
+        return runShieldedWrite("unshieldToPlatformAddress", amount, expectedWalletIdHex) { walletId, credits ->
+            source.unshield(walletId, target, credits)
+        }
+    }
+
+    override suspend fun topUpIdentityFromShielded(
+        identityId: ByteArray,
+        amount: Dash,
+        expectedWalletIdHex: String
+    ): SdkWriteResult<Unit> {
+        if (identityId.size != 32) {
+            return notBroadcast("topUpIdentityFromShielded", "identity id is not 32 bytes", null)
+        }
+        val target = identityId.copyOf()
+        return runShieldedWrite("topUpIdentityFromShielded", amount, expectedWalletIdHex) { walletId, credits ->
+            source.identityTopUpFromPool(walletId, target, credits)
+        }
+    }
+
+    override suspend fun shieldFromWalletToAddress(
+        toShieldedAddress: String,
+        amount: Dash,
+        expectedWalletIdHex: String
+    ): SdkWriteResult<ShieldFromWalletOutcome> {
+        val recipientRaw43 = decodeOrchardAddress(toShieldedAddress, displayHrpSafe())
+            ?: return notBroadcast("shieldFromWallet", "malformed or wrong-network shielded address", null)
+        return shieldFromWalletInternal(
+            amount,
+            fundingPath = null,
+            expectedWalletIdHex = expectedWalletIdHex,
+            externalRecipientRaw43 = recipientRaw43
+        )
+    }
+
+    override suspend fun estimateShieldedFeeCredits(kind: ShieldedFeeKind): Long? {
+        if (!isEnabled()) return null
+        return try {
+            source.estimateSpendFeeCredits(kind).takeIf { it >= 0 }
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("shielded fee estimate failed; the fee is unknown", t)
+            null
+        }
+    }
+
+    private suspend fun transferShieldedInternal(
+        toAddress: String,
+        amount: Dash,
+        memo: String?,
+        expectedWalletIdHex: String?
     ): SdkWriteResult<Unit> {
         // Pure preflights first — provably nothing submitted.
         val recipientRaw43 = decodeOrchardAddress(toAddress, displayHrpSafe())
@@ -2601,7 +2733,7 @@ class ShieldedBalanceServiceImpl internal constructor(
         if (cleanMemo != null && cleanMemo.toByteArray(Charsets.UTF_8).size > MAX_SHIELDED_MEMO_BYTES) {
             return notBroadcast("transferShielded", "memo exceeds $MAX_SHIELDED_MEMO_BYTES UTF-8 bytes", null)
         }
-        return runShieldedWrite("transferShielded", amount) { walletId, credits ->
+        return runShieldedWrite("transferShielded", amount, expectedWalletIdHex) { walletId, credits ->
             source.transfer(walletId, recipientRaw43, credits, cleanMemo)
         }
     }
@@ -2617,12 +2749,19 @@ class ShieldedBalanceServiceImpl internal constructor(
             source.unshield(walletId, target, credits)
         }
 
-    override suspend fun withdrawToCore(addressBase58: String, amount: Dash): SdkWriteResult<Unit> {
+    override suspend fun withdrawToCore(addressBase58: String, amount: Dash): SdkWriteResult<Unit> =
+        withdrawToCoreInternal(addressBase58, amount, expectedWalletIdHex = null)
+
+    private suspend fun withdrawToCoreInternal(
+        addressBase58: String,
+        amount: Dash,
+        expectedWalletIdHex: String?
+    ): SdkWriteResult<Unit> {
         val address = addressBase58.trim()
         if (address.isEmpty()) {
             return notBroadcast("withdrawToCore", "empty core address", null)
         }
-        return runShieldedWrite("withdrawToCore", amount) { walletId, credits ->
+        return runShieldedWrite("withdrawToCore", amount, expectedWalletIdHex) { walletId, credits ->
             source.withdraw(walletId, address, credits, WITHDRAW_CORE_FEE_PER_BYTE)
         }
     }
@@ -2649,6 +2788,8 @@ class ShieldedBalanceServiceImpl internal constructor(
     private suspend fun runShieldedWrite(
         operation: String,
         amount: Dash,
+        /** When set, the ready runtime must be bound to this SDK wallet, else NotBroadcast. */
+        expectedWalletIdHex: String? = null,
         block: suspend (walletId: ByteArray, amountCredits: Long) -> Unit
     ): SdkWriteResult<Unit> {
         if (!isEnabled()) return SdkWriteResult.NotBroadcast("flag off")
@@ -2665,7 +2806,12 @@ class ShieldedBalanceServiceImpl internal constructor(
         if (!ensureShieldedReady()) {
             return notBroadcast(operation, "shielded runtime not ready", null)
         }
-        val walletId = readyWalletIdHex.value?.let(::walletIdFromHex)
+        val walletIdHex = readyWalletIdHex.value
+            ?: return notBroadcast(operation, "shielded runtime not ready", null)
+        if (expectedWalletIdHex != null && !walletIdHex.equals(expectedWalletIdHex, ignoreCase = true)) {
+            return notBroadcast(operation, "the shielded runtime is bound to another wallet", null)
+        }
+        val walletId = walletIdFromHex(walletIdHex)
             ?: return notBroadcast(operation, "shielded runtime not ready", null)
 
         // The single broadcast attempt (~30s Halo 2 proof — callers show
