@@ -292,6 +292,8 @@ class ExternalSendViewModel internal constructor(
                     ExternalSendExecution.InterruptedByRestart ->
                         ExternalSendStatus.Done(ExternalSendResult.MayHaveGoneThrough, afterRestart = true)
                     ExternalSendExecution.Idle -> ExternalSendStatus.Idle
+                    // An outcome being dismissed: no dialog, nothing can be sent yet.
+                    ExternalSendExecution.Acknowledging -> ExternalSendStatus.Restoring
                     is ExternalSendExecution.Sending -> ExternalSendStatus.Sending(
                         hasShieldedLeg(execution.request.source, execution.request.destination)
                     )

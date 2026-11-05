@@ -71,6 +71,13 @@ sealed class ExternalSendExecution {
      * history". Terminal until acknowledged.
      */
     object InterruptedByRestart : ExternalSendExecution()
+
+    /**
+     * An outcome was acknowledged and its marker is being cleared: claimed atomically so a
+     * second acknowledgement does nothing, and not Idle so nothing new can be submitted (and
+     * have its own marker wiped) before the clear finishes. Becomes Idle after the clear.
+     */
+    object Acknowledging : ExternalSendExecution()
 }
 
 /**
@@ -98,9 +105,11 @@ internal class DashPayConfigInFlightMarker(private val config: DashPayConfig) : 
  * sees the outcome when they open the external send again.
  *
  * Process death: before the request is handed to the service the in-flight marker is written
- * (a failed write sends nothing). It is cleared only on a definitive Sent / Not sent, and on an
- * unknown outcome only when the user acknowledges it. A fresh process that finds it set (or
- * cannot read it) starts in [ExternalSendExecution.InterruptedByRestart].
+ * (a failed write sends nothing). It is cleared right away only on Not sent (nothing spent);
+ * on Sent and on an unknown outcome only when the user acknowledges it, so a process that dies
+ * before the user saw a Sent still warns on the next launch instead of offering the form again.
+ * A fresh process that finds it set (or cannot read it) starts in
+ * [ExternalSendExecution.InterruptedByRestart].
  *
  * Deliberately simpler than the shielded [de.schildbach.wallet.ui.shielded.ShieldedTransferExecutor]:
  * no system notification and no stall watchdog. The service is itself single-flight.
@@ -197,9 +206,11 @@ class ExternalSendExecutor internal constructor(
                 log.error("external send threw; outcome unknown", e)
             } finally {
                 log.info("external send {} → {} finished: {}", request.source, kindOf(request.destination), kindOf(result))
-                // Cleared BEFORE the outcome is published: a later submit (only after this
-                // one is acknowledged) can never have its own marker cleared by this one.
-                if (marked && isDefinitive(result)) {
+                // Only Not sent (nothing spent) clears here; Sent keeps the restart
+                // protection until acknowledged. Cleared BEFORE the outcome is published: a
+                // later submit (only after this one is acknowledged) can never have its own
+                // marker cleared by this one.
+                if (marked && result is ExternalSendResult.NotSent) {
                     withContext(NonCancellable) { clearMarker() }
                 }
                 _state.value = ExternalSendExecution.Finished(request, result)
@@ -209,24 +220,27 @@ class ExternalSendExecutor internal constructor(
     }
 
     /**
-     * The screen showed the outcome; the executor is free again. An unknown outcome (or a
-     * restart-interrupted one) clears the marker first, and only then becomes Idle, so the
-     * clear can never race a new send's marker.
+     * The screen showed the outcome; the executor is free again. A Not sent outcome (marker
+     * already cleared) becomes Idle at once. Any other outcome is first CLAIMED — atomically
+     * moved to [ExternalSendExecution.Acknowledging] — so only one acknowledgement clears the
+     * marker; it becomes Idle only after the clear, so the clear can never race a new send's
+     * marker. A losing (duplicate) acknowledgement does nothing.
      */
     fun acknowledge() {
         val current = _state.value
         val needsClear = when (current) {
-            is ExternalSendExecution.Finished -> !isDefinitive(current.result)
+            is ExternalSendExecution.Finished -> current.result !is ExternalSendResult.NotSent
             ExternalSendExecution.InterruptedByRestart -> true
             else -> return
         }
         if (!needsClear) {
-            _state.update { if (it === current) ExternalSendExecution.Idle else it }
+            _state.compareAndSet(current, ExternalSendExecution.Idle)
             return
         }
+        if (!_state.compareAndSet(current, ExternalSendExecution.Acknowledging)) return
         applicationScope.launch {
             clearMarker()
-            _state.update { if (it === current) ExternalSendExecution.Idle else it }
+            _state.compareAndSet(ExternalSendExecution.Acknowledging, ExternalSendExecution.Idle)
         }
     }
 
@@ -240,10 +254,6 @@ class ExternalSendExecutor internal constructor(
             log.warn("external send: could not clear the in-flight marker", e)
         }
     }
-
-    /** Sent and Not sent are definitive; anything else may have moved money. */
-    private fun isDefinitive(result: ExternalSendResult): Boolean =
-        result is ExternalSendResult.Sent || result is ExternalSendResult.NotSent
 
     private fun kindOf(destination: SendDestination): String = destination::class.java.simpleName
 
