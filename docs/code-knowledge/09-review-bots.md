@@ -34,8 +34,17 @@
 1. Fix only code the PR touches. A finding on code outside the PR gets an answer explaining why it is not this change's
    concern; it is not silently fixed.
 2. At most two local `/pre-review` rounds per push. A third only when the owner asks for it. If we are digging in (each round finds holes in the previous fix),
-   get out with the smallest change or ask.
-3. Locally, act only on blocking/major findings. Suggestions and nitpicks wait for the bot's own round.
+   get out with the smallest change or ask. The second round is not optional once the first found a blocker: the fix
+   is new code the bot reads with the same eyes. On #1670 round 1 found three blockers, the fix went out unreviewed,
+   and the bot's first blocker sat on a line of that fix commit (`ConnectAvailability.kt`, `1d216ed3e`).
+   A pre-review finding deferred in the PR description is not deferred for the bot: on #1662 four of its eight
+   blockers were the "open items (known, not addressed here)" the description listed. Deferring needs a tracking
+   issue linked on the PR, or the item gets fixed.
+3. Locally, fix every blocking finding and every suggestion the GPT-6.1 Sol lane raised that is a few lines of
+   existing code. The bot approves only at zero findings of every severity, and its verifier does not share our
+   severity scale: on #1645, #1654 and #1666 (2026-10-27 … 11-03) four of its six blockers were suggestions in our
+   own pre-review report, twice after we had downgraded what the Sol lane rated blocking. A larger suggestion is
+   deferred with a tracking issue linked on the PR, in the same push. Nitpicks wait for the bot's own round.
 4. Pushing back on thepastaclaw is allowed and expected when a comment does not concern our code or is immaterial in
    our case.
 5. Fix only what the bot found, the narrowest way, with no new mechanism. A suggestion is fixed only when it is a line
@@ -43,13 +52,29 @@
    findings forward.
 6. Once the bot reports no blocking findings, stop fixing. Report the remaining suggestions and nitpicks; take a new
    blocker to the owner first.
+7. A fix that needs a new field, flag, capture or latch is a design decision, not a fix round. Write the alternative
+   down and ask the maintainer on the PR before coding it; prefer the design the maintainer stated from the first
+   commit. Four of the six blockers on #1645/#1654/#1666 sat on code an earlier fix round wrote, and #1654 went from
+   "round the fiat line to two decimals" to 21 commits one mechanism at a time (`maxSelected` → `pinnedAmount` → a
+   captured amount → validating the captured amount); the maintainer's `maxSelected` design was the one that held.
+8. A refutation cites the version the module *resolves*, which is neither the one `build.gradle` declares nor the
+   newest jar in the Gradle cache. Ask Gradle, per module and variant configuration (an Android module has no
+   default `compileClasspath`):
+   `./gradlew :<module>:dependencyInsight --configuration <variant>RuntimeClasspath --dependency <group:artifact>`,
+   e.g. `./gradlew :wallet:dependencyInsight --configuration _testNet3DebugRuntimeClasspath --dependency
+   androidx.paging:paging-common`. Then `javap` on that jar, and the resolved version in the reply. On #1666 both
+   sides argued from a file: `wallet/build.gradle` says `paging-runtime-ktx:3.1.1`, so one side reasoned from 3.1.1
+   (whose `PagingData.empty()` dispatches load states) and the other from the 3.3.2 jar it found in the cache. The
+   command above answers `3.3.2`: Room 2.7.1, pinned through the SDK, lifts the whole `androidx.paging` atomic
+   group by conflict resolution. A failing test the finding's sequence cannot make pass is the other acceptable
+   evidence. An argument is not.
 
 ## Pushback that works
 | Situation | What to say (with evidence) | Example |
 |---|---|---|
 | The defect exists unchanged in the base | Name the base commit; say it is not introduced by the diff; link a tracking issue | #1616 → #1626, #1576, #1575, #1571 |
 | The proper fix needs the SDK | Name the missing primitive, say why every app-side heuristic leaves a gap, link an issue | #1621 → dash-wallet#1635; #1607 `broadcastRawTransaction` |
-| Behaviour is already correct | Show the current code or the library (e.g. `javap` shows both exceptions extend `CompletionException`) | #1608, #1566 |
+| Behaviour is already correct | Show the current code or the library (e.g. `javap` shows both exceptions extend `CompletionException`) — from the jar `dependencyInsight` resolves for the module, with its version | #1608, #1566; the wrong jar on #1666 |
 | Not reachable | Name the production gate that makes it unreachable | #1607 `shouldPrompt()` |
 | Recovery already exists | Name the code path that recovers (`MainActivity.onResume()` restarts the service) | #1568 |
 | Inherited mechanism handles it | E.g. `BaseConfig` clears all keys on wallet wipe | #1595 |
