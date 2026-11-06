@@ -506,6 +506,15 @@ object MyTheme {
             fontWeight = FontWeight(400)
         )
 
+        // Callout - the "Text/Callout" style (e.g. the Receive card's address value, Figma
+        // 7062:49310): BodyLarge's size with a tighter 21sp line height.
+        val Callout = TextStyle(
+            fontSize = 16.sp,
+            lineHeight = 21.sp,
+            fontFamily = interRegular,
+            fontWeight = FontWeight(400)
+        )
+
         // Footnote styles - secondary/explanatory text. From the "New/Text" styles that design
         // system components apply (e.g. SystemMessage's description, node 8378:445); not yet on
         // the documented typography page (node 5856:804). Same metrics as the deprecated
