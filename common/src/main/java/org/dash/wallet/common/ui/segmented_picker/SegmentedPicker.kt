@@ -35,7 +35,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalDensity
@@ -90,7 +95,17 @@ data class SegmentedPickerStyle(
     // scrolling horizontally when they overflow, instead of splitting the width equally. The
     // thumb then follows the selected option's measured bounds (e.g. the Receive balance tabs,
     // Figma 7062:49313). Horizontal mode only; off by default.
-    val fitOptionsToContent: Boolean = false
+    val fitOptionsToContent: Boolean = false,
+    // Alpha of an unselected option's title and icon tint, relative to textPrimary.
+    val unselectedContentAlpha: Float = 0.4f,
+    // fitOptionsToContent only: horizontal inset inside the scrolling row, so options scroll
+    // right up to the picker's edges while resting inset from them (e.g. the Receive balance
+    // tabs, Figma 7062:49313, px-[20px]). Zero by default.
+    val contentPaddingHorizontal: Float = 0f,
+    // fitOptionsToContent only: fraction of the row's width over which each end fades from
+    // transparent to opaque (a horizontal alpha mask, symmetric so direction-neutral). Zero,
+    // the default, draws no fade.
+    val edgeFadeFraction: Float = 0f
 )
 
 @Composable
@@ -234,7 +249,8 @@ fun SegmentedPicker(
                         modifier = Modifier.weight(1f),
                         paddingHorizontal = style.optionPaddingHorizontal.dp,
                         paddingVertical = style.optionPaddingVertical.dp,
-                        iconAboveTitle = style.iconAboveTitle
+                        iconAboveTitle = style.iconAboveTitle,
+                        unselectedContentAlpha = style.unselectedContentAlpha
                     )
                 }
             }
@@ -257,7 +273,8 @@ fun SegmentedPicker(
                         isHorizontal = false,
                         paddingHorizontal = style.optionPaddingHorizontal.dp,
                         paddingVertical = style.optionPaddingVertical.dp,
-                        iconAboveTitle = style.iconAboveTitle
+                        iconAboveTitle = style.iconAboveTitle,
+                        unselectedContentAlpha = style.unselectedContentAlpha
                     )
                 }
             }
@@ -268,7 +285,8 @@ fun SegmentedPicker(
 /**
  * [SegmentedPicker] with [SegmentedPickerStyle.fitOptionsToContent]: options keep their own
  * width, start-aligned, and scroll horizontally when they do not fit. The thumb is drawn under
- * the selected option's measured bounds.
+ * the selected option's measured bounds. [SegmentedPickerStyle.contentPaddingHorizontal] insets
+ * the scrolling content, and [SegmentedPickerStyle.edgeFadeFraction] fades the row's ends.
  */
 @Composable
 private fun FitContentSegmentedPicker(
@@ -308,14 +326,42 @@ private fun FitContentSegmentedPicker(
         label = "fitThumbWidth"
     )
 
+    val edgeFade = style.edgeFadeFraction
     Box(
         modifier = modifier
+            .then(
+                if (edgeFade > 0f) {
+                    Modifier
+                        // Offscreen so DstIn masks only this row, not what is behind it.
+                        .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                        .drawWithContent {
+                            drawContent()
+                            drawRect(
+                                brush = Brush.horizontalGradient(
+                                    0f to Color.Transparent,
+                                    edgeFade to Color.Black,
+                                    1f - edgeFade to Color.Black,
+                                    1f to Color.Transparent
+                                ),
+                                blendMode = BlendMode.DstIn
+                            )
+                        }
+                } else {
+                    Modifier
+                }
+            )
             .clip(RoundedCornerShape(style.cornerRadius.dp))
             .background(backgroundColor)
             .padding(style.containerPadding.dp)
             .horizontalScroll(rememberScrollState())
     ) {
-        Box(modifier = Modifier.fillMaxHeight()) {
+        // The inset sits inside the scroll, around both the thumb and the row, so the measured
+        // option offsets and the thumb's absoluteOffset share one origin.
+        Box(
+            modifier = Modifier
+                .fillMaxHeight()
+                .padding(horizontal = style.contentPaddingHorizontal.dp)
+        ) {
             if (showSelection && selectedBounds != null) {
                 SelectionThumb(
                     style = style,
@@ -347,7 +393,8 @@ private fun FitContentSegmentedPicker(
                             },
                         paddingHorizontal = style.optionPaddingHorizontal.dp,
                         paddingVertical = style.optionPaddingVertical.dp,
-                        iconAboveTitle = style.iconAboveTitle
+                        iconAboveTitle = style.iconAboveTitle,
+                        unselectedContentAlpha = style.unselectedContentAlpha
                     )
                 }
             }
@@ -376,7 +423,8 @@ private fun OptionContent(
     isHorizontal: Boolean = true,
     paddingHorizontal: Dp = 0.dp,
     paddingVertical: Dp = 0.dp,
-    iconAboveTitle: Boolean = false
+    iconAboveTitle: Boolean = false,
+    unselectedContentAlpha: Float = 0.4f
 ) {
     Box(
         modifier = modifier
@@ -393,7 +441,7 @@ private fun OptionContent(
                 Icon(
                     painter = painterResource(id = it),
                     contentDescription = null,
-                    tint = if (isSelected) Color.Unspecified else colors.textPrimary.copy(alpha = 0.4f),
+                    tint = if (isSelected) Color.Unspecified else colors.textPrimary.copy(alpha = unselectedContentAlpha),
                     modifier = iconModifier
                 )
             }
@@ -401,7 +449,7 @@ private fun OptionContent(
         val title: @Composable () -> Unit = {
             Text(
                 text = option.title,
-                color = if (isSelected) colors.textPrimary else colors.textPrimary.copy(alpha = 0.4f),
+                color = if (isSelected) colors.textPrimary else colors.textPrimary.copy(alpha = unselectedContentAlpha),
                 style = textStyle,
                 textAlign = TextAlign.Center
             )
