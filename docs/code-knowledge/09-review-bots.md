@@ -42,7 +42,7 @@
    issue linked on the PR, or the item gets fixed.
 3. Locally, fix every blocking finding and every suggestion the GPT-6.1 Sol lane raised that is a few lines of
    existing code. The bot approves only at zero findings of every severity, and its verifier does not share our
-   severity scale: on #1645, #1654 and #1666 (2026-10-27 … 11-03) four of its seven blockers were suggestions in our
+   severity scale: on #1645, #1654 and #1666 (2026-10-27 … 11-03) four of its six blockers were suggestions in our
    own pre-review report, twice after we had downgraded what the Sol lane rated blocking. A larger suggestion is
    deferred with a tracking issue linked on the PR, in the same push. Nitpicks wait for the bot's own round.
 4. Pushing back on thepastaclaw is allowed and expected when a comment does not concern our code or is immaterial in
@@ -54,14 +54,20 @@
    blocker to the owner first.
 7. A fix that needs a new field, flag, capture or latch is a design decision, not a fix round. Write the alternative
    down and ask the maintainer on the PR before coding it; prefer the design the maintainer stated from the first
-   commit. Five of the seven blockers on #1645/#1654/#1666 sat on code an earlier fix round wrote, and #1654 went from
+   commit. Four of the six blockers on #1645/#1654/#1666 sat on code an earlier fix round wrote, and #1654 went from
    "round the fiat line to two decimals" to 21 commits one mechanism at a time (`maxSelected` → `pinnedAmount` → a
    captured amount → validating the captured amount); the maintainer's `maxSelected` design was the one that held.
-8. A refutation cites the dependency the module resolves, not the newest jar on disk: `./gradlew
-   :wallet:dependencyInsight --dependency <artifact>`, then `javap` on that jar, version in the reply. #1666's
-   "placeholder" family was refuted twice from `paging-runtime 3.3.2` while `wallet/build.gradle` resolves `3.1.1`,
-   whose `PagingData.empty()` does dispatch load states; the bot blocked on it after the push. A failing test the
-   finding's sequence cannot make pass is the other acceptable evidence. An argument is not.
+8. A refutation cites the version the module *resolves*, which is neither the one `build.gradle` declares nor the
+   newest jar in the Gradle cache. Ask Gradle, per module and variant configuration (an Android module has no
+   default `compileClasspath`):
+   `./gradlew :<module>:dependencyInsight --configuration <variant>RuntimeClasspath --dependency <group:artifact>`,
+   e.g. `./gradlew :wallet:dependencyInsight --configuration _testNet3DebugRuntimeClasspath --dependency
+   androidx.paging:paging-common`. Then `javap` on that jar, and the resolved version in the reply. On #1666 both
+   sides argued from a file: `wallet/build.gradle` says `paging-runtime-ktx:3.1.1`, so one side reasoned from 3.1.1
+   (whose `PagingData.empty()` dispatches load states) and the other from the 3.3.2 jar it found in the cache. The
+   command above answers `3.3.2`: Room 2.7.1, pinned through the SDK, lifts the whole `androidx.paging` atomic
+   group by conflict resolution. A failing test the finding's sequence cannot make pass is the other acceptable
+   evidence. An argument is not.
 
 ## Pushback that works
 | Situation | What to say (with evidence) | Example |

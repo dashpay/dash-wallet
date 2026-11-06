@@ -34,12 +34,16 @@ The report is printed and kept in `~/.cache/prereview/<sha>.md`; `--status` show
 
 - **Verify every finding** against the code at HEAD: open the lines and walk the sequence it describes. Drop a
   finding the code does not support, and say why. Keep one even if it looks unlikely. **Never lower a severity**:
-  the bot's verifier is this model, and on #1645/#1654/#1666 four of its seven blockers were findings our reports
+  the bot's verifier is this model, and on #1645/#1654/#1666 four of its six blockers were findings our reports
   carried as suggestions, two of them downgraded from the model's own blocking. A finding is dropped only on
-  evidence: a test its sequence cannot make pass, or the bytecode of the dependency the module resolves —
-  `./gradlew :wallet:dependencyInsight --dependency <artifact>`, then `javap` on that jar, version noted. Not the
-  newest jar in the Gradle cache (#1666: refuted twice from `paging-runtime 3.3.2` while `wallet` resolves `3.1.1`;
-  the bot blocked on it after the push). An argument is not evidence.
+  evidence: a test its sequence cannot make pass, or the bytecode of the dependency the module *resolves* — which
+  is neither the version `build.gradle` declares nor the newest jar in the Gradle cache. Ask Gradle, per module and
+  variant configuration (an Android module has no default `compileClasspath`):
+  `./gradlew :<module>:dependencyInsight --configuration <variant>RuntimeClasspath --dependency <group:artifact>`,
+  e.g. `./gradlew :wallet:dependencyInsight --configuration _testNet3DebugRuntimeClasspath --dependency
+  androidx.paging:paging-common`; then `javap` on that jar, resolved version noted. On #1666 both sides argued
+  from a file (`build.gradle` says 3.1.1; a 3.3.2 jar sat in the cache) and the command answers 3.3.2 — Room 2.7.1
+  lifts the whole `androidx.paging` atomic group. An argument is not evidence.
 - **Fix the class, not the line.** Name the rule each finding breaks, then `git grep` every other place it must
   hold: callers, legacy / resume / retry / restore / background paths, the other screen that shows the same value.
   A sibling the review did not name is the next round's finding.
@@ -84,7 +88,7 @@ login) is in scope and gets fixed.
    the previous fix, get out with the smallest change, or ask the user what to do next.
 3. **Locally, every blocking finding and every suggestion that is a few lines of existing code.** The bot approves
    only at zero findings of every severity, and its verifier upgrades about half of what this report calls a
-   suggestion (4 of 7 blockers on #1645/#1654/#1666 were our suggestions). A larger suggestion is deferred with a
+   suggestion (4 of 6 blockers on #1645/#1654/#1666 were our suggestions). A larger suggestion is deferred with a
    tracking issue linked on the PR, in the same push. Nitpicks wait for the bot's own round.
 4. **Push back when a comment is not about our code or does not matter in our case**: reply with the reasons,
    do not resolve the thread — the bot re-checks on reply.
