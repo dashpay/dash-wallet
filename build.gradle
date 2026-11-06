@@ -8,21 +8,6 @@ buildscript {
         // truth for both the dependency coordinate (wallet/build.gradle) and the
         // DASH_SDK_VERSION BuildConfig field shown on the About screen once the
         // cutover hands L1 ownership to the SDK.
-        // Pre-release SDK snapshot published to the Sonatype snapshots repository
-        // (declared below as 'Central Portal Snapshots'; anonymous read). Pinned to
-        // the exact timestamped build, not the -SNAPSHOT name, so a later upload
-        // can't change what this commit builds. 5.1.0-int36: HashEngineering/platform
-        // integration/5.1.0-int36 @ 0db63f1e21, on v5.1-dev 9766bab24a; engine
-        // dashpay/rust-dashcore 7329126edf. Carries the TXO-reconcile rework: the
-        // reconcile policy owned by rs-platform-wallet
-        // (refactor/platform-wallet-txo-reconcile-policy @ 015edc1ca8) and the Kotlin
-        // SDK driving it (feat/kotlin-sdk-txo-reconcile-rust-policy @ ef45bb4767, the
-        // #5767 rework of the #4638 port). Carries fund-from-asset-lock with an
-        // external recipient (HashEngineering/platform
-        // feat/kotlin-sdk-fund-from-asset-lock-external @ 760d00f559). As before:
-        // #4312/#4313 (shielded), the dashj-legacy ECDH fallback and the asset-lock
-        // 1 s re-poll. #5259 is no longer carried (the reconcile rework replaces it).
-        // Recipe: HashEngineering/dash-wallet-qa recipes/platform/5.1.0-int36.yaml.
         dashSdkVersion = '5.1.0-int36-20261106.165805-1'
         // 5.0.0 carries a libsdklib.so that knows document serialization
         // format 3. Format 3 arrives with Platform protocol version 14 (it
