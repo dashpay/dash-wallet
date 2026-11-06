@@ -17,6 +17,7 @@
 package de.schildbach.wallet.service.platform
 
 import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
+import de.schildbach.wallet.service.platform.sdk.PlatformAddressSyncService
 import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -44,6 +45,7 @@ class PlatformSyncEngineTeardownTest {
 
     private val l1ShadowSyncService = mockk<L1ShadowSyncService>(relaxed = true)
     private val shieldedBalanceService = mockk<ShieldedBalanceService>(relaxed = true)
+    private val platformAddressSyncService = mockk<PlatformAddressSyncService>(relaxed = true)
     private val identityRepository = mockk<IdentityRepository>(relaxed = true)
 
     private fun service() = PlatformSynchronizationService(
@@ -75,6 +77,7 @@ class PlatformSyncEngineTeardownTest {
         nonInteractiveWalletUnlock = mockk(relaxed = true),
         l1ShadowSyncService = l1ShadowSyncService,
         shieldedBalanceService = shieldedBalanceService,
+        platformAddressSyncService = platformAddressSyncService,
         cutoverUiDataService = mockk(relaxed = true),
         sdkBlockchainStateService = mockk(relaxed = true),
         cutoverTxSeamService = mockk(relaxed = true),
@@ -92,6 +95,7 @@ class PlatformSyncEngineTeardownTest {
 
         coVerify(exactly = 1) { l1ShadowSyncService.stop() }
         coVerify(exactly = 1) { shieldedBalanceService.stop() }
+        coVerify(exactly = 1) { platformAddressSyncService.stop() }
     }
 
     @Test
@@ -100,6 +104,7 @@ class PlatformSyncEngineTeardownTest {
 
         coVerify(exactly = 1) { l1ShadowSyncService.stop() }
         coVerify(exactly = 1) { shieldedBalanceService.stop() }
+        coVerify(exactly = 1) { platformAddressSyncService.stop() }
     }
 
     @Test
@@ -110,5 +115,15 @@ class PlatformSyncEngineTeardownTest {
         service().stopSdkEngines()
 
         coVerify(exactly = 1) { shieldedBalanceService.stop() }
+    }
+
+    @Test
+    fun stopSdkEngines_failingEngineStopsStillStopThePlatformAddressSync() = runBlocking {
+        coEvery { l1ShadowSyncService.stop() } throws RuntimeException("rust client stop failed")
+        coEvery { shieldedBalanceService.stop() } throws RuntimeException("shielded stop failed")
+
+        service().stopSdkEngines()
+
+        coVerify(exactly = 1) { platformAddressSyncService.stop() }
     }
 }

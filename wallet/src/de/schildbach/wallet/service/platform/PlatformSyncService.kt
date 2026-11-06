@@ -55,6 +55,7 @@ import de.schildbach.wallet.service.platform.sdk.SdkBlockchainStateService
 import de.schildbach.wallet.service.platform.sdk.BindHealL1Starter
 import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
 import de.schildbach.wallet.service.platform.sdk.NonInteractiveWalletUnlock
+import de.schildbach.wallet.service.platform.sdk.PlatformAddressSyncService
 import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
 import de.schildbach.wallet.service.platform.sdk.SdkIdentityVerifyQueries
 import de.schildbach.wallet.service.platform.sdk.SdkProfileQueries
@@ -150,9 +151,10 @@ interface PlatformSyncService {
     suspend fun stopSync()
 
     /**
-     * Unconditionally stop the two Kotlin-SDK background engines (the L1
-     * shadow SPV and the shielded sync loop). Both stops are best-effort,
-     * failure-contained no-ops when not running. [shutdown] calls it on
+     * Unconditionally stop the Kotlin-SDK background engines (the L1 shadow
+     * SPV, the shielded sync loop and the Platform-address balance sync
+     * loop). Every stop is best-effort, a failure-contained no-op when not
+     * running. [shutdown] calls it on
      * every build type (debug builds used to skip the engine stops on the
      * routine teardown; that exemption was removed on 2026-09-25). The
      * destructive paths (wallet wipe, before `finalizeWipe()` deletes app
@@ -260,6 +262,7 @@ class PlatformSynchronizationService @Inject constructor(
     private val nonInteractiveWalletUnlock: NonInteractiveWalletUnlock,
     private val l1ShadowSyncService: L1ShadowSyncService,
     private val shieldedBalanceService: ShieldedBalanceService,
+    private val platformAddressSyncService: PlatformAddressSyncService,
     private val cutoverUiDataService: CutoverUiDataService,
     private val sdkBlockchainStateService: SdkBlockchainStateService,
     private val cutoverTxSeamService: CutoverTxSeamService,
@@ -503,7 +506,16 @@ class PlatformSynchronizationService @Inject constructor(
         bindEstablished = sdkWalletBinder.bindEstablished,
         serviceTearingDown = { de.schildbach.wallet.service.BlockchainServiceImpl.isCleaningUpNow },
         stopGeneration = { l1ShadowSyncService.stopGeneration() },
-        startL1 = { generation -> l1ShadowSyncService.startIfEnabled(expectedExternalStopGeneration = generation) }
+        startL1 = { generation ->
+            // Sampled BEFORE the liveness check: stopSdkEngines() cancels this
+            // waiter before it bumps the Platform-address stop generation, so a
+            // waiter still active here sampled the generation that stop moves.
+            val platformAddressGeneration = platformAddressSyncService.stopGeneration()
+            currentCoroutineContext().ensureActive()
+            l1ShadowSyncService.startIfEnabled(expectedExternalStopGeneration = generation).also { started ->
+                if (started) platformAddressSyncService.startIfReady(platformAddressGeneration)
+            }
+        }
     )
     private var lastTopupUpdateTime = 0L
     private var lastMetadataUpdateTime = 0L
@@ -562,6 +574,9 @@ class PlatformSynchronizationService @Inject constructor(
         StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_SDK_BIND_KICKED, "SDK_BIND_KICKED")
         val bindJob = sdkWalletBinder.bindInBackground(nonInteractiveWalletUnlock::unlockOrNull)
         val lifetime = serviceLifetime.get()
+        // Sampled with the lifetime: an engine stop after this point (shutdown,
+        // or the wipe's direct stopSdkEngines) refuses this kick's start.
+        val platformAddressGeneration = platformAddressSyncService.stopGeneration()
         startupKickJob?.cancel()
         startupKickJob = syncScope.launch {
             bindJob.join()
@@ -610,6 +625,14 @@ class PlatformSynchronizationService @Inject constructor(
                 // waiter the current lifetime armed.
                 val stillCurrent = { serviceLifetime.get() == lifetime }
                 if (started) bindHealL1Starter.cancel(stillCurrent) else bindHealL1Starter.arm(stillCurrent)
+                // Platform-address (BLAST) balance sync: without it credits other
+                // wallets send to our Platform addresses never show up. Same
+                // foreground-service lifetime as the L1 engine; it declines until
+                // the SDK wallet is bound (the bind heal above retries it), and
+                // stopSdkEngines() is its teardown. Not gated on Advanced mode:
+                // it keeps the persisted Platform balances correct for every
+                // reader (External Send, invite top-up).
+                platformAddressSyncService.startIfReady(platformAddressGeneration)
             }
             // Phase 5d follow-up: the post-cutover UI data source (balance
             // header / tx list / coins-received detection served from the
@@ -907,6 +930,9 @@ class PlatformSynchronizationService @Inject constructor(
             .onFailure { log.warn("failed to stop the L1 shadow sync on shutdown", it) }
         runCatching { shieldedBalanceService.stop() }
             .onFailure { log.warn("failed to stop the shielded runtime on shutdown", it) }
+        // Last, and after bindHealL1Starter.cancel(): its stop-generation bump
+        // must follow the heal's cancel (see bindHealL1Starter). Failure-contained.
+        platformAddressSyncService.stop()
     }
 
     override suspend fun stopSync() {

@@ -17,6 +17,8 @@
 package de.schildbach.wallet.service.platform
 
 import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
+import de.schildbach.wallet.service.platform.sdk.PlatformAddressSyncService
+import de.schildbach.wallet.service.platform.sdk.PlatformAddressSyncSource
 import de.schildbach.wallet.service.platform.sdk.SdkWalletBinder
 import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
 import de.schildbach.wallet.service.platform.sdk.WalletUnlock
@@ -69,6 +71,24 @@ class PlatformSyncEngineRestartTest {
     private val identityRepository = mockk<IdentityRepository>(relaxed = true)
     private val externalSendExecutor = mockk<ExternalSendExecutor>(relaxed = true)
 
+    /** The real start/stop fencing over a fake SDK seam (ready, not running). */
+    private class FakePlatformAddressSource : PlatformAddressSyncSource {
+        @Volatile var starts = 0
+        @Volatile var stops = 0
+        override suspend fun ready() = true
+        override suspend fun isRunning() = false
+        override suspend fun start() { starts++ }
+        override suspend fun stop() { stops++ }
+    }
+    private val platformAddressSource = FakePlatformAddressSource()
+    private val platformAddressSyncService = PlatformAddressSyncService(platformAddressSource)
+
+    private suspend fun awaitPlatformAddressStarts(expected: Int) {
+        val deadline = System.currentTimeMillis() + kickTimeoutMs
+        while (platformAddressSource.starts < expected && System.currentTimeMillis() < deadline) delay(20)
+        org.junit.Assert.assertEquals(expected, platformAddressSource.starts)
+    }
+
     /** The engine kick is asynchronous (`syncScope.launch { bindJob.join(); … }`). */
     private val kickTimeoutMs = 10_000L
 
@@ -103,6 +123,7 @@ class PlatformSyncEngineRestartTest {
         nonInteractiveWalletUnlock = mockk(relaxed = true),
         l1ShadowSyncService = l1ShadowSyncService,
         shieldedBalanceService = shieldedBalanceService,
+        platformAddressSyncService = platformAddressSyncService,
         cutoverUiDataService = mockk(relaxed = true),
         sdkBlockchainStateService = mockk(relaxed = true),
         cutoverTxSeamService = mockk(relaxed = true),
@@ -300,5 +321,44 @@ class PlatformSyncEngineRestartTest {
         // The step the kick runs after the sweep.
         verify(timeout = kickTimeoutMs, exactly = 1) { binder.provisionContactAccountsInBackground(force = true) }
         Unit
+    }
+
+    /**
+     * The Platform-address balance sync shares the L1 engine's lifetime: init() (a possibly
+     * background process) does not start it, resume() (the foreground service) does, after the
+     * bind pass, and every service restart starts it again.
+     */
+    @Test
+    fun platformAddressSync_startsFromResumeOnly_andRestartsAfterAnEngineStop() = runBlocking {
+        val service = service()
+
+        service.init()
+        delay(500)
+        org.junit.Assert.assertEquals(0, platformAddressSource.starts)
+
+        service.resume()
+        awaitPlatformAddressStarts(1)
+
+        service.stopSdkEngines()
+        org.junit.Assert.assertEquals(1, platformAddressSource.stops)
+
+        service.resume()
+        awaitPlatformAddressStarts(2)
+    }
+
+    /** A stop that lands while the kick waits on its bind leaves the Platform-address loop down. */
+    @Test
+    fun stopSdkEngines_beforeTheBindCompletes_startsNoPlatformAddressSync() = runBlocking {
+        val bind = CompletableDeferred<Unit>()
+        val binder = mockk<SdkWalletBinder>(relaxed = true)
+        every { binder.bindInBackground(any<suspend () -> WalletUnlock?>()) } returns bind
+        val service = service(sdkWalletBinder = binder)
+
+        service.resume()
+        service.stopSdkEngines()
+        bind.complete(Unit)
+        delay(500)
+
+        org.junit.Assert.assertEquals(0, platformAddressSource.starts)
     }
 }
