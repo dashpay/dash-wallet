@@ -297,6 +297,9 @@ class ExternalSendViewModel internal constructor(
             .onEach { rate -> _uiState.update { it.copy(rate = rate?.fiat) } }
             .launchIn(viewModelScope)
 
+        // Finish an interrupted Core → Platform send, if any (background, app-scoped).
+        executor.resumePendingPlatformFunding()
+
         executor.state
             .onEach { execution ->
                 val status = when (execution) {

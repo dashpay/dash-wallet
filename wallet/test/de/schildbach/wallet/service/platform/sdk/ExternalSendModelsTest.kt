@@ -239,7 +239,12 @@ class ExternalSendModelsTest {
     fun matrix_core() {
         assertEquals(SendSupport.SUPPORTED, support(SendBalance.CORE, core))
         assertEquals(SendSupport.SUPPORTED, support(SendBalance.CORE, shielded))
-        assertEquals(SendSupport.NOT_SUPPORTED_YET, support(SendBalance.CORE, platform))
+        // fundFromAssetLockExternal: P2PKH only (either network's HRP; the network is checked by the parser).
+        assertEquals(SendSupport.SUPPORTED, support(SendBalance.CORE, platform))
+        assertEquals(SendSupport.SUPPORTED, support(SendBalance.CORE, SendDestination.Platform(platformTestP2pkh)))
+        assertEquals(SendSupport.NOT_SUPPORTED_YET, support(SendBalance.CORE, SendDestination.Platform(platformMainP2sh)))
+        assertEquals(SendSupport.NOT_SUPPORTED_YET, support(SendBalance.CORE, SendDestination.Platform(platformTestP2sh)))
+        assertEquals(SendSupport.SUPPORTED, support(SendBalance.CORE, platform, hasIdentity = false))
         assertEquals(SendSupport.SUPPORTED, support(SendBalance.CORE, identity, own = true))
         assertEquals(SendSupport.NEEDS_OWN_IDENTITY, support(SendBalance.CORE, identity, own = false))
         // Could not tell: fail closed.
@@ -355,5 +360,79 @@ class ExternalSendModelsTest {
             detectSendDestination(input, test)
             detectSendDestination("dash:$input", test)
         }
+    }
+
+    // ── Core → Platform record and arithmetic ─────────────────────────
+
+    private val outPoint = "ab".repeat(32) + ":0"
+
+    private fun record(outPointHex: String? = outPoint) = PendingPlatformFunding(
+        id = "a7c1e3d2-0000-4000-8000-000000000001",
+        walletIdHex = "cd".repeat(32),
+        lockDuffs = 162_000L,
+        destination = PlatformAddressBytes(0, hash20),
+        explicitCredits = 100_000_000L,
+        remainder = PlatformAddressBytes(0, ByteArray(20) { 9 }),
+        outPointHex = outPointHex
+    )
+
+    @Test
+    fun pendingPlatformFunding_roundTrips_withAndWithoutAnOutPoint() {
+        for (original in listOf(record(), record(outPointHex = null))) {
+            val decoded = PendingPlatformFunding.decode(original.encode())
+            assertTrue(decoded.sameAs(original))
+        }
+        assertTrue(record(null).withOutPoint(outPoint).sameAs(record()))
+        assertFalse(record(null).sameAs(record()))
+    }
+
+    @Test
+    fun pendingPlatformFunding_malformed_isAnError_neverAbsent() {
+        val good = record().encode()
+        val malformed = listOf(
+            "",
+            "2" + good.substring(1),
+            good.replace("|162000|", "|-1|"),
+            good.replace("|162000|", "|x|"),
+            good + "|extra",
+            good.replace(":0", ":"),
+            good.substringBeforeLast('|') + "|" + "ab".repeat(31) + ":0",
+            // A P2SH recipient can never be persisted.
+            good.replaceFirst("|0|", "|1|")
+        )
+        for (text in malformed) {
+            try {
+                PendingPlatformFunding.decode(text)
+                throw AssertionError("decoded a malformed record")
+            } catch (e: IllegalStateException) {
+                // expected
+            }
+        }
+    }
+
+    @Test
+    fun pendingPlatformFunding_refusesARemainderThatIsThePayee_andRedactsItself() {
+        try {
+            PendingPlatformFunding("id", "cd".repeat(32), 1L, PlatformAddressBytes(0, hash20), 1L, PlatformAddressBytes(0, hash20), null)
+            throw AssertionError("accepted the payee as the remainder")
+        } catch (e: IllegalArgumentException) {
+            // expected
+        }
+        val text = record().toString()
+        assertFalse(text.contains("162000"))
+        assertFalse(text.contains("cdcd"))
+        assertFalse(text.contains("abab"))
+    }
+
+    @Test
+    fun coreToPlatform_arithmetic() {
+        assertEquals(62_000L, PLATFORM_FUNDING_FEE_MARGIN_DUFFS)
+        assertEquals(162_000L, platformFundingLockDuffs(100_000L))
+        // The L1 reserve ((n * 148 + 300) * 2, at least 1000 duffs) plus the margin.
+        assertEquals(1_000L + 62_000L, coreToPlatformFeeDuffs(1))
+        assertEquals(1_192L + 62_000L, coreToPlatformFeeDuffs(2))
+        assertEquals(1L, coreToPlatformMaxDuffs(63_193L, 2))
+        assertNull(coreToPlatformMaxDuffs(63_192L, 2))
+        assertNull(coreToPlatformMaxDuffs(0L, 2))
     }
 }

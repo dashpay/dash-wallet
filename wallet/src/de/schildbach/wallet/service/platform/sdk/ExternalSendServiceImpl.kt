@@ -24,6 +24,7 @@ import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.payments.SendEngineNotSyncedException
 import de.schildbach.wallet.payments.SendNotSdkRoutableException
 import de.schildbach.wallet.payments.SendSignerLockedException
+import de.schildbach.wallet.payments.PendingPaymentFundingGate
 import de.schildbach.wallet.payments.isCompleteTxFailure
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.shielded.assetLockMaxFeeReserve
@@ -31,6 +32,7 @@ import de.schildbach.wallet.ui.shielded.shieldedMaxFeeAdjustment
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -53,7 +55,10 @@ import org.dash.wallet.common.services.WalletSession
 import org.dash.wallet.common.util.readRetryDelayMs
 import org.dashfoundation.dashsdk.credits.FundingInput
 import org.slf4j.LoggerFactory
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -258,6 +263,58 @@ internal interface ExternalSendSource {
         amountCredits: Long
     )
     suspend fun identityTransfer(walletIdHex: String, fromId: ByteArray, toId: ByteArray, amountCredits: Long)
+
+    // Core → Platform (`fundFromAssetLockExternal`)
+
+    /**
+     * The L1 funding gate ([SdkL1SendService.probeSendGate]): true only while the SDK's own
+     * Core wallet has a complete, current view of the chain to build an asset lock from.
+     */
+    fun coreFundingGateOpen(): Boolean
+
+    /**
+     * Run [build], a FRESH asset-lock build, under the pending-payment funding gate's shared
+     * selection lock ([de.schildbach.wallet.payments.PendingPaymentFundingGate]); null (nothing
+     * run) while an uncertain earlier payment's inputs are exposed or a wallet wipe ran.
+     */
+    suspend fun <T> withFreshCoreFunding(build: suspend () -> T): T?
+
+    /**
+     * A P2PKH address of [walletIdHex]'s own Platform payment account
+     * ([EXTERNAL_FUNDING_PLATFORM_ACCOUNT_INDEX]) other than [excludeHash], for the remainder:
+     * the lowest unused index, else the lowest index (the selection the wallet's other
+     * self-payments use). Null when there is none; throws when unreadable.
+     */
+    suspend fun ownPlatformRemainderAddress(walletIdHex: String, excludeHash: ByteArray): PlatformAddressBytes?
+
+    /**
+     * `fundFromAssetLockExternal` of [record] from its wallet (BIP44 account
+     * [EXTERNAL_FUNDING_ACCOUNT_INDEX]): locks [PendingPlatformFunding.lockDuffs] and pays
+     * [PendingPlatformFunding.recipients]. [onAssetLockBuilt] gets the new lock's outpoint key
+     * synchronously on an SDK thread, before broadcast. Throws on failure.
+     */
+    suspend fun fundPlatformExternal(record: PendingPlatformFunding, onAssetLockBuilt: (outPointHex: String) -> Unit)
+
+    /**
+     * `resumeFundFromAssetLockExternal` of [record]'s tracked lock
+     * ([PendingPlatformFunding.outPointHex], required) with exactly its recipients. Throws on
+     * failure (an already-consumed lock as `AssetLockAlreadyConsumed`, see
+     * [isAssetLockAlreadyConsumed]).
+     */
+    suspend fun resumePlatformFundingExternal(record: PendingPlatformFunding)
+
+    /**
+     * The SDK's tracked status of [walletIdHex]'s asset lock [outPointHex]
+     * ([ASSET_LOCK_STATUS_CONSUMED] = done), null when the SDK tracks no such lock of that
+     * wallet; throws when unreadable.
+     */
+    suspend fun trackedAssetLockStatus(walletIdHex: String, outPointHex: String): Int?
+
+    /**
+     * Whether [walletIdHex] has any Platform-address funding lock
+     * ([ASSET_LOCK_FUNDING_TYPE_ADDRESS_TOPUP]) that is not Consumed; throws when unreadable.
+     */
+    suspend fun hasUnconsumedAddressFundingLocks(walletIdHex: String): Boolean
 }
 
 /** Production [ExternalSendSource]. */
@@ -272,7 +329,8 @@ internal class DashSdkExternalSendSource(
     private val usernameQueries: SdkUsernameQueries,
     private val dashPayConfig: DashPayConfig,
     private val identityConfig: BlockchainIdentityConfig,
-    private val walletData: WalletData
+    private val walletData: WalletData,
+    private val fundingGate: PendingPaymentFundingGate
 ) : ExternalSendSource {
 
     private suspend fun manager(): org.dashfoundation.dashsdk.wallet.PlatformWalletManager {
@@ -458,6 +516,70 @@ internal class DashSdkExternalSendSource(
         )
     }
 
+    override fun coreFundingGateOpen(): Boolean = sdkL1SendService.probeSendGate().allowed
+
+    override suspend fun <T> withFreshCoreFunding(build: suspend () -> T): T? =
+        fundingGate.selectionLock.selectIfAllowed({ fundingGate.isFreshFundingBlocked() }, build)?.value
+
+    private suspend fun database(): org.dashfoundation.dashsdk.persistence.DashDatabase {
+        sdkService.ensureStarted()
+        return checkNotNull(sdkService.databaseOrNull()) { "SDK database missing after ensureStarted()" }
+    }
+
+    private fun walletIdBytes(walletIdHex: String): ByteArray =
+        checkNotNull(walletIdFromHex(walletIdHex)) { "malformed SDK wallet id" }
+
+    override suspend fun ownPlatformRemainderAddress(walletIdHex: String, excludeHash: ByteArray): PlatformAddressBytes? {
+        val rows = database().platformAddressDao().observeByWallet(walletIdBytes(walletIdHex)).first()
+            .filter {
+                it.accountIndex == EXTERNAL_FUNDING_PLATFORM_ACCOUNT_INDEX &&
+                    it.addressType == 0 &&
+                    it.addressHash.size == 20 &&
+                    !it.addressHash.contentEquals(excludeHash)
+            }
+        val row = rows.filter { !it.isUsed }.minByOrNull { it.addressIndex } ?: rows.minByOrNull { it.addressIndex }
+        return row?.let { PlatformAddressBytes(0, it.addressHash.copyOf()) }
+    }
+
+    override suspend fun fundPlatformExternal(record: PendingPlatformFunding, onAssetLockBuilt: (String) -> Unit) {
+        val manager = manager()
+        wallet(record.walletIdHex).fundFromAssetLockExternal(
+            amountDuffs = record.lockDuffs,
+            fundingAccountIndex = EXTERNAL_FUNDING_ACCOUNT_INDEX,
+            platformAccountIndex = EXTERNAL_FUNDING_PLATFORM_ACCOUNT_INDEX,
+            recipients = record.recipients,
+            signerHandle = manager.signerHandle,
+            coreSignerHandle = manager.mnemonicResolverHandle,
+            onAssetLockBuilt = { outPoint -> onAssetLockBuilt(outPoint.outPointHex) }
+        )
+    }
+
+    override suspend fun resumePlatformFundingExternal(record: PendingPlatformFunding) {
+        val outPoint = checkNotNull(record.outPointHex?.let(::parseOutPointHex)) { "no lock outpoint recorded" }
+        val manager = manager()
+        wallet(record.walletIdHex).resumeFundFromAssetLockExternal(
+            outPointTxid = outPoint.first,
+            outPointVout = outPoint.second,
+            platformAccountIndex = EXTERNAL_FUNDING_PLATFORM_ACCOUNT_INDEX,
+            recipients = record.recipients,
+            signerHandle = manager.signerHandle,
+            coreSignerHandle = manager.mnemonicResolverHandle
+        )
+    }
+
+    override suspend fun trackedAssetLockStatus(walletIdHex: String, outPointHex: String): Int? {
+        val walletId = walletIdBytes(walletIdHex)
+        return database().assetLockDao().getByOutPointHex(outPointHex)
+            ?.takeIf { it.walletId.contentEquals(walletId) }
+            ?.statusRaw
+    }
+
+    override suspend fun hasUnconsumedAddressFundingLocks(walletIdHex: String): Boolean =
+        database().assetLockDao()
+            .observeByWalletAndFundingType(walletIdBytes(walletIdHex), ASSET_LOCK_FUNDING_TYPE_ADDRESS_TOPUP)
+            .first()
+            .any { it.statusRaw != ASSET_LOCK_STATUS_CONSUMED }
+
     private companion object {
         private val log = LoggerFactory.getLogger(DashSdkExternalSendSource::class.java)
     }
@@ -485,15 +607,19 @@ internal class DashSdkExternalSendSource(
  *    is [NotSentReason.GENERIC] with nothing called — and the write is pinned to the
  *    captured id;
  * 6. the outcome: Broadcast → Sent, NotBroadcast → NotSent, Ambiguous / anything
- *    unclassified → [ExternalSendResult.MayHaveGoneThrough] (terminal).
+ *    unclassified → [ExternalSendResult.MayHaveGoneThrough] (terminal). Core → Platform
+ *    additionally persists its recipients before the call and is never NotSent once its
+ *    asset lock was built ([sendCoreToPlatform], [resumePendingPlatformFunding]).
  */
 @Singleton
 class ExternalSendServiceImpl internal constructor(
     private val source: ExternalSendSource,
     private val network: AddressNetwork,
+    private val platformFundingStore: PlatformFundingStore,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val balancePollMs: Long = BALANCE_POLL_MS,
-    private val retryDelayMs: (Long) -> Long = ::readRetryDelayMs
+    private val retryDelayMs: (Long) -> Long = ::readRetryDelayMs,
+    private val newFundingId: () -> String = { UUID.randomUUID().toString() }
 ) : ExternalSendService {
 
     @Inject
@@ -507,16 +633,22 @@ class ExternalSendServiceImpl internal constructor(
         usernameQueries: SdkUsernameQueries,
         dashPayConfig: DashPayConfig,
         identityConfig: BlockchainIdentityConfig,
-        walletData: WalletData
+        walletData: WalletData,
+        fundingGate: PendingPaymentFundingGate
     ) : this(
         source = DashSdkExternalSendSource(
             sdkService, sendPaymentService, sdkL1SendService, cutoverUiDataService, shieldedBalanceService,
-            transparentTopUp, usernameQueries, dashPayConfig, identityConfig, walletData
+            transparentTopUp, usernameQueries, dashPayConfig, identityConfig, walletData, fundingGate
         ),
-        network = AddressNetwork.fromId(Constants.NETWORK_PARAMETERS.id)
+        network = AddressNetwork.fromId(Constants.NETWORK_PARAMETERS.id),
+        platformFundingStore = DashPayConfigPlatformFundingStore(dashPayConfig)
     )
 
+    /** Single-flight for [send] AND [resumePendingPlatformFunding]: the one owner of the funding record. */
     private val inFlight = AtomicBoolean(false)
+
+    /** [resumePendingPlatformFunding] attempts per funding id, this process. */
+    private val platformResumeAttempts = ConcurrentHashMap<String, Int>()
 
     // ── Reads ─────────────────────────────────────────────────────────
 
@@ -625,6 +757,10 @@ class ExternalSendServiceImpl internal constructor(
      * - Core → Shielded: the shield pool fee ([shieldPoolFeeDuffs]), paid ON TOP of the
      *   amount ([send] locks `amount + pool fee`, the recipient receives `amount`); the L1
      *   fee of the lock is extra and unknown, so not exact.
+     * - Core → Platform: [coreToPlatformFeeDuffs], paid ON TOP of the amount — the L1
+     *   asset-lock fee reserve (an upper bound) plus the Platform-fee margin, whose unused
+     *   part lands on the wallet's own Platform address. Not exact; null when the UTXO
+     *   count is unknown.
      * - Shielded → *: the flat single-note pool fee of the transition; more notes cost more.
      * - Core → Identity, Platform → *, Identity → *: Rust meters these at execution; no
      *   pre-send figure exists, so null.
@@ -636,7 +772,10 @@ class ExternalSendServiceImpl internal constructor(
                 is SendDestination.Shielded -> this.source.shieldedFeeCredits(ShieldedFeeKind.TRANSFER)?.let {
                     FeeEstimate(Dash(shieldPoolFeeDuffs(it)), exact = false)
                 }
-                else -> null
+                is SendDestination.Platform -> this.source.spendableUtxoCount()?.let {
+                    FeeEstimate(Dash(coreToPlatformFeeDuffs(it)), exact = false)
+                }
+                is SendDestination.Identity -> null
             }
             SendBalance.SHIELDED -> this.source.shieldedFeeCredits(shieldedKindFor(destination))?.let {
                 FeeEstimate(Dash(ceilCreditsToDuffs(it)), exact = false)
@@ -651,6 +790,8 @@ class ExternalSendServiceImpl internal constructor(
      *   recipient amount (amount − fee) is always positive.
      * - Core → Shielded: [coreToShieldedMaxDuffs] — from the asset-lock-eligible balance,
      *   less the L1 fee reserve and the shield pool fee.
+     * - Core → Platform: [coreToPlatformMaxDuffsOrNull] — the same eligible balance less the
+     *   L1 fee reserve and the Platform-fee margin.
      * - Shielded → *: the READY balance minus the single-note pool fee; a Max send also
      *   retries once with the exact deficit the note selection reports.
      * - Everything else: null (no pre-send fee figure).
@@ -660,7 +801,8 @@ class ExternalSendServiceImpl internal constructor(
             SendBalance.CORE -> when (destination) {
                 is SendDestination.Core -> withContext(ioDispatcher) { coreToCoreMaxDuffs() }?.let(::Dash)
                 is SendDestination.Shielded -> withContext(ioDispatcher) { coreToShieldedMaxDuffs() }?.let(::Dash)
-                else -> null
+                is SendDestination.Platform -> withContext(ioDispatcher) { coreToPlatformMaxDuffsOrNull() }?.let(::Dash)
+                is SendDestination.Identity -> null
             }
             SendBalance.SHIELDED -> {
                 val balance = this.source.observeShieldedBalance().first()
@@ -707,6 +849,18 @@ class ExternalSendServiceImpl internal constructor(
         val feeCredits = source.shieldedFeeCredits(ShieldedFeeKind.TRANSFER) ?: return null
         val max = eligible - assetLockMaxFeeReserve(utxoCount).duffs - shieldPoolFeeDuffs(feeCredits)
         return max.takeIf { it > 0 }
+    }
+
+    /**
+     * The Core → Platform Max: [coreToPlatformMaxDuffs] of the asset-lock-eligible balance,
+     * null when a figure is unknown, the result is not positive, or it is below the Platform
+     * minimum output. Throws when a read fails.
+     */
+    private suspend fun coreToPlatformMaxDuffsOrNull(): Long? {
+        val eligible = source.coreAssetLockEligibleDuffs() ?: return null
+        val utxoCount = source.spendableUtxoCount() ?: return null
+        return coreToPlatformMaxDuffs(eligible, utxoCount)
+            ?.takeIf { it >= ceilCreditsToDuffs(PLATFORM_MIN_OUTPUT_CREDITS) }
     }
 
     // ── Send ──────────────────────────────────────────────────────────
@@ -818,7 +972,7 @@ class ExternalSendServiceImpl internal constructor(
 
         // (5)+(6) The one write.
         return when (source) {
-            SendBalance.CORE -> sendFromCore(pair, walletIdHex, destination, amount, isMax, coreSession)
+            SendBalance.CORE -> sendFromCore(pair, walletIdHex, destination, amount, amountCredits, isMax, coreSession)
             SendBalance.SHIELDED -> sendFromShielded(pair, walletIdHex, destination, amount, isMax)
             SendBalance.PLATFORM -> sendFromPlatform(pair, walletIdHex, destination, amountCredits)
             SendBalance.IDENTITY -> sendFromIdentity(
@@ -836,6 +990,7 @@ class ExternalSendServiceImpl internal constructor(
         walletIdHex: String,
         destination: SendDestination,
         amount: Dash,
+        amountCredits: Long,
         isMax: Boolean,
         coreSession: WalletSession?
     ): ExternalSendResult {
@@ -849,7 +1004,265 @@ class ExternalSendServiceImpl internal constructor(
                     mapWrite(pair, this.source.coreTopUpIdentity(destination.identityIdBase58, amount.duffs))
                 }
             }
-            is SendDestination.Platform -> notSent(pair, NotSentReason.NOT_SUPPORTED, "unreachable: gated")
+            is SendDestination.Platform -> sendCoreToPlatform(pair, walletIdHex, destination, amount, amountCredits)
+        }
+    }
+
+    /**
+     * `fundFromAssetLockExternal`: lock `amount + margin` ([platformFundingLockDuffs]), pay the
+     * payee exactly [amountCredits], the remainder (fee payer) to one of the wallet's own
+     * Platform addresses. The SDK's resume contract is honoured in order:
+     * 1. the recipients are persisted ([PlatformFundingStore.write]) BEFORE the call — a failed
+     *    write sends nothing — and at most one record is pending (a second send is refused);
+     * 2. `onAssetLockBuilt` records the lock's outpoint against them, durably, before the lock
+     *    is broadcast;
+     * 3. the record is cleared on success, and when no lock was built and the call provably
+     *    sent nothing (NotSent). Once the lock was built any failure keeps the record (the
+     *    [resumePendingPlatformFunding] sweep pays the same payee) and is never NotSent.
+     */
+    private suspend fun sendCoreToPlatform(
+        pair: String,
+        walletIdHex: String,
+        destination: SendDestination.Platform,
+        amount: Dash,
+        amountCredits: Long
+    ): ExternalSendResult {
+        val to = decodePlatformAddress(destination.address, network)
+            ?: return notSent(pair, NotSentReason.GENERIC, "invalid platform address")
+        if (to.addressType != 0) return notSent(pair, NotSentReason.NOT_SUPPORTED, "P2SH platform address")
+        if (amountCredits < PLATFORM_MIN_OUTPUT_CREDITS) {
+            return notSent(pair, NotSentReason.GENERIC, "below the platform minimum output")
+        }
+        val lockDuffs = try {
+            platformFundingLockDuffs(amount.duffs)
+        } catch (e: ArithmeticException) {
+            return notSent(pair, NotSentReason.GENERIC, "amount out of range")
+        }
+        val pending = try {
+            platformFundingStore.read()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("external send {}: pending platform funding unreadable; not sent", pair, e)
+            return ExternalSendResult.NotSent(NotSentReason.GENERIC)
+        }
+        if (pending != null) {
+            return notSent(pair, NotSentReason.PAYMENT_STILL_CONFIRMING, "an earlier Core → Platform send is pending")
+        }
+        val gateOpen = readOrNull("L1 funding gate") { this.source.coreFundingGateOpen() }
+        if (gateOpen != true) return notSent(pair, NotSentReason.NOT_SYNCED, "L1 funding gate closed")
+        val remainder = readOrNull("own platform address") {
+            this.source.ownPlatformRemainderAddress(walletIdHex, to.hash)
+        } ?: return notSent(pair, NotSentReason.GENERIC, "no own platform address for the remainder")
+        val record = try {
+            PendingPlatformFunding(newFundingId(), walletIdHex, lockDuffs, to, amountCredits, remainder, outPointHex = null)
+        } catch (e: IllegalArgumentException) {
+            return notSent(pair, NotSentReason.GENERIC, "malformed funding record")
+        }
+        try {
+            platformFundingStore.write(record)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("external send {}: could not persist the recipients; not sent", pair, e)
+            return ExternalSendResult.NotSent(NotSentReason.GENERIC)
+        }
+
+        // From here the record exists: every path below either clears it (provably nothing
+        // built) or leaves it for the sweep.
+        val builtOutPoint = AtomicReference<String?>(null)
+        val outcome: SdkWriteResult<Unit> = if (!stillBound(pair, walletIdHex)) {
+            SdkWriteResult.NotBroadcast("the bound wallet changed")
+        } else {
+            try {
+                this.source.withFreshCoreFunding {
+                    this.source.fundPlatformExternal(record) { outPointHex ->
+                        // SDK thread, before broadcast: short, no SDK calls, never throws.
+                        builtOutPoint.set(outPointHex)
+                        try {
+                            platformFundingStore.writeBlocking(record.withOutPoint(outPointHex))
+                        } catch (e: Exception) {
+                            log.error("external send {}: could not record the lock outpoint (retried after the call)", pair, e)
+                        }
+                    }
+                }?.let { SdkWriteResult.Broadcast(Unit) }
+                    ?: SdkWriteResult.NotBroadcast(L1_PENDING_PAYMENT_UNPROTECTED_REASON)
+            } catch (e: CancellationException) {
+                // A built lock keeps its record; make its outpoint durable before unwinding.
+                builtOutPoint.get()?.let { outPoint ->
+                    withContext(NonCancellable) { ensureOutPointRecorded(pair, record, outPoint) }
+                }
+                throw e
+            } catch (e: Exception) {
+                classifyBroadcastFailure(e)
+            } catch (e: LinkageError) {
+                SdkWriteResult.NotBroadcast("native library unavailable", e)
+            }
+        }
+
+        val outPointHex = builtOutPoint.get()
+        if (outPointHex == null) {
+            // onAssetLockBuilt never fired: no lock was built, so nothing was broadcast.
+            return when (outcome) {
+                is SdkWriteResult.NotBroadcast -> {
+                    clearPlatformFunding(pair, record.id)
+                    mapWrite(pair, outcome)
+                }
+                is SdkWriteResult.Broadcast -> {
+                    clearPlatformFunding(pair, record.id)
+                    log.info("external send {}: sent", pair)
+                    ExternalSendResult.Sent(null)
+                }
+                // Kept: the sweep clears it once no unconsumed funding lock exists.
+                is SdkWriteResult.Ambiguous -> mapWrite(pair, outcome)
+            }
+        }
+        if (outcome is SdkWriteResult.Broadcast) {
+            clearPlatformFunding(pair, record.id)
+            log.info("external send {}: sent", pair)
+            return ExternalSendResult.Sent(null)
+        }
+        // The lock was built (and may be on the network): never NotSent. Make sure the
+        // outpoint is durable even if the callback's write failed; the sweep pays the payee.
+        ensureOutPointRecorded(pair, record, outPointHex)
+        log.warn(
+            "external send {}: lock built, funding not confirmed ({}) — may have gone through; resumed automatically",
+            pair,
+            outcome.javaClass.simpleName,
+            (outcome as? SdkWriteResult.NotBroadcast)?.cause ?: (outcome as? SdkWriteResult.Ambiguous)?.cause
+        )
+        return ExternalSendResult.MayHaveGoneThrough
+    }
+
+    /** Re-record [outPointHex] against [record] unless the store already holds exactly that. */
+    private suspend fun ensureOutPointRecorded(pair: String, record: PendingPlatformFunding, outPointHex: String) {
+        try {
+            val stored = platformFundingStore.read()
+            if (stored == null || stored.id != record.id || stored.outPointHex != outPointHex) {
+                platformFundingStore.write(record.withOutPoint(outPointHex))
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.error("external send {}: could not record the lock outpoint; the lock cannot be resumed automatically", pair, e)
+        }
+    }
+
+    private suspend fun clearPlatformFunding(pair: String, id: String) {
+        try {
+            platformFundingStore.clear(id)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Left behind: the sweep clears it (no lock, or a consumed one).
+            log.warn("external send {}: could not clear the pending platform funding", pair, e)
+        }
+    }
+
+    // ── Core → Platform resume ────────────────────────────────────────
+
+    override suspend fun resumePendingPlatformFunding(): Int = try {
+        withContext(ioDispatcher) { resumePendingPlatformFundingInner() }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        log.warn("pending platform funding sweep failed; retried on the next trigger", e)
+        0
+    }
+
+    /**
+     * The sweep. It owns the record only while it holds [inFlight] (a running [send] may have
+     * just written a record whose lock is not built yet), and acts only for the bound wallet.
+     * - No outpoint: clear when the SDK has no unconsumed Platform-address funding lock of the
+     *   wallet (the build never happened, or its lock is done); otherwise keep it — that lock
+     *   cannot be attributed by amount or timing.
+     * - Outpoint, lock Consumed: done, clear.
+     * - Outpoint, lock not tracked: keep (nothing to resume, nothing to prove it never went out).
+     * - Outpoint, lock not Consumed: resume with exactly the persisted recipients, at most
+     *   [MAX_PLATFORM_RESUME_ATTEMPTS_PER_PROCESS] times per process; clear on success or when
+     *   Platform answers already consumed.
+     */
+    private suspend fun resumePendingPlatformFundingInner(): Int {
+        val first = try {
+            platformFundingStore.read()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("pending platform funding unreadable or malformed; kept, not resumed", e)
+            return 0
+        } ?: return 0
+        if (!inFlight.compareAndSet(false, true)) {
+            log.info("pending platform funding {}: an external send is running; sweep skipped", first.id)
+            return 0
+        }
+        try {
+            // Re-read as the owner: the send that held [inFlight] may have changed it.
+            val record = platformFundingStore.read() ?: return 0
+            val committed = readOrNull("cutover state") { this.source.cutoverCommittedOrThrow() }
+            if (committed != true) return 0
+            val bound = readOrNull("bound wallet") { this.source.boundWalletIdOrNull() }
+            if (bound == null || !bound.equals(record.walletIdHex, ignoreCase = true)) {
+                log.warn("pending platform funding {}: not of the bound wallet; kept", record.id)
+                return 0
+            }
+            val outPointHex = record.outPointHex
+            if (outPointHex == null) {
+                val unconsumed = readOrNull("address funding locks") {
+                    this.source.hasUnconsumedAddressFundingLocks(record.walletIdHex)
+                } ?: return 0
+                if (unconsumed) {
+                    log.warn("pending platform funding {}: no outpoint recorded and a funding lock is open; kept", record.id)
+                } else {
+                    platformFundingStore.clear(record.id)
+                    log.info("pending platform funding {}: no lock was left open; cleared", record.id)
+                }
+                return 0
+            }
+            val status = try {
+                this.source.trackedAssetLockStatus(record.walletIdHex, outPointHex)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                log.warn("pending platform funding {}: lock status unreadable; kept", record.id, e)
+                return 0
+            }
+            if (status == null) {
+                log.warn("pending platform funding {}: the SDK does not track its lock; kept", record.id)
+                return 0
+            }
+            if (status == ASSET_LOCK_STATUS_CONSUMED) {
+                platformFundingStore.clear(record.id)
+                log.info("pending platform funding {}: lock consumed; cleared", record.id)
+                return 0
+            }
+            val attempts = platformResumeAttempts.getOrDefault(record.id, 0)
+            if (attempts >= MAX_PLATFORM_RESUME_ATTEMPTS_PER_PROCESS) {
+                log.warn("pending platform funding {}: {} attempts this process; retried on the next start", record.id, attempts)
+                return 0
+            }
+            platformResumeAttempts[record.id] = attempts + 1
+            if (!stillBound("Core → Platform resume", record.walletIdHex)) return 0
+            try {
+                this.source.resumePlatformFundingExternal(record)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                if (isAssetLockAlreadyConsumed(e)) {
+                    platformFundingStore.clear(record.id)
+                    log.warn("pending platform funding {}: Platform reports the lock already consumed; cleared", record.id)
+                } else {
+                    log.warn("pending platform funding {}: resume failed (attempt {}); kept", record.id, attempts + 1, e)
+                }
+                return 0
+            } catch (e: LinkageError) {
+                log.warn("pending platform funding {}: native library unavailable; kept", record.id, e)
+                return 0
+            }
+            platformFundingStore.clear(record.id)
+            log.info("pending platform funding {}: resumed and consumed", record.id)
+            return 1
+        } finally {
+            inFlight.set(false)
         }
     }
 
@@ -1093,6 +1506,9 @@ class ExternalSendServiceImpl internal constructor(
 
         /** How often the Platform / identity balances (no live feed) are re-read while observed. */
         internal const val BALANCE_POLL_MS = 15_000L
+
+        /** Unattended Core → Platform resume attempts per funding, per process. */
+        internal const val MAX_PLATFORM_RESUME_ATTEMPTS_PER_PROCESS = 3
 
         private fun kindOf(destination: SendDestination): String = when (destination) {
             is SendDestination.Core -> "Core"
