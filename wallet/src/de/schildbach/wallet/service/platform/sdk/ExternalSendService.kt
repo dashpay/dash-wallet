@@ -146,6 +146,11 @@ interface ExternalSendService {
      *
      * Shielded legs block for a ~30s proof: run this on an application-scoped owner so
      * leaving the screen does not cancel it.
+     *
+     * Core → Platform: the payee receives [amount]; the lock carries a Platform-fee margin on
+     * top, whose unused part lands on the wallet's own Platform address. Its recipients are
+     * persisted before the SDK call ([PendingPlatformFunding]); while an earlier one is still
+     * pending a new Core → Platform send is [NotSentReason.PAYMENT_STILL_CONFIRMING].
      */
     suspend fun send(
         source: SendBalance,
@@ -154,4 +159,14 @@ interface ExternalSendService {
         isMax: Boolean,
         expectedWalletIdHex: String?
     ): ExternalSendResult
+
+    /**
+     * Finish an interrupted Core → Platform send: when a [PendingPlatformFunding] of the bound
+     * wallet has a built lock that is not Consumed, resume it with EXACTLY its persisted
+     * recipients (`resumeFundFromAssetLockExternal`), so the original payee is paid. The record
+     * is cleared once the lock is consumed (by this resume, earlier, or as Platform reports).
+     * Attempts are capped per process. Never throws (except cancellation); returns the number
+     * of fundings completed by this call (0 or 1).
+     */
+    suspend fun resumePendingPlatformFunding(): Int
 }

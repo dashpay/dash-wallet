@@ -35,6 +35,7 @@ import org.dash.wallet.common.payments.parsers.AddressNetwork
 import org.dash.wallet.common.payments.parsers.Base58
 import org.dash.wallet.common.services.PaymentSubmissionPendingException
 import org.dash.wallet.common.services.WalletSession
+import org.dashfoundation.dashsdk.errors.DashSdkError
 import org.dashfoundation.dashsdk.credits.FundingInput
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
@@ -58,6 +59,9 @@ class ExternalSendServiceImplTest {
     )
     private val platform = SendDestination.Platform(
         requireNotNull(Bech32m.encode("tdash", byteArrayOf(0xb0.toByte()) + hash20))
+    )
+    private val platformP2sh = SendDestination.Platform(
+        requireNotNull(Bech32m.encode("tdash", byteArrayOf(0x80.toByte()) + hash20))
     )
     private val ownIdentity = SendDestination.Identity(ownIdBase58)
     private val otherIdentity = SendDestination.Identity(otherIdBase58)
@@ -194,6 +198,71 @@ class ExternalSendServiceImplTest {
             lastCredits = amountCredits
             nativeWrite()
         }
+
+        // Core → Platform
+        var gateOpen: () -> Boolean = { true }
+        var freshFundingAllowed = true
+        var remainder: PlatformAddressBytes? = PlatformAddressBytes(0, remainderHash)
+        var lastRemainderExclude: ByteArray? = null
+        var fund: (PendingPlatformFunding, (String) -> Unit) -> Unit = { _, built -> built(OUT_POINT) }
+        var resume: (PendingPlatformFunding) -> Unit = {}
+        var lockStatus: () -> Int? = { 2 }
+        var unconsumedLocks: () -> Boolean = { false }
+        val funded = mutableListOf<PendingPlatformFunding>()
+        val resumed = mutableListOf<PendingPlatformFunding>()
+
+        override fun coreFundingGateOpen(): Boolean = gateOpen()
+        override suspend fun <T> withFreshCoreFunding(build: suspend () -> T): T? =
+            if (freshFundingAllowed) build() else null
+
+        override suspend fun ownPlatformRemainderAddress(walletIdHex: String, excludeHash: ByteArray): PlatformAddressBytes? {
+            lastRemainderExclude = excludeHash
+            return remainder
+        }
+
+        override suspend fun fundPlatformExternal(record: PendingPlatformFunding, onAssetLockBuilt: (String) -> Unit) {
+            calls += "fundPlatformExternal"
+            funded += record
+            fund(record, onAssetLockBuilt)
+        }
+
+        override suspend fun resumePlatformFundingExternal(record: PendingPlatformFunding) {
+            calls += "resumePlatformFundingExternal"
+            resumed += record
+            resume(record)
+        }
+
+        override suspend fun trackedAssetLockStatus(walletIdHex: String, outPointHex: String): Int? = lockStatus()
+        override suspend fun hasUnconsumedAddressFundingLocks(walletIdHex: String): Boolean = unconsumedLocks()
+    }
+
+    private class FakeStore : PlatformFundingStore {
+        var record: PendingPlatformFunding? = null
+        var failRead = false
+        var failWrite = false
+        var failBlocking = false
+        val writes = mutableListOf<PendingPlatformFunding>()
+
+        override suspend fun read(): PendingPlatformFunding? {
+            if (failRead) throw java.io.IOException("datastore")
+            return record
+        }
+
+        override suspend fun write(record: PendingPlatformFunding) {
+            if (failWrite) throw java.io.IOException("datastore")
+            this.record = record
+            writes += record
+        }
+
+        override fun writeBlocking(record: PendingPlatformFunding) {
+            if (failBlocking) throw java.io.IOException("datastore")
+            this.record = record
+            writes += record
+        }
+
+        override suspend fun clear(id: String) {
+            if (record?.id == id) record = null
+        }
     }
 
     private fun source(
@@ -202,8 +271,8 @@ class ExternalSendServiceImplTest {
         managed: List<ByteArray> = listOf(ownId)
     ) = FakeSource(bound.toMutableList(), ownIdentity, managed)
 
-    private fun service(source: FakeSource) =
-        ExternalSendServiceImpl(source, AddressNetwork.DASH_TESTNET, ioDispatcher = Dispatchers.Unconfined)
+    private fun service(source: FakeSource, store: PlatformFundingStore = FakeStore()) =
+        ExternalSendServiceImpl(source, AddressNetwork.DASH_TESTNET, store, ioDispatcher = Dispatchers.Unconfined)
 
     /** A send confirmed while [walletA] was bound (the ViewModel's capture). */
     private suspend fun ExternalSendServiceImpl.send(
@@ -397,7 +466,8 @@ class ExternalSendServiceImplTest {
     @Test
     fun unsupportedPairs_areNotSupported_withNoSeamCall() = runBlocking {
         val pairs = listOf(
-            SendBalance.CORE to platform,
+            // The SDK funds P2PKH Platform addresses only.
+            SendBalance.CORE to platformP2sh,
             SendBalance.PLATFORM to core,
             SendBalance.PLATFORM to shielded,
             SendBalance.IDENTITY to shielded,
@@ -431,6 +501,7 @@ class ExternalSendServiceImplTest {
         for ((from, to) in listOf(
             SendBalance.CORE to core,
             SendBalance.CORE to shielded,
+            SendBalance.CORE to platform,
             SendBalance.SHIELDED to core,
             SendBalance.PLATFORM to platform,
             SendBalance.IDENTITY to core
@@ -492,7 +563,7 @@ class ExternalSendServiceImplTest {
                 return SdkWriteResult.Broadcast(Unit)
             }
         }
-        val gated = ExternalSendServiceImpl(slow, AddressNetwork.DASH_TESTNET, ioDispatcher = Dispatchers.Unconfined)
+        val gated = ExternalSendServiceImpl(slow, AddressNetwork.DASH_TESTNET, FakeStore(), ioDispatcher = Dispatchers.Unconfined)
         try {
             val first = async(start = CoroutineStart.UNDISPATCHED) {
                 gated.send(SendBalance.SHIELDED, shielded, amount, false)
@@ -649,7 +720,7 @@ class ExternalSendServiceImplTest {
         val source = object : ExternalSendSource by source() {
             override suspend fun shieldedFeeCredits(kind: ShieldedFeeKind): Long? = null
         }
-        val result = ExternalSendServiceImpl(source, AddressNetwork.DASH_TESTNET, ioDispatcher = Dispatchers.Unconfined)
+        val result = ExternalSendServiceImpl(source, AddressNetwork.DASH_TESTNET, FakeStore(), ioDispatcher = Dispatchers.Unconfined)
             .send(SendBalance.CORE, shielded, amount, false, walletA)
         assertEquals(ExternalSendResult.NotSent(NotSentReason.GENERIC), result)
     }
@@ -683,6 +754,7 @@ class ExternalSendServiceImplTest {
             SendBalance.CORE to core,
             SendBalance.CORE to shielded,
             SendBalance.CORE to ownIdentity,
+            SendBalance.CORE to platform,
             SendBalance.SHIELDED to core,
             SendBalance.PLATFORM to platform,
             SendBalance.PLATFORM to otherIdentity,
@@ -726,6 +798,7 @@ class ExternalSendServiceImplTest {
         val service = ExternalSendServiceImpl(
             source,
             AddressNetwork.DASH_TESTNET,
+            FakeStore(),
             ioDispatcher = Dispatchers.Unconfined,
             retryDelayMs = { 0L }
         )
@@ -746,5 +819,317 @@ class ExternalSendServiceImplTest {
         assertTrue(values[0].isFailure)
         assertTrue(values[1].isFailure)
         assertEquals("id", values[2].getOrNull())
+    }
+    // ── Core → Platform (fundFromAssetLockExternal) ───────────────────
+
+    private fun pendingRecord(outPointHex: String? = OUT_POINT, wallet: String = walletA) = PendingPlatformFunding(
+        id = "earlier",
+        walletIdHex = wallet,
+        lockDuffs = 162_000L,
+        destination = PlatformAddressBytes(0, hash20),
+        explicitCredits = amountCredits,
+        remainder = PlatformAddressBytes(0, remainderHash),
+        outPointHex = outPointHex
+    )
+
+    @Test
+    fun coreToPlatform_paysTheExactAmount_remainderToAnOwnAddress_lockCarriesTheMargin() = runBlocking {
+        val source = source()
+        val store = FakeStore()
+        var persistedBeforeTheCall: PendingPlatformFunding? = null
+        var outPointDurableInTheCallback: String? = null
+        source.fund = { record, built ->
+            persistedBeforeTheCall = store.record
+            assertTrue(requireNotNull(persistedBeforeTheCall).sameAs(record))
+            built(OUT_POINT)
+            outPointDurableInTheCallback = store.record?.outPointHex
+        }
+        val result = service(source, store).send(SendBalance.CORE, platform, amount, false)
+
+        assertEquals(ExternalSendResult.Sent(null), result)
+        assertEquals(listOf("fundPlatformExternal"), source.calls)
+        val record = source.funded.single()
+        // Persisted before the call, without an outpoint; the outpoint was durable before the callback returned.
+        assertNull(requireNotNull(persistedBeforeTheCall).outPointHex)
+        assertEquals(OUT_POINT, outPointDurableInTheCallback)
+        // The payee gets exactly the amount; the lock adds the Platform-fee margin.
+        assertEquals(100_000L + PLATFORM_FUNDING_FEE_MARGIN_DUFFS, record.lockDuffs)
+        assertEquals(walletA, record.walletIdHex)
+        assertEquals(
+            listOf(
+                org.dashfoundation.dashsdk.wallet.ManagedPlatformWallet.FundRecipient(0, hash20, amountCredits),
+                org.dashfoundation.dashsdk.wallet.ManagedPlatformWallet.FundRecipient(0, remainderHash, null)
+            ),
+            record.recipients
+        )
+        // The remainder is never the payee's address.
+        assertArrayEquals(hash20, source.lastRemainderExclude)
+        // Success clears the record.
+        assertNull(store.record)
+    }
+
+    @Test
+    fun coreToPlatform_p2shDestination_isNotSent_beforeAnythingIsBuiltOrPersisted() = runBlocking {
+        val source = source()
+        val store = FakeStore()
+        assertEquals(
+            ExternalSendResult.NotSent(NotSentReason.NOT_SUPPORTED),
+            service(source, store).send(SendBalance.CORE, platformP2sh, amount, false)
+        )
+        assertTrue(source.calls.isEmpty())
+        assertTrue(store.writes.isEmpty())
+    }
+
+    @Test
+    fun coreToPlatform_failureAfterTheLockWasBuilt_isNeverNotSent_andKeepsTheRecord() = runBlocking {
+        // A pre-broadcast-looking error AFTER onAssetLockBuilt: the lock exists all the same.
+        for (error in listOf(RuntimeException("no private key stored"), RuntimeException("platform timeout"))) {
+            val source = source().apply {
+                fund = { _, built ->
+                    built(OUT_POINT)
+                    throw error
+                }
+            }
+            val store = FakeStore()
+            assertEquals(ExternalSendResult.MayHaveGoneThrough, service(source, store).send(SendBalance.CORE, platform, amount, false))
+            val kept = requireNotNull(store.record)
+            assertEquals(OUT_POINT, kept.outPointHex)
+            assertTrue(kept.sameAs(source.funded.single().withOutPoint(OUT_POINT)))
+        }
+    }
+
+    @Test
+    fun coreToPlatform_outPointWriteFailedInTheCallback_isRecordedAfterTheCall() = runBlocking {
+        val source = source().apply {
+            fund = { _, built ->
+                built(OUT_POINT)
+                throw RuntimeException("platform timeout")
+            }
+        }
+        val store = FakeStore().apply { failBlocking = true }
+        assertEquals(ExternalSendResult.MayHaveGoneThrough, service(source, store).send(SendBalance.CORE, platform, amount, false))
+        assertEquals(OUT_POINT, store.record?.outPointHex)
+    }
+
+    @Test
+    fun coreToPlatform_failureBeforeTheLockWasBuilt_isNotSent_andClearsTheRecord() = runBlocking {
+        val source = source().apply { fund = { _, _ -> throw RuntimeException("no private key stored") } }
+        val store = FakeStore()
+        val result = service(source, store).send(SendBalance.CORE, platform, amount, false)
+        assertTrue(result is ExternalSendResult.NotSent)
+        assertEquals(1, store.writes.size)
+        assertNull(store.record)
+    }
+
+    @Test
+    fun coreToPlatform_ambiguousBeforeTheLockWasBuilt_isMayHaveGoneThrough_andKeepsTheRecordForTheSweep() = runBlocking {
+        val source = source().apply { fund = { _, _ -> throw RuntimeException("platform timeout") } }
+        val store = FakeStore()
+        assertEquals(ExternalSendResult.MayHaveGoneThrough, service(source, store).send(SendBalance.CORE, platform, amount, false))
+        assertNull(requireNotNull(store.record).outPointHex)
+    }
+
+    @Test
+    fun coreToPlatform_aPendingRecord_blocksTheNextSend_withNothingBuilt() = runBlocking {
+        val source = source()
+        val store = FakeStore().apply { record = pendingRecord() }
+        assertEquals(
+            ExternalSendResult.NotSent(NotSentReason.PAYMENT_STILL_CONFIRMING),
+            service(source, store).send(SendBalance.CORE, platform, amount, false)
+        )
+        assertTrue(source.calls.isEmpty())
+        assertEquals("earlier", store.record?.id)
+
+        // Unreadable (or malformed) is not "none": fail closed.
+        val unreadable = FakeStore().apply { failRead = true }
+        assertEquals(
+            ExternalSendResult.NotSent(NotSentReason.GENERIC),
+            service(source, unreadable).send(SendBalance.CORE, platform, amount, false)
+        )
+        assertTrue(source.calls.isEmpty())
+    }
+
+    @Test
+    fun coreToPlatform_refusals_beforeTheCall_persistNothingOrClearIt() = runBlocking {
+        // The recipients cannot be persisted: nothing is built.
+        var source = source()
+        var store = FakeStore().apply { failWrite = true }
+        assertEquals(ExternalSendResult.NotSent(NotSentReason.GENERIC), service(source, store).send(SendBalance.CORE, platform, amount, false))
+        assertTrue(source.calls.isEmpty())
+
+        // L1 funding gate closed.
+        source = source().apply { gateOpen = { false } }
+        store = FakeStore()
+        assertEquals(ExternalSendResult.NotSent(NotSentReason.NOT_SYNCED), service(source, store).send(SendBalance.CORE, platform, amount, false))
+        assertTrue(source.calls.isEmpty())
+        assertTrue(store.writes.isEmpty())
+
+        // No own Platform address for the remainder.
+        source = source().apply { remainder = null }
+        assertEquals(ExternalSendResult.NotSent(NotSentReason.GENERIC), service(source, store).send(SendBalance.CORE, platform, amount, false))
+        assertTrue(source.calls.isEmpty())
+        assertTrue(store.writes.isEmpty())
+
+        // Below Platform's minimum output (500 000 credits = 500 duffs).
+        source = source()
+        assertEquals(
+            ExternalSendResult.NotSent(NotSentReason.GENERIC),
+            service(source, store).send(SendBalance.CORE, platform, Dash(499L), false)
+        )
+        assertTrue(source.calls.isEmpty())
+        assertTrue(store.writes.isEmpty())
+
+        // An unprotected earlier payment blocks the fresh build: the record is cleared again.
+        source = source().apply { freshFundingAllowed = false }
+        assertEquals(
+            ExternalSendResult.NotSent(NotSentReason.PAYMENT_STILL_CONFIRMING),
+            service(source, store).send(SendBalance.CORE, platform, amount, false)
+        )
+        assertTrue(source.calls.isEmpty())
+        assertEquals(1, store.writes.size)
+        assertNull(store.record)
+    }
+
+    @Test
+    fun coreToPlatform_feeAndMax_carryTheL1ReserveAndThePlatformMargin() = runBlocking {
+        val source = source()
+        val service = service(source)
+        val fee = Dash(assetLockMaxFeeReserve(2).duffs + PLATFORM_FUNDING_FEE_MARGIN_DUFFS)
+        assertEquals(FeeEstimate(fee, exact = false), service.estimateFee(SendBalance.CORE, platform, amount))
+        assertEquals(Dash(5_000_000L) - fee, service.maxSendable(SendBalance.CORE, platform))
+
+        // Unknown figures are no Max / no fee, never zero.
+        source.coreEligible = null
+        assertNull(service.maxSendable(SendBalance.CORE, platform))
+        source.coreEligible = 5_000_000L
+        source.utxoCount = null
+        assertNull(service.maxSendable(SendBalance.CORE, platform))
+        assertNull(service.estimateFee(SendBalance.CORE, platform, amount))
+        // Too small to cover the reserve and the margin (or Platform's minimum output): no Max.
+        source.utxoCount = 2
+        source.coreEligible = fee.duffs
+        assertNull(service.maxSendable(SendBalance.CORE, platform))
+        source.coreEligible = fee.duffs + 499L
+        assertNull(service.maxSendable(SendBalance.CORE, platform))
+        source.coreEligible = fee.duffs + 500L
+        assertEquals(Dash(500L), service.maxSendable(SendBalance.CORE, platform))
+    }
+
+    @Test
+    fun resume_usesExactlyThePersistedRecipients_andClearsOnSuccess() = runBlocking {
+        val source = source()
+        val pending = pendingRecord()
+        val store = FakeStore().apply { record = pending }
+        val service = service(source, store)
+        assertEquals(1, service.resumePendingPlatformFunding())
+        assertEquals(listOf("resumePlatformFundingExternal"), source.calls)
+        assertTrue(source.resumed.single().sameAs(pending))
+        assertEquals(pending.recipients, source.resumed.single().recipients)
+        assertNull(store.record)
+        // Nothing left: the next sweep does nothing.
+        assertEquals(0, service.resumePendingPlatformFunding())
+        assertEquals(1, source.resumed.size)
+    }
+
+    @Test
+    fun resume_consumedLock_orAlreadyConsumedAnswer_clearsTheRecord() = runBlocking {
+        var source = source().apply { lockStatus = { ASSET_LOCK_STATUS_CONSUMED } }
+        var store = FakeStore().apply { record = pendingRecord() }
+        assertEquals(0, service(source, store).resumePendingPlatformFunding())
+        assertTrue(source.calls.isEmpty())
+        assertNull(store.record)
+
+        source = source().apply {
+            resume = { throw DashSdkError.PlatformWallet.AssetLockAlreadyConsumed("already consumed") }
+        }
+        store = FakeStore().apply { record = pendingRecord() }
+        assertEquals(0, service(source, store).resumePendingPlatformFunding())
+        assertEquals(1, source.resumed.size)
+        assertNull(store.record)
+    }
+
+    @Test
+    fun resume_failure_keepsTheRecord_andAttemptsAreCappedPerProcess() = runBlocking {
+        val source = source().apply { resume = { throw RuntimeException("platform timeout") } }
+        val store = FakeStore().apply { record = pendingRecord() }
+        val service = service(source, store)
+        repeat(ExternalSendServiceImpl.MAX_PLATFORM_RESUME_ATTEMPTS_PER_PROCESS + 2) {
+            assertEquals(0, service.resumePendingPlatformFunding())
+        }
+        assertEquals(ExternalSendServiceImpl.MAX_PLATFORM_RESUME_ATTEMPTS_PER_PROCESS, source.resumed.size)
+        assertEquals("earlier", store.record?.id)
+    }
+
+    @Test
+    fun resume_withoutAnOutPoint_clearsOnlyWhenNoFundingLockIsOpen() = runBlocking {
+        var source = source().apply { unconsumedLocks = { true } }
+        val store = FakeStore().apply { record = pendingRecord(outPointHex = null) }
+        assertEquals(0, service(source, store).resumePendingPlatformFunding())
+        assertTrue(source.calls.isEmpty())
+        assertEquals("earlier", store.record?.id)
+
+        source = source().apply { unconsumedLocks = { false } }
+        assertEquals(0, service(source, store).resumePendingPlatformFunding())
+        assertTrue(source.calls.isEmpty())
+        assertNull(store.record)
+    }
+
+    @Test
+    fun resume_keepsTheRecord_forAnotherWallet_anUntrackedLock_orAnUnreadableStatus() = runBlocking {
+        for (setup in listOf<(FakeSource) -> Unit>(
+            { it.bound = mutableListOf(walletB) },
+            { it.lockStatus = { null } },
+            { it.lockStatus = { throw java.io.IOException("room") } },
+            { it.cutover = { false } }
+        )) {
+            val source = source().also(setup)
+            val store = FakeStore().apply { record = pendingRecord() }
+            assertEquals(0, service(source, store).resumePendingPlatformFunding())
+            assertTrue(source.calls.isEmpty())
+            assertEquals("earlier", store.record?.id)
+        }
+    }
+
+    @Test
+    fun resume_doesNotRunAlongsideASend() = runBlocking {
+        val entered = CompletableDeferred<Unit>()
+        val release = CompletableDeferred<Unit>()
+        val source = source().apply {
+            fund = { _, built ->
+                built(OUT_POINT)
+                runBlocking {
+                    entered.complete(Unit)
+                    release.await()
+                }
+            }
+        }
+        val store = FakeStore()
+        val service = service(source, store)
+        try {
+            val send = async(Dispatchers.Default) { service.send(SendBalance.CORE, platform, amount, false) }
+            entered.await()
+            // The send owns its record (outpoint recorded, lock not done): the sweep keeps off it.
+            assertEquals(0, service.resumePendingPlatformFunding())
+            assertTrue(source.resumed.isEmpty())
+            release.complete(Unit)
+            assertEquals(ExternalSendResult.Sent(null), send.await())
+        } finally {
+            release.complete(Unit)
+        }
+        assertNull(store.record)
+    }
+
+    @Test
+    fun theAddressFundingLockType_isNotOneTheShieldedOrIdentitySweepsRead() {
+        assertTrue(ASSET_LOCK_FUNDING_TYPE_ADDRESS_TOPUP != ASSET_LOCK_FUNDING_TYPE_SHIELDED_TOPUP)
+        assertTrue(
+            org.dashfoundation.dashsdk.wallet.TrackedAssetLock.FundingType.values()
+                .none { it.raw == ASSET_LOCK_FUNDING_TYPE_ADDRESS_TOPUP }
+        )
+    }
+
+    private companion object {
+        const val OUT_POINT = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef:1"
+        val remainderHash = ByteArray(20) { 7 }
     }
 }

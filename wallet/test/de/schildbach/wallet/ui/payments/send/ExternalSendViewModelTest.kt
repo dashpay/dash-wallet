@@ -63,6 +63,9 @@ class ExternalSendViewModelTest {
     private val coreAddress = Base58.encodeChecked(network.addressHeader, hash20)
     private val mainnetCoreAddress = Base58.encodeChecked(AddressNetwork.DASH_MAINNET.addressHeader, hash20)
     private val platformAddress = requireNotNull(Bech32m.encode("tdash", byteArrayOf(0xb0.toByte()) + hash20))
+
+    /** A P2SH Platform address: the one destination Core cannot pay (P2PKH-only funding). */
+    private val platformP2shAddress = requireNotNull(Bech32m.encode("tdash", byteArrayOf(0x80.toByte()) + hash20))
     private val shieldedAddress =
         requireNotNull(Bech32m.encode("tdash", byteArrayOf(0x10) + ByteArray(43) { (it * 3 + 7).toByte() }))
     private val identityId = Base58.encode(ByteArray(32) { (255 - it).toByte() })
@@ -99,6 +102,12 @@ class ExternalSendViewModelTest {
         ): ExternalSendResult {
             sends += ExternalSendRequest(source, destination, amount, isMax, expectedWalletIdHex)
             return sendGate?.await() ?: sendResult
+        }
+
+        var platformResumes = 0
+        override suspend fun resumePendingPlatformFunding(): Int {
+            platformResumes++
+            return 0
         }
     }
 
@@ -235,9 +244,13 @@ class ExternalSendViewModelTest {
         val core = buildViewModel().apply { goToAmount(coreAddress) }
         assertEquals(SendBalance.CORE, core.uiState.value.source)
 
-        // Core cannot pay a Platform address; Shielded can.
+        // Core pays a P2PKH Platform address (fundFromAssetLockExternal) ...
         val platform = buildViewModel().apply { goToAmount(platformAddress) }
-        assertEquals(SendBalance.SHIELDED, platform.uiState.value.source)
+        assertEquals(SendBalance.CORE, platform.uiState.value.source)
+
+        // ... but not a P2SH one; Shielded can.
+        val p2sh = buildViewModel().apply { goToAmount(platformP2shAddress) }
+        assertEquals(SendBalance.SHIELDED, p2sh.uiState.value.source)
     }
 
     @Test
@@ -255,7 +268,7 @@ class ExternalSendViewModelTest {
     @Test
     fun sourceSelection_ignoresUnsupportedAndUnlistedSources() {
         val viewModel = buildViewModel()
-        viewModel.goToAmount(platformAddress)
+        viewModel.goToAmount(platformP2shAddress)
 
         viewModel.onSourceSelected(SendBalance.CORE)
         assertEquals(SendBalance.SHIELDED, viewModel.uiState.value.source)
@@ -280,7 +293,7 @@ class ExternalSendViewModelTest {
         service.balances.getValue(SendBalance.SHIELDED).value = twoDash
         service.max[SendBalance.SHIELDED] = oneDash
         val viewModel = buildViewModel()
-        viewModel.goToAmount(platformAddress)
+        viewModel.goToAmount(platformP2shAddress)
         assertEquals(twoDash, viewModel.uiState.value.balance)
         assertEquals(oneDash, viewModel.uiState.value.maxSendable)
 
@@ -343,12 +356,14 @@ class ExternalSendViewModelTest {
     fun continue_isBlockedForAnUnsupportedPair() {
         val state = ExternalSendUIState(
             step = ExternalSendStep.AMOUNT,
-            destination = SendDestination.Platform(platformAddress),
+            destination = SendDestination.Platform(platformP2shAddress),
             source = SendBalance.CORE,
             amountText = "1",
             balance = twoDash
         )
         assertFalse(state.canContinueAmount)
+        // A P2PKH Platform address is payable from Core.
+        assertTrue(state.copy(destination = SendDestination.Platform(platformAddress)).canContinueAmount)
         assertTrue(state.copy(source = SendBalance.SHIELDED).canContinueAmount)
     }
 
@@ -885,7 +900,7 @@ class ExternalSendViewModelTest {
         service.balances.getValue(SendBalance.PLATFORM).value = twoDash
         service.max[SendBalance.SHIELDED] = max
         val viewModel = buildViewModel(rate = usd100)
-        viewModel.goToAmount(platformAddress)
+        viewModel.goToAmount(platformP2shAddress)
         viewModel.onMaxClick()
         viewModel.onCurrencySelected(dashMode = false)
         assertEquals(max, viewModel.uiState.value.amount)
@@ -932,5 +947,15 @@ class ExternalSendViewModelTest {
             AdvancedScanAction.Error(wrongNetwork = false),
             AdvancedSendViewModel.scanActionFor("3QJmnh", network, true, connect)
         )
+    }
+
+    @Test
+    fun anInterruptedCoreToPlatformSend_isResumed_whenTheExecutorStarts_andEachTimeTheScreenOpens() {
+        // setUp's executor ran one sweep.
+        assertEquals(1, service.platformResumes)
+        buildViewModel()
+        assertEquals(2, service.platformResumes)
+        buildViewModel()
+        assertEquals(3, service.platformResumes)
     }
 }

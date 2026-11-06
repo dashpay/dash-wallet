@@ -25,6 +25,8 @@ import de.schildbach.wallet.service.platform.sdk.SendDestination
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -34,6 +36,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.dash.wallet.common.money.Dash
 import org.slf4j.LoggerFactory
+import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -134,6 +137,9 @@ class ExternalSendExecutor internal constructor(
     private val _state = MutableStateFlow<ExternalSendExecution>(ExternalSendExecution.Restoring)
     val state: StateFlow<ExternalSendExecution> = _state.asStateFlow()
 
+    /** The running [resumePendingPlatformFunding] sweep (declared before `init`, which starts one). */
+    private val platformFundingSweep = AtomicReference<Job?>(null)
+
     init {
         applicationScope.launch {
             val interrupted = try {
@@ -153,6 +159,32 @@ class ExternalSendExecutor internal constructor(
                 }
             }
         }
+        resumePendingPlatformFunding()
+    }
+
+    /**
+     * Finish an interrupted Core → Platform send in the background
+     * ([ExternalSendService.resumePendingPlatformFunding]): run when the executor starts and
+     * each time the external send screen opens. One sweep at a time; cheap (one store read)
+     * when nothing is pending. It shares the service's single-flight with sends: it skips
+     * while a send runs, and a send submitted while it resumes a lock is refused as in
+     * progress (Not sent, nothing spent).
+     */
+    fun resumePendingPlatformFunding() {
+        val running = platformFundingSweep.get()
+        if (running?.isActive == true) return
+        val job = applicationScope.launch(start = CoroutineStart.LAZY) {
+            val completed = try {
+                service.resumePendingPlatformFunding()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                log.warn("external send: pending Core → Platform sweep failed", e)
+                0
+            }
+            if (completed > 0) log.info("external send: an interrupted Core → Platform send was completed")
+        }
+        if (platformFundingSweep.compareAndSet(running, job)) job.start() else job.cancel()
     }
 
     /**

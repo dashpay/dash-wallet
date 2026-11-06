@@ -301,6 +301,16 @@ open class DashPayConfig @Inject constructor(
         val EXTERNAL_SEND_IN_FLIGHT = booleanPreferencesKey("external_send_in_flight")
 
         /**
+         * The one Core → third-party Platform address send whose asset lock is not yet known
+         * consumed ([de.schildbach.wallet.service.platform.sdk.PendingPlatformFunding]): its
+         * recipients, its lock amount and, once built, the lock's outpoint. Written before
+         * the SDK call, the outpoint added from `onAssetLockBuilt`, removed once the lock is
+         * consumed. The SDK's tracked lock stores no recipients, so this is what a resume
+         * pays; while it is present no new Core → Platform send starts. Never logged.
+         */
+        val EXTERNAL_PLATFORM_FUNDING_PENDING = stringPreferencesKey("external_platform_funding_pending")
+
+        /**
          * `startedAtMillis` of the in-flight marker whose "could not confirm"
          * guidance the user closed. While it matches the current marker the
          * automatic triggers (startup, resume) stop re-presenting the sheet;

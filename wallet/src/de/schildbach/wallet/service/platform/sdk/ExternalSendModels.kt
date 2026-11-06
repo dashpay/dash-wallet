@@ -133,6 +133,18 @@ internal fun decodePlatformAddress(address: String, network: AddressNetwork): Pl
     return PlatformAddressBytes(type, data.copyOfRange(1, data.size))
 }
 
+/**
+ * Whether [address] is a well-formed P2PKH Platform address (type byte
+ * [PLATFORM_P2PKH_TYPE_BYTE], 20-byte hash) of either Dash HRP. False for P2SH and for
+ * anything that is not a Platform address. The network is checked separately.
+ */
+internal fun isP2pkhPlatformAddress(address: String): Boolean {
+    val decoded = Bech32m.decode(address.trim()) ?: return false
+    if (decoded.hrp != MAINNET_HRP && decoded.hrp != TESTNET_HRP) return false
+    val data = decoded.data
+    return data.size == 1 + PLATFORM_HASH_LENGTH && (data[0].toInt() and 0xff) == PLATFORM_P2PKH_TYPE_BYTE
+}
+
 /** The 32 bytes of a base58 identity id, or null when [identityIdBase58] is not one. */
 internal fun decodeIdentityId(identityIdBase58: String): ByteArray? {
     val trimmed = identityIdBase58.trim()
@@ -324,14 +336,17 @@ enum class SendSupport {
  *
  * | From \ To | Core | Shielded | Platform | Identity |
  * |---|---|---|---|---|
- * | Core | yes | yes | no (1) | own identity only (2) |
+ * | Core | yes | yes | yes, P2PKH only (1) | own identity only (2) |
  * | Shielded | yes | yes | yes | yes |
  * | Platform | no (3) | no (4) | yes | yes |
  * | Identity | yes | no (5) | yes | yes, not to itself |
  *
- * 1. The pinned Kotlin SDK's `fundFromAssetLock` only funds the wallet's OWN Platform
- *    addresses (Rust `RecipientOwnership::AllOwned`); the external variant exists in
- *    the Rust FFI but is not bound in JNI.
+ * 1. `ManagedPlatformWallet.fundFromAssetLockExternal`: the payee gets the explicit
+ *    amount, the wallet's own Platform address the remainder (and pays the fee). The SDK
+ *    takes P2PKH recipients only, so a P2SH (`dash1s…`) destination is
+ *    [SendSupport.NOT_SUPPORTED_YET] here and refused by [ExternalSendService.send]
+ *    before anything is built. A lock interrupted after it was built is resumed with its
+ *    persisted recipients ([PendingPlatformFunding]).
  * 2. The Core top-up's resume gate keys on the managed identity's registration index;
  *    for someone else's identity a killed attempt could not be resumed (double-pay
  *    risk). [destinationIsOwnIdentity] null (could not tell) fails closed.
@@ -349,7 +364,8 @@ fun externalSendSupport(
     return when (source) {
         SendBalance.CORE -> when (destination) {
             is SendDestination.Core, is SendDestination.Shielded -> SendSupport.SUPPORTED
-            is SendDestination.Platform -> SendSupport.NOT_SUPPORTED_YET
+            is SendDestination.Platform ->
+                if (isP2pkhPlatformAddress(destination.address)) SendSupport.SUPPORTED else SendSupport.NOT_SUPPORTED_YET
             is SendDestination.Identity ->
                 if (destinationIsOwnIdentity == true) SendSupport.SUPPORTED else SendSupport.NEEDS_OWN_IDENTITY
         }
