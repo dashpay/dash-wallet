@@ -20,9 +20,11 @@ import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
 import de.schildbach.wallet.service.platform.sdk.SdkWalletBinder
 import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
 import de.schildbach.wallet.service.platform.sdk.WalletUnlock
+import de.schildbach.wallet.ui.payments.send.ExternalSendExecutor
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
@@ -65,6 +67,7 @@ class PlatformSyncEngineRestartTest {
     private val l1ShadowSyncService = mockk<L1ShadowSyncService>(relaxed = true)
     private val shieldedBalanceService = mockk<ShieldedBalanceService>(relaxed = true)
     private val identityRepository = mockk<IdentityRepository>(relaxed = true)
+    private val externalSendExecutor = mockk<ExternalSendExecutor>(relaxed = true)
 
     /** The engine kick is asynchronous (`syncScope.launch { bindJob.join(); … }`). */
     private val kickTimeoutMs = 10_000L
@@ -104,6 +107,7 @@ class PlatformSyncEngineRestartTest {
         sdkBlockchainStateService = mockk(relaxed = true),
         cutoverTxSeamService = mockk(relaxed = true),
         shieldedTransferExecutor = mockk(relaxed = true),
+        externalSendExecutor = { externalSendExecutor },
         contactRequestNotificationService = mockk(relaxed = true),
         dashPaySyncStatus = de.schildbach.wallet.service.DashPaySyncStatus()
     )
@@ -229,6 +233,72 @@ class PlatformSyncEngineRestartTest {
         delay(500)
 
         coVerify(exactly = 0) { l1ShadowSyncService.startIfEnabled() }
+        Unit
+    }
+
+    /**
+     * The pending Core → Platform External Send sweep runs at app start, not only when the
+     * External Send screen opens: every kick (init from WalletApplication, resume from the
+     * foreground service) starts it once its bind pass has finished — the trigger the pending
+     * wallet-shield sweep uses.
+     */
+    @Test
+    fun everyKick_startsThePendingExternalPlatformFundingSweep() = runBlocking {
+        val service = service()
+
+        service.init()
+        verify(timeout = kickTimeoutMs, exactly = 1) { externalSendExecutor.resumePendingPlatformFunding() }
+
+        service.resume()
+        verify(timeout = kickTimeoutMs, exactly = 2) { externalSendExecutor.resumePendingPlatformFunding() }
+        Unit
+    }
+
+    /** The sweep needs the bound wallet: nothing starts it before the kick's bind pass ends. */
+    @Test
+    fun pendingExternalPlatformFundingSweep_waitsForTheBindPass() = runBlocking {
+        val bind = CompletableDeferred<Unit>()
+        val binder = mockk<SdkWalletBinder>(relaxed = true)
+        every { binder.bindInBackground(any<suspend () -> WalletUnlock?>()) } returns bind
+        val service = service(sdkWalletBinder = binder)
+
+        service.init()
+        delay(500)
+        verify(exactly = 0) { externalSendExecutor.resumePendingPlatformFunding() }
+
+        bind.complete(Unit)
+        verify(timeout = kickTimeoutMs, exactly = 1) { externalSendExecutor.resumePendingPlatformFunding() }
+        Unit
+    }
+
+    /** A kick a stop cancelled while it waited on its bind starts no sweep either. */
+    @Test
+    fun stopSdkEngines_cancelsTheSweepOfAKickStillWaitingOnItsBind() = runBlocking {
+        val bind = CompletableDeferred<Unit>()
+        val binder = mockk<SdkWalletBinder>(relaxed = true)
+        every { binder.bindInBackground(any<suspend () -> WalletUnlock?>()) } returns bind
+        val service = service(sdkWalletBinder = binder)
+
+        service.resume()
+        service.stopSdkEngines()
+        bind.complete(Unit)
+        delay(500)
+
+        verify(exactly = 0) { externalSendExecutor.resumePendingPlatformFunding() }
+        Unit
+    }
+
+    /** A failure to reach the executor is logged; the rest of the kick still runs. */
+    @Test
+    fun aFailingExecutor_doesNotBreakTheKick() = runBlocking {
+        every { externalSendExecutor.resumePendingPlatformFunding() } throws IllegalStateException("boom")
+        val binder = mockk<SdkWalletBinder>(relaxed = true)
+        val service = service(sdkWalletBinder = binder)
+
+        service.resume()
+
+        // The step the kick runs after the sweep.
+        verify(timeout = kickTimeoutMs, exactly = 1) { binder.provisionContactAccountsInBackground(force = true) }
         Unit
     }
 }

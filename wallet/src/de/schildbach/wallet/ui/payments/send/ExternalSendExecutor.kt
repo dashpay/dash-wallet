@@ -164,8 +164,10 @@ class ExternalSendExecutor internal constructor(
 
     /**
      * Finish an interrupted Core → Platform send in the background
-     * ([ExternalSendService.resumePendingPlatformFunding]): run when the executor starts and
-     * each time the external send screen opens. One sweep at a time; cheap (one store read)
+     * ([ExternalSendService.resumePendingPlatformFunding]): run when the executor starts, on
+     * every SDK engine kick after its bind pass (app start and each blockchain-service start,
+     * `PlatformSynchronizationService.kickSdkEngines`), and each time the external send
+     * screen opens. One sweep at a time; cheap (one store read)
      * when nothing is pending. It shares the service's single-flight with sends: it skips
      * while a send runs, and a send submitted while it resumes a lock is refused as in
      * progress (Not sent, nothing spent).

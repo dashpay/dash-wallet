@@ -67,6 +67,7 @@ import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.PreBlockStage
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.more.TxMetadataSaveFrequency
+import de.schildbach.wallet.ui.payments.send.ExternalSendExecutor
 import de.schildbach.wallet.ui.shielded.ShieldedTransferExecutor
 import de.schildbach.wallet_test.BuildConfig
 import kotlinx.coroutines.*
@@ -263,6 +264,10 @@ class PlatformSynchronizationService @Inject constructor(
     private val sdkBlockchainStateService: SdkBlockchainStateService,
     private val cutoverTxSeamService: CutoverTxSeamService,
     private val shieldedTransferExecutor: ShieldedTransferExecutor,
+    // Lazy: the executor's service graph (ExternalSendServiceImpl → ShieldedBalanceService,
+    // SdkL1SendService, …) is resolved only when a kick first reaches it, off the main thread,
+    // and a dependency path back to this service can never become a construction cycle.
+    private val externalSendExecutor: dagger.Lazy<ExternalSendExecutor>,
     private val contactRequestNotificationService: ContactRequestNotificationService,
     // The DashPay half of the user-facing "still syncing" state; this service
     // is the only component that knows whether DashPay applies at all.
@@ -649,6 +654,16 @@ class PlatformSynchronizationService @Inject constructor(
                     }
                 }.onFailure { log.warn("startup shielded bring-up failed", it) }
             }
+            // The External Send counterpart of the pending wallet-shield sweep
+            // above: finish a Core → Platform send whose asset lock was built
+            // but whose Platform funding never completed, without the user
+            // opening External Send (a pending record means they already
+            // confirmed that payment, so Advanced mode is not consulted). Same
+            // trigger as that sweep: every kick, after the bind pass. The sweep
+            // runs on the application scope, off the main thread, one at a time
+            // and single-flight with sends (the service's inFlight); it no-ops
+            // unless the cutover is committed and the record's wallet is bound.
+            resumePendingExternalPlatformFunding()
             // DIP-15 friend-chain backfill (docs/kotlin-sdk-migration-plan.md;
             // scratchpad/txdiff/FINDINGS.md): the app keeps DashPay contacts on
             // dashj and never drives the SDK's contact-sync path, so the bound
@@ -658,6 +673,17 @@ class PlatformSynchronizationService @Inject constructor(
             // promptly on every service (re)start; fire-and-forget and provably
             // inert unless a USE_KOTLIN_SDK_* flag is on and a wallet is bound.
             sdkWalletBinder.provisionContactAccountsInBackground(force = true)
+        }
+    }
+
+    /** Kick [ExternalSendExecutor.resumePendingPlatformFunding]; never throws into the kick. */
+    private fun resumePendingExternalPlatformFunding() {
+        try {
+            externalSendExecutor.get().resumePendingPlatformFunding()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("startup pending external Platform funding sweep could not start", e)
         }
     }
 
