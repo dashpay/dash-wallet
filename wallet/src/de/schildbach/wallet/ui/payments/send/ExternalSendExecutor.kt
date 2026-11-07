@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.ui.payments.send
 
+import androidx.datastore.preferences.core.Preferences
 import de.schildbach.wallet.data.WalletData
 import de.schildbach.wallet.service.platform.sdk.ExternalSendResult
 import de.schildbach.wallet.service.platform.sdk.ExternalSendService
@@ -96,11 +97,18 @@ internal interface ExternalSendInFlightMarker {
     suspend fun clear()
 }
 
-/** [ExternalSendInFlightMarker] over [DashPayConfig] (error-preserving reads). */
-internal class DashPayConfigInFlightMarker(private val config: DashPayConfig) : ExternalSendInFlightMarker {
-    override suspend fun isSet(): Boolean = config.getPreservingErrors(DashPayConfig.EXTERNAL_SEND_IN_FLIGHT) == true
-    override suspend fun set() = config.set(DashPayConfig.EXTERNAL_SEND_IN_FLIGHT, true)
-    override suspend fun clear() = config.set(DashPayConfig.EXTERNAL_SEND_IN_FLIGHT, false)
+/**
+ * [ExternalSendInFlightMarker] over the [DashPayConfig] flag [key] (error-preserving reads):
+ * [DashPayConfig.EXTERNAL_SEND_IN_FLIGHT] by default, [DashPayConfig.INTERNAL_TRANSFER_IN_FLIGHT]
+ * for the internal transfer.
+ */
+internal class DashPayConfigInFlightMarker(
+    private val config: DashPayConfig,
+    private val key: Preferences.Key<Boolean> = DashPayConfig.EXTERNAL_SEND_IN_FLIGHT
+) : ExternalSendInFlightMarker {
+    override suspend fun isSet(): Boolean = config.getPreservingErrors(key) == true
+    override suspend fun set() = config.set(key, true)
+    override suspend fun clear() = config.set(key, false)
 }
 
 /**
@@ -358,5 +366,6 @@ class ExternalSendExecutor internal constructor(
         is ExternalSendResult.NotSent -> "NotSent(${result.reason})"
         ExternalSendResult.MayHaveGoneThrough -> "MayHaveGoneThrough"
         ExternalSendResult.InterruptedFundsReturnToShielded -> "InterruptedFundsReturnToShielded"
+        ExternalSendResult.CompletesAutomatically -> "CompletesAutomatically"
     }
 }
