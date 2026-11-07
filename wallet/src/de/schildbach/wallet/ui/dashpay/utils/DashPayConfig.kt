@@ -311,6 +311,13 @@ open class DashPayConfig @Inject constructor(
         val EXTERNAL_PLATFORM_FUNDING_PENDING = stringPreferencesKey("external_platform_funding_pending")
 
         /**
+         * [EXTERNAL_SEND_IN_FLIGHT] for the Advanced-mode internal transfer between the user's own
+         * balances ([de.schildbach.wallet.ui.payments.internal.InternalTransferExecutor]). A bare
+         * flag: no amount, address or id.
+         */
+        val INTERNAL_TRANSFER_IN_FLIGHT = booleanPreferencesKey("internal_transfer_in_flight")
+
+        /**
          * `startedAtMillis` of the in-flight marker whose "could not confirm"
          * guidance the user closed. While it matches the current marker the
          * automatic triggers (startup, resume) stop re-presenting the sheet;

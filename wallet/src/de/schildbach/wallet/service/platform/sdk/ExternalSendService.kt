@@ -83,6 +83,14 @@ sealed class ExternalSendResult {
      * user's OWN shielded balance instead; the recipient is not paid. Terminal; no retry.
      */
     object InterruptedFundsReturnToShielded : ExternalSendResult()
+
+    /**
+     * Internal transfer Core → own Shielded only ([InternalTransferService]): the L1 asset lock
+     * went out and the wallet's pending-shield sweep finishes the shield to the user's own
+     * shielded balance ([ShieldFromWalletOutcome.SHIELD_PENDING_RETRY]). Funds are not lost
+     * and nothing must be sent again. Terminal; no retry.
+     */
+    object CompletesAutomatically : ExternalSendResult()
 }
 
 /**
@@ -123,6 +131,16 @@ interface ExternalSendService {
 
     /** Fee for this exact send, or null when it cannot be known before the send (never fabricated). */
     suspend fun estimateFee(source: SendBalance, destination: SendDestination, amount: Dash): FeeEstimate?
+
+    /**
+     * [estimateFee] for a destination of the balance kind [destinationKind]: every estimate
+     * depends only on the pair, never on the address, so the internal transfer
+     * ([InternalTransferService]) can show it before its own destination is resolved.
+     */
+    suspend fun estimateFeeForPair(source: SendBalance, destinationKind: SendBalance, amount: Dash): FeeEstimate?
+
+    /** [maxSendable] for a destination of the balance kind [destinationKind] (see [estimateFeeForPair]). */
+    suspend fun maxSendableForPair(source: SendBalance, destinationKind: SendBalance): Dash?
 
     /**
      * The Max amount, or null when unknown: for Core → Core the whole spendable balance,

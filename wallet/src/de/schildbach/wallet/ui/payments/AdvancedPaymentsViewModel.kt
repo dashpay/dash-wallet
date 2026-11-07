@@ -18,7 +18,6 @@
 package de.schildbach.wallet.ui.payments
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import org.dash.wallet.common.util.readRetryDelayMs
@@ -31,48 +30,37 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.retryWhen
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
-import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
 /**
- * @property tabIds the logical tab ids in display order (see [PaymentsFragment.tabIdsFor]),
- *   or null until the shielded flag has been read: the screen builds no pages until then.
+ * @property tabIds the logical tab ids in display order (see [advancedPaymentsTabIds]); null only
+ *   before the first state is set (the screen builds no pages until then).
  */
 data class AdvancedPaymentsUIState(
     val tabIds: List<Int>? = null
 )
 
 @HiltViewModel
-class AdvancedPaymentsViewModel @Inject constructor(
-    dashPayConfig: DashPayConfig
-) : ViewModel() {
-    companion object {
-        private val log = LoggerFactory.getLogger(AdvancedPaymentsViewModel::class.java)
-    }
+class AdvancedPaymentsViewModel internal constructor(supportsPlatform: Boolean) : ViewModel() {
+    @Inject
+    constructor() : this(Constants.SUPPORTS_PLATFORM)
 
-    private val _uiState = MutableStateFlow(AdvancedPaymentsUIState())
+    private val _uiState = MutableStateFlow(AdvancedPaymentsUIState(tabIds = advancedPaymentsTabIds(supportsPlatform)))
     val uiState: StateFlow<AdvancedPaymentsUIState> = _uiState.asStateFlow()
-
-    init {
-        viewModelScope.launch {
-            advancedPaymentsTabsFlow(
-                shieldedFlag = dashPayConfig.observePreservingErrors(DashPayConfig.USE_KOTLIN_SDK_SHIELDED),
-                supportsPlatform = Constants.SUPPORTS_PLATFORM,
-                onError = { e, attempt -> log.warn("shielded flag read failed (attempt {})", attempt, e) }
-            ).collect { tabIds ->
-                _uiState.update { it.copy(tabIds = tabIds) }
-            }
-        }
-    }
 }
+
+/**
+ * The tab set for the Advanced payments screen (MO-1125): the "Internal" tab is always shown
+ * where Platform is supported, whatever the shielded flag — with the flag off, the Internal
+ * transfer shows Shielded disabled. Basic mode ([PaymentsFragment]) keeps its own gating.
+ */
+internal fun advancedPaymentsTabIds(supportsPlatform: Boolean): List<Int> = PaymentsFragment.tabIdsFor(supportsPlatform)
 
 /**
  * The shielded flag as a never-failing flow: a failed read counts as off (as
  * [DashPayConfig.get] reading absent does for [PaymentsFragment]), is reported to
- * [onError] and is retried, so the flow never completes on an error. Shared by the
- * Advanced payments tabs ([advancedPaymentsTabsFlow]) and the Receive balance tabs.
+ * [onError] and is retried, so the flow never completes on an error. Used by the Receive
+ * balance tabs.
  */
 internal fun shieldedEnabledFlow(
     shieldedFlag: Flow<Boolean?>,
@@ -86,18 +74,4 @@ internal fun shieldedEnabledFlow(
         delay(retryDelayMs(attempt))
         true
     }
-    .distinctUntilChanged()
-
-/**
- * The tab set for the Advanced payments screen. Same gating as [PaymentsFragment]: the
- * "Internal" tab needs `SUPPORTS_PLATFORM` and `USE_KOTLIN_SDK_SHIELDED`; a failed read
- * hides it (see [shieldedEnabledFlow]).
- */
-internal fun advancedPaymentsTabsFlow(
-    shieldedFlag: Flow<Boolean?>,
-    supportsPlatform: Boolean,
-    onError: (Throwable, Long) -> Unit = { _, _ -> },
-    retryDelayMs: (Long) -> Long = ::readRetryDelayMs
-): Flow<List<Int>> = shieldedEnabledFlow(shieldedFlag, onError, retryDelayMs)
-    .map { PaymentsFragment.tabIdsFor(supportsPlatform && it) }
     .distinctUntilChanged()

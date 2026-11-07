@@ -629,6 +629,24 @@ interface ShieldedBalanceService {
         expectedWalletIdHex: String
     ): SdkWriteResult<ShieldFromWalletOutcome>
 
+    // ── Pinned self transfers (Advanced mode "Internal Transfers") ─────
+    //
+    // The self-only writes above, pinned to the SDK wallet [expectedWalletIdHex] the
+    // caller captured before its first suspension: a runtime bound to another wallet is a
+    // [SdkWriteResult.NotBroadcast] before anything is submitted. Same contracts otherwise.
+
+    /** [shieldFromWallet] (self-shield, own default Orchard address), pinned to [expectedWalletIdHex]. */
+    suspend fun shieldFromWalletPinned(
+        amount: Dash,
+        expectedWalletIdHex: String
+    ): SdkWriteResult<ShieldFromWalletOutcome>
+
+    /** [shieldFromCredits] (Type 15, own default Orchard address), pinned to [expectedWalletIdHex]. */
+    suspend fun shieldFromCreditsPinned(amount: Dash, expectedWalletIdHex: String): SdkWriteResult<Unit>
+
+    /** [unshieldToCredits] (Type 17, own Platform address), pinned to [expectedWalletIdHex]. */
+    suspend fun unshieldToCreditsPinned(amount: Dash, expectedWalletIdHex: String): SdkWriteResult<Unit>
+
     /**
      * The consensus-pinned flat pool fee, in credits, of a single-note (2-action)
      * transition of [kind]; a spend selecting more notes pays more, so this is an

@@ -281,6 +281,15 @@ internal fun <T> Flow<T>.retryReadErrors(
     }
 }
 
+/**
+ * The user's registered identity id from the identity record ([id] and its creation [state]),
+ * null when there is none yet; an unknown creation state throws (unknown, not "none").
+ */
+internal fun ownRegisteredIdentity(id: String?, state: String?): String? {
+    val creation = IdentityCreationState.valueOf(state ?: IdentityCreationState.NONE.name)
+    return id?.takeIf { it.isNotBlank() && creation >= IdentityCreationState.IDENTITY_REGISTERED }
+}
+
 private val retryLog = LoggerFactory.getLogger("de.schildbach.wallet.service.platform.sdk.ExternalSendRetry")
 
 /**
@@ -513,11 +522,7 @@ internal class DashSdkExternalSendSource(
         ) { id, state -> Result.success(ownIdentity(id, state)) }
             .retryReadErrors("identity record", Result.failure(IllegalStateException("identity record unreadable")))
 
-    /** A registered identity; an unknown creation state throws (unknown, not "none"). */
-    private fun ownIdentity(id: String?, state: String?): String? {
-        val creation = IdentityCreationState.valueOf(state ?: IdentityCreationState.NONE.name)
-        return id?.takeIf { it.isNotBlank() && creation >= IdentityCreationState.IDENTITY_REGISTERED }
-    }
+    private fun ownIdentity(id: String?, state: String?): String? = ownRegisteredIdentity(id, state)
 
     override suspend fun managedIdentityIds(walletIdHex: String): List<ByteArray> =
         wallet(walletIdHex).inMemoryIdentityStates().filter { !it.watched }.map { it.identityId }
@@ -927,8 +932,15 @@ class ExternalSendServiceImpl internal constructor(
     }
 
     override suspend fun estimateFee(source: SendBalance, destination: SendDestination, amount: Dash): FeeEstimate? =
+        estimateFeeForPair(source, balanceKindOf(destination), amount)
+
+    override suspend fun estimateFeeForPair(
+        source: SendBalance,
+        destinationKind: SendBalance,
+        amount: Dash
+    ): FeeEstimate? =
         try {
-            withContext(ioDispatcher) { estimateFeeInner(source, destination) }
+            withContext(ioDispatcher) { estimateFeeInner(source, destinationKind) }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -955,17 +967,17 @@ class ExternalSendServiceImpl internal constructor(
      *   fee of the asset unlock comes out of the amount on top; Platform/Identity → Shielded
      *   add the shielded compute fee to the metered one.)
      */
-    private suspend fun estimateFeeInner(source: SendBalance, destination: SendDestination): FeeEstimate? =
+    private suspend fun estimateFeeInner(source: SendBalance, destination: SendBalance): FeeEstimate? =
         when (source) {
             SendBalance.CORE -> when (destination) {
-                is SendDestination.Core -> FeeEstimate(Dash(coreSendFeeReserveDuffs()), exact = false)
-                is SendDestination.Shielded -> this.source.shieldedFeeCredits(ShieldedFeeKind.TRANSFER)?.let {
+                SendBalance.CORE -> FeeEstimate(Dash(coreSendFeeReserveDuffs()), exact = false)
+                SendBalance.SHIELDED -> this.source.shieldedFeeCredits(ShieldedFeeKind.TRANSFER)?.let {
                     FeeEstimate(Dash(shieldPoolFeeDuffs(it)), exact = false)
                 }
-                is SendDestination.Platform -> this.source.spendableUtxoCount()?.let {
+                SendBalance.PLATFORM -> this.source.spendableUtxoCount()?.let {
                     FeeEstimate(Dash(coreToPlatformFeeDuffs(it)), exact = false)
                 }
-                is SendDestination.Identity -> null
+                SendBalance.IDENTITY -> null
             }
             SendBalance.SHIELDED -> this.source.shieldedFeeCredits(shieldedKindFor(destination))?.let {
                 FeeEstimate(Dash(ceilCreditsToDuffs(it)), exact = false)
@@ -986,13 +998,17 @@ class ExternalSendServiceImpl internal constructor(
      *   retries once with the exact deficit the note selection reports.
      * - Everything else: null (no pre-send fee figure).
      */
-    override suspend fun maxSendable(source: SendBalance, destination: SendDestination): Dash? = try {
+    override suspend fun maxSendable(source: SendBalance, destination: SendDestination): Dash? =
+        maxSendableForPair(source, balanceKindOf(destination))
+
+    override suspend fun maxSendableForPair(source: SendBalance, destinationKind: SendBalance): Dash? = try {
+        val destination = destinationKind
         when (source) {
             SendBalance.CORE -> when (destination) {
-                is SendDestination.Core -> withContext(ioDispatcher) { coreToCoreMaxDuffs() }?.let(::Dash)
-                is SendDestination.Shielded -> withContext(ioDispatcher) { coreToShieldedMaxDuffs() }?.let(::Dash)
-                is SendDestination.Platform -> withContext(ioDispatcher) { coreToPlatformMaxDuffsOrNull() }?.let(::Dash)
-                is SendDestination.Identity -> null
+                SendBalance.CORE -> withContext(ioDispatcher) { coreToCoreMaxDuffs() }?.let(::Dash)
+                SendBalance.SHIELDED -> withContext(ioDispatcher) { coreToShieldedMaxDuffs() }?.let(::Dash)
+                SendBalance.PLATFORM -> withContext(ioDispatcher) { coreToPlatformMaxDuffsOrNull() }?.let(::Dash)
+                SendBalance.IDENTITY -> null
             }
             SendBalance.SHIELDED -> {
                 val balance = this.source.observeShieldedBalance().first()
@@ -1785,11 +1801,11 @@ class ExternalSendServiceImpl internal constructor(
             is SendDestination.Identity -> "Identity"
         }
 
-        private fun shieldedKindFor(destination: SendDestination): ShieldedFeeKind = when (destination) {
-            is SendDestination.Core -> ShieldedFeeKind.WITHDRAWAL
-            is SendDestination.Shielded -> ShieldedFeeKind.TRANSFER
-            is SendDestination.Platform -> ShieldedFeeKind.UNSHIELD
-            is SendDestination.Identity -> ShieldedFeeKind.IDENTITY_TOP_UP
+        private fun shieldedKindFor(destination: SendBalance): ShieldedFeeKind = when (destination) {
+            SendBalance.CORE -> ShieldedFeeKind.WITHDRAWAL
+            SendBalance.SHIELDED -> ShieldedFeeKind.TRANSFER
+            SendBalance.PLATFORM -> ShieldedFeeKind.UNSHIELD
+            SendBalance.IDENTITY -> ShieldedFeeKind.IDENTITY_TOP_UP
         }
     }
 }

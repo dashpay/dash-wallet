@@ -2139,7 +2139,13 @@ class ShieldedBalanceServiceImpl internal constructor(
     }
 
     override suspend fun shieldFromCredits(amount: Dash): SdkWriteResult<Unit> =
-        runShieldedWrite("shieldFromCredits", amount) { walletId, credits ->
+        shieldFromCreditsInternal(amount, expectedWalletIdHex = null)
+
+    override suspend fun shieldFromCreditsPinned(amount: Dash, expectedWalletIdHex: String): SdkWriteResult<Unit> =
+        shieldFromCreditsInternal(amount, expectedWalletIdHex)
+
+    private suspend fun shieldFromCreditsInternal(amount: Dash, expectedWalletIdHex: String?): SdkWriteResult<Unit> =
+        runShieldedWrite("shieldFromCredits", amount, expectedWalletIdHex) { walletId, credits ->
             source.shield(walletId, credits)
         }
 
@@ -2183,6 +2189,12 @@ class ShieldedBalanceServiceImpl internal constructor(
 
     override suspend fun shieldFromWallet(amount: Dash): SdkWriteResult<ShieldFromWalletOutcome> =
         shieldFromWalletInternal(amount, fundingPath = null)
+
+    override suspend fun shieldFromWalletPinned(
+        amount: Dash,
+        expectedWalletIdHex: String
+    ): SdkWriteResult<ShieldFromWalletOutcome> =
+        shieldFromWalletInternal(amount, fundingPath = null, expectedWalletIdHex = expectedWalletIdHex)
 
     /** Tracked locks with [PendingWalletShieldLock.platformConsumed] applied; unreadable → none (fail closed). */
     private suspend fun trackedShieldLocks(walletId: ByteArray): List<PendingWalletShieldLock> {
@@ -2812,7 +2824,13 @@ class ShieldedBalanceServiceImpl internal constructor(
     }
 
     override suspend fun unshieldToCredits(amount: Dash): SdkWriteResult<Unit> =
-        runShieldedWrite("unshieldToCredits", amount) { walletId, credits ->
+        unshieldToCreditsInternal(amount, expectedWalletIdHex = null)
+
+    override suspend fun unshieldToCreditsPinned(amount: Dash, expectedWalletIdHex: String): SdkWriteResult<Unit> =
+        unshieldToCreditsInternal(amount, expectedWalletIdHex)
+
+    private suspend fun unshieldToCreditsInternal(amount: Dash, expectedWalletIdHex: String?): SdkWriteResult<Unit> =
+        runShieldedWrite("unshieldToCredits", amount, expectedWalletIdHex) { walletId, credits ->
             val target = try {
                 source.ownPlatformAddressOrNull(walletId)
             } catch (t: Throwable) {

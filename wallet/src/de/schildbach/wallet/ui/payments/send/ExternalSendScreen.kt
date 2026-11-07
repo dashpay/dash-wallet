@@ -23,7 +23,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -39,19 +38,15 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -61,26 +56,20 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.schildbach.wallet.service.platform.sdk.ExternalSendResult
 import de.schildbach.wallet.service.platform.sdk.IdentityResolution
-import de.schildbach.wallet.service.platform.sdk.NotSentReason
 import de.schildbach.wallet.service.platform.sdk.SendBalance
 import de.schildbach.wallet.service.platform.sdk.SendDestination
 import de.schildbach.wallet.service.platform.sdk.SendSupport
+import de.schildbach.wallet.service.platform.sdk.balanceKindOf
 import de.schildbach.wallet.ui.shielded.toDisplay
 import de.schildbach.wallet.ui.shielded.toDisplayString
 import de.schildbach.wallet.ui.shielded.toFiatAt
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.money.Dash
-import org.dash.wallet.common.money.Fiat
 import org.dash.wallet.common.ui.components.ActionItem
 import org.dash.wallet.common.ui.components.AddressField
-import org.dash.wallet.common.ui.components.ButtonData
 import org.dash.wallet.common.ui.components.DASH_CURRENCY_CODE
 import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.DashWalletTheme
-import org.dash.wallet.common.ui.components.EnterAmount
-import org.dash.wallet.common.ui.components.Grabber
-import org.dash.wallet.common.ui.components.ListItem1
-import org.dash.wallet.common.ui.components.ListItem
 import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.Menu
 import org.dash.wallet.common.ui.components.ModalDialog
@@ -88,14 +77,10 @@ import org.dash.wallet.common.ui.components.MyImages
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.Size
 import org.dash.wallet.common.ui.components.Style
-import org.dash.wallet.common.ui.components.SystemMessage
 import org.dash.wallet.common.ui.components.TopIntro
 import org.dash.wallet.common.ui.components.TopNavBase
 import org.dash.wallet.common.ui.enter_amount.AmountEntryPage
 import org.dash.wallet.common.ui.enter_amount.AmountEntryPrimaryButton
-import org.dash.wallet.common.ui.enter_amount.decimalSeparatorFor
-import org.dash.wallet.common.ui.enter_amount.localizeAmountForDisplay
-import java.util.Locale
 
 /** The callbacks of [ExternalSendScreen], one per user action. */
 class ExternalSendActions(
@@ -499,33 +484,6 @@ private fun StatusText(text: String, color: Color) {
 
 // ── Sheets ──────────────────────────────────────────────────────────────────
 
-/** Dimmed backdrop and a bottom sheet with a grabber, as in the shielded flows. */
-@Composable
-private fun SheetOverlay(onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0x800A0B0D))
-            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
-                onDismiss()
-            }
-    ) {
-        Column(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .background(
-                    LocalDashColors.current.backgroundPrimary,
-                    RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
-                )
-                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
-        ) {
-            Grabber()
-            content()
-        }
-    }
-}
-
 /** Figma 7076:47424 "Select source": the four balances with a radio; unsupported rows disabled. */
 @Composable
 private fun SourceSheet(uiState: ExternalSendUIState, actions: ExternalSendActions) {
@@ -570,121 +528,31 @@ private fun Radio(selected: Boolean) {
     )
 }
 
-/** Figma 7076:47968 / 7107:48421: amount, From / To / Network fee / Total, info notes, buttons. */
+/** Figma 7076:47968 / 7107:48421, through the shared [SendConfirmSheet]. */
 @Composable
 private fun ConfirmSheet(uiState: ExternalSendUIState, confirm: ExternalSendConfirm, actions: ExternalSendActions) {
     val request = confirm.request
-    val unknown = stringResource(R.string.external_send_value_unknown)
-    SheetOverlay(onDismiss = actions.onDismissConfirm) {
-        TopNavBase(
-            leadingPart = false,
-            trailingPart = false,
-            title = stringResource(R.string.external_send_confirm_title)
-        )
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-        ) {
-            // What the recipient receives (a Core Max drain: the amount minus the fee).
-            ConfirmAmount(confirm.recipientAmount, uiState.rate, uiState.fiatCode)
-            Spacer(modifier = Modifier.height(20.dp))
-            Menu {
-                ListItem1(
-                    label = stringResource(R.string.external_send_from),
-                    value = stringResource(balanceNameFor(request.source))
-                )
-                val destination = request.destination
-                val toValue = when (destination) {
-                    is SendDestination.Identity ->
-                        (uiState.identityResolution as? IdentityResolution.Found)?.username
-                            ?: ExternalSendViewModel.shorten(destination.display)
-                    else -> ExternalSendViewModel.shorten(destination.display)
-                }
-                ListItem1(label = stringResource(R.string.external_send_to), value = toValue)
-                val fee = if (confirm.feeLoading) null else confirm.fee
-                DashValueRow(
-                    label = stringResource(R.string.external_send_network_fee),
-                    value = fee?.let { approximate(it.fee.toDisplayString(), !it.exact) },
-                    unknown = unknown
-                )
-                DashValueRow(
-                    label = stringResource(R.string.external_send_total),
-                    // A drain's total is the confirmed amount itself (exact); otherwise amount + fee.
-                    value = confirm.total?.takeIf { fee != null || confirm.feeIncluded }?.let { total ->
-                        approximate(total.toDisplayString(), !confirm.feeIncluded && fee?.exact != true)
-                    },
-                    unknown = unknown
-                )
-                ConfirmNotes(request.source, destination)
-            }
-        }
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-            horizontalArrangement = Arrangement.spacedBy(20.dp)
-        ) {
-            DashButton(
-                modifier = Modifier.weight(1f),
-                text = stringResource(R.string.button_cancel),
-                style = Style.TintedGray,
-                size = Size.Large,
-                onClick = actions.onDismissConfirm
-            )
-            DashButton(
-                modifier = Modifier.weight(1f),
-                text = stringResource(R.string.button_confirm),
-                style = Style.FilledBlue,
-                size = Size.Large,
-                onClick = actions.onConfirm
-            )
-        }
+    val destination = request.destination
+    val toValue = when (destination) {
+        is SendDestination.Identity ->
+            (uiState.identityResolution as? IdentityResolution.Found)?.username
+                ?: ExternalSendViewModel.shorten(destination.display)
+        else -> ExternalSendViewModel.shorten(destination.display)
     }
-}
-
-/** A confirm row whose value is a Dash amount: the Dash symbol before it, or [unknown] alone. */
-@Composable
-private fun DashValueRow(label: String, value: String?, unknown: String) {
-    val colors = LocalDashColors.current
-    ListItem(
-        label = label,
-        trailingText = value ?: unknown,
-        trailingLeadingIcon = if (value != null) {
-            {
-                Icon(
-                    painter = painterResource(org.dash.wallet.common.R.drawable.ic_dash_d_black),
-                    contentDescription = null,
-                    tint = colors.textPrimary,
-                    modifier = Modifier.size(12.dp)
-                )
-            }
-        } else {
-            null
-        }
-    )
-}
-
-@Composable
-private fun approximate(value: String, estimate: Boolean): String =
-    if (estimate) stringResource(R.string.external_send_approximately, value) else value
-
-/** The confirm sheet's amount block (Figma "amount" 380x97): the same bar as the amount page, read-only. */
-@Composable
-private fun ConfirmAmount(amount: Dash, rate: Fiat?, fiatCode: String?) {
-    val separator = remember { decimalSeparatorFor(Locale.getDefault()) }
-    val fiat = amount.toFiatAt(rate)
-    EnterAmount(
-        primaryAmount = localizeAmountForDisplay(amount.toDisplayString(), separator),
-        secondaryAmount = fiat?.let { localizeAmountForDisplay(it.toPlainString(), separator) } ?: "0",
-        currencyCodes = if (fiatCode != null) listOf(DASH_CURRENCY_CODE, fiatCode) else listOf(DASH_CURRENCY_CODE),
-        selectedCurrencyIndex = 0,
-        showMaxButton = false,
-        showBalanceButton = false,
-        showPrimaryChevron = false,
-        showSecondary = fiat != null,
-        showCurrencyPicker = false,
-        modifier = Modifier.padding(horizontal = 20.dp)
+    SendConfirmSheet(
+        // What the recipient receives (a Core Max drain: the amount minus the fee).
+        amount = confirm.recipientAmount,
+        rate = uiState.rate,
+        fiatCode = uiState.fiatCode,
+        fromValue = stringResource(balanceNameFor(request.source)),
+        toValue = toValue,
+        fee = confirm.fee,
+        feeLoading = confirm.feeLoading,
+        total = confirm.total,
+        feeIncluded = confirm.feeIncluded,
+        notes = externalConfirmNotes(request.source, destination),
+        onDismiss = actions.onDismissConfirm,
+        onConfirm = actions.onConfirm
     )
 }
 
@@ -692,157 +560,22 @@ private fun ConfirmAmount(amount: Dash, rate: Fiat?, fiatCode: String?) {
  * Figma 7107:48425: from the Shielded balance to anywhere but Shielded, the send is not instant
  * and becomes public. An identity destination is paid into its Platform balance (AC8).
  */
-@Composable
-private fun ConfirmNotes(source: SendBalance, destination: SendDestination) {
-    val notes = buildList {
-        if (source == SendBalance.SHIELDED && destination !is SendDestination.Shielded) {
-            add(R.string.external_send_shielded_not_instant)
-            add(
-                when (destination) {
-                    is SendDestination.Core -> R.string.external_send_shielded_public_to_core
-                    is SendDestination.Platform -> R.string.external_send_shielded_public_to_platform
-                    else -> R.string.external_send_shielded_public_to_identity
-                }
-            )
-        }
-        if (destination is SendDestination.Identity) {
-            add(R.string.external_send_identity_balance_note)
-        }
-    }
-    if (notes.isEmpty()) return
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = 10.dp, end = 10.dp, top = 18.dp, bottom = 14.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        notes.forEach { note ->
-            SystemMessage(
-                description = stringResource(note),
-                iconRes = org.dash.wallet.common.R.drawable.ic_info_blue
-            )
-        }
-    }
-}
-
-// ── Progress and outcome ────────────────────────────────────────────────────
-
-/**
- * The send is running on the app scope. Leaving does not cancel it; the outcome shows when the
- * user opens the external send again.
- */
-@Composable
-private fun SendingOverlay(shieldedLeg: Boolean, onLeave: () -> Unit) {
-    val colors = LocalDashColors.current
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0x800A0B0D))
-            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {},
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            modifier = Modifier
-                .padding(horizontal = 40.dp)
-                .background(colors.backgroundSecondary, RoundedCornerShape(20.dp))
-                .padding(30.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            CircularProgressIndicator(color = colors.dashBlue)
-            Text(
-                text = stringResource(R.string.external_send_sending_title),
-                style = MyTheme.Typography.TitleMediumSemibold,
-                color = colors.textPrimary,
-                textAlign = TextAlign.Center
-            )
-            Text(
-                text = stringResource(
-                    if (shieldedLeg) R.string.external_send_sending_shielded_message else R.string.external_send_sending_message
-                ),
-                style = MyTheme.Typography.BodyMedium,
-                color = colors.textSecondary,
-                textAlign = TextAlign.Center
-            )
-            if (shieldedLeg) {
-                DashButton(
-                    text = stringResource(R.string.external_send_close),
-                    style = Style.TintedGray,
-                    size = Size.Large,
-                    onClick = onLeave
-                )
+internal fun externalConfirmNotes(source: SendBalance, destination: SendDestination): List<Int> = buildList {
+    if (source == SendBalance.SHIELDED && destination !is SendDestination.Shielded) {
+        add(R.string.external_send_shielded_not_instant)
+        add(
+            when (destination) {
+                is SendDestination.Core -> R.string.external_send_shielded_public_to_core
+                is SendDestination.Platform -> R.string.external_send_shielded_public_to_platform
+                else -> R.string.external_send_shielded_public_to_identity
             }
-        }
+        )
+    }
+    if (destination is SendDestination.Identity) {
+        add(R.string.external_send_identity_balance_note)
     }
 }
 
-/** The terminal outcome. Only Not sent offers to go back and edit; nothing offers a retry. */
-@Composable
-private fun ResultDialog(result: ExternalSendResult, afterRestart: Boolean, onClose: () -> Unit) {
-    val content = resultContentFor(result, afterRestart)
-    ModalDialog(
-        showDialog = true,
-        onDismissRequest = onClose,
-        icon = ImageVector.vectorResource(content.icon),
-        heading = stringResource(content.title),
-        textBlocks = listOf(stringResource(content.message)),
-        buttons = listOf(
-            ButtonData(
-                label = stringResource(content.button),
-                onClick = onClose,
-                isPrimary = true,
-                style = Style.TintedGray
-            )
-        )
-    )
-}
-
-/** What the outcome dialog shows for [result]. */
-internal data class ResultContent(
-    @DrawableRes val icon: Int,
-    @StringRes val title: Int,
-    @StringRes val message: Int,
-    @StringRes val button: Int
-)
-
-internal fun resultContentFor(result: ExternalSendResult, afterRestart: Boolean = false): ResultContent = when (result) {
-    is ExternalSendResult.Sent -> ResultContent(
-        org.dash.wallet.common.R.drawable.ic_success_green,
-        R.string.external_send_sent_title,
-        R.string.external_send_sent_message,
-        R.string.external_send_close
-    )
-    is ExternalSendResult.NotSent -> ResultContent(
-        org.dash.wallet.common.R.drawable.ic_error,
-        R.string.external_send_not_sent_title,
-        notSentMessageFor(result.reason),
-        R.string.external_send_edit
-    )
-    ExternalSendResult.MayHaveGoneThrough -> ResultContent(
-        org.dash.wallet.common.R.drawable.ic_toast_info_warning,
-        R.string.external_send_ambiguous_title,
-        if (afterRestart) R.string.external_send_ambiguous_after_restart_message else R.string.external_send_ambiguous_message,
-        R.string.external_send_close
-    )
-    ExternalSendResult.InterruptedFundsReturnToShielded -> ResultContent(
-        org.dash.wallet.common.R.drawable.ic_toast_info_warning,
-        R.string.external_send_interrupted_title,
-        R.string.external_send_interrupted_message,
-        R.string.external_send_close
-    )
-}
-
-@StringRes
-internal fun notSentMessageFor(reason: NotSentReason): Int = when (reason) {
-    NotSentReason.INSUFFICIENT_FUNDS -> R.string.external_send_not_sent_insufficient_funds
-    NotSentReason.NOT_SYNCED -> R.string.external_send_not_sent_not_synced
-    NotSentReason.SIGNER_LOCKED -> R.string.external_send_not_sent_signer_locked
-    NotSentReason.NOT_SUPPORTED -> R.string.external_send_not_sent_not_supported
-    NotSentReason.PAYMENT_STILL_CONFIRMING -> R.string.external_send_not_sent_still_confirming
-    NotSentReason.IN_PROGRESS -> R.string.external_send_not_sent_in_progress
-    NotSentReason.BALANCE_CHANGED -> R.string.external_send_not_sent_balance_changed
-    NotSentReason.GENERIC -> R.string.external_send_not_sent_generic
-}
 
 // ── Icons and names ─────────────────────────────────────────────────────────
 
@@ -855,7 +588,7 @@ internal fun iconFor(source: SendBalance): Int = when (source) {
 }
 
 @DrawableRes
-internal fun iconFor(destination: SendDestination): Int = iconFor(balanceOf(destination))
+internal fun iconFor(destination: SendDestination): Int = iconFor(balanceKindOf(destination))
 
 @StringRes
 internal fun titleFor(source: SendBalance): Int = when (source) {
@@ -866,7 +599,7 @@ internal fun titleFor(source: SendBalance): Int = when (source) {
 }
 
 @StringRes
-internal fun titleFor(destination: SendDestination): Int = titleFor(balanceOf(destination))
+internal fun titleFor(destination: SendDestination): Int = titleFor(balanceKindOf(destination))
 
 @StringRes
 internal fun balanceNameFor(source: SendBalance): Int = when (source) {
@@ -876,13 +609,6 @@ internal fun balanceNameFor(source: SendBalance): Int = when (source) {
     SendBalance.IDENTITY -> R.string.external_send_balance_name_identity
 }
 
-/** The kind of balance a destination is paid into, for its icon and name. */
-private fun balanceOf(destination: SendDestination): SendBalance = when (destination) {
-    is SendDestination.Core -> SendBalance.CORE
-    is SendDestination.Shielded -> SendBalance.SHIELDED
-    is SendDestination.Platform -> SendBalance.PLATFORM
-    is SendDestination.Identity -> SendBalance.IDENTITY
-}
 
 @Preview(showBackground = true, widthDp = 420, heightDp = 926)
 @Composable

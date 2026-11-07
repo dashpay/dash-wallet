@@ -93,6 +93,8 @@ class ExternalSendViewModelTest {
         override suspend fun resolveIdentity(identityIdBase58: String): IdentityResolution = resolution
         override suspend fun estimateFee(source: SendBalance, destination: SendDestination, amount: Dash) = fee
         override suspend fun maxSendable(source: SendBalance, destination: SendDestination): Dash? = max[source]
+        override suspend fun estimateFeeForPair(source: SendBalance, destinationKind: SendBalance, amount: Dash) = fee
+        override suspend fun maxSendableForPair(source: SendBalance, destinationKind: SendBalance): Dash? = max[source]
         override suspend fun send(
             source: SendBalance,
             destination: SendDestination,

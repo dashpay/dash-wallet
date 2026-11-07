@@ -51,6 +51,7 @@ import de.schildbach.wallet.ui.payments.PaymentsFragment.Companion.ACTIVE_TAB_IN
 import de.schildbach.wallet.ui.payments.PaymentsFragment.Companion.ACTIVE_TAB_RECEIVE
 import de.schildbach.wallet.ui.payments.PaymentsFragment.Companion.ARG_ACTIVE_TAB
 import de.schildbach.wallet.ui.payments.PaymentsFragment.Companion.ARG_SOURCE
+import de.schildbach.wallet.ui.payments.internal.InternalTransferFragment
 import de.schildbach.wallet.ui.payments.send.AdvancedSendFragment
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentAdvancedPaymentsBinding
@@ -72,7 +73,8 @@ import org.dash.wallet.common.ui.viewBinding
  * navigation (`ShowNavBar` on the destination), over the payments pages.
  *
  * Receive is [AdvancedReceiveFragment] (the Compose [ReceivePage]), Send is
- * [AdvancedSendFragment] (MO-1121); Internal is the same child page as [PaymentsFragment]'s. The enter/exit transitions are on
+ * [AdvancedSendFragment] (MO-1121) and Internal is [InternalTransferFragment] (MO-1125), shown
+ * whatever the shielded flag (see [advancedPaymentsTabIds]). The enter/exit transitions are on
  * the NavOptions (see [paymentsRoute]). There is no close control: like the other
  * bottom-nav screens it is left through the bottom navigation or Back.
  *
@@ -238,11 +240,7 @@ class AdvancedPaymentsFragment : Fragment(R.layout.fragment_advanced_payments) {
         }
     }
 
-    /**
-     * Pages keyed by logical tab id (stable ids), so a change of tab set — the
-     * shielded flag flipping — keeps the pages that remain and drops only the
-     * one that went away.
-     */
+    /** Pages keyed by logical tab id (stable ids), so a tab-set change keeps the pages that remain. */
     private class TabsAdapter(
         fragment: Fragment,
         private val source: String
@@ -265,7 +263,7 @@ class AdvancedPaymentsFragment : Fragment(R.layout.fragment_advanced_payments) {
 
         override fun createFragment(position: Int): Fragment = when (tabIds[position]) {
             ACTIVE_TAB_RECEIVE -> AdvancedReceiveFragment.newInstance()
-            ACTIVE_TAB_INTERNAL -> PaymentsInternalFragment.newInstance()
+            ACTIVE_TAB_INTERNAL -> InternalTransferFragment.newInstance()
             else -> AdvancedSendFragment.newInstance(source = source)
         }
     }

@@ -316,6 +316,14 @@ private fun detectCoreDashUri(input: String, network: AddressNetwork): Destinati
     }
 }
 
+/** The kind of balance [destination] is paid into. */
+fun balanceKindOf(destination: SendDestination): SendBalance = when (destination) {
+    is SendDestination.Core -> SendBalance.CORE
+    is SendDestination.Shielded -> SendBalance.SHIELDED
+    is SendDestination.Platform -> SendBalance.PLATFORM
+    is SendDestination.Identity -> SendBalance.IDENTITY
+}
+
 /** Whether a pair can be sent, and if not, why (the UI maps each to its own copy). */
 enum class SendSupport {
     SUPPORTED,
