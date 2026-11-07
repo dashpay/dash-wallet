@@ -599,6 +599,7 @@
     <string name="internal_transfer_swap">Swap the From and To balances</string>
     <string name="internal_transfer_unavailable">Not available yet</string>
     <string name="internal_transfer_insufficient_balance">Insufficient balance</string>
+    <string name="internal_transfer_confirm_refused">Your balance changed and no longer covers this transfer. Nothing was sent. Check the amount and try again.</string>
     <string name="internal_transfer_withdrawal_not_instant">Withdrawals from your Identity balance to Core are not instant and take some time</string>
     <string name="internal_transfer_completes_automatically_title">Transfer in progress</string>
     <string name="internal_transfer_completes_automatically_message">Your funds left your Core balance and will arrive in your Shielded balance automatically. Do not transfer them again.</string>

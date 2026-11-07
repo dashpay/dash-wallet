@@ -27,7 +27,10 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.currentStateAsState
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -62,7 +65,13 @@ class InternalTransferFragment : Fragment() {
             setContent {
                 DashWalletTheme {
                     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-                    BackHandler(enabled = uiState.picker != null || uiState.confirm != null) { viewModel.onBack() }
+                    // ViewPager2 lifts only the selected page to RESUMED: an offscreen Internal page
+                    // must not take Back from the page on show.
+                    val lifecycleState by LocalLifecycleOwner.current.lifecycle.currentStateAsState()
+                    val selectedPage = lifecycleState.isAtLeast(Lifecycle.State.RESUMED)
+                    BackHandler(enabled = selectedPage && (uiState.picker != null || uiState.confirm != null)) {
+                        viewModel.onBack()
+                    }
                     InternalTransferScreen(
                         uiState = uiState,
                         actions = InternalTransferActions(

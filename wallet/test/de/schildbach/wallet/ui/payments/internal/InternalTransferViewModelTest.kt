@@ -44,6 +44,7 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.dash.wallet.common.data.WalletUIConfig
+import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.junit.After
@@ -106,6 +107,7 @@ class InternalTransferViewModelTest {
     }
 
     private val service = FakeService()
+    private val rate = MutableStateFlow<ExchangeRate?>(null)
     private val marker = FakeMarker()
     private lateinit var executor: InternalTransferExecutor
 
@@ -125,7 +127,7 @@ class InternalTransferViewModelTest {
             every { observe(WalletUIConfig.SELECTED_CURRENCY) } returns flowOf("USD")
         }
         val rates = mockk<ExchangeRatesProvider> {
-            every { observeExchangeRate(any()) } returns flowOf(null)
+            every { observeExchangeRate(any()) } returns rate
         }
         return InternalTransferViewModel(service, executor, walletUIConfig, rates, savedState)
     }
@@ -429,5 +431,91 @@ class InternalTransferViewModelTest {
         )
         assertEquals(listOf(R.string.internal_transfer_withdrawal_not_instant), internalConfirmNotes(IDENTITY, CORE))
         assertEquals(emptyList<Int>(), internalConfirmNotes(CORE, SHIELDED))
+    }
+
+    // ── rate changes ─────────────────────────────────────────────────────────
+
+    /** 2 DASH on Core, 100 fiat typed at 100 USD/DASH (1 DASH), then Continue. */
+    private fun confirmOneDashTypedInFiat(): InternalTransferViewModel {
+        rate.value = ExchangeRate("USD", "100")
+        service.balances.getValue(CORE).value = twoDash
+        val viewModel = buildViewModel()
+        viewModel.onCurrencySelected(dashMode = false)
+        viewModel.type("100")
+        assertEquals(oneDash, viewModel.state.amount)
+        viewModel.onContinue()
+        assertEquals(oneDash, requireNotNull(viewModel.state.confirm).request.amount)
+        return viewModel
+    }
+
+    @Test
+    fun `a rate change while the confirm is open still submits the captured request`() {
+        val viewModel = confirmOneDashTypedInFiat()
+        // The typed fiat is now 2.5 DASH: the live form no longer fits, the captured 1 DASH does.
+        rate.value = ExchangeRate("USD", "40")
+        assertFalse(viewModel.state.canContinue)
+
+        val request = requireNotNull(viewModel.confirmedRequest())
+        assertEquals(oneDash, request.amount)
+        assertTrue(viewModel.submit(request))
+        assertEquals(listOf(request), service.transfers)
+        assertFalse(viewModel.state.confirmRefused)
+    }
+
+    @Test
+    fun `Confirm is refused explicitly when the balance no longer covers the captured request`() {
+        val viewModel = confirmOneDashTypedInFiat()
+        rate.value = ExchangeRate("USD", "40")
+        service.balances.getValue(CORE).value = Dash(50_000_000)
+
+        assertNull(viewModel.confirmedRequest())
+        assertNull(viewModel.state.confirm)
+        assertTrue(viewModel.state.confirmRefused)
+        assertTrue(service.transfers.isEmpty())
+
+        // Editing the amount clears the refusal.
+        viewModel.onKeyInput("back")
+        assertFalse(viewModel.state.confirmRefused)
+    }
+
+    @Test
+    fun `a balance drop during authentication refuses the submit explicitly`() {
+        val viewModel = confirmOneDashTypedInFiat()
+        val request = requireNotNull(viewModel.confirmedRequest())
+        service.balances.getValue(CORE).value = Dash(50_000_000)
+
+        assertFalse(viewModel.submit(request))
+        assertNull(viewModel.state.confirm)
+        assertTrue(viewModel.state.confirmRefused)
+        assertTrue(service.transfers.isEmpty())
+    }
+
+    @Test
+    fun `Max in fiat mode is re-rendered at a new rate`() {
+        rate.value = ExchangeRate("USD", "100")
+        service.balances.getValue(CORE).value = twoDash
+        service.max[CORE to SHIELDED] = oneDash
+        val viewModel = buildViewModel()
+        viewModel.onCurrencySelected(dashMode = false)
+        viewModel.onMaxClick()
+        assertEquals("100.00", viewModel.state.amountText)
+
+        rate.value = ExchangeRate("USD", "50")
+        assertEquals("50.00", viewModel.state.amountText)
+        assertEquals(oneDash, viewModel.state.amount)
+        assertTrue(viewModel.state.isMax)
+    }
+
+    @Test
+    fun `a typed fiat amount keeps its text and follows the rate in Dash`() {
+        rate.value = ExchangeRate("USD", "100")
+        service.balances.getValue(CORE).value = twoDash
+        val viewModel = buildViewModel()
+        viewModel.onCurrencySelected(dashMode = false)
+        viewModel.type("100")
+
+        rate.value = ExchangeRate("USD", "50")
+        assertEquals("100", viewModel.state.amountText)
+        assertEquals(twoDash, viewModel.state.amount)
     }
 }

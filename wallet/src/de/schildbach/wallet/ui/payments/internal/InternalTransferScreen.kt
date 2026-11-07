@@ -383,6 +383,8 @@ private fun PairStatus(uiState: InternalTransferUIState) {
     when {
         uiState.support != InternalTransferSupport.SUPPORTED && uiState.shieldedEnabled != null ->
             StatusText(stringResource(R.string.internal_transfer_unavailable), colors.textSecondary)
+        uiState.confirmRefused ->
+            StatusText(stringResource(R.string.internal_transfer_confirm_refused), colors.red)
         uiState.insufficientBalance ->
             StatusText(stringResource(R.string.internal_transfer_insufficient_balance), colors.red)
     }

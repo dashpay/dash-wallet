@@ -88,6 +88,9 @@ data class InternalTransferConfirm(
  *   continues and the form stays disabled until its outcome. Reset when the status changes.
  * @property pinnedAmount the exact amount while [amountText] is only its rendering (see the
  *   External Send's `pinnedAmount`).
+ * @property confirmRefused Confirm was refused because the captured request no longer fits the
+ *   balance or pair (see [InternalTransferViewModel.confirmedRequest]); the sheet was closed and
+ *   the form says so until the user edits it or continues again.
  */
 data class InternalTransferUIState(
     val from: SendBalance = SendBalance.CORE,
@@ -106,7 +109,8 @@ data class InternalTransferUIState(
     val picker: InternalTransferPicker? = null,
     val confirm: InternalTransferConfirm? = null,
     val status: ExternalSendStatus = ExternalSendStatus.Idle,
-    val sendingHidden: Boolean = false
+    val sendingHidden: Boolean = false,
+    val confirmRefused: Boolean = false
 ) {
     val pair: InternalTransferPair get() = InternalTransferPair(from, to)
 
@@ -226,7 +230,7 @@ class InternalTransferViewModel @Inject constructor(
             .filterNotNull()
             .onEach { code -> _uiState.update { it.copy(fiatCode = code) } }
             .flatMapLatest(exchangeRates::observeExchangeRate)
-            .onEach { rate -> _uiState.update { it.copy(rate = rate?.fiat) } }
+            .onEach { rate -> onRateChanged(rate?.fiat) }
             .launchIn(viewModelScope)
 
         executor.state
@@ -292,6 +296,23 @@ class InternalTransferViewModel @Inject constructor(
         setPair(defaultInternalTransferPair(state.shieldedEnabled == true, state.hasIdentity == true), byUser = false)
     }
 
+    /**
+     * A typed fiat amount stays authoritative (its Dash value follows the rate, as [amount]
+     * computes it). A Max or pinned amount is authoritative in Dash: in fiat mode its text is
+     * only a rendering, so it is re-rendered at the new rate.
+     */
+    private fun onRateChanged(rate: Fiat?) {
+        _uiState.update {
+            val coinAuthoritative = it.maxAmount != null || it.pinnedAmount != null
+            if (!it.dashMode && coinAuthoritative && rate != null) {
+                it.copy(rate = rate, amountText = displayTextFor(it.amount, dashMode = false, rate = rate))
+            } else {
+                it.copy(rate = rate)
+            }
+        }
+        saveAmount()
+    }
+
     // ── From / To ────────────────────────────────────────────────────────────
 
     fun onShowPicker(picker: InternalTransferPicker) {
@@ -333,6 +354,7 @@ class InternalTransferViewModel @Inject constructor(
                 from = pair.from,
                 to = pair.to,
                 pairChosenByUser = it.pairChosenByUser || byUser,
+                confirmRefused = if (changed) false else it.confirmRefused,
                 maxAmount = if (changed) null else it.maxAmount,
                 // A dropped Max keeps its exact amount (no longer Max): its text may be rounded fiat.
                 pinnedAmount = if (changed && it.isMax) it.amount else it.pinnedAmount,
@@ -374,7 +396,7 @@ class InternalTransferViewModel @Inject constructor(
         val decimals = if (state.dashMode) DASH_DECIMALS else FIAT_DECIMALS
         val text = processAmountKeyInput(base, key, decimals)
         if (text == state.amountText && !state.isMax) return
-        _uiState.update { it.copy(amountText = text, maxAmount = null, pinnedAmount = null) }
+        _uiState.update { it.copy(amountText = text, maxAmount = null, pinnedAmount = null, confirmRefused = false) }
         saveAmount()
     }
 
@@ -388,7 +410,8 @@ class InternalTransferViewModel @Inject constructor(
             it.copy(
                 dashMode = dashMode,
                 amountText = text,
-                pinnedAmount = if (amount.isZero || state.isMax) null else amount
+                pinnedAmount = if (amount.isZero || state.isMax) null else amount,
+                confirmRefused = false
             )
         }
         saveAmount()
@@ -400,7 +423,12 @@ class InternalTransferViewModel @Inject constructor(
         val max = state.maxSendable ?: return
         if (!state.formEditable) return
         _uiState.update {
-            it.copy(maxAmount = max, pinnedAmount = null, amountText = displayTextFor(max, it.dashMode, it.rate))
+            it.copy(
+                maxAmount = max,
+                pinnedAmount = null,
+                amountText = displayTextFor(max, it.dashMode, it.rate),
+                confirmRefused = false
+            )
         }
         saveAmount()
     }
@@ -419,7 +447,7 @@ class InternalTransferViewModel @Inject constructor(
             state.isMax,
             service.currentWalletIdOrNull()
         )
-        _uiState.update { it.copy(confirm = InternalTransferConfirm(request), picker = null) }
+        _uiState.update { it.copy(confirm = InternalTransferConfirm(request), picker = null, confirmRefused = false) }
         feeJob?.cancel()
         feeJob = viewModelScope.launch {
             val fee = service.estimateFee(request.from, request.to, request.amount)
@@ -439,18 +467,51 @@ class InternalTransferViewModel @Inject constructor(
         _uiState.update { it.copy(confirm = null) }
     }
 
-    /** The request the confirm sheet shows, captured BEFORE authentication; null when none. */
+    /**
+     * The request the confirm sheet shows, captured BEFORE authentication; null when none.
+     *
+     * The CAPTURED request is validated, not the live form (whose fiat amount follows the rate).
+     * When it no longer validates the sheet is closed and [InternalTransferUIState.confirmRefused]
+     * says why, so Confirm never does nothing silently.
+     */
     fun confirmedRequest(): InternalTransferRequest? {
-        val state = _uiState.value
-        return state.confirm?.request?.takeIf { state.canContinue }
+        val request = _uiState.value.confirm?.request ?: return null
+        return request.takeIf { stillValid(it) }
     }
 
     /** Authenticated: run [request], unless it is no longer the request on the confirm sheet. */
     fun submit(request: InternalTransferRequest): Boolean {
         if (_uiState.value.confirm?.request != request) return false
+        // The balance may have moved during authentication.
+        if (!stillValid(request)) return false
         if (!executor.submit(request)) return false
         _uiState.update { it.copy(confirm = null) }
         return true
+    }
+
+    /**
+     * Whether the captured [request] can still be sent: it is the selected, supported pair, the
+     * form is idle, the same SDK wallet is bound, and the From balance is known and covers the
+     * captured amount (Max when known, as for Continue). Otherwise the confirm sheet is closed
+     * with [InternalTransferUIState.confirmRefused] set.
+     */
+    private fun stillValid(request: InternalTransferRequest): Boolean {
+        val state = _uiState.value
+        if (!state.formEditable) return false
+        val limit = state.limit
+        val valid = state.from == request.from &&
+            state.to == request.to &&
+            state.support == InternalTransferSupport.SUPPORTED &&
+            request.amount.isPositive &&
+            state.balance != null &&
+            limit != null &&
+            !request.amount.isGreaterThan(limit) &&
+            service.currentWalletIdOrNull() == request.expectedWalletIdHex
+        if (!valid) {
+            feeJob?.cancel()
+            _uiState.update { if (it.confirm?.request == request) it.copy(confirm = null, confirmRefused = true) else it }
+        }
+        return valid
     }
 
     /**
