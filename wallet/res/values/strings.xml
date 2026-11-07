@@ -157,6 +157,8 @@
     <string name="transaction_row_status_sending">Sending</string>
     <string name="transaction_row_status_sent_internally">Internal</string>
     <string name="transaction_row_shielded">Shielded</string>
+    <!-- A Core payment sent to a Dash Platform address (an asset lock funding that address). -->
+    <string name="transaction_row_platform">Platform</string>
     <string name="transaction_row_unshielded">Unshielded</string>
     <!-- An AssetUnlock from Platform to this wallet that this wallet's own shielded pool did not
          author: a Platform identity credit withdrawal (evonode reward withdrawals included) or a
