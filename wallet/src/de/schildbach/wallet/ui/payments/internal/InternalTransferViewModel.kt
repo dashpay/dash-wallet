@@ -77,7 +77,8 @@ data class InternalTransferConfirm(
 /**
  * Single UI state of the Advanced-mode Internal tab (MO-1125).
  *
- * @property shieldedEnabled `USE_KOTLIN_SDK_SHIELDED`; null until read (an unreadable flag is off).
+ * @property shieldedEnabled `USE_KOTLIN_SDK_SHIELDED`; null = unknown (not read yet, or unreadable):
+ *   Shielded pairs are disabled, but a chosen Shielded pair is kept.
  * @property hasIdentity null = unknown: Identity is hidden.
  * @property pairChosenByUser the user changed From/To; until then the default pair
  *   ([defaultInternalTransferPair]) follows the inputs as they arrive.
@@ -273,18 +274,22 @@ class InternalTransferViewModel @Inject constructor(
 
     /**
      * Until the user changes the pair, follow the default as the flag and identity arrive. A
-     * user's pair that is no longer listed (identity gone) falls back to the default.
+     * user's (or restored) pair is dropped for the default only on CONFIRMED absence: the user
+     * has no identity ([InternalTransferUIState.hasIdentity] false) for an Identity pair, or the
+     * shielded flag is read as off (false) for a Shielded pair. While either is unknown (null:
+     * not read yet, or a read error) the pair is kept and Continue stays disabled.
      */
     private fun reconcilePair() {
         val state = _uiState.value
-        val listed = state.from in state.balances && state.to in state.balances
-        if (state.pairChosenByUser && listed) return
-        val pair = defaultInternalTransferPair(state.shieldedEnabled == true, state.hasIdentity == true)
         if (state.pairChosenByUser) {
+            val sides = setOf(state.from, state.to)
+            val identityGone = SendBalance.IDENTITY in sides && state.hasIdentity == false
+            val shieldedOff = SendBalance.SHIELDED in sides && state.shieldedEnabled == false
+            if (!identityGone && !shieldedOff) return
             _uiState.update { it.copy(pairChosenByUser = false) }
             savedState[KEY_PAIR_CHOSEN] = false
         }
-        setPair(pair, byUser = false)
+        setPair(defaultInternalTransferPair(state.shieldedEnabled == true, state.hasIdentity == true), byUser = false)
     }
 
     // ── From / To ────────────────────────────────────────────────────────────
