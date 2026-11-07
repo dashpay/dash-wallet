@@ -144,10 +144,29 @@ class ExternalSendFragment : Fragment() {
         }
     }
 
+    /**
+     * A terminal outcome (sent, or may have gone through — including the one shown after a
+     * process restart) returns Home, the way a completed send does elsewhere. NotSent stays
+     * on this screen so the user can try again.
+     */
     private fun onResultClosed(result: ExternalSendResult) {
         viewModel.onResultAcknowledged()
         if (result !is ExternalSendResult.NotSent) {
-            leave()
+            leaveToHome()
+        }
+    }
+
+    /**
+     * Pops back to Home (the bottom navigation follows the destination change). Falls back
+     * to [leave] when Home is not on the back stack so the user is never stranded here.
+     */
+    private fun leaveToHome() {
+        val navController = findNavController()
+        // A second tap while the pop runs would act on the screen below.
+        if (navController.currentDestination?.id == R.id.externalSendFragment) {
+            if (!navController.popBackStack(R.id.walletFragment, false)) {
+                navController.popBackStack()
+            }
         }
     }
 }
