@@ -29,6 +29,8 @@ import de.schildbach.wallet.service.platform.sdk.DashSdkService
 import de.schildbach.wallet.service.platform.sdk.DashSdkServiceImpl
 import de.schildbach.wallet.service.platform.sdk.ExternalSendService
 import de.schildbach.wallet.service.platform.sdk.ExternalSendServiceImpl
+import de.schildbach.wallet.service.platform.sdk.InternalTransferService
+import de.schildbach.wallet.service.platform.sdk.InternalTransferServiceImpl
 import de.schildbach.wallet.service.platform.sdk.PlatformMnemonicProvider
 import de.schildbach.wallet.service.platform.sdk.SdkMessageSigner
 import de.schildbach.wallet.service.platform.sdk.SecurityGuardMnemonicProvider
@@ -82,6 +84,11 @@ abstract class PlatformSdkModule {
     @Singleton
     @Binds
     abstract fun bindExternalSendService(service: ExternalSendServiceImpl): ExternalSendService
+
+    /** Advanced-mode Internal Transfers (MO-1125): own-balance moves over the External Send routes. */
+    @Singleton
+    @Binds
+    abstract fun bindInternalTransferService(service: InternalTransferServiceImpl): InternalTransferService
 
     /**
      * The SDK message-signing seam behind

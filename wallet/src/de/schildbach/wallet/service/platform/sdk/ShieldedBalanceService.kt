@@ -378,9 +378,12 @@ interface ShieldedBalanceService {
      * Shield [amount] from the wallet's own Platform credit balance into
      * its own shielded pool (Type 15). Self-shield only — Rust always
      * targets this wallet's default Orchard address. Blocks for the ~30s
-     * proof; the note arrives on the next shielded sync pass.
+     * proof; the note arrives on the next shielded sync pass. With [expectedWalletIdHex] (the SDK wallet the
+     * caller captured before its first suspension) the write is pinned to it: a runtime
+     * bound to another wallet is a [SdkWriteResult.NotBroadcast] before anything is
+     * submitted. Null (the default) uses whichever wallet is bound.
      */
-    suspend fun shieldFromCredits(amount: Dash): SdkWriteResult<Unit>
+    suspend fun shieldFromCredits(amount: Dash, expectedWalletIdHex: String? = null): SdkWriteResult<Unit>
 
     /**
      * Shield [amount] of the wallet's L1 (Core) balance into its own
@@ -420,9 +423,15 @@ interface ShieldedBalanceService {
      *
      * The recipient receives `amount − pool fee` (the flat shielded fee
      * plus the protocol's asset-lock base cost come out of the locked
-     * amount). Blocks for the ~30s Halo 2 proof.
+     * amount). Blocks for the ~30s Halo 2 proof. With [expectedWalletIdHex] (the SDK wallet the
+     * caller captured before its first suspension) the write is pinned to it: a runtime
+     * bound to another wallet is a [SdkWriteResult.NotBroadcast] before anything is
+     * submitted. Null (the default) uses whichever wallet is bound.
      */
-    suspend fun shieldFromWallet(amount: Dash): SdkWriteResult<ShieldFromWalletOutcome>
+    suspend fun shieldFromWallet(
+        amount: Dash,
+        expectedWalletIdHex: String? = null
+    ): SdkWriteResult<ShieldFromWalletOutcome>
 
     /**
      * [shieldFromWallet], but funded STRICTLY from the single funds account
@@ -541,9 +550,12 @@ interface ShieldedBalanceService {
      * (Type 17) — the target is the wallet's lowest-index unused DIP-17
      * Platform receive address from the SDK's address store; no address
      * available yet is a [SdkWriteResult.NotBroadcast]. Blocks for the
-     * ~30s proof.
+     * ~30s proof. With [expectedWalletIdHex] (the SDK wallet the
+     * caller captured before its first suspension) the write is pinned to it: a runtime
+     * bound to another wallet is a [SdkWriteResult.NotBroadcast] before anything is
+     * submitted. Null (the default) uses whichever wallet is bound.
      */
-    suspend fun unshieldToCredits(amount: Dash): SdkWriteResult<Unit>
+    suspend fun unshieldToCredits(amount: Dash, expectedWalletIdHex: String? = null): SdkWriteResult<Unit>
 
     /**
      * Withdraw [amount] from the shielded pool to the Core L1 address
