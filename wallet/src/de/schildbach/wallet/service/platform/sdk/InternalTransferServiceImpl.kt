@@ -64,8 +64,11 @@ internal interface InternalTransferSource {
      */
     fun unadvertisedCoreAddress(): String
 
-    /** [ShieldedBalanceService.platformReceiveAddress]: the wallet's own Platform address, or null. */
-    suspend fun ownPlatformAddress(): String?
+    /**
+     * [ShieldedBalanceService.ownPlatformAddressOf]: the own Platform address of [walletIdHex] from
+     * the SDK's address store (no shielded flag or runtime needed), or null.
+     */
+    suspend fun ownPlatformAddress(walletIdHex: String): String?
 
     suspend fun shieldedFeeCredits(kind: ShieldedFeeKind): Long?
 
@@ -105,7 +108,8 @@ internal class DashSdkInternalTransferSource(
 
     override fun unadvertisedCoreAddress(): String = walletData.unadvertisedDestinationLive().toBase58()
 
-    override suspend fun ownPlatformAddress(): String? = shieldedBalanceService.platformReceiveAddress()
+    override suspend fun ownPlatformAddress(walletIdHex: String): String? =
+        shieldedBalanceService.ownPlatformAddressOf(walletIdHex)
 
     override suspend fun shieldedFeeCredits(kind: ShieldedFeeKind): Long? =
         shieldedBalanceService.estimateShieldedFeeCredits(kind)
@@ -137,8 +141,8 @@ internal class DashSdkInternalTransferSource(
  * - Shielded → Platform: [ShieldedBalanceService.unshieldToCreditsPinned] (own Platform address),
  *   with the shielded Max fee retry.
  * - Platform → Shielded: [ShieldedBalanceService.shieldFromCreditsPinned].
- * - Identity → Platform: [ExternalSendService.send] to the wallet's own Platform address
- *   ([ShieldedBalanceService.platformReceiveAddress]); unavailable = Not sent.
+ * - Identity → Platform: [ExternalSendService.send] to the confirmed wallet's own Platform address
+ *   ([ShieldedBalanceService.ownPlatformAddressOf], no shielded flag needed); unavailable = Not sent.
  *
  * Funds safety, in order, for every [transfer]: single-flight; positive amount; the pair matrix;
  * cutover committed and (for a shielded leg) the shielded flag, error-preserving; the wallet
@@ -178,10 +182,10 @@ class InternalTransferServiceImpl internal constructor(
 
     override fun observeHasIdentity(): Flow<Boolean?> = externalSendService.observeHasIdentity()
 
-    override fun observeShieldedEnabled(): Flow<Boolean> =
+    override fun observeShieldedEnabled(): Flow<Boolean?> =
         source.observeShieldedFlag()
-            .map<Boolean?, Boolean> { it == true }
-            .retryReadErrors("shielded flag", false, retryDelayMs)
+            .map<Boolean?, Boolean?> { it == true }
+            .retryReadErrors("shielded flag", null, retryDelayMs)
             .distinctUntilChanged()
 
     override fun currentWalletIdOrNull(): String? = externalSendService.currentWalletIdOrNull()
@@ -286,7 +290,7 @@ class InternalTransferServiceImpl internal constructor(
             SendBalance.PLATFORM -> when (from) {
                 SendBalance.SHIELDED -> unshieldToOwnPlatform(pair, walletIdHex, amount, isMax)
                 else -> {
-                    val address = readOrNull("own platform address") { source.ownPlatformAddress() }
+                    val address = readOrNull("own platform address") { source.ownPlatformAddress(walletIdHex) }
                         ?: return notSent(pair, NotSentReason.GENERIC, "own platform address unavailable")
                     delegate(pair, walletIdHex, from, SendDestination.Platform(address), amount, isMax)
                 }

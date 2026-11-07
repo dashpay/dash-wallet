@@ -2138,6 +2138,17 @@ class ShieldedBalanceServiceImpl internal constructor(
         }
     }
 
+    override suspend fun ownPlatformAddressOf(walletIdHex: String): String? {
+        val walletId = walletIdFromHex(walletIdHex) ?: return null
+        return try {
+            source.ownPlatformAddressOrNull(walletId)
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("failed to read the wallet's own platform address", t)
+            null
+        }
+    }
+
     override suspend fun shieldFromCredits(amount: Dash): SdkWriteResult<Unit> =
         shieldFromCreditsInternal(amount, expectedWalletIdHex = null)
 

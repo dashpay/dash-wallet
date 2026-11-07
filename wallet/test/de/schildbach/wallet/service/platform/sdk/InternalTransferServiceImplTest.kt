@@ -120,7 +120,11 @@ class InternalTransferServiceImplTest {
         override suspend fun boundWalletIdOrNull(): String? = boundWallets.removeFirstOrNull() ?: defaultBound
         override suspend fun ownIdentityIdOrThrow(): String? = identity.getOrThrow()
         override fun unadvertisedCoreAddress(): String = coreAddress()
-        override suspend fun ownPlatformAddress(): String? = platformAddress
+        val platformAddressReads = mutableListOf<String>()
+        override suspend fun ownPlatformAddress(walletIdHex: String): String? {
+            platformAddressReads += walletIdHex
+            return platformAddress
+        }
         override suspend fun shieldedFeeCredits(kind: ShieldedFeeKind): Long? = feeCredits
 
         override suspend fun shieldFromWallet(amount: Dash, walletIdHex: String): SdkWriteResult<ShieldFromWalletOutcome> {
@@ -183,6 +187,14 @@ class InternalTransferServiceImplTest {
         source.platformAddress = null
         assertEquals(ExternalSendResult.NotSent(NotSentReason.GENERIC), transfer(IDENTITY, PLATFORM))
         assertNothingSubmitted()
+    }
+
+    @Test
+    fun `identity to Platform works with the shielded flag off, pinned to the confirmed wallet`() {
+        source.shielded = false
+        assertEquals(ExternalSendResult.Sent("txid"), transfer(IDENTITY, PLATFORM))
+        assertEquals(listOf(WALLET_A), source.platformAddressReads)
+        assertEquals(listOf(Send(IDENTITY, SendDestination.Platform(ownPlatform), amount, false, WALLET_A)), external.sends)
     }
 
     @Test
@@ -337,13 +349,13 @@ class InternalTransferServiceImplTest {
     }
 
     @Test
-    fun `an unreadable shielded flag reads as off and keeps observing`() = runBlocking {
+    fun `an unreadable shielded flag reads as unknown and keeps observing`() = runBlocking {
         var reads = 0
         source.flag = flow {
             if (reads++ == 0) throw IOException("datastore")
             emit(true)
         }
-        assertEquals(listOf(false, true), service.observeShieldedEnabled().take(2).toList())
+        assertEquals(listOf(null, true), service.observeShieldedEnabled().take(2).toList())
         assertTrue(reads >= 2)
         source.flag = MutableStateFlow<Boolean?>(null)
         assertEquals(false, service.observeShieldedEnabled().first())

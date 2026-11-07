@@ -361,6 +361,16 @@ interface ShieldedBalanceService {
     suspend fun platformReceiveAddress(): String?
 
     /**
+     * The own Platform (DIP-17) receive address of the SDK wallet [walletIdHex] — the same row
+     * [platformReceiveAddress] picks — read straight from the SDK's address store. Unlike
+     * [platformReceiveAddress] it needs only the SDK started, NOT the shielded flag or runtime,
+     * and it is pinned to the given wallet. Null when [walletIdHex] is malformed, the store has
+     * no row for it, or the read fails (fail closed). Never throws (except cancellation); the
+     * address is never logged.
+     */
+    suspend fun ownPlatformAddressOf(walletIdHex: String): String?
+
+    /**
      * Shield [amount] from the wallet's own Platform credit balance into
      * its own shielded pool (Type 15). Self-shield only — Rust always
      * targets this wallet's default Orchard address. Blocks for the ~30s

@@ -37,10 +37,11 @@ interface InternalTransferService {
     fun observeHasIdentity(): Flow<Boolean?>
 
     /**
-     * `USE_KOTLIN_SDK_SHIELDED`, error-preserving: an unreadable flag emits false (off) and
-     * keeps observing. Never completes on a transient error.
+     * `USE_KOTLIN_SDK_SHIELDED`, error-preserving: true/false when read (absent = false), null
+     * when unreadable (unknown: treated as off for gating, never as a confirmed "off"); keeps
+     * observing and never completes on a transient error.
      */
-    fun observeShieldedEnabled(): Flow<Boolean>
+    fun observeShieldedEnabled(): Flow<Boolean?>
 
     /** [ExternalSendService.currentWalletIdOrNull]: captured, without suspending, at confirmation. */
     fun currentWalletIdOrNull(): String?

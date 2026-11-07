@@ -68,7 +68,7 @@ class InternalTransferViewModelTest {
     private class FakeService : InternalTransferService {
         val balances = SendBalance.entries.associateWith { MutableStateFlow<Dash?>(null) }
         val hasIdentity = MutableStateFlow<Boolean?>(true)
-        val shielded = MutableStateFlow(true)
+        val shielded = MutableStateFlow<Boolean?>(true)
         var fee: FeeEstimate? = null
         val max = mutableMapOf<Pair<SendBalance, SendBalance>, Dash?>()
         var gate: CompletableDeferred<ExternalSendResult>? = null
@@ -78,7 +78,7 @@ class InternalTransferViewModelTest {
 
         override fun observeBalance(balance: SendBalance): Flow<Dash?> = balances.getValue(balance)
         override fun observeHasIdentity(): Flow<Boolean?> = hasIdentity
-        override fun observeShieldedEnabled(): Flow<Boolean> = shielded
+        override fun observeShieldedEnabled(): Flow<Boolean?> = shielded
         override fun currentWalletIdOrNull(): String? = walletId
         override suspend fun estimateFee(from: SendBalance, to: SendBalance, amount: Dash) = fee
         override suspend fun maxSendable(from: SendBalance, to: SendBalance): Dash? = max[from to to]
@@ -218,6 +218,61 @@ class InternalTransferViewModelTest {
         viewModel.onBalancePicked(IDENTITY)
         service.hasIdentity.value = false
         assertEquals(CORE to SHIELDED, viewModel.state.from to viewModel.state.to)
+        assertFalse(viewModel.state.pairChosenByUser)
+    }
+
+    @Test
+    fun `a restored Identity pair survives an identity that is not known yet`() {
+        val savedState = SavedStateHandle(
+            mapOf(
+                InternalTransferViewModel.KEY_FROM to IDENTITY.name,
+                InternalTransferViewModel.KEY_TO to CORE.name,
+                InternalTransferViewModel.KEY_PAIR_CHOSEN to true
+            )
+        )
+        service.hasIdentity.value = null
+        service.shielded.value = true // the flag arrives first
+        val viewModel = buildViewModel(savedState)
+        assertEquals(IDENTITY to CORE, viewModel.state.from to viewModel.state.to)
+        assertTrue(viewModel.state.pairChosenByUser)
+        assertEquals(true, savedState.get<Boolean>(InternalTransferViewModel.KEY_PAIR_CHOSEN))
+        assertEquals(IDENTITY.name, savedState.get<String>(InternalTransferViewModel.KEY_FROM))
+        // Unknown blocks Continue but keeps the pair.
+        service.balances.getValue(IDENTITY).value = twoDash
+        viewModel.type("1")
+        assertFalse(viewModel.state.canContinue)
+
+        service.hasIdentity.value = true
+        assertEquals(IDENTITY to CORE, viewModel.state.from to viewModel.state.to)
+        assertTrue(viewModel.state.canContinue)
+    }
+
+    @Test
+    fun `a restored Identity pair falls back to the default once there is confirmedly no identity`() {
+        val savedState = SavedStateHandle(
+            mapOf(
+                InternalTransferViewModel.KEY_FROM to IDENTITY.name,
+                InternalTransferViewModel.KEY_TO to CORE.name,
+                InternalTransferViewModel.KEY_PAIR_CHOSEN to true
+            )
+        )
+        service.hasIdentity.value = null
+        val viewModel = buildViewModel(savedState)
+        service.hasIdentity.value = false
+        assertEquals(CORE to SHIELDED, viewModel.state.from to viewModel.state.to)
+        assertFalse(viewModel.state.pairChosenByUser)
+        assertEquals(false, savedState.get<Boolean>(InternalTransferViewModel.KEY_PAIR_CHOSEN))
+    }
+
+    @Test
+    fun `a chosen Shielded pair survives an unreadable flag, and falls back when the flag is off`() {
+        val viewModel = buildViewModel()
+        viewModel.onSwap() // Shielded → Core, chosen
+        service.shielded.value = null
+        assertEquals(SHIELDED to CORE, viewModel.state.from to viewModel.state.to)
+        assertEquals(InternalTransferSupport.SHIELDED_OFF, viewModel.state.support)
+        service.shielded.value = false
+        assertEquals(CORE to IDENTITY, viewModel.state.from to viewModel.state.to)
         assertFalse(viewModel.state.pairChosenByUser)
     }
 
