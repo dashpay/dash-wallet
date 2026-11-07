@@ -83,9 +83,10 @@ data class SdkTxDetail(
     /**
      * The Platform-funding role of this transaction when it is a wallet-authored
      * asset lock the app-side records identify (identity upgrade / top-up /
-     * invite). The SDK records these as INTERNAL moves; classified app-side so
-     * the detail sheet renders "sent to" + the "…Fee" title instead of the
-     * "moved internally to" internal-move presentation. Null for a plain move.
+     * invite / Platform-address send). The SDK records these as INTERNAL
+     * moves; classified app-side so the detail sheet renders "sent to" + the
+     * kind's title instead of the "moved internally to" internal-move
+     * presentation. Null for a plain move.
      */
     val assetLockKind: AssetLockKind? = null
 ) {

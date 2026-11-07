@@ -119,6 +119,29 @@ class AssetLockKindResolverWalletScopeTest {
     }
 
     @Test
+    fun platformAddressFundingType_resolvesToPlatformWithoutTheAccountProbe() = runTest {
+        // `AssetLockFundingType::AssetLockAddressTopUp` — the Core → Platform-address send.
+        every { db.assetLockDao() } returns mockk<AssetLockDao> {
+            coEvery { fundingTypeForTxid(hex) } returns ASSET_LOCK_FUNDING_TYPE_ADDRESS_TOPUP
+        }
+        every { sdkService.loadedWalletIds() } returns setOf(walletIdHex)
+
+        assertEquals(AssetLockKind.PLATFORM, resolver().kindFor(hex))
+        // The durable funding type answered: no credit-account fallback ran.
+        verify(exactly = 0) { readable.query(any<SupportSQLiteQuery>()) }
+    }
+
+    @Test
+    fun seededPlatformKind_winsBeforeTheSdkRowLands() = runTest {
+        every { sdkService.loadedWalletIds() } returns setOf(walletIdHex)
+        val resolver = resolver()
+        resolver.seed(hex.uppercase(), AssetLockKind.PLATFORM)
+
+        assertEquals(AssetLockKind.PLATFORM, resolver.kindFor(hex))
+        coVerify(exactly = 0) { transactionDao.transactionKindForDisplayTxid(any()) }
+    }
+
+    @Test
     fun noLoadedWallet_failsClosedAndIsNotNegativeCached() = runTest {
         every { sdkService.loadedWalletIds() } returns emptySet()
         assertUnknownWalletVerdictIsPartial()

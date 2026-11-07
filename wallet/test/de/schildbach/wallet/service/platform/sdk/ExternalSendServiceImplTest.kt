@@ -869,6 +869,44 @@ class ExternalSendServiceImplTest {
     }
 
     @Test
+    fun coreToPlatform_seedsThePlatformKindForTheBuiltLock_inTheCallback() = runBlocking {
+        val seeds = mutableListOf<Pair<String, AssetLockKind>>()
+        var seededInTheCallback = false
+        val source = source().apply {
+            fund = { _, built ->
+                built(OUT_POINT)
+                seededInTheCallback = seeds.isNotEmpty()
+            }
+        }
+        val service = ExternalSendServiceImpl(
+            source,
+            AddressNetwork.DASH_TESTNET,
+            FakeStore(),
+            ioDispatcher = Dispatchers.Unconfined,
+            seedAssetLockKind = { hex, kind -> seeds += hex to kind }
+        )
+        assertEquals(ExternalSendResult.Sent(null), service.send(SendBalance.CORE, platform, amount, false))
+        // Keyed by the lock's display txid (the outpoint without its vout), before broadcast.
+        assertEquals(listOf(OUT_POINT.substringBefore(':') to AssetLockKind.PLATFORM), seeds)
+        assertTrue(seededInTheCallback)
+    }
+
+    @Test
+    fun coreToPlatform_aFailingKindSeed_neverFailsTheSend() = runBlocking {
+        val source = source().apply { fund = { _, built -> built(OUT_POINT) } }
+        val store = FakeStore()
+        val service = ExternalSendServiceImpl(
+            source,
+            AddressNetwork.DASH_TESTNET,
+            store,
+            ioDispatcher = Dispatchers.Unconfined,
+            seedAssetLockKind = { _, _ -> throw IllegalStateException("seed") }
+        )
+        assertEquals(ExternalSendResult.Sent(null), service.send(SendBalance.CORE, platform, amount, false))
+        assertNull(store.record)
+    }
+
+    @Test
     fun coreToPlatform_p2shDestination_isNotSent_beforeAnythingIsBuiltOrPersisted() = runBlocking {
         val source = source()
         val store = FakeStore()

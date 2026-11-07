@@ -455,13 +455,15 @@ internal val AssetLockKind.isPoolTransfer: Boolean
     get() = this == AssetLockKind.SHIELD || this == AssetLockKind.UNSHIELD
 
 /**
- * The kinds an OUTGOING asset lock can carry: the Platform-funding ones and the
- * shield (a lock into the wallet's own pool, kept on its transfer treatment).
- * The unshield pair are AssetUnlocks, recorded INCOMING, never an outgoing lock.
+ * The kinds an OUTGOING asset lock can carry: the Platform-funding ones (the
+ * Platform-address send included) and the shield (a lock into the wallet's own
+ * pool, kept on its transfer treatment). The unshield pair are AssetUnlocks,
+ * recorded INCOMING, never an outgoing lock.
  */
 internal val AssetLockKind.appliesToOutgoing: Boolean
     get() = this == AssetLockKind.UPGRADE || this == AssetLockKind.TOPUP ||
-        this == AssetLockKind.INVITE || this == AssetLockKind.SHIELD
+        this == AssetLockKind.INVITE || this == AssetLockKind.SHIELD ||
+        this == AssetLockKind.PLATFORM
 
 /**
  * Whether the display pass asks the asset-lock resolver about an OUTGOING
@@ -480,6 +482,8 @@ internal fun assetLockTitleRes(kind: AssetLockKind): Int = when (kind) {
     // unshield/withdraw "Unshielded".
     AssetLockKind.INVITE -> R.string.transaction_row_invitation
     AssetLockKind.SHIELD -> R.string.transaction_row_shielded
+    // Core → Platform-address send: a payment, so the sent arrow, titled "Platform".
+    AssetLockKind.PLATFORM -> R.string.transaction_row_platform
     AssetLockKind.UNSHIELD -> R.string.transaction_row_unshielded
     // Every AssetUnlock without evidence that THIS wallet's pool authored it.
     // That is not only a foreign pool's unshield: a Platform identity credit
