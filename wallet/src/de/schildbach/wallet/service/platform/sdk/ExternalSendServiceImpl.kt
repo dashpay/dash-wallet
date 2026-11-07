@@ -619,7 +619,15 @@ class ExternalSendServiceImpl internal constructor(
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val balancePollMs: Long = BALANCE_POLL_MS,
     private val retryDelayMs: (Long) -> Long = ::readRetryDelayMs,
-    private val newFundingId: () -> String = { UUID.randomUUID().toString() }
+    private val newFundingId: () -> String = { UUID.randomUUID().toString() },
+    /**
+     * Seed the asset-lock kind ([AssetLockKind.PLATFORM]) in-memory the instant a
+     * Core → Platform lock is built, so the first classification of the L1 lock reads
+     * "Platform" instead of momentarily "Internal" while the SDK's `asset_locks` row
+     * lands — mirroring the shield/top-up/invite paths. No-op default keeps the
+     * host-JVM tests inert.
+     */
+    private val seedAssetLockKind: (displayHex: String, kind: AssetLockKind) -> Unit = { _, _ -> }
 ) : ExternalSendService {
 
     @Inject
@@ -634,14 +642,16 @@ class ExternalSendServiceImpl internal constructor(
         dashPayConfig: DashPayConfig,
         identityConfig: BlockchainIdentityConfig,
         walletData: WalletData,
-        fundingGate: PendingPaymentFundingGate
+        fundingGate: PendingPaymentFundingGate,
+        assetLockKindResolver: AssetLockKindResolver
     ) : this(
         source = DashSdkExternalSendSource(
             sdkService, sendPaymentService, sdkL1SendService, cutoverUiDataService, shieldedBalanceService,
             transparentTopUp, usernameQueries, dashPayConfig, identityConfig, walletData, fundingGate
         ),
         network = AddressNetwork.fromId(Constants.NETWORK_PARAMETERS.id),
-        platformFundingStore = DashPayConfigPlatformFundingStore(dashPayConfig)
+        platformFundingStore = DashPayConfigPlatformFundingStore(dashPayConfig),
+        seedAssetLockKind = { displayHex, kind -> assetLockKindResolver.seed(displayHex, kind) }
     )
 
     /** Single-flight for [send] AND [resumePendingPlatformFunding]: the one owner of the funding record. */
@@ -1084,6 +1094,7 @@ class ExternalSendServiceImpl internal constructor(
                         } catch (e: Exception) {
                             log.error("external send {}: could not record the lock outpoint (retried after the call)", pair, e)
                         }
+                        seedPlatformLockKind(pair, outPointHex)
                     }
                 }?.let { SdkWriteResult.Broadcast(Unit) }
                     ?: SdkWriteResult.NotBroadcast(L1_PENDING_PAYMENT_UNPROTECTED_REASON)
@@ -1132,6 +1143,22 @@ class ExternalSendServiceImpl internal constructor(
             (outcome as? SdkWriteResult.NotBroadcast)?.cause ?: (outcome as? SdkWriteResult.Ambiguous)?.cause
         )
         return ExternalSendResult.MayHaveGoneThrough
+    }
+
+    /**
+     * Seed [AssetLockKind.PLATFORM] for the lock [outPointHex] (`<display txid>:<vout>`;
+     * the txid part is already the resolver's display-hex key). Best-effort and never
+     * throws: it runs on the SDK's `onAssetLockBuilt` thread, and a miss only delays the
+     * "Platform" label until the SDK's durable funding type is readable.
+     */
+    private fun seedPlatformLockKind(pair: String, outPointHex: String) {
+        try {
+            outPointHex.substringBefore(':')
+                .takeIf { it.length == 64 }
+                ?.let { seedAssetLockKind(it, AssetLockKind.PLATFORM) }
+        } catch (e: Exception) {
+            log.warn("external send {}: lock kind seed failed; the row may momentarily read Internal", pair, e)
+        }
     }
 
     /** Re-record [outPointHex] against [record] unless the store already holds exactly that. */
