@@ -71,6 +71,14 @@ internal class AppConnectSession(
     private fun identityId() = identities.blockchainIdentity?.uniqueIdentifier ?: error("Identity unavailable")
     private fun checkScope(expected: String) = check(scope() == expected) { "Wallet, identity or network changed. Scan again." }
     private fun readIdentity(): Identity = platform.client.getIdentity(identityId().toBuffer(), true) ?: error("Identity not found")
+
+    /**
+     * Call after a proven query such as [readIdentity]: its verified response set the SDK's version. A
+     * refresh that fails returns the SDK's starting version instead, which says nothing about the network.
+     */
+    private fun requireProtocolVersion() = check(platform.client.getProtocolVersion() >= ConnectAvailability.MIN_PROTOCOL_VERSION) {
+        ConnectAvailability.VERSION_TOO_OLD_ERROR
+    }
     private fun requestHash(request: DashKeyRequest) = Base58.encode(KeyExchangeCrypto.hash256(
         request.requireAppConnect().bytes
     ))
@@ -82,9 +90,9 @@ internal class AppConnectSession(
 
     suspend fun prepareTokenPurchase(request: DashStRequest): TokenPurchaseApproval = withContext(Dispatchers.IO) {
         mutex.withLock {
-            check(platform.client.refreshProtocolVersion() >= 14) { "App Connect operations require Platform protocol version 14" }
             val scope = scope()
             val identity = readIdentity()
+            requireProtocolVersion()
             val summary = nativeBytes(dashsdk.prepareTokenPurchaseSdk(platform.rustSdk, request.transitionBytes, identity.id.toNative()))
             val data = JSONObject(String(summary, Charsets.UTF_8))
             val id = "$scope:${data.getString("requestId")}"
@@ -181,10 +189,9 @@ internal class AppConnectSession(
 
     suspend fun prepare(request: DashKeyRequest): AppConnectPlan = withContext(Dispatchers.IO) {
         val parsed = request.requireAppConnect()
-        check(Constants.NETWORK_PARAMETERS.id != NetworkParameters.ID_MAINNET) { "App Connect is unavailable on mainnet" }
-        check(platform.client.refreshProtocolVersion() >= 14) { "App Connect requires Platform protocol version 14" }
         val scope = scope()
         val identity = readIdentity()
+        requireProtocolVersion()
         val blockTime = platform.client.getPlatformTime(identity.id)
         parsed.requireFresh(System.currentTimeMillis())
         parsed.identityHint?.let { check(it.contentEquals(identity.id.toBuffer())) { "QR requests a different identity" } }
@@ -259,7 +266,6 @@ internal class AppConnectSession(
             check(0 in plan.selectedAuth && plan.selectedAuth.all { it in plan.grants.indices }) { "Primary grant is required" }
             check(plan.selectedEncryption.all { it in parsed.encryption.indices })
             parsed.requireFresh(System.currentTimeMillis())
-            check(platform.client.refreshProtocolVersion() >= 14)
             val selectedGrants = plan.selectedAuth.sorted().map { plan.grants[it] }
             plan.requireGroupScopes(validateOwnership(request, selectedGrants))
             val recordId = "${plan.scope}:${plan.requestHash}"
@@ -280,16 +286,19 @@ internal class AppConnectSession(
             try {
                 var identity = readIdentity()
                 check(identity.id.toString() == plan.identityId) { "Identity changed. Scan again." }
+                requireProtocolVersion()
                 val time = platform.client.getPlatformTime(identity.id)
                 // Key IDs belong to the identity, not to an app or connection.
                 requireOtherRegistrationsSettled(plan.scope, recordId, identity, time)
                 check(selectedGrants.all { it.expiresAt!! > time + 3_600_000 }) { "Grant expired. Scan again." }
                 val keys = mutableListOf<IdentityPublicKey>()
+                // Application keys use the network's coin type in their derivation path.
+                val isMainnet = Constants.NETWORK_PARAMETERS.id == NetworkParameters.ID_MAINNET
                 var nextId = (identity.publicKeys.maxOfOrNull { it.id } ?: -1) + 1
                 plan.grants.forEachIndexed { index, grant ->
                     if (index !in plan.selectedAuth) return@forEachIndexed
                     val leaf = KeyExchangeCrypto.sessionRequestLeaf(request.appEphemeralPubKey, index)
-                    val secret = ApplicationKeyDerivation.sessionAuthentication(seed, identity.id.toBuffer(), leaf, false)
+                    val secret = ApplicationKeyDerivation.sessionAuthentication(seed, identity.id.toBuffer(), leaf, isMainnet)
                     privateKeys.add(secret)
                     val key = IdentityPublicKey(nextId++, KeyType.ECDSA_HASH160, Purpose.AUTHENTICATION,
                         if (grant.securityLevel == 1) SecurityLevel.CRITICAL else SecurityLevel.HIGH,
@@ -301,7 +310,7 @@ internal class AppConnectSession(
                     if (index !in plan.selectedEncryption) return@forEachIndexed
                     val purpose = if (binding.purpose == 1) Purpose.ENCRYPTION else Purpose.DECRYPTION
                     val secret = ApplicationKeyDerivation.encryption(
-                        seed, identity.id.toBuffer(), binding.contractId, purpose, rotation = 0L, isMainnet = false)
+                        seed, identity.id.toBuffer(), binding.contractId, purpose, rotation = 0L, isMainnet = isMainnet)
                     privateKeys.add(secret)
                     val data = KeyExchangeCrypto.compressedPublicKey(secret)
                     val candidates = identity.publicKeys.filter { it.purpose == purpose && it.contractBounds is SingleContractBounds &&

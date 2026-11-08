@@ -23,17 +23,11 @@ import org.dashj.platform.dpp.identity.Identity
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.Before
-import org.junit.Assume.assumeFalse
-import de.schildbach.wallet.Constants
-import org.bitcoinj.core.NetworkParameters
 
 @org.junit.runner.RunWith(org.robolectric.RobolectricTestRunner::class)
 @org.robolectric.annotation.Config(application = android.app.Application::class, sdk = [28],
     manifest = org.robolectric.annotation.Config.NONE, shadows = [AppConnectKeyStateTest.ShadowSdkEnums::class])
 class AppConnectOwnershipTest {
-    private fun nonMainnetOnly() {
-        assumeFalse(Constants.IS_PROD_BUILD || Constants.NETWORK_PARAMETERS.id == NetworkParameters.ID_MAINNET)
-    }
     private val service = mockk<PlatformService>(relaxed = true)
     private val repo = mockk<PlatformRepo>(relaxed = true)
     private val identities = mockk<IdentityRepository>(relaxed = true)
@@ -60,7 +54,7 @@ class AppConnectOwnershipTest {
         every { identities.blockchainIdentity!!.uniqueIdentifier } returns identityId
         every { identity.id } returns identityId
         every { service.platform.client.getIdentity(any(), true) } returns identity
-        every { service.platform.client.refreshProtocolVersion() } returns 14
+        every { service.platform.client.getProtocolVersion() } returns 14
         every { service.platform.client.getPlatformTime(any()) } returns System.currentTimeMillis()
         every { app.ownerId } returns owner
         every { app.requiresIdentityEncryptionBoundedKey } returns true
@@ -75,7 +69,6 @@ class AppConnectOwnershipTest {
     }
 
     @Test fun `owned contract plus exact DashPay profile exception prepare successfully`() = runBlocking {
-        nonMainnetOnly()
         val plan = session.prepare(request)
         assertEquals(2, plan.grants.size)
         assertEquals("profile", plan.grants[1].documentType)
@@ -85,7 +78,6 @@ class AppConnectOwnershipTest {
     }
 
     @Test fun `an omitted grant cannot block approval but the chosen expiry still does`() = runBlocking {
-        nonMainnetOnly()
         val start = System.currentTimeMillis()
         every { service.platform.client.getPlatformTime(any()) } returns start
         val raw = request.requireAppConnect()
@@ -120,8 +112,48 @@ class AppConnectOwnershipTest {
         }
     }
 
+    @Test fun `approval derives the app keys for the wallet's network`() = runBlocking {
+        every { repo.walletApplication.wallet!!.isEncrypted } returns false
+        every { identity.publicKeys } returns mutableListOf()
+        coEvery { repo.getWalletEncryptionKey() } returns null
+        coEvery { repo.getWalletSeed() } returns mockk { every { seedBytes } returns ByteArray(32) { 1 } }
+        val derivation = org.dashj.platform.dpp.identity.ApplicationKeyDerivation
+        val network = de.schildbach.wallet.Constants.NETWORK_PARAMETERS
+        val original = network.id
+        mockkObject(derivation)
+        try {
+            val reached = IllegalStateException("Encryption key reached derivation")
+            // A fresh secret per call: approval wipes the ones it used.
+            every { derivation.sessionAuthentication(any(), any(), any(), any()) } answers { ByteArray(32) { 3 } }
+            every { derivation.encryption(any(), any(), any(), any(), any(), any()) } throws reached
+            for ((id, mainnet) in listOf(org.bitcoinj.core.NetworkParameters.ID_MAINNET to true,
+                    org.bitcoinj.core.NetworkParameters.ID_TESTNET to false)) {
+                org.robolectric.util.ReflectionHelpers.setField(network, "id", id)
+                // The connection scope includes the network, so each network prepares its own plan.
+                val prepared = session.prepare(request).copy(selectedAuth = setOf(0), selectedEncryption = setOf(0))
+                val failure = assertThrows(IllegalStateException::class.java) {
+                    runBlocking(ConnectionAuthorization { true }) { session.approve(request, prepared) }
+                }
+                assertEquals(reached.message, failure.message)
+                verify(exactly = 1) { derivation.sessionAuthentication(any(), any(), any(), mainnet) }
+                verify(exactly = 1) { derivation.encryption(any(), any(), any(), any(), any(), mainnet) }
+            }
+            coVerify(exactly = 0) { config.saveGrant(any()) }
+        } finally {
+            org.robolectric.util.ReflectionHelpers.setField(network, "id", original)
+            unmockkObject(derivation)
+        }
+    }
+
+    @Test fun `a version the network did not confirm cannot pass for protocol 14`() {
+        // A failed refresh returns the SDK's starting version; only a proven read sets the one checked here.
+        every { service.platform.client.refreshProtocolVersion() } returns 14
+        every { service.platform.client.getProtocolVersion() } returns 13
+        val error = assertThrows(IllegalStateException::class.java) { runBlocking { session.prepare(request) } }
+        assertEquals(ConnectAvailability.VERSION_TOO_OLD_ERROR, error.message)
+    }
+
     @Test fun `restart restores omitted grant selection before enforcing expiry`() = runBlocking {
-        nonMainnetOnly()
         val start = System.currentTimeMillis()
         every { service.platform.client.getPlatformTime(any()) } returns start
         val raw = request.requireAppConnect()
@@ -173,7 +205,7 @@ class AppConnectOwnershipTest {
         assertThrows(de.schildbach.wallet.ui.more.connections.protocol.DashConnectUriException::class.java) {
             plan.requireMatches(legacy)
         }
-        verify(exactly = 0) { service.platform.client.refreshProtocolVersion() }
+        verify(exactly = 0) { service.platform.client.getProtocolVersion() }
         verify(exactly = 0) { service.platform.client.getIdentity(any(), any()) }
         coVerify(exactly = 0) { repo.getWalletEncryptionKey() }
         coVerify(exactly = 0) { repo.getWalletSeed() }
@@ -182,7 +214,6 @@ class AppConnectOwnershipTest {
     }
 
     @Test fun `verified admin managed group prepares with complete dynamic scope disclosure`() = runBlocking {
-        nonMainnetOnly()
         val client = service.platform.client
         val plan = session.prepare(groupRequest)
         assertEquals(group, plan.groupScopes[group.id.toString()])
@@ -196,7 +227,6 @@ class AppConnectOwnershipTest {
     }
 
     @Test fun `changed group scope blocks approval and retry before accessing seed or saving keys`() = runBlocking {
-        nonMainnetOnly()
         val plan = session.prepare(groupRequest)
         for (changed in listOf(group.copy(adminIds = emptySet()), group.copy(contracts = emptySet()),
             group.copy(documentTypes = emptySet()), group.copy(tokens = emptySet()))) {
@@ -213,7 +243,6 @@ class AppConnectOwnershipTest {
     }
 
     @Test fun `restart preparation compares persisted approval across all recovery states`() = runBlocking {
-        nonMainnetOnly()
         val prepared = session.prepare(groupRequest).copy(selectedEncryption = emptySet())
         val old = prepared.copy(groupScopes = mapOf(group.id.toString() to group.copy(adminIds = emptySet())))
         val keys = prepared.grants.mapIndexed { index, grant ->
@@ -251,7 +280,6 @@ class AppConnectOwnershipTest {
     }
 
     @Test fun `recovered changed scope is blocked before seed access without acknowledgement`() = runBlocking {
-        nonMainnetOnly()
         val prepared = session.prepare(groupRequest)
         val old = prepared.copy(groupScopes = mapOf(group.id.toString() to group.copy(adminIds = emptySet())))
         val record = org.json.JSONObject().put("id", "${prepared.scope}:${prepared.requestHash}")
@@ -276,7 +304,6 @@ class AppConnectOwnershipTest {
     }
 
     @Test fun `missing foreign or unverified groups fail closed`() {
-        nonMainnetOnly()
         every { service.platform.client.getContractGroup(any()) } returns null
         assertThrows(IllegalStateException::class.java) {
             runBlocking { session.prepare(groupRequest) }
@@ -289,7 +316,6 @@ class AppConnectOwnershipTest {
     }
 
     @Test fun `optional unselected group changes do not alter selected consent`() = runBlocking {
-        nonMainnetOnly()
         val raw = request.appConnect!!
         val optionalGroup = groupRequest.appConnect!!.auth.first()
         val plan = session.prepare(request.copy(appConnect = raw.copy(auth = raw.auth + optionalGroup)))
@@ -301,7 +327,6 @@ class AppConnectOwnershipTest {
     }
 
     @Test fun `foreign single contract ownership is still rejected`() {
-        nonMainnetOnly()
         every { app.ownerId } returns owner
         val raw = request.appConnect!!
         val foreign = raw.auth.first().copy(id = ByteArray(32) { 3 })
@@ -311,7 +336,6 @@ class AppConnectOwnershipTest {
     }
 
     @Test fun `DashPay exception does not permit contact requests or whole contract`() {
-        nonMainnetOnly()
         val raw = request.appConnect!!
         val changed = raw.auth[1].copy(documentType = "contactRequest")
         assertThrows(IllegalStateException::class.java) {
@@ -323,7 +347,6 @@ class AppConnectOwnershipTest {
     }
 
     @Test fun `encryption opt in and app binding are mandatory`() {
-        nonMainnetOnly()
         every { app.requiresIdentityEncryptionBoundedKey } returns false
         assertThrows(IllegalStateException::class.java) { runBlocking { session.prepare(request) } }
         every { app.requiresIdentityEncryptionBoundedKey } returns true
@@ -334,20 +357,18 @@ class AppConnectOwnershipTest {
     }
 
     @Test fun `system apps old protocols and different identity hints are rejected`() {
-        nonMainnetOnly()
         assertThrows(IllegalStateException::class.java) {
             runBlocking { session.prepare(request.copy(contractId = Base58.decode(AppConnectSession.RESPONSE_CONTRACT))) }
         }
-        every { service.platform.client.refreshProtocolVersion() } returns 13
+        every { service.platform.client.getProtocolVersion() } returns 13
         assertThrows(IllegalStateException::class.java) { runBlocking { session.prepare(request) } }
-        every { service.platform.client.refreshProtocolVersion() } returns 14
+        every { service.platform.client.getProtocolVersion() } returns 14
         assertThrows(IllegalStateException::class.java) {
             runBlocking { session.prepare(request.copy(appConnect = request.appConnect!!.copy(identityHint = ByteArray(32)))) }
         }
     }
 
     @Test fun `consent cannot remove limits exceed the wallet maximums or broaden bounds`() = runBlocking {
-        nonMainnetOnly()
         val plan = session.prepare(request)
         val primary = plan.grants.first()
         for (bad in listOf(primary.copy(totalBudget = null), primary.copy(totalBudget = AppConnectLimits.MAX_BUDGET + java.math.BigInteger.ONE),

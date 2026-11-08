@@ -57,9 +57,8 @@ class ConnectionsViewModelTest {
     @Before fun setup() {
         Dispatchers.setMain(dispatcher)
         originalSupportsPlatform = Constants.SUPPORTS_PLATFORM
-        org.junit.Assume.assumeFalse(Constants.IS_PROD_BUILD ||
-            Constants.NETWORK_PARAMETERS.id == org.bitcoinj.core.NetworkParameters.ID_MAINNET)
         Constants.SUPPORTS_PLATFORM = true
+        coEvery { repository.isAvailable() } returns true
         every { repository.observeConnections() } returns MutableStateFlow(emptyList())
         every { identities.blockchainIdentity } returns null
         every { identities.blockchainIdentityFlow } returns MutableStateFlow(null)
@@ -82,7 +81,45 @@ class ConnectionsViewModelTest {
         if (::model.isInitialized) model.viewModelScope.cancel()
         applicationScope.cancel()
         Constants.SUPPORTS_PLATFORM = originalSupportsPlatform
+        ConnectAvailability.resetForTest()
         Dispatchers.resetMain()
+    }
+
+    @Test fun `an unread Platform version leaves the screen retryable instead of unavailable`() {
+        model.viewModelScope.cancel()
+        var reads = 0
+        coEvery { repository.isAvailable() } answers { reads++; null }
+        model = ConnectionsViewModel(repository, identities, applicationScope, availability())
+        dispatcher.scheduler.runCurrent()
+        assertFalse(model.uiState.value.featureUnavailable)
+        assertEquals(ConnectionRecordsStatus.UNAVAILABLE, model.uiState.value.recordsStatus)
+        // Connectivity returns: Retry reads the version again.
+        coEvery { repository.isAvailable() } answers { reads++; true }
+        model.retryConnections()
+        dispatcher.scheduler.runCurrent()
+        assertEquals(2, reads)
+        assertFalse(model.uiState.value.featureUnavailable)
+    }
+
+    private fun openWithoutUsername(available: Boolean?) {
+        model.viewModelScope.cancel()
+        coEvery { repository.isAvailable() } returns available
+        every { identityConfig.observeIdentityPresence() } returns MutableStateFlow(false)
+        model = ConnectionsViewModel(repository, identities, applicationScope, availability())
+        dispatcher.scheduler.runCurrent()
+    }
+
+    @Test fun `a wallet without a username is offered one on a network that runs Connect`() {
+        openWithoutUsername(available = true)
+        assertEquals(ConnectionRecordsStatus.NO_IDENTITY, model.uiState.value.recordsStatus)
+        assertFalse(model.uiState.value.featureUnavailable)
+    }
+
+    @Test fun `a wallet without a username is not offered one on a network too old for Connect`() {
+        // A restored process does not replay the link, so the screen itself must check the version.
+        openWithoutUsername(available = false)
+        assertEquals(ConnectionRecordsStatus.UNAVAILABLE, model.uiState.value.recordsStatus)
+        assertTrue(model.uiState.value.featureUnavailable)
     }
 
     private fun assertUnsupportedRequestRejected(openedFromUrl: Boolean, purchase: Boolean) {
@@ -767,6 +804,7 @@ class ConnectionsViewModelTest {
         val platform = mockk<de.schildbach.wallet.service.platform.PlatformService>(relaxed = true)
         val wallet = mockk<de.schildbach.wallet.ui.dashpay.PlatformRepo>(relaxed = true)
         every { wallet.walletApplication.wallet!!.watchingKey.pubKey } returns ByteArray(33) { 1 }
+        coEvery { wallet.readProtocolVersion() } returns ConnectAvailability.MIN_PROTOCOL_VERSION
         val config = mockk<DashConnectConfig>()
         val scope = AppConnectSession(platform, wallet, identities, config).scope()
         val record = org.json.JSONObject().put("scope", scope).put("app", "app").put("state", "active")

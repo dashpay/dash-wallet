@@ -92,6 +92,11 @@ class ToolsFragment : Fragment() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        viewModel.refreshConnectionsAvailability()
+    }
+
     private fun onZenLedgerExport() {
         viewModel.logEvent(AnalyticsConstants.Tools.ZENLEDGER)
         val secureActivity = requireActivity() as? SecureActivity

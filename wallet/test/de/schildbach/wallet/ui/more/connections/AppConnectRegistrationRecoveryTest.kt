@@ -118,7 +118,7 @@ class AppConnectRegistrationRecoveryTest {
         every { wallet.walletApplication.wallet!!.isEncrypted } returns false
         every { wallet.getWalletSeed()!!.seedBytes } returns ByteArray(32) { 1 }
         every { identities.blockchainIdentity!!.uniqueIdentifier } returns identityId
-        every { service.platform.client.refreshProtocolVersion() } returns 14
+        every { service.platform.client.getProtocolVersion() } returns 14
         every { service.platform.client.getIdentity(any(), true) } returns identity()
         every { service.platform.client.getPlatformTime(any()) } returns time
         every { service.platform.client.getDataContract(appId.toBuffer(), true) } returns mockk(relaxed = true) {

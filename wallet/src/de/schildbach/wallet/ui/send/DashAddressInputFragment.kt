@@ -42,7 +42,7 @@ class DashAddressInputFragment : AddressInputFragment() {
 
     override fun handleSpecialInput(input: String): Boolean {
         if (Constants.SUPPORTS_CONNECT && DashConnectUri.isConnectUri(input)) {
-            // DashConnect QR, handled by the Connections screen. Where the feature is off (prod)
+            // DashConnect QR, handled by the Connections screen. Where the feature is off
             // these URIs fall through to the normal unrecognised-QR error.
             safeNavigate(DashAddressInputFragmentDirections.addressInputToConnections(input))
             return true

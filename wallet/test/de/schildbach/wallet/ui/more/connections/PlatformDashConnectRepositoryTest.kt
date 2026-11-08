@@ -23,7 +23,12 @@ import de.schildbach.wallet.service.platform.PlatformService
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.more.connections.protocol.DashConnectUriException
 import de.schildbach.wallet.ui.more.connections.protocol.DashConnectUri
+import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import org.bitcoinj.core.Base58
 import org.bitcoinj.core.ECKey
@@ -31,6 +36,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
+import org.junit.After
+import org.junit.Before
 import org.junit.Test
 import java.math.BigInteger
 
@@ -49,6 +56,24 @@ class PlatformDashConnectRepositoryTest {
     private val config = mockk<DashConnectConfig>(relaxed = true)
 
     private val repository = PlatformDashConnectRepository(platform, platformRepo, identityRepository, config)
+
+    private val originalSupportsPlatform = Constants.SUPPORTS_PLATFORM
+
+    @Before
+    fun setup() {
+        // Platform support depends on the device ABI, which a plain JVM test does not report.
+        Constants.SUPPORTS_PLATFORM = true
+        ConnectAvailability.resetForTest()
+        every { identityRepository.blockchainIdentity?.uniqueIdentifier } returns
+            org.dashj.platform.dpp.identifier.Identifier.from(ByteArray(32) { 7 })
+        coEvery { platformRepo.readProtocolVersion() } returns ConnectAvailability.MIN_PROTOCOL_VERSION
+    }
+
+    @After
+    fun teardown() {
+        Constants.SUPPORTS_PLATFORM = originalSupportsPlatform
+        ConnectAvailability.resetForTest()
+    }
 
     private fun appPublicKey(): ByteArray =
         ECKey.fromPrivate(BigInteger(1, ByteArray(32) { 0x01 }), true).pubKey
@@ -112,6 +137,72 @@ class PlatformDashConnectRepositoryTest {
         }
         assertEquals("QR network does not match wallet network", error.message)
         Unit
+    }
+
+    @Test
+    fun parseQr_acceptsMainnetQrOnMainnet() = runBlocking {
+        val network = Constants.NETWORK_PARAMETERS
+        val original = network.id
+        org.robolectric.util.ReflectionHelpers.setField(network, "id", org.bitcoinj.core.NetworkParameters.ID_MAINNET)
+        try {
+            val result = repository.parseQr(testnetKeyUri().replace("?n=t", "?n=m"))
+            assertEquals("cd".repeat(32), org.bitcoinj.core.Utils.HEX.encode(result.request.contractId))
+            val error = assertThrows(DashConnectUriException::class.java) {
+                runBlocking { repository.parseQr(testnetKeyUri()) }
+            }
+            assertEquals("QR network does not match wallet network", error.message)
+        } finally {
+            org.robolectric.util.ReflectionHelpers.setField(network, "id", original)
+        }
+    }
+
+    @Test
+    fun isAvailable_readsTheVersionForAWalletWithoutAUsername() {
+        assumeTrue(ConnectAvailability.isSupported)
+        // A wallet without a username still needs the answer, to reach Connections and create one.
+        every { identityRepository.blockchainIdentity } returns null
+        assertEquals(true, runBlocking { repository.isAvailable() })
+    }
+
+    private fun assertOverlappingProbeAnswersWithTheNewestVersion(olderResult: Int?) = runBlocking {
+        assumeTrue(ConnectAvailability.isSupported)
+        // An older probe finishes after a newer one has read 14.
+        val olderRead = CompletableDeferred<Int?>()
+        coEvery { platformRepo.readProtocolVersion() } coAnswers { olderRead.await() }
+        val older = async(Dispatchers.Unconfined) { repository.isAvailable() }
+        coEvery { platformRepo.readProtocolVersion() } returns ConnectAvailability.MIN_PROTOCOL_VERSION
+        assertEquals(true, repository.isAvailable())
+        olderRead.complete(olderResult)
+        assertEquals(true, older.await())
+    }
+
+    @Test
+    fun isAvailable_answersWithTheNewestVersionWhenAnOlderProbeReadsLess() =
+        assertOverlappingProbeAnswersWithTheNewestVersion(olderResult = 13)
+
+    @Test
+    fun isAvailable_answersWithTheNewestVersionWhenAnOlderProbeFails() =
+        assertOverlappingProbeAnswersWithTheNewestVersion(olderResult = null)
+
+    @Test
+    fun parseQr_refusesWhilePlatformIsBelowProtocol14() {
+        assumeTrue("testnet-only feature", Constants.IS_TESTNET_BUILD)
+        coEvery { platformRepo.readProtocolVersion() } returns 13
+        val error = assertThrows(IllegalStateException::class.java) {
+            runBlocking { repository.parseQr(testnetKeyUri()) }
+        }
+        assertEquals("DashConnect requires Platform protocol version 14", error.message)
+    }
+
+    @Test
+    fun parseQr_asksToRetryWhenThePlatformVersionCannotBeRead() {
+        assumeTrue("testnet-only feature", Constants.IS_TESTNET_BUILD)
+        // The network did not answer, so the SDK's starting version was never confirmed.
+        coEvery { platformRepo.readProtocolVersion() } returns null
+        val error = assertThrows(IllegalStateException::class.java) {
+            runBlocking { repository.parseQr(testnetKeyUri()) }
+        }
+        assertEquals(ConnectAvailability.VERSION_UNKNOWN_ERROR, error.message)
     }
 
     @Test
