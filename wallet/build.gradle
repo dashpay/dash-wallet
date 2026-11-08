@@ -366,6 +366,13 @@ android {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard.cfg'
             testProguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard.cfg', 'proguardTest-rules.txt'
+            // Write native-debug-symbols.zip (the prebuilt libraries' symbol tables)
+            // for Play Console, so native crashes in Android vitals show function names
+            // while the APK ships stripped. The SDK libraries carry no DWARF, so FULL
+            // would add nothing over SYMBOL_TABLE.
+            ndk {
+                debugSymbolLevel 'SYMBOL_TABLE'
+            }
         }
         debug {
             multiDexEnabled true
