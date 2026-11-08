@@ -45,9 +45,37 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.core.Base58
+import java.math.BigInteger
 import javax.inject.Inject
 
 enum class ConnectionRecordsStatus { LOADING, READY, UNAVAILABLE, NO_IDENTITY }
+
+/** The Connections page tabs (Figma 40042:59884). */
+enum class ConnectionsTab {
+    ACTIVE,
+    DISCONNECTED,
+    EXPIRED;
+
+    /** Pending connections may still hold live keys, so they stay with the active ones. */
+    fun includes(connection: DAppConnection): Boolean = when (this) {
+        ACTIVE -> !connection.legacyOnly &&
+            (connection.status == ConnectionStatus.ACTIVE || connection.status == ConnectionStatus.APPROVED)
+        DISCONNECTED -> connection.legacyOnly || connection.status == ConnectionStatus.DISCONNECTED
+        EXPIRED -> !connection.legacyOnly && connection.status == ConnectionStatus.EXPIRED
+    }
+}
+
+/** The connection whose details sheet is open; the connection itself is read from the live list. */
+data class ConnectionDetailsState(
+    val connectionId: String,
+    /** The wallet, identity and network the connection belongs to; another wallet's row is not this one. */
+    val scope: String? = null,
+    val username: String = "",
+    val identityId: String = "",
+    val terms: ConnectionTerms? = null,
+    val isLoading: Boolean = true,
+    val error: String? = null
+)
 
 data class ConnectionsUIState(
     val connections: List<DAppConnection> = emptyList(),
@@ -61,7 +89,12 @@ data class ConnectionsUIState(
     val pendingPurchase: TokenPurchaseApproval? = null,
     val purchaseStatus: TokenPurchaseStatus = TokenPurchaseStatus.READY,
     val purchaseError: String? = null,
-    val error: String? = null
+    val error: String? = null,
+    val selectedTab: ConnectionsTab = ConnectionsTab.ACTIVE,
+    val selectedConnection: ConnectionDetailsState? = null,
+    /** Unlinked DashPay profile keys to warn about; null when there are none or they were dismissed. */
+    val sharedProfileKeys: SharedProfileKeys? = null,
+    val isRevokingSharedKeys: Boolean = false
 )
 
 @HiltViewModel
@@ -81,6 +114,8 @@ class ConnectionsViewModel @Inject constructor(
         object Loading : ApproveResult()
         data class Success(val connection: DAppConnection) : ApproveResult()
         data class Error(val message: String?) : ApproveResult()
+        /** The identity balance cannot pay the fee to register the app's keys; nothing was submitted. */
+        object InsufficientCredits : ApproveResult()
     }
 
     sealed class ScanOutcome {
@@ -112,6 +147,8 @@ class ConnectionsViewModel @Inject constructor(
     private var operationInProgress = false
     private var walletUnlockCheck: () -> Boolean = { false }
     private var connectionsJob: Job? = null
+    private var sharedKeysJob: Job? = null
+    private var detailsJob: Job? = null
     private var identityRetryJob: Job? = null
     private var walletLockJob: Job? = null
     private var walletLockGeneration: () -> Long = { 0L }
@@ -218,7 +255,7 @@ class ConnectionsViewModel @Inject constructor(
                         _uiState.update { it.copy(recordsStatus = ConnectionRecordsStatus.UNAVAILABLE) }
                         return@collectLatest
                     }
-                    ConnectIdentityStatus.AVAILABLE -> Unit
+                    ConnectIdentityStatus.AVAILABLE -> loadSharedProfileKeys()
                 }
                 try {
                     // Keep rows and availability in this cancellable observation, not separate buffered consumers.
@@ -255,6 +292,8 @@ class ConnectionsViewModel @Inject constructor(
                     "App Connect is unavailable in production or on mainnet"
                 }
                 uiState.first { it.recordsStatus != ConnectionRecordsStatus.LOADING }
+                // Without a username the screen offers to create one, which is the answer to this request.
+                if (_uiState.value.recordsStatus == ConnectionRecordsStatus.NO_IDENTITY) return@launch
                 // Keep the URI in this pending coroutine until local identity loading finishes.
                 // A completed load with no identity is handled by the normal preparation error.
                 identityRepository.initializationResult.filterNotNull().first().getOrThrow()
@@ -277,11 +316,14 @@ class ConnectionsViewModel @Inject constructor(
                 pendingOpenedFromUrl = openedFromUrl
                 pendingApprovalFailed = false
                 pendingApprovalRefreshFailed = false
-                _uiState.update { it.copy(pendingRequest = request.copy(permissionText = plan?.permissionText.orEmpty(),
-                    grantChoices = plan?.choices().orEmpty(), recovering = plan?.recovering ?: false,
+                _uiState.update { state -> state.copy(pendingRequest = request.copy(permissionText = plan?.permissionText.orEmpty(),
+                    recovering = plan?.recovering ?: false,
                     requiresGroupReapproval = plan?.requiresGroupReapproval ?: false,
                     groupScopeChangeApproved = false,
-                    walletIdentityId = plan?.identityId ?: request.walletIdentityId),
+                    walletIdentityId = plan?.identityId ?: request.walletIdentityId,
+                    requestedAt = plan?.requestedAt ?: 0,
+                    firstConnection = state.connections.none { it.id == request.appContractId })
+                    .let { if (plan == null) it else it.withTerms(plan) },
                     requiresRevocation = plan?.recovering == true) }
                 _approveResult.value = ApproveResult.Idle
                 _scanOutcome.value = ScanOutcome.ConnectionRequested
@@ -384,19 +426,25 @@ class ConnectionsViewModel @Inject constructor(
         val changed = if (encryption) plan.copy(selectedEncryption =
             if (selected) plan.selectedEncryption + index else plan.selectedEncryption - index)
         else plan.copy(selectedAuth = if (selected) plan.selectedAuth + index else plan.selectedAuth - index)
+            .withCurrentLimits()
         pendingPlan = changed
-        _uiState.update { it.copy(pendingRequest = it.pendingRequest?.copy(grantChoices = changed.choices())) }
+        _uiState.update { it.copy(pendingRequest = it.pendingRequest?.withTerms(changed)) }
     }
 
-    fun selectLimits(budget: Int, lifetime: Int) {
+    /** Sets the connection's funding limit, in credits: above 0 and at most 5 DASH. */
+    fun selectFundingLimit(total: BigInteger) = changeLimits { it.withLimits(total, it.expiry ?: return@changeLimits null) }
+
+    /** Sets the expiry shared by the app's keys, within a year of the request's Platform time. */
+    fun selectExpiry(expiresAt: Long) = changeLimits { it.withLimits(it.fundingTotal ?: return@changeLimits null, expiresAt) }
+
+    private fun changeLimits(change: (AppConnectPlan) -> AppConnectPlan?) {
         if (!isWalletUnlocked) return
         if (operationInProgress || _uiState.value.requiresRevocation) return
         val plan = pendingPlan ?: return
         if (plan.recovering) return
-        val changed = plan.withPresets(budget, lifetime)
+        val changed = try { change(plan) } catch (e: IllegalArgumentException) { null } ?: return
         pendingPlan = changed
-        _uiState.update { it.copy(pendingRequest = it.pendingRequest?.copy(grantChoices = changed.choices(),
-            budgetPreset = budget, lifetimePreset = lifetime)) }
+        _uiState.update { it.copy(pendingRequest = it.pendingRequest?.withTerms(changed)) }
     }
 
     fun approveGroupScopeChange(approved: Boolean) {
@@ -426,6 +474,12 @@ class ConnectionsViewModel @Inject constructor(
             try {
                 if (!isWalletUnlocked) return@launchAuthorizedOperation
                 requireConnectionRecords()
+                // A recovering approval may already have paid; otherwise stop before submitting what
+                // Platform would reject. An unreadable balance proceeds and leaves that to Platform.
+                if (plan?.recovering != true && identityRepository.getIdentityBalance()?.isBalanceEmpty() == true) {
+                    _approveResult.value = ApproveResult.InsufficientCredits
+                    return@launchAuthorizedOperation
+                }
                 // Once approval starts, a transport failure cannot establish that no grant was published.
                 _uiState.update { it.copy(requiresRevocation = true,
                     pendingRequest = it.pendingRequest?.copy(recovering = true)) }
@@ -452,13 +506,11 @@ class ConnectionsViewModel @Inject constructor(
                         (ex !is GroupScopeChangedException && state.requiresRevocation),
                         pendingRequest = state.pendingRequest?.copy(
                         permissionText = refreshed.permissionText,
-                        grantChoices = refreshed.choices(),
                         recovering = refreshed.recovering,
                         requiresGroupReapproval = refreshed.requiresGroupReapproval,
                         groupScopeChangeApproved = false,
-                        budgetPreset = refreshed.budgetPreset,
-                        lifetimePreset = refreshed.lifetimePreset
-                    )) }
+                        requestedAt = refreshed.requestedAt
+                    )?.withTerms(refreshed)) }
                 } catch (refreshError: Exception) {
                     if (refreshError is CancellationException) throw refreshError
                     pendingApprovalRefreshFailed = true
@@ -538,6 +590,90 @@ class ConnectionsViewModel @Inject constructor(
         return repository.connectionDetails(connection.id, connection.scope).also { requireConnectionRecords() }
     }
 
+    fun selectTab(tab: ConnectionsTab) {
+        _uiState.update { it.copy(selectedTab = tab) }
+    }
+
+    /** Opens the details sheet for [connection] and loads what its recorded keys allow. */
+    fun openConnection(connection: DAppConnection) {
+        if (!isWalletUnlocked || !canUseConnections) return
+        // Each opening owns its load, so a slower earlier load cannot overwrite a newer one.
+        detailsJob?.cancel()
+        _uiState.update { it.copy(selectedConnection = ConnectionDetailsState(connection.id, connection.scope)) }
+        detailsJob = viewModelScope.launch {
+            val loaded = try {
+                requireConnectionRecords()
+                // The username and identity are read first: the terms read checks the scope after them.
+                val username = repository.resolveWalletUsername() ?: identityRepository.getUsername().orEmpty()
+                val identityId = identityRepository.blockchainIdentity?.uniqueIdString.orEmpty()
+                val terms = repository.connectionTerms(connection.id, connection.scope)
+                ConnectionDetailsState(connection.id, connection.scope, username, identityId, terms, isLoading = false)
+            } catch (ex: Exception) {
+                if (ex is CancellationException) throw ex
+                log.error("failed to load DashConnect connection details", ex)
+                ConnectionDetailsState(connection.id, connection.scope, isLoading = false, error = ex.message)
+            }
+            _uiState.update { state ->
+                if (state.selectedConnection?.connectionId != connection.id ||
+                    state.selectedConnection.scope != connection.scope) state else state.copy(selectedConnection = loaded)
+            }
+        }
+    }
+
+    private fun loadSharedProfileKeys() {
+        sharedKeysJob?.cancel()
+        _uiState.update { it.copy(sharedProfileKeys = null) }
+        sharedKeysJob = viewModelScope.launch {
+            // Best effort: without Platform the warning just stays hidden.
+            val keys = try { repository.sharedProfileKeys() } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                log.warn("Cannot check for unlinked DashPay profile keys", e)
+                null
+            }
+            _uiState.update { it.copy(sharedProfileKeys = keys) }
+        }
+    }
+
+    fun dismissSharedProfileKeys() {
+        val keys = _uiState.value.sharedProfileKeys ?: return
+        _uiState.update { it.copy(sharedProfileKeys = null) }
+        applicationScope.launch {
+            try {
+                repository.dismissSharedProfileKeys(keys)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                log.error("Cannot save dismissed DashPay profile keys", e)
+                // Not saved, so show the warning again rather than let it return unexplained later.
+                _uiState.update { if (it.sharedProfileKeys == null) it.copy(sharedProfileKeys = keys) else it }
+            }
+        }
+    }
+
+    fun revokeSharedProfileKeys() {
+        val keys = _uiState.value.sharedProfileKeys ?: return
+        if (_uiState.value.isRevokingSharedKeys) return
+        _uiState.update { it.copy(isRevokingSharedKeys = true) }
+        launchAuthorizedOperation {
+            try {
+                if (isWalletUnlocked) {
+                    requireConnectionRecords()
+                    repository.revokeSharedProfileKeys(keys)
+                    _uiState.update { it.copy(sharedProfileKeys = null) }
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                _scanOutcome.value = ScanOutcome.Error(e.message)
+            } finally {
+                _uiState.update { it.copy(isRevokingSharedKeys = false) }
+            }
+        }
+    }
+
+    fun closeConnection() {
+        detailsJob?.cancel()
+        _uiState.update { it.copy(selectedConnection = null) }
+    }
+
     fun resetApproveResult() {
         _approveResult.value = ApproveResult.Idle
     }
@@ -563,3 +699,14 @@ class ConnectionsViewModel @Inject constructor(
         }
     }
 }
+
+/** Copies the consent terms a plan shows (grants, limits and the plain-language summary) into the request. */
+private fun ConnectionRequest.withTerms(plan: AppConnectPlan) = copy(
+    grantChoices = plan.choices(),
+    capabilities = plan.capabilities(),
+    fundingLimit = plan.fundingLimit(),
+    expiresAt = plan.connectionExpiresAt(),
+    budgetPreset = AppConnectPresets.budgets.indexOf(plan.fundingTotal),
+    lifetimePreset = AppConnectPresets.lifetimeDays.indexOfFirst { plan.blockTime + it * AppConnectLimits.DAY == plan.expiry },
+    blockTime = plan.blockTime
+)

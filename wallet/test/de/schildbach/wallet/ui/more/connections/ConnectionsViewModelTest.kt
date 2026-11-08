@@ -263,18 +263,23 @@ class ConnectionsViewModelTest {
             model.closePendingRequest()
             dispatcher.scheduler.runCurrent()
             scan()
-            val refreshed = plan.copy(recovering = recovering, blockTime = System.currentTimeMillis())
+            val now = System.currentTimeMillis()
+            val refreshed = plan.copy(recovering = recovering, blockTime = now).let {
+                if (recovering) it else it.withLimits(AppConnectPresets.budgets[0], now + 30 * AppConnectLimits.DAY)
+            }
             coEvery { repository.approvePreparedLogin(any(), any()) } throws GroupScopeChangedException()
             coEvery { repository.prepareLogin(any()) } returns refreshed
             model.approvePendingRequest()
             dispatcher.scheduler.runCurrent()
             assertEquals(recovering, model.uiState.value.requiresRevocation)
             model.selectGrant(1, false, false)
-            model.selectLimits(1, 1)
+            model.selectFundingLimit(AppConnectPresets.budgets[1])
+            model.selectExpiry(now + 90 * AppConnectLimits.DAY)
             val shown = model.uiState.value.pendingRequest!!
             assertEquals(recovering, shown.grantChoices.first { it.index == 1 && !it.encryption }.selected)
-            assertEquals(if (recovering) 0 else 1, shown.budgetPreset)
-            assertEquals(if (recovering) 0 else 1, shown.lifetimePreset)
+            assertEquals(if (recovering) -1 else 1, shown.budgetPreset)
+            assertEquals(if (recovering) -1 else 1, shown.lifetimePreset)
+            if (!recovering) assertEquals(AppConnectPresets.budgets[1], shown.fundingLimit)
         }
     }
 
@@ -469,7 +474,7 @@ class ConnectionsViewModelTest {
         assertTrue(model.uiState.value.connections.isEmpty())
     }
 
-    @Test fun `confirmed fresh wallet has its own state and cannot prepare scanned or URL requests`() {
+    @Test fun `confirmed fresh wallet shows the username prompt instead of preparing scanned or URL requests`() {
         every { identityConfig.observeIdentityPresence() } returns MutableStateFlow(false)
         model.refreshConnections()
         dispatcher.scheduler.runCurrent()
@@ -479,9 +484,10 @@ class ConnectionsViewModelTest {
         for (url in listOf(false, true)) {
             if (url) model.onUrlOpened("dash-key:test") else model.onQrScanned("dash-key:test")
             dispatcher.scheduler.runCurrent()
-            assertEquals("Create a username to connect apps.",
-                (model.scanOutcome.value as ConnectionsViewModel.ScanOutcome.Error).message)
-            model.resetScanOutcome()
+            assertEquals(ConnectionsViewModel.ScanOutcome.Idle, model.scanOutcome.value)
+            assertNull(model.uiState.value.error)
+            assertFalse(model.uiState.value.isLoading)
+            assertNull(model.uiState.value.pendingRequest)
         }
         verify(exactly = 0) { repository.observeConnections() }
         coVerify(exactly = 0) { repository.prepareLogin(any()) }
@@ -1028,6 +1034,24 @@ class ConnectionsViewModelTest {
         assertTrue(model.approveResult.value is ConnectionsViewModel.ApproveResult.Success)
     }
 
+    @Test fun `empty identity balance offers credits without submitting and keeps the request open`() {
+        scan()
+        val pending = model.uiState.value.pendingRequest
+        coEvery { identities.getIdentityBalance() } returns de.schildbach.wallet.data.CreditBalanceInfo(0)
+        model.approvePendingRequest()
+        dispatcher.scheduler.advanceUntilIdle()
+        assertEquals(ConnectionsViewModel.ApproveResult.InsufficientCredits, model.approveResult.value)
+        assertEquals(pending, model.uiState.value.pendingRequest)
+        assertFalse(model.uiState.value.requiresRevocation)
+        coVerify(exactly = 0) { repository.approvePreparedLogin(any(), any()) }
+        // After a top-up the same request approves; an unreadable balance is left to Platform.
+        coEvery { identities.getIdentityBalance() } returns null
+        coEvery { repository.approvePreparedLogin(any(), any()) } returns mockk(relaxed = true)
+        model.approvePendingRequest()
+        dispatcher.scheduler.advanceUntilIdle()
+        assertTrue(model.approveResult.value is ConnectionsViewModel.ApproveResult.Success)
+    }
+
     @Test fun `lock before queued login submission prevents signing without creating recovery state`() {
         var unlocked = true
         model.bindWalletUnlockCheck { unlocked }
@@ -1365,7 +1389,8 @@ class ConnectionsViewModelTest {
     @Test fun `failed approval terms stay frozen and retry uses original plan`() {
         failApproval()
         val original = model.uiState.value.pendingRequest
-        model.selectLimits(1, 1)
+        model.selectFundingLimit(AppConnectPresets.budgets[1])
+        model.selectExpiry(System.currentTimeMillis() + 90 * AppConnectLimits.DAY)
         model.selectGrant(1, false, false)
         assertEquals(original, model.uiState.value.pendingRequest)
         model.approvePendingRequest()
@@ -1467,7 +1492,8 @@ class ConnectionsViewModelTest {
             val shown = nodes(owner.rootSemanticsNode).filter {
                 it.config.contains(androidx.compose.ui.semantics.SemanticsProperties.Text)
             }.flatMap { it.config[androidx.compose.ui.semantics.SemanticsProperties.Text].map { text -> text.text } }
-            assertTrue(shown.contains(activity.getString(de.schildbach.wallet_test.R.string.dash_connect_identity_required)))
+            assertTrue(shown.contains(activity.getString(de.schildbach.wallet_test.R.string.dash_connect_no_username_heading)))
+            assertTrue(shown.contains(activity.getString(de.schildbach.wallet_test.R.string.dash_connect_create_username)))
             assertFalse(shown.contains(retryText))
             assertFalse(shown.contains(activity.getString(de.schildbach.wallet_test.R.string.dash_connect_scan_qr)))
         } finally {
@@ -1509,6 +1535,59 @@ class ConnectionsViewModelTest {
         } finally {
             controller.pause().stop().destroy()
         }
+    }
+
+    private val sharedKeys = SharedProfileKeys("scope", listOf(20))
+
+    private fun loadSharedKeys() {
+        coEvery { repository.sharedProfileKeys() } returns sharedKeys
+        model.refreshConnections()
+        dispatcher.scheduler.runCurrent()
+        assertEquals(sharedKeys, model.uiState.value.sharedProfileKeys)
+    }
+
+    @Test fun `revoking shared profile keys is authorized and clears the warning`() {
+        loadSharedKeys()
+        var authorized = false
+        coEvery { repository.revokeSharedProfileKeys(sharedKeys) } coAnswers {
+            kotlin.coroutines.coroutineContext.connectionAuthorization()()
+            authorized = true
+        }
+        model.revokeSharedProfileKeys()
+        assertTrue(model.uiState.value.isRevokingSharedKeys)
+        dispatcher.scheduler.runCurrent()
+        assertTrue(authorized)
+        assertNull(model.uiState.value.sharedProfileKeys)
+        assertFalse(model.uiState.value.isRevokingSharedKeys)
+    }
+
+    @Test fun `failed shared key revocation keeps the warning and reports the error`() {
+        loadSharedKeys()
+        coEvery { repository.revokeSharedProfileKeys(sharedKeys) } throws IllegalStateException("Identity update batch not confirmed")
+        model.revokeSharedProfileKeys()
+        dispatcher.scheduler.runCurrent()
+        assertEquals(sharedKeys, model.uiState.value.sharedProfileKeys)
+        assertFalse(model.uiState.value.isRevokingSharedKeys)
+        assertEquals("Identity update batch not confirmed",
+            (model.scanOutcome.value as ConnectionsViewModel.ScanOutcome.Error).message)
+    }
+
+    @Test fun `locked wallet cannot revoke shared profile keys`() {
+        loadSharedKeys()
+        model.bindWalletUnlockCheck { false }
+        model.revokeSharedProfileKeys()
+        dispatcher.scheduler.runCurrent()
+        coVerify(exactly = 0) { repository.revokeSharedProfileKeys(any()) }
+        assertFalse(model.uiState.value.isRevokingSharedKeys)
+    }
+
+    @Test fun `failed dismissal save shows the shared key warning again`() {
+        loadSharedKeys()
+        coEvery { repository.dismissSharedProfileKeys(sharedKeys) } throws java.io.IOException("No space left")
+        model.dismissSharedProfileKeys()
+        assertNull(model.uiState.value.sharedProfileKeys)
+        dispatcher.scheduler.runCurrent()
+        assertEquals(sharedKeys, model.uiState.value.sharedProfileKeys)
     }
 }
 

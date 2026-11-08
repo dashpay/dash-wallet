@@ -126,7 +126,7 @@ class AppConnectRegistrationRecoveryTest {
         }
         val scope = session.scope()
         val plan = AppConnectPlan(Base58.encode(KeyExchangeCrypto.hash256(parsed.bytes)), scope,
-            identityId.toString(), listOf(grant), "Consent", blockTime = time)
+            identityId.toString(), listOf(grant), "Consent", blockTime = time).withRequestedLimits()
         coEvery { config.getGrants() } returns listOf(record(scope = scope))
         val error = assertThrows(IllegalStateException::class.java) {
             runBlocking(ConnectionAuthorization { true }) { session.approve(request, plan) }

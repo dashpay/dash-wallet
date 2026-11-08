@@ -72,6 +72,15 @@ class RevocationSettlementTest {
             .getLong("updatedAt") > 1L)
     }
 
+    @Test fun `a record keeps the time it first became active`() {
+        val record = JSONObject().put("state", "confirmed").put("updatedAt", 1L)
+        assertFalse(record.has("connectedAt"))
+        record.withGrantState("active", 10L)
+        assertEquals(10L, record.getLong("connectedAt"))
+        record.withGrantState("disabled", 20L).withGrantState("active", 30L)
+        assertEquals(10L, record.getLong("connectedAt"))
+    }
+
     @Test fun `connection cards show only the sanitized friendly name`() {
         assertEquals("Yappr", connectionDisplayName("Login to Yappr"))
         assertEquals("Yappr", connectionDisplayName("Yappr"))
