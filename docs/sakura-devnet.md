@@ -26,8 +26,21 @@ The local, Git-ignored `wallet/google-services.json` must contain
 
 Core peers come from the Sakura status page's 13 validator IP addresses.
 The SDK supplies HTTPS DAPI endpoints on port 1443. Core protocol is 70240.
-DashJ's default devnet quorum and activation settings are retained as an explicit
-testing assumption, not verified Sakura consensus configuration.
+Sakura explicitly selects `LLMQ_DEVNET_DIP0024` (105) for rotated InstantSend
+quorums and `LLMQ_DEVNET_PLATFORM` (107) for Platform. The generic DashJ devnet
+defaults (`LLMQ_60_75` / `LLMQ_100_67`) do not match Sakura. In particular, choosing
+the wrong rotated type makes DashJ reject valid offset quorum base blocks as
+"Quorum block height does not match interval", preventing fresh Platform quorums
+from reaching the proof-verification context provider. Standard DKG intervals,
+signature validation, and proof validation are unchanged. Other activation and
+quorum-role defaults still require operator confirmation.
+
+Observed sources: the [public Sakura network status API](https://status.testnet.networks.dash.org/api/networks/devnet-sakura)
+reports `llmq_devnet_dip0024` and `llmq_devnet_platform`; the rejected
+[base block](https://insight.sakura.networks.dash.org/insight-api/block/725b5a33ece6f5087d0aac70ee526c4c5e680218a90fcbb615d74b5114604248)
+is at height 164497 (48-block cycle, rotation index 1). The Samsung proof callback
+requested Platform quorum type 107. No public quorum-server keys are injected
+into the trusted local quorum cache.
 
 Before funding the wallet, confirm Core synchronization, refresh the Platform
 protocol version, check fresh block timestamps, and fetch a data contract with
