@@ -70,10 +70,6 @@ plugins {
 }
 
 allprojects {
-    dependencies.components.withModule('org.dashj:dashj-core') {
-        // The forced release is immutable; verify its checksums.
-        changing = false
-    }
     repositories {
         google()
         mavenLocal()

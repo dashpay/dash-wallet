@@ -285,23 +285,8 @@ app contract identity, including for older saved grants. Grant status transition
 refresh updatedAt without changing it on an ordinary refresh or identical state
 write. CI exports SUPPORT_EMAIL only after the external SDK build completes.
 
-The follow-up pins DashJ in the wallet and SDK to the published timestamped build
-`24.0.0-20261024.220449-1`, keeping Core 24 support. Wallet resolution forces that
-version across transitive dependencies as well. Gradle resolved it from the public
-Central Portal snapshots repository without Maven Local. Its JAR SHA-256 is:
-
-```text
-1f2afb88ca62ab910554e3aa9bf40c240111fc3d3379da152bf59bc19e7828bd
-```
-
-Gradle now enforces the reviewed JAR, POM, module metadata and source JAR hashes in
-gradle/verification-metadata.xml. The pinned DashJ component is marked non-changing
-so timestamped snapshot resolution participates in checksum verification. Other
-dependencies retain their existing policy; this is not a whole-project dependency
-audit. Do not use lenient/off verification or regenerate hashes to bypass a mismatch.
-Snapshot retention may still remove that exact build; a retained release remains
-preferable long-term.
-See the SDK's docs/dashj-build-pin.md for publication provenance.
+The wallet uses the DashJ 24.0.0 release from Maven Central, keeping Core 24
+support. Wallet resolution forces that version across transitive dependencies as well.
 
 Yappr's profile and callback consumer already support `ac=failed`:
 https://github.com/PastaPastaPasta/yappr/blob/staging/docs/APP_CONNECT_PROFILE.md#callback
