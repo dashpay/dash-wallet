@@ -139,8 +139,13 @@ class MayaConversionPreviewFragment : Fragment() {
                     MayaConversionPreviewScreen(
                         state = uiState,
                         onBackClick = {
-                            viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_QUOTE_TOP_BACK)
-                            findNavController().popBackStack()
+                            // Leaving mid-commit would tear down this fragment and its
+                            // ViewModel, cancelling the coroutine that is holding a deposit
+                            // that may already be broadcast. Ignore the arrow until it lands.
+                            if (!uiState.isLoading) {
+                                viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_QUOTE_TOP_BACK)
+                                findNavController().popBackStack()
+                            }
                         },
                         onCancelClick = ::onCancelClick,
                         onConfirmClick = ::onConfirmClick,
@@ -174,6 +179,9 @@ class MayaConversionPreviewFragment : Fragment() {
             viewModel.swapTradeUIModel = this
             updateConversionPreviewUI()
         }
+        // Restored after the deposit went out (process death, or the result sheet dismissed):
+        // keep Confirm dead rather than offering to send the swap again.
+        uiState = uiState.copy(isCommitted = viewModel.committedTxId != null)
 
         viewModel.showLoading.observe(viewLifecycleOwner) { showLoading ->
             uiState = uiState.copy(isLoading = showLoading == true)
@@ -202,6 +210,7 @@ class MayaConversionPreviewFragment : Fragment() {
         }
 
         viewModel.commitSwapTradeSuccessState.observe(viewLifecycleOwner) { params ->
+            uiState = uiState.copy(isCommitted = true)
             val walletName = if (viewModel.swapTradeUIModel.inputCurrency == Constants.DASH_CURRENCY) {
                 mayaCurrencyMapper.getCurrencyName(viewModel.swapTradeUIModel.inputCurrency)
             } else {
@@ -249,6 +258,12 @@ class MayaConversionPreviewFragment : Fragment() {
 
     private fun onCancelClick() {
         viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_QUOTE_CANCEL)
+        if (viewModel.committedTxId != null) {
+            // The deposit is broadcast; "cancel this transaction?" would be a lie, and answering
+            // yes to it is exactly what makes a user re-run the swap. Just leave the screen.
+            findNavController().popBackStack()
+            return
+        }
         val dialog = AdaptiveDialog.simple(
             getString(R.string.cancel_transaction),
             getString(R.string.no_keep_it),
@@ -266,6 +281,11 @@ class MayaConversionPreviewFragment : Fragment() {
     }
 
     private fun onConfirmClick() {
+        // Belt and braces with the disabled button: this trade's deposit is already on the
+        // network, and re-committing would fund a second NEAR intent rather than re-pay it.
+        if (viewModel.committedTxId != null) {
+            return
+        }
         countDownTimer?.cancel()
         if (isRefreshing) {
             getNewCommitOrder()
@@ -502,6 +522,11 @@ class MayaConversionPreviewFragment : Fragment() {
 
     private fun setupBackNavigation() {
         onBackPressedCallback = requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner) {
+            // Swallow back while the order is being committed — see onBackClick. The callback
+            // stays enabled so the press doesn't fall through to the activity and pop anyway.
+            if (uiState.isLoading) {
+                return@addCallback
+            }
             viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_QUOTE_ANDROID_BACK)
             findNavController().popBackStack()
         }

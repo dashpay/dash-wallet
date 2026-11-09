@@ -18,11 +18,13 @@ package org.dash.wallet.integrations.maya.ui
 
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.core.Sha256Hash
@@ -66,6 +68,7 @@ class MayaConversionPreviewViewModel @Inject constructor(
         private const val IS_LOCK_TIMEOUT_MS = 10_000L
         private const val KEY_ORDER = "swap_trade_order"
         private const val KEY_QUOTE_CREATED_AT = "quote_created_at"
+        private const val KEY_COMMITTED_TXID = "committed_txid"
     }
 
     /**
@@ -96,6 +99,20 @@ class MayaConversionPreviewViewModel @Inject constructor(
             savedStateHandle[KEY_QUOTE_CREATED_AT] = value
         }
 
+    /**
+     * Tx id of the deposit this screen has already broadcast, or null while nothing has been
+     * sent. Persisted because the deposit is irreversible and a second commit does NOT re-pay
+     * it: [SwapProvider.commitSwapTransaction] refreshes the route first, and on NEAR Intents
+     * the refreshed quote carries a brand-new one-time deposit address, so a retry funds a
+     * SECOND intent and both settle. Saved state is what stops a process death between the
+     * broadcast and the result screen from restoring a preview with a live Confirm button.
+     */
+    var committedTxId: String?
+        get() = savedStateHandle[KEY_COMMITTED_TXID]
+        private set(value) {
+            savedStateHandle[KEY_COMMITTED_TXID] = value
+        }
+
     private val _showLoading: MutableStateFlow<Boolean> = MutableStateFlow(false)
     val showLoading: StateFlow<Boolean>
         get() = _showLoading.asStateFlow()
@@ -115,6 +132,14 @@ class MayaConversionPreviewViewModel @Inject constructor(
     val onInsufficientMoneyCallback = SingleLiveEvent<Unit>()
 
     fun commitSwapTrade(tradeId: String) = viewModelScope.launch {
+        // This trade's deposit is already on the network and can't be recalled. Refuse to
+        // commit it twice: a second commit refreshes the route and, on NEAR Intents, mints a
+        // new one-time deposit address, so it wouldn't re-pay the first intent — it would fund
+        // a second one, and both would settle.
+        committedTxId?.let {
+            log.warn("ignoring a second commit of a trade already broadcast as {}", it)
+            return@launch
+        }
         analyticsService.logEvent(AnalyticsConstants.Coinbase.CONVERT_QUOTE_CONFIRM, mapOf())
         val inputCurrency = swapTradeUIModel.amount.dashCode
         val inputAmount = swapTradeUIModel.amount.dash
@@ -123,52 +148,40 @@ class MayaConversionPreviewViewModel @Inject constructor(
         _showLoading.value = true
         when (val result = swapProvider.commitSwapTransaction(tradeId, swapTradeUIModel)) {
             is ResponseResource.Success -> {
-                // Wait for the swap transaction to be IS-locked or confirmed on the network.
-                // This verifies that the transaction was successfully broadcast and seen by peers.
-                // Dash IS locks typically arrive within 1-2 seconds; we allow up to 10 seconds
-                // before proceeding anyway (the tx was sent; lock may arrive later).
-                val txId = result.value.txid
-                if (txId != Sha256Hash.ZERO_HASH) {
-                    val locked = withTimeoutOrNull(IS_LOCK_TIMEOUT_MS) {
-                        walletDataProvider.observeTransactions(true, LockedTransaction(txId)).first()
-                    }
-                    if (locked != null) {
-                        log.info("maya swap tx {} IS-locked or confirmed", txId)
-                    } else {
-                        log.warn("maya swap tx {} not IS-locked within {}ms timeout", txId, IS_LOCK_TIMEOUT_MS)
-                    }
+                if (result.value == SwapTradeResponse.EMPTY_SWAP_TRADE) {
+                    _showLoading.value = false
+                    commitSwapTradeFailureState.call()
+                    return@launch
                 }
 
-                _showLoading.value = false
-                if (result.value == SwapTradeResponse.EMPTY_SWAP_TRADE) {
-                    commitSwapTradeFailureState.call()
-                } else {
-                    // commitSwapTransaction refreshes the route before broadcasting, and on
-                    // SwapKit/NEAR Intents routes the refreshed quote carries a NEW one-time
-                    // deposit address — the one the tx actually paid. Persist the returned
-                    // (committed) model, not the pre-refresh preview quote, or tracking and
-                    // the explorer link point at an intent that never receives funds (MO-983).
-                    val committedTrade = result.value
-                    if (committedTrade.vaultAddress != swapTradeUIModel.vaultAddress) {
-                        log.info(
-                            "deposit address changed on route refresh: {} -> {}",
-                            swapTradeUIModel.vaultAddress,
-                            committedTrade.vaultAddress
-                        )
-                    }
-                    commitSwapTradeSuccessState.value = SendTransactionToWalletParams(
-                        committedTrade.amount,
-                        committedTrade.feeAmount,
-                        committedTrade.destinationAddress,
-                        MayaConstants.TRANSACTION_TYPE_SEND,
-                        txid = txId.takeIf { it != Sha256Hash.ZERO_HASH }?.toString(),
-                        depositAddress = committedTrade.vaultAddress
+                // commitSwapTransaction refreshes the route before broadcasting, and on
+                // SwapKit/NEAR Intents routes the refreshed quote carries a NEW one-time
+                // deposit address — the one the tx actually paid. Persist the returned
+                // (committed) model, not the pre-refresh preview quote, or tracking and
+                // the explorer link point at an intent that never receives funds (MO-983).
+                val committedTrade = result.value
+                val txId = committedTrade.txid
+                if (committedTrade.vaultAddress != swapTradeUIModel.vaultAddress) {
+                    log.info(
+                        "deposit address changed on route refresh: {} -> {}",
+                        swapTradeUIModel.vaultAddress,
+                        committedTrade.vaultAddress
                     )
-                    val service = when (dispatchingSwapProvider.currentBackend()) {
-                        SwapBackend.SWAPKIT -> ServiceName.Swapkit
-                        SwapBackend.MAYA -> ServiceName.Maya
-                    }
+                }
+                val service = when (dispatchingSwapProvider.currentBackend()) {
+                    SwapBackend.SWAPKIT -> ServiceName.Swapkit
+                    SwapBackend.MAYA -> ServiceName.Maya
+                }
+
+                // The deposit is broadcast and the funds are gone, so record it BEFORE the
+                // IS-lock wait below — and under NonCancellable, so a cancellation arriving
+                // now (the user leaving the screen, the OS killing the process) can't drop the
+                // record. Recording it late left a paid-for swap that SwapTrackingService never
+                // polls and that nothing on screen accounts for, which is what invited the user
+                // to send the whole swap a second time.
+                withContext(NonCancellable) {
                     if (txId != Sha256Hash.ZERO_HASH) {
+                        committedTxId = txId.toString()
                         swapOrderDao.insertOrder(
                             SwapOrder(
                                 txId = txId,
@@ -193,6 +206,31 @@ class MayaConversionPreviewViewModel @Inject constructor(
                         service
                     )
                 }
+
+                // Wait for the swap transaction to be IS-locked or confirmed on the network.
+                // This verifies that the transaction was successfully broadcast and seen by peers.
+                // Dash IS locks typically arrive within 1-2 seconds; we allow up to 10 seconds
+                // before proceeding anyway (the tx was sent; lock may arrive later).
+                if (txId != Sha256Hash.ZERO_HASH) {
+                    val locked = withTimeoutOrNull(IS_LOCK_TIMEOUT_MS) {
+                        walletDataProvider.observeTransactions(true, LockedTransaction(txId)).first()
+                    }
+                    if (locked != null) {
+                        log.info("maya swap tx {} IS-locked or confirmed", txId)
+                    } else {
+                        log.warn("maya swap tx {} not IS-locked within {}ms timeout", txId, IS_LOCK_TIMEOUT_MS)
+                    }
+                }
+
+                _showLoading.value = false
+                commitSwapTradeSuccessState.value = SendTransactionToWalletParams(
+                    committedTrade.amount,
+                    committedTrade.feeAmount,
+                    committedTrade.destinationAddress,
+                    MayaConstants.TRANSACTION_TYPE_SEND,
+                    txid = txId.takeIf { it != Sha256Hash.ZERO_HASH }?.toString(),
+                    depositAddress = committedTrade.vaultAddress
+                )
             }
             is ResponseResource.Failure -> {
                 _showLoading.value = false
