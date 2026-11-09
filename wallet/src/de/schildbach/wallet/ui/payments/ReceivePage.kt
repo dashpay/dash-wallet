@@ -47,6 +47,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -251,6 +252,7 @@ private fun QrCode(uiState: ReceiveUIState) {
                     bitmap = bitmap.asImageBitmap(),
                     contentDescription = description,
                     colorFilter = ColorFilter.tint(Color.Black, BlendMode.SrcIn),
+                    filterQuality = FilterQuality.None,
                     modifier = Modifier.size(200.dp)
                 )
                 Image(

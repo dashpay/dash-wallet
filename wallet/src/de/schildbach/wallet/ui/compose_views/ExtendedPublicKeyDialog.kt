@@ -15,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -72,6 +73,7 @@ private fun ExtendedPublicKeyContent(
                 bitmap = bitmap.asImageBitmap(),
                 contentDescription = null,
                 colorFilter = ColorFilter.tint(colors.textPrimary, BlendMode.SrcIn),
+                filterQuality = FilterQuality.None,
                 modifier = Modifier
                     .padding(vertical = 30.dp)
                     .size(180.dp)
