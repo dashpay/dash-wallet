@@ -31,13 +31,22 @@ import de.schildbach.wallet_test.R
 //
 // De-dup rule: kinds whose operation IS a wallet Core transaction already
 // render as an L1 row, so they get no shielded row (two rows for one
-// operation would double-count it). ShieldFromAssetLock (1, Core asset lock →
-// pool) always does; Withdrawal (5, pool → Core) does only when it pays one
-// of the wallet's OWN Core addresses (the L1 "Unshielded" row). A withdrawal
-// to a FOREIGN Core address never touches the wallet's L1, so it renders
-// here as a "Sent" row; one whose destination cannot be resolved gets no row
-// (a gap is better than a double count). Ids could not collide anyway:
-// shielded ids carry the `shielded:` prefix, L1 ids are txid hex or group ids.
+// operation would double-count it).
+// - ShieldFromAssetLock (1, Core asset lock → pool): the wallet broadcasts
+//   the asset lock (stage a) BEFORE the Type 18 transition funds the pool,
+//   so its L1 row always exists first — always skipped.
+// - Withdrawal (5, pool → Core) to one of the wallet's OWN Core addresses:
+//   the Core AssetUnlock payout can wait minutes in Platform's withdrawal
+//   queue. Until the SDK holds the wallet's output paying that address
+//   ([CounterpartyOwnership.OWN_PAID_ON_CORE]) the entry renders here as an
+//   own "Unshielded" move; once it does, the L1 "Unshielded" row takes over
+//   and this row is dropped on the next re-plan (the sync re-plans on L1
+//   display writes too, so the overlap is at most one debounce window).
+// - A withdrawal to a FOREIGN Core address never touches the wallet's L1, so
+//   it renders here as a "Sent" row; one whose destination cannot be
+//   resolved gets no row (a gap is better than a double count).
+// Ids could not collide anyway: shielded ids carry the `shielded:` prefix,
+// L1 ids are txid hex or group ids.
 //
 // Ownership ([CounterpartyOwnership], resolved app-side per entry against
 // the SDK store) only matters for kinds whose counterparty may be someone
@@ -81,10 +90,28 @@ fun parseShieldedHistoryRowId(rowId: String): ShieldedActivityRowKey? {
 
 /**
  * Whether an entry's counterparty belongs to the active wallet. [UNKNOWN]
- * (undecodable counterparty, failed lookup, no network parameters) is never
- * treated as either answer where the answer changes the row.
+ * (undecodable counterparty, no network parameters) is never treated as
+ * either answer where the answer changes the row. A failed READ is not
+ * UNKNOWN: it throws [ShieldedStoreReadException] so the caller retries
+ * instead of acting on a guess.
  */
-enum class CounterpartyOwnership { OWN, EXTERNAL, UNKNOWN }
+enum class CounterpartyOwnership {
+    OWN,
+
+    /**
+     * Withdrawals only: an OWN Core address, and the SDK already holds the
+     * wallet's output paying it — the L1 row renders the operation.
+     */
+    OWN_PAID_ON_CORE,
+    EXTERNAL,
+    UNKNOWN
+}
+
+/**
+ * A read of the SDK store failed while resolving a counterparty: a transient
+ * condition, never an answer. Carries no values (the cause may; log its class only).
+ */
+class ShieldedStoreReadException(cause: Throwable) : Exception("shielded store read failed", cause)
 
 /** The Base58 version bytes of the active network's Core addresses. */
 data class CoreAddressVersions(val pubKeyHash: Int, val scriptHash: Int)
@@ -184,19 +211,34 @@ private val SENT_TO_OTHER = ShieldedKindSpec(
 
 /**
  * How [kindTag] renders given its counterparty's [ownership], or null for no
- * row: 1 ShieldFromAssetLock and an OWN 5 Withdrawal (their Core tx is the
- * row — see the de-dup rule above), a 5 Withdrawal of UNKNOWN destination,
+ * row: 1 ShieldFromAssetLock and a 5 Withdrawal already paid on Core (their
+ * Core tx is the row — see the de-dup rule above), a 5 Withdrawal of UNKNOWN
+ * destination,
  * 7 ShieldedSpend (own spend with only self-change, fee unknown: no honest
  * amount) and any tag this app does not know. An Unshield (4) or identity
  * top-up (9) that is not provably OWN renders as [SENT_TO_OTHER] — its value
  * is the same either way, only the internal-move label would be wrong.
  */
 private fun kindSpec(kindTag: Int, ownership: CounterpartyOwnership): ShieldedKindSpec? = when (kindTag) {
-    ShieldedActivityKindTag.UNSHIELD -> if (ownership == CounterpartyOwnership.OWN) unshieldToOwn else SENT_TO_OTHER
-    ShieldedActivityKindTag.IDENTITY_TOP_UP -> if (ownership == CounterpartyOwnership.OWN) topUpOwn else SENT_TO_OTHER
-    ShieldedActivityKindTag.WITHDRAWAL -> if (ownership == CounterpartyOwnership.EXTERNAL) SENT_TO_OTHER else null
+    ShieldedActivityKindTag.UNSHIELD -> if (ownership.isOwn()) unshieldToOwn else SENT_TO_OTHER
+    ShieldedActivityKindTag.IDENTITY_TOP_UP -> if (ownership.isOwn()) topUpOwn else SENT_TO_OTHER
+    ShieldedActivityKindTag.WITHDRAWAL -> when (ownership) {
+        CounterpartyOwnership.OWN -> withdrawalToOwnCore
+        CounterpartyOwnership.EXTERNAL -> SENT_TO_OTHER
+        CounterpartyOwnership.OWN_PAID_ON_CORE, CounterpartyOwnership.UNKNOWN -> null
+    }
     else -> fixedKindSpec(kindTag)
 }
+
+private fun CounterpartyOwnership.isOwn() =
+    this == CounterpartyOwnership.OWN || this == CounterpartyOwnership.OWN_PAID_ON_CORE
+
+/** An own withdrawal still in Platform's queue: the payout has no L1 row yet. */
+private val withdrawalToOwnCore = ShieldedKindSpec(
+    R.string.transaction_row_unshielded, R.string.transaction_row_unshielded,
+    TxDisplayCacheEntry.ICON_INTERNAL, TxDisplayCacheEntry.BG_SENT, outgoing = true,
+    R.string.external_send_balance_name_shielded, R.string.external_send_balance_name_core
+)
 
 private val unshieldToOwn = ShieldedKindSpec(
     R.string.transaction_row_unshielded, R.string.transaction_row_unshielded,
