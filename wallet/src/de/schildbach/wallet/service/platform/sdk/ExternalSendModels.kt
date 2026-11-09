@@ -338,8 +338,8 @@ enum class SendSupport {
  * |---|---|---|---|---|
  * | Core | yes | yes | yes, P2PKH only (1) | own identity only (2) |
  * | Shielded | yes | yes | yes | yes |
- * | Platform | no (3) | no (4) | yes | yes |
- * | Identity | yes | no (5) | yes | yes, not to itself |
+ * | Platform | yes (3) | yes (4) | yes | yes |
+ * | Identity | yes | yes (5) | yes | yes, not to itself |
  *
  * 1. `ManagedPlatformWallet.fundFromAssetLockExternal`: the payee gets the explicit
  *    amount, the wallet's own Platform address the remainder (and pays the fee). The SDK
@@ -350,9 +350,15 @@ enum class SendSupport {
  * 2. The Core top-up's resume gate keys on the managed identity's registration index;
  *    for someone else's identity a killed attempt could not be resumed (double-pay
  *    risk). [destinationIsOwnIdentity] null (could not tell) fails closed.
- * 3. The SDK's Platform-address withdrawal only withdraws the full balance.
- * 4. `shieldedShield` (Type 15) only pays the wallet's own Orchard address.
- * 5. `shieldedShieldFromIdentity` (Type 21) is self-only too.
+ * 3. The partial-amount `ManagedPlatformWallet.withdrawCredits(coreAddress, inputs, …)`
+ *    with inputs the wallet selects ([selectPlatformWithdrawalInputs]); amounts below the
+ *    withdrawal minimum ([PLATFORM_MIN_WITHDRAWAL_CREDITS]) are refused before signing.
+ * 4. `shieldedShieldToRecipient` (Type 15 to a third party's Orchard address; the SDK
+ *    selects the Platform-address inputs).
+ * 5. `shieldedShieldFromIdentityToRecipient` (Type 21 to a third party's Orchard address).
+ *
+ * In 4 and 5 the SDK refuses an Orchard address the wallet's own shielded account
+ * recognizes (a self-shield is not an external send) before building anything.
  */
 fun externalSendSupport(
     source: SendBalance,
@@ -370,13 +376,9 @@ fun externalSendSupport(
                 if (destinationIsOwnIdentity == true) SendSupport.SUPPORTED else SendSupport.NEEDS_OWN_IDENTITY
         }
         SendBalance.SHIELDED -> SendSupport.SUPPORTED
-        SendBalance.PLATFORM -> when (destination) {
-            is SendDestination.Platform, is SendDestination.Identity -> SendSupport.SUPPORTED
-            is SendDestination.Core, is SendDestination.Shielded -> SendSupport.NOT_SUPPORTED_YET
-        }
+        SendBalance.PLATFORM -> SendSupport.SUPPORTED
         SendBalance.IDENTITY -> when (destination) {
-            is SendDestination.Core, is SendDestination.Platform -> SendSupport.SUPPORTED
-            is SendDestination.Shielded -> SendSupport.NOT_SUPPORTED_YET
+            is SendDestination.Core, is SendDestination.Shielded, is SendDestination.Platform -> SendSupport.SUPPORTED
             // A transfer from the user's identity to itself moves nothing and pays a fee.
             is SendDestination.Identity ->
                 if (destinationIsOwnIdentity == true) SendSupport.NOT_SUPPORTED_YET else SendSupport.SUPPORTED

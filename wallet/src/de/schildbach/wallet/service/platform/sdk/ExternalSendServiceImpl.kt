@@ -82,7 +82,8 @@ internal fun notSentReasonFor(result: SdkWriteResult.NotBroadcast): NotSentReaso
     }
     fun any(vararg needles: String) = texts.any { text -> needles.any { text.contains(it) } }
     return when {
-        any(L1_PENDING_PAYMENT_UNPROTECTED_REASON) -> NotSentReason.PAYMENT_STILL_CONFIRMING
+        any(L1_PENDING_PAYMENT_UNPROTECTED_REASON, REASON_SHIELDED_IDENTITY_DEBIT_PENDING) ->
+            NotSentReason.PAYMENT_STILL_CONFIRMING
         any(L1_SIGNER_LOCKED_REASON, REASON_PRE_BROADCAST_ASSET_LOCK_SIGNING) -> NotSentReason.SIGNER_LOCKED
         any(
             L1_FUNDING_GATE_CLOSED_REASON,
@@ -142,6 +143,111 @@ internal fun selectPlatformInputs(candidates: List<FundingInput>, targetCredits:
 }
 
 /**
+ * The Core fee rate of a Platform → Core withdrawal, duffs/byte: the minimum Fibonacci rate
+ * DPP accepts, the rate the shielded withdrawal uses.
+ */
+internal const val PLATFORM_WITHDRAW_CORE_FEE_PER_BYTE = ShieldedBalanceServiceImpl.WITHDRAW_CORE_FEE_PER_BYTE
+
+/** The DIP-17 Platform payment account a Platform → Core withdrawal spends from. */
+internal const val PLATFORM_WITHDRAW_ACCOUNT_INDEX = 0
+
+/** Size of an asset-unlock transaction in bytes (dashcore `ASSET_UNLOCK_TX_SIZE`). */
+private const val ASSET_UNLOCK_TX_SIZE_BYTES = 190L
+
+/**
+ * The smallest Platform → Core withdrawal, in credits, at [PLATFORM_WITHDRAW_CORE_FEE_PER_BYTE]:
+ * `min_withdrawal_amount` (1 000 000 credits, rs-platform-version system limits v2–v4) plus the
+ * Core fee of the asset unlock, which from protocol version 14 is carved out of the withdrawn
+ * amount (rs-dpp `min_withdrawal_amount_with_core_fee`: 190 bytes × the rate × 1000 credits per
+ * duff). The SDK exposes no reader for it, and DPP would reject a smaller withdrawal only while
+ * validating the signed transition, so [ExternalSendService.send] refuses it before anything is
+ * selected or signed.
+ */
+internal const val PLATFORM_MIN_WITHDRAWAL_CREDITS =
+    1_000_000L + ASSET_UNLOCK_TX_SIZE_BYTES * PLATFORM_WITHDRAW_CORE_FEE_PER_BYTE * CREDITS_PER_DUFF
+
+/** The largest Platform → Core withdrawal, in credits (`max_withdrawal_amount`, 500 DASH, system limits v1–v4). */
+internal const val PLATFORM_MAX_WITHDRAWAL_CREDITS = 50_000_000_000_000L
+
+/** DPP's `max_address_inputs` (dpp state-transition versions v2–v4): at most this many inputs per transition. */
+internal const val PLATFORM_MAX_ADDRESS_INPUTS = 16
+
+/** Unsigned lexicographic order of 20-byte address hashes: the order of rs-dpp's `PlatformAddress` (P2PKH). */
+private val ADDRESS_HASH_ORDER = Comparator<FundingInput> { a, b ->
+    val x = a.hash
+    val y = b.hash
+    for (i in 0 until minOf(x.size, y.size)) {
+        val c = (x[i].toInt() and 0xff) - (y[i].toInt() and 0xff)
+        if (c != 0) return@Comparator c
+    }
+    x.size - y.size
+}
+
+/**
+ * Inputs for a partial Platform → Core withdrawal (`withdrawCredits` with explicit inputs)
+ * that take EXACTLY [targetCredits] in total, or null when the addresses cannot cover it.
+ *
+ * The SDK charges the Platform transition fee to the input whose address sorts FIRST
+ * (`DeductFromInput(0)` over the inputs ordered by address), out of what that address KEEPS.
+ * So the chosen set's first-sorting input (the fee payer) keeps at least [feeReserveCredits]
+ * of its balance; every other input may be drawn in full. No input ever takes more than its
+ * address's balance, every input takes at least [minInputCredits] (DPP rejects the whole
+ * transition otherwise), only P2PKH addresses (the only kind the wallet signs) are used, and
+ * at most [maxInputs] inputs are chosen. Of the feasible sets the one with the fewest inputs
+ * (the fee grows with the input count) is returned, the fee payer first.
+ */
+internal fun selectPlatformWithdrawalInputs(
+    candidates: List<FundingInput>,
+    targetCredits: Long,
+    feeReserveCredits: Long,
+    minInputCredits: Long,
+    maxInputs: Int = PLATFORM_MAX_ADDRESS_INPUTS
+): List<FundingInput>? {
+    if (targetCredits <= 0 || feeReserveCredits < 0 || maxInputs < 1) return null
+    val min = maxOf(minInputCredits, 1L)
+    val usable = candidates
+        .filter { it.addressType == 0 && it.hash.size == 20 && it.credits >= min }
+        .sortedWith(ADDRESS_HASH_ORDER)
+    var best: List<FundingInput>? = null
+    for ((index, payer) in usable.withIndex()) {
+        val payerCap = payer.credits - feeReserveCredits
+        if (payerCap < min) continue
+        // Only addresses sorting AFTER the payer may join it: otherwise one of them would pay.
+        val others = usable.subList(index + 1, usable.size).sortedByDescending { it.credits }
+        val maxOthers = minOf(maxInputs - 1, others.size)
+        for (count in 0..maxOthers) {
+            if (best != null && count + 1 >= best.size) break
+            val picked = others.take(count)
+            val lowest = try {
+                Math.multiplyExact(min, (count + 1).toLong())
+            } catch (e: ArithmeticException) {
+                break
+            }
+            val highest = picked.fold(payerCap) { acc, input -> saturatingAdd(acc, input.credits) }
+            if (targetCredits < lowest) break
+            if (targetCredits > highest) continue
+            // Every input starts at the minimum; the rest is drawn from the others first
+            // (in full if need be), then from the payer, which never exceeds payerCap.
+            var extra = targetCredits - lowest
+            val inputs = picked.map { input ->
+                val add = minOf(extra, input.credits - min)
+                extra -= add
+                FundingInput(input.addressType, input.hash.copyOf(), min + add)
+            }
+            best = listOf(FundingInput(payer.addressType, payer.hash.copyOf(), min + extra)) + inputs
+            break
+        }
+    }
+    return best
+}
+
+private fun saturatingAdd(a: Long, b: Long): Long = try {
+    Math.addExact(a, b)
+} catch (e: ArithmeticException) {
+    Long.MAX_VALUE
+}
+
+/**
  * The pool fee, in duffs, a Core → Shielded asset lock pays on top of what the recipient
  * receives: Rust derives `shield_amount = lock_value − pool_fee` with
  * `pool_fee = compute_minimum_shielded_fee(2) + asset_lock_base_cost`
@@ -176,6 +282,15 @@ internal fun <T> Flow<T>.retryReadErrors(
 }
 
 private val retryLog = LoggerFactory.getLogger("de.schildbach.wallet.service.platform.sdk.ExternalSendRetry")
+
+/**
+ * The SDK's AUTO-withdrawal preflight ([ExternalSendSource.platformWithdrawalPreflight]):
+ * whether the account can fund any withdrawal, and the transition fee it reserves on its fee
+ * payer for all of its withdrawable (≥ minimum input) addresses, in credits (0 unless
+ * [canWithdraw]). DPP's minimum fee grows with the input count, so for a subset of those
+ * addresses it is an upper bound.
+ */
+internal data class PlatformWithdrawalPreflight(val canWithdraw: Boolean, val estimatedFeeCredits: Long)
 
 // ── Source seam ───────────────────────────────────────────────────────
 
@@ -263,6 +378,39 @@ internal interface ExternalSendSource {
         amountCredits: Long
     )
     suspend fun identityTransfer(walletIdHex: String, fromId: ByteArray, toId: ByteArray, amountCredits: Long)
+
+    // Platform → Core (partial withdrawal)
+
+    /**
+     * The SDK's AUTO-withdrawal preflight of [walletIdHex]'s Platform payment account
+     * ([PLATFORM_WITHDRAW_ACCOUNT_INDEX]) at [PLATFORM_WITHDRAW_CORE_FEE_PER_BYTE]
+     * (`preflightWithdrawal`, an on-chain read; signs and spends nothing); throws when
+     * unreadable.
+     */
+    suspend fun platformWithdrawalPreflight(walletIdHex: String): PlatformWithdrawalPreflight
+
+    /** The version-locked minimum input amount of a Platform-address transition, in credits; throws when unreadable. */
+    suspend fun platformMinInputCredits(walletIdHex: String): Long
+
+    /**
+     * `withdrawCredits(coreAddress, inputs, …)`: withdraw exactly [inputs] (each one's credits
+     * from its address) to [coreAddress] at [PLATFORM_WITHDRAW_CORE_FEE_PER_BYTE]. Throws on
+     * failure (classified by [classifyBroadcastFailure]).
+     */
+    suspend fun platformWithdraw(walletIdHex: String, coreAddress: String, inputs: List<FundingInput>)
+
+    // → Shielded (third-party Orchard address); the [ShieldedBalanceService] write pipeline
+
+    /** [ShieldedBalanceService.shieldFromCreditsToAddress] (Type 15 to [address]). */
+    suspend fun platformShieldTo(walletIdHex: String, address: String, amount: Dash): SdkWriteResult<Unit>
+
+    /** [ShieldedBalanceService.shieldFromIdentityToAddress] (Type 21 from [fromId] to [address]). */
+    suspend fun identityShieldTo(
+        walletIdHex: String,
+        fromId: ByteArray,
+        address: String,
+        amount: Dash
+    ): SdkWriteResult<Unit>
 
     // Core → Platform (`fundFromAssetLockExternal`)
 
@@ -515,6 +663,35 @@ internal class DashSdkExternalSendSource(
             signerHandle = manager.signerHandle
         )
     }
+
+    override suspend fun platformWithdrawalPreflight(walletIdHex: String): PlatformWithdrawalPreflight {
+        val preflight = wallet(walletIdHex).preflightWithdrawal(
+            accountIndex = PLATFORM_WITHDRAW_ACCOUNT_INDEX,
+            coreFeePerByte = PLATFORM_WITHDRAW_CORE_FEE_PER_BYTE
+        )
+        return PlatformWithdrawalPreflight(preflight.canWithdraw, preflight.estimatedFee)
+    }
+
+    override suspend fun platformMinInputCredits(walletIdHex: String): Long = wallet(walletIdHex).minAmounts().minInput
+
+    override suspend fun platformWithdraw(walletIdHex: String, coreAddress: String, inputs: List<FundingInput>) {
+        val manager = manager()
+        wallet(walletIdHex).withdrawCredits(
+            coreAddress = coreAddress,
+            inputs = inputs.map {
+                org.dashfoundation.dashsdk.wallet.ManagedPlatformWallet.WithdrawalInput(it.addressType, it.hash, it.credits)
+            },
+            coreFeePerByte = PLATFORM_WITHDRAW_CORE_FEE_PER_BYTE,
+            signerHandle = manager.signerHandle,
+            accountIndex = PLATFORM_WITHDRAW_ACCOUNT_INDEX
+        )
+    }
+
+    override suspend fun platformShieldTo(walletIdHex: String, address: String, amount: Dash) =
+        shieldedBalanceService.shieldFromCreditsToAddress(address, amount, walletIdHex)
+
+    override suspend fun identityShieldTo(walletIdHex: String, fromId: ByteArray, address: String, amount: Dash) =
+        shieldedBalanceService.shieldFromIdentityToAddress(fromId, address, amount, walletIdHex)
 
     override fun coreFundingGateOpen(): Boolean = sdkL1SendService.probeSendGate().allowed
 
@@ -773,7 +950,10 @@ class ExternalSendServiceImpl internal constructor(
      *   count is unknown.
      * - Shielded → *: the flat single-note pool fee of the transition; more notes cost more.
      * - Core → Identity, Platform → *, Identity → *: Rust meters these at execution; no
-     *   pre-send figure exists, so null.
+     *   pre-send figure exists, so null. (Platform → Core's withdrawal preflight estimate is
+     *   only the fee payer's reserve, not the fee of this exact set of inputs, and the Core
+     *   fee of the asset unlock comes out of the amount on top; Platform/Identity → Shielded
+     *   add the shielded compute fee to the metered one.)
      */
     private suspend fun estimateFeeInner(source: SendBalance, destination: SendDestination): FeeEstimate? =
         when (source) {
@@ -984,12 +1164,13 @@ class ExternalSendServiceImpl internal constructor(
         return when (source) {
             SendBalance.CORE -> sendFromCore(pair, walletIdHex, destination, amount, amountCredits, isMax, coreSession)
             SendBalance.SHIELDED -> sendFromShielded(pair, walletIdHex, destination, amount, isMax)
-            SendBalance.PLATFORM -> sendFromPlatform(pair, walletIdHex, destination, amountCredits)
+            SendBalance.PLATFORM -> sendFromPlatform(pair, walletIdHex, destination, amount, amountCredits)
             SendBalance.IDENTITY -> sendFromIdentity(
                 pair,
                 walletIdHex,
                 checkNotNull(ownIdentityBytes) { "identity source without its id" },
                 destination,
+                amount,
                 amountCredits
             )
         }
@@ -1414,9 +1595,14 @@ class ExternalSendServiceImpl internal constructor(
         pair: String,
         walletIdHex: String,
         destination: SendDestination,
+        amount: Dash,
         amountCredits: Long
     ): ExternalSendResult {
         return when (destination) {
+            is SendDestination.Core -> sendPlatformToCore(pair, walletIdHex, destination, amountCredits)
+            is SendDestination.Shielded -> shieldedWrite(pair, walletIdHex) {
+                this.source.platformShieldTo(walletIdHex, destination.address, amount)
+            }
             is SendDestination.Platform -> {
                 val to = decodePlatformAddress(destination.address, network)
                     ?: return notSent(pair, NotSentReason.GENERIC, "invalid platform address")
@@ -1432,8 +1618,45 @@ class ExternalSendServiceImpl internal constructor(
                     ?: return notSent(pair, NotSentReason.INSUFFICIENT_FUNDS, "platform addresses cannot cover the amount")
                 nativeWrite(pair, walletIdHex) { this.source.platformTopUpIdentity(walletIdHex, identityId, inputs) }
             }
-            else -> notSent(pair, NotSentReason.NOT_SUPPORTED, "unreachable: gated")
         }
+    }
+
+    /**
+     * Partial withdrawal: the inputs take exactly [amountCredits] ([selectPlatformWithdrawalInputs]
+     * over the cached address balances), the fee payer keeping the SDK preflight's estimated
+     * transition fee. [amountCredits] is the GROSS withdrawal: the Core fee of the asset unlock
+     * comes out of it, as for Identity → Core. Every refusal here happens before anything is
+     * signed (NotSent); the SDK re-checks each input against its on-chain balance before
+     * signing.
+     */
+    private suspend fun sendPlatformToCore(
+        pair: String,
+        walletIdHex: String,
+        destination: SendDestination.Core,
+        amountCredits: Long
+    ): ExternalSendResult {
+        if (amountCredits < PLATFORM_MIN_WITHDRAWAL_CREDITS) {
+            return notSent(pair, NotSentReason.GENERIC, "below the platform withdrawal minimum")
+        }
+        if (amountCredits > PLATFORM_MAX_WITHDRAWAL_CREDITS) {
+            return notSent(pair, NotSentReason.GENERIC, "above the platform withdrawal maximum")
+        }
+        val candidates = readOrNull("platform address balances") { this.source.platformAddressBalances(walletIdHex) }
+            ?: return notSent(pair, NotSentReason.GENERIC, "platform address balances unreadable")
+        val minInput = readOrNull("platform minimum input") { this.source.platformMinInputCredits(walletIdHex) }
+            ?.takeIf { it > 0 }
+            ?: return notSent(pair, NotSentReason.GENERIC, "platform minimum input unknown")
+        val preflight = readOrNull("withdrawal preflight") { this.source.platformWithdrawalPreflight(walletIdHex) }
+            ?: return notSent(pair, NotSentReason.GENERIC, "withdrawal preflight unreadable")
+        if (!preflight.canWithdraw) {
+            return notSent(pair, NotSentReason.INSUFFICIENT_FUNDS, "the platform addresses cannot fund a withdrawal")
+        }
+        // A zero estimate would let the fee payer be drained: unknown, not free.
+        val feeReserve = preflight.estimatedFeeCredits.takeIf { it > 0 }
+            ?: return notSent(pair, NotSentReason.GENERIC, "withdrawal fee estimate unknown")
+        val inputs = selectPlatformWithdrawalInputs(candidates, amountCredits, feeReserve, minInput)
+            ?: return notSent(pair, NotSentReason.INSUFFICIENT_FUNDS, "platform addresses cannot cover the amount and fee")
+        return nativeWrite(pair, walletIdHex) { this.source.platformWithdraw(walletIdHex, destination.address, inputs) }
     }
 
     private suspend fun sendFromIdentity(
@@ -1441,6 +1664,7 @@ class ExternalSendServiceImpl internal constructor(
         walletIdHex: String,
         fromId: ByteArray,
         destination: SendDestination,
+        amount: Dash,
         amountCredits: Long
     ): ExternalSendResult {
         return when (destination) {
@@ -1460,8 +1684,25 @@ class ExternalSendServiceImpl internal constructor(
                     ?: return notSent(pair, NotSentReason.GENERIC, "invalid identity id")
                 nativeWrite(pair, walletIdHex) { this.source.identityTransfer(walletIdHex, fromId, toId, amountCredits) }
             }
-            is SendDestination.Shielded -> notSent(pair, NotSentReason.NOT_SUPPORTED, "unreachable: gated")
+            is SendDestination.Shielded -> shieldedWrite(pair, walletIdHex) {
+                this.source.identityShieldTo(walletIdHex, fromId, destination.address, amount)
+            }
         }
+    }
+
+    /**
+     * One [ShieldedBalanceService] write (it pins [walletIdHex] itself and classifies its own
+     * outcome), after the bound-wallet re-check; mapped by [mapWrite].
+     */
+    private suspend fun shieldedWrite(
+        pair: String,
+        walletIdHex: String,
+        call: suspend () -> SdkWriteResult<Unit>
+    ): ExternalSendResult {
+        if (!stillBound(pair, walletIdHex)) return ExternalSendResult.NotSent(NotSentReason.GENERIC)
+        val result = call()
+        if (result is SdkWriteResult.Broadcast) log.info("external send {}: sent", pair)
+        return mapWrite(pair, result)
     }
 
     /** One raw SDK credits call, after the wallet re-check, classified by [classifyBroadcastFailure]. */

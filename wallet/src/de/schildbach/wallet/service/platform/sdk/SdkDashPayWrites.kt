@@ -144,6 +144,16 @@ internal const val REASON_PRE_BROADCAST_ASSET_LOCK_SELECTION =
 internal const val REASON_PRE_BROADCAST_ASSET_LOCK_SIGNING =
     "pre-broadcast asset-lock signing failure"
 
+/**
+ * [classifyBroadcastFailure] reason for
+ * [DashSdkError.PlatformWallet.ShieldedIdentityDebitPending]: an EARLIER identity-funded
+ * shield (Type 21) is still unresolved, so the SDK neither built nor broadcast this one.
+ * Nothing was submitted; the same request works once shielded sync has reconciled the
+ * earlier debit.
+ */
+internal const val REASON_SHIELDED_IDENTITY_DEBIT_PENDING =
+    "pre-broadcast: an earlier identity shield is still unresolved"
+
 internal fun classifyBroadcastFailure(t: Throwable): SdkWriteResult<Nothing> = when {
     t is DashSdkError.InvalidParameter ||
         t is DashSdkError.InvalidState ||
@@ -244,6 +254,11 @@ internal fun classifyBroadcastFailure(t: Throwable): SdkWriteResult<Nothing> = w
     // submitted and the selection released — retryable with a smaller
     // amount. The message arms below stay as the fallback for AAR lines
     // that still surface these as WalletOperation strings.
+    // Raised by the identity shields (Type 21) BEFORE building: an earlier identity
+    // debit is still unresolved, so this request was never built or broadcast (SDK KDoc
+    // of `ShieldedIdentityDebitPending` and of `shieldedShieldFromIdentity*`).
+    t is DashSdkError.PlatformWallet.ShieldedIdentityDebitPending ->
+        SdkWriteResult.NotBroadcast(REASON_SHIELDED_IDENTITY_DEBIT_PENDING, t)
     t is DashSdkError.PlatformWallet.CoreInsufficientFunds ->
         SdkWriteResult.NotBroadcast(REASON_PRE_BROADCAST_BUILD_SHORTFALL, t)
     t is DashSdkError.PlatformWallet.AssetLockInsufficientFunds ->
@@ -343,7 +358,11 @@ internal fun classifyBroadcastFailure(t: Throwable): SdkWriteResult<Nothing> = w
             m.contains("platform address network mismatch") ||
             m.contains("invalid core address") ||
             m.contains("core address network mismatch") ||
-            m.contains("overflows u64")
+            m.contains("overflows u64") ||
+            // A third-party shield (Type 15 / Type 21 to a recipient) whose recipient
+            // this wallet's own shielded account recognizes: rs-platform-wallet
+            // `resolve_shield_recipient` refuses it before building anything.
+            m.contains("recipient belongs to this shielded account")
     } == true ->
         SdkWriteResult.NotBroadcast("pre-broadcast shielded build-input validation failure", t)
     else -> SdkWriteResult.Ambiguous(t)

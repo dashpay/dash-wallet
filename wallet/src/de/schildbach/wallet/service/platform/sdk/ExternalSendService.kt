@@ -151,6 +151,13 @@ interface ExternalSendService {
      * top, whose unused part lands on the wallet's own Platform address. Its recipients are
      * persisted before the SDK call ([PendingPlatformFunding]); while an earlier one is still
      * pending a new Core → Platform send is [NotSentReason.PAYMENT_STILL_CONFIRMING].
+     *
+     * Platform → Core: a partial withdrawal of exactly [amount] from the wallet's Platform
+     * addresses (the inputs are selected here, never above an address's balance); the Core fee
+     * of the asset unlock comes out of [amount], the Platform fee out of what the fee-paying
+     * address keeps. Below the withdrawal minimum it is refused before anything is signed.
+     * Platform / Identity → Shielded: a shield of [amount] to the third-party Orchard address,
+     * fees on top; the wallet's own shielded address is refused (nothing submitted).
      */
     suspend fun send(
         source: SendBalance,
