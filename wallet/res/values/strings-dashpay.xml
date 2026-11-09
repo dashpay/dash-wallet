@@ -436,6 +436,7 @@
     <string name="turned_off">Turned off</string>
     <string name="coinjoin_mixing_transactions">Mixing Transactions</string>
     <string name="coinjoin_transaction_group">These are mixing related transactions.</string>
+    <string name="coinjoin_transaction_group_title">Why do I see all these transactions?</string>
     <string name="intermediate">Intermediate</string>
     <string name="advanced">Advanced</string>
     <string name="intermediate_level_card_decs">Advanced users who have a very high level of technical expertise can determine your transaction history</string>
@@ -546,7 +547,7 @@
     <string name="group_by">Group by</string>
     <string name="transaction_metadata_title">Transaction metadata</string>
     <string name="transaction_metadata_data_being_saved">Scheduled</string>
-    <string name="transaction_metadata_payment_category_description">Indicates if a transaction is associated with Coinbase, Uphold, Topper or CrowdNode</string>
+    <string name="transaction_metadata_payment_category_description">Indicates if a transaction is associated with Coinbase, Uphold, Topper or DashSpend</string>
     <string name="transaction_metadata_fiat_price_description">The historical price at the time of the transaction</string>
     <string name="transaction_metadata_description">Your data is stored on your device but will be lost if you reset or restore your wallet. Below are examples of the information that will be saved when saved on the network.</string>
     <string name="transaction_metadata_cost">How much does it cost?</string>

@@ -286,37 +286,6 @@ object AnalyticsConstants {
         const val DETAILS_GIFT_CARD = "home_transaction_details_gift_card"
     }
 
-    object CrowdNode {
-        const val STAKING_ENTRY = "explore__staking"
-
-        const val WELCOME_DIALOG_CONTINUE = "staking_cn__welcome_modal__b_continue"
-        const val CREATE_NEW_ACCOUNT = "staking_cn__b_create_acc"
-        const val CREATE_ACCOUNT_BUTTON = "staking_cn__new_acc__b_create_acc"
-        const val CREATE_ACCOUNT_ERROR_RETRY = "staking_cn__new_acc__dialogue_b_retry"
-        const val CREATE_ACCOUNT_SUCCESS = "staking_cn__new_account_created"
-
-        const val LINK_EXISTING = "staking_cn__b_link_acc"
-        const val LINK_EXISTING_LOGIN_BUTTON = "staking_cn__link_acc__b_login"
-
-        const val PORTAL_DEPOSIT = "staking_cn__b_deposit"
-        const val PORTAL_DEPOSIT_SUCCESS = "staking_cn_deposit_success"
-        const val PORTAL_DEPOSIT_ERROR = "staking_cn_deposit_error"
-        const val PORTAL_WITHDRAW = "staking_cn__b_withdraw"
-        const val PORTAL_WITHDRAW_CANCEL = "staking_cn__withdraw__m_b_cancel"
-        const val PORTAL_WITHDRAW_SUCCESS = "staking_cn_withdraw_success"
-        const val PORTAL_WITHDRAW_ERROR = "staking_cn_withdraw_error"
-        const val PORTAL_WITHDRAW_BUY = "staking_cn__withdraw__m_b_buy"
-        const val PORTAL_CREATE_ONLINE_ACCOUNT = "staking_cn__b_create_online_acc"
-        const val PORTAL_VERIFY = "staking_cn__b_verify"
-
-        const val CREATE_ONLINE_CONTINUE = "staking_cn__online__b_continue"
-        const val WITHDRAWAL_REQUESTED = "staking_cn__b_withdraw_final"
-        const val DEPOSIT_REQUESTED = "staking_cn__b_deposit_final"
-
-        const val LOW_BALANCE_PROCEED = "staking_cn__dialogue_low_balance_proceed"
-        const val LOW_BALANCE_CANCEL = "staking_cn__dialogue_low_balance_cancel"
-    }
-
     object Coinbase {
         const val ENTER_CONNECTED = "coinbase_enter_connected"
         const val ENTER_DISCONNECTED = "coinbase_enter_disconnected"

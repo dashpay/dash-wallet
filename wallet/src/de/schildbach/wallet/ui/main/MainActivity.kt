@@ -54,8 +54,6 @@ import de.schildbach.wallet.ui.dashpay.*
 import de.schildbach.wallet.ui.invite.InviteHandler
 import de.schildbach.wallet.ui.invite.InviteSendContactRequestDialog
 import de.schildbach.wallet.ui.more.connections.ConnectionsFragment
-import de.schildbach.wallet.ui.staking.StakingActivity
-import de.schildbach.wallet.ui.staking.createCrowdNodeWithdrawalReminderDialog
 import de.schildbach.wallet.ui.main.MainActivityExt.checkLowStorageAlert
 import de.schildbach.wallet.ui.cutover.CutoverSyncNoticeDialogFragment
 import de.schildbach.wallet.ui.cutover.SdkBindPendingDialogFragment
@@ -144,12 +142,11 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     private var isRestoringBackup = false
     private var showBackupWalletDialog = false
     private var retryCreationIfInProgress = true
-    private var pendingCrowdNodeWithdrawalReminder = false
 
     /**
      * The post-upgrade mixed-funds sheet fired while the lock screen was up;
-     * shown as soon as it comes down (same deferral as the CrowdNode
-     * reminder — a sheet rendered under the PIN screen is invisible).
+     * shown as soon as it comes down (a sheet rendered under the PIN screen
+     * is invisible).
      */
     private var pendingMixedFundsMigration = false
 
@@ -336,14 +333,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
         viewModel.showCreateUsernameEvent.observe(this) {
             startActivity(Intent(this@MainActivity, CreateUsernameActivity::class.java))
-        }
-        viewModel.showCrowdNodeWithdrawalReminder.observe(this) {
-            if (lockScreenDisplayed) {
-                // Don't surface the reminder over the lock screen; defer until it's dismissed.
-                pendingCrowdNodeWithdrawalReminder = true
-            } else {
-                presentCrowdNodeWithdrawalReminder()
-            }
         }
         viewModel.showMixedFundsMigration.observe(this) {
             if (lockScreenDisplayed) {
@@ -781,11 +770,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         }
         showStaleRatesToast()
 
-        if (pendingCrowdNodeWithdrawalReminder) {
-            pendingCrowdNodeWithdrawalReminder = false
-            presentCrowdNodeWithdrawalReminder()
-        }
-
         if (pendingCutoverUpgradeNotice) {
             // Clear ONLY on a real showing: showOnce refuses while the fragment
             // manager has saved state, and clearing first lost the one-time
@@ -811,12 +795,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             // re-fires the prompt (no-op otherwise).
             viewModel.recheckMixedFundsMigrationPrompt()
         }
-    }
-
-    private fun presentCrowdNodeWithdrawalReminder() {
-        createCrowdNodeWithdrawalReminderDialog {
-            startActivity(StakingActivity.createIntent(this, goToWithdraw = true))
-        }.show(this)
     }
 
     override fun onLockScreenActivated() {

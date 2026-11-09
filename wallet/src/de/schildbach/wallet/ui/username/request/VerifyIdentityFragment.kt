@@ -50,7 +50,7 @@ class VerifyIdentityFragment : Fragment(R.layout.fragment_verfiy_identity) {
             viewModel.copyPost(binding.postText.text.toString())
             Toast.makeText(
                 requireContext(),
-                getString(org.dash.wallet.integrations.crowdnode.R.string.copied),
+                getString(R.string.copied),
                 Toast.LENGTH_SHORT
             ).show()
         }

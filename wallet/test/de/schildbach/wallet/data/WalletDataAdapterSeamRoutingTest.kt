@@ -307,51 +307,10 @@ class WalletDataAdapterSeamRoutingTest {
         assertEquals(listOf(dashjOnlyTx.txId.toString()), adapter.getTransactions().map { it.txId })
     }
 
-    // ── Seam output locks (post-cutover CrowdNode signup lock step) ───
+    // ── Seam lock waits ───
 
     @Test
-    fun postCutover_lockOutputsOfSdkOnlyTxRegistersAtTheSeamWithoutThrowing() = runTest {
-        val state = MutableStateFlow<String?>("CUT_OVER")
-        val source = FakeSource(MutableStateFlow(snapshot(record(context = 0))))
-        val service = seamService(source, state, backgroundScope)
-        service.start()
-        runCurrent()
-
-        // The held dashj wallet never saw the incoming SDK-fed tx.
-        val walletData = mockWalletData(listOf(dashjOnlyTx))
-        val registry = SeamOutputLockRegistry()
-        val adapter = WalletDataAdapter(walletData, { service }, registry)
-
-        // Output 0 pays 0.023 to yLW8Vfeb…; output 1 pays elsewhere.
-        adapter.lockOutputsPayingTo(sdkTx.txId.toString(), "yLW8Vfeb6sJfB3deb4KGsa5vY9g5pAqWQi")
-
-        assertTrue(registry.hasAnyLocks())
-        assertTrue(registry.isLocked(sdkTx.txId.toString(), 0))
-        assertFalse(registry.isLocked(sdkTx.txId.toString(), 1))
-        verify(exactly = 0) { walletData.lockOutput(any()) }
-    }
-
-    @Test
-    fun lockOutputsOfHeldWalletTxStillUsesTheDashjLock() = runTest {
-        val state = MutableStateFlow<String?>("DUAL_RUNNING")
-        val service = seamService(FakeSource(), state, backgroundScope)
-        service.start()
-        runCurrent()
-
-        val walletData = mockWalletData(listOf(sdkTx))
-        val registry = SeamOutputLockRegistry()
-        val adapter = WalletDataAdapter(walletData, { service }, registry)
-
-        adapter.lockOutputsPayingTo(sdkTx.txId.toString(), "yLW8Vfeb6sJfB3deb4KGsa5vY9g5pAqWQi")
-
-        // Pre-cutover / self-authored behavior byte-identical: the dashj wallet
-        // lock is taken (one matching P2PKH output) and the registry stays empty.
-        verify(exactly = 1) { walletData.lockOutput(any()) }
-        assertFalse(registry.hasAnyLocks())
-    }
-
-    @Test
-    fun preCutover_lockAndWaitStillFailClosedOnAWalletMiss() = runTest {
+    fun preCutover_waitStillFailsClosedOnAWalletMiss() = runTest {
         val state = MutableStateFlow<String?>("DUAL_RUNNING")
         val service = seamService(FakeSource(), state, backgroundScope)
         service.start()
@@ -359,15 +318,6 @@ class WalletDataAdapterSeamRoutingTest {
 
         val registry = SeamOutputLockRegistry()
         val adapter = WalletDataAdapter(mockWalletData(emptyList()), { service }, registry)
-
-        var lockThrew = false
-        try {
-            adapter.lockOutputsPayingTo(sdkTx.txId.toString(), "yLW8Vfeb6sJfB3deb4KGsa5vY9g5pAqWQi")
-        } catch (e: IllegalStateException) {
-            lockThrew = true
-        }
-        assertTrue("lockOutputsPayingTo must fail closed pre-cutover", lockThrew)
-        assertFalse(registry.hasAnyLocks())
 
         var waitThrew = false
         try {

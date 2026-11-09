@@ -79,7 +79,6 @@ class TransferDashViewModel @Inject constructor(
         // Results and questions of an earlier transfer, including one whose send is still
         // running, are dropped rather than shown on (or answered from) the new screen.
         transferGeneration.incrementAndGet()
-        _leftoverBalanceWarning.value = null
         _sendDashToCoinbaseState.value = null
         savedStateHandle[KEY_PAYMENT_OUTCOME_UNKNOWN] = false
         savedStateHandle[KEY_SENT_UNDELIVERED] = false
@@ -103,38 +102,16 @@ class TransferDashViewModel @Inject constructor(
         }
     }
 
-    /** A transfer the leftover-balance check stopped, to send anyway once the user agrees. */
-    data class PendingTransfer(val dashValue: Dash, val isEmptyWallet: Boolean, val session: WalletSession?)
-
-    private val _leftoverBalanceWarning = MutableStateFlow<PendingTransfer?>(null)
-
-    /**
-     * The send would leave too little behind: the screen asks, then calls [submitTransfer] again.
-     * Kept until the screen takes it ([consumeLeftoverBalanceWarning]), so a warning raised while
-     * the screen is stopped or being recreated is asked once it resumes.
-     */
-    val leftoverBalanceWarning: StateFlow<PendingTransfer?> = _leftoverBalanceWarning.asStateFlow()
-
-    /** True for exactly one taker of [pending], which then asks the user. */
-    fun consumeLeftoverBalanceWarning(pending: PendingTransfer): Boolean =
-        _leftoverBalanceWarning.compareAndSet(pending, null)
-
-    /** Gives back a taken [pending] the user did not answer, unless a newer one arrived. */
-    fun retainLeftoverBalanceWarning(pending: PendingTransfer) {
-        _leftoverBalanceWarning.compareAndSet(null, pending)
-    }
-
     /**
      * Starts the transfer in this view model's scope, so a recreation of the screen (which
      * cancels the screen's own coroutines) cannot cancel a send that may already be on the
-     * network. Its result arrives in [observeSendDashToCoinbaseState], or [leftoverBalanceWarning].
+     * network. Its result arrives in [observeSendDashToCoinbaseState].
      * False, with nothing started, when a send is in progress or an earlier one's outcome is
      * unknown.
      */
     fun submitTransfer(
         dashValue: Dash,
         isEmptyWallet: Boolean,
-        checkConditions: Boolean,
         session: WalletSession?
     ): Boolean {
         if (paymentOutcomeUnknown.value || sentUnanswered() || sendInFlight.get()) {
@@ -145,16 +122,7 @@ class TransferDashViewModel @Inject constructor(
         viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
             _loadingState.value = true
             try {
-                sendDash(dashValue, isEmptyWallet, checkConditions, session)
-            } catch (ex: Exception) {
-                if (!ex.isLeftoverBalanceWarning) {
-                    throw ex
-                }
-                // Asked only on the screen that started it: answered on a newer one, it would
-                // send the old amount without the balance check.
-                if (generation == transferGeneration.get()) {
-                    _leftoverBalanceWarning.value = PendingTransfer(dashValue, isEmptyWallet, session)
-                }
+                sendDash(dashValue, isEmptyWallet, session)
             } finally {
                 _loadingState.value = false
             }
@@ -355,7 +323,7 @@ class TransferDashViewModel @Inject constructor(
      * Sends the transfer from the wallet of [session], taken when the user confirmed it, and
      * refused with nothing sent if that wallet has since been wiped (review 4304575003).
      */
-    suspend fun sendDash(dashValue: Dash, isEmptyWallet: Boolean, checkConditions: Boolean, session: WalletSession?) {
+    suspend fun sendDash(dashValue: Dash, isEmptyWallet: Boolean, session: WalletSession?) {
         // Claimed synchronously, before the first suspension, so two rapid confirms cannot both
         // pass and send; refused for good once an earlier send's outcome is unknown.
         // Refused too while a transfer that went out awaits the user's answer to its result.
@@ -367,7 +335,7 @@ class TransferDashViewModel @Inject constructor(
         savedStateHandle[KEY_SEND_IN_PROGRESS] = true
         val generation = transferGeneration.get()
         try {
-            val state = checkTransaction(dashValue, isEmptyWallet, checkConditions, session)
+            val state = checkTransaction(dashValue, isEmptyWallet, session)
             // A newer transfer screen was opened meanwhile: this result is not its own.
             if (generation == transferGeneration.get()) {
                 if (state == SendDashResponseState.OutcomeUnknownState) {
@@ -414,7 +382,6 @@ class TransferDashViewModel @Inject constructor(
     private suspend fun checkTransaction(
         coin: Dash,
         isEmptyWallet: Boolean,
-        checkConditions: Boolean,
         session: WalletSession?
     ): SendDashResponseState {
         return try {
@@ -422,7 +389,6 @@ class TransferDashViewModel @Inject constructor(
                 dashAddress,
                 coin,
                 emptyWallet = isEmptyWallet,
-                checkBalanceConditions = checkConditions,
                 session = session
             )
             transactionMetadataProvider.markAddressAsTransferOutAsync(
@@ -436,7 +402,6 @@ class TransferDashViewModel @Inject constructor(
             when {
                 // Not a failure of the send: the caller decides what a cancellation means.
                 e is CancellationException -> throw e
-                e.isLeftoverBalanceWarning -> throw e
                 // May have been sent: never reported as a failure, which offers a retry.
                 e is PaymentSubmissionPendingException -> {
                     e.printStackTrace()

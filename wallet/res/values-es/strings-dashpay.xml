@@ -416,6 +416,7 @@ de Dash</b></string>
     <string name="turned_off">Apagado</string>
     <string name="coinjoin_mixing_transactions">Transacciones mixtas</string>
     <string name="coinjoin_transaction_group">Se trata de transacciones mixtas relacionadas.</string>
+    <string name="coinjoin_transaction_group_title">¿Por qué veo todas estas transacciones?</string>
     <string name="intermediate">Intermedio</string>
     <string name="advanced">Avanzado</string>
     <string name="intermediate_level_card_decs">Los usuarios avanzados que tienen un nivel muy alto de experiencia técnica pueden determinar tu historial de transacciones.</string>

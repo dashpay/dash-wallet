@@ -31,6 +31,9 @@ import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.data.entity.TransactionMetadata
 import org.dash.wallet.common.transactions.TransactionCategory
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -56,7 +59,7 @@ open class DatabaseMigrationTest {
             ""
         )
         private const val address = "yNo1YJcNBoveEHWB7eYmxFZBVEAYQo46Yb"
-        private const val service = ServiceName.CrowdNode
+        private const val service = ServiceName.CTXSpend
     }
 
     private val migrations = arrayOf(
@@ -67,7 +70,9 @@ open class DatabaseMigrationTest {
         AppDatabaseMigrations.migration15to16,
         AppDatabaseMigrations.migration16to17,
         AppDatabaseMigrations.migration17to18,
-        AppDatabaseMigrations.migration18to19
+        AppDatabaseMigrations.migration18to19,
+        AppDatabaseMigrations.migration19to20,
+        AppDatabaseMigrations.migration20to21
     )
 
     @Rule
@@ -103,7 +108,7 @@ open class DatabaseMigrationTest {
         // Check that data is valid
         runBlocking {
             val savedRate = db.exchangeRatesDao().getRateSync("ARS")
-            assert(savedRate == null)
+            assertNull(savedRate)
         }
 
         db.close()
@@ -161,19 +166,78 @@ open class DatabaseMigrationTest {
         // Check that data is valid
         runBlocking {
             val savedBlockchainState = db.blockchainStateDao().getState()
-            assert(savedBlockchainState!!.bestChainHeight == BLOCKCHAIN_HEIGHT)
+            assertEquals(BLOCKCHAIN_HEIGHT, savedBlockchainState!!.bestChainHeight)
 
             val savedRate = db.exchangeRatesDao().getRateSync("ARS")
-            assert(savedRate?.rate == EXCHANGE_RATE)
+            assertEquals(EXCHANGE_RATE, savedRate?.rate)
 
             val savedAddressMetadata = db.addressMetadataDao().loadRecipient(address)
-            assert(savedAddressMetadata?.address == address)
-            assert(savedAddressMetadata?.service == service)
+            assertEquals(address, savedAddressMetadata?.address)
+            assertEquals(service, savedAddressMetadata?.service)
 
             val savedTxMetadata = db.transactionMetadataDao().load(txMetadata.txId)!!
-            assert(savedTxMetadata == txMetadata)
+            assertEquals(txMetadata, savedTxMetadata)
         }
 
         db.close()
+    }
+
+    @Test
+    @Throws(IOException::class)
+    fun openingDatabaseClearsCacheWithCrowdNodeRows() {
+        val db = openCacheDatabase(withCrowdNode = true)
+
+        runBlocking {
+            assertTrue(db.txGroupCacheDao().getAll().isEmpty())
+            assertTrue(db.txDisplayCacheDao().getAll().isEmpty())
+        }
+
+        db.close()
+    }
+
+    @Test
+    @Throws(IOException::class)
+    fun openingDatabaseKeepsCacheWithoutCrowdNodeRows() {
+        val db = openCacheDatabase(withCrowdNode = false)
+
+        runBlocking {
+            assertEquals(listOf("coinjoin_2025-03-16"), db.txGroupCacheDao().getAll().map { it.groupId })
+            assertEquals(listOf("coinjoin_2025-03-16"), db.txDisplayCacheDao().getAll().map { it.rowId })
+        }
+
+        db.close()
+    }
+
+    private fun openCacheDatabase(withCrowdNode: Boolean): AppDatabase {
+        testHelper.createDatabase(TEST_DB_NAME, 21).apply {
+            val groups = mutableListOf(Triple("coinjoin_2025-03-16", "cc", "coinjoin"))
+            val rowIds = mutableListOf("coinjoin_2025-03-16")
+            if (withCrowdNode) {
+                groups.add(Triple("crowdnode", "aa", "crowdnode"))
+                groups.add(Triple("crowdnode", "bb", "crowdnode"))
+                rowIds.add("crowdnode")
+            }
+            groups.forEachIndexed { index, (groupId, txId, type) ->
+                execSQL(
+                    "INSERT INTO tx_group_cache (groupId, txId, wrapperType, groupDate, sortOrder) " +
+                        "VALUES ('$groupId', '$txId', '$type', '2025-03-16', $index)"
+                )
+            }
+            rowIds.forEach { rowId ->
+                execSQL(
+                    "INSERT INTO tx_display_cache (rowId, title, valueSatoshis, iconType, iconBgType, " +
+                        "statusText, comment, transactionAmount, time, hasErrors, filterFlags) " +
+                        "VALUES ('$rowId', 'title', 0, 0, 0, '', '', 2, 0, 0, 0)"
+                )
+            }
+            close()
+        }
+
+        return Room.databaseBuilder(
+            InstrumentationRegistry.getInstrumentation().targetContext,
+            AppDatabase::class.java, TEST_DB_NAME
+        ).addMigrations(*migrations)
+            .addCallback(AppDatabaseMigrations.removeCrowdNodeCacheRows)
+            .build()
     }
 }

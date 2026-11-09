@@ -408,6 +408,7 @@ Dash</b> anda</string>
     <string name="turned_off">Mati</string>
     <string name="coinjoin_mixing_transactions">Mencampur Transaksi</string>
     <string name="coinjoin_transaction_group">Ini adalah pencampuran transaksi terkait.</string>
+    <string name="coinjoin_transaction_group_title">Mengapa saya melihat semua transaksi ini?</string>
     <string name="intermediate">Menengah</string>
     <string name="advanced">Lanjutan</string>
     <string name="intermediate_level_card_decs">Pengguna tingkat lanjut yang memiliki tingkat keahlian teknis sangat tinggi dapat mengetahui riwayat transaksi Anda</string>

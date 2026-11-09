@@ -27,9 +27,10 @@ import javax.inject.Singleton
  * SEAM-LEVEL OUTPUT LOCK REGISTRY: the post-cutover twin of dashj's
  * `Wallet.lockedOutputs` for transactions the HELD dashj wallet never sees.
  *
- * Post-cutover, incoming SDK-fed transactions (most critically CrowdNode's
- * API-response transactions, whose account-address outputs the signup flow
- * locks via `WalletDataProvider.lockOutputsPayingTo`) exist only in the SDK
+ * Its only producer was CrowdNode's signup lock step, removed with the CrowdNode
+ * integration (#1664); nothing registers locks here now.
+ *
+ * Post-cutover, incoming SDK-fed transactions exist only in the SDK
  * store — `Wallet.lockOutput` cannot be applied to them because there is no
  * wallet `Transaction` to resolve. [de.schildbach.wallet.data.WalletDataAdapter]
  * registers those locks here instead, keyed by outpoint (`txidHex:vout`,

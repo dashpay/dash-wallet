@@ -158,4 +158,5 @@
     <string name="from_dash_wallet_on_this_device">С Dash Wallet на этом устройстве</string>
     <string name="preposition_at">в</string>
     <string name="info"> Информация</string>
+    <string name="scan_qr">Сканировать QR</string>
 </resources>

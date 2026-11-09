@@ -416,6 +416,7 @@ Username</b></string>
     <string name="turned_off">Spento</string>
     <string name="coinjoin_mixing_transactions">Transazioni miste</string>
     <string name="coinjoin_transaction_group">Si tratta di transazioni correlate al mixaggio.</string>
+    <string name="coinjoin_transaction_group_title">Perché vedo tutte queste transazioni?</string>
     <string name="intermediate">Intermedio</string>
     <string name="advanced">Avanzate</string>
     <string name="intermediate_level_card_decs">Gli utenti avanzati che hanno un livello molto elevato di competenza tecnica possono determinare la cronologia delle transazioni</string>

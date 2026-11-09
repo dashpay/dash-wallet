@@ -415,6 +415,7 @@
     <string name="turned_off">Wyłączony</string>
     <string name="coinjoin_mixing_transactions">Miksowanie transakcji</string>
     <string name="coinjoin_transaction_group">Te transakcje są stworzone przez miksowanie</string>
+    <string name="coinjoin_transaction_group_title">Dlaczego widzę te wszystkie transakcje?</string>
     <string name="intermediate">Średni</string>
     <string name="advanced">Zaawansowany</string>
     <string name="intermediate_level_card_decs">Zaawansowani użytkownicy, którzy posiadają bardzo wysoki poziom wiedzy technicznej, mogą być w stanie odkryć historię twoich transakcji.</string>

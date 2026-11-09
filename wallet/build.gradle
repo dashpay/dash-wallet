@@ -52,7 +52,6 @@ dependencies {
     implementation project(path: ":features:exploredash")
     implementation project(path: ':integrations:uphold')
     implementation project(path: ":integrations:coinbase")
-    implementation project(path: ":integrations:crowdnode")
     implementation project(path: ":integrations:maya")
 
     implementation(project(':integration-android')) {
