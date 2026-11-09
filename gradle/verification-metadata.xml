@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<verification-metadata xmlns="https://schema.gradle.org/dependency-verification"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="https://schema.gradle.org/dependency-verification https://schema.gradle.org/dependency-verification/dependency-verification-1.3.xsd">
+    <configuration>
+        <verify-metadata>true</verify-metadata>
+        <verify-signatures>false</verify-signatures>
+        <trusted-artifacts>
+            <trust group="^(?!org[.]dashj$).*" regex="true" reason="Verification is currently scoped to the pinned DashJ core publication."/>
+            <trust group="org[.]dashj" name="^(?!dashj-core$).*" regex="true" reason="Other DashJ modules retain their existing verification policy."/>
+        </trusted-artifacts>
+    </configuration>
+    <components>
+        <component group="org.dashj" name="dashj-core" version="24.0.0">
+            <artifact name="dashj-core-24.0.0.jar">
+                <sha256 value="6693111b44c6e5fd2ee293d5ca41fb2e77061276963721e53045325464426c0a" origin="DashJ Core 24.0.0 release, Maven Central."/>
+            </artifact>
+            <artifact name="dashj-core-24.0.0.pom">
+                <sha256 value="7c3268853f0858155ad0b31107cbde12b136c27e9ebb068ae4b1c6206335f1b6"/>
+            </artifact>
+            <artifact name="dashj-core-24.0.0.module">
+                <sha256 value="f0d360c98624facabe52c3d673f5c432b10358ffa6d7c20d378fb15b66d2e080"/>
+            </artifact>
+            <artifact name="dashj-core-24.0.0-sources.jar">
+                <sha256 value="02ad2b46d8bbe0f86a8f435abd0a7461af3bfeff63e2010ef63dcb3fface7448"/>
+            </artifact>
+            <artifact name="dashj-core-24.0.0-javadoc.jar">
+                <sha256 value="80089ada315fad225817bd950935120452dbdc415b74b741ba34d901eca4438a"/>
+            </artifact>
+        </component>
+    </components>
+</verification-metadata>

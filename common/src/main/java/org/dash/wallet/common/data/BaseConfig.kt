@@ -115,8 +115,12 @@ abstract class BaseConfig(
     init {
         synchronized(registryLock) { liveInstances[this] = Unit }
         walletDataProvider.attachOnWalletWipedListener {
-            clearAll()
+            onWalletWiped()
         }
+    }
+
+    protected open suspend fun onWalletWiped() {
+        clearAll()
     }
 
     open fun <T> observe(key: Preferences.Key<T>): Flow<T?> {

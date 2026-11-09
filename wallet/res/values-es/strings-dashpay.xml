@@ -563,4 +563,6 @@ de Dash</b></string>
     <string name="dash_connect_confirm">Confirmar</string>
     <string name="dash_connect_testnet_only_heading">Disponible solo en testnet</string>
     <string name="dash_connect_testnet_only_message">El inicio de sesión con DashConnect aún no está disponible en mainnet</string>
+    <string name="dash_connect_group_scope_changed">El alcance de este grupo ha cambiado desde tu aprobación anterior, o su alcance anterior no quedó registrado. Revisa los miembros y administradores actuales que aparecen abajo antes de continuar. Es posible que las claves registradas anteriormente sigan activas; la opción Revocar acceso sigue disponible.</string>
+    <string name="dash_connect_group_scope_approve">Apruebo el alcance actualizado del grupo que se muestra arriba.</string>
     </resources>

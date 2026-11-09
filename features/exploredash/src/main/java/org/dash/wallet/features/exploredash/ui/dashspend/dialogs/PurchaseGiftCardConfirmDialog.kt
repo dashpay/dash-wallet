@@ -63,7 +63,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.data.ServiceName
-import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.payments.parsers.isPaymentUriParseError
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.DirectPayException

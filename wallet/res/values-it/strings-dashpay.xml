@@ -563,4 +563,6 @@ Username</b></string>
     <string name="dash_connect_confirm">Confermare</string>
     <string name="dash_connect_testnet_only_heading">Disponibile solo su testnet</string>
     <string name="dash_connect_testnet_only_message">L\'accesso con DashConnect non è ancora disponibile su mainnet</string>
+    <string name="dash_connect_group_scope_changed">L\'ambito di questo gruppo è cambiato dalla tua precedente approvazione, oppure il suo ambito precedente non è stato registrato. Esamina i membri e gli amministratori attuali qui sotto prima di continuare. Le chiavi registrate in precedenza potrebbero essere ancora attive; Revoca accesso resta disponibile.</string>
+    <string name="dash_connect_group_scope_approve">Approvo l\'ambito aggiornato del gruppo mostrato sopra.</string>
     </resources>

@@ -563,4 +563,6 @@ Benutzernamen</b></string>
     <string name="dash_connect_confirm">Bestätigen</string>
     <string name="dash_connect_testnet_only_heading">Nur im Testnet verfügbar</string>
     <string name="dash_connect_testnet_only_message">Die Anmeldung mit DashConnect ist im Mainnet noch nicht verfügbar</string>
+    <string name="dash_connect_group_scope_changed">Der Umfang dieser Gruppe hat sich seit deiner letzten Genehmigung geändert, oder ihr bisheriger Umfang wurde nicht gespeichert. Prüfe die aktuellen Mitglieder und Administratoren unten, bevor du fortfährst. Zuvor registrierte Schlüssel können noch aktiv sein; „Zugriff widerrufen“ bleibt verfügbar.</string>
+    <string name="dash_connect_group_scope_approve">Ich genehmige den oben angezeigten aktualisierten Gruppenumfang.</string>
     </resources>

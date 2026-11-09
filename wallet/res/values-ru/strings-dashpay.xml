@@ -563,4 +563,6 @@ Dash</b></string>
     <string name="dash_connect_confirm">Подтвердить</string>
     <string name="dash_connect_testnet_only_heading">Доступно только в тестовой сети</string>
     <string name="dash_connect_testnet_only_message">Вход через DashConnect пока недоступен в основной сети</string>
+    <string name="dash_connect_group_scope_changed">Область действия этой группы изменилась с момента вашего предыдущего одобрения, или её предыдущая область не была записана. Прежде чем продолжить, проверьте текущих участников и администраторов ниже. Ранее зарегистрированные ключи могут оставаться активными; функция «Отозвать доступ» по-прежнему доступна.</string>
+    <string name="dash_connect_group_scope_approve">Я одобряю обновлённую область действия группы, показанную выше.</string>
     </resources>

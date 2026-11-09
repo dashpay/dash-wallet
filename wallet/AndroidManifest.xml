@@ -126,13 +126,26 @@
             android:launchMode="singleTop"
             android:windowSoftInputMode="adjustResize">
 
-            <!-- DashConnect (MO-945): login (dash-key:) and key-registration (dash-st:)
-                 URIs from external scanners and browsers route to the Connections screen -->
+            <!-- DashConnect: login and wallet-operation URIs from scanners and browsers
+                 route to the Connections screen for validation and explicit approval. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 
                 <data android:scheme="dash-key" />
                 <data android:scheme="dash-st" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+            </intent-filter>
+
+            <!-- App Connect on the DashPay scheme: dashpay://connect?v=2&n=..&r=..
+                 A separate filter: a host in the dash-key/dash-st filter above would stop those
+                 opaque URIs (which have no host) from matching. dashpay://invite stays with
+                 InviteHandlerActivity. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <data android:scheme="dashpay" android:host="connect" />
 
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
@@ -184,6 +197,13 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
+        <activity
+            android:name="de.schildbach.wallet.ui.send.InAppSendCoinsActivity"
+            android:label="@string/pay_title"
+            android:screenOrientation="portrait"
+            android:theme="@style/My.Theme.ChildActivity"
+            tools:ignore="LockedOrientationActivity"
+            android:exported="false" />
         <activity
             android:name="de.schildbach.wallet.ui.send.SendCoinsQrActivity"
             android:configChanges="keyboard|keyboardHidden"

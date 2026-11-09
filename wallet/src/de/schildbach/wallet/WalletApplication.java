@@ -375,6 +375,8 @@ public class WalletApplication extends MultiDexApplication
     // The payment paths' wipe barrier: raised when Reset Wallet starts, lowered once the old wallet is gone.
     @Inject
     public de.schildbach.wallet.payments.FundingSelectionLock fundingSelectionLock;
+    @Inject
+    de.schildbach.wallet.ui.more.connections.DashConnectConfig dashConnectConfig;
     private WalletBalanceObserver walletBalanceObserver;
     @Inject
     public ExchangeIntegrationProvider exchangeIntegrationProvider;
@@ -2471,7 +2473,9 @@ public class WalletApplication extends MultiDexApplication
 
             if (files != null) {
                 for (File file : files) {
-                    if (DATASTORE_FILES_KEPT_ON_WIPE.contains(file.getName())) {
+                    if (DATASTORE_FILES_KEPT_ON_WIPE.contains(file.getName())
+                            // This scoped authorization/replay audit must survive same-seed recovery.
+                            || de.schildbach.wallet.ui.more.connections.DashConnectConfig.AUDIT_FILE_NAME.equals(file.getName())) {
                         fileKept.add(file.getName());
                     } else if (!apiCleared.contains(file.getName())) {
                         if (file.delete()) {
