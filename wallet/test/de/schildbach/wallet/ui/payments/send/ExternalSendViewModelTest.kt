@@ -27,6 +27,7 @@ import de.schildbach.wallet.service.platform.sdk.IdentityResolution
 import de.schildbach.wallet.service.platform.sdk.NotSentReason
 import de.schildbach.wallet.service.platform.sdk.SendBalance
 import de.schildbach.wallet.service.platform.sdk.SendDestination
+import de.schildbach.wallet.ui.shielded.toKeypadString
 import de.schildbach.wallet_test.R
 import io.mockk.every
 import io.mockk.mockk
@@ -81,6 +82,9 @@ class ExternalSendViewModelTest {
         var resolution: IdentityResolution = IdentityResolution.Found("alice")
         var fee: FeeEstimate? = null
         val max = mutableMapOf<SendBalance, Dash?>()
+
+        /** When set for a source, its [maxSendable] suspends on it (a slow Max read). */
+        val maxGates = mutableMapOf<SendBalance, CompletableDeferred<Unit>>()
         var sendGate: CompletableDeferred<ExternalSendResult>? = null
         var sendResult: ExternalSendResult = ExternalSendResult.Sent(null)
         val sends = mutableListOf<ExternalSendRequest>()
@@ -92,7 +96,10 @@ class ExternalSendViewModelTest {
         override suspend fun isOwnIdentity(identityIdBase58: String): Boolean? = ownIdentity
         override suspend fun resolveIdentity(identityIdBase58: String): IdentityResolution = resolution
         override suspend fun estimateFee(source: SendBalance, destination: SendDestination, amount: Dash) = fee
-        override suspend fun maxSendable(source: SendBalance, destination: SendDestination): Dash? = max[source]
+        override suspend fun maxSendable(source: SendBalance, destination: SendDestination): Dash? {
+            maxGates[source]?.await()
+            return max[source]
+        }
         override suspend fun send(
             source: SendBalance,
             destination: SendDestination,
@@ -913,20 +920,218 @@ class ExternalSendViewModelTest {
     }
 
     @Test
-    fun aDroppedMax_keepsItsExactAmount() {
-        val max = Dash(123_456_789)
+    fun max_followsTheSource_acrossACurrencySwitch() {
+        val shieldedMax = Dash(123_456_789)
         service.balances.getValue(SendBalance.SHIELDED).value = twoDash
         service.balances.getValue(SendBalance.PLATFORM).value = twoDash
-        service.max[SendBalance.SHIELDED] = max
+        service.max[SendBalance.SHIELDED] = shieldedMax
+        service.max[SendBalance.PLATFORM] = oneDash
         val viewModel = buildViewModel(rate = usd100)
         viewModel.goToAmount(platformP2shAddress)
         viewModel.onMaxClick()
         viewModel.onCurrencySelected(dashMode = false)
-        assertEquals(max, viewModel.uiState.value.amount)
+        assertEquals(shieldedMax, viewModel.uiState.value.amount)
 
         viewModel.onSourceSelected(SendBalance.PLATFORM)
-        assertFalse(viewModel.uiState.value.isMax)
-        assertEquals(max, viewModel.uiState.value.amount)
+        with(viewModel.uiState.value) {
+            assertTrue(isMax)
+            assertFalse(dashMode)
+            assertEquals(oneDash, amount)
+        }
+    }
+
+    // ── Max follows a source change ──────────────────────────────────────────
+
+    private val coreMax = Dash(3_064_752)
+    private val shieldedMax = Dash(1_500_000)
+
+    /** Core and Shielded funded, each with its own Max; [platformAddress] opens on Core. */
+    private fun maxOnCore(saved: SavedStateHandle = SavedStateHandle()): ExternalSendViewModel {
+        service.balances.getValue(SendBalance.CORE).value = twoDash
+        service.balances.getValue(SendBalance.SHIELDED).value = twoDash
+        service.max[SendBalance.CORE] = coreMax
+        service.max[SendBalance.SHIELDED] = shieldedMax
+        val viewModel = buildViewModel(saved)
+        viewModel.goToAmount(platformAddress)
+        assertEquals(SendBalance.CORE, viewModel.uiState.value.source)
+        viewModel.onMaxClick()
+        assertEquals(coreMax, viewModel.uiState.value.amount)
+        return viewModel
+    }
+
+    @Test
+    fun maxThenSwitchingSource_becomesTheNewSourcesMax() {
+        val gate = CompletableDeferred<Unit>()
+        service.maxGates[SendBalance.SHIELDED] = gate
+        val viewModel = maxOnCore()
+
+        viewModel.onSourceSelected(SendBalance.SHIELDED)
+        // While the new source's Max is read, nothing is sendable: never the old source's Max.
+        with(viewModel.uiState.value) {
+            assertTrue(maxPending)
+            assertFalse(isMax)
+            assertEquals(Dash.ZERO, amount)
+            assertEquals("0", amountText)
+            assertFalse(canContinueAmount)
+        }
+
+        gate.complete(Unit)
+        with(viewModel.uiState.value) {
+            assertFalse(maxPending)
+            assertTrue(isMax)
+            assertEquals(shieldedMax, amount)
+            assertEquals(shieldedMax.toKeypadString(), amountText)
+            assertTrue(canContinueAmount)
+        }
+        viewModel.onAmountContinue()
+        val request = viewModel.uiState.value.confirm?.request
+        assertEquals(SendBalance.SHIELDED, request?.source)
+        assertEquals(shieldedMax, request?.amount)
+        assertEquals(true, request?.isMax)
+    }
+
+    @Test
+    fun maxThenSwitchingToASourceWithNoMax_clearsTheAmount() {
+        val viewModel = maxOnCore()
+        service.max[SendBalance.PLATFORM] = null
+
+        // Balance not known yet: Max is still pending.
+        viewModel.onSourceSelected(SendBalance.PLATFORM)
+        assertTrue(viewModel.uiState.value.maxPending)
+        assertEquals(Dash.ZERO, viewModel.uiState.value.amount)
+
+        // Known balance, no Max (fee unknown): the pending Max is dropped, the amount stays zero.
+        service.balances.getValue(SendBalance.PLATFORM).value = twoDash
+        with(viewModel.uiState.value) {
+            assertFalse(maxPending)
+            assertFalse(isMax)
+            assertEquals(Dash.ZERO, amount)
+            assertEquals("0", amountText)
+            assertNull(pinnedAmount)
+            assertFalse(canContinueAmount)
+        }
+    }
+
+    @Test
+    fun typingWhileMaxIsPending_cancelsIt() {
+        val gate = CompletableDeferred<Unit>()
+        service.maxGates[SendBalance.SHIELDED] = gate
+        val viewModel = maxOnCore()
+        viewModel.onSourceSelected(SendBalance.SHIELDED)
+        assertTrue(viewModel.uiState.value.maxPending)
+
+        viewModel.type("1")
+        assertFalse(viewModel.uiState.value.maxPending)
+        assertEquals(oneDash, viewModel.uiState.value.amount)
+
+        gate.complete(Unit)
+        with(viewModel.uiState.value) {
+            assertFalse(isMax)
+            assertEquals(shieldedMax, maxSendable)
+            assertEquals(oneDash, amount)
+        }
+    }
+
+    @Test
+    fun aKeyTheKeypadRejects_stillCancelsAPendingMax() {
+        service.maxGates[SendBalance.SHIELDED] = CompletableDeferred()
+        val viewModel = maxOnCore()
+        viewModel.onSourceSelected(SendBalance.SHIELDED)
+        viewModel.onKeyInput("back")
+        assertFalse(viewModel.uiState.value.maxPending)
+        assertEquals(Dash.ZERO, viewModel.uiState.value.amount)
+    }
+
+    @Test
+    fun aStaleSourcesMax_isIgnored() {
+        val shieldedGate = CompletableDeferred<Unit>()
+        val platformGate = CompletableDeferred<Unit>()
+        service.maxGates[SendBalance.SHIELDED] = shieldedGate
+        service.maxGates[SendBalance.PLATFORM] = platformGate
+        service.balances.getValue(SendBalance.PLATFORM).value = twoDash
+        service.max[SendBalance.PLATFORM] = oneDash
+        val viewModel = maxOnCore()
+
+        viewModel.onSourceSelected(SendBalance.SHIELDED)
+        viewModel.onSourceSelected(SendBalance.PLATFORM)
+        shieldedGate.complete(Unit)
+        with(viewModel.uiState.value) {
+            assertEquals(SendBalance.PLATFORM, source)
+            assertTrue(maxPending)
+            assertNull(maxSendable)
+            assertEquals(Dash.ZERO, amount)
+        }
+
+        platformGate.complete(Unit)
+        with(viewModel.uiState.value) {
+            assertFalse(maxPending)
+            assertTrue(isMax)
+            assertEquals(oneDash, amount)
+        }
+    }
+
+    @Test
+    fun switchingSourceWithoutMax_keepsTheTypedAmount() {
+        service.balances.getValue(SendBalance.CORE).value = twoDash
+        service.balances.getValue(SendBalance.SHIELDED).value = twoDash
+        service.max[SendBalance.SHIELDED] = shieldedMax
+        val viewModel = buildViewModel()
+        viewModel.goToAmount(platformAddress)
+        viewModel.type("0.5")
+
+        viewModel.onSourceSelected(SendBalance.SHIELDED)
+        with(viewModel.uiState.value) {
+            assertFalse(maxPending)
+            assertFalse(isMax)
+            assertEquals("0.5", amountText)
+            assertEquals(Dash(50_000_000), amount)
+        }
+    }
+
+    @Test
+    fun aPendingMax_survivesProcessDeath_andResolvesOnRestore() {
+        val saved = SavedStateHandle()
+        service.maxGates[SendBalance.SHIELDED] = CompletableDeferred()
+        val first = maxOnCore(saved)
+        first.onSourceSelected(SendBalance.SHIELDED)
+        assertTrue(first.uiState.value.maxPending)
+        assertEquals(true, saved.get<Boolean>(ExternalSendViewModel.KEY_MAX_PENDING))
+        assertNull(saved.get<Long>(ExternalSendViewModel.KEY_MAX_DUFFS))
+
+        // The new process reads the Shielded Max at once, before the pending Max is restored.
+        service.maxGates.remove(SendBalance.SHIELDED)
+        val restored = buildViewModel(saved)
+        with(restored.uiState.value) {
+            assertEquals(SendBalance.SHIELDED, source)
+            assertFalse(maxPending)
+            assertTrue(isMax)
+            assertEquals(shieldedMax, amount)
+        }
+        assertEquals(false, saved.get<Boolean>(ExternalSendViewModel.KEY_MAX_PENDING))
+        assertEquals(shieldedMax.duffs, saved.get<Long>(ExternalSendViewModel.KEY_MAX_DUFFS))
+    }
+
+    @Test
+    fun maxFollowsTheSource_whenAnAutomaticPickReplacesTheUsersSource() {
+        service.hasIdentity.value = true
+        service.balances.getValue(SendBalance.CORE).value = twoDash
+        service.balances.getValue(SendBalance.IDENTITY).value = twoDash
+        service.max[SendBalance.CORE] = coreMax
+        service.max[SendBalance.IDENTITY] = oneDash
+        val viewModel = buildViewModel()
+        viewModel.goToAmount(platformAddress)
+        viewModel.onSourceSelected(SendBalance.IDENTITY)
+        assertEquals(SendBalance.IDENTITY, viewModel.uiState.value.source)
+        viewModel.onMaxClick()
+        assertEquals(oneDash, viewModel.uiState.value.amount)
+
+        // The identity goes away: the source falls back to Core, and so does Max.
+        service.hasIdentity.value = false
+        with(viewModel.uiState.value) {
+            assertEquals(SendBalance.CORE, source)
+            assertTrue(isMax)
+            assertEquals(coreMax, amount)
+        }
     }
 
     @Test
