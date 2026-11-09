@@ -30,11 +30,12 @@ publication), and `dash-sdk-android` artifacts from Maven Central. Wallet CI doe
 not clone or build Kotlin Platform or Platform, run native SDK tests, or publish
 SDK artifacts. SDK builds, native tests, and publication belong to the SDK project.
 
-The wallet and Kotlin SDK use DashJ `24.0.0-SNAPSHOT` for networks running Core 24.
+The wallet and Kotlin SDK use DashJ `24.0.0` for networks running Core 24; its
+checksums are enforced as described under the DashJ release below.
 
 ## Lifecycle
 
-Only `dash-key:` v2 login requests are supported. Legacy v1 links are rejected
+Only v2 login requests are supported, carried by `dashpay://connect` or `dash-key:`. Legacy v1 links are rejected
 at parsing and again before session preparation or approval, including retries.
 There is no synthesized legacy grant or legacy response-encryption fallback.
 This does not affect the separate `dash-st:` v1 token-purchase format or
@@ -283,10 +284,16 @@ still require emulator/device testing.
 Connection list names explicitly mark QR branding as unverified and include the
 app contract identity, including for older saved grants. Grant status transitions
 refresh updatedAt without changing it on an ordinary refresh or identical state
-write. CI exports SUPPORT_EMAIL only after the external SDK build completes.
+write.
 
-The wallet uses the DashJ 24.0.0 release from Maven Central, keeping Core 24
-support. Wallet resolution forces that version across transitive dependencies as well.
+The wallet uses the DashJ 24.0.0 release, keeping Core 24 support. Wallet
+resolution forces that version across transitive dependencies as well. The force
+pins the coordinates, not the bytes, and Gradle searches Maven Local before Maven
+Central, so gradle/verification-metadata.xml enforces the Maven Central release's
+JAR, POM, module metadata, sources and javadoc hashes for dashj-core. A local
+build of 24.0.0 differs in packaging and fails verification; remove it from Maven
+Local rather than regenerating the hashes. Other dependencies retain their existing
+policy; this is not a whole-project dependency audit.
 
 Yappr's profile and callback consumer already support `ac=failed`:
 https://github.com/PastaPastaPasta/yappr/blob/staging/docs/APP_CONNECT_PROFILE.md#callback
