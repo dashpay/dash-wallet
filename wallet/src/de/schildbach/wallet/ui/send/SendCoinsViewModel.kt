@@ -181,7 +181,6 @@ class SendCoinsViewModel @Inject constructor(
     fun submitPayment(
         editedAmount: Coin,
         exchangeRate: ExchangeRate?,
-        checkBalance: Boolean,
         autoAcceptContactRequest: Boolean
     ): Boolean {
         if (paymentOutcomeUnknown.value || sentUndelivered() || sendInFlight.get()) {
@@ -190,7 +189,7 @@ class SendCoinsViewModel @Inject constructor(
         // Undispatched: signAndSendPayment claims the send before this returns.
         viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
             val outcome = try {
-                SendOutcome.Sent(signAndSendPayment(editedAmount, exchangeRate, checkBalance), autoAcceptContactRequest)
+                SendOutcome.Sent(signAndSendPayment(editedAmount, exchangeRate), autoAcceptContactRequest)
             } catch (ex: SendRefusedException) {
                 log.info("send refused: {}", ex.message)
                 return@launch
@@ -617,8 +616,7 @@ class SendCoinsViewModel @Inject constructor(
      */
     suspend fun signAndSendPayment(
         editedAmount: Coin,
-        exchangeRate: ExchangeRate?,
-        checkBalance: Boolean
+        exchangeRate: ExchangeRate?
     ): Transaction {
         if (paymentOutcomeUnknown.value) {
             throw SendRefusedException("an earlier send's outcome is unknown; nothing was sent")
@@ -634,7 +632,7 @@ class SendCoinsViewModel @Inject constructor(
         savedStateHandle[KEY_SEND_IN_PROGRESS] = true
         val submitted = AtomicBoolean(false)
         try {
-            return sendPayment(editedAmount, exchangeRate, checkBalance, submitted)
+            return sendPayment(editedAmount, exchangeRate, submitted)
         } catch (ex: Exception) {
             // Cancelled once the submission had started: the broadcast may have gone out, and
             // nobody is left to learn whether it did.
@@ -653,7 +651,6 @@ class SendCoinsViewModel @Inject constructor(
     private suspend fun sendPayment(
         editedAmount: Coin,
         exchangeRate: ExchangeRate?,
-        checkBalance: Boolean,
         submitted: AtomicBoolean
     ): Transaction = withContext(Dispatchers.IO) {
         Context.propagate(wallet.context)
@@ -792,7 +789,6 @@ class SendCoinsViewModel @Inject constructor(
                 submitted.set(true)
                 sendCoinsTaskRunner.sendCoins(
                     finalSendRequest,
-                    checkBalanceConditions = checkBalance,
                     intendedRecipient = intendedRecipient,
                     // the wallet this screen built and confirmed the payment on: a wipe since
                     // must not have the replacement pay it, on either route

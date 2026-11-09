@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Figma "chevron" in the collapsible cards (Approve connection sheet, node 40033:59353) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="11dp"
+    android:height="7dp"
+    android:viewportWidth="11"
+    android:viewportHeight="7">
+    <path
+        android:pathData="M10,5.5L5.5,1L1,5.5"
+        android:fillColor="#00000000"
+        android:strokeWidth="2"
+        android:strokeColor="#525C66"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

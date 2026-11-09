@@ -1247,10 +1247,6 @@ class SecurityGuardMultiThreadingTest {
                             TODO("Not yet implemented")
                         }
 
-                        override fun checkSendingConditions(address: Address?, amount: Coin) {
-                            TODO("Not yet implemented")
-                        }
-
                         override fun observeMostRecentTransaction(): Flow<Transaction> {
                             TODO("Not yet implemented")
                         }

@@ -27,7 +27,7 @@ open class CoinsReceivedTxFilter(
         private set
 
     override fun matches(tx: TxInfo): Boolean {
-        // this check prevents a CoinJoin TX from being marked as a Crowdnode TX
+        // this check prevents a CoinJoin TX from matching
         if (tx.isEntirelySelf || tx.netValueDuffs < 0) {
             // Not an incoming transaction
             return false

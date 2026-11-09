@@ -52,6 +52,8 @@ import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityLockScreenRootBinding
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.SecureActivity
@@ -136,6 +138,16 @@ open class LockScreenActivity : SecureActivity(), LockScreenHost {
     override val lockScreenDisplayed: Boolean
         get() = !lockScreenUiReady || binding.rootViewSwitcher.displayedChild == 0
 
+    private val _walletLocked = MutableStateFlow(true)
+    val walletLocked = _walletLocked.asStateFlow()
+    private val lockGeneration = java.util.concurrent.atomic.AtomicLong()
+    val walletLockGeneration: Long get() = lockGeneration.get()
+
+    private fun markWalletLocked() {
+        lockGeneration.incrementAndGet()
+        _walletLocked.value = true
+    }
+
     private val temporaryLockCheckHandler = Handler()
     private val temporaryLockCheckInterval = TimeUnit.SECONDS.toMillis(10)
     private val temporaryLockCheckRunnable = Runnable {
@@ -156,7 +168,10 @@ open class LockScreenActivity : SecureActivity(), LockScreenHost {
     }
 
     val keepUnlocked by lazy {
-        intent.getBooleanExtra(INTENT_EXTRA_KEEP_UNLOCKED, false)
+        // Only private activity entry points may request the quick-receive/scan shortcut.
+        // Exported activities must use the in-process authentication/auto-logout state.
+        !packageManager.getActivityInfo(componentName, 0).exported &&
+            intent.getBooleanExtra(INTENT_EXTRA_KEEP_UNLOCKED, false)
     }
 
     protected var isLocked: Boolean = false
@@ -354,6 +369,7 @@ open class LockScreenActivity : SecureActivity(), LockScreenHost {
             handleLockScreenActivated()
         } else {
             binding.rootViewSwitcher.displayedChild = 1
+            _walletLocked.value = false
             if (!keepUnlocked) {
                 autoLogout.maybeStartAutoLogoutTimer()
             }
@@ -542,12 +558,14 @@ open class LockScreenActivity : SecureActivity(), LockScreenHost {
             overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
         } else {
             binding.rootViewSwitcher.displayedChild = 1
+            _walletLocked.value = false
             // After the content is shown again: a listener may now re-show what the lock dismissed.
             lockScreenBroadcaster.notifyUnlocked()
         }
     }
 
     private fun setLockState(suggestedState: State) {
+        markWalletLocked()
         if (!lockScreenUiReady) return // early finish in onCreate
         binding.lockScreen.apply {
             actionScanToPay.isEnabled = true
@@ -699,6 +717,7 @@ open class LockScreenActivity : SecureActivity(), LockScreenHost {
     // Called once the lock screen is displayed (lockScreenDisplayed is true): handleWhenResumed
     // reads it when a dialog this dismisses reports no answer, to ask again on unlock.
     private fun handleLockScreenActivated() {
+        markWalletLocked()
         if (this::alertDialog.isInitialized) {
             alertDialog.dismissDialog()
         }
