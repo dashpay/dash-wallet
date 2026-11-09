@@ -23,6 +23,7 @@ import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlin.coroutines.EmptyCoroutineContext
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
@@ -134,7 +135,13 @@ internal fun decodeShieldedMemo(memo: ByteArray): String? {
  * not silently render as IN/OUT).
  */
 internal fun toShieldedActivityEntry(entity: ShieldedActivityEntity): ShieldedActivityEntry? {
-    if (entity.status == 2) return null
+    val status = when (entity.status) {
+        0 -> ShieldedActivityStatus.PENDING
+        1 -> ShieldedActivityStatus.CONFIRMED
+        3 -> ShieldedActivityStatus.UNKNOWN
+        // 2 = Failed, and any status tag this app does not know.
+        else -> return null
+    }
     val direction = when (entity.direction) {
         0 -> ShieldedActivityDirection.IN
         1 -> ShieldedActivityDirection.OUT
@@ -148,7 +155,13 @@ internal fun toShieldedActivityEntry(entity: ShieldedActivityEntity): ShieldedAc
         amount = creditsToDash(entity.amount),
         timestampMs = entity.createdAtMs,
         memo = decodeShieldedMemo(entity.memo),
-        pending = entity.status == 0
+        pending = status == ShieldedActivityStatus.PENDING,
+        kindTag = entity.kindTag,
+        accountIndex = entity.accountIndex,
+        amountCredits = entity.amount,
+        // Unknown, never zero: no recorded fee, or a value no fee can have.
+        feeCredits = entity.fee.takeIf { entity.hasFee && it >= 0 },
+        status = status
     )
 }
 
@@ -675,6 +688,9 @@ interface ShieldedSource {
     /** Live activity rows for the wallet, from the SDK's Room store. */
     fun observeActivity(walletId: ByteArray): Flow<List<ShieldedActivityEntity>>
 
+    /** One activity row by its full key (`shieldedDao().getActivity`), or null when absent. */
+    suspend fun activity(walletId: ByteArray, accountIndex: Int, entryId: ByteArray): ShieldedActivityEntity?
+
     /** Raw 43-byte default Orchard address for account 0, or null when unbound. */
     suspend fun shieldedDefaultAddress(walletId: ByteArray): ByteArray?
 
@@ -862,6 +878,12 @@ internal class DashSdkShieldedSource(
 
     override fun observeActivity(walletId: ByteArray): Flow<List<ShieldedActivityEntity>> =
         flow { emitAll(database().shieldedDao().observeActivityByWallet(walletId)) }
+
+    override suspend fun activity(
+        walletId: ByteArray,
+        accountIndex: Int,
+        entryId: ByteArray
+    ): ShieldedActivityEntity? = database().shieldedDao().getActivity(walletId, accountIndex, entryId)
 
     override suspend fun shieldedDefaultAddress(walletId: ByteArray): ByteArray? =
         manager().shieldedDefaultAddress(walletId, account = 0)
@@ -2099,19 +2121,40 @@ class ShieldedBalanceServiceImpl internal constructor(
         }
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
     override fun observeShieldedActivity(): Flow<List<ShieldedActivityEntry>> =
+        observeShieldedActivityOrNotReady().map { it?.entries ?: emptyList() }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    override fun observeShieldedActivityOrNotReady(): Flow<ShieldedActivitySnapshot?> =
         readyWalletIdHex.flatMapLatest { hex ->
             val walletId = hex?.let(::walletIdFromHex)
-            if (walletId == null) {
-                flowOf(emptyList())
+            if (hex == null || walletId == null) {
+                flowOf(null)
             } else {
                 source.observeActivity(walletId).map { rows ->
-                    rows.mapNotNull(::toShieldedActivityEntry)
-                        .sortedByDescending { it.timestampMs }
+                    ShieldedActivitySnapshot(
+                        walletIdHex = hex,
+                        entries = rows.mapNotNull(::toShieldedActivityEntry)
+                            .sortedByDescending { it.timestampMs }
+                    )
                 }
             }
         }
+
+    override suspend fun shieldedActivityEntry(accountIndex: Int, entryIdHex: String): ShieldedActivityEntry? {
+        // Capture the active wallet before the first suspension: the read is
+        // scoped to the wallet that is ready NOW, never a later one.
+        val walletId = readyWalletIdHex.value?.let(::walletIdFromHex) ?: return null
+        val entryId = walletIdFromHex(entryIdHex) ?: return null // also a 32-byte key
+        return try {
+            withContext(Dispatchers.IO) { source.activity(walletId, accountIndex, entryId) }
+                ?.let(::toShieldedActivityEntry)
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("shielded activity lookup failed", t)
+            null
+        }
+    }
 
     override suspend fun shieldedReceiveAddress(): String? {
         if (!ensureShieldedReady()) return null

@@ -166,6 +166,8 @@
     <string name="transaction_row_withdrawal">Withdrawal</string>
     <string name="transaction_row_invitation">Invitation</string>
     <string name="transaction_row_status_processing">Processing</string>
+    <string name="transaction_details_status">Status</string>
+    <string name="transaction_details_activity_unavailable">This activity could not be loaded</string>
     <string name="transaction_row_status_confirming">Confirming</string>
     <string name="transaction_row_status_locked">Locked</string>
     <string name="transaction_row_status_error_sending">Error Sending</string>

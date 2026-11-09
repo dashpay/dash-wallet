@@ -107,7 +107,8 @@ class PlatformUsernameReconcileTest {
         shieldedTransferExecutor = mockk(relaxed = true),
         externalSendExecutor = { mockk(relaxed = true) },
         contactRequestNotificationService = mockk(relaxed = true),
-        dashPaySyncStatus = de.schildbach.wallet.service.DashPaySyncStatus()
+        dashPaySyncStatus = de.schildbach.wallet.service.DashPaySyncStatus(),
+        shieldedHistoryRowSync = dagger.Lazy { mockk<de.schildbach.wallet.service.platform.sdk.ShieldedHistoryRowSync>(relaxed = true) }
     )
 
     @Test

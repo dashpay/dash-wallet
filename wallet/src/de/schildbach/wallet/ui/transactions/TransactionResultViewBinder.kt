@@ -37,7 +37,9 @@ import org.dash.wallet.common.ui.components.MerchantNameIcon
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.service.platform.sdk.AssetLockKind
+import de.schildbach.wallet.database.entity.TxDisplayCacheEntry
 import de.schildbach.wallet.service.platform.sdk.L1TxUiStatus
+import de.schildbach.wallet.service.platform.sdk.PlatformActivityDetail
 import de.schildbach.wallet.service.platform.sdk.SdkTxDetail
 import de.schildbach.wallet.service.platform.sdk.assetLockTitleRes
 import de.schildbach.wallet.ui.DashPayUserActivity
@@ -89,6 +91,9 @@ class TransactionResultViewBinder(
 
     private lateinit var transaction: Transaction
     private var sdkDetail: SdkTxDetail? = null
+
+    /** Non-null after [bindPlatformActivityDetail]: a shielded-pool entry with no Core tx. */
+    private var platformDetail: PlatformActivityDetail? = null
 
     /**
      * Bug A: a direction/amount/fee/address override for a dashj-held transaction
@@ -324,6 +329,71 @@ class TransactionResultViewBinder(
         setStringOutputs(detail.outputAddresses, detail.hasOpReturn, inflater)
     }
 
+    /**
+     * Bind a shielded-pool activity entry (no Core transaction): kind title, the
+     * principal with its sign, the fee (when recorded), date, settlement status,
+     * the From / To balances and the memo. Everything txid-keyed — block
+     * explorer, tax category, private memo, report issue — and the fiat value
+     * (no rate is recorded) are hidden.
+     */
+    fun bindPlatformActivityDetail(detail: PlatformActivityDetail) {
+        this.platformDetail = detail
+
+        binding.transactionTitle.setTextColor(
+            ContextCompat.getColor(context, if (detail.outgoing) R.color.dash_blue else R.color.system_green)
+        )
+        binding.transactionTitle.text = context.getText(detail.titleRes)
+        binding.transactionAmountSignal.text = if (detail.outgoing) "-" else "+"
+        binding.transactionAmountSignal.isVisible = true
+        updateIcon()
+
+        binding.dashAmount.setFormat(dashFormat)
+        binding.dashAmount.setAmount(Coin.valueOf(detail.principalDuffs))
+        binding.fiatValue.isVisible = false
+
+        val fee = detail.feeDuffs?.let { Coin.valueOf(it) }
+        binding.feeContainer.isVisible = isFeeAvailable(fee)
+        if (fee != null && isFeeAvailable(fee)) {
+            binding.transactionFee.setFormat(dashFormat)
+            binding.transactionFee.setAmount(fee)
+        }
+
+        binding.dateContainer.isVisible = detail.timestampMs > 0
+        if (detail.timestampMs > 0) {
+            binding.transactionDateAndTime.text = DateUtils.formatDateTime(
+                context,
+                detail.timestampMs,
+                DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_SHOW_TIME
+            )
+        }
+
+        binding.statusContainer.isVisible = detail.pending
+        if (detail.pending) {
+            binding.transactionStatus.setText(R.string.transaction_row_status_processing)
+        }
+
+        // From / To: balance names, not addresses. A null side is an external
+        // counterparty (another wallet), which the entry does not name.
+        val inflater = LayoutInflater.from(context)
+        binding.transactionInputAddressesContainer.removeAllViews()
+        binding.transactionOutputAddressesContainer.removeAllViews()
+        binding.transactionOutputOpReturnsContainer.removeAllViews()
+        binding.inputAddressesLabel.setText(R.string.external_send_from)
+        binding.outputAddressesLabel.setText(R.string.external_send_to)
+        setStringInputs(listOfNotNull(detail.fromBalanceRes?.let(context::getString)), inflater)
+        setStringOutputs(listOfNotNull(detail.toBalanceRes?.let(context::getString)), false, inflater)
+
+        binding.paymentMemoContainer.isVisible = !detail.memo.isNullOrEmpty()
+        binding.paymentMemo.text = detail.memo.orEmpty()
+
+        binding.errorContainer.isVisible = false
+        binding.openTaxCategoryCard.isVisible = false
+        binding.privateMemo.isVisible = false
+        binding.openExplorerCard.isVisible = false
+        binding.openProviderExplorerCard.isVisible = false
+        binding.reportIssueCard.isVisible = false
+    }
+
     private fun setStringInputs(addresses: List<String>, inflater: LayoutInflater) {
         binding.inputsContainer.isVisible = addresses.isNotEmpty()
         addresses.forEach {
@@ -439,7 +509,8 @@ class TransactionResultViewBinder(
     private fun updateIcon() {
         val sdkDetail = this.sdkDetail
         val sdkOverride = this.sdkOverride
-        if (!::transaction.isInitialized && sdkDetail == null) {
+        val platformDetail = this.platformDetail
+        if (!::transaction.isInitialized && sdkDetail == null && platformDetail == null) {
             return
         }
 
@@ -452,6 +523,12 @@ class TransactionResultViewBinder(
             R.drawable.ic_transaction_failed
         } else if (iconRes != null) {
             iconRes!!
+        } else if (platformDetail != null) {
+            when (platformDetail.iconType) {
+                TxDisplayCacheEntry.ICON_INTERNAL -> R.drawable.ic_internal
+                TxDisplayCacheEntry.ICON_SENT -> R.drawable.ic_transaction_sent
+                else -> R.drawable.ic_transaction_received
+            }
         } else if (sdkDetail != null) {
             when {
                 !sdkDetail.isSent -> R.drawable.ic_transaction_received

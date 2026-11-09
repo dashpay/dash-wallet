@@ -378,6 +378,9 @@ public class WalletApplication extends MultiDexApplication
     dagger.Lazy<de.schildbach.wallet.service.platform.sdk.CoinJoinFundsMigrationService> coinJoinFundsMigrationService;
     @Inject
     dagger.Lazy<de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService> shieldedBalanceService;
+    // Lazy: only stopped/re-armed by Reset Wallet; PlatformSynchronizationService starts it.
+    @Inject
+    dagger.Lazy<de.schildbach.wallet.service.platform.sdk.ShieldedHistoryRowSync> shieldedHistoryRowSync;
     // The payment paths' wipe barrier: raised when Reset Wallet starts, lowered once the old wallet is gone.
     @Inject
     public de.schildbach.wallet.payments.FundingSelectionLock fundingSelectionLock;

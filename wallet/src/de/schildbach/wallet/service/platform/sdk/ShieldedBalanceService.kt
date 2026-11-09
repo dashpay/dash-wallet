@@ -53,8 +53,82 @@ data class ShieldedActivityEntry(
     val amount: Dash,
     val timestampMs: Long,
     val memo: String?,
-    val pending: Boolean
+    val pending: Boolean,
+    /**
+     * The SDK's `ShieldedActivityKind::tag` (see [ShieldedActivityKindTag]).
+     * Passed through unchanged: an unknown future tag is kept so a consumer
+     * can decide to skip it rather than render it as a known kind.
+     */
+    val kindTag: Int,
+    /** ZIP-32 account index of the sub-wallet the entry belongs to (part of the row key). */
+    val accountIndex: Int,
+    /** Principal amount in Platform credits, exact (the unfloored source of [amount]). */
+    val amountCredits: Long,
+    /**
+     * The state-transition fee in Platform credits, or null when the SDK did
+     * not record one (`hasFee == false`) or recorded an invalid (negative)
+     * value. Null means UNKNOWN, never zero.
+     */
+    val feeCredits: Long?,
+    /** Settlement state; failed entries are never surfaced. */
+    val status: ShieldedActivityStatus
 )
+
+/**
+ * One [ShieldedBalanceService.observeShieldedActivityOrNotReady] emission: the
+ * ready wallet's mapped activity, newest first. [walletIdHex] identifies the
+ * wallet the rows belong to — never log it.
+ */
+class ShieldedActivitySnapshot(
+    val walletIdHex: String,
+    val entries: List<ShieldedActivityEntry>
+) {
+    override fun toString(): String = "ShieldedActivitySnapshot(entries=${entries.size})"
+}
+
+/**
+ * Settlement state of a surfaced [ShieldedActivityEntry]. `Failed` rows are
+ * dropped by the mapping, so they have no value here. [UNKNOWN] is the SDK's
+ * own "cannot tell yet" state and is displayed like [PENDING].
+ */
+enum class ShieldedActivityStatus { PENDING, CONFIRMED, UNKNOWN }
+
+/**
+ * The SDK's `ShieldedActivityKind::tag` values (`ShieldedActivityEntity.kindTag`
+ * at the pinned SDK). Kept as plain ints because the column is an int and a
+ * future SDK may add tags this app does not know.
+ */
+object ShieldedActivityKindTag {
+    /** Type 15: the wallet's Platform addresses → its own pool. */
+    const val SHIELD = 0
+
+    /** Type 18: a Core asset lock → the pool (the Core tx renders as an L1 row). */
+    const val SHIELD_FROM_ASSET_LOCK = 1
+
+    /** A note received from another wallet. */
+    const val RECEIVED = 2
+
+    /** Type 16: pool → another Orchard address. */
+    const val SENT = 3
+
+    /** Type 17: pool → a transparent Platform address. */
+    const val UNSHIELD = 4
+
+    /** Type 19: pool → Core (the Core tx renders as an L1 row). */
+    const val WITHDRAWAL = 5
+
+    /** Type 20: pool → a new identity (username registration). */
+    const val IDENTITY_CREATE = 6
+
+    /** An own spend with only self-change; its fee is not known. */
+    const val SHIELDED_SPEND = 7
+
+    /** Type 21: an identity → the pool. */
+    const val SHIELD_FROM_IDENTITY = 8
+
+    /** Type 22: pool → an existing identity (top-up). */
+    const val IDENTITY_TOP_UP = 9
+}
 
 /**
  * Outcome payload of [ShieldedBalanceService.shieldFromWallet] on the
@@ -266,6 +340,27 @@ interface ShieldedBalanceService {
      * with unrecognized directions are not surfaced.
      */
     fun observeShieldedActivity(): Flow<List<ShieldedActivityEntry>>
+
+    /**
+     * Same timeline as [observeShieldedActivity], scoped to the ACTIVE (ready)
+     * wallet, but with "not ready" kept distinct from "no activity": emits
+     * `null` while no wallet is ready (flag off, before [ensureShieldedReady],
+     * after a wipe reset) and the mapped list — possibly empty, which then
+     * really means empty — once one is. Consumers that DELETE derived state on
+     * an empty list (the Home history rows) must use this, never
+     * [observeShieldedActivity]: unknown is not empty. Each snapshot names the
+     * wallet it was read from, so a consumer can tell a wallet switch apart.
+     */
+    fun observeShieldedActivityOrNotReady(): Flow<ShieldedActivitySnapshot?>
+
+    /**
+     * One activity entry of the ACTIVE (ready) wallet by its row key
+     * ([ShieldedActivityEntry.accountIndex], [ShieldedActivityEntry.id]), read
+     * off the main thread. Null when no wallet is ready, the key is malformed,
+     * the row does not exist (or is Failed / unmappable), or the read failed —
+     * the failure is logged. Never throws except for cancellation.
+     */
+    suspend fun shieldedActivityEntry(accountIndex: Int, entryIdHex: String): ShieldedActivityEntry?
 
     /**
      * Live [ShieldedSyncStatus] for the shielded runtime. Starts at

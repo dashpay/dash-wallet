@@ -287,6 +287,20 @@ class AppDatabaseMigrations {
             }
         }
 
+        /**
+         * The `tx_display_cache.source` discriminator: 0 = an L1 (Core) row, 1 = a shielded
+         * pool activity row written by `ShieldedHistoryRowSync`. Every existing row is an L1
+         * row, hence the default. Kept as a constant so the unit test checks the exact SQL.
+         */
+        internal const val SQL_22_TO_23_ADD_SOURCE =
+            "ALTER TABLE `tx_display_cache` ADD COLUMN `source` INTEGER NOT NULL DEFAULT 0"
+
+        val migration22to23 = object : Migration(22, 23) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(SQL_22_TO_23_ADD_SOURCE)
+            }
+        }
+
         val migration15to16 = object : Migration(15, 16) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 // previous versions have no data in invitations table, so do this

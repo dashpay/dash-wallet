@@ -176,4 +176,36 @@ open class DatabaseMigrationTest {
 
         db.close()
     }
+
+    /**
+     * 22 → 23 adds `tx_display_cache.source` (0 = L1, 1 = shielded activity). An existing
+     * row must survive as an L1 row and the migrated schema must match the exported 23.json.
+     */
+    @Test
+    @Throws(IOException::class)
+    fun migrate22to23() {
+        testHelper.createDatabase(TEST_DB_NAME, 22).apply {
+            val values = ContentValues()
+            values.put("rowId", "ab".repeat(32))
+            values.put("title", "Received")
+            values.put("valueSatoshis", 100L)
+            values.put("iconType", 0)
+            values.put("iconBgType", 0)
+            values.put("statusText", "")
+            values.put("comment", "")
+            values.put("transactionAmount", 1)
+            values.put("time", 500L)
+            values.put("hasErrors", 0)
+            values.put("filterFlags", 2)
+            insert("tx_display_cache", SQLiteDatabase.CONFLICT_REPLACE, values)
+            close()
+        }
+
+        val db = testHelper.runMigrationsAndValidate(TEST_DB_NAME, 23, true, AppDatabaseMigrations.migration22to23)
+        db.query("SELECT source FROM tx_display_cache").use { cursor ->
+            assert(cursor.moveToFirst())
+            assert(cursor.getInt(0) == 0)
+        }
+        db.close()
+    }
 }

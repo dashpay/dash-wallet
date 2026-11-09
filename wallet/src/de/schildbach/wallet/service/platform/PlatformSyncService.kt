@@ -275,6 +275,9 @@ class PlatformSynchronizationService @Inject constructor(
     // The DashPay half of the user-facing "still syncing" state; this service
     // is the only component that knows whether DashPay applies at all.
     private val dashPaySyncStatus: de.schildbach.wallet.service.DashPaySyncStatus,
+    // Lazy for the same reason as externalSendExecutor: resolved off the main thread on
+    // the first SDK-engine kick, never while this service is being constructed.
+    private val shieldedHistoryRowSync: dagger.Lazy<de.schildbach.wallet.service.platform.sdk.ShieldedHistoryRowSync>,
 ) : PlatformSyncService {
     companion object {
         private val log: Logger = LoggerFactory.getLogger(PlatformSynchronizationService::class.java)
@@ -639,6 +642,10 @@ class PlatformSynchronizationService @Inject constructor(
             // SDK once the cutover is committed). Idempotent once-per-process
             // start; provably inert pre-cutover — see CutoverUiDataService.
             cutoverUiDataService.start()
+            // The Home history's shielded-activity rows (a username paid from the
+            // pool has no Core tx, so no L1 row). Idempotent once-per-process
+            // start; writes nothing until a shielded wallet is ready.
+            shieldedHistoryRowSync.get().start()
             // Kill-list Step B (sync-state track): post-cutover the app-wide
             // BlockchainState (sync %, best height/date, stage, stalled
             // NETWORK impediment) derives from the SDK SPV feed. Idempotent,

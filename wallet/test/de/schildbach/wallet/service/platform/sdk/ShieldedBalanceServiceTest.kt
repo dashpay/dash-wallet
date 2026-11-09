@@ -269,6 +269,18 @@ class ShieldedBalanceServiceTest {
         override fun observeActivity(walletId: ByteArray): Flow<List<ShieldedActivityEntity>> =
             activityFlow.onStart { activityFailure?.let { throw it } }
 
+        override suspend fun activity(
+            walletId: ByteArray,
+            accountIndex: Int,
+            entryId: ByteArray
+        ): ShieldedActivityEntity? {
+            activityFailure?.let { throw it }
+            return activityFlow.value.firstOrNull {
+                it.walletId.contentEquals(walletId) && it.accountIndex == accountIndex &&
+                    it.entryId.contentEquals(entryId)
+            }
+        }
+
         override suspend fun shieldedDefaultAddress(walletId: ByteArray): ByteArray? = defaultAddress
 
         override suspend fun ownPlatformAddressOrNull(walletId: ByteArray): String? = platformAddress()
@@ -1421,6 +1433,45 @@ class ShieldedBalanceServiceTest {
 
         // 150_000_001_999 credits / 1000 = 150_000_001 duffs.
         assertEquals(Dash(150_000_001L), service.observeShieldedBalance().first())
+    }
+
+    @Test
+    fun activityOrNotReady_nullBeforeReady_thenTheReadyWalletsRealList() = runBlocking {
+        val source = readySource()
+        val service = service(source)
+
+        // Unknown is not empty: not-ready is null, not an empty list.
+        assertNull(service.observeShieldedActivityOrNotReady().first())
+        assertTrue(service.ensureShieldedReady())
+
+        val empty = service.observeShieldedActivityOrNotReady().first()
+        assertNotNull(empty)
+        assertTrue(empty!!.entries.isEmpty())
+
+        source.activityFlow.value = listOf(activity(entryId = 1, direction = 1, status = 1))
+        assertEquals(1, service.observeShieldedActivityOrNotReady().first()!!.entries.size)
+    }
+
+    @Test
+    fun activityLookup_scopedToTheReadyWallet_nullWhenAbsentMalformedOrFailing() = runBlocking {
+        val source = readySource()
+        val service = service(source)
+        source.activityFlow.value = listOf(
+            activity(entryId = 7, direction = 1, status = 1, kindTag = 6, fee = 1_000L, hasFee = true, accountIndex = 2)
+        )
+        val idHex = "07" + "00".repeat(31)
+
+        // Not ready yet: no lookup.
+        assertNull(service.shieldedActivityEntry(2, idHex))
+        assertTrue(service.ensureShieldedReady())
+
+        val entry = service.shieldedActivityEntry(2, idHex)
+        assertNotNull(entry)
+        assertEquals(6, entry!!.kindTag)
+        assertNull(service.shieldedActivityEntry(0, idHex)) // wrong account
+        assertNull(service.shieldedActivityEntry(2, "zz")) // malformed
+        source.activityFailure = IllegalStateException("db closed")
+        assertNull(service.shieldedActivityEntry(2, idHex)) // read failure → null, logged
     }
 
     @Test
@@ -3121,6 +3172,46 @@ class ShieldedBalanceServiceTest {
         assertFalse(entry.pending)
     }
 
+    @Test
+    fun activityEntity_carriesKindAccountCreditsFeeAndStatus() {
+        val entry = toShieldedActivityEntry(
+            activity(
+                entryId = 2, direction = 1, status = 3, amount = 2_796_148_800L,
+                kindTag = 6, fee = 203_851_200L, hasFee = true, accountIndex = 4
+            )
+        )!!
+        assertEquals(6, entry.kindTag)
+        assertEquals(4, entry.accountIndex)
+        assertEquals(2_796_148_800L, entry.amountCredits)
+        assertEquals(203_851_200L, entry.feeCredits)
+        assertEquals(ShieldedActivityStatus.UNKNOWN, entry.status)
+        assertFalse(entry.pending)
+        assertEquals(
+            ShieldedActivityStatus.PENDING,
+            toShieldedActivityEntry(activity(entryId = 1, direction = 0, status = 0))!!.status
+        )
+        assertEquals(
+            ShieldedActivityStatus.CONFIRMED,
+            toShieldedActivityEntry(activity(entryId = 1, direction = 0, status = 1))!!.status
+        )
+        // An unknown future status tag is not surfaced (it might be a failure).
+        assertNull(toShieldedActivityEntry(activity(entryId = 1, direction = 0, status = 4)))
+    }
+
+    @Test
+    fun activityEntity_feeIsNullWhenNotRecordedOrInvalid_neverZero() {
+        assertNull(toShieldedActivityEntry(activity(entryId = 1, direction = 1, status = 1, fee = 5L))!!.feeCredits)
+        assertNull(
+            toShieldedActivityEntry(activity(entryId = 1, direction = 1, status = 1, fee = -1L, hasFee = true))!!
+                .feeCredits
+        )
+        assertEquals(
+            0L,
+            toShieldedActivityEntry(activity(entryId = 1, direction = 1, status = 1, fee = 0L, hasFee = true))!!
+                .feeCredits
+        )
+    }
+
     // ── Pure mapping: Orchard address codec ───────────────────────────────
 
     @Test
@@ -4344,17 +4435,21 @@ class ShieldedBalanceServiceTest {
         createdAtMs: Long = 0L,
         memo: ByteArray = ByteArray(0),
         spentNullifiers: ByteArray = ByteArray(0),
-        noteCmxs: ByteArray = ByteArray(0)
+        noteCmxs: ByteArray = ByteArray(0),
+        kindTag: Int = 3,
+        fee: Long = 0L,
+        hasFee: Boolean = false,
+        accountIndex: Int = 0
     ) = ShieldedActivityEntity(
         walletId = walletIdBytes,
-        accountIndex = 0,
+        accountIndex = accountIndex,
         entryId = ByteArray(32).also { it[0] = entryId.toByte() },
-        kindTag = 3,
+        kindTag = kindTag,
         direction = direction,
         status = status,
         amount = amount,
-        fee = 0L,
-        hasFee = false,
+        fee = fee,
+        hasFee = hasFee,
         blockHeight = 0L,
         hasBlockHeight = false,
         createdAtMs = createdAtMs,
