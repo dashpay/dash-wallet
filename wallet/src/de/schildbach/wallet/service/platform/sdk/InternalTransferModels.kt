@@ -45,11 +45,12 @@ enum class InternalTransferSupport {
  * |---|---|---|---|---|
  * | Core | — | yes | no (1) | yes |
  * | Shielded | yes | — | yes | yes |
- * | Platform | no (2) | yes | — | yes |
+ * | Platform | yes (2) | yes | — | yes |
  * | Identity | yes | no (3) | yes | — |
  *
  * 1. The Platform-address funding from an asset lock is not wired for this flow yet.
- * 2. The SDK's Platform-address withdrawal only withdraws the full balance.
+ * 2. The External Send's partial Platform → Core withdrawal (`withdrawCredits` with the
+ *    inputs the wallet selects) to the wallet's own unadvertised Core address.
  * 3. `shieldedShieldFromIdentity` (Type 21) is not bound in the wallet yet.
  *
  * [shieldedEnabled] and [hasIdentity] are the error-preserving reads: unknown is false.
@@ -75,7 +76,7 @@ fun internalTransferSupport(
 fun internalTransferPairSupported(from: SendBalance, to: SendBalance): Boolean = when (from) {
     SendBalance.CORE -> to == SendBalance.SHIELDED || to == SendBalance.IDENTITY
     SendBalance.SHIELDED -> to != SendBalance.SHIELDED
-    SendBalance.PLATFORM -> to == SendBalance.SHIELDED || to == SendBalance.IDENTITY
+    SendBalance.PLATFORM -> to != SendBalance.PLATFORM
     SendBalance.IDENTITY -> to == SendBalance.CORE || to == SendBalance.PLATFORM
 }
 

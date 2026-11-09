@@ -129,15 +129,18 @@ internal class DashSdkInternalTransferSource(
  * [ExternalSendService.send] to the resolved OWN destination (that route's gating, pinning and
  * classification apply unchanged) or one of [ShieldedBalanceService]'s pinned self routes.
  *
- * Routes (the 9 supported pairs of [internalTransferSupport]):
+ * Routes (the 10 supported pairs of [internalTransferSupport]):
  * - Core → Shielded: [ShieldedBalanceService.shieldFromWalletPinned] of `amount + pool fee`
  *   ([shieldPoolFeeDuffs]), so the own shielded balance receives the confirmed amount (the
  *   External Send's Core → Shielded convention). A lock that went out with the shield still
  *   pending is [ExternalSendResult.CompletesAutomatically].
  * - Core → Identity, Shielded → Identity, Platform → Identity: [ExternalSendService.send] to
  *   the user's own identity id.
- * - Shielded → Core, Identity → Core: [ExternalSendService.send] to the UNADVERTISED Core
- *   address ([InternalTransferSource.unadvertisedCoreAddress]); unavailable = Not sent.
+ * - Shielded → Core, Platform → Core, Identity → Core: [ExternalSendService.send] to the
+ *   UNADVERTISED Core address ([InternalTransferSource.unadvertisedCoreAddress]); unavailable =
+ *   Not sent. Platform → Core is the External Send's partial withdrawal: [amount] is the gross
+ *   withdrawal (the asset unlock's Core fee comes out of it) and one below the withdrawal
+ *   minimum is refused there before anything is signed.
  * - Shielded → Platform: [ShieldedBalanceService.unshieldToCreditsPinned] (own Platform address),
  *   with the shielded Max fee retry.
  * - Platform → Shielded: [ShieldedBalanceService.shieldFromCreditsPinned].

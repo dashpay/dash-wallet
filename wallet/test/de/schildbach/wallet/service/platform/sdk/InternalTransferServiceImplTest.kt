@@ -162,19 +162,43 @@ class InternalTransferServiceImplTest {
     fun `Core destinations are the unadvertised address`() {
         assertEquals(ExternalSendResult.Sent("txid"), transfer(SHIELDED, CORE))
         assertEquals(ExternalSendResult.Sent("txid"), transfer(IDENTITY, CORE, isMax = true))
+        assertEquals(ExternalSendResult.Sent("txid"), transfer(PLATFORM, CORE))
         assertEquals(
             listOf(
                 Send(SHIELDED, SendDestination.Core(unadvertised), amount, false, WALLET_A),
-                Send(IDENTITY, SendDestination.Core(unadvertised), amount, true, WALLET_A)
+                Send(IDENTITY, SendDestination.Core(unadvertised), amount, true, WALLET_A),
+                Send(PLATFORM, SendDestination.Core(unadvertised), amount, false, WALLET_A)
             ),
             external.sends
         )
     }
 
     @Test
+    fun `Platform to Core withdraws to the unadvertised address, pinned, with the shielded flag off and no identity`() {
+        source.shielded = null // unreadable: Platform → Core has no shielded leg, so it is never read
+        source.identity = Result.failure(IOException("unreadable")) // nor the identity record
+        assertEquals(ExternalSendResult.Sent("txid"), transfer(PLATFORM, CORE))
+        assertEquals(listOf(Send(PLATFORM, SendDestination.Core(unadvertised), amount, false, WALLET_A)), external.sends)
+        assertEquals(emptyList<String>(), source.writes)
+    }
+
+    @Test
+    fun `Platform to Core passes the withdrawal's outcome through unchanged`() {
+        for (outcome in listOf(
+            ExternalSendResult.NotSent(NotSentReason.GENERIC),
+            ExternalSendResult.NotSent(NotSentReason.INSUFFICIENT_FUNDS),
+            ExternalSendResult.MayHaveGoneThrough
+        )) {
+            external.result = outcome
+            assertEquals(outcome, transfer(PLATFORM, CORE))
+        }
+    }
+
+    @Test
     fun `no unadvertised Core address fails closed before anything is submitted`() {
         source.coreAddress = { throw IllegalStateException("no unadvertised destination post-cutover") }
         assertEquals(ExternalSendResult.NotSent(NotSentReason.GENERIC), transfer(SHIELDED, CORE))
+        assertEquals(ExternalSendResult.NotSent(NotSentReason.GENERIC), transfer(PLATFORM, CORE))
         assertNothingSubmitted()
     }
 
@@ -262,7 +286,7 @@ class InternalTransferServiceImplTest {
 
     @Test
     fun `the matrix is enforced by the service`() {
-        for ((from, to) in listOf(CORE to PLATFORM, PLATFORM to CORE, IDENTITY to SHIELDED, CORE to CORE)) {
+        for ((from, to) in listOf(CORE to PLATFORM, IDENTITY to SHIELDED, CORE to CORE)) {
             assertEquals("$from → $to", ExternalSendResult.NotSent(NotSentReason.NOT_SUPPORTED), transfer(from, to))
         }
         assertNothingSubmitted()
@@ -346,6 +370,13 @@ class InternalTransferServiceImplTest {
         assertNull(service.estimateFee(CORE, PLATFORM, amount))
         assertNull(service.maxSendable(CORE, PLATFORM))
         assertNull(service.estimateFee(PLATFORM, SHIELDED, amount))
+        // Platform → Core asks the External Send's own figures (null today: metered by Rust).
+        assertNull(service.estimateFee(PLATFORM, CORE, amount))
+        assertNull(service.maxSendable(PLATFORM, CORE))
+        external.pairFees[PLATFORM to CORE] = fee
+        external.pairMax[PLATFORM to CORE] = Dash(5000)
+        assertEquals(fee, service.estimateFee(PLATFORM, CORE, amount))
+        assertEquals(Dash(5000), service.maxSendable(PLATFORM, CORE))
     }
 
     @Test
