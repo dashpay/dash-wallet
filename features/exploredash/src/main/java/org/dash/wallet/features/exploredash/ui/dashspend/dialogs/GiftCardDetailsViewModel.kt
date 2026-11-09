@@ -606,18 +606,8 @@ class GiftCardDetailsViewModel @Inject constructor(
         val number = giftCard.cardNumber ?: return
         val value = giftCard.barcodeContent?.takeIf { it.isNotEmpty() }
             ?: number.replace(" ", "").replace("-", "")
-        saveBarcode(value, giftCard.barcodeFormat(), index)
+        saveBarcode(value, giftCard.barcodeFormat ?: BarcodeFormat.CODE_128, index)
     }
-
-    private fun GiftCardInfo.barcodeFormat(): BarcodeFormat =
-        when (barcodeType?.lowercase()) {
-            "qr", "qrcode", "qr_code" -> BarcodeFormat.QR_CODE
-            "code39" -> BarcodeFormat.CODE_39
-            "code93" -> BarcodeFormat.CODE_93
-            "pdf417" -> BarcodeFormat.PDF_417
-            "aztec" -> BarcodeFormat.AZTEC
-            else -> BarcodeFormat.CODE_128
-        }
 
     private suspend fun saveBarcode(value: String, cardFormat: BarcodeFormat, index: Int) {
         try {

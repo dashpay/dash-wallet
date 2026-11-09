@@ -17,6 +17,7 @@
 package org.dash.wallet.features.exploredash.data.dashspend.ctx.model
 
 import com.google.gson.annotations.SerializedName
+import com.google.zxing.BarcodeFormat
 
 data class GiftCardResponse(
     @SerializedName("id") val id: String,
@@ -41,4 +42,14 @@ data class GiftCardResponse(
     @SerializedName("paymentFiatAmount") val fiatAmount: String? = "",
     @SerializedName("paymentFiatCurrency") val fiatCurrency: String? = "",
     @SerializedName("paymentUrls") val paymentUrls: Map<String, String>? = buildMap { }
-)
+) {
+    fun barcodeFormat(): BarcodeFormat? = when (barcodeType) {
+        "code39" -> BarcodeFormat.CODE_39
+        "code93" -> BarcodeFormat.CODE_93
+        "code128" -> BarcodeFormat.CODE_128
+        "pdf417" -> BarcodeFormat.PDF_417
+        "aztec" -> BarcodeFormat.AZTEC
+        "qr" -> BarcodeFormat.QR_CODE
+        else -> null
+    }
+}
