@@ -44,7 +44,8 @@ class DashConnectConfigTest {
         val ordinary = File(files, "datastore/ordinary.preferences_pb").apply { writeText("settings") }
         val app = spyk(de.schildbach.wallet.WalletApplication())
         every { app.filesDir } returns files
-        app.clearDatastorePrefFiles(emptySet())
+        // The production teardown order: the live configs first, then the files they did not clear.
+        app.clearDatastorePrefFiles(org.dash.wallet.common.data.BaseConfig.clearAllLiveInstances())
         listener.captured.invoke()
         assertFalse(ordinary.exists())
         assertTrue(File(files, "datastore/${DashConnectConfig.AUDIT_FILE_NAME}").isFile)

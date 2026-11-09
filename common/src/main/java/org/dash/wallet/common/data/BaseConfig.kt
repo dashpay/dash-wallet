@@ -78,7 +78,9 @@ abstract class BaseConfig(
 
             for (instance in snapshot) {
                 try {
-                    instance.clearAll()
+                    // The config's own wipe policy (clearAll() unless it keeps records that must
+                    // survive a same-seed restore, as DashConnectConfig's audit does).
+                    instance.onWalletWiped()
                     cleared.add(instance.preferencesFileName)
                 } catch (e: CancellationException) {
                     throw e
