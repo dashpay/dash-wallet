@@ -29,7 +29,11 @@ import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.sdk.AssetLockKind
 import de.schildbach.wallet.service.platform.sdk.AssetLockKindResolver
 import de.schildbach.wallet.service.platform.sdk.CutoverUiDataService
+import de.schildbach.wallet.service.platform.sdk.PlatformActivityDetail
 import de.schildbach.wallet.service.platform.sdk.SdkTopUpRecoveryService
+import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
+import de.schildbach.wallet.service.platform.sdk.parseShieldedHistoryRowId
+import de.schildbach.wallet.service.platform.sdk.platformActivityDetailOf
 import de.schildbach.wallet.service.platform.sdk.SdkTxDetail
 import de.schildbach.wallet.service.platform.sdk.SdkTxDetailProvider
 import de.schildbach.wallet.service.platform.sdk.toDefaultMetadata
@@ -76,6 +80,7 @@ class TransactionResultViewModel @Inject constructor(
     private val cutoverUiDataService: CutoverUiDataService,
     private val assetLockKindResolver: AssetLockKindResolver,
     private val sdkTopUpRecoveryService: SdkTopUpRecoveryService,
+    private val shieldedBalanceService: ShieldedBalanceService,
     val analytics: AnalyticsService,
     val walletApplication: WalletApplication
 ) : ViewModel() {
@@ -116,6 +121,49 @@ class TransactionResultViewModel @Inject constructor(
     private val _sdkDirectionOverride = MutableStateFlow<SdkTxDetail?>(null)
     val sdkDirectionOverride: StateFlow<SdkTxDetail?>
         get() = _sdkDirectionOverride
+
+    /**
+     * The shielded-pool activity entry a `shielded:` Home row opens (no Core
+     * transaction exists for it). Null until [loadPlatformActivity] has read it.
+     */
+    private val _platformActivityDetail = MutableStateFlow<PlatformActivityDetail?>(null)
+    val platformActivityDetail: StateFlow<PlatformActivityDetail?> = _platformActivityDetail.asStateFlow()
+
+    /**
+     * True when [loadPlatformActivity] could not produce a detail (malformed id,
+     * no ready wallet, row gone or unmappable, read failed) — the sheet closes
+     * instead of showing a fabricated or empty detail.
+     */
+    private val _platformActivityLoadFailed = MutableStateFlow(false)
+    val platformActivityLoadFailed: StateFlow<Boolean> = _platformActivityLoadFailed.asStateFlow()
+
+    private var platformActivityLoad: Job? = null
+
+    /**
+     * Load the detail for a shielded-activity history row id. The service reads
+     * the ACTIVE wallet's row off the main thread. Idempotent across view
+     * recreation: a load already running or finished is not repeated.
+     */
+    fun loadPlatformActivity(rowId: String) {
+        if (platformActivityLoad != null) return
+        val key = parseShieldedHistoryRowId(rowId)
+        if (key == null) {
+            log.warn("shielded activity detail: malformed row id")
+            _platformActivityLoadFailed.value = true
+            return
+        }
+        platformActivityLoad = viewModelScope.launch {
+            val detail = shieldedBalanceService.shieldedActivityEntry(key.accountIndex, key.entryIdHex)
+                ?.let(::platformActivityDetailOf)
+            if (detail == null) {
+                // Value-free: no id, amount or memo.
+                log.warn("shielded activity detail unavailable")
+                _platformActivityLoadFailed.value = true
+            } else {
+                _platformActivityDetail.value = detail
+            }
+        }
+    }
 
     private val _transactionMetadata: MutableStateFlow<TransactionMetadata?> = MutableStateFlow(null)
     val transactionMetadata

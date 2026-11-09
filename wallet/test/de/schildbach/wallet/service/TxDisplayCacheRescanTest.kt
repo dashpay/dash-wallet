@@ -282,6 +282,7 @@ class TxDisplayCacheRescanTest {
         // second one runs on the service's own worker, so wait for it.
         verify(timeout = 5_000, exactly = 2) { cutoverUi.requestFullReconcile() }
         coVerify(exactly = 0) { displayDao.deleteAll() }
+        coVerify(exactly = 0) { displayDao.deleteAllL1() }
         coVerify(exactly = 0) { groupDao.deleteAll() }
     }
 
@@ -293,7 +294,10 @@ class TxDisplayCacheRescanTest {
         coVerify(exactly = 1) { displayDao.deleteAll() }
 
         walletReset.emit(Unit)
-        coVerify(timeout = 5_000, exactly = 2) { displayDao.deleteAll() }
+        // The dashj wallet-reset clear drops the L1 rows only: shielded-activity
+        // rows are not dashj-derived and nothing dashj-side would re-write them.
+        coVerify(timeout = 5_000, exactly = 1) { displayDao.deleteAllL1() }
+        coVerify(exactly = 1) { displayDao.deleteAll() }
         coVerify(exactly = 2) { groupDao.deleteAll() }
         verify(exactly = 0) { cutoverUi.requestFullReconcile() }
     }

@@ -28,6 +28,11 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface TxDisplayCacheDao {
+    companion object {
+        /** Row ids per `IN (…)` delete, under SQLite's 999 bound-variable floor. */
+        const val DELETE_CHUNK = 500
+    }
+
     /**
      * Room-native PagingSource filtered by [filterFlag].
      * Pass [filterFlag] = 0 for ALL (no WHERE filtering).
@@ -36,7 +41,13 @@ interface TxDisplayCacheDao {
     @Query("SELECT * FROM tx_display_cache WHERE (:filterFlag = 0 OR (filterFlags & :filterFlag) != 0) ORDER BY time DESC")
     fun pagingSource(filterFlag: Int): PagingSource<Int, TxDisplayCacheEntry>
 
-    @Query("SELECT COUNT(*) FROM tx_display_cache")
+    /**
+     * Number of L1 ([TxDisplayCacheEntry.SOURCE_L1]) rows. Shielded rows are excluded:
+     * every caller compares this against an L1 count (SDK records, dashj transactions,
+     * the known-zero rebuild gate), and a shielded row must neither mask missing L1 rows
+     * nor keep an empty L1 cache from being rebuilt.
+     */
+    @Query("SELECT COUNT(*) FROM tx_display_cache WHERE source = 0")
     suspend fun getCount(): Int
 
     /**
@@ -45,7 +56,7 @@ interface TxDisplayCacheDao {
      * line (restore birth-date calibration; see
      * [de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService]).
      */
-    @Query("SELECT MIN(time) FROM tx_display_cache")
+    @Query("SELECT MIN(time) FROM tx_display_cache WHERE source = 0")
     suspend fun oldestTimeMs(): Long?
 
     /** Fetch all entries ordered newest-first — used for in-memory snapshot on startup. */
@@ -109,8 +120,25 @@ interface TxDisplayCacheDao {
     )
     suspend fun updateGroupValueAndCount(rowId: String, valueSatoshis: Long, transactionAmount: Int): Int
 
+    /**
+     * Delete EVERY row, L1 and shielded — the wallet wipe (and pre-cutover rescan) clear.
+     * L1-only rebuilds use [deleteAllL1] so they never drop the shielded rows, which only
+     * the shielded sync re-writes (on its next activity emission).
+     */
     @Query("DELETE FROM tx_display_cache")
     suspend fun deleteAll()
+
+    /** Delete every L1 ([TxDisplayCacheEntry.SOURCE_L1]) row; shielded rows are kept. */
+    @Query("DELETE FROM tx_display_cache WHERE source = 0")
+    suspend fun deleteAllL1()
+
+    /** Every shielded-activity row ([TxDisplayCacheEntry.SOURCE_SHIELDED]). */
+    @Query("SELECT * FROM tx_display_cache WHERE source = 1")
+    suspend fun getShieldedRows(): List<TxDisplayCacheEntry>
+
+    /** Delete every shielded row. */
+    @Query("DELETE FROM tx_display_cache WHERE source = 1")
+    suspend fun deleteAllShielded()
 
     /** Delete specific rows by rowId. */
     @Query("DELETE FROM tx_display_cache WHERE rowId IN (:rowIds)")
@@ -136,7 +164,31 @@ interface TxDisplayCacheDao {
      */
     @Transaction
     suspend fun replaceAll(entries: List<TxDisplayCacheEntry>) {
-        deleteAll()
+        // L1 rows only: the dashj rebuild knows nothing of the shielded-activity rows.
+        deleteAllL1()
         if (entries.isNotEmpty()) insertAll(entries)
+    }
+
+    /**
+     * Atomically make the shielded rows exactly [rows]: upsert them and delete every
+     * other [TxDisplayCacheEntry.SOURCE_SHIELDED] row. [keepIds] is the set of row ids to
+     * keep (normally `rows.map { it.rowId }`). L1 rows are never touched — every row in
+     * [rows] must carry [TxDisplayCacheEntry.SOURCE_SHIELDED] and a `shielded:` row id,
+     * so the upsert cannot overwrite an L1 row either.
+     */
+    @Transaction
+    suspend fun replaceShieldedRows(rows: List<TxDisplayCacheEntry>, keepIds: Set<String>) {
+        require(rows.all { it.source == TxDisplayCacheEntry.SOURCE_SHIELDED }) {
+            "replaceShieldedRows accepts shielded rows only"
+        }
+        if (keepIds.isEmpty()) {
+            deleteAllShielded()
+        } else {
+            // A `NOT IN (:keepIds)` delete would bind the whole keep-set, and SQLite caps
+            // bound variables (999 on older devices): diff in memory, delete in chunks.
+            val stale = getShieldedRows().map { it.rowId }.filterNot { it in keepIds }
+            stale.chunked(DELETE_CHUNK).forEach { deleteByIds(it) }
+        }
+        if (rows.isNotEmpty()) insertAll(rows)
     }
 }
