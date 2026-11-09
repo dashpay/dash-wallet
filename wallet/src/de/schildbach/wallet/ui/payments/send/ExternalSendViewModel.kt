@@ -109,6 +109,9 @@ data class ExternalSendConfirm(
  * @property balance the selected [source]'s spendable balance; null = unknown (shown as a
  *   placeholder, never as 0, and it blocks Continue).
  * @property maxSendable null = unknown: Max is unavailable and the [balance] bounds the amount.
+ * @property maxPending Max was set when the source changed: it follows the new [source] once
+ *   that source's [maxSendable] is known (or is dropped when it has none). Meanwhile the amount
+ *   is zero, so the old source's Max can never be confirmed against the new source.
  * @property pinnedAmount the exact amount while [amountText] is only its rendering (a currency
  *   switch rounds fiat to two decimals, a dropped Max leaves its text): never re-parsed until
  *   the user edits the amount (see `ShieldedTransferViewModel`'s pinnedAmount).
@@ -129,6 +132,7 @@ data class ExternalSendUIState(
     val amountText: String = "0",
     val dashMode: Boolean = true,
     val maxAmount: Dash? = null,
+    val maxPending: Boolean = false,
     val pinnedAmount: Dash? = null,
     val fiatCode: String? = null,
     val rate: Fiat? = null,
@@ -201,6 +205,7 @@ data class ExternalSendUIState(
             destination != null &&
             supportOf(source) == SendSupport.SUPPORTED &&
             amount.isPositive &&
+            !maxPending &&
             balance != null &&
             !exceedsBalance &&
             (dashMode || rate != null || pinnedAmount != null || maxAmount != null) &&
@@ -250,6 +255,7 @@ class ExternalSendViewModel internal constructor(
         internal const val KEY_AMOUNT = "external_send_amount"
         internal const val KEY_DASH_MODE = "external_send_dash_mode"
         internal const val KEY_MAX_DUFFS = "external_send_max_duffs"
+        internal const val KEY_MAX_PENDING = "external_send_max_pending"
         internal const val KEY_PINNED_DUFFS = "external_send_pinned_duffs"
         internal const val KEY_SOURCE = "external_send_source"
         internal const val KEY_SOURCE_CHOSEN = "external_send_source_chosen"
@@ -344,16 +350,26 @@ class ExternalSendViewModel internal constructor(
             val amountText = savedState.get<String>(KEY_AMOUNT) ?: "0"
             val dashMode = savedState.get<Boolean>(KEY_DASH_MODE) ?: true
             val maxAmount = savedState.get<Long>(KEY_MAX_DUFFS)?.let(::Dash)
+            val maxPending = maxAmount == null && savedState.get<Boolean>(KEY_MAX_PENDING) == true
             val pinnedAmount = savedState.get<Long>(KEY_PINNED_DUFFS)?.let(::Dash)
             enterAmountStep(parse.destination, amount = null)
             if (chosen && source != null) {
                 selectSource(source, byUser = true)
             }
-            // After the source: a source change drops a Max amount.
+            // After the source: restoring the source must not turn the saved Max into a pending one.
             _uiState.update {
-                it.copy(amountText = amountText, dashMode = dashMode, maxAmount = maxAmount, pinnedAmount = pinnedAmount)
+                it.copy(
+                    amountText = amountText,
+                    dashMode = dashMode,
+                    maxAmount = maxAmount,
+                    maxPending = maxPending,
+                    pinnedAmount = pinnedAmount
+                )
             }
             saveAmount()
+            // The source's Max may already have been read before the pending Max was restored:
+            // read it again so the restored pending Max resolves.
+            if (maxPending) restartBalance()
         }
     }
 
@@ -409,7 +425,9 @@ class ExternalSendViewModel internal constructor(
                 sourceChosenByUser = it.sourceChosenByUser && sameDestination,
                 amountText = amount?.toKeypadString() ?: if (sameDestination) it.amountText else "0",
                 dashMode = if (amount != null) true else it.dashMode,
+                // A new destination (or a URI amount) resets the amount, Max and a pending Max with it.
                 maxAmount = if (sameDestination && amount == null) it.maxAmount else null,
+                maxPending = sameDestination && amount == null && it.maxPending,
                 // A URI amount is exact; it stays pinned until the user edits it.
                 pinnedAmount = amount ?: if (sameDestination) it.pinnedAmount else null,
                 confirm = null,
@@ -435,9 +453,10 @@ class ExternalSendViewModel internal constructor(
         val base = if (state.isMax) displayTextFor(state.amount, state.dashMode, state.rate) else state.amountText
         val decimals = if (state.dashMode) DASH_DECIMALS else FIAT_DECIMALS
         val text = processAmountKeyInput(base, key, decimals)
-        // A key the keypad rejected (text unchanged) keeps the exact amount.
-        if (text == state.amountText && !state.isMax) return
-        _uiState.update { it.copy(amountText = text, maxAmount = null, pinnedAmount = null) }
+        // A key the keypad rejected (text unchanged) keeps the exact amount; any key cancels a
+        // pending Max (the user is entering an amount themselves).
+        if (text == state.amountText && !state.isMax && !state.maxPending) return
+        _uiState.update { it.copy(amountText = text, maxAmount = null, maxPending = false, pinnedAmount = null) }
         saveAmount()
     }
 
@@ -464,7 +483,12 @@ class ExternalSendViewModel internal constructor(
         val max = state.maxSendable ?: return
         if (!state.formEditable) return
         _uiState.update {
-            it.copy(maxAmount = max, pinnedAmount = null, amountText = displayTextFor(max, it.dashMode, it.rate))
+            it.copy(
+                maxAmount = max,
+                maxPending = false,
+                pinnedAmount = null,
+                amountText = displayTextFor(max, it.dashMode, it.rate)
+            )
         }
         saveAmount()
     }
@@ -496,12 +520,16 @@ class ExternalSendViewModel internal constructor(
     private fun selectSource(source: SendBalance, byUser: Boolean) {
         val changed = _uiState.value.source != source
         _uiState.update {
+            // Max follows the source: the old source's Max is never kept as an amount for the new
+            // one. Until the new source's Max is read the amount is zero (Continue stays disabled).
+            val followMax = changed && (it.isMax || it.maxPending)
             it.copy(
                 source = source,
                 sourceChosenByUser = it.sourceChosenByUser || byUser,
                 maxAmount = if (changed) null else it.maxAmount,
-                // A dropped Max keeps its exact amount (no longer Max): its text may be rounded fiat.
-                pinnedAmount = if (changed && it.isMax) it.amount else it.pinnedAmount,
+                maxPending = if (changed) followMax else it.maxPending,
+                pinnedAmount = if (followMax) null else it.pinnedAmount,
+                amountText = if (followMax) "0" else it.amountText,
                 balance = if (changed) null else it.balance,
                 maxSendable = if (changed) null else it.maxSendable
             )
@@ -544,11 +572,34 @@ class ExternalSendViewModel internal constructor(
             .onEach { balance ->
                 if (generation == balanceGeneration) _uiState.update { it.copy(balance = balance) }
             }
-            .mapLatest { balance -> if (balance == null) null else service.maxSendable(source, destination) }
-            .onEach { max ->
-                if (generation == balanceGeneration) _uiState.update { it.copy(maxSendable = max) }
+            .mapLatest { balance -> balance to if (balance == null) null else service.maxSendable(source, destination) }
+            .onEach { (balance, max) ->
+                if (generation == balanceGeneration) onMaxSendable(balance, max)
             }
             .launchIn(viewModelScope)
+    }
+
+    /**
+     * The selected source's [max] was read for its [balance] (null: the balance is not known yet).
+     * A pending Max becomes that Max, exactly as [onMaxClick] sets it; a source with a known
+     * balance but no positive Max drops the pending Max and leaves the amount at zero.
+     */
+    private fun onMaxSendable(balance: Dash?, max: Dash?) {
+        val before = _uiState.value.maxPending
+        _uiState.update {
+            when {
+                !it.maxPending || balance == null -> it.copy(maxSendable = max)
+                max != null && max.isPositive -> it.copy(
+                    maxSendable = max,
+                    maxAmount = max,
+                    maxPending = false,
+                    pinnedAmount = null,
+                    amountText = displayTextFor(max, it.dashMode, it.rate)
+                )
+                else -> it.copy(maxSendable = max, maxPending = false, amountText = "0", pinnedAmount = null)
+            }
+        }
+        if (before) saveAmount()
     }
 
     private fun checkIdentity(destination: SendDestination) {
@@ -635,7 +686,13 @@ class ExternalSendViewModel internal constructor(
         if (status.result is ExternalSendResult.NotSent) {
             executor.acknowledge()
             // Max is chosen again deliberately; the amount it was stays exact.
-            _uiState.update { it.copy(maxAmount = null, pinnedAmount = if (it.isMax) it.amount else it.pinnedAmount) }
+            _uiState.update {
+                it.copy(
+                    maxAmount = null,
+                    maxPending = false,
+                    pinnedAmount = if (it.isMax) it.amount else it.pinnedAmount
+                )
+            }
             saveAmount()
         } else {
             // Set before the executor can reach Idle, so the form never lights up in between.
@@ -680,6 +737,7 @@ class ExternalSendViewModel internal constructor(
         savedState[KEY_AMOUNT] = state.amountText
         savedState[KEY_DASH_MODE] = state.dashMode
         savedState[KEY_MAX_DUFFS] = state.maxAmount?.duffs
+        savedState[KEY_MAX_PENDING] = state.maxPending
         savedState[KEY_PINNED_DUFFS] = state.pinnedAmount?.duffs
     }
 }
