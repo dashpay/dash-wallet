@@ -630,7 +630,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                 )
             }.join()
         } catch (ex: Exception) {
-            log.error("Failed to save barcode for $value", ex)
+            log.error("Failed to save barcode for card $index", ex)
         }
     }
 

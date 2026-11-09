@@ -255,6 +255,8 @@ class CTXSpendRepository @Inject constructor(
                     merchantName = response.merchantName,
                     status = GiftCardStatus.valueOf(response.status.uppercase()),
                     barcodeUrl = response.barcodeUrl,
+                    barcodeType = response.barcodeType,
+                    barcodeContent = response.barcodeContent,
                     cardNumber = response.cardNumber,
                     cardPin = response.cardPin,
                     cryptoAmount = response.cryptoAmount,
