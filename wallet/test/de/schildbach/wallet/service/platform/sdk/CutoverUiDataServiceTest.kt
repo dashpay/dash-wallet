@@ -231,15 +231,15 @@ class CutoverUiDataServiceTest {
 
     @Test
     fun rowPlan_externalUnshieldKeepsReceiveSemantics() {
-        // An AssetUnlock this wallet's pool did not author (a foreign pool's
-        // unshield, or a Platform identity credit withdrawal) is a genuine
-        // receive: "Unshielded Withdrawal", the green inbound arrow, Received
+        // An AssetUnlock this wallet's pool did not author (a Platform address
+        // or identity credit withdrawal, or a foreign pool's unshield) is a
+        // genuine receive: "Withdrawal", the green inbound arrow, Received
         // treatment and the coins-received notification.
         val plan = planL1TxRow(
             record(net = 300_000, context = 1, direction = 0),
             AssetLockKind.UNSHIELD_EXTERNAL
         )
-        assertEquals(R.string.transaction_row_unshielded_withdrawal, plan.titleRes)
+        assertEquals(R.string.transaction_row_withdrawal, plan.titleRes)
         assertEquals(TxDisplayCacheEntry.ICON_RECEIVED, plan.iconType)
         assertEquals(TxDisplayCacheEntry.BG_RECEIVED, plan.iconBgType)
         assertEquals(TxDisplayCacheEntry.FLAG_RECEIVED, plan.filterFlags)
@@ -550,7 +550,7 @@ class CutoverUiDataServiceTest {
             mapOf(cached.rowId to cached), emptySet(), resolve, now,
             kindByTxid = mapOf(displayHex(7) to AssetLockKind.UNSHIELD_EXTERNAL)
         )
-        assertEquals(resolve(R.string.transaction_row_unshielded_withdrawal), plan.updates.single().title)
+        assertEquals(resolve(R.string.transaction_row_withdrawal), plan.updates.single().title)
     }
 
     @Test
@@ -961,7 +961,7 @@ class CutoverUiDataServiceTest {
         val richTitles = listOf(
             R.string.transaction_row_shielded,
             R.string.transaction_row_unshielded,
-            R.string.transaction_row_unshielded_withdrawal,
+            R.string.transaction_row_withdrawal,
             R.string.transaction_row_invitation,
             R.string.dashpay_upgrade_fee,
             R.string.dashpay_topup_fee,
