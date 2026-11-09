@@ -11,18 +11,21 @@
         </trusted-artifacts>
     </configuration>
     <components>
-        <component group="org.dashj" name="dashj-core" version="24.0.0-20261024.220449-1">
-            <artifact name="dashj-core-24.0.0-20261024.220449-1.jar">
-                <sha256 value="1f2afb88ca62ab910554e3aa9bf40c240111fc3d3379da152bf59bc19e7828bd" origin="Reviewed timestamped Core 24 build; see docs/app-connect-v2.md."/>
+        <component group="org.dashj" name="dashj-core" version="24.0.0">
+            <artifact name="dashj-core-24.0.0.jar">
+                <sha256 value="6693111b44c6e5fd2ee293d5ca41fb2e77061276963721e53045325464426c0a" origin="DashJ Core 24.0.0 release, Maven Central."/>
             </artifact>
-            <artifact name="dashj-core-24.0.0-20261024.220449-1.pom">
-                <sha256 value="b0169a055a753dc0aac2b2acdd4c173965e010c6794707bf14be9aded8d09251"/>
+            <artifact name="dashj-core-24.0.0.pom">
+                <sha256 value="7c3268853f0858155ad0b31107cbde12b136c27e9ebb068ae4b1c6206335f1b6"/>
             </artifact>
-            <artifact name="dashj-core-24.0.0-20261024.220449-1.module">
-                <sha256 value="2e64b1e0f6883d46abf9229d86d1d3490dc5a321adc0aaaf97544da3d1e900d6"/>
+            <artifact name="dashj-core-24.0.0.module">
+                <sha256 value="f0d360c98624facabe52c3d673f5c432b10358ffa6d7c20d378fb15b66d2e080"/>
             </artifact>
-            <artifact name="dashj-core-24.0.0-20261024.220449-1-sources.jar">
-                <sha256 value="0c056ba884576f122887918c61ae417b45cf22a2f7eea39c527e6d91bb87496e"/>
+            <artifact name="dashj-core-24.0.0-sources.jar">
+                <sha256 value="02ad2b46d8bbe0f86a8f435abd0a7461af3bfeff63e2010ef63dcb3fface7448"/>
+            </artifact>
+            <artifact name="dashj-core-24.0.0-javadoc.jar">
+                <sha256 value="80089ada315fad225817bd950935120452dbdc415b74b741ba34d901eca4438a"/>
             </artifact>
         </component>
     </components>

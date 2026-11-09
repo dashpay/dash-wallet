@@ -453,4 +453,5 @@
     <string name="crowdnode_withdrawal_reminder_title">Tienes saldo en CrowdNode</string>
     <string name="crowdnode_withdrawal_reminder_message">Estos fondos deben retirarse de CrowdNode. Puede transferirlos a esta billetera o a través de su cuenta en línea en otro dispositivo.</string>
     <string name="crowdnode_withdraw_funds">Retirar fondos</string>
+    <string name="dash_connect_revoke_access">Revocar acceso</string>
 </resources>
