@@ -696,6 +696,13 @@ interface ShieldedSource {
      */
     suspend fun isOwnCoreAddress(walletId: ByteArray, address: String): Boolean
 
+    /**
+     * Whether the SDK holds an output of [walletId] paying the Core [address]
+     * (a `txos` row of that wallet) — i.e. the wallet's L1 history already
+     * shows a payment to it.
+     */
+    suspend fun walletHoldsOutputTo(walletId: ByteArray, address: String): Boolean
+
     /** Whether [walletId] has a `platform_addresses` row with [addressHash]. */
     suspend fun isOwnPlatformAddress(walletId: ByteArray, addressHash: ByteArray): Boolean
 
@@ -895,6 +902,14 @@ internal class DashSdkShieldedSource(
         val accountId = db.coreAddressDao().getByAddress(address)?.accountId ?: return false
         return db.accountDao().getById(accountId)?.walletId?.contentEquals(walletId) == true
     }
+
+    override suspend fun walletHoldsOutputTo(walletId: ByteArray, address: String): Boolean =
+        database().openHelper.readableDatabase.query(
+            androidx.sqlite.db.SimpleSQLiteQuery(
+                "SELECT 1 FROM txos WHERE walletId = ? AND address = ? LIMIT 1",
+                arrayOf<Any>(walletId, address)
+            )
+        ).use { it.moveToFirst() }
 
     override suspend fun isOwnPlatformAddress(walletId: ByteArray, addressHash: ByteArray): Boolean =
         database().platformAddressDao().getByWalletAndAddressHash(walletId, addressHash) != null
@@ -2181,25 +2196,30 @@ class ShieldedBalanceServiceImpl internal constructor(
         }
         val walletId = walletIdFromHex(walletIdHex) ?: return CounterpartyOwnership.UNKNOWN
         return try {
-            val own = withContext(Dispatchers.IO) {
+            withContext(Dispatchers.IO) {
                 when (query) {
-                    is CounterpartyQuery.CoreAddress -> source.isOwnCoreAddress(walletId, query.address)
-                    is CounterpartyQuery.PlatformAddressHash -> source.isOwnPlatformAddress(walletId, query.hash)
-                    is CounterpartyQuery.Identity -> source.isOwnIdentity(walletId, query.identityId)
-                    else -> null
+                    is CounterpartyQuery.CoreAddress -> when {
+                        !source.isOwnCoreAddress(walletId, query.address) -> CounterpartyOwnership.EXTERNAL
+                        // Paid on Core already: the L1 row renders the withdrawal.
+                        source.walletHoldsOutputTo(walletId, query.address) -> CounterpartyOwnership.OWN_PAID_ON_CORE
+                        else -> CounterpartyOwnership.OWN
+                    }
+                    is CounterpartyQuery.PlatformAddressHash ->
+                        ownOrExternal(source.isOwnPlatformAddress(walletId, query.hash))
+                    is CounterpartyQuery.Identity -> ownOrExternal(source.isOwnIdentity(walletId, query.identityId))
+                    else -> CounterpartyOwnership.UNKNOWN
                 }
-            }
-            when (own) {
-                true -> CounterpartyOwnership.OWN
-                false -> CounterpartyOwnership.EXTERNAL
-                null -> CounterpartyOwnership.UNKNOWN
             }
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
-            log.warn("shielded activity counterparty lookup failed ({})", t.javaClass.simpleName)
-            CounterpartyOwnership.UNKNOWN
+            // A failed read is not an answer: the caller retries rather than
+            // re-planning (and so deleting) the row on a guess.
+            throw ShieldedStoreReadException(t)
         }
     }
+
+    private fun ownOrExternal(own: Boolean) =
+        if (own) CounterpartyOwnership.OWN else CounterpartyOwnership.EXTERNAL
 
     override suspend fun shieldedReceiveAddress(): String? {
         if (!ensureShieldedReady()) return null

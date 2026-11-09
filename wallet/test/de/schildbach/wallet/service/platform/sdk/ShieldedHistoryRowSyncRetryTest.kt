@@ -60,6 +60,7 @@ class ShieldedHistoryRowSyncRetryTest {
         every { service.observeShieldedActivityOrNotReady() } returns feed
         coEvery { service.counterpartyOwnership(any(), any()) } returns CounterpartyOwnership.UNKNOWN
         val dao = mockk<TxDisplayCacheDao>()
+        coEvery { dao.getShieldedRows() } returns emptyList()
         var calls = 0
         coEvery { dao.replaceShieldedRows(any(), any()) } answers {
             calls++
@@ -83,5 +84,56 @@ class ShieldedHistoryRowSyncRetryTest {
         coVerify(exactly = 2) {
             dao.replaceShieldedRows(match { rows -> rows.single().rowId == "shielded:0:${"01".repeat(32)}" }, any())
         }
+    }
+
+    @Test
+    fun failedOwnershipRead_writesNothing_keepsRows_andRetries() = runTest {
+        val withdrawal = entry.copy(kindTag = ShieldedActivityKindTag.WITHDRAWAL)
+        val feed = MutableStateFlow<ShieldedActivitySnapshot?>(
+            ShieldedActivitySnapshot("aa".repeat(32), listOf(withdrawal))
+        )
+        val service = mockk<ShieldedBalanceService>()
+        every { service.observeShieldedActivityOrNotReady() } returns feed
+        var reads = 0
+        coEvery { service.counterpartyOwnership(any(), any()) } answers {
+            reads++
+            // The first pass's read fails (a txo / address read). Treating it as
+            // UNKNOWN would re-plan the row away; it must fail the pass instead.
+            if (reads == 1) throw ShieldedStoreReadException(IllegalStateException("db locked"))
+            CounterpartyOwnership.EXTERNAL
+        }
+        val dao = mockk<TxDisplayCacheDao>()
+        coEvery { dao.getShieldedRows() } returns emptyList()
+        coEvery { dao.replaceShieldedRows(any(), any()) } returns Unit
+        val sync = ShieldedHistoryRowSync(
+            service, dao, DisplayCacheRefreshBus(), { "res:$it" }, backgroundScope,
+            StandardTestDispatcher(testScheduler), retryDelayMs = 30_000L
+        )
+
+        sync.start()
+        runCurrent()
+        coVerify(exactly = 0) { dao.replaceShieldedRows(any(), any()) }
+
+        advanceTimeBy(30_001L)
+        runCurrent()
+        coVerify(exactly = 1) { dao.replaceShieldedRows(match { it.size == 1 }, any()) }
+    }
+
+    @Test
+    fun anUnchangedPlan_writesAndSignalsNothing() = runTest {
+        val feed = MutableStateFlow<ShieldedActivitySnapshot?>(ShieldedActivitySnapshot("aa".repeat(32), listOf(entry)))
+        val service = mockk<ShieldedBalanceService>()
+        every { service.observeShieldedActivityOrNotReady() } returns feed
+        coEvery { service.counterpartyOwnership(any(), any()) } returns CounterpartyOwnership.UNKNOWN
+        val planned = planShieldedHistoryRows(listOf(entry), { CounterpartyOwnership.UNKNOWN }, { "res:$it" }).rows
+        val dao = mockk<TxDisplayCacheDao>()
+        coEvery { dao.getShieldedRows() } returns planned
+        val sync = ShieldedHistoryRowSync(
+            service, dao, DisplayCacheRefreshBus(), { "res:$it" }, backgroundScope,
+            StandardTestDispatcher(testScheduler), retryDelayMs = 30_000L
+        )
+        sync.start()
+        runCurrent()
+        coVerify(exactly = 0) { dao.replaceShieldedRows(any(), any()) }
     }
 }

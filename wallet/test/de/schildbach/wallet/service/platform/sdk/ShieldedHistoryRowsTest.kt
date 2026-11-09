@@ -40,8 +40,14 @@ class ShieldedHistoryRowsTest {
     private fun planOrSkip(e: ShieldedActivityEntry, r: (Int) -> String, own: CounterpartyOwnership = CounterpartyOwnership.OWN) =
         planShieldedHistoryRowOrSkip(e, own, r)
 
-    private fun planRows(entries: List<ShieldedActivityEntry>, r: (Int) -> String) =
-        planShieldedHistoryRows(entries, { CounterpartyOwnership.OWN }, r)
+    // Withdrawals: already paid on Core (the L1 row renders them).
+    private fun planRows(entries: List<ShieldedActivityEntry>, r: (Int) -> String) = planShieldedHistoryRows(
+        entries,
+        {
+            if (it.kindTag == ShieldedActivityKindTag.WITHDRAWAL) CounterpartyOwnership.OWN_PAID_ON_CORE else CounterpartyOwnership.OWN
+        },
+        r
+    )
 
     private fun detailOf(e: ShieldedActivityEntry, own: CounterpartyOwnership = CounterpartyOwnership.OWN) =
         platformActivityDetailOf(e, own)
@@ -155,7 +161,7 @@ class ShieldedHistoryRowsTest {
     fun deDupAndNoHonestAmountKinds_produceNoRow() {
         // 1 and 5 are Core transactions, already rendered as L1 rows.
         assertNull(planRow(entry(ShieldedActivityKindTag.SHIELD_FROM_ASSET_LOCK), resolve))
-        assertNull(planRow(entry(ShieldedActivityKindTag.WITHDRAWAL), resolve))
+        assertNull(planRow(entry(ShieldedActivityKindTag.WITHDRAWAL), resolve, CounterpartyOwnership.OWN_PAID_ON_CORE))
         // 7: own spend with only self-change, no honest amount.
         assertNull(planRow(entry(ShieldedActivityKindTag.SHIELDED_SPEND), resolve))
         // Unknown future tags.
@@ -163,7 +169,7 @@ class ShieldedHistoryRowsTest {
         assertNull(planRow(entry(-1), resolve))
         assertEquals(
             ShieldedRowPlan.Skipped(ShieldedRowSkip.KIND_NOT_SHOWN),
-            planOrSkip(entry(ShieldedActivityKindTag.WITHDRAWAL), resolve)
+            planOrSkip(entry(ShieldedActivityKindTag.WITHDRAWAL), resolve, CounterpartyOwnership.OWN_PAID_ON_CORE)
         )
     }
 
@@ -330,7 +336,7 @@ class ShieldedHistoryRowsTest {
             assertEquals("tag $tag to", fromTo.second, detail.toBalanceRes)
         }
         assertNull(detailOf(entry(ShieldedActivityKindTag.SHIELD_FROM_ASSET_LOCK)))
-        assertNull(detailOf(entry(ShieldedActivityKindTag.WITHDRAWAL)))
+        assertNull(detailOf(entry(ShieldedActivityKindTag.WITHDRAWAL), CounterpartyOwnership.OWN_PAID_ON_CORE))
         assertNull(detailOf(entry(ShieldedActivityKindTag.SHIELDED_SPEND)))
         assertNull(detailOf(entry(ShieldedActivityKindTag.SENT, feeCredits = null)))
         assertTrue(detailOf(entry(ShieldedActivityKindTag.SENT, status = ShieldedActivityStatus.UNKNOWN))!!.pending)
@@ -347,7 +353,9 @@ class ShieldedHistoryRowsTest {
             Case(ShieldedActivityKindTag.UNSHIELD, CounterpartyOwnership.OWN, resolve(R.string.transaction_row_unshielded), TxDisplayCacheEntry.ICON_INTERNAL, null),
             Case(ShieldedActivityKindTag.UNSHIELD, CounterpartyOwnership.EXTERNAL, sent, TxDisplayCacheEntry.ICON_SENT, null),
             Case(ShieldedActivityKindTag.UNSHIELD, CounterpartyOwnership.UNKNOWN, sent, TxDisplayCacheEntry.ICON_SENT, null),
-            Case(ShieldedActivityKindTag.WITHDRAWAL, CounterpartyOwnership.OWN, null, null, ShieldedRowSkip.KIND_NOT_SHOWN),
+            // Own withdrawal still in Platform's queue: an own move until the payout is on Core.
+            Case(ShieldedActivityKindTag.WITHDRAWAL, CounterpartyOwnership.OWN, resolve(R.string.transaction_row_unshielded), TxDisplayCacheEntry.ICON_INTERNAL, null),
+            Case(ShieldedActivityKindTag.WITHDRAWAL, CounterpartyOwnership.OWN_PAID_ON_CORE, null, null, ShieldedRowSkip.KIND_NOT_SHOWN),
             Case(ShieldedActivityKindTag.WITHDRAWAL, CounterpartyOwnership.EXTERNAL, sent, TxDisplayCacheEntry.ICON_SENT, null),
             Case(ShieldedActivityKindTag.WITHDRAWAL, CounterpartyOwnership.UNKNOWN, null, null, ShieldedRowSkip.OWNERSHIP_UNKNOWN),
             Case(ShieldedActivityKindTag.IDENTITY_TOP_UP, CounterpartyOwnership.OWN, resolve(R.string.dashpay_topup_fee), TxDisplayCacheEntry.ICON_SENT, null),
@@ -375,6 +383,7 @@ class ShieldedHistoryRowsTest {
             val expectedTo = when {
                 c.own != CounterpartyOwnership.OWN -> null
                 c.tag == ShieldedActivityKindTag.UNSHIELD -> R.string.external_send_balance_name_platform
+                c.tag == ShieldedActivityKindTag.WITHDRAWAL -> R.string.external_send_balance_name_core
                 else -> R.string.external_send_balance_name_identity
             }
             assertEquals(label, expectedTo, detail.toBalanceRes)

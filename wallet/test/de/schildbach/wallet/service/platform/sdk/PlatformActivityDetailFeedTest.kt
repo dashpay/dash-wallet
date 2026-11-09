@@ -176,4 +176,48 @@ class PlatformActivityDetailFeedTest {
         assertEquals(listOf<PlatformActivityDetailState>(PlatformActivityDetailState.Unavailable), withdrawal)
         assertEquals(listOf<PlatformActivityDetailState>(PlatformActivityDetailState.Unavailable), failing)
     }
+
+    @Test
+    fun aFailedStoreRead_keepsTheShownDetail_andRetries() = runTest {
+        var failNext = false
+        val feed = MutableStateFlow<ShieldedActivitySnapshot?>(
+            ShieldedActivitySnapshot(
+                walletA,
+                listOf(entry(ShieldedActivityStatus.PENDING, kindTag = ShieldedActivityKindTag.UNSHIELD))
+            )
+        )
+        val svc = mockk<ShieldedBalanceService>().also {
+            every { it.observeShieldedActivityOrNotReady() } returns feed
+            coEvery { it.counterpartyOwnership(any(), any()) } answers {
+                if (failNext) {
+                    failNext = false
+                    throw ShieldedStoreReadException(IllegalStateException("db locked"))
+                }
+                CounterpartyOwnership.OWN
+            }
+        }
+        val states = mutableListOf<PlatformActivityDetailState>()
+        backgroundScope.launch {
+            platformActivityDetailFeed(svc, rowId, readRetryDelayMs = 5_000L).collect { states += it }
+        }
+        runCurrent()
+        assertTrue((states.last() as PlatformActivityDetailState.Shown).detail.pending)
+
+        // The entry confirms, but this emission's ownership read fails: nothing is
+        // emitted (the pending detail stays shown), never "unavailable".
+        failNext = true
+        feed.value = ShieldedActivitySnapshot(
+            walletA,
+            listOf(entry(ShieldedActivityStatus.CONFIRMED, kindTag = ShieldedActivityKindTag.UNSHIELD))
+        )
+        runCurrent()
+        assertEquals(1, states.size)
+        assertTrue(states.none { it is PlatformActivityDetailState.Unavailable })
+
+        // After the pause the feed re-reads and shows the confirmed entry.
+        advanceTimeBy(5_001L)
+        runCurrent()
+        assertFalse((states.last() as PlatformActivityDetailState.Shown).detail.pending)
+        assertTrue(states.none { it is PlatformActivityDetailState.Unavailable })
+    }
 }

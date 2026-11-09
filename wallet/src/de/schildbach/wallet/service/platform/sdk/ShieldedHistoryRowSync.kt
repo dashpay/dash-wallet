@@ -31,6 +31,10 @@ import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
@@ -49,9 +53,18 @@ import javax.inject.Singleton
  * - "not ready" (`null`, e.g. before bring-up or after a wipe reset) changes
  *   nothing: unknown is not empty, so existing rows stay. Only a READY wallet's
  *   real (possibly empty) list replaces them.
- * - a failed read or write logs (no values) and keeps the rows; the feed is
+ * - a failed read (feed, counterparty ownership, payout txo) or write logs (no
+ *   values) and keeps the rows: nothing of that pass is written. The feed is
  *   re-subscribed after [retryDelayMs], which re-emits the current snapshot and
- *   so retries the write.
+ *   so retries the pass.
+ *
+ * Re-plan triggers: every activity emission, and every L1 display write
+ * ([DisplayCacheRefreshBus.changes], debounced by [replanDebounceMs]) — an own
+ * withdrawal's "Unshielded" row must go once its Core payout lands, which
+ * changes no shielded row. Between the L1 row's insert and that debounced
+ * re-plan both rows can briefly show (at most ~[replanDebounceMs] plus one
+ * pass). A plan equal to the stored rows writes and signals nothing, so the
+ * sync's own writes do not loop through the bus.
  *
  * Lifecycle: [start] is idempotent and once-per-process (called beside
  * [CutoverUiDataService.start]). The wallet wipe calls [stopForWalletWipe]
@@ -59,6 +72,7 @@ import javax.inject.Singleton
  * no write planned from the wiped wallet can land after the clear — and
  * [resumeAfterWalletWipe] once it is done.
  */
+@OptIn(kotlinx.coroutines.FlowPreview::class)
 @Singleton
 class ShieldedHistoryRowSync internal constructor(
     private val shieldedBalanceService: ShieldedBalanceService,
@@ -67,7 +81,8 @@ class ShieldedHistoryRowSync internal constructor(
     private val resolveString: (Int) -> String,
     private val scope: CoroutineScope,
     private val ioDispatcher: CoroutineDispatcher,
-    private val retryDelayMs: Long
+    private val retryDelayMs: Long,
+    private val replanDebounceMs: Long = DEFAULT_REPLAN_DEBOUNCE_MS
 ) {
     @Inject
     constructor(
@@ -88,6 +103,7 @@ class ShieldedHistoryRowSync internal constructor(
     companion object {
         private val log = LoggerFactory.getLogger(ShieldedHistoryRowSync::class.java)
         private const val DEFAULT_RETRY_DELAY_MS = 30_000L
+        private const val DEFAULT_REPLAN_DEBOUNCE_MS = 2_000L
     }
 
     private val lock = Any()
@@ -157,9 +173,16 @@ class ShieldedHistoryRowSync internal constructor(
     private suspend fun collectLoop() {
         while (true) {
             try {
-                shieldedBalanceService.observeShieldedActivityOrNotReady().collect { snapshot ->
-                    applySnapshot(snapshot)
-                }
+                // Re-plan on every activity emission AND after L1 display writes
+                // (debounced): an own withdrawal's row must go once its Core payout
+                // lands, which changes no shielded row. Our own writes tick the bus
+                // too, but an unchanged plan writes nothing and signals nothing.
+                val l1Changes = displayCacheRefreshBus.changes
+                    .debounce(replanDebounceMs)
+                    .onStart { emit(Unit) }
+                combine(shieldedBalanceService.observeShieldedActivityOrNotReady(), l1Changes) { snapshot, _ -> snapshot }
+                    .conflate()
+                    .collect { snapshot -> applySnapshot(snapshot) }
                 // The feed is not expected to complete; resubscribe after a pause if it does.
             } catch (e: CancellationException) {
                 throw e
@@ -178,9 +201,10 @@ class ShieldedHistoryRowSync internal constructor(
      * Apply one activity snapshot: `null` (not ready) is a no-op; a list
      * (possibly empty) replaces the shielded rows, each entry planned with its
      * counterparty ownership resolved against the snapshot's own wallet.
-     * Returns true when the rows were written. A failed write THROWS (after
-     * leaving the existing rows untouched — the replace is one transaction) so
-     * [collectLoop] retries it.
+     * Returns true when the rows were written (false when nothing changed).
+     * A failed ownership read ([ShieldedStoreReadException]) or a failed write
+     * THROWS before anything is written (the replace is one transaction), so
+     * the existing rows stay and [collectLoop] retries the pass.
      */
     internal suspend fun applySnapshot(snapshot: ShieldedActivitySnapshot?): Boolean {
         if (snapshot == null) {
@@ -208,6 +232,7 @@ class ShieldedHistoryRowSync internal constructor(
             log.info("shielded history rows: {} planned, skipped {}", plan.rows.size, plan.skipped)
         }
         currentCoroutineContext().ensureActive()
+        if (txDisplayCacheDao.getShieldedRows().toSet() == plan.rows.toSet()) return false
         txDisplayCacheDao.replaceShieldedRows(plan.rows, plan.rows.mapTo(HashSet()) { it.rowId })
         displayCacheRefreshBus.signalChanged()
         return true

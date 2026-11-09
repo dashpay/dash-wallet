@@ -61,7 +61,9 @@ class ShieldedHistoryRowSyncTest {
     private val walletA = "aa".repeat(32)
     private val walletB = "bb".repeat(32)
     private val l1Txid = "cd".repeat(32)
+    @Volatile
     private var ownership = CounterpartyOwnership.OWN
+    private val bus = DisplayCacheRefreshBus()
 
     @Before
     fun setUp() {
@@ -81,9 +83,9 @@ class ShieldedHistoryRowSyncTest {
     private fun sync(): ShieldedHistoryRowSync {
         val service = mockk<ShieldedBalanceService>()
         every { service.observeShieldedActivityOrNotReady() } returns activity
-        coEvery { service.counterpartyOwnership(any(), any()) } returns ownership
+        coEvery { service.counterpartyOwnership(any(), any()) } answers { ownership }
         return ShieldedHistoryRowSync(
-            service, dao, DisplayCacheRefreshBus(), { "res:$it" }, scope, Dispatchers.IO, retryDelayMs = 10L
+            service, dao, bus, { "res:$it" }, scope, Dispatchers.IO, retryDelayMs = 10L, replanDebounceMs = 10L
         )
     }
 
@@ -265,6 +267,37 @@ class ShieldedHistoryRowSyncTest {
     @Test
     fun unknownWithdrawalDestination_getsNoRow() = runBlocking {
         ownership = CounterpartyOwnership.UNKNOWN
+        val sync = sync()
+        sync.applySnapshot(
+            ShieldedActivitySnapshot(walletA, listOf(entry("05".repeat(32), kindTag = ShieldedActivityKindTag.WITHDRAWAL)))
+        )
+        assertEquals(emptySet<String>(), ids())
+    }
+
+    @Test
+    fun ownWithdrawal_unshieldedUntilPaidOnCore_thenAnL1WriteReplansItAway() = runBlocking {
+        val w = "05".repeat(32)
+        val sync = sync()
+        sync.start()
+        // In Platform's withdrawal queue: no Core output yet → an own "Unshielded" move.
+        activity.value = ShieldedActivitySnapshot(walletA, listOf(entry(w, kindTag = ShieldedActivityKindTag.WITHDRAWAL)))
+        awaitIds(setOf("shielded:0:$w"))
+        val row = dao.getAll().single()
+        assertEquals("res:${de.schildbach.wallet_test.R.string.transaction_row_unshielded}", row.title)
+        assertEquals(TxDisplayCacheEntry.ICON_INTERNAL, row.iconType)
+        assertEquals(-3_000_000L, row.valueSatoshis)
+
+        // The payout lands on Core (txo held) and the L1 writer inserts its row and
+        // signals the bus — no shielded_activities change at all.
+        ownership = CounterpartyOwnership.OWN_PAID_ON_CORE
+        dao.insertAll(listOf(l1Row(l1Txid)))
+        bus.signalChanged()
+        awaitIds(setOf(l1Txid))
+    }
+
+    @Test
+    fun ownWithdrawalAlreadyPaidOnCore_getsNoRow() = runBlocking {
+        ownership = CounterpartyOwnership.OWN_PAID_ON_CORE
         val sync = sync()
         sync.applySnapshot(
             ShieldedActivitySnapshot(walletA, listOf(entry("05".repeat(32), kindTag = ShieldedActivityKindTag.WITHDRAWAL)))

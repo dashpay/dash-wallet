@@ -374,9 +374,13 @@ interface ShieldedBalanceService {
      * wallet [walletIdHex] (the snapshot's wallet — never another): a Core
      * withdrawal address in that wallet's `core_addresses` accounts, an
      * unshield's Platform address in its `platform_addresses`, a topped-up
-     * identity in its `identities`. [CounterpartyOwnership.UNKNOWN] when the
-     * counterparty cannot be decoded or a read fails (logged without values).
-     * Reads off the main thread; never throws except for cancellation.
+     * identity in its `identities`; an own withdrawal address the SDK already
+     * holds a wallet output for is [CounterpartyOwnership.OWN_PAID_ON_CORE].
+     * [CounterpartyOwnership.UNKNOWN] when the counterparty cannot be decoded
+     * or the network is unknown. Reads off the main thread.
+     *
+     * @throws ShieldedStoreReadException when a store read fails — transient,
+     *   never an answer: callers keep what they show and retry.
      */
     suspend fun counterpartyOwnership(walletIdHex: String, entry: ShieldedActivityEntry): CounterpartyOwnership
 

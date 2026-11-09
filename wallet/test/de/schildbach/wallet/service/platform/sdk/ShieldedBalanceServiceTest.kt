@@ -284,6 +284,14 @@ class ShieldedBalanceServiceTest {
             return (walletId.hex() to address) in ownCoreAddresses
         }
 
+        /** Core addresses (per wallet id hex) the SDK holds a wallet output for. */
+        val paidCoreAddresses = mutableSetOf<Pair<String, String>>()
+
+        override suspend fun walletHoldsOutputTo(walletId: ByteArray, address: String): Boolean {
+            ownershipFailure?.let { throw it }
+            return (walletId.hex() to address) in paidCoreAddresses
+        }
+
         override suspend fun isOwnPlatformAddress(walletId: ByteArray, addressHash: ByteArray): Boolean {
             ownershipFailure?.let { throw it }
             return (walletId.hex() to addressHash.hex()) in ownPlatformHashes
@@ -1476,21 +1484,31 @@ class ShieldedBalanceServiceTest {
         source.ownCoreAddresses += walletIdHex to address
         source.ownPlatformHashes += walletIdHex to hashHex
         source.ownIdentities += walletIdHex to "22".repeat(32)
+        // Own address, payout not yet on Core (withdrawal queue): an own move.
         assertEquals(CounterpartyOwnership.OWN, service.counterpartyOwnership(walletIdHex, withdrawal))
+        source.paidCoreAddresses += walletIdHex to address
+        assertEquals(CounterpartyOwnership.OWN_PAID_ON_CORE, service.counterpartyOwnership(walletIdHex, withdrawal))
         assertEquals(CounterpartyOwnership.OWN, service.counterpartyOwnership(walletIdHex, unshield))
         assertEquals(CounterpartyOwnership.OWN, service.counterpartyOwnership(walletIdHex, topUp))
         // Scoped to the wallet asked about: another wallet's rows do not count.
         val other = "cd".repeat(32)
         assertEquals(CounterpartyOwnership.EXTERNAL, service.counterpartyOwnership(other, withdrawal))
 
-        // Undecodable counterparty, a malformed wallet id or a failed read: unknown.
+        // Undecodable counterparty or a malformed wallet id: unknown.
         assertEquals(
             CounterpartyOwnership.UNKNOWN,
             service.counterpartyOwnership(walletIdHex, ownershipEntry(ShieldedActivityKindTag.WITHDRAWAL, ByteArray(5)))
         )
         assertEquals(CounterpartyOwnership.UNKNOWN, service.counterpartyOwnership("zz", withdrawal))
+        // A failed READ is not an answer: it throws, for the caller to retry.
         source.ownershipFailure = IllegalStateException("db closed")
-        assertEquals(CounterpartyOwnership.UNKNOWN, service.counterpartyOwnership(walletIdHex, unshield))
+        for (e in listOf(withdrawal, unshield, topUp)) {
+            try {
+                service.counterpartyOwnership(walletIdHex, e)
+                fail("expected ShieldedStoreReadException")
+            } catch (expected: ShieldedStoreReadException) {
+            }
+        }
     }
 
     @Test
