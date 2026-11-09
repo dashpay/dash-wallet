@@ -55,13 +55,15 @@ enum class AssetLockKind {
     UNSHIELD,
 
     /**
-     * An AssetUnlock from a FOREIGN pool paying this wallet — at the Core
-     * level a plain incoming payment, and it must keep receive semantics
-     * (green inbound arrow, coins-received notification) under the
-     * "Unshielded" label. Field case: a tester funded a different seed in a
-     * desktop wallet, shielded there, and unshielded a piece back to this
-     * wallet — the unconditional kind-7 → self-move treatment relabelled a
-     * genuine external receive.
+     * An AssetUnlock paying this wallet that this wallet's pool did not
+     * author — at the Core level a plain incoming payment, and it must keep
+     * receive semantics (green inbound arrow, coins-received notification).
+     * It carries no source: a Platform address withdrawal, a Platform identity
+     * credit withdrawal (evonode rewards included) or a foreign pool's
+     * unshield, so the row is titled plain "Withdrawal" (2026-11-08). Field
+     * case: a tester funded a different seed in a desktop wallet, shielded
+     * there, and unshielded a piece back to this wallet — the unconditional
+     * kind-7 → self-move treatment relabelled a genuine external receive.
      */
     UNSHIELD_EXTERNAL
 }

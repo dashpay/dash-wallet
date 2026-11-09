@@ -486,12 +486,14 @@ internal fun assetLockTitleRes(kind: AssetLockKind): Int = when (kind) {
     AssetLockKind.PLATFORM -> R.string.transaction_row_platform
     AssetLockKind.UNSHIELD -> R.string.transaction_row_unshielded
     // Every AssetUnlock without evidence that THIS wallet's pool authored it.
-    // That is not only a foreign pool's unshield: a Platform identity credit
-    // withdrawal (evonode reward withdrawals included) is an AssetUnlock too,
-    // and plain "Unshielded" on it read as a shielded-pool move the user never
-    // made (field report, 2026-09-30). Product decision, 2026-09-30, replacing
-    // the shared label of 2026-08-10; the arrow still carries the receive.
-    AssetLockKind.UNSHIELD_EXTERNAL -> R.string.transaction_row_unshielded_withdrawal
+    // A received AssetUnlock carries no source, so it may be a Platform address
+    // withdrawal (sendable via Advanced External Send, Platform → Core), a
+    // Platform identity credit withdrawal (evonode reward withdrawals included)
+    // or a foreign shielded pool's unshield. "Unshielded" mislabels the first
+    // two, so the row reads plain "Withdrawal" (user decision, 2026-11-08,
+    // replacing "Unshielded Withdrawal" of 2026-09-30); the arrow still
+    // carries the receive.
+    AssetLockKind.UNSHIELD_EXTERNAL -> R.string.transaction_row_withdrawal
 }
 
 /**
