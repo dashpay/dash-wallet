@@ -263,8 +263,13 @@ class ExternalSendModelsTest {
 
     @Test
     fun matrix_platform() {
-        assertEquals(SendSupport.NOT_SUPPORTED_YET, support(SendBalance.PLATFORM, core))
-        assertEquals(SendSupport.NOT_SUPPORTED_YET, support(SendBalance.PLATFORM, shielded))
+        // int37: the partial-amount withdrawal and the Type 15 shield to a recipient.
+        assertEquals(SendSupport.SUPPORTED, support(SendBalance.PLATFORM, core))
+        assertEquals(SendSupport.SUPPORTED, support(SendBalance.PLATFORM, shielded))
+        // A P2SH Platform destination is a plain transfer output.
+        assertEquals(SendSupport.SUPPORTED, support(SendBalance.PLATFORM, SendDestination.Platform(platformMainP2sh)))
+        // The Platform source needs no identity.
+        assertEquals(SendSupport.SUPPORTED, support(SendBalance.PLATFORM, core, hasIdentity = false))
         assertEquals(SendSupport.SUPPORTED, support(SendBalance.PLATFORM, platform))
         assertEquals(SendSupport.SUPPORTED, support(SendBalance.PLATFORM, identity))
         assertEquals(SendSupport.SUPPORTED, support(SendBalance.PLATFORM, identity, own = true))
@@ -273,7 +278,8 @@ class ExternalSendModelsTest {
     @Test
     fun matrix_identity() {
         assertEquals(SendSupport.SUPPORTED, support(SendBalance.IDENTITY, core))
-        assertEquals(SendSupport.NOT_SUPPORTED_YET, support(SendBalance.IDENTITY, shielded))
+        // int37: the Type 21 shield to a recipient.
+        assertEquals(SendSupport.SUPPORTED, support(SendBalance.IDENTITY, shielded))
         assertEquals(SendSupport.SUPPORTED, support(SendBalance.IDENTITY, platform))
         assertEquals(SendSupport.SUPPORTED, support(SendBalance.IDENTITY, identity, own = false))
         // To itself: moves nothing.
