@@ -5,7 +5,6 @@ enum class SwapValueErrorType(var amount: String? = null) {
     MoreThanMax,
     NotEnoughBalance,
     UnAuthorizedValue,
-    SendingConditionsUnmet,
     ExchangeRateMissing,
     NOError
 }

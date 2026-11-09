@@ -158,4 +158,5 @@
     <string name="from_dash_wallet_on_this_device">Da sua Carteira Dash neste dispositivo</string>
     <string name="preposition_at">em</string>
     <string name="info">Informação</string>
+    <string name="scan_qr">Digitalizar QR</string>
 </resources>

@@ -150,4 +150,5 @@
     <string name="send_coins_error_msg">مشکل در ارسال مبلغ مورد نظر!</string>
     <string name="from_dash_wallet_on_this_device">از دش والت روی این دستگاه</string>
     <string name="preposition_at">در</string>
-    </resources>
+    <string name="scan_qr">اسکن کیوآر کد</string>
+</resources>

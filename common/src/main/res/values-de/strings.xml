@@ -158,4 +158,5 @@
     <string name="from_dash_wallet_on_this_device">Von der Dash Wallet auf diesem Gerät</string>
     <string name="preposition_at">bei</string>
     <string name="info">Info</string>
+    <string name="scan_qr">QR Code scannen</string>
 </resources>

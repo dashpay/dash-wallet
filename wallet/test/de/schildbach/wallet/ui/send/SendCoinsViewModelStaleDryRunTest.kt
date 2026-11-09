@@ -144,7 +144,6 @@ class SendCoinsViewModelStaleDryRunTest {
             runner.sendCoins(
                 any<SendRequest>(),
                 any<Boolean>(),
-                any<Boolean>(),
                 any<Consumer<Transaction>>(),
                 any<String>(),
                 any<Address>(),
@@ -156,7 +155,7 @@ class SendCoinsViewModelStaleDryRunTest {
         } coAnswers {
             synchronized(sends) {
                 sends.sent += args[0] as SendRequest
-                sends.recipients += args[5] as Address?
+                sends.recipients += args[4] as Address?
             }
             mockk<Transaction>(relaxed = true)
         }
@@ -231,7 +230,7 @@ class SendCoinsViewModelStaleDryRunTest {
     }
 
     private fun send(viewModel: SendCoinsViewModel, amount: Coin) =
-        runBlocking { viewModel.signAndSendPayment(amount, null, true) }
+        runBlocking { viewModel.signAndSendPayment(amount, null) }
 
     /** Opens the send screen paying [payee] with [amount] entered; its dry run is done. */
     private fun open(viewModel: SendCoinsViewModel, payee: Address, amount: Coin) {

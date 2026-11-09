@@ -29,11 +29,10 @@ androidFiles = [
                 "../wallet/res/values/strings-extra.xml",
                 "../common/src/main/res/values/strings.xml",
                 "../integrations/uphold/src/main/res/values/strings-uphold.xml",
-                "../integrations/crowdnode/src/main/res/values/strings-crowdnode.xml",
                 "../integrations/coinbase/src/main/res/values/strings.xml",
                 "../features/exploredash/src/main/res/values/strings-explore-dash.xml"
                 ]
-androidFileDesc = ["wallet", "wallet", "common", "uphold", "crowdnode", "coinbase", "explore-dash"]
+androidFileDesc = ["wallet", "wallet", "common", "uphold", "coinbase", "explore-dash"]
 
 iOSFiles = {"iOS/app-localizable-strings.strings", "iOS/dashsync-localizable-strings.strings"}
 
@@ -147,7 +146,7 @@ def main():
     androidStringsWithEscapeSequences = {}
     androidStringsWithBadWords = {}
     # currently these are case sensitive
-    badWords = [ "passphrase", "Passphrase", "secret key", "Crowdnode", "crowdnode" "CoinBase"]
+    badWords = [ "passphrase", "Passphrase", "secret key", "CoinBase"]
 
     outputFile = codecs.open("translation-comparison-report.html", "w", "utf-8")
     outputFile.write(u'\ufeff')

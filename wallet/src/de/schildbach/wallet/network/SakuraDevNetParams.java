@@ -2,8 +2,9 @@ package de.schildbach.wallet.network;
 
 import org.bitcoinj.core.Address;
 import org.bitcoinj.params.DevNetParams;
+import org.bitcoinj.quorums.LLMQParameters;
 
-/** Wallet-local configuration; consensus defaults are inherited from DashJ. */
+/** Wallet-local Sakura network selection; cryptographic validation stays enabled. */
 public final class SakuraDevNetParams extends DevNetParams {
     private static final String[] PEERS = {
         "68.67.122.86", "68.67.122.87", "68.67.122.240", "68.67.122.241",
@@ -15,6 +16,10 @@ public final class SakuraDevNetParams extends DevNetParams {
     private SakuraDevNetParams(String sporkAddress, int port) {
         super("sakura", sporkAddress, port, PEERS.clone(), true, 70240);
         Address.fromBase58(this, sporkAddress);
+        // Sakura uses rotated devnet quorums (105), not DevNetParams' 60_75 default.
+        // The selector also tells DashJ not to apply non-rotated height alignment to these commitments.
+        llmqTypeDIP0024InstantSend = LLMQParameters.LLMQType.LLMQ_DEVNET_DIP0024;
+        llmqTypePlatform = LLMQParameters.LLMQType.LLMQ_DEVNET_PLATFORM;
     }
 
     public static synchronized SakuraDevNetParams create(String sporkAddress, int port) {

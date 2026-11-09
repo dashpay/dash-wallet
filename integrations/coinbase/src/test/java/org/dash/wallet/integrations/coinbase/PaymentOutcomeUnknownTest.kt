@@ -39,7 +39,6 @@ import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.money.Dash
-import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.common.services.PaymentSubmissionPendingException
 import org.dash.wallet.common.services.SendPaymentService
@@ -81,7 +80,7 @@ class PaymentOutcomeUnknownTest {
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         coEvery {
-            sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any())
+            sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any())
         } throws outcomeUnknown
         every { sendPaymentService.currentWalletSession() } returns null
         every { networkState.isConnected } returns MutableStateFlow(true)
@@ -99,7 +98,7 @@ class PaymentOutcomeUnknownTest {
     fun transferDash_outcomeUnknown_isOutcomeUnknownState_notARetryableFailure() = runTest {
         val viewModel = transferViewModel(SavedStateHandle())
 
-        viewModel.sendDash(Dash.valueOf(100_000), isEmptyWallet = false, checkConditions = false, session = null)
+        viewModel.sendDash(Dash.valueOf(100_000), isEmptyWallet = false, session = null)
 
         assertEquals(
             SendDashResponseState.OutcomeUnknownState,
@@ -111,42 +110,42 @@ class PaymentOutcomeUnknownTest {
     fun transferDash_outcomeUnknown_isTerminal_andRefusesASecondSend() = runTest {
         val viewModel = transferViewModel(SavedStateHandle())
 
-        viewModel.sendDash(Dash.valueOf(100_000), isEmptyWallet = false, checkConditions = false, session = null)
+        viewModel.sendDash(Dash.valueOf(100_000), isEmptyWallet = false, session = null)
         assertTrue(viewModel.paymentOutcomeUnknown.value)
 
         // Continue again on the same screen: refused before anything is sent.
-        viewModel.sendDash(Dash.valueOf(100_000), isEmptyWallet = false, checkConditions = false, session = null)
+        viewModel.sendDash(Dash.valueOf(100_000), isEmptyWallet = false, session = null)
 
-        coVerify(exactly = 1) { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any()) }
+        coVerify(exactly = 1) { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any()) }
     }
 
     @Test
     fun transferDash_outcomeUnknown_survivesRestore_andStillRefusesASend() = runTest {
         val savedState = SavedStateHandle()
         transferViewModel(savedState)
-            .sendDash(Dash.valueOf(100_000), isEmptyWallet = false, checkConditions = false, session = null)
+            .sendDash(Dash.valueOf(100_000), isEmptyWallet = false, session = null)
 
         // A new view model over the saved state, as after the process was killed and restored.
         val restored = transferViewModel(restoredFrom(savedState))
         assertTrue(restored.paymentOutcomeUnknown.value)
-        restored.sendDash(Dash.valueOf(100_000), isEmptyWallet = false, checkConditions = false, session = null)
+        restored.sendDash(Dash.valueOf(100_000), isEmptyWallet = false, session = null)
 
-        coVerify(exactly = 1) { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any()) }
+        coVerify(exactly = 1) { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any()) }
     }
 
     @Test
     fun transferDash_outcomeUnknown_aNewlyOpenedTransferScreen_mayTransferAgain() = runTest {
         // The view model is scoped to the whole Coinbase graph, so it outlives the transfer screen.
         val viewModel = transferViewModel(SavedStateHandle())
-        viewModel.sendDash(Dash.valueOf(100_000), isEmptyWallet = false, checkConditions = false, session = null)
+        viewModel.sendDash(Dash.valueOf(100_000), isEmptyWallet = false, session = null)
         assertTrue(viewModel.paymentOutcomeUnknown.value)
 
         // The user leaves and later opens the transfer screen afresh: a new transfer, not a retry.
         viewModel.startNewTransfer()
 
         assertFalse(viewModel.paymentOutcomeUnknown.value)
-        viewModel.sendDash(Dash.valueOf(100_000), isEmptyWallet = false, checkConditions = false, session = null)
-        coVerify(exactly = 2) { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any()) }
+        viewModel.sendDash(Dash.valueOf(100_000), isEmptyWallet = false, session = null)
+        coVerify(exactly = 2) { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any()) }
     }
 
     @Test
@@ -155,112 +154,94 @@ class PaymentOutcomeUnknownTest {
         // already have gone out: it was reported as a retryable failure.
         val held = CompletableDeferred<Unit>()
         coEvery {
-            sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any())
+            sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any())
         } coAnswers {
             held.await()
             "txid"
         }
         val viewModel = transferViewModel(SavedStateHandle())
 
-        val waiter = launch { viewModel.sendDash(Dash.valueOf(100_000), false, false, null) }
+        val waiter = launch { viewModel.sendDash(Dash.valueOf(100_000), false, null) }
         runCurrent()
         waiter.cancel()
         advanceUntilIdle()
 
         assertTrue(viewModel.paymentOutcomeUnknown.value)
         assertFalse(viewModel.observeSendDashToCoinbaseState.value is SendDashResponseState.FailureState)
-        viewModel.sendDash(Dash.valueOf(100_000), false, false, null)
-        coVerify(exactly = 1) { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any()) }
+        viewModel.sendDash(Dash.valueOf(100_000), false, null)
+        coVerify(exactly = 1) { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any()) }
     }
 
     @Test
     fun transferDash_aSendInProgress_whenTheProcessDies_isAnUnknownOutcome_onRestore() = runTest {
         val held = CompletableDeferred<Unit>()
         coEvery {
-            sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any())
+            sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any())
         } coAnswers {
             held.await()
             "txid"
         }
         val savedState = SavedStateHandle()
         val viewModel = transferViewModel(savedState)
-        val sending = launch { viewModel.sendDash(Dash.valueOf(100_000), false, false, null) }
+        val sending = launch { viewModel.sendDash(Dash.valueOf(100_000), false, null) }
         runCurrent()
 
         // The process is killed now; a new view model starts from the state saved meanwhile.
         val restored = transferViewModel(restoredFrom(savedState))
         assertTrue(restored.paymentOutcomeUnknown.value)
-        restored.sendDash(Dash.valueOf(100_000), false, false, null)
+        restored.sendDash(Dash.valueOf(100_000), false, null)
 
         held.complete(Unit)
         sending.join()
-        coVerify(exactly = 1) { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any()) }
+        coVerify(exactly = 1) { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any()) }
     }
 
     @Test
     fun transferDash_aSubmissionOwnedByTheViewModel_outlivesTheScreen_andCannotBeSentAgain() = runTest {
         val held = CompletableDeferred<Unit>()
         coEvery {
-            sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any())
+            sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any())
         } coAnswers {
             held.await()
             "txid"
         }
         val viewModel = transferViewModel(SavedStateHandle())
 
-        assertTrue(viewModel.submitTransfer(Dash.valueOf(100_000), false, true, null))
+        assertTrue(viewModel.submitTransfer(Dash.valueOf(100_000), false, null))
         // A second Continue, from this screen or a recreated one, while the first is sending.
-        assertFalse(viewModel.submitTransfer(Dash.valueOf(100_000), false, true, null))
+        assertFalse(viewModel.submitTransfer(Dash.valueOf(100_000), false, null))
 
         held.complete(Unit)
         advanceUntilIdle()
 
         assertTrue(viewModel.observeSendDashToCoinbaseState.value is SendDashResponseState.SuccessState)
-        coVerify(exactly = 1) { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any()) }
-    }
-
-    @Test
-    fun transferDash_aLeftoverBalanceWarning_isKeptUntilTheScreenTakesIt_once() = runTest {
-        coEvery {
-            sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any())
-        } throws LeftoverBalanceException(Dash.valueOf(1_000), "leftover")
-        val viewModel = transferViewModel(SavedStateHandle())
-
-        // Raised while no screen is resumed to ask (stopped, or being recreated).
-        assertTrue(viewModel.submitTransfer(Dash.valueOf(100_000), false, true, null))
-        advanceUntilIdle()
-
-        val pending = requireNotNull(viewModel.leftoverBalanceWarning.value)
-        assertEquals(Dash.valueOf(100_000), pending.dashValue)
-        assertTrue(viewModel.consumeLeftoverBalanceWarning(pending))
-        assertFalse("asked once", viewModel.consumeLeftoverBalanceWarning(pending))
-        assertNull(viewModel.leftoverBalanceWarning.value)
+        coVerify(exactly = 1) { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any()) }
     }
 
     @Test
     fun transferDash_aSuccessHeldWhileLocked_whenTheProcessDies_refusesTheTransferOnRestore() = runTest {
-        coEvery { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any()) } returns "txid"
+        coEvery { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any()) } returns "txid"
         val savedState = SavedStateHandle()
         val viewModel = transferViewModel(savedState)
 
         // Sent; the result waits for the screen (the wallet is locked) when the process is killed.
-        assertTrue(viewModel.submitTransfer(Dash.valueOf(100_000), false, true, null))
+        assertTrue(viewModel.submitTransfer(Dash.valueOf(100_000), false, null))
         advanceUntilIdle()
         assertTrue(viewModel.observeSendDashToCoinbaseState.value is SendDashResponseState.SuccessState)
 
         val restored = transferViewModel(restoredFrom(savedState))
         assertTrue(restored.paymentOutcomeUnknown.value)
-        assertFalse(restored.submitTransfer(Dash.valueOf(100_000), false, true, null))
-        coVerify(exactly = 1) { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any()) }
+        assertFalse(restored.submitTransfer(Dash.valueOf(100_000), false, null))
+        coVerify(exactly = 1) { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any()) }
     }
 
     @Test
     fun transferDash_aSuccessShownButNotAnswered_isUnknownOnRestore_andAnsweredIsNot() = runTest {
-        coEvery { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any()) } returns "txid"
+        coEvery { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any()) } returns "txid"
         val savedState = SavedStateHandle()
         val viewModel = transferViewModel(savedState)
 
-        assertTrue(viewModel.submitTransfer(Dash.valueOf(100_000), false, true, null))
+        assertTrue(viewModel.submitTransfer(Dash.valueOf(100_000), false, null))
         advanceUntilIdle()
         val result = requireNotNull(viewModel.observeSendDashToCoinbaseState.value)
         assertTrue(viewModel.consumeSendDashToCoinbaseState(result))
@@ -276,10 +257,10 @@ class PaymentOutcomeUnknownTest {
     fun transferDash_aSentTransfer_isASuccess_evenWhenTheWalletDoesNotListItAsPending() = runTest {
         // The wallet may not have the transaction yet, or it may be confirmed already.
         every { walletDataProvider.getTransaction(any()) } returns null
-        coEvery { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any()) } returns "txid"
+        coEvery { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any()) } returns "txid"
         val viewModel = transferViewModel(SavedStateHandle())
 
-        assertTrue(viewModel.submitTransfer(Dash.valueOf(100_000), false, true, null))
+        assertTrue(viewModel.submitTransfer(Dash.valueOf(100_000), false, null))
         advanceUntilIdle()
 
         val result = requireNotNull(viewModel.observeSendDashToCoinbaseState.value)
@@ -293,68 +274,32 @@ class PaymentOutcomeUnknownTest {
 
     @Test
     fun transferDash_aSecondContinue_betweenASuccessAndItsAnswer_isRefused() = runTest {
-        coEvery { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any()) } returns "txid"
+        coEvery { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any()) } returns "txid"
         val viewModel = transferViewModel(SavedStateHandle())
 
-        assertTrue(viewModel.submitTransfer(Dash.valueOf(100_000), false, true, null))
+        assertTrue(viewModel.submitTransfer(Dash.valueOf(100_000), false, null))
         advanceUntilIdle()
         assertTrue(viewModel.observeSendDashToCoinbaseState.value is SendDashResponseState.SuccessState)
 
-        assertFalse(viewModel.submitTransfer(Dash.valueOf(100_000), false, true, null))
-        viewModel.sendDash(Dash.valueOf(100_000), false, false, null)
+        assertFalse(viewModel.submitTransfer(Dash.valueOf(100_000), false, null))
+        viewModel.sendDash(Dash.valueOf(100_000), false, null)
         advanceUntilIdle()
-        coVerify(exactly = 1) { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any()) }
-    }
-
-    @Test
-    fun transferDash_anEarlierTransfersLeftoverWarning_isNotAskedOnANewTransferScreen() = runTest {
-        coEvery {
-            sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any())
-        } throws LeftoverBalanceException(Dash.valueOf(1_000), "leftover")
-        val viewModel = transferViewModel(SavedStateHandle())
-
-        // Raised for a transfer the user left without answering.
-        assertTrue(viewModel.submitTransfer(Dash.valueOf(100_000), false, true, null))
-        advanceUntilIdle()
-        assertTrue(viewModel.leftoverBalanceWarning.value != null)
-
-        viewModel.startNewTransfer()
-
-        assertNull(viewModel.leftoverBalanceWarning.value)
+        coVerify(exactly = 1) { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any()) }
     }
 
     @Test
     fun transferDash_aSendFinishingAfterANewTransferOpened_isNotShownOnIt() = runTest {
-        val held = CompletableDeferred<Unit>()
-        var leftover = true
-        coEvery {
-            sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any())
-        } coAnswers {
-            held.await()
-            if (leftover) throw LeftoverBalanceException(Dash.valueOf(1_000), "leftover")
-            "txid"
-        }
         val viewModel = transferViewModel(SavedStateHandle())
 
-        assertTrue(viewModel.submitTransfer(Dash.valueOf(100_000), false, true, null))
-        runCurrent()
-        // The screen is left (e.g. the session expired) and Transfer is opened again.
-        viewModel.startNewTransfer()
-        held.complete(Unit)
-        advanceUntilIdle()
-
-        assertNull("the old amount's question", viewModel.leftoverBalanceWarning.value)
-
-        // Likewise an old transfer's result, or its unknown outcome.
+        // An old transfer's result, or its unknown outcome, is not shown on a new transfer screen.
         val again = CompletableDeferred<Unit>()
-        leftover = false
         coEvery {
-            sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any())
+            sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any())
         } coAnswers {
             again.await()
             throw outcomeUnknown
         }
-        assertTrue(viewModel.submitTransfer(Dash.valueOf(100_000), false, true, null))
+        assertTrue(viewModel.submitTransfer(Dash.valueOf(100_000), false, null))
         runCurrent()
         viewModel.startNewTransfer()
         again.complete(Unit)
@@ -368,27 +313,27 @@ class PaymentOutcomeUnknownTest {
     fun transferDash_concurrentSends_onlyOneReachesTheWallet_andARetryableFailureAllowsAnother() = runTest {
         val gate = CompletableDeferred<Unit>()
         coEvery {
-            sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any())
+            sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any())
         } coAnswers {
             gate.await()
             throw IllegalStateException("rejected")
         }
         val viewModel = transferViewModel(SavedStateHandle())
 
-        val first = launch { viewModel.sendDash(Dash.valueOf(100_000), false, false, null) }
-        val second = launch { viewModel.sendDash(Dash.valueOf(100_000), false, false, null) }
+        val first = launch { viewModel.sendDash(Dash.valueOf(100_000), false, null) }
+        val second = launch { viewModel.sendDash(Dash.valueOf(100_000), false, null) }
         runCurrent()
         gate.complete(Unit)
         advanceUntilIdle()
         first.join()
         second.join()
 
-        coVerify(exactly = 1) { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any()) }
+        coVerify(exactly = 1) { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any()) }
         assertFalse(viewModel.paymentOutcomeUnknown.value)
 
         // The send was refused (a retryable failure): the user may try again.
-        viewModel.sendDash(Dash.valueOf(100_000), false, false, null)
-        coVerify(exactly = 2) { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any()) }
+        viewModel.sendDash(Dash.valueOf(100_000), false, null)
+        coVerify(exactly = 2) { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any()) }
     }
 
     @Test
@@ -411,7 +356,7 @@ class PaymentOutcomeUnknownTest {
         viewModel.commitSwapTrade("trade", Constants.DASH_CURRENCY, "0.01").join()
 
         coVerify(exactly = 1) { coinBaseRepository.commitSwapTrade(any()) }
-        coVerify(exactly = 1) { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any()) }
+        coVerify(exactly = 1) { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any()) }
     }
 
     @Test
@@ -420,7 +365,7 @@ class PaymentOutcomeUnknownTest {
             ResponseResource.Success(SwapTradeUIModel(swapTradeId = "trade", inputCurrency = Constants.DASH_CURRENCY))
         coEvery { coinBaseRepository.createAddress() } returns ResponseResource.Success("XcoinbaseDepositAddress")
         coEvery {
-            sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any())
+            sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any())
         } throws IllegalStateException("rejected")
         val viewModel = previewViewModel(SavedStateHandle())
         var failureEvents = 0
@@ -438,7 +383,7 @@ class PaymentOutcomeUnknownTest {
         coEvery { coinBaseRepository.commitSwapTrade(any()) } returns
             ResponseResource.Success(SwapTradeUIModel(swapTradeId = "trade", inputCurrency = Constants.DASH_CURRENCY))
         coEvery { coinBaseRepository.createAddress() } returns ResponseResource.Success("XcoinbaseDepositAddress")
-        coEvery { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any()) } returns "txid"
+        coEvery { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any()) } returns "txid"
         val viewModel = previewViewModel(SavedStateHandle())
 
         viewModel.commitSwapTrade("trade", Constants.DASH_CURRENCY, "0.01").join()
@@ -451,7 +396,7 @@ class PaymentOutcomeUnknownTest {
         coEvery { coinBaseRepository.commitSwapTrade(any()) } returns
             ResponseResource.Success(SwapTradeUIModel(swapTradeId = "trade", inputCurrency = Constants.DASH_CURRENCY))
         coEvery { coinBaseRepository.createAddress() } returns ResponseResource.Success("XcoinbaseDepositAddress")
-        coEvery { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any()) } returns "txid"
+        coEvery { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any()) } returns "txid"
         val viewModel = previewViewModel(SavedStateHandle())
         viewModel.commitSwapTrade("trade", Constants.DASH_CURRENCY, "0.01").join()
 
@@ -466,7 +411,7 @@ class PaymentOutcomeUnknownTest {
         assertTrue(viewModel.consumeSaleSent(sent))
         viewModel.commitSwapTrade("trade", Constants.DASH_CURRENCY, "0.01").join()
         coVerify(exactly = 1) { coinBaseRepository.commitSwapTrade(any()) }
-        coVerify(exactly = 1) { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any()) }
+        coVerify(exactly = 1) { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any()) }
     }
 
     @Test
@@ -479,7 +424,7 @@ class PaymentOutcomeUnknownTest {
             ResponseResource.Success(SwapTradeUIModel(swapTradeId = "trade", inputCurrency = Constants.DASH_CURRENCY))
         }
         coEvery { coinBaseRepository.createAddress() } returns ResponseResource.Success("XcoinbaseDepositAddress")
-        coEvery { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any()) } returns "txid"
+        coEvery { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any()) } returns "txid"
         val savedState = SavedStateHandle()
         val committing = previewViewModel(savedState).commitSwapTrade("trade", Constants.DASH_CURRENCY, "0.01")
         runCurrent()
@@ -517,7 +462,7 @@ class PaymentOutcomeUnknownTest {
         restored.commitSwapTrade("trade", Constants.DASH_CURRENCY, "0.01").join()
 
         coVerify(exactly = 1) { coinBaseRepository.commitSwapTrade(any()) }
-        coVerify(exactly = 1) { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any()) }
+        coVerify(exactly = 1) { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any()) }
     }
 
     @Test
@@ -551,7 +496,7 @@ class PaymentOutcomeUnknownTest {
         coEvery { coinBaseRepository.createAddress() } returns ResponseResource.Success("XcoinbaseDepositAddress")
         val held = CompletableDeferred<Unit>()
         coEvery {
-            sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any())
+            sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any())
         } coAnswers {
             held.await()
             "txid"
@@ -568,7 +513,7 @@ class PaymentOutcomeUnknownTest {
         held.complete(Unit)
         committing.join()
         coVerify(exactly = 1) { coinBaseRepository.commitSwapTrade(any()) }
-        coVerify(exactly = 1) { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any()) }
+        coVerify(exactly = 1) { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any()) }
     }
 
     @Test
@@ -576,7 +521,7 @@ class PaymentOutcomeUnknownTest {
         coEvery { coinBaseRepository.commitSwapTrade(any()) } returns
             ResponseResource.Success(SwapTradeUIModel(swapTradeId = "trade", inputCurrency = Constants.DASH_CURRENCY))
         coEvery { coinBaseRepository.createAddress() } returns ResponseResource.Success("XcoinbaseDepositAddress")
-        coEvery { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any()) } returns "txid"
+        coEvery { sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any()) } returns "txid"
         val savedState = SavedStateHandle()
         val viewModel = previewViewModel(savedState)
 
@@ -597,7 +542,7 @@ class PaymentOutcomeUnknownTest {
             ResponseResource.Success(SwapTradeUIModel(swapTradeId = "trade", inputCurrency = Constants.DASH_CURRENCY))
         coEvery { coinBaseRepository.createAddress() } returns ResponseResource.Success("XcoinbaseDepositAddress")
         coEvery {
-            sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any(), any())
+            sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any())
         } throws IllegalStateException("rejected")
         val savedState = SavedStateHandle()
         previewViewModel(savedState).commitSwapTrade("trade", Constants.DASH_CURRENCY, "0.01").join()
