@@ -37,6 +37,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.DialogWindowProvider
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.currentStateAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -115,36 +124,84 @@ fun InternalTransferScreen(uiState: InternalTransferUIState, actions: InternalTr
 
         val picker = uiState.picker
         if (picker != null && uiState.formEditable) {
-            PickerSheet(uiState, picker, actions)
+            AboveBottomNavigation(onBack = actions.onDismissPicker) {
+                PickerSheet(uiState, picker, actions)
+            }
         }
 
         val confirm = uiState.confirm
         if (confirm != null && uiState.status == ExternalSendStatus.Idle) {
             val request = confirm.request
-            SendConfirmSheet(
-                amount = request.amount,
-                rate = uiState.rate,
-                fiatCode = uiState.fiatCode,
-                fromValue = stringResource(balanceNameFor(request.from)),
-                toValue = stringResource(balanceNameFor(request.to)),
-                fee = confirm.fee,
-                feeLoading = confirm.feeLoading,
-                total = confirm.total,
-                feeIncluded = false,
-                notes = internalConfirmNotes(request.from, request.to),
-                onDismiss = actions.onDismissConfirm,
-                onConfirm = actions.onConfirm
-            )
+            AboveBottomNavigation(onBack = actions.onDismissConfirm) {
+                SendConfirmSheet(
+                    amount = request.amount,
+                    rate = uiState.rate,
+                    fiatCode = uiState.fiatCode,
+                    fromValue = stringResource(balanceNameFor(request.from)),
+                    toValue = stringResource(balanceNameFor(request.to)),
+                    fee = confirm.fee,
+                    feeLoading = confirm.feeLoading,
+                    total = confirm.total,
+                    feeIncluded = false,
+                    notes = internalConfirmNotes(request.from, request.to),
+                    onDismiss = actions.onDismissConfirm,
+                    onConfirm = actions.onConfirm
+                )
+            }
         }
 
         when (val status = uiState.status) {
             // A shielded leg's ~30 s proof can be left: Close hides the overlay (the form stays
-            // disabled) and the outcome shows when it arrives.
+            // disabled) and the outcome shows when it arrives. Back does what Close does, and
+            // nothing while a Core / Platform transfer (seconds, not leavable) runs.
             is ExternalSendStatus.Sending -> if (!uiState.sendingHidden) {
-                SendingOverlay(status.shieldedLeg, actions.onHideSending)
+                AboveBottomNavigation(onBack = if (status.shieldedLeg) actions.onHideSending else null) {
+                    SendingOverlay(status.shieldedLeg, actions.onHideSending)
+                }
             }
             is ExternalSendStatus.Done -> ResultDialog(status.result, status.afterRestart, actions.onResultClosed)
             ExternalSendStatus.Idle, ExternalSendStatus.Restoring -> {}
+        }
+    }
+}
+
+/**
+ * Shows [content] (a full-screen scrim with a sheet or a card) in its own window, over the host's
+ * tab picker and the app's bottom navigation. The Internal page is a pager page of
+ * AdvancedPaymentsFragment, whose `nav_home` destination keeps MainActivity's bottom navigation
+ * drawn over the bottom of the nav host: drawn in the page, the sheet's lower rows would sit under
+ * it, and the scrim would leave the tab picker and the navigation tappable. The External Send has
+ * no bottom navigation, so it draws the same overlays in place.
+ *
+ * The window fits the system bars, as MainActivity's content does, and has no dim of its own: the
+ * overlay's scrim is the only one, so it looks as it does in the External Send. Back calls [onBack]
+ * (null: Back does nothing while the window shows).
+ *
+ * Only the selected pager page (RESUMED; ViewPager2 keeps the offscreen one at STARTED) opens the
+ * window: an offscreen Internal page draws the overlay in place, where it is not seen.
+ */
+@Composable
+private fun AboveBottomNavigation(onBack: (() -> Unit)?, content: @Composable () -> Unit) {
+    val lifecycleState by LocalLifecycleOwner.current.lifecycle.currentStateAsState()
+    if (!lifecycleState.isAtLeast(Lifecycle.State.RESUMED)) {
+        content()
+        return
+    }
+    Dialog(
+        onDismissRequest = { onBack?.invoke() },
+        properties = DialogProperties(
+            dismissOnBackPress = onBack != null,
+            dismissOnClickOutside = false,
+            usePlatformDefaultWidth = false
+        )
+    ) {
+        val window = (LocalView.current.parent as? DialogWindowProvider)?.window
+        SideEffect {
+            window?.setDimAmount(0f)
+            window?.setWindowAnimations(0)
+        }
+        Box(modifier = Modifier.fillMaxSize()) {
+            content()
         }
     }
 }
