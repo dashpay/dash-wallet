@@ -31,7 +31,7 @@ class InternalTransferModelsTest {
     private val supported = setOf(
         CORE to SHIELDED, CORE to IDENTITY,
         SHIELDED to CORE, SHIELDED to PLATFORM, SHIELDED to IDENTITY,
-        PLATFORM to SHIELDED, PLATFORM to IDENTITY,
+        PLATFORM to CORE, PLATFORM to SHIELDED, PLATFORM to IDENTITY,
         IDENTITY to CORE, IDENTITY to PLATFORM
     )
 
@@ -48,11 +48,11 @@ class InternalTransferModelsTest {
                 assertEquals("$from → $to", (from to to) in supported, internalTransferPairSupported(from, to))
             }
         }
-        // Exactly the three pairs the SDK cannot do yet are disabled.
+        // Exactly the two pairs the SDK cannot do yet are disabled.
         val notYet = SendBalance.entries.flatMap { f -> SendBalance.entries.map { f to it } }
             .filter { internalTransferSupport(it.first, it.second, true, true) == InternalTransferSupport.NOT_SUPPORTED_YET }
             .toSet()
-        assertEquals(setOf(CORE to PLATFORM, PLATFORM to CORE, IDENTITY to SHIELDED), notYet)
+        assertEquals(setOf(CORE to PLATFORM, IDENTITY to SHIELDED), notYet)
     }
 
     @Test
@@ -64,6 +64,8 @@ class InternalTransferModelsTest {
         assertEquals(InternalTransferSupport.SUPPORTED, internalTransferSupport(IDENTITY, CORE, false, true))
         // The matrix wins over the flags: an unsupported pair is "not yet", whatever they say.
         assertEquals(InternalTransferSupport.NOT_SUPPORTED_YET, internalTransferSupport(CORE, PLATFORM, false, false))
+        // Platform → Core needs neither the shielded feature nor an identity.
+        assertEquals(InternalTransferSupport.SUPPORTED, internalTransferSupport(PLATFORM, CORE, false, false))
     }
 
     @Test
@@ -76,6 +78,10 @@ class InternalTransferModelsTest {
     @Test
     fun `swap exchanges From and To (AC3)`() {
         assertEquals(InternalTransferPair(SHIELDED, CORE), InternalTransferPair(CORE, SHIELDED).swapped())
+        // The default with no shielded feature and no identity swaps to the one supported pair left.
+        val swapped = defaultInternalTransferPair(false, false).swapped()
+        assertEquals(InternalTransferPair(PLATFORM, CORE), swapped)
+        assertEquals(InternalTransferSupport.SUPPORTED, internalTransferSupport(swapped.from, swapped.to, false, false))
     }
 
     @Test
