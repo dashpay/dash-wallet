@@ -18,7 +18,6 @@
 package de.schildbach.wallet.data
 
 import de.schildbach.wallet.service.platform.sdk.CutoverTxSeamService
-import de.schildbach.wallet.service.platform.sdk.SeamOutputLockRegistry
 import de.schildbach.wallet.transactions.LockedTransaction
 import de.schildbach.wallet.transactions.NeutralFilterAdapter
 import de.schildbach.wallet.transactions.WalletTransactionFilter
@@ -65,8 +64,7 @@ class WalletDataAdapter @Inject constructor(
     // dagger.Lazy breaks the DI cycle DashPayConfig → WalletDataProvider →
     // WalletDataAdapter → CutoverTxSeamService → DashPayConfig; the seam
     // service is only dereferenced at call time, never at construction.
-    private val txSeamServiceLazy: dagger.Lazy<CutoverTxSeamService>,
-    private val seamLockRegistry: SeamOutputLockRegistry
+    private val txSeamServiceLazy: dagger.Lazy<CutoverTxSeamService>
 ) : WalletDataProvider {
 
     private val txSeamService: CutoverTxSeamService

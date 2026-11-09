@@ -22,7 +22,6 @@ import de.schildbach.wallet.service.platform.sdk.CutoverUiSource
 import de.schildbach.wallet.service.platform.sdk.L1TxUiRecord
 import de.schildbach.wallet.service.platform.sdk.SdkBalanceSplitDuffs
 import de.schildbach.wallet.service.platform.sdk.SdkSeamTxSnapshot
-import de.schildbach.wallet.service.platform.sdk.SeamOutputLockRegistry
 import de.schildbach.wallet.service.platform.sdk.l1TxUiRecord
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import io.mockk.every
@@ -153,7 +152,7 @@ class WalletDataAdapterSeamRoutingTest {
         runCurrent()
 
         val walletData = mockWalletData(listOf(dashjOnlyTx))
-        val adapter = WalletDataAdapter(walletData, { service }, SeamOutputLockRegistry())
+        val adapter = WalletDataAdapter(walletData, { service })
 
         val txs = adapter.getTransactions()
         assertEquals(listOf(dashjOnlyTx.txId.toString()), txs.map { it.txId })
@@ -178,7 +177,7 @@ class WalletDataAdapterSeamRoutingTest {
         runCurrent()
 
         val walletData = mockWalletData(listOf(sdkTx, dashjOnlyTx))
-        val adapter = WalletDataAdapter(walletData, { service }, SeamOutputLockRegistry())
+        val adapter = WalletDataAdapter(walletData, { service })
 
         // getTransactions: SDK set wins for txs the SDK knows; held-dashj
         // history the SDK never saw is unioned in (dedup'd by txid).
@@ -218,7 +217,7 @@ class WalletDataAdapterSeamRoutingTest {
         service.start()
         runCurrent()
 
-        val adapter = WalletDataAdapter(mockWalletData(listOf(sdkTx, dashjOnlyTx)), { service }, SeamOutputLockRegistry())
+        val adapter = WalletDataAdapter(mockWalletData(listOf(sdkTx, dashjOnlyTx)), { service })
 
         assertEquals(
             listOf(dashjOnlyTx.txId.toString()),
@@ -240,7 +239,7 @@ class WalletDataAdapterSeamRoutingTest {
         service.start()
         runCurrent()
 
-        val adapter = WalletDataAdapter(mockWalletData(listOf(sdkTx, dashjOnlyTx)), { service }, SeamOutputLockRegistry())
+        val adapter = WalletDataAdapter(mockWalletData(listOf(sdkTx, dashjOnlyTx)), { service })
 
         val sdkMatch = adapter.getTransactions(txIdFilter(sdkTx.txId))
         assertEquals(listOf(sdkTx.txId.toString()), sdkMatch.map { it.txId })
@@ -272,14 +271,13 @@ class WalletDataAdapterSeamRoutingTest {
 
         // The held dashj wallet holds the same txid the SDK serves. The filter rejects the
         // SDK copy, and the held dashj copy must not take its place.
-        val sameTxidAdapter = WalletDataAdapter(mockWalletData(listOf(sdkTx)), { service }, SeamOutputLockRegistry())
+        val sameTxidAdapter = WalletDataAdapter(mockWalletData(listOf(sdkTx)), { service })
         assertTrue(sameTxidAdapter.getTransactions(hasRaw).isEmpty())
 
         // A held-dashj-only tx is still filtered in alongside it.
         val adapter = WalletDataAdapter(
             mockWalletData(listOf(sdkTx, dashjOnlyTx)),
-            { service },
-            SeamOutputLockRegistry()
+            { service }
         )
         assertEquals(listOf(dashjOnlyTx.txId.toString()), adapter.getTransactions(hasRaw).map { it.txId })
     }
@@ -293,7 +291,7 @@ class WalletDataAdapterSeamRoutingTest {
         runCurrent()
 
         val walletData = mockWalletData(listOf(dashjOnlyTx))
-        val adapter = WalletDataAdapter(walletData, { service }, SeamOutputLockRegistry())
+        val adapter = WalletDataAdapter(walletData, { service })
 
         backgroundScope.launch { adapter.observeTransactions(false).collect {} }
         runCurrent()
@@ -316,8 +314,7 @@ class WalletDataAdapterSeamRoutingTest {
         service.start()
         runCurrent()
 
-        val registry = SeamOutputLockRegistry()
-        val adapter = WalletDataAdapter(mockWalletData(emptyList()), { service }, registry)
+        val adapter = WalletDataAdapter(mockWalletData(emptyList()), { service })
 
         var waitThrew = false
         try {
@@ -336,7 +333,7 @@ class WalletDataAdapterSeamRoutingTest {
         service.start()
         runCurrent()
 
-        val adapter = WalletDataAdapter(mockWalletData(emptyList()), { service }, SeamOutputLockRegistry())
+        val adapter = WalletDataAdapter(mockWalletData(emptyList()), { service })
 
         var completed = false
         val wait = backgroundScope.launch {
@@ -361,7 +358,7 @@ class WalletDataAdapterSeamRoutingTest {
         service.start()
         runCurrent()
 
-        val adapter = WalletDataAdapter(mockWalletData(emptyList()), { service }, SeamOutputLockRegistry())
+        val adapter = WalletDataAdapter(mockWalletData(emptyList()), { service })
 
         // Current-state replay: no further snapshot/event is needed.
         adapter.waitUntilLocked(sdkTx.txId.toString())
