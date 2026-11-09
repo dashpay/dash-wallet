@@ -14,7 +14,7 @@ This project contains several sub-projects:
       A tiny library for integrating Dash payments into your own Android app
      (e.g. donations, in-app purchases).
  * __integrations__
-     Contains the various integrations: Crowdnode, Coinbase, Uphold,
+     Contains the various integrations: Coinbase, Uphold,
  * __sample-integration-android__:
      A minimal example app to demonstrate integration of digital payments into
      your Android app.

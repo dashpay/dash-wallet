@@ -199,8 +199,8 @@ class TransferDashViewModel @Inject constructor(
         }
     }
 
-    suspend fun sendDash(dashValue: Coin, isEmptyWallet: Boolean, checkConditions: Boolean) {
-        _sendDashToCoinbaseState.value = checkTransaction(dashValue, isEmptyWallet, checkConditions)
+    suspend fun sendDash(dashValue: Coin, isEmptyWallet: Boolean) {
+        _sendDashToCoinbaseState.value = checkTransaction(dashValue, isEmptyWallet)
     }
 
     suspend fun estimateNetworkFee(value: Coin, emptyWallet: Boolean): SendPaymentService.TransactionDetails? {
@@ -229,23 +229,19 @@ class TransferDashViewModel @Inject constructor(
 
     private suspend fun checkTransaction(
         coin: Coin,
-        isEmptyWallet: Boolean,
-        checkConditions: Boolean
+        isEmptyWallet: Boolean
     ): SendDashResponseState {
         return try {
             val transaction = sendPaymentService.sendCoins(
                 dashAddress,
                 coin,
-                emptyWallet = isEmptyWallet,
-                checkBalanceConditions = checkConditions
+                emptyWallet = isEmptyWallet
             )
             transactionMetadataProvider.markAddressAsTransferOutAsync(
                 dashAddress.toBase58(),
                 ServiceName.Coinbase
             )
             SendDashResponseState.SuccessState(transaction.isPending)
-        } catch (e: LeftoverBalanceException) {
-            throw e
         } catch (e: InsufficientMoneyException) {
             e.printStackTrace()
             SendDashResponseState.InsufficientMoneyState

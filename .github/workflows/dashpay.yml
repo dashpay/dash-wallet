@@ -16,12 +16,6 @@ jobs:
       run: |
           echo "build_number=$((80000))" >> $GITHUB_ENV
           
-    - name: Get the support email
-      env:
-        SUPPORT_EMAIL: "${{ secrets.INTERNAL_SUPPORT_EMAIL }}"
-      run: |
-        echo "SUPPORT_EMAIL=$SUPPORT_EMAIL" >> $GITHUB_ENV
-    
     - uses: actions/checkout@v3
     - name: set up JDK
       uses: actions/setup-java@v3
@@ -30,13 +24,19 @@ jobs:
         distribution: 'adopt'
         cache: gradle
 
+    - name: Get the support email
+      env:
+        SUPPORT_EMAIL: "${{ secrets.INTERNAL_SUPPORT_EMAIL }}"
+      run: |
+        echo "SUPPORT_EMAIL=$SUPPORT_EMAIL" >> $GITHUB_ENV
+
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
       
     - name: Set up Ruby
       uses: ruby/setup-ruby@v1
       with:
-        ruby-version: '3.0.3'
+        ruby-version: '3.3'
         
     - name: Generate cache key
       run: bash .deploy/checksum.sh checksum.txt
@@ -46,14 +46,12 @@ jobs:
       continue-on-error: true
       with:
         path: vendor/bundle
-        key: ${{ runner.os }}-gems-${{ hashFiles('**/Gemfile.lock') }}
+        key: ${{ runner.os }}-gems-ruby-3.3-${{ hashFiles('**/Gemfile.lock') }}
         restore-keys: |
-            ${{ runner.os }}-gems-
+            ${{ runner.os }}-gems-ruby-3.3-
             
     - name: Setup fastlane
       run: |
-        gem install bundler:2.2.26
-        gem install google-cloud-storage
         bundle config path vendor/bundle
         bundle install --jobs 4 --retry 3
         

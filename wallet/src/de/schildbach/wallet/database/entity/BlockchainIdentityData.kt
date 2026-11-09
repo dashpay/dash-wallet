@@ -229,6 +229,12 @@ open class BlockchainIdentityConfig @Inject constructor(
         private val log = LoggerFactory.getLogger(BlockchainIdentityConfig::class.java)
     }
 
+    /** Unlike ordinary preference reads, absence here must never be inferred from an I/O fallback. */
+    fun observeIdentityPresence(): Flow<Boolean> = context.dataStore.data.map { prefs ->
+        IdentityCreationState.valueOf(prefs[CREATION_STATE] ?: "NONE") != IdentityCreationState.NONE ||
+            prefs.asMap().keys.any { it != CREATION_STATE }
+    }
+
     private val identityData: Flow<BlockchainIdentityData> = data
         .map { prefs ->
             BlockchainIdentityData(

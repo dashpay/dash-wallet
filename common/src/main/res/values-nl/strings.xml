@@ -153,4 +153,5 @@
     <string name="from_dash_wallet_on_this_device">Van Dash portemonnee op dit apparaat</string>
     <string name="preposition_at">ter hoogte van</string>
     <string name="info">Info</string>
+    <string name="scan_qr">Scan QR</string>
 </resources>

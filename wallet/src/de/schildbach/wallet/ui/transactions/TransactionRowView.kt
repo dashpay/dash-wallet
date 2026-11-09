@@ -33,7 +33,6 @@ import org.dash.wallet.common.data.entity.SwapOrderStatus
 import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.common.util.ResourceString
-import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
 import org.slf4j.LoggerFactory
 
 data class TransactionRowView(
@@ -70,25 +69,6 @@ data class TransactionRowView(
             val firstTx = txWrapper.transactions.values.first()
 
             return when (txWrapper) {
-                is FullCrowdNodeSignUpTxSet -> TransactionRowView(
-                        ResourceString(R.string.crowdnode_account),
-                        txWrapper.id,
-                        txWrapper.getValue(bag),
-                        firstTx.exchangeRate,
-                        null,
-                        R.drawable.ic_crowdnode_logo,
-                        null,
-                        R.style.TxNoBackground,
-                        -1,
-                        metadata?.memo ?: "",
-                        txWrapper.transactions.size,
-                        firstTx.updateTime.time,
-                        TxResourceMapper().dateTimeFormat,
-                        false,
-                        ServiceName.CrowdNode,
-                        txWrapper
-                    )
-
                 is CoinJoinMixingTxSet -> TransactionRowView(
                     ResourceString(R.string.coinjoin_mixing_transactions),
                     txWrapper.id,

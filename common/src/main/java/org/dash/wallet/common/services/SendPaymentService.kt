@@ -19,7 +19,6 @@ package org.dash.wallet.common.services
 
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
-import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionOutput
@@ -30,7 +29,6 @@ import org.bitcoinj.wallet.Wallet
 import java.util.function.Consumer
 import java.util.function.Predicate
 
-class LeftoverBalanceException(missing: Coin, message: String) : InsufficientMoneyException(missing, message)
 class DirectPayException(message: String) : Exception(message)
 
 /**
@@ -53,13 +51,11 @@ data class PaymentRecoveryMetadata(
 )
 
 interface SendPaymentService {
-    @Throws(LeftoverBalanceException::class)
     suspend fun sendCoins(
         address: Address,
         amount: Coin,
         coinSelector: CoinSelector? = null,
         emptyWallet: Boolean = false,
-        checkBalanceConditions: Boolean = true,
         beforeSending: Consumer<Transaction>? = null,
         canSendLockedOutput: Predicate<TransactionOutput>? = null
     ): Transaction

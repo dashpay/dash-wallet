@@ -25,13 +25,12 @@ import androidx.room.Index
  * reconstruct [wrappedTransactionList] at startup without calling [wrapAllTransactions].
  *
  * Each row represents one transaction belonging to a group:
- * - [groupId] identifies the wrapper (e.g. "coinjoin_2025-03-16", "crowdnode", or the txId
+ * - [groupId] identifies the wrapper (e.g. "coinjoin_2025-03-16", or the txId
  *   base58 string for single-tx wrappers).
  * - [txId] is the lowercase hex string of the transaction hash ([Sha256Hash.toString]).
- * - [wrapperType] is one of [TYPE_SINGLE], [TYPE_COINJOIN], or [TYPE_CROWDNODE].
+ * - [wrapperType] is either [TYPE_SINGLE] or [TYPE_COINJOIN].
  * - [groupDate] is a [java.time.LocalDate] in ISO-8601 format (YYYY-MM-DD).
- * - [sortOrder] preserves the insertion order required for correct factory reconstruction
- *   (especially important for CrowdNode whose [tryInclude] is order-sensitive).
+ * - [sortOrder] preserves the insertion order required for correct factory reconstruction.
  */
 @Entity(
     tableName = "tx_group_cache",
@@ -48,6 +47,5 @@ data class TxGroupCacheEntry(
     companion object {
         const val TYPE_SINGLE    = "single"
         const val TYPE_COINJOIN  = "coinjoin"
-        const val TYPE_CROWDNODE = "crowdnode"
     }
 }

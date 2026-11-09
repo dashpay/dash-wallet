@@ -43,7 +43,6 @@ import org.dash.wallet.common.data.PresentableTxMetadata
 import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.transactions.TransactionWrapper
-import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
 import javax.inject.Inject
 
 @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
@@ -107,7 +106,6 @@ class TransactionGroupViewModel @Inject constructor(
         metadata: Map<Sha256Hash, PresentableTxMetadata>
     ) {
         val resourceMapper = when (transactionWrapper) {
-            is FullCrowdNodeSignUpTxSet -> CrowdNodeTxResourceMapper()
             is CoinJoinMixingTxSet -> CoinJoinTxResourceMapper()
             else -> TxResourceMapper()
         }

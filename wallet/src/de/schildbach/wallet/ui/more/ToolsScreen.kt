@@ -35,7 +35,6 @@ import android.content.res.Configuration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import de.schildbach.wallet.Constants
 import kotlinx.coroutines.flow.StateFlow
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.ui.components.DashWalletTheme
@@ -192,8 +191,8 @@ private fun ToolsScreenContent(
                     action = onCsvExportClick
                 )
 
-                if (Constants.SUPPORTS_CONNECT) {
-                    // Connections (DashConnect)
+                if (uiState.connectionsAvailable) {
+                    // Connections (DashConnect), also without a username: it offers to create one
                     MenuItem(
                         title = stringResource(R.string.dash_connect_connections_title),
                         icon = R.drawable.ic_menu_connections,
@@ -236,6 +235,6 @@ private fun ToolsScreenContent(
 @Preview(name = "Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
 fun ToolsScreenPreview() {
     DashWalletTheme {
-        ToolsScreenContent(uiState = ToolsUIState(false, false, true))
+        ToolsScreenContent(uiState = ToolsUIState(false, false, true, connectionsAvailable = true))
     }
 }

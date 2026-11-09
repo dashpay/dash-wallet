@@ -36,7 +36,6 @@ dependencies {
     implementation project(path: ":features:exploredash")
     implementation project(path: ':integrations:uphold')
     implementation project(path: ":integrations:coinbase")
-    implementation project(path: ":integrations:crowdnode")
     implementation project(path: ":integrations:maya")
 
     implementation(project(':integration-android')) {
@@ -273,8 +272,8 @@ android {
         minSdkVersion 24
         targetSdkVersion 36
         // version code: MMmmppbb; MM = Major Version, mm = minor version, pp == patch version, bb = build
-        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 11090109
-        versionName project.hasProperty('versionName') ? project.property('versionName') : "11.9.1"
+        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 11090205
+        versionName project.hasProperty('versionName') ? project.property('versionName') : "11.9.2"
         multiDexEnabled true
         generatedDensities = ['hdpi', 'xhdpi']
         vectorDrawables.useSupportLibrary = true

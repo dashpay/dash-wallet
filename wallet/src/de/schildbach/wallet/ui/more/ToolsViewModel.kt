@@ -28,6 +28,8 @@ import de.schildbach.wallet.database.dao.BlockchainStateDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.transactions.TaxBitExporter
+import de.schildbach.wallet.ui.more.connections.ConnectAvailability
+import de.schildbach.wallet.ui.more.connections.DashConnectRepository
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,6 +39,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.lifecycle.viewModelScope
@@ -55,7 +58,9 @@ import javax.inject.Inject
 data class ToolsUIState(
     val isLoading: Boolean = false,
     val isSyncing: Boolean = false,
-    val hasUsername: Boolean = false
+    val hasUsername: Boolean = false,
+    /** DashConnect is supported here and the network runs Platform protocol version 14 or later. */
+    val connectionsAvailable: Boolean = false
 )
 
 @HiltViewModel
@@ -66,7 +71,8 @@ class ToolsViewModel @Inject constructor(
     blockchainStateDao: BlockchainStateDao,
     private val dashPayConfig: DashPayConfig,
     private val identityConfig: BlockchainIdentityConfig,
-    private val analyticsService: AnalyticsService
+    private val analyticsService: AnalyticsService,
+    private val connectRepository: DashConnectRepository
 ) : ViewModel() {
 
     sealed class ExportCsvResult {
@@ -100,11 +106,27 @@ class ToolsViewModel @Inject constructor(
         )
 
         blockchainStateDao.observeState().onEach {
-            _uiState.value = uiState.value.copy(isSyncing = it?.isSynced() != true)
+            _uiState.update { state -> state.copy(isSyncing = it?.isSynced() != true) }
         }.launchIn(viewModelScope)
 
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(hasUsername = hasUsername())
+            // Read first: a copy of the state taken before this suspends would undo other updates.
+            val hasUsername = hasUsername()
+            _uiState.update { it.copy(hasUsername = hasUsername) }
+        }
+
+        ConnectAvailability.availability.onEach {
+            _uiState.update { state -> state.copy(connectionsAvailable = it) }
+        }.launchIn(viewModelScope)
+    }
+
+    /**
+     * Asks the network for its protocol version, which the availability above follows. Called on every
+     * resume: a lookup that failed offline, or a network that has since upgraded, is read again.
+     */
+    fun refreshConnectionsAvailability() {
+        if (ConnectAvailability.isSupported && !_uiState.value.connectionsAvailable) {
+            viewModelScope.launch { connectRepository.isAvailable() }
         }
     }
 

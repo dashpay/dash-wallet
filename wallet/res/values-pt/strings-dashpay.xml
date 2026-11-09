@@ -424,6 +424,7 @@ Dash</b></string>
     <string name="coinjoin_mixing_level_subtitle">Você pode alterar ou parar o nível de mistura a qualquer momento</string>
     <string name="coinjoin_mixing_transactions">Misturando Transações</string>
     <string name="coinjoin_transaction_group">Estas são transações relacionadas à mistura.</string>
+    <string name="coinjoin_transaction_group_title">Por que vejo todas essas transações?</string>
     <string name="intermediate">Intermediário</string>
     <string name="advanced">Avançado</string>
     <string name="intermediate_level_card_decs">Usuários avançados com um nível muito alto de conhecimento técnico podem determinar seu histórico de transações</string>
@@ -588,4 +589,6 @@ Dash</b></string>
     <string name="dash_connect_confirm">Confirmar</string>
     <string name="dash_connect_testnet_only_heading">Disponível apenas na testnet</string>
     <string name="dash_connect_testnet_only_message">O login com DashConnect ainda não está disponível na mainnet</string>
+    <string name="dash_connect_group_scope_changed">O escopo deste grupo mudou desde a sua aprovação anterior, ou o escopo anterior não foi registrado. Revise os membros e administradores atuais abaixo antes de continuar. Chaves registradas anteriormente ainda podem estar ativas; a opção Revogar acesso continua disponível.</string>
+    <string name="dash_connect_group_scope_approve">Eu aprovo o escopo atualizado do grupo mostrado acima.</string>
     </resources>

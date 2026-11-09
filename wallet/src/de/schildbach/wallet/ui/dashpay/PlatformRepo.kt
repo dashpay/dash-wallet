@@ -101,6 +101,7 @@ class PlatformRepo @Inject constructor(
         private val log = LoggerFactory.getLogger(PlatformRepo::class.java)
         const val TIMESPAN: Long = DateUtils.DAY_IN_MILLIS * 90 // 90 days
         const val TOP_CONTACT_COUNT = 4
+        private val PROTOCOL_VERSION_PROBE_ID = Identifier.from(ByteArray(32))
     }
 
     private val onSeriousErrorListeneners = arrayListOf<SeriousErrorListener>()
@@ -163,10 +164,11 @@ class PlatformRepo @Inject constructor(
                 null
             }
             // Don't bother with DeriveKeyTask here, just call deriveKey
+            if (password == null) return null
             val encryptionKey = wallet.keyCrypter!!.deriveKey(password)
             wallet.keyChainSeed.decrypt(wallet.keyCrypter, "", encryptionKey)
         } else {
-            null
+            wallet.keyChainSeed
         }
     }
 
@@ -554,6 +556,30 @@ class PlatformRepo @Inject constructor(
                 log.warn("unable to refresh the platform protocol version", e)
             }
             ContestedUsernameFees.currentProtocolVersion
+        }
+    }
+
+    /**
+     * The protocol version the network reported, or null when it did not answer. A refresh that fails
+     * still returns a number, the SDK's starting version (13 on mainnet and testnet), so the version
+     * counts only after a proven query succeeds: its verified response sets it. The query asks for an
+     * identity no wallet owns, whose proven absence carries the same metadata, so a wallet without a
+     * username can read the version too.
+     */
+    suspend fun readProtocolVersion(): Int? {
+        return withContext(Dispatchers.IO) {
+            try {
+                platform.client.getPlatformTime(PROTOCOL_VERSION_PROBE_ID)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                log.warn("unable to read the platform protocol version", e)
+                return@withContext null
+            }
+            platform.client.getProtocolVersion().also {
+                ContestedUsernameFees.updateProtocolVersion(it)
+                log.info("platform protocol version: {}", it)
+            }
         }
     }
 }

@@ -82,7 +82,6 @@ import org.dash.wallet.common.InteractionAwareActivity;
 import org.dash.wallet.common.WalletDataProvider;
 import org.dash.wallet.common.data.WalletUIConfig;
 import org.dash.wallet.common.integrations.ExchangeIntegrationProvider;
-import org.dash.wallet.common.services.LeftoverBalanceException;
 import org.dash.wallet.common.services.TransactionMetadataProvider;
 import org.dash.wallet.common.services.analytics.AnalyticsService;
 import org.dash.wallet.common.transactions.TransactionWrapperFactory;
@@ -107,8 +106,6 @@ import de.schildbach.wallet.transactions.WalletBalanceObserver;
 import de.schildbach.wallet.ui.buy_sell.LiquidClient;
 import org.dash.wallet.integrations.uphold.api.UpholdClient;
 import org.dash.wallet.integrations.uphold.data.UpholdConstants;
-import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig;
-import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeBalanceCondition;
 import org.dash.wallet.integrations.maya.api.SwapTrackingService;
 import org.dash.wallet.integrations.uphold.utils.UpholdConfig;
 import org.jetbrains.annotations.NotNull;
@@ -215,8 +212,6 @@ public class WalletApplication extends MultiDexApplication
     @Inject
     BlockchainStateDataProvider blockchainStateDataProvider;
     @Inject
-    CrowdNodeConfig crowdNodeConfig;
-    @Inject
     TransactionMetadataProvider transactionMetadataProvider;
     @Inject
     PlatformRepo platformRepo;
@@ -242,6 +237,8 @@ public class WalletApplication extends MultiDexApplication
     TxDisplayCacheService txDisplayCacheService;
     @Inject
     SwapTrackingService swapTrackingService;
+    @Inject
+    de.schildbach.wallet.ui.more.connections.DashConnectConfig dashConnectConfig;
     private WalletBalanceObserver walletBalanceObserver;
     private CoinJoinService coinJoinService;
     @Inject
@@ -558,6 +555,7 @@ public class WalletApplication extends MultiDexApplication
         log.info("STARTUP finalizeInit: afterLoadWallet done in {}ms", System.currentTimeMillis() - _t); _t = System.currentTimeMillis();
 
         cleanupFiles();
+        removeCrowdNodeData();
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             createNotificationChannels();
@@ -965,6 +963,19 @@ public class WalletApplication extends MultiDexApplication
         }
     }
 
+    // CrowdNode was removed: drop its preferences, DataStore file and any pending sign-up work
+    private void removeCrowdNodeData() {
+        final boolean hadPrefs = config.removeObsoleteCrowdNodePrefs();
+        final File dataStore = new File(new File(getFilesDir(), Constants.Files.DATASTORE_PREFS_DIRECTORY),
+                "crowdnode.preferences_pb");
+        final boolean hadDataStore = dataStore.delete();
+
+        if (hadPrefs || hadDataStore) {
+            log.info("removing obsolete CrowdNode data");
+            WorkManager.getInstance(this).cancelUniqueWork("CrowdNode.WORK");
+        }
+    }
+
     private void clearDatastorePrefs() {
         final File folder = new File(getFilesDir(), Constants.Files.DATASTORE_PREFS_DIRECTORY);
 
@@ -974,6 +985,10 @@ public class WalletApplication extends MultiDexApplication
 
             if (files != null) {
                 for (File file: files) {
+                    // This scoped authorization/replay audit must survive same-seed recovery.
+                    if (de.schildbach.wallet.ui.more.connections.DashConnectConfig.AUDIT_FILE_NAME.equals(file.getName())) {
+                        continue;
+                    }
                     file.delete();
                 }
             }
@@ -1466,19 +1481,6 @@ public class WalletApplication extends MultiDexApplication
     @Override
     public void detachOnWalletWipedListener(@NonNull Function1<? super Continuation<? super Unit>,?> listener) {
         wipeListeners.remove(listener);
-    }
-
-    @Override
-    public void checkSendingConditions(
-            @Nullable Address address,
-            @NonNull Coin amount
-    ) throws LeftoverBalanceException {
-        new CrowdNodeBalanceCondition().check(
-                getWalletBalance(),
-                address,
-                amount,
-                crowdNodeConfig
-        );
     }
 
     @Override
