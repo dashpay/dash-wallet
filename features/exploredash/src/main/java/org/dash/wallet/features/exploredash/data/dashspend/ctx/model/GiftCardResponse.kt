@@ -24,6 +24,8 @@ data class GiftCardResponse(
     @SerializedName("barcodeUrl") val barcodeUrl: String? = "",
     @SerializedName("number") val cardNumber: String? = "",
     @SerializedName("pin") val cardPin: String? = "",
+    @SerializedName("barcodeType") val barcodeType: String? = null,
+    @SerializedName("barcodeContent") val barcodeContent: String? = null,
     val cardFiatAmount: String? = "",
     val cardFiatCurrency: String? = "",
     val merchantName: String? = "",

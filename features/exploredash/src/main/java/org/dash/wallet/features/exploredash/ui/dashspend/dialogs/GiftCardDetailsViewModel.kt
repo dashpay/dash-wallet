@@ -46,6 +46,7 @@ import org.dash.wallet.common.util.*
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderType
 import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.Barcode
+import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardInfo
 import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardStatus
 import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
@@ -242,7 +243,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                                 if (!giftCard.cardNumber.isNullOrEmpty()) {
                                     updateGiftCard(0, giftCard.cardNumber, giftCard.cardPin)
                                     log.info("CTXSpend: saving barcode for: ${giftCard.barcodeUrl}")
-                                    saveBarcode(giftCard.cardNumber, 0)
+                                    saveBarcode(giftCard, 0)
                                     val startPurchaseTime =
                                         ctxSpendConfig.get(CTXSpendConfig.PREFS_LAST_PURCHASE_START) ?: -1
                                     if (startPurchaseTime != -1L) {
@@ -483,7 +484,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                                         log.info("PiggyCards: saving barcode for: ${giftCard.barcodeUrl}")
                                         giftCard.barcodeUrl?.let {
                                             if (!saveBarcodeUrl(it, cardIndex)) {
-                                                saveBarcode(giftCard.cardNumber, BarcodeFormat.CODE_128, cardIndex)
+                                                saveBarcode(giftCard, cardIndex)
                                             }
                                         }
                                     } else if (giftCard.redeemUrl?.isNotEmpty() == true) {
@@ -601,33 +602,35 @@ class GiftCardDetailsViewModel @Inject constructor(
         logOnPurchaseEvents(giftCard)
     }
 
-    private suspend fun saveBarcode(giftCardNumber: String, index: Int) {
-        try {
-            applicationScope.launch {
-                metadataProvider.updateGiftCardBarcode(
-                    transactionId,
-                    index,
-                    giftCardNumber.replace(" ", "").replace("-", ""),
-                    BarcodeFormat.CODE_128 // Assuming CTX barcodes are all CODE_128
-                )
-            }.join()
-        } catch (ex: Exception) {
-            log.error("Failed to save barcode for $giftCardNumber", ex)
-        }
+    private suspend fun saveBarcode(giftCard: GiftCardInfo, index: Int) {
+        val number = giftCard.cardNumber ?: return
+        val value = giftCard.barcodeContent?.takeIf { it.isNotEmpty() }
+            ?: number.replace(" ", "").replace("-", "")
+        saveBarcode(value, giftCard.barcodeFormat(), index)
     }
 
-    private suspend fun saveBarcode(giftCardNumber: String, cardFormat: BarcodeFormat, index: Int) {
+    private fun GiftCardInfo.barcodeFormat(): BarcodeFormat =
+        when (barcodeType?.lowercase()) {
+            "qr", "qrcode", "qr_code" -> BarcodeFormat.QR_CODE
+            "code39" -> BarcodeFormat.CODE_39
+            "code93" -> BarcodeFormat.CODE_93
+            "pdf417" -> BarcodeFormat.PDF_417
+            "aztec" -> BarcodeFormat.AZTEC
+            else -> BarcodeFormat.CODE_128
+        }
+
+    private suspend fun saveBarcode(value: String, cardFormat: BarcodeFormat, index: Int) {
         try {
             applicationScope.launch {
                 metadataProvider.updateGiftCardBarcode(
                     transactionId,
                     index,
-                    giftCardNumber.replace(" ", "").replace("-", ""),
+                    value,
                     cardFormat
                 )
             }.join()
         } catch (ex: Exception) {
-            log.error("Failed to save barcode for $giftCardNumber", ex)
+            log.error("Failed to save barcode for $value", ex)
         }
     }
 
