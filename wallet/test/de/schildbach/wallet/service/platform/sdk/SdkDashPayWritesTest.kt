@@ -517,7 +517,15 @@ class SdkDashPayWritesTest {
             // note-value arithmetic guards in select_notes
             DashSdkError.PlatformWallet.WalletOperation(
                 "shielded transfer failed: Shielded build error: amount + fee overflows u64"
-            )
+            ),
+            // a third-party shield (Type 15 / 21) to this wallet's own Orchard address,
+            // refused by resolve_shield_recipient before anything is built
+            DashSdkError.PlatformWallet.WalletOperation(
+                "shielded shield failed: Shielded build error: recipient belongs to this shielded " +
+                    "account; use the self-shield entry point (no recipient) instead"
+            ),
+            // an earlier identity shield is unresolved: this one was never built
+            DashSdkError.PlatformWallet.ShieldedIdentityDebitPending("earlier identity debit unresolved")
         )
         for (error in liveShapes) {
             val result = classifyBroadcastFailure(error)

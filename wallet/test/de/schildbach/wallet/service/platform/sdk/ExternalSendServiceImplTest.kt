@@ -199,6 +199,38 @@ class ExternalSendServiceImplTest {
             nativeWrite()
         }
 
+        // Platform → Core, → Shielded (third party)
+        var withdrawalPreflight: () -> PlatformWithdrawalPreflight = { PlatformWithdrawalPreflight(true, 400_500_000L) }
+        var minInput: () -> Long = { 100_000L }
+        var lastCoreAddress: String? = null
+        var lastShieldAddress: String? = null
+
+        override suspend fun platformWithdrawalPreflight(walletIdHex: String) = withdrawalPreflight()
+        override suspend fun platformMinInputCredits(walletIdHex: String): Long = minInput()
+
+        override suspend fun platformWithdraw(walletIdHex: String, coreAddress: String, inputs: List<FundingInput>) {
+            calls += "platformWithdraw"
+            lastCoreAddress = coreAddress
+            lastInputs = inputs
+            nativeWrite()
+        }
+
+        override suspend fun platformShieldTo(walletIdHex: String, address: String, amount: Dash): SdkWriteResult<Unit> {
+            lastShieldAddress = address
+            return shielded("platformShieldTo", amount)
+        }
+
+        override suspend fun identityShieldTo(
+            walletIdHex: String,
+            fromId: ByteArray,
+            address: String,
+            amount: Dash
+        ): SdkWriteResult<Unit> {
+            lastFromId = fromId
+            lastShieldAddress = address
+            return shielded("identityShieldTo", amount)
+        }
+
         // Core → Platform
         var gateOpen: () -> Boolean = { true }
         var freshFundingAllowed = true
@@ -383,6 +415,244 @@ class ExternalSendServiceImplTest {
         }
     }
 
+    // ── int37 pairs: Platform → Core, Platform / Identity → Shielded ──
+
+    /** A P2PKH Platform-address balance whose 20-byte hash is all [b]. */
+    private fun address(b: Int, credits: Long) = FundingInput(0, ByteArray(20) { b.toByte() }, credits)
+
+    @Test
+    fun platformToCore_withdrawsExactlyTheAmount_feePayerKeepsTheReserve() = runBlocking {
+        val reserve = 400_500_000L
+        val source = source().apply {
+            // Hash 0x01 sorts first: it pays the fee, so it must keep the reserve.
+            platformBalances = { listOf(address(1, 450_000_000L), address(2, 80_000_000L)) }
+        }
+        assertEquals(ExternalSendResult.Sent(null), service(source).send(SendBalance.PLATFORM, core, amount, false))
+        assertEquals(listOf("platformWithdraw"), source.calls)
+        assertEquals(core.address, source.lastCoreAddress)
+        val inputs = requireNotNull(source.lastInputs)
+        assertEquals(amountCredits, inputs.sumOf { it.credits })
+        val payer = inputs.first { it.hash[0] == 1.toByte() }
+        assertTrue(450_000_000L - payer.credits >= reserve)
+        assertTrue(inputs.all { input -> input.credits <= (if (input.hash[0] == 1.toByte()) 450_000_000L else 80_000_000L) })
+    }
+
+    @Test
+    fun platformToCore_refusals_beforeAnythingIsSigned_areNotSent_withNoCall() = runBlocking {
+        val funded = listOf(address(1, 900_000_000L))
+        val cases = listOf<Pair<(FakeSource) -> Unit, ExternalSendResult>>(
+            // Cannot cover amount + the fee payer's reserve.
+            { s: FakeSource -> s.platformBalances = { listOf(address(1, 450_000_000L)) } } to
+                ExternalSendResult.NotSent(NotSentReason.INSUFFICIENT_FUNDS),
+            { s: FakeSource ->
+                s.platformBalances = { funded }
+                s.withdrawalPreflight = { PlatformWithdrawalPreflight(false, 0L) }
+            } to ExternalSendResult.NotSent(NotSentReason.INSUFFICIENT_FUNDS),
+            // A zero fee estimate is unknown, never free.
+            { s: FakeSource ->
+                s.platformBalances = { funded }
+                s.withdrawalPreflight = { PlatformWithdrawalPreflight(true, 0L) }
+            } to ExternalSendResult.NotSent(NotSentReason.GENERIC),
+            { s: FakeSource ->
+                s.platformBalances = { funded }
+                s.withdrawalPreflight = { throw java.io.IOException("dapi") }
+            } to ExternalSendResult.NotSent(NotSentReason.GENERIC),
+            { s: FakeSource ->
+                s.platformBalances = { funded }
+                s.minInput = { throw IllegalStateException("SDK wallet not loaded") }
+            } to ExternalSendResult.NotSent(NotSentReason.GENERIC),
+            { s: FakeSource -> s.platformBalances = { throw IllegalStateException("SDK wallet not loaded") } } to
+                ExternalSendResult.NotSent(NotSentReason.GENERIC)
+        )
+        for ((setUp, expected) in cases) {
+            val source = source().apply(setUp)
+            assertEquals(expected, service(source).send(SendBalance.PLATFORM, core, amount, false))
+            assertTrue(source.calls.isEmpty())
+        }
+    }
+
+    @Test
+    fun platformToCore_belowTheWithdrawalMinimum_isNotSent_withNoRead() = runBlocking {
+        var read = false
+        val source = source().apply {
+            platformBalances = {
+                read = true
+                listOf(address(1, 900_000_000L))
+            }
+        }
+        // 1 189 duffs = 1 189 000 credits < 1 000 000 + 190 × 1 000.
+        assertEquals(
+            ExternalSendResult.NotSent(NotSentReason.GENERIC),
+            service(source).send(SendBalance.PLATFORM, core, Dash(1_189L), false)
+        )
+        assertTrue(source.calls.isEmpty())
+        assertTrue(!read)
+        // Exactly at the minimum is sent.
+        assertEquals(ExternalSendResult.Sent(null), service(source).send(SendBalance.PLATFORM, core, Dash(1_190L), false))
+        assertEquals(PLATFORM_MIN_WITHDRAWAL_CREDITS, source.lastInputs?.sumOf { it.credits })
+    }
+
+    @Test
+    fun platformToCore_outcomes_mapLikeTheOtherCreditsWrites() = runBlocking {
+        val source = source().apply {
+            platformBalances = { listOf(address(1, 900_000_000L)) }
+            nativeWrite = { throw RuntimeException("connection reset") }
+        }
+        assertEquals(ExternalSendResult.MayHaveGoneThrough, service(source).send(SendBalance.PLATFORM, core, amount, false))
+
+        source.nativeWrite = { throw DashSdkError.PlatformWallet.TransactionBroadcastUnconfirmed("unconfirmed") }
+        assertEquals(ExternalSendResult.MayHaveGoneThrough, service(source).send(SendBalance.PLATFORM, core, amount, false))
+
+        source.nativeWrite = { throw DashSdkError.InvalidParameter("bad address") }
+        assertEquals(
+            ExternalSendResult.NotSent(NotSentReason.GENERIC),
+            service(source).send(SendBalance.PLATFORM, core, amount, false)
+        )
+    }
+
+    @Test
+    fun platformAndIdentityToShielded_callTheirShieldWrite_withTheRecipient() = runBlocking {
+        val platformSource = source()
+        assertEquals(ExternalSendResult.Sent(null), service(platformSource).send(SendBalance.PLATFORM, shielded, amount, false))
+        assertEquals(listOf("platformShieldTo"), platformSource.calls)
+        assertEquals(shielded.address, platformSource.lastShieldAddress)
+        assertEquals(listOf(amount), platformSource.shieldedAmounts)
+
+        val identitySource = source()
+        assertEquals(ExternalSendResult.Sent(null), service(identitySource).send(SendBalance.IDENTITY, shielded, amount, false))
+        assertEquals(listOf("identityShieldTo"), identitySource.calls)
+        assertEquals(shielded.address, identitySource.lastShieldAddress)
+        assertArrayEquals(ownId, identitySource.lastFromId)
+        assertEquals(listOf(amount), identitySource.shieldedAmounts)
+    }
+
+    @Test
+    fun toShielded_outcomes_ambiguousIsMayHaveGoneThrough_notBroadcastIsNotSent_neverRetried() = runBlocking {
+        for (from in listOf(SendBalance.PLATFORM, SendBalance.IDENTITY)) {
+            val ambiguous = source().apply {
+                shieldedResult = {
+                    SdkWriteResult.Ambiguous(DashSdkError.PlatformWallet.ShieldedSpendUnconfirmed("unconfirmed"))
+                }
+            }
+            // Even a Max is never retried for these sources.
+            assertEquals(ExternalSendResult.MayHaveGoneThrough, service(ambiguous).send(from, shielded, amount, true))
+            assertEquals(1, ambiguous.shieldedAmounts.size)
+
+            val notBroadcast = source().apply {
+                shieldedResult = {
+                    SdkWriteResult.NotBroadcast(
+                        "pre-broadcast",
+                        RuntimeException("Insufficient shielded balance: available 1, required 2")
+                    )
+                }
+            }
+            assertEquals(
+                ExternalSendResult.NotSent(NotSentReason.INSUFFICIENT_FUNDS),
+                service(notBroadcast).send(from, shielded, amount, true)
+            )
+            assertEquals(1, notBroadcast.shieldedAmounts.size)
+        }
+        val debitPending = source().apply {
+            shieldedResult = { classifyBroadcastFailure(DashSdkError.PlatformWallet.ShieldedIdentityDebitPending("pending")) }
+        }
+        assertEquals(
+            ExternalSendResult.NotSent(NotSentReason.PAYMENT_STILL_CONFIRMING),
+            service(debitPending).send(SendBalance.IDENTITY, shielded, amount, false)
+        )
+    }
+
+    @Test
+    fun toShielded_gates_shieldedFlagOff_orWalletChanged_callNothing() = runBlocking {
+        for (from in listOf(SendBalance.PLATFORM, SendBalance.IDENTITY)) {
+            val flagOff = source().apply { shieldedOn = { false } }
+            assertEquals(ExternalSendResult.NotSent(NotSentReason.NOT_SUPPORTED), service(flagOff).send(from, shielded, amount, false))
+            assertTrue(flagOff.calls.isEmpty())
+
+            val changed = source(bound = listOf(walletA, walletB))
+            assertEquals(ExternalSendResult.NotSent(NotSentReason.GENERIC), service(changed).send(from, shielded, amount, false))
+            assertTrue(changed.calls.isEmpty())
+        }
+        val changed = source(bound = listOf(walletA, walletB)).apply { platformBalances = { listOf(address(1, 900_000_000L)) } }
+        assertEquals(ExternalSendResult.NotSent(NotSentReason.GENERIC), service(changed).send(SendBalance.PLATFORM, core, amount, false))
+        assertTrue(changed.calls.isEmpty())
+    }
+
+    @Test
+    fun int37Pairs_haveNoPreSendFee_andNoMax() = runBlocking {
+        val service = service(source().apply { platformBalances = { listOf(address(1, 900_000_000L)) } })
+        for ((from, to) in listOf(SendBalance.PLATFORM to core, SendBalance.PLATFORM to shielded, SendBalance.IDENTITY to shielded)) {
+            assertNull("$from → $to", service.estimateFee(from, to, amount))
+            assertNull("$from → $to", service.maxSendable(from, to))
+        }
+    }
+
+    // ── selectPlatformWithdrawalInputs ────────────────────────────────
+
+    @Test
+    fun withdrawalSelection_singleInput_whenThePayerCoversAmountAndReserve() {
+        val inputs = requireNotNull(
+            selectPlatformWithdrawalInputs(listOf(address(5, 1_000L), address(9, 300L)), 600L, 400L, 10L)
+        )
+        assertEquals(1, inputs.size)
+        assertEquals(600L, inputs.single().credits)
+        assertEquals(5.toByte(), inputs.single().hash[0])
+    }
+
+    @Test
+    fun withdrawalSelection_theFirstSortingInputPays_andKeepsTheReserve_othersMayBeDrained() {
+        // Neither address covers 1 000 + reserve alone. Hash 0x01 sorts first, so it pays;
+        // 0x02 is drained in full.
+        val inputs = requireNotNull(
+            selectPlatformWithdrawalInputs(listOf(address(2, 600L), address(1, 900L)), 1_000L, 400L, 10L)
+        )
+        assertEquals(1_000L, inputs.sumOf { it.credits })
+        val payer = inputs.first()
+        assertEquals(1.toByte(), payer.hash[0])
+        assertTrue(900L - payer.credits >= 400L)
+        assertEquals(600L, inputs.first { it.hash[0] == 2.toByte() }.credits)
+    }
+
+    @Test
+    fun withdrawalSelection_unsignedHashOrder_decidesThePayer() {
+        // 0x80 sorts AFTER 0x01 unsigned (signed it would sort before). Only 0x01 can keep the
+        // reserve, so it must be the first-sorting input of the set.
+        val inputs = requireNotNull(
+            selectPlatformWithdrawalInputs(listOf(address(0x80, 500L), address(1, 700L)), 700L, 400L, 10L)
+        )
+        assertEquals(1.toByte(), inputs.first().hash[0])
+        assertTrue(700L - inputs.first().credits >= 400L)
+        assertEquals(700L, inputs.sumOf { it.credits })
+    }
+
+    @Test
+    fun withdrawalSelection_refuses_whatItCannotCoverExactly() {
+        // Not enough once the payer keeps its reserve.
+        assertNull(selectPlatformWithdrawalInputs(listOf(address(1, 1_000L)), 700L, 400L, 10L))
+        // Below the minimum input, below the minimum per input, P2SH only, non-positive target.
+        assertNull(selectPlatformWithdrawalInputs(listOf(address(1, 1_000L)), 5L, 400L, 10L))
+        assertNull(selectPlatformWithdrawalInputs(listOf(address(1, 1_000L), address(2, 9L)), 605L, 400L, 10L))
+        assertNull(selectPlatformWithdrawalInputs(listOf(FundingInput(1, ByteArray(20) { 1 }, 1_000L)), 100L, 0L, 10L))
+        assertNull(selectPlatformWithdrawalInputs(listOf(address(1, 1_000L)), 0L, 0L, 10L))
+        // At most maxInputs inputs.
+        val many = (1..5).map { address(it, 100L) }
+        assertNull(selectPlatformWithdrawalInputs(many, 450L, 0L, 10L, maxInputs = 4))
+        assertEquals(450L, selectPlatformWithdrawalInputs(many, 450L, 0L, 10L, maxInputs = 5)?.sumOf { it.credits })
+    }
+
+    @Test
+    fun withdrawalSelection_neverTakesMoreThanABalance_andEveryInputClearsTheMinimum() {
+        val candidates = listOf(address(3, 250L), address(1, 520L), address(2, 120L), address(4, 75L))
+        val balances = candidates.associate { it.hash[0] to it.credits }
+        for (target in 10L..560L step 7L) {
+            val inputs = selectPlatformWithdrawalInputs(candidates, target, 100L, 20L) ?: continue
+            assertEquals(target, inputs.sumOf { it.credits })
+            assertTrue(inputs.all { it.credits >= 20L && it.credits <= requireNotNull(balances[it.hash[0]]) })
+            val payer = inputs.minWith { a, b -> (a.hash[0].toInt() and 0xff) - (b.hash[0].toInt() and 0xff) }
+            assertTrue(requireNotNull(balances[payer.hash[0]]) - payer.credits >= 100L)
+            assertTrue(inputs.first() === payer)
+        }
+    }
+
     // ── Outcome classification ────────────────────────────────────────
 
     @Test
@@ -468,9 +738,6 @@ class ExternalSendServiceImplTest {
         val pairs = listOf(
             // The SDK funds P2PKH Platform addresses only.
             SendBalance.CORE to platformP2sh,
-            SendBalance.PLATFORM to core,
-            SendBalance.PLATFORM to shielded,
-            SendBalance.IDENTITY to shielded,
             SendBalance.IDENTITY to ownIdentity,
             // Someone else's identity from Core: the resume gate cannot protect it.
             SendBalance.CORE to otherIdentity

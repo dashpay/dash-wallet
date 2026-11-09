@@ -689,6 +689,27 @@ interface ShieldedSource {
     suspend fun shield(walletId: ByteArray, amountCredits: Long)
 
     /**
+     * Type 15 to a THIRD PARTY: shield credits from the wallet's Platform payment addresses
+     * to [recipientRaw43] (the SDK refuses an address of this wallet's own shielded account).
+     * Blocks for the proof. Default throws: only the production source (and fakes that
+     * exercise it) need it.
+     */
+    suspend fun shieldToRecipient(walletId: ByteArray, recipientRaw43: ByteArray, amountCredits: Long): Unit =
+        throw UnsupportedOperationException("shield to a recipient not supported by this source")
+
+    /**
+     * Type 21 to a THIRD PARTY: shield credits from the managed identity [identityId]
+     * (32 bytes) to [recipientRaw43]. Blocks for the proof. Default throws: only the
+     * production source (and fakes that exercise it) need it.
+     */
+    suspend fun shieldFromIdentityToRecipient(
+        walletId: ByteArray,
+        identityId: ByteArray,
+        recipientRaw43: ByteArray,
+        amountCredits: Long
+    ): Unit = throw UnsupportedOperationException("identity shield to a recipient not supported by this source")
+
+    /**
      * Type 18: build an L1 asset lock of [amountDuffs] from the SDK
      * wallet's OWN Core UTXOs, broadcast it over the SDK's SPV peers,
      * then shield the lock (minus the pool fee) to [recipientRaw43].
@@ -858,6 +879,29 @@ internal class DashSdkShieldedSource(
 
     override suspend fun shield(walletId: ByteArray, amountCredits: Long) =
         manager().shieldedShield(walletId = walletId, amount = amountCredits)
+
+    override suspend fun shieldToRecipient(walletId: ByteArray, recipientRaw43: ByteArray, amountCredits: Long) =
+        manager().shieldedShieldToRecipient(
+            walletId = walletId,
+            recipientRaw43 = recipientRaw43,
+            amount = amountCredits
+        )
+
+    override suspend fun shieldFromIdentityToRecipient(
+        walletId: ByteArray,
+        identityId: ByteArray,
+        recipientRaw43: ByteArray,
+        amountCredits: Long
+    ) {
+        // The proven post-debit identity balance is not needed: the identity balance
+        // reads re-fetch it.
+        manager().shieldedShieldFromIdentityToRecipient(
+            walletId = walletId,
+            identityId = identityId,
+            recipientRaw43 = recipientRaw43,
+            amount = amountCredits
+        )
+    }
 
     override suspend fun fundFromAssetLock(
         walletId: ByteArray,
@@ -2691,6 +2735,35 @@ class ShieldedBalanceServiceImpl internal constructor(
         val target = identityId.copyOf()
         return runShieldedWrite("topUpIdentityFromShielded", amount, expectedWalletIdHex) { walletId, credits ->
             source.identityTopUpFromPool(walletId, target, credits)
+        }
+    }
+
+    override suspend fun shieldFromCreditsToAddress(
+        toShieldedAddress: String,
+        amount: Dash,
+        expectedWalletIdHex: String
+    ): SdkWriteResult<Unit> {
+        val recipientRaw43 = decodeOrchardAddress(toShieldedAddress, displayHrpSafe())
+            ?: return notBroadcast("shieldFromCreditsToAddress", "malformed or wrong-network shielded address", null)
+        return runShieldedWrite("shieldFromCreditsToAddress", amount, expectedWalletIdHex) { walletId, credits ->
+            source.shieldToRecipient(walletId, recipientRaw43, credits)
+        }
+    }
+
+    override suspend fun shieldFromIdentityToAddress(
+        identityId: ByteArray,
+        toShieldedAddress: String,
+        amount: Dash,
+        expectedWalletIdHex: String
+    ): SdkWriteResult<Unit> {
+        if (identityId.size != 32) {
+            return notBroadcast("shieldFromIdentityToAddress", "identity id is not 32 bytes", null)
+        }
+        val recipientRaw43 = decodeOrchardAddress(toShieldedAddress, displayHrpSafe())
+            ?: return notBroadcast("shieldFromIdentityToAddress", "malformed or wrong-network shielded address", null)
+        val fromId = identityId.copyOf()
+        return runShieldedWrite("shieldFromIdentityToAddress", amount, expectedWalletIdHex) { walletId, credits ->
+            source.shieldFromIdentityToRecipient(walletId, fromId, recipientRaw43, credits)
         }
     }
 

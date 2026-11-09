@@ -368,6 +368,25 @@ class ExternalSendViewModelTest {
     }
 
     @Test
+    fun continue_isAllowedForThePairsTheInt37SdkAdded() {
+        val state = ExternalSendUIState(
+            step = ExternalSendStep.AMOUNT,
+            destination = SendDestination.Core(coreAddress),
+            source = SendBalance.PLATFORM,
+            amountText = "1",
+            balance = twoDash,
+            hasIdentity = true
+        )
+        // Platform → Core (partial withdrawal), Platform / Identity → Shielded (third-party shields).
+        assertTrue(state.canContinueAmount)
+        assertTrue(state.copy(destination = SendDestination.Shielded(shieldedAddress)).canContinueAmount)
+        assertTrue(
+            state.copy(source = SendBalance.IDENTITY, destination = SendDestination.Shielded(shieldedAddress))
+                .canContinueAmount
+        )
+    }
+
+    @Test
     fun continue_toAnIdentity_needsItToBeFound_andUnknownCanBeRetried() {
         service.balances.getValue(SendBalance.SHIELDED).value = twoDash
         service.resolution = IdentityResolution.NotFound

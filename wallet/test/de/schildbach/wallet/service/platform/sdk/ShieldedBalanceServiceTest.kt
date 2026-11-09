@@ -279,6 +279,31 @@ class ShieldedBalanceServiceTest {
             onShield()
         }
 
+        var lastIdentityId: ByteArray? = null
+        val shieldToCalls = mutableListOf<String>()
+
+        override suspend fun shieldToRecipient(walletId: ByteArray, recipientRaw43: ByteArray, amountCredits: Long) {
+            broadcastCalls++
+            shieldToCalls += "platform"
+            lastRecipientRaw43 = recipientRaw43
+            lastAmountCredits = amountCredits
+            onShield()
+        }
+
+        override suspend fun shieldFromIdentityToRecipient(
+            walletId: ByteArray,
+            identityId: ByteArray,
+            recipientRaw43: ByteArray,
+            amountCredits: Long
+        ) {
+            broadcastCalls++
+            shieldToCalls += "identity"
+            lastIdentityId = identityId
+            lastRecipientRaw43 = recipientRaw43
+            lastAmountCredits = amountCredits
+            onShield()
+        }
+
         override suspend fun transfer(
             walletId: ByteArray,
             recipientRaw43: ByteArray,
@@ -1737,6 +1762,84 @@ class ShieldedBalanceServiceTest {
             val source = readySource().apply { onShield = outcome }
             service(source).shieldFromCredits(Dash.COIN)
             assertEquals(1, source.broadcastCalls)
+        }
+    }
+
+    // ── Third-party shields: Platform (Type 15) / identity (Type 21) → recipient ──
+
+    private val identity32 = ByteArray(32) { 4 }
+
+    private suspend fun ShieldedBalanceServiceImpl.shieldTo(
+        fromIdentity: Boolean,
+        address: String = recipientAddress,
+        amount: Dash = Dash(250),
+        expectedWallet: String = walletIdHex,
+        identityId: ByteArray = identity32
+    ): SdkWriteResult<Unit> = if (fromIdentity) {
+        shieldFromIdentityToAddress(identityId, address, amount, expectedWallet)
+    } else {
+        shieldFromCreditsToAddress(address, amount, expectedWallet)
+    }
+
+    @Test
+    fun shieldToRecipient_mapsRecipientAmountAndIdentity() = runBlocking {
+        for (fromIdentity in listOf(false, true)) {
+            val source = readySource()
+            val result = service(source).shieldTo(fromIdentity)
+
+            assertTrue(result is SdkWriteResult.Broadcast)
+            assertEquals(listOf(if (fromIdentity) "identity" else "platform"), source.shieldToCalls)
+            assertArrayEquals(recipientRaw43, source.lastRecipientRaw43)
+            assertEquals(250_000L, source.lastAmountCredits)
+            if (fromIdentity) assertArrayEquals(identity32, source.lastIdentityId)
+        }
+    }
+
+    @Test
+    fun shieldToRecipient_preflightRefusals_areNotBroadcast_withNoBroadcastAttempt() = runBlocking {
+        val mainnetAddress = encodeOrchardAddress(recipientRaw43, "dash")!!
+        for (fromIdentity in listOf(false, true)) {
+            val source = readySource()
+            val service = service(source)
+            for (bad in listOf("not-an-address", mainnetAddress)) {
+                assertTrue(service.shieldTo(fromIdentity, address = bad) is SdkWriteResult.NotBroadcast)
+            }
+            assertTrue(service.shieldTo(fromIdentity, amount = Dash.ZERO) is SdkWriteResult.NotBroadcast)
+            // The runtime is bound to another wallet than the one the user confirmed with.
+            assertTrue(service.shieldTo(fromIdentity, expectedWallet = "cd".repeat(32)) is SdkWriteResult.NotBroadcast)
+            assertEquals(0, source.broadcastCalls)
+        }
+        val source = readySource()
+        assertTrue(service(source).shieldTo(true, identityId = ByteArray(31)) is SdkWriteResult.NotBroadcast)
+        assertEquals(0, source.broadcastCalls)
+    }
+
+    @Test
+    fun shieldToRecipient_sdkOutcomes_ownRecipientAndDebitPendingAreNotBroadcast_unconfirmedIsAmbiguous() = runBlocking {
+        val cases = listOf<Pair<() -> Unit, Boolean>>(
+            // rs-platform-wallet resolve_shield_recipient, before anything is built.
+            {
+                throw DashSdkError.PlatformWallet.WalletOperation(
+                    "shielded shield failed: Shielded build error: recipient belongs to this shielded " +
+                        "account; use the self-shield entry point (no recipient) instead"
+                )
+            } to true,
+            { throw DashSdkError.PlatformWallet.ShieldedIdentityDebitPending("earlier debit unresolved") } to true,
+            { throw DashSdkError.PlatformWallet.ShieldedSpendUnconfirmed("broadcast accepted") } to false,
+            { throw DashSdkError.NetworkError("conn dropped mid-submit") } to false
+        )
+        for (fromIdentity in listOf(false, true)) {
+            for ((outcome, notBroadcast) in cases) {
+                val source = readySource().apply { onShield = outcome }
+                val result = service(source).shieldTo(fromIdentity)
+                if (notBroadcast) {
+                    assertTrue(result is SdkWriteResult.NotBroadcast)
+                } else {
+                    assertTrue(result is SdkWriteResult.Ambiguous)
+                }
+                // One attempt, never retried.
+                assertEquals(1, source.broadcastCalls)
+            }
         }
     }
 

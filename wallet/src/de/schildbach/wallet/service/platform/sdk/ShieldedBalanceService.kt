@@ -579,6 +579,37 @@ interface ShieldedBalanceService {
     ): SdkWriteResult<Unit>
 
     /**
+     * [shieldFromCredits] to an EXTERNAL Orchard recipient [toShieldedAddress] (Type 15,
+     * `shieldedShieldToRecipient`): [amount] credits from the wallet's own Platform payment
+     * addresses (account 0; the SDK selects the inputs, in ascending derivation order, and
+     * reserves the flat shield fee on top) become a note of the recipient. An address this
+     * wallet's own shielded account recognizes is refused by the SDK before anything is
+     * built ([SdkWriteResult.NotBroadcast]); malformed / wrong-network input is refused
+     * here. A spend that may have been submitted is [SdkWriteResult.Ambiguous] (never
+     * retried). Blocks for the ~30s proof.
+     */
+    suspend fun shieldFromCreditsToAddress(
+        toShieldedAddress: String,
+        amount: Dash,
+        expectedWalletIdHex: String
+    ): SdkWriteResult<Unit>
+
+    /**
+     * Shield [amount] credits from the wallet's managed identity [identityId] (32 bytes) to
+     * the EXTERNAL Orchard recipient [toShieldedAddress] (Type 21,
+     * `shieldedShieldFromIdentityToRecipient`). The identity pays [amount] plus the metered
+     * transition fee and the shielded compute fee. Same refusals as
+     * [shieldFromCreditsToAddress]; an earlier identity shield that is still unresolved is a
+     * [SdkWriteResult.NotBroadcast] (the SDK built nothing). Blocks for the ~30s proof.
+     */
+    suspend fun shieldFromIdentityToAddress(
+        identityId: ByteArray,
+        toShieldedAddress: String,
+        amount: Dash,
+        expectedWalletIdHex: String
+    ): SdkWriteResult<Unit>
+
+    /**
      * [shieldFromWallet] to an EXTERNAL Orchard recipient [toShieldedAddress]: one fresh
      * L1 asset lock + Type 18 paying that address.
      *

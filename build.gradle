@@ -11,12 +11,15 @@ buildscript {
         // Pre-release SDK snapshot published to the Sonatype snapshots repository
         // (declared below as 'Central Portal Snapshots'; anonymous read). Pinned to
         // the exact timestamped build, not the -SNAPSHOT name, so a later upload
-        // can't change what this commit builds. 5.1.0-int36: HashEngineering/platform
-        // feat/kotlin-sdk-fund-from-asset-lock-external @ 760d00f559 = v5.1-dev plus the
-        // fund_from_asset_lock_external JNI binding (ManagedPlatformWallet
-        // .fundFromAssetLockExternal / .resumeFundFromAssetLockExternal), used by the
-        // Advanced-mode Core → third-party Platform address send.
-        dashSdkVersion = '5.1.0-int36-20261106.165805-1'
+        // can't change what this commit builds. 5.1.0-int37: HashEngineering/platform
+        // integration/5.1.0-int37 @ 45d7bcb1b2 = int36 (fund_from_asset_lock_external,
+        // used by the Core → third-party Platform address send) plus three bindings the
+        // Advanced-mode External Send uses: the partial-amount Platform-address withdrawal
+        // (ManagedPlatformWallet.withdrawCredits with explicit WithdrawalInputs, Platform →
+        // Core), and the third-party shields PlatformWalletManager.shieldedShieldToRecipient
+        // (Type 15, Platform → Shielded) and .shieldedShieldFromIdentityToRecipient
+        // (Type 21, Identity → Shielded).
+        dashSdkVersion = '5.1.0-int37-20261108.041023-1'
         // 5.0.0 carries a libsdklib.so that knows document serialization
         // format 3. Format 3 arrives with Platform protocol version 14 (it
         // stamps the document with the contract version its bytes conform to,
