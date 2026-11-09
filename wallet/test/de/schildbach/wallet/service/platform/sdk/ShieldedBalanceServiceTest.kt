@@ -269,16 +269,29 @@ class ShieldedBalanceServiceTest {
         override fun observeActivity(walletId: ByteArray): Flow<List<ShieldedActivityEntity>> =
             activityFlow.onStart { activityFailure?.let { throw it } }
 
-        override suspend fun activity(
-            walletId: ByteArray,
-            accountIndex: Int,
-            entryId: ByteArray
-        ): ShieldedActivityEntity? {
-            activityFailure?.let { throw it }
-            return activityFlow.value.firstOrNull {
-                it.walletId.contentEquals(walletId) && it.accountIndex == accountIndex &&
-                    it.entryId.contentEquals(entryId)
-            }
+        /** Own Core addresses / Platform address hashes (hex) / identity ids (hex), per wallet id hex. */
+        val ownCoreAddresses = mutableSetOf<Pair<String, String>>()
+        val ownPlatformHashes = mutableSetOf<Pair<String, String>>()
+        val ownIdentities = mutableSetOf<Pair<String, String>>()
+
+        @Volatile
+        var ownershipFailure: Throwable? = null
+
+        private fun ByteArray.hex() = joinToString("") { "%02x".format(it) }
+
+        override suspend fun isOwnCoreAddress(walletId: ByteArray, address: String): Boolean {
+            ownershipFailure?.let { throw it }
+            return (walletId.hex() to address) in ownCoreAddresses
+        }
+
+        override suspend fun isOwnPlatformAddress(walletId: ByteArray, addressHash: ByteArray): Boolean {
+            ownershipFailure?.let { throw it }
+            return (walletId.hex() to addressHash.hex()) in ownPlatformHashes
+        }
+
+        override suspend fun isOwnIdentity(walletId: ByteArray, identityId: ByteArray): Boolean {
+            ownershipFailure?.let { throw it }
+            return (walletId.hex() to identityId.hex()) in ownIdentities
         }
 
         override suspend fun shieldedDefaultAddress(walletId: ByteArray): ByteArray? = defaultAddress
@@ -492,7 +505,8 @@ class ShieldedBalanceServiceTest {
         stopLockTimeoutMs: Long = ShieldedBalanceServiceImpl.STOP_LOCK_TIMEOUT_MS,
         afterReadyCommitted: suspend () -> Unit = {},
         afterStopFallbackBump: suspend () -> Unit = {},
-        freshFundingBlocked: suspend () -> Boolean = { false }
+        freshFundingBlocked: suspend () -> Boolean = { false },
+        coreAddressVersions: CoreAddressVersions? = CoreAddressVersions(pubKeyHash = 140, scriptHash = 19)
     ) = ShieldedBalanceServiceImpl(
         source = source,
         dashPayConfig = config(enabled, l1ShadowEnabled, lastBalanceDuffs, consumed),
@@ -508,7 +522,8 @@ class ShieldedBalanceServiceTest {
         afterReadyCommitted = afterReadyCommitted,
         afterStopFallbackBump = afterStopFallbackBump,
         freshFundingBlocked = freshFundingBlocked,
-        fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
+        fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock(),
+        coreAddressVersions = { coreAddressVersions }
     )
 
     // ── Plan §37: stop() must not wait forever on a bring-up parked in the native bind ──
@@ -1435,6 +1450,71 @@ class ShieldedBalanceServiceTest {
         assertEquals(Dash(150_000_001L), service.observeShieldedBalance().first())
     }
 
+    private fun ownershipEntry(kindTag: Int, counterparty: ByteArray = ByteArray(0), identityId: ByteArray = ByteArray(0)) =
+        toShieldedActivityEntry(
+            activity(entryId = 1, direction = 1, status = 1, kindTag = kindTag, fee = 1L, hasFee = true)
+        )!!.copy(counterparty = counterparty, identityId = identityId)
+
+    @Test
+    fun counterpartyOwnership_resolvesEachKindAgainstTheGivenWallet() = runBlocking {
+        val source = readySource()
+        val service = service(source)
+        val hash = ByteArray(20) { 0x11 }
+        val p2pkh = byteArrayOf(0x76, 0xa9.toByte(), 0x14) + hash + byteArrayOf(0x88.toByte(), 0xac.toByte())
+        val address = org.bitcoinj.core.Base58.encodeChecked(140, hash)
+        val identity = ByteArray(32) { 0x22 }
+        val hashHex = "11".repeat(20)
+        val withdrawal = ownershipEntry(ShieldedActivityKindTag.WITHDRAWAL, counterparty = p2pkh)
+        val unshield = ownershipEntry(ShieldedActivityKindTag.UNSHIELD, counterparty = byteArrayOf(0) + hash)
+        val topUp = ownershipEntry(ShieldedActivityKindTag.IDENTITY_TOP_UP, identityId = identity)
+
+        // Nothing stored for this wallet: external.
+        assertEquals(CounterpartyOwnership.EXTERNAL, service.counterpartyOwnership(walletIdHex, withdrawal))
+        assertEquals(CounterpartyOwnership.EXTERNAL, service.counterpartyOwnership(walletIdHex, unshield))
+        assertEquals(CounterpartyOwnership.EXTERNAL, service.counterpartyOwnership(walletIdHex, topUp))
+
+        source.ownCoreAddresses += walletIdHex to address
+        source.ownPlatformHashes += walletIdHex to hashHex
+        source.ownIdentities += walletIdHex to "22".repeat(32)
+        assertEquals(CounterpartyOwnership.OWN, service.counterpartyOwnership(walletIdHex, withdrawal))
+        assertEquals(CounterpartyOwnership.OWN, service.counterpartyOwnership(walletIdHex, unshield))
+        assertEquals(CounterpartyOwnership.OWN, service.counterpartyOwnership(walletIdHex, topUp))
+        // Scoped to the wallet asked about: another wallet's rows do not count.
+        val other = "cd".repeat(32)
+        assertEquals(CounterpartyOwnership.EXTERNAL, service.counterpartyOwnership(other, withdrawal))
+
+        // Undecodable counterparty, a malformed wallet id or a failed read: unknown.
+        assertEquals(
+            CounterpartyOwnership.UNKNOWN,
+            service.counterpartyOwnership(walletIdHex, ownershipEntry(ShieldedActivityKindTag.WITHDRAWAL, ByteArray(5)))
+        )
+        assertEquals(CounterpartyOwnership.UNKNOWN, service.counterpartyOwnership("zz", withdrawal))
+        source.ownershipFailure = IllegalStateException("db closed")
+        assertEquals(CounterpartyOwnership.UNKNOWN, service.counterpartyOwnership(walletIdHex, unshield))
+    }
+
+    @Test
+    fun counterpartyOwnership_withoutNetworkVersions_isUnknownForWithdrawals() = runBlocking {
+        val source = readySource()
+        val service = service(source, coreAddressVersions = null)
+        val p2pkh = byteArrayOf(0x76, 0xa9.toByte(), 0x14) + ByteArray(20) + byteArrayOf(0x88.toByte(), 0xac.toByte())
+        assertEquals(
+            CounterpartyOwnership.UNKNOWN,
+            service.counterpartyOwnership(walletIdHex, ownershipEntry(ShieldedActivityKindTag.WITHDRAWAL, p2pkh))
+        )
+    }
+
+    @Test
+    fun activityEntity_carriesCounterpartyAndIdentity_toStringRedacts() {
+        val entity = activity(entryId = 1, direction = 1, status = 1, kindTag = 5, amount = 123_456_000L)
+            .copy(counterparty = byteArrayOf(9, 8, 7), identityId = ByteArray(32) { 3 })
+        val entry = toShieldedActivityEntry(entity)!!
+        assertArrayEquals(byteArrayOf(9, 8, 7), entry.counterparty)
+        assertArrayEquals(ByteArray(32) { 3 }, entry.identityId)
+        assertFalse(entry.toString().contains("123456"))
+        assertFalse(entry.toString().contains(entry.id))
+    }
+
     @Test
     fun activityOrNotReady_nullBeforeReady_thenTheReadyWalletsRealList() = runBlocking {
         val source = readySource()
@@ -1450,28 +1530,6 @@ class ShieldedBalanceServiceTest {
 
         source.activityFlow.value = listOf(activity(entryId = 1, direction = 1, status = 1))
         assertEquals(1, service.observeShieldedActivityOrNotReady().first()!!.entries.size)
-    }
-
-    @Test
-    fun activityLookup_scopedToTheReadyWallet_nullWhenAbsentMalformedOrFailing() = runBlocking {
-        val source = readySource()
-        val service = service(source)
-        source.activityFlow.value = listOf(
-            activity(entryId = 7, direction = 1, status = 1, kindTag = 6, fee = 1_000L, hasFee = true, accountIndex = 2)
-        )
-        val idHex = "07" + "00".repeat(31)
-
-        // Not ready yet: no lookup.
-        assertNull(service.shieldedActivityEntry(2, idHex))
-        assertTrue(service.ensureShieldedReady())
-
-        val entry = service.shieldedActivityEntry(2, idHex)
-        assertNotNull(entry)
-        assertEquals(6, entry!!.kindTag)
-        assertNull(service.shieldedActivityEntry(0, idHex)) // wrong account
-        assertNull(service.shieldedActivityEntry(2, "zz")) // malformed
-        source.activityFailure = IllegalStateException("db closed")
-        assertNull(service.shieldedActivityEntry(2, idHex)) // read failure → null, logged
     }
 
     @Test

@@ -71,8 +71,23 @@ data class ShieldedActivityEntry(
      */
     val feeCredits: Long?,
     /** Settlement state; failed entries are never surfaced. */
-    val status: ShieldedActivityStatus
-)
+    val status: ShieldedActivityStatus,
+    /**
+     * The SDK's raw counterparty bytes (43-byte Orchard address, 21-byte
+     * serialized Platform address, or a Core output script), empty when none.
+     * Address data: never logged (see [toString]).
+     */
+    val counterparty: ByteArray = ByteArray(0),
+    /**
+     * The identity the kind carries (created / funding / topped-up identity
+     * for kinds 6 / 8 / 9), empty otherwise. Never logged.
+     */
+    val identityId: ByteArray = ByteArray(0)
+) {
+    /** Value-free: amounts, memo, ids and counterparties never reach a log. */
+    override fun toString(): String =
+        "ShieldedActivityEntry(kindTag=$kindTag, direction=$direction, status=$status)"
+}
 
 /**
  * One [ShieldedBalanceService.observeShieldedActivityOrNotReady] emission: the
@@ -353,14 +368,17 @@ interface ShieldedBalanceService {
      */
     fun observeShieldedActivityOrNotReady(): Flow<ShieldedActivitySnapshot?>
 
+
     /**
-     * One activity entry of the ACTIVE (ready) wallet by its row key
-     * ([ShieldedActivityEntry.accountIndex], [ShieldedActivityEntry.id]), read
-     * off the main thread. Null when no wallet is ready, the key is malformed,
-     * the row does not exist (or is Failed / unmappable), or the read failed —
-     * the failure is logged. Never throws except for cancellation.
+     * Whose [entry]'s counterparty is, checked against the SDK store of the
+     * wallet [walletIdHex] (the snapshot's wallet — never another): a Core
+     * withdrawal address in that wallet's `core_addresses` accounts, an
+     * unshield's Platform address in its `platform_addresses`, a topped-up
+     * identity in its `identities`. [CounterpartyOwnership.UNKNOWN] when the
+     * counterparty cannot be decoded or a read fails (logged without values).
+     * Reads off the main thread; never throws except for cancellation.
      */
-    suspend fun shieldedActivityEntry(accountIndex: Int, entryIdHex: String): ShieldedActivityEntry?
+    suspend fun counterpartyOwnership(walletIdHex: String, entry: ShieldedActivityEntry): CounterpartyOwnership
 
     /**
      * Live [ShieldedSyncStatus] for the shielded runtime. Starts at

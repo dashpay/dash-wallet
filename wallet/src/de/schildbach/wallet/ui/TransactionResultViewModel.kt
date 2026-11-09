@@ -32,8 +32,8 @@ import de.schildbach.wallet.service.platform.sdk.CutoverUiDataService
 import de.schildbach.wallet.service.platform.sdk.PlatformActivityDetail
 import de.schildbach.wallet.service.platform.sdk.SdkTopUpRecoveryService
 import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
-import de.schildbach.wallet.service.platform.sdk.parseShieldedHistoryRowId
-import de.schildbach.wallet.service.platform.sdk.platformActivityDetailOf
+import de.schildbach.wallet.service.platform.sdk.PlatformActivityDetailState
+import de.schildbach.wallet.service.platform.sdk.platformActivityDetailFeed
 import de.schildbach.wallet.service.platform.sdk.SdkTxDetail
 import de.schildbach.wallet.service.platform.sdk.SdkTxDetailProvider
 import de.schildbach.wallet.service.platform.sdk.toDefaultMetadata
@@ -124,15 +124,16 @@ class TransactionResultViewModel @Inject constructor(
 
     /**
      * The shielded-pool activity entry a `shielded:` Home row opens (no Core
-     * transaction exists for it). Null until [loadPlatformActivity] has read it.
+     * transaction exists for it), as of the latest activity emission. Null
+     * until [loadPlatformActivity] has read it.
      */
     private val _platformActivityDetail = MutableStateFlow<PlatformActivityDetail?>(null)
     val platformActivityDetail: StateFlow<PlatformActivityDetail?> = _platformActivityDetail.asStateFlow()
 
     /**
-     * True when [loadPlatformActivity] could not produce a detail (malformed id,
-     * no ready wallet, row gone or unmappable, read failed) — the sheet closes
-     * instead of showing a fabricated or empty detail.
+     * True once the detail can no longer be shown (malformed id, no ready
+     * wallet, the entry failed / disappeared, the wallet changed, the read
+     * failed) — the sheet closes instead of showing a fabricated or stale detail.
      */
     private val _platformActivityLoadFailed = MutableStateFlow(false)
     val platformActivityLoadFailed: StateFlow<Boolean> = _platformActivityLoadFailed.asStateFlow()
@@ -140,27 +141,23 @@ class TransactionResultViewModel @Inject constructor(
     private var platformActivityLoad: Job? = null
 
     /**
-     * Load the detail for a shielded-activity history row id. The service reads
-     * the ACTIVE wallet's row off the main thread. Idempotent across view
-     * recreation: a load already running or finished is not repeated.
+     * Follow the detail of a shielded-activity history row live
+     * ([platformActivityDetailFeed]: pending → confirmed in place, a failed
+     * entry closes the sheet), collected off the main thread in the ViewModel
+     * scope. Idempotent across view recreation: a running follow is kept.
      */
     fun loadPlatformActivity(rowId: String) {
         if (platformActivityLoad != null) return
-        val key = parseShieldedHistoryRowId(rowId)
-        if (key == null) {
-            log.warn("shielded activity detail: malformed row id")
-            _platformActivityLoadFailed.value = true
-            return
-        }
-        platformActivityLoad = viewModelScope.launch {
-            val detail = shieldedBalanceService.shieldedActivityEntry(key.accountIndex, key.entryIdHex)
-                ?.let(::platformActivityDetailOf)
-            if (detail == null) {
-                // Value-free: no id, amount or memo.
-                log.warn("shielded activity detail unavailable")
-                _platformActivityLoadFailed.value = true
-            } else {
-                _platformActivityDetail.value = detail
+        platformActivityLoad = viewModelScope.launch(Dispatchers.IO) {
+            platformActivityDetailFeed(shieldedBalanceService, rowId).collect { state ->
+                when (state) {
+                    is PlatformActivityDetailState.Shown -> _platformActivityDetail.value = state.detail
+                    PlatformActivityDetailState.Unavailable -> {
+                        // Value-free: no id, amount or memo.
+                        log.warn("shielded activity detail unavailable")
+                        _platformActivityLoadFailed.value = true
+                    }
+                }
             }
         }
     }

@@ -49,8 +49,9 @@ import javax.inject.Singleton
  * - "not ready" (`null`, e.g. before bring-up or after a wipe reset) changes
  *   nothing: unknown is not empty, so existing rows stay. Only a READY wallet's
  *   real (possibly empty) list replaces them.
- * - a failed read or write logs (no values) and keeps the rows; a failed feed
- *   is re-subscribed after [retryDelayMs].
+ * - a failed read or write logs (no values) and keeps the rows; the feed is
+ *   re-subscribed after [retryDelayMs], which re-emits the current snapshot and
+ *   so retries the write.
  *
  * Lifecycle: [start] is idempotent and once-per-process (called beside
  * [CutoverUiDataService.start]). The wallet wipe calls [stopForWalletWipe]
@@ -163,8 +164,11 @@ class ShieldedHistoryRowSync internal constructor(
             } catch (e: CancellationException) {
                 throw e
             } catch (t: Throwable) {
-                // No values: the exception class only. Rows stay as they are.
-                log.warn("shielded history rows: activity feed failed ({}); keeping rows", t.javaClass.simpleName)
+                // A failed feed OR a failed write: rows stay as they are, and the
+                // resubscription after the pause re-emits the current snapshot, so a
+                // write that failed while the feed is quiet is retried. No values:
+                // the exception class only.
+                log.warn("shielded history rows: sync pass failed ({}); keeping rows, retrying", t.javaClass.simpleName)
             }
             delay(retryDelayMs)
         }
@@ -172,8 +176,11 @@ class ShieldedHistoryRowSync internal constructor(
 
     /**
      * Apply one activity snapshot: `null` (not ready) is a no-op; a list
-     * (possibly empty) replaces the shielded rows. Returns true when the rows
-     * were written. A failed write logs and keeps the existing rows.
+     * (possibly empty) replaces the shielded rows, each entry planned with its
+     * counterparty ownership resolved against the snapshot's own wallet.
+     * Returns true when the rows were written. A failed write THROWS (after
+     * leaving the existing rows untouched — the replace is one transaction) so
+     * [collectLoop] retries it.
      */
     internal suspend fun applySnapshot(snapshot: ShieldedActivitySnapshot?): Boolean {
         if (snapshot == null) {
@@ -186,21 +193,23 @@ class ShieldedHistoryRowSync internal constructor(
             heldWalletIdHex = null
         }
         lastSeenWalletIdHex = snapshot.walletIdHex
-        val plan = planShieldedHistoryRows(snapshot.entries, resolveString)
+        val ownership = HashMap<String, CounterpartyOwnership>()
+        for (entry in snapshot.entries) {
+            ownership[shieldedHistoryRowId(entry.accountIndex, entry.id)] =
+                shieldedBalanceService.counterpartyOwnership(snapshot.walletIdHex, entry)
+        }
+        val plan = planShieldedHistoryRows(
+            snapshot.entries,
+            { ownership[shieldedHistoryRowId(it.accountIndex, it.id)] ?: CounterpartyOwnership.UNKNOWN },
+            resolveString
+        )
         if (plan.skipped.isNotEmpty()) {
             // Counts only — never ids, amounts or memos.
             log.info("shielded history rows: {} planned, skipped {}", plan.rows.size, plan.skipped)
         }
-        return try {
-            currentCoroutineContext().ensureActive()
-            txDisplayCacheDao.replaceShieldedRows(plan.rows, plan.rows.mapTo(HashSet()) { it.rowId })
-            displayCacheRefreshBus.signalChanged()
-            true
-        } catch (e: CancellationException) {
-            throw e
-        } catch (t: Throwable) {
-            log.warn("shielded history rows: write failed ({}); keeping rows", t.javaClass.simpleName)
-            false
-        }
+        currentCoroutineContext().ensureActive()
+        txDisplayCacheDao.replaceShieldedRows(plan.rows, plan.rows.mapTo(HashSet()) { it.rowId })
+        displayCacheRefreshBus.signalChanged()
+        return true
     }
 }

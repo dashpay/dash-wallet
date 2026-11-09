@@ -161,7 +161,9 @@ internal fun toShieldedActivityEntry(entity: ShieldedActivityEntity): ShieldedAc
         amountCredits = entity.amount,
         // Unknown, never zero: no recorded fee, or a value no fee can have.
         feeCredits = entity.fee.takeIf { entity.hasFee && it >= 0 },
-        status = status
+        status = status,
+        counterparty = entity.counterparty.copyOf(),
+        identityId = entity.identityId.copyOf()
     )
 }
 
@@ -688,8 +690,17 @@ interface ShieldedSource {
     /** Live activity rows for the wallet, from the SDK's Room store. */
     fun observeActivity(walletId: ByteArray): Flow<List<ShieldedActivityEntity>>
 
-    /** One activity row by its full key (`shieldedDao().getActivity`), or null when absent. */
-    suspend fun activity(walletId: ByteArray, accountIndex: Int, entryId: ByteArray): ShieldedActivityEntity?
+    /**
+     * Whether the Core [address] is one of [walletId]'s own: its `core_addresses`
+     * row exists and its account belongs to that wallet.
+     */
+    suspend fun isOwnCoreAddress(walletId: ByteArray, address: String): Boolean
+
+    /** Whether [walletId] has a `platform_addresses` row with [addressHash]. */
+    suspend fun isOwnPlatformAddress(walletId: ByteArray, addressHash: ByteArray): Boolean
+
+    /** Whether the identity [identityId] is stored and belongs to [walletId]. */
+    suspend fun isOwnIdentity(walletId: ByteArray, identityId: ByteArray): Boolean
 
     /** Raw 43-byte default Orchard address for account 0, or null when unbound. */
     suspend fun shieldedDefaultAddress(walletId: ByteArray): ByteArray?
@@ -879,11 +890,17 @@ internal class DashSdkShieldedSource(
     override fun observeActivity(walletId: ByteArray): Flow<List<ShieldedActivityEntity>> =
         flow { emitAll(database().shieldedDao().observeActivityByWallet(walletId)) }
 
-    override suspend fun activity(
-        walletId: ByteArray,
-        accountIndex: Int,
-        entryId: ByteArray
-    ): ShieldedActivityEntity? = database().shieldedDao().getActivity(walletId, accountIndex, entryId)
+    override suspend fun isOwnCoreAddress(walletId: ByteArray, address: String): Boolean {
+        val db = database()
+        val accountId = db.coreAddressDao().getByAddress(address)?.accountId ?: return false
+        return db.accountDao().getById(accountId)?.walletId?.contentEquals(walletId) == true
+    }
+
+    override suspend fun isOwnPlatformAddress(walletId: ByteArray, addressHash: ByteArray): Boolean =
+        database().platformAddressDao().getByWalletAndAddressHash(walletId, addressHash) != null
+
+    override suspend fun isOwnIdentity(walletId: ByteArray, identityId: ByteArray): Boolean =
+        database().identityDao().getByIdentityId(identityId)?.walletId?.contentEquals(walletId) == true
 
     override suspend fun shieldedDefaultAddress(walletId: ByteArray): ByteArray? =
         manager().shieldedDefaultAddress(walletId, account = 0)
@@ -1231,7 +1248,14 @@ class ShieldedBalanceServiceImpl internal constructor(
      * was read, before the readiness-coverage decision — where a stopped
      * session's collector can still be running. No-op in production.
      */
-    private val afterCoverageRead: suspend () -> Unit = {}
+    private val afterCoverageRead: suspend () -> Unit = {},
+    /**
+     * The active network's Core address version bytes, for resolving a
+     * withdrawal's destination script to an address. Null (the default) makes
+     * every such lookup [CounterpartyOwnership.UNKNOWN] — fail closed. Prod
+     * reads [Constants.NETWORK_PARAMETERS] lazily.
+     */
+    private val coreAddressVersions: () -> CoreAddressVersions? = { null }
 ) : ShieldedBalanceService {
 
     @Inject
@@ -1268,7 +1292,13 @@ class ShieldedBalanceServiceImpl internal constructor(
         sweepScope = applicationScope,
         seedAssetLockKind = { displayHex, kind -> assetLockKindResolver.seed(displayHex, kind) },
         freshFundingBlocked = { fundingGate.isFreshFundingBlocked() },
-        fundingSelection = fundingGate.selectionLock
+        fundingSelection = fundingGate.selectionLock,
+        coreAddressVersions = {
+            CoreAddressVersions(
+                pubKeyHash = Constants.NETWORK_PARAMETERS.addressHeader,
+                scriptHash = Constants.NETWORK_PARAMETERS.p2SHHeader
+            )
+        }
     )
 
     /** Serializes [ensureShieldedReady]/[stop] — the single-flight guarantee. */
@@ -2141,18 +2171,33 @@ class ShieldedBalanceServiceImpl internal constructor(
             }
         }
 
-    override suspend fun shieldedActivityEntry(accountIndex: Int, entryIdHex: String): ShieldedActivityEntry? {
-        // Capture the active wallet before the first suspension: the read is
-        // scoped to the wallet that is ready NOW, never a later one.
-        val walletId = readyWalletIdHex.value?.let(::walletIdFromHex) ?: return null
-        val entryId = walletIdFromHex(entryIdHex) ?: return null // also a 32-byte key
+    override suspend fun counterpartyOwnership(
+        walletIdHex: String,
+        entry: ShieldedActivityEntry
+    ): CounterpartyOwnership {
+        val query = counterpartyQueryFor(entry, coreAddressVersions())
+        if (query is CounterpartyQuery.NotNeeded || query is CounterpartyQuery.Undecodable) {
+            return CounterpartyOwnership.UNKNOWN
+        }
+        val walletId = walletIdFromHex(walletIdHex) ?: return CounterpartyOwnership.UNKNOWN
         return try {
-            withContext(Dispatchers.IO) { source.activity(walletId, accountIndex, entryId) }
-                ?.let(::toShieldedActivityEntry)
+            val own = withContext(Dispatchers.IO) {
+                when (query) {
+                    is CounterpartyQuery.CoreAddress -> source.isOwnCoreAddress(walletId, query.address)
+                    is CounterpartyQuery.PlatformAddressHash -> source.isOwnPlatformAddress(walletId, query.hash)
+                    is CounterpartyQuery.Identity -> source.isOwnIdentity(walletId, query.identityId)
+                    else -> null
+                }
+            }
+            when (own) {
+                true -> CounterpartyOwnership.OWN
+                false -> CounterpartyOwnership.EXTERNAL
+                null -> CounterpartyOwnership.UNKNOWN
+            }
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
-            log.warn("shielded activity lookup failed", t)
-            null
+            log.warn("shielded activity counterparty lookup failed ({})", t.javaClass.simpleName)
+            CounterpartyOwnership.UNKNOWN
         }
     }
 

@@ -23,6 +23,8 @@ import de.schildbach.wallet.database.AppDatabase
 import de.schildbach.wallet.database.dao.TxDisplayCacheDao
 import de.schildbach.wallet.database.entity.TxDisplayCacheEntry
 import de.schildbach.wallet.service.DisplayCacheRefreshBus
+import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.CoroutineScope
@@ -59,6 +61,7 @@ class ShieldedHistoryRowSyncTest {
     private val walletA = "aa".repeat(32)
     private val walletB = "bb".repeat(32)
     private val l1Txid = "cd".repeat(32)
+    private var ownership = CounterpartyOwnership.OWN
 
     @Before
     fun setUp() {
@@ -78,6 +81,7 @@ class ShieldedHistoryRowSyncTest {
     private fun sync(): ShieldedHistoryRowSync {
         val service = mockk<ShieldedBalanceService>()
         every { service.observeShieldedActivityOrNotReady() } returns activity
+        coEvery { service.counterpartyOwnership(any(), any()) } returns ownership
         return ShieldedHistoryRowSync(
             service, dao, DisplayCacheRefreshBus(), { "res:$it" }, scope, Dispatchers.IO, retryDelayMs = 10L
         )
@@ -237,5 +241,34 @@ class ShieldedHistoryRowSyncTest {
         withTimeout(5_000) {
             while (ids() != expected) kotlinx.coroutines.delay(10)
         }
+    }
+
+    @Test
+    fun ownershipIsResolvedAgainstTheSnapshotsWallet_foreignWithdrawalGetsASentRow() = runBlocking {
+        val service = mockk<ShieldedBalanceService>()
+        every { service.observeShieldedActivityOrNotReady() } returns activity
+        coEvery { service.counterpartyOwnership(walletA, any()) } returns CounterpartyOwnership.EXTERNAL
+        val sync = ShieldedHistoryRowSync(
+            service, dao, DisplayCacheRefreshBus(), { "res:$it" }, scope, Dispatchers.IO, retryDelayMs = 10L
+        )
+        val w = "05".repeat(32)
+        sync.applySnapshot(
+            ShieldedActivitySnapshot(walletA, listOf(entry(w, kindTag = ShieldedActivityKindTag.WITHDRAWAL)))
+        )
+        val row = dao.getAll().single()
+        assertEquals("shielded:0:$w", row.rowId)
+        assertEquals("res:${de.schildbach.wallet_test.R.string.transaction_row_status_sent}", row.title)
+        assertEquals(-3_000_000L, row.valueSatoshis)
+        coVerify { service.counterpartyOwnership(walletA, any()) }
+    }
+
+    @Test
+    fun unknownWithdrawalDestination_getsNoRow() = runBlocking {
+        ownership = CounterpartyOwnership.UNKNOWN
+        val sync = sync()
+        sync.applySnapshot(
+            ShieldedActivitySnapshot(walletA, listOf(entry("05".repeat(32), kindTag = ShieldedActivityKindTag.WITHDRAWAL)))
+        )
+        assertEquals(emptySet<String>(), ids())
     }
 }
