@@ -415,27 +415,23 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
             liveAdapter.loadStateFlow
                 .distinctUntilChanged()
                 .collectLatest { loadStates ->
-                    // Swap cacheAdapter → liveAdapter inside the same ConcatAdapter as soon as the
-                    // live (filter-aware) Pager has its first settled answer for the current
-                    // filter — whether that answer is some rows or none. The unfiltered cache
-                    // snapshot must not keep deciding what's on screen once the live data is in,
-                    // or a filter matching nothing would stay masked by the cache's stale content.
-                    // Gated on viewModel.transactionsLoaded instead of a per-view "seen Loading"
-                    // latch: that latch is reset per view but a late subscriber to the singleton
-                    // service's cachedIn() Pager (e.g. this view recreated after a bottom-nav tab
-                    // swap, once the Pager has already settled once) gets a synthesized catch-up
-                    // Insert.Refresh carrying the current settled LoadStates and never replays the
-                    // historical Loading transition, so the latch could never flip and the swap
-                    // would never fire. transactionsLoaded is flipped exactly when the service's
-                    // data source becomes authoritative and is not reset per view, so a late
-                    // subscriber reads the right value immediately. The service emits nothing
-                    // while its data source is still Empty, so a NotLoading refresh here always
-                    // comes from a settled Room generation, never a startup placeholder.
-                    // Keeping one ConcatAdapter instance avoids the "cannot find wrapper"
-                    // crash from ConcatAdapterController.
-                    if (cacheAdapterAttached &&
-                        loadStates.refresh is LoadState.NotLoading &&
-                        viewModel.transactionsLoaded.value) {
+                    // Swap/loading/empty decision: see transactionsListPolicy's KDoc for why
+                    // these particular inputs and this particular gating.
+                    val policy = transactionsListPolicy(
+                        cacheAdapterAttached = cacheAdapterAttached,
+                        cacheHasRows = cacheHasRows,
+                        refreshState = loadStates.refresh,
+                        transactionsLoaded = viewModel.transactionsLoaded.value,
+                        isBuildingCache = viewModel.isBuildingCache.value,
+                        liveItemCount = liveAdapter.itemCount,
+                        headerIsEmpty = header.isEmpty()
+                    )
+
+                    if (policy.swapToLive) {
+                        // Keeping one ConcatAdapter instance avoids the "cannot find wrapper"
+                        // crash from ConcatAdapterController, which two separate ConcatAdapter
+                        // instances trigger by calling onViewDetachedFromWindow on each other's
+                        // ViewHolders.
                         log.info("STARTUP swapping to live adapter: {} items at {}",
                             liveAdapter.itemCount, System.currentTimeMillis())
                         val lm = binding.walletTransactionsList.layoutManager as LinearLayoutManager
@@ -447,13 +443,6 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                     }
 
                     val isRefreshing = loadStates.refresh is LoadState.Loading
-                    val cacheHasItems = cacheAdapterAttached && cacheHasRows
-                    // Only show the loading spinner when there's nothing to display yet.
-                    val isLoading = isRefreshing && liveAdapter.itemCount == 0 && !cacheHasItems
-                    val isEmpty = viewModel.transactionsLoaded.value &&
-                        loadStates.refresh is LoadState.NotLoading &&
-                        liveAdapter.itemCount == 0 && !cacheHasItems
-
                     if (!isRefreshing && liveAdapter.itemCount > 0 && firstPageLoadStartTime > 0L) {
                         log.info("STARTUP first live items visible: {}ms from onViewCreated, {}ms from first-load-start ({} items)",
                             System.currentTimeMillis() - onViewCreatedTime,
@@ -462,10 +451,8 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                         firstPageLoadStartTime = -1L // prevent re-logging on subsequent invalidations
                     }
 
-                    val buildingFromScratch = viewModel.isBuildingCache.value &&
-                        liveAdapter.itemCount == 0 && !cacheHasItems
-                    binding.loading.isVisible = isLoading || buildingFromScratch
-                    if (isEmpty && header.isEmpty()) showEmptyView() else showTransactionList()
+                    binding.loading.isVisible = policy.isLoading
+                    if (policy.isEmpty) showEmptyView() else showTransactionList()
                 }
         }
 
@@ -960,3 +947,60 @@ internal fun needsNewName(errorMessage: String?): Boolean = errorMessage != null
         errorMessage.contains(Regex("does not have .* as a contender")) ||
         errorMessage.contains("missing domain document for ")
     )
+
+/** [transactionsListPolicy]'s swap/loading/empty decision for the current loadStateFlow emission. */
+internal data class TransactionsListPolicy(
+    val swapToLive: Boolean,
+    val isLoading: Boolean,
+    val isEmpty: Boolean
+)
+
+/**
+ * Pure cache→live handoff and loading/empty-view policy for the transaction history list, as a
+ * function of the inputs that arrive independently in `WalletTransactionsFragment`: the cache
+ * list's commit ([cacheHasRows]), the live Pager's settled state ([refreshState]), the
+ * service-wide "live data source is authoritative" latch ([transactionsLoaded]), the cache
+ * rebuild flag ([isBuildingCache]), the per-view attachment state ([cacheAdapterAttached]), the
+ * live adapter's row count ([liveItemCount]) and whether the header is empty ([headerIsEmpty]).
+ * Extracted so it can be host-unit-tested without a Fragment/Robolectric view harness.
+ *
+ * [swapToLive] fires as soon as the live (filter-aware) Pager has its first settled answer for
+ * the current filter — whether that answer is some rows or none — while the cache adapter is
+ * still attached. The unfiltered cache snapshot must not keep deciding what's on screen once the
+ * live data is in, or a filter matching nothing would stay masked by the cache's stale content.
+ * It is gated on [transactionsLoaded] instead of a per-view "seen Loading" latch: that latch is
+ * reset per view, but a late subscriber to the singleton service's `cachedIn()` Pager (e.g. this
+ * view recreated after a bottom-nav tab swap, once the Pager has already settled once) gets a
+ * synthesized catch-up `Insert.Refresh` carrying the current settled LoadStates and never replays
+ * the historical Loading transition, so the latch could never flip and the swap would never fire.
+ * [transactionsLoaded] is flipped exactly when the service's data source becomes authoritative
+ * and is not reset per view, so a late subscriber reads the right value immediately. The service
+ * emits nothing while its data source is still Empty, so a `NotLoading` refresh here always comes
+ * from a settled Room generation, never a startup placeholder.
+ *
+ * [isLoading] and [isEmpty] both treat the cache as already detached in the same evaluation that
+ * [swapToLive] fires, mirroring the Fragment applying the swap before it re-reads
+ * `cacheAdapterAttached` — otherwise a filter settling empty on a cache that still has rows would
+ * report neither loading nor empty for one extra emission.
+ */
+internal fun transactionsListPolicy(
+    cacheAdapterAttached: Boolean,
+    cacheHasRows: Boolean,
+    refreshState: LoadState,
+    transactionsLoaded: Boolean,
+    isBuildingCache: Boolean,
+    liveItemCount: Int,
+    headerIsEmpty: Boolean
+): TransactionsListPolicy {
+    val swapToLive = cacheAdapterAttached && refreshState is LoadState.NotLoading && transactionsLoaded
+    val cacheHasItems = cacheAdapterAttached && !swapToLive && cacheHasRows
+    val isRefreshing = refreshState is LoadState.Loading
+    // Only show the loading spinner/overlay when there's nothing to display yet.
+    val isLoading = (isRefreshing || isBuildingCache) && liveItemCount == 0 && !cacheHasItems
+    val isEmpty = transactionsLoaded &&
+        refreshState is LoadState.NotLoading &&
+        liveItemCount == 0 &&
+        !cacheHasItems &&
+        headerIsEmpty
+    return TransactionsListPolicy(swapToLive, isLoading, isEmpty)
+}
