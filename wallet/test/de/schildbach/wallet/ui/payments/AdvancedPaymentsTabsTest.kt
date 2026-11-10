@@ -21,7 +21,9 @@ import de.schildbach.wallet.ui.payments.PaymentsFragment.Companion.ACTIVE_TAB_IN
 import de.schildbach.wallet.ui.payments.PaymentsFragment.Companion.ACTIVE_TAB_PAY
 import de.schildbach.wallet.ui.payments.PaymentsFragment.Companion.ACTIVE_TAB_RECEIVE
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class AdvancedPaymentsTabsTest {
@@ -65,5 +67,12 @@ class AdvancedPaymentsTabsTest {
         assertEquals(2, AdvancedPaymentsFragment.positionOf(threeTabs, ACTIVE_TAB_PAY))
         assertEquals(1, AdvancedPaymentsFragment.positionOf(twoTabs, ACTIVE_TAB_PAY))
         assertEquals(0, AdvancedPaymentsFragment.positionOf(twoTabs, ACTIVE_TAB_INTERNAL))
+    }
+
+    @Test
+    fun `the bottom navigation shows on the Receive tab only`() {
+        assertTrue(AdvancedPaymentsFragment.showsBottomNavigation(ACTIVE_TAB_RECEIVE))
+        assertFalse(AdvancedPaymentsFragment.showsBottomNavigation(ACTIVE_TAB_INTERNAL))
+        assertFalse(AdvancedPaymentsFragment.showsBottomNavigation(ACTIVE_TAB_PAY))
     }
 }

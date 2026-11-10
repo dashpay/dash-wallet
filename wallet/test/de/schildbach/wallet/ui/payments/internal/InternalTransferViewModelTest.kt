@@ -399,37 +399,42 @@ class InternalTransferViewModelTest {
     // ── lock screen ──────────────────────────────────────────────────────────
 
     @Test
-    fun `the lock screen closes the picker`() {
+    fun `the picker stays open under the lock screen`() {
         val viewModel = buildViewModel()
         viewModel.onShowPicker(InternalTransferPicker.FROM)
         viewModel.onLockScreen()
-        assertNull(viewModel.state.picker)
+        // Drawn in the page, which the lock screen covers: it shows again as it was.
+        assertEquals(InternalTransferPicker.FROM, viewModel.state.picker)
         assertTrue(viewModel.state.lockScreenShown)
+
+        viewModel.onLockScreenDismissed()
+        assertFalse(viewModel.state.lockScreenShown)
+        assertEquals(InternalTransferPicker.FROM, viewModel.state.picker)
     }
 
     @Test
-    fun `the lock screen closes the confirm and keeps the amount`() {
+    fun `the confirm stays open under the lock screen and transfers nothing by itself`() {
         service.balances.getValue(CORE).value = twoDash
         val viewModel = buildViewModel()
         viewModel.type("1")
         viewModel.onContinue()
-        val request = requireNotNull(viewModel.confirmedRequest())
+        val confirm = requireNotNull(viewModel.state.confirm)
 
         viewModel.onLockScreen()
-        assertNull(viewModel.state.confirm)
+        // Drawn in the page, which the lock screen covers: it shows again as it was. The lock
+        // dismisses an authentication in progress, so nothing is submitted.
+        assertEquals(confirm, viewModel.state.confirm)
         assertEquals(oneDash, viewModel.state.amount)
-        assertEquals("1", viewModel.state.amountText)
-        // An authentication that completes after the lock transfers nothing.
-        assertFalse(viewModel.submit(request))
         assertTrue(service.transfers.isEmpty())
 
         viewModel.onLockScreenDismissed()
         assertFalse(viewModel.state.lockScreenShown)
-        assertTrue(viewModel.state.canContinue)
+        assertEquals(confirm, viewModel.state.confirm)
+        assertEquals(confirm.request, viewModel.confirmedRequest())
     }
 
     @Test
-    fun `the lock screen withholds the sending overlay until the unlock and the transfer continues`() {
+    fun `the lock screen leaves a running transfer and its overlay as they are`() {
         service.balances.getValue(CORE).value = twoDash
         service.gate = CompletableDeferred()
         val viewModel = buildViewModel()
@@ -439,11 +444,11 @@ class InternalTransferViewModelTest {
         assertTrue(viewModel.submit(request))
 
         viewModel.onLockScreen()
+        // The overlay is drawn in the page, under the lock screen: not hidden.
         assertFalse(viewModel.state.sendingHidden)
         assertTrue(viewModel.state.lockScreenShown)
         assertEquals(ExternalSendStatus.Sending(shieldedLeg = true), viewModel.state.status)
 
-        // Unlocked while still running: the overlay shows again.
         viewModel.onLockScreenDismissed()
         assertFalse(viewModel.state.lockScreenShown)
         assertFalse(viewModel.state.sendingHidden)

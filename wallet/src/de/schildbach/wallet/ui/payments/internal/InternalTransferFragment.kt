@@ -52,12 +52,13 @@ import javax.inject.Inject
  *
  * Confirm captures the exact request, then asks for PIN/biometric (the External Send's auth
  * path), then hands it to the app-scoped [InternalTransferExecutor]: leaving the screen does not
- * cancel the transfer. Back closes an open sheet; otherwise it belongs to the host. Closing a
- * finished transfer's outcome returns Home, as the External Send does; Not sent stays here.
+ * cancel the transfer. Back closes an open sheet; otherwise it belongs to the host (as in the
+ * External Send, Back while a transfer runs leaves it running). Closing a finished transfer's
+ * outcome returns Home, as the External Send does; Not sent stays here.
  *
- * The lock screen is drawn in MainActivity's content, under this page's overlay windows: on lock
- * ([onLockScreenActivated]) the sheets close and the outcome is withheld until the wallet is
- * unlocked ([LockScreenActivity.walletLocked] turns false).
+ * The lock screen is drawn in MainActivity's content, over this page and its in-place sheets but
+ * under the outcome dialog's window: on lock ([onLockScreenActivated]) the outcome is withheld
+ * until the wallet is unlocked ([LockScreenActivity.walletLocked] turns false).
  */
 @AndroidEntryPoint
 class InternalTransferFragment : Fragment(), LockScreenAware {
@@ -78,10 +79,11 @@ class InternalTransferFragment : Fragment(), LockScreenAware {
                 DashWalletTheme {
                     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
                     // ViewPager2 lifts only the selected page to RESUMED: an offscreen Internal page
-                    // must not take Back from the page on show.
+                    // must not take Back from the page on show. Nor does a sheet the lock screen covers.
                     val lifecycleState by LocalLifecycleOwner.current.lifecycle.currentStateAsState()
                     val selectedPage = lifecycleState.isAtLeast(Lifecycle.State.RESUMED)
-                    BackHandler(enabled = selectedPage && (uiState.picker != null || uiState.confirm != null)) {
+                    val sheetOpen = uiState.picker != null || uiState.confirm != null
+                    BackHandler(enabled = selectedPage && !uiState.lockScreenShown && sheetOpen) {
                         viewModel.onBack()
                     }
                     InternalTransferScreen(
