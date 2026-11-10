@@ -26,20 +26,29 @@ import de.schildbach.wallet.ui.dashpay.testPlatformRepo
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import org.bitcoinj.core.Context
 import org.bitcoinj.core.ECKey
+import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.crypto.ChildNumber
+import org.bitcoinj.crypto.EncryptableItem
 import org.bitcoinj.crypto.IDeterministicKey
+import org.bitcoinj.crypto.KeyCrypterScrypt
 import org.bitcoinj.params.TestNet3Params
+import org.bitcoinj.script.Script
 import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.bitcoinj.wallet.DeterministicSeed
+import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.WalletEx
+import org.bitcoinj.wallet.WalletProtobufSerializer
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
+import org.bouncycastle.crypto.params.KeyParameter
 import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.dpp.identity.Identity
 import org.dashj.platform.dpp.identity.IdentityPublicKey
 import org.dashj.platform.sdk.KeyType
 import org.dashj.platform.sdk.Purpose
 import org.dashj.platform.sdk.SecurityLevel
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -50,6 +59,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import java.util.EnumSet
 
 /**
@@ -233,5 +244,114 @@ class AppConnectSigningKeyTest {
             realParent.deriveChildKey(firstArg<ChildNumber>())
         }
         assertEquals(3, walletRepo.requireIdentityChainKeys(identity, null))
+    }
+
+    // --- a genuinely encrypted wallet (no mocked isEncrypted) ---------------------------------
+
+    /** Low scrypt cost: production parameters only slow the test; the crypto path is identical. */
+    private val keyCrypter = KeyCrypterScrypt(1024)
+    private val aesKey: KeyParameter by lazy { keyCrypter.deriveKey("correct horse") }
+
+    /**
+     * A real wallet on the same seed as [walletAuth], with its identity chain created and then
+     * encrypted the way the app does it: `Wallet.encrypt` re-encrypts every key chain extension.
+     */
+    private fun encryptedWallet(): Pair<Wallet, AuthenticationGroupExtension> {
+        Context.propagate(Context.getOrCreate(params))
+        val wallet = WalletEx.fromSeed(params, seed(1), Script.ScriptType.P2PKH)
+        val auth = AuthenticationGroupExtension(wallet)
+        wallet.addExtension(auth)
+        auth.addKeyChains(params, seed(1), EnumSet.of(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY))
+        wallet.encrypt(keyCrypter, aesKey)
+        assertTrue(wallet.isEncrypted)
+        assertTrue(auth.isEncrypted)
+        assertNotNull(auth.identityKeyChain.keyCrypter)
+        return wallet to auth
+    }
+
+    /** The app's reload: write the wallet file and read it back with fresh extension objects (WalletFactory). */
+    private fun reload(wallet: Wallet): Pair<Wallet, AuthenticationGroupExtension> {
+        val bytes = ByteArrayOutputStream().also { WalletProtobufSerializer().writeWallet(wallet, it) }.toByteArray()
+        val reloaded = WalletProtobufSerializer().readWallet(
+            ByteArrayInputStream(bytes),
+            false,
+            arrayOf(AuthenticationGroupExtension(params))
+        )
+        val auth = reloaded.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as? AuthenticationGroupExtension
+        return reloaded to checkNotNull(auth) { "reloaded wallet lost its authentication extension" }
+    }
+
+    private fun platformRepo(wallet: Wallet, auth: AuthenticationGroupExtension): PlatformRepo {
+        val walletRepo = testPlatformRepo()
+        every { walletRepo.walletApplication.wallet } returns wallet
+        every { walletRepo.walletApplication.authenticationGroupExtension } returns auth
+        return walletRepo
+    }
+
+    /** The key a signer resolves for [identityKey], checked to be encrypted and to sign as that key. */
+    private fun assertEncryptedSigningKey(auth: AuthenticationGroupExtension, identityKey: IdentityPublicKey, index: Int) {
+        val walletKey = checkNotNull(auth.identityKeyChain.findKeyFromPubKey(identityKey.data) as? IDeterministicKey) {
+            "key $index is not issued on the identity chain"
+        }
+        val encryptable = checkNotNull(walletKey as? EncryptableItem) { "key $index is not encryptable" }
+        assertTrue("key $index must stay encrypted", encryptable.isEncrypted)
+        assertNotNull(encryptable.encryptedData)
+        assertThrows(Exception::class.java) { walletKey.privKeyBytes }
+        // decrypts with the wallet's key to exactly this wallet's private key at that chain index
+        val plain = walletAuth.identityKeyChain.watchingKey.deriveChildKey(ChildNumber(index, true))
+        assertArrayEquals(plain.privKeyBytes, walletKey.decrypt(keyCrypter, aesKey).privKeyBytes)
+        // and signs the way WalletSignerCallback / the purchase signer do (signHash with the key)
+        val hash = Sha256Hash.twiceOf("dashconnect $index".toByteArray())
+        val signature = walletKey.signHash(hash, aesKey)
+        assertArrayEquals(identityKey.data, ECKey.signedMessageToKey(hash, signature).pubKey)
+    }
+
+    @Test fun `encrypted wallet backfill issues encrypted keys that sign after a reload and are not reissued`() {
+        val (wallet, auth) = encryptedWallet()
+        val identity = sdkIdentity(walletAuth)
+        val chainBefore = auth.identityKeyChain
+        // the SDK-created state: HIGH (2) and TRANSFER (3) are registered but unknown to the chain
+        (2..3).forEach { assertNull(chainBefore.findKeyFromPubKey(identity.publicKeys[it].data)) }
+        val keysBefore = chainBefore.numKeys()
+
+        // the signing read: decrypt the parent, derive 2 and 3, re-encrypt them and import them
+        val session = session(identity, platformRepo(wallet, auth))
+        assertSame(identity, session.readSigningIdentity(aesKey))
+        assertEquals(keysBefore + 2, auth.identityKeyChain.numKeys())
+        (0..3).forEach { assertEncryptedSigningKey(auth, identity.publicKeys[it], it) }
+
+        // reload from the serialized wallet, as the next app launch does
+        val (reloaded, reloadedAuth) = reload(wallet)
+        assertTrue(reloaded.isEncrypted)
+        assertTrue(reloadedAuth.isEncrypted)
+        assertNotNull(reloadedAuth.identityKeyChain.keyCrypter)
+        assertEquals(keysBefore + 2, reloadedAuth.identityKeyChain.numKeys())
+        (0..3).forEach { assertEncryptedSigningKey(reloadedAuth, identity.publicKeys[it], it) }
+        val reloadedRepo = platformRepo(reloaded, reloadedAuth)
+        val reloadedSession = session(identity, reloadedRepo)
+        assertEquals(2, reloadedSession.signingKey(identity, SecurityLevel.HIGH, time).id)
+        assertEquals(1, reloadedSession.signingKey(identity, SecurityLevel.CRITICAL, time).id)
+
+        // retry after the reload: everything resolves, nothing is imported again (strict and lenient)
+        assertSame(identity, reloadedSession.readSigningIdentity(aesKey))
+        assertEquals(0, reloadedRepo.requireIdentityChainKeys(identity, aesKey))
+        assertEquals(0, reloadedRepo.ensureIdentityChainKeys(identity, aesKey))
+        // and a fully issued encrypted chain needs no key at all
+        assertEquals(0, reloadedRepo.requireIdentityChainKeys(identity, null))
+        assertEquals(keysBefore + 2, reloadedAuth.identityKeyChain.numKeys())
+    }
+
+    @Test fun `encrypted wallet backfill with the wrong key imports nothing`() {
+        val (wallet, auth) = encryptedWallet()
+        val identity = sdkIdentity(walletAuth)
+        val walletRepo = platformRepo(wallet, auth)
+        val keysBefore = auth.identityKeyChain.numKeys()
+
+        assertThrows(IdentityKeyChainBackfillException::class.java) {
+            walletRepo.requireIdentityChainKeys(identity, keyCrypter.deriveKey("wrong password"))
+        }
+        assertEquals(keysBefore, auth.identityKeyChain.numKeys())
+        (2..3).forEach { assertNull(auth.identityKeyChain.findKeyFromPubKey(identity.publicKeys[it].data)) }
+        assertTrue(wallet.isEncrypted)
     }
 }
