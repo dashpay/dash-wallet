@@ -49,6 +49,7 @@ class SdkTransparentTopUpTest {
         var unresolvedLock: () -> TrackedAssetLock? = { null },
         var onResume: (TrackedAssetLock) -> Long? = { null },
         var onTopUpFromCore: () -> Long? = { null },
+        var builtLockTxid: () -> String? = { null },
         private val identityId: ByteArray,
         private val registrationIndex: Int,
         private val walletId: String
@@ -75,7 +76,7 @@ class SdkTransparentTopUpTest {
         override suspend fun topUpAssetLockTxidDisplayHex(
             walletIdHex: String,
             registrationIndex: Int
-        ): String? = null
+        ): String? = builtLockTxid()
 
         override suspend fun topUpFromCore(
             walletIdHex: String,
@@ -258,5 +259,96 @@ class SdkTransparentTopUpTest {
         // re-consumes the lock's own UTXOs, selects nothing fresh
         assertTrue(result is SdkWriteResult.Broadcast)
         assertEquals(1, source.resumeCalls)
+    }
+
+    // ── the lock txid reported to External Send ───────────────────────────
+
+    private fun topUpOf(source: FakeSource, freshFundingBlocked: Boolean = false) = SdkTransparentTopUp(
+        source = source,
+        cutoverCommitted = { true },
+        freshFundingBlocked = { freshFundingBlocked },
+        fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
+    )
+
+    @Test
+    fun reportingLockTxId_freshBuild_carriesTheBuiltLocksDisplayTxid() {
+        val source = fakeSource()
+        source.onTopUpFromCore = { 55_000L }
+        source.builtLockTxid = { "cd".repeat(32) }
+
+        val result = runBlocking {
+            topUpOf(source).topUpReportingLockTxId(identityBase58, amountDuffs, newUserIntent = true)
+        }
+
+        assertEquals(SdkWriteResult.Broadcast(TopUpOutcome(55_000L, "cd".repeat(32))), result)
+    }
+
+    @Test
+    fun reportingLockTxId_resume_carriesTheResumedLocksDisplayTxid() {
+        val source = fakeSource()
+        val lock = trackedLock(firstByte = 9)
+        source.unresolvedLock = { lock }
+        source.onResume = { 42_000L }
+
+        val result = runBlocking {
+            topUpOf(source).topUpReportingLockTxId(identityBase58, amountDuffs, newUserIntent = false)
+        }
+
+        assertEquals(SdkWriteResult.Broadcast(TopUpOutcome(42_000L, displayHexOf(lock.outpointTxid))), result)
+    }
+
+    @Test
+    fun reportingLockTxId_rerunOnItsOwnConsumedLock_carriesThatLocksTxid() {
+        val source = fakeSource()
+        val lock = trackedLock(firstByte = 5)
+        source.unresolvedLock = { lock }
+        source.onResume = { throw alreadyConsumedFailure() }
+
+        val result = runBlocking {
+            topUpOf(source).topUpReportingLockTxId(identityBase58, amountDuffs, newUserIntent = false)
+        }
+
+        assertEquals(
+            SdkWriteResult.Broadcast(
+                TopUpOutcome(SdkTransparentTopUp.BALANCE_ALREADY_CREDITED, displayHexOf(lock.outpointTxid))
+            ),
+            result
+        )
+        assertEquals(0, source.topUpFromCoreCalls)
+    }
+
+    @Test
+    fun reportingLockTxId_unrecoverableTxid_isStillBroadcast_withoutIt() {
+        val source = fakeSource()
+        source.onTopUpFromCore = { 55_000L }
+        source.builtLockTxid = { throw IllegalStateException("asset_locks unreadable") }
+
+        val result = runBlocking {
+            topUpOf(source).topUpReportingLockTxId(identityBase58, amountDuffs, newUserIntent = true)
+        }
+
+        assertEquals(SdkWriteResult.Broadcast(TopUpOutcome(55_000L, null)), result)
+    }
+
+    @Test
+    fun reportingLockTxId_failuresKeepTheirClass_andPlainTopUpIsUnchanged() {
+        val blocked = fakeSource().apply { onTopUpFromCore = { 55_000L } }
+        val refused = runBlocking {
+            topUpOf(blocked, freshFundingBlocked = true).topUpReportingLockTxId(identityBase58, amountDuffs, true)
+        }
+        assertTrue(refused is SdkWriteResult.NotBroadcast)
+
+        val unknown = fakeSource().apply { onTopUpFromCore = { null } }
+        val ambiguous = runBlocking { topUpOf(unknown).topUpReportingLockTxId(identityBase58, amountDuffs, true) }
+        assertTrue(ambiguous is SdkWriteResult.Ambiguous)
+
+        val plain = fakeSource().apply {
+            onTopUpFromCore = { 55_000L }
+            builtLockTxid = { "cd".repeat(32) }
+        }
+        assertEquals(
+            SdkWriteResult.Broadcast(55_000L),
+            runBlocking { topUpOf(plain).topUp(identityBase58, amountDuffs, newUserIntent = true) }
+        )
     }
 }

@@ -834,6 +834,75 @@ class ExternalSendViewModelTest {
         assertTrue(marker.value)
     }
 
+    // ── the transaction result screen (a Sent with its txid) ─────────────────
+
+    private val lockTxId = "0123456789abcdef".repeat(4)
+
+    @Test
+    fun sentWithItsTxId_opensTheTransactionResult_onceUntilAcknowledged() {
+        val gate = CompletableDeferred<ExternalSendResult>()
+        service.sendGate = gate
+        val viewModel = sendOnce()
+        assertNull("nothing while sending", viewModel.openTransactionResult.value)
+
+        gate.complete(ExternalSendResult.Sent(lockTxId))
+        assertEquals(lockTxId, viewModel.uiState.value.openTransactionResult)
+        assertEquals(lockTxId, viewModel.openTransactionResult.value)
+        assertTrue(viewModel.takeTransactionResult(lockTxId))
+        assertFalse("another txid is not the outcome", viewModel.takeTransactionResult("ab".repeat(32)))
+
+        viewModel.onResultAcknowledged()
+        // Cleared at once, before the executor settles: never opened twice.
+        assertNull(viewModel.uiState.value.openTransactionResult)
+        assertNull(viewModel.openTransactionResult.value)
+        assertFalse(viewModel.takeTransactionResult(lockTxId))
+        assertTrue(viewModel.uiState.value.finished)
+        assertEquals(ExternalSendExecution.Idle, executor.state.value)
+        assertFalse(marker.value)
+    }
+
+    @Test
+    fun sentWithItsTxId_isOfferedAgain_toAScreenCreatedBeforeItWasAcknowledged_butNotAfter() {
+        service.sendResult = ExternalSendResult.Sent(lockTxId)
+        val saved = SavedStateHandle()
+        sendOnce(buildViewModel(saved))
+        // The user left while it was sending (the executor is app-scoped): a new screen opens it.
+        val returned = buildViewModel()
+        assertEquals(lockTxId, returned.openTransactionResult.value)
+
+        returned.onResultAcknowledged()
+        // A recreation (config change) of the acknowledged screen restores finished: nothing to open.
+        val recreated = buildViewModel(SavedStateHandle(mapOf(ExternalSendViewModel.KEY_FINISHED to true)))
+        assertNull(recreated.openTransactionResult.value)
+        assertNull(buildViewModel().openTransactionResult.value)
+    }
+
+    @Test
+    fun everyOtherOutcome_keepsTheInScreenResult() {
+        val others = listOf(
+            ExternalSendResult.Sent(null),
+            ExternalSendResult.Sent("txid"),
+            ExternalSendResult.Sent(lockTxId.dropLast(1) + "z"),
+            ExternalSendResult.NotSent(NotSentReason.NOT_SYNCED),
+            ExternalSendResult.MayHaveGoneThrough,
+            ExternalSendResult.InterruptedFundsReturnToShielded
+        )
+        for (result in others) {
+            executor = newExecutor()
+            service.sendResult = result
+            val viewModel = sendOnce()
+            assertEquals(ExternalSendStatus.Done(result), viewModel.uiState.value.status)
+            assertNull("$result", viewModel.uiState.value.openTransactionResult)
+            assertNull("$result", viewModel.openTransactionResult.value)
+            viewModel.onResultAcknowledged()
+            marker.value = false
+        }
+        // The restart warning has no txid either.
+        marker.value = true
+        executor = newExecutor()
+        assertNull(buildViewModel().uiState.value.openTransactionResult)
+    }
+
     @Test
     fun inFlightMarker_unwritable_sendsNothing() {
         marker.failWrites = true

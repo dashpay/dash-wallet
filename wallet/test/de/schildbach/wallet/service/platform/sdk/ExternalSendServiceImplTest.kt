@@ -84,8 +84,10 @@ class ExternalSendServiceImplTest {
         var shieldedBalance: Dash? = Dash(1_000_000L)
         var platformBalances: () -> List<FundingInput> = { emptyList() }
         var shieldedResult: (Dash) -> SdkWriteResult<Unit> = { SdkWriteResult.Broadcast(Unit) }
-        var shieldFromCoreResult: (Dash) -> SdkWriteResult<ShieldFromWalletOutcome> =
-            { SdkWriteResult.Broadcast(ShieldFromWalletOutcome.COMPLETED) }
+        var shieldFromCoreResult: (Dash) -> SdkWriteResult<ShieldToAddressOutcome> =
+            { SdkWriteResult.Broadcast(ShieldToAddressOutcome(ShieldFromWalletOutcome.COMPLETED, SHIELD_LOCK_TXID)) }
+        var coreTopUpResult: () -> SdkWriteResult<TopUpOutcome> =
+            { SdkWriteResult.Broadcast(TopUpOutcome(1L, TOP_UP_LOCK_TXID)) }
         var coreSend: () -> String = { "txid" }
         var nativeWrite: () -> Unit = {}
         val shieldedAmounts = mutableListOf<Dash>()
@@ -145,16 +147,23 @@ class ExternalSendServiceImplTest {
             return shielded("shieldedTopUpIdentity", amount)
         }
 
-        override suspend fun shieldFromCore(walletIdHex: String, address: String, amount: Dash): SdkWriteResult<ShieldFromWalletOutcome> {
+        override suspend fun shieldFromCore(
+            walletIdHex: String,
+            address: String,
+            amount: Dash
+        ): SdkWriteResult<ShieldToAddressOutcome> {
             calls += "shieldFromCore"
             shieldedAmounts += amount
             return shieldFromCoreResult(amount)
         }
 
-        override suspend fun coreTopUpIdentity(identityIdBase58: String, amountDuffs: Long): SdkWriteResult<Long> {
+        override suspend fun coreTopUpIdentity(
+            identityIdBase58: String,
+            amountDuffs: Long
+        ): SdkWriteResult<TopUpOutcome> {
             calls += "coreTopUpIdentity"
             lastDuffs = amountDuffs
-            return SdkWriteResult.Broadcast(1L)
+            return coreTopUpResult()
         }
 
         override suspend fun platformTransfer(walletIdHex: String, to: PlatformAddressBytes, amountCredits: Long) {
@@ -330,11 +339,16 @@ class ExternalSendServiceImplTest {
     @Test
     fun coreToShielded_completed_isSent_pendingRetry_isInterrupted() = runBlocking {
         val source = source()
-        assertEquals(ExternalSendResult.Sent(null), service(source).send(SendBalance.CORE, shielded, amount, false))
+        assertEquals(
+            ExternalSendResult.Sent(SHIELD_LOCK_TXID),
+            service(source).send(SendBalance.CORE, shielded, amount, false)
+        )
         // The lock is the amount plus the pool fee (ceil(2_000_500 credits) + 50_000 duffs).
         assertEquals(listOf(amount + Dash(52_001L)), source.shieldedAmounts)
 
-        source.shieldFromCoreResult = { SdkWriteResult.Broadcast(ShieldFromWalletOutcome.SHIELD_PENDING_RETRY) }
+        source.shieldFromCoreResult = {
+            SdkWriteResult.Broadcast(ShieldToAddressOutcome(ShieldFromWalletOutcome.SHIELD_PENDING_RETRY))
+        }
         assertEquals(
             ExternalSendResult.InterruptedFundsReturnToShielded,
             service(source).send(SendBalance.CORE, shielded, amount, false)
@@ -342,11 +356,44 @@ class ExternalSendServiceImplTest {
     }
 
     @Test
-    fun coreToOwnIdentity_topsUpInDuffs() = runBlocking {
+    fun coreToShielded_lockTxIdMissingOrMalformed_isStillSent_withoutATxId() = runBlocking {
+        for (txId in listOf(null, "", "not-a-txid", SHIELD_LOCK_TXID.dropLast(1), "zz" + SHIELD_LOCK_TXID.drop(2))) {
+            val source = source().apply {
+                shieldFromCoreResult = {
+                    SdkWriteResult.Broadcast(ShieldToAddressOutcome(ShieldFromWalletOutcome.COMPLETED, txId))
+                }
+            }
+            assertEquals(
+                "txid $txId",
+                ExternalSendResult.Sent(null),
+                service(source).send(SendBalance.CORE, shielded, amount, false)
+            )
+        }
+    }
+
+    @Test
+    fun coreToOwnIdentity_topsUpInDuffs_reportingTheTopUpLockTxId() = runBlocking {
         val source = source()
-        assertEquals(ExternalSendResult.Sent(null), service(source).send(SendBalance.CORE, ownIdentity, amount, false))
+        assertEquals(
+            ExternalSendResult.Sent(TOP_UP_LOCK_TXID),
+            service(source).send(SendBalance.CORE, ownIdentity, amount, false)
+        )
         assertEquals(listOf("coreTopUpIdentity"), source.calls)
         assertEquals(100_000L, source.lastDuffs)
+    }
+
+    @Test
+    fun coreToOwnIdentity_lockTxIdUnknown_isStillSent_andFailuresKeepTheirClass() = runBlocking {
+        val source = source().apply { coreTopUpResult = { SdkWriteResult.Broadcast(TopUpOutcome(1L, null)) } }
+        assertEquals(ExternalSendResult.Sent(null), service(source).send(SendBalance.CORE, ownIdentity, amount, false))
+
+        source.coreTopUpResult = { SdkWriteResult.Ambiguous(IllegalStateException("unknown")) }
+        assertEquals(
+            ExternalSendResult.MayHaveGoneThrough,
+            service(source).send(SendBalance.CORE, ownIdentity, amount, false)
+        )
+        source.coreTopUpResult = { SdkWriteResult.NotBroadcast("a top-up is already in progress") }
+        assertTrue(service(source).send(SendBalance.CORE, ownIdentity, amount, false) is ExternalSendResult.NotSent)
     }
 
     @Test
@@ -914,7 +961,10 @@ class ExternalSendServiceImplTest {
         // minus the pool fee.
         val max = requireNotNull(service.maxSendable(SendBalance.CORE, shielded))
         assertEquals(Dash(5_000_000L) - assetLockMaxFeeReserve(2) - poolFee, max)
-        assertEquals(ExternalSendResult.Sent(null), service.send(SendBalance.CORE, shielded, max, isMax = true))
+        assertEquals(
+            ExternalSendResult.Sent(SHIELD_LOCK_TXID),
+            service.send(SendBalance.CORE, shielded, max, isMax = true)
+        )
         assertEquals(listOf(Dash(5_000_000L) - assetLockMaxFeeReserve(2)), source.shieldedAmounts)
     }
 
@@ -1113,7 +1163,8 @@ class ExternalSendServiceImplTest {
         }
         val result = service(source, store).send(SendBalance.CORE, platform, amount, false)
 
-        assertEquals(ExternalSendResult.Sent(null), result)
+        // The lock's display txid: the outpoint without its vout.
+        assertEquals(ExternalSendResult.Sent(OUT_POINT.substringBefore(':')), result)
         assertEquals(listOf("fundPlatformExternal"), source.calls)
         val record = source.funded.single()
         // Persisted before the call, without an outpoint; the outpoint was durable before the callback returned.
@@ -1152,7 +1203,7 @@ class ExternalSendServiceImplTest {
             ioDispatcher = Dispatchers.Unconfined,
             seedAssetLockKind = { hex, kind -> seeds += hex to kind }
         )
-        assertEquals(ExternalSendResult.Sent(null), service.send(SendBalance.CORE, platform, amount, false))
+        assertEquals(ExternalSendResult.Sent(LOCK_TXID), service.send(SendBalance.CORE, platform, amount, false))
         // Keyed by the lock's display txid (the outpoint without its vout), before broadcast.
         assertEquals(listOf(OUT_POINT.substringBefore(':') to AssetLockKind.PLATFORM), seeds)
         assertTrue(seededInTheCallback)
@@ -1169,8 +1220,22 @@ class ExternalSendServiceImplTest {
             ioDispatcher = Dispatchers.Unconfined,
             seedAssetLockKind = { _, _ -> throw IllegalStateException("seed") }
         )
-        assertEquals(ExternalSendResult.Sent(null), service.send(SendBalance.CORE, platform, amount, false))
+        assertEquals(ExternalSendResult.Sent(LOCK_TXID), service.send(SendBalance.CORE, platform, amount, false))
         assertNull(store.record)
+    }
+
+    @Test
+    fun coreToPlatform_malformedOutPoint_isStillSent_withoutATxId() = runBlocking {
+        for (outPoint in listOf("garbage", ":1", "0123:1", "zz" + OUT_POINT.drop(2))) {
+            val source = source().apply { fund = { _, built -> built(outPoint) } }
+            val store = FakeStore()
+            assertEquals(
+                "outpoint $outPoint",
+                ExternalSendResult.Sent(null),
+                service(source, store).send(SendBalance.CORE, platform, amount, false)
+            )
+            assertNull(store.record)
+        }
     }
 
     @Test
@@ -1417,7 +1482,7 @@ class ExternalSendServiceImplTest {
             assertEquals(0, service.resumePendingPlatformFunding())
             assertTrue(source.resumed.isEmpty())
             release.complete(Unit)
-            assertEquals(ExternalSendResult.Sent(null), send.await())
+            assertEquals(ExternalSendResult.Sent(LOCK_TXID), send.await())
         } finally {
             release.complete(Unit)
         }
@@ -1435,6 +1500,9 @@ class ExternalSendServiceImplTest {
 
     private companion object {
         const val OUT_POINT = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef:1"
+        const val LOCK_TXID = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        const val SHIELD_LOCK_TXID = "aa23456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        const val TOP_UP_LOCK_TXID = "bb23456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
         val remainderHash = ByteArray(20) { 7 }
     }
 }
