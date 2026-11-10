@@ -516,7 +516,8 @@ class InternalTransferViewModel @Inject constructor(
 
     /**
      * The user closed the outcome. Not sent → back to the same amount (Max chosen again
-     * deliberately); any other outcome clears the amount for a new transfer (the tab stays).
+     * deliberately); any other outcome clears the amount for a new transfer (the
+     * fragment then returns Home; the cleared amount is what a later visit finds).
      */
     fun onResultAcknowledged() {
         val status = _uiState.value.status as? ExternalSendStatus.Done ?: return
