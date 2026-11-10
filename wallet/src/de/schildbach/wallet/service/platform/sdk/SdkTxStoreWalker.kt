@@ -20,6 +20,7 @@ package de.schildbach.wallet.service.platform.sdk
 import androidx.sqlite.db.SimpleSQLiteQuery
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import org.dashfoundation.dashsdk.persistence.DashDatabase
 
@@ -51,6 +52,47 @@ internal fun txoIsForeignSql(alias: String): String =
     "EXISTS (SELECT 1 FROM core_addresses fca JOIN accounts fa ON fa.id = fca.accountId " +
         "WHERE fca.address = $alias.address " +
         "AND fa.accountType = ${SdkTxContactResolver.ACCOUNT_TYPE_DASHPAY_EXTERNAL})"
+
+/**
+ * The single Kotlin-side owner of the DIP-15 foreign-output rule
+ * [txoIsForeignSql] encodes in SQL — consumed by [SdkTxDetailProvider.load]
+ * (via [SdkTxDetailProvider.foreignContactTxoExclusion]) and
+ * [SdkTxContactResolver.signedNetsFor]/[SdkTxContactResolver.ownedInvolvementFor].
+ * `accountId` is the primary signal; a friendship-send TXO persists with
+ * `accountId` NULL (see [txoIsForeignSql]'s KDoc), so `coreAddressId` — the
+ * `core_addresses` PK, always populated — is the authoritative fallback,
+ * with `address` covering a row that predates that column.
+ */
+internal fun isForeignTxo(
+    accountId: Long?,
+    coreAddressId: String?,
+    address: String?,
+    externalAccountIds: Set<Long>,
+    externalAddresses: Set<String>
+): Boolean =
+    (accountId != null && accountId in externalAccountIds) ||
+        (accountId == null && (coreAddressId ?: address) in externalAddresses)
+
+/**
+ * The watch-only DIP-15 external friendship accounts' ids, and the
+ * addresses they own, for [walletId] — the exclusion sets [isForeignTxo]
+ * needs. Shared by [SdkTxDetailProvider.foreignContactTxoExclusion] and
+ * [SdkTxContactResolver.foreignExclusionContext]; this function does no
+ * fail-soft handling itself — a prerequisite failure (DB not started,
+ * wallet not resolved) is the caller's concern, before this is reached.
+ */
+internal suspend fun foreignTxoExclusionSets(db: DashDatabase, walletId: ByteArray): Pair<Set<Long>, Set<String>> {
+    val externalAccountIds = db.accountDao()
+        .observeByWalletAndType(walletId, SdkTxContactResolver.ACCOUNT_TYPE_DASHPAY_EXTERNAL)
+        .first()
+        .map { it.id }
+        .toSet()
+    val externalAddresses = HashSet<String>()
+    for (accountId in externalAccountIds) {
+        db.coreAddressDao().observeByAccount(accountId).first().mapTo(externalAddresses) { it.address }
+    }
+    return externalAccountIds to externalAddresses
+}
 
 /**
  * The real output/input shape of one transaction, parsed from the SDK store's

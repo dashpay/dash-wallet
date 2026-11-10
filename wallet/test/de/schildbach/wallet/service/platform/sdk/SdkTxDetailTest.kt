@@ -534,13 +534,14 @@ class SdkTxDetailTest {
     }
 
     @Test
-    fun `load still attributes outputs via the raw TXO walk when ownership is unknown`() {
+    fun `load withholds the recipient list for INCOMING too when ownership is unknown`() {
         // Same ambiguous-wallet state as the test above (more than one SDK
-        // wallet loaded, so foreignContactTxoExclusion returns null), but with
-        // real TXO rows for both outputs: the walk must still run with no
-        // exclusion so INCOMING keeps attributing its received addresses from
-        // the persisted TXO rows, while OUTGOING stays fail-closed via
-        // ownershipUnknown regardless of what the walk found.
+        // wallet loaded, so foreignContactTxoExclusion returns null). Real TXO
+        // rows exist for both outputs, but without the exclusion sets neither
+        // can be told apart from a contact's foreign output, so the raw TXO
+        // walk must not run at all: BOTH directions stay fail-closed, not just
+        // OUTGOING — closing the gap where a foreign DashPay watch-only output
+        // could render under "Received at" (DW-1658).
         val manager = mockk<org.dashfoundation.dashsdk.wallet.PlatformWalletManager> {
             every { wallets } returns MutableStateFlow(
                 mapOf("01".repeat(32) to mockk(relaxed = true), "02".repeat(32) to mockk(relaxed = true))
@@ -564,7 +565,7 @@ class SdkTxDetailTest {
             coEvery { getEntriesByIds(any()) } returns emptyList()
         }
 
-        fun loadWithDirection(directionCode: Int) = run {
+        fun loadWithDirection(directionCode: Int): Pair<SdkTxDetail, DashDatabase> {
             val entity = mockk<TransactionEntity> {
                 every { txid } returns decoded.txid
                 every { transactionData } returns rawTxBytes
@@ -585,31 +586,33 @@ class SdkTxDetailTest {
                 every { databaseOrNull() } returns db
                 every { walletManagerOrNull() } returns manager
             }
-            requireNotNull(
+            val detail = requireNotNull(
                 runBlocking {
                     SdkTxDetailProvider(sdkService, displayCacheDao, mockk(relaxed = true)) { _, _ -> null }
                         .load(decoded.txidDisplayHex)
                 }
             )
+            return detail to db
         }
 
         mockkObject(TransactionDecoder)
         try {
             every { TransactionDecoder.decode(any(), any()) } returns decoded
 
-            val incoming = loadWithDirection(0)
-            assertEquals(
-                "INCOMING must still attribute provably-ours outputs even when the " +
-                    "foreign-contact exclusion is unavailable",
-                listOf(recipientAddress, changeAddress),
-                incoming.outputAddresses
+            val (incoming, incomingDb) = loadWithDirection(0)
+            assertTrue(
+                "INCOMING must withhold the recipient list, not attribute outputs from an " +
+                    "unexcluded raw TXO walk, when ownership is unknown",
+                incoming.outputAddresses.isEmpty()
             )
+            coVerify(exactly = 0) { incomingDb.txoDao().getByOutpoint(any()) }
 
-            val outgoing = loadWithDirection(1)
+            val (outgoing, outgoingDb) = loadWithDirection(1)
             assertTrue(
                 "OUTGOING must stay fail-closed on ownershipUnknown regardless of what the walk found",
                 outgoing.outputAddresses.isEmpty()
             )
+            coVerify(exactly = 0) { outgoingDb.txoDao().getByOutpoint(any()) }
         } finally {
             unmockkObject(TransactionDecoder)
         }
