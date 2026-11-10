@@ -42,7 +42,7 @@ import javax.inject.Singleton
 
 /**
  * Keeps the Home history's shielded-activity rows (`tx_display_cache` rows with
- * `source = SOURCE_SHIELDED`, see [planShieldedHistoryRow]) in step with the SDK's
+ * `source = SOURCE_SHIELDED`, see [planShieldedHistoryRowOrSkip]) in step with the SDK's
  * `shielded_activities` table for the ACTIVE wallet
  * ([ShieldedBalanceService.observeShieldedActivityOrNotReady] follows the ready
  * wallet id). Each snapshot is planned and applied with
@@ -232,8 +232,7 @@ class ShieldedHistoryRowSync internal constructor(
             log.info("shielded history rows: {} planned, skipped {}", plan.rows.size, plan.skipped)
         }
         currentCoroutineContext().ensureActive()
-        if (txDisplayCacheDao.getShieldedRows().toSet() == plan.rows.toSet()) return false
-        txDisplayCacheDao.replaceShieldedRows(plan.rows, plan.rows.mapTo(HashSet()) { it.rowId })
+        if (!txDisplayCacheDao.replaceShieldedRows(plan.rows)) return false
         displayCacheRefreshBus.signalChanged()
         return true
     }

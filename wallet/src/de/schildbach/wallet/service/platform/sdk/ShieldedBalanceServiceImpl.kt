@@ -152,10 +152,8 @@ internal fun toShieldedActivityEntry(entity: ShieldedActivityEntity): ShieldedAc
     return ShieldedActivityEntry(
         id = entity.entryId.joinToString("") { "%02x".format(it) },
         direction = direction,
-        amount = creditsToDash(entity.amount),
         timestampMs = entity.createdAtMs,
         memo = decodeShieldedMemo(entity.memo),
-        pending = status == ShieldedActivityStatus.PENDING,
         kindTag = entity.kindTag,
         accountIndex = entity.accountIndex,
         amountCredits = entity.amount,
@@ -1265,12 +1263,12 @@ class ShieldedBalanceServiceImpl internal constructor(
      */
     private val afterCoverageRead: suspend () -> Unit = {},
     /**
-     * The active network's Core address version bytes, for resolving a
-     * withdrawal's destination script to an address. Null (the default) makes
-     * every such lookup [CounterpartyOwnership.UNKNOWN] — fail closed. Prod
-     * reads [Constants.NETWORK_PARAMETERS] lazily.
+     * Decodes a withdrawal's destination Core script to its address on the
+     * active network (null = undecodable). The default decodes nothing, which
+     * makes every such lookup [CounterpartyOwnership.UNKNOWN] — fail closed.
+     * Prod reads [Constants.NETWORK_PARAMETERS] lazily, on each call.
      */
-    private val coreAddressVersions: () -> CoreAddressVersions? = { null }
+    private val coreScriptToAddress: (ByteArray) -> String? = { null }
 ) : ShieldedBalanceService {
 
     @Inject
@@ -1308,12 +1306,7 @@ class ShieldedBalanceServiceImpl internal constructor(
         seedAssetLockKind = { displayHex, kind -> assetLockKindResolver.seed(displayHex, kind) },
         freshFundingBlocked = { fundingGate.isFreshFundingBlocked() },
         fundingSelection = fundingGate.selectionLock,
-        coreAddressVersions = {
-            CoreAddressVersions(
-                pubKeyHash = Constants.NETWORK_PARAMETERS.addressHeader,
-                scriptHash = Constants.NETWORK_PARAMETERS.p2SHHeader
-            )
-        }
+        coreScriptToAddress = { script -> decodeCoreScriptAddress(script, Constants.NETWORK_PARAMETERS) }
     )
 
     /** Serializes [ensureShieldedReady]/[stop] — the single-flight guarantee. */
@@ -2190,7 +2183,7 @@ class ShieldedBalanceServiceImpl internal constructor(
         walletIdHex: String,
         entry: ShieldedActivityEntry
     ): CounterpartyOwnership {
-        val query = counterpartyQueryFor(entry, coreAddressVersions())
+        val query = counterpartyQueryFor(entry, coreScriptToAddress)
         if (query is CounterpartyQuery.NotNeeded || query is CounterpartyQuery.Undecodable) {
             return CounterpartyOwnership.UNKNOWN
         }

@@ -19,7 +19,12 @@ package de.schildbach.wallet.service.platform.sdk
 
 import androidx.annotation.StringRes
 import de.schildbach.wallet.database.entity.TxDisplayCacheEntry
+import de.schildbach.wallet.transactions.TxInfoConverter
 import de.schildbach.wallet_test.R
+import org.bitcoinj.core.NetworkParameters
+import org.bitcoinj.script.Script
+import org.bitcoinj.script.ScriptException
+import org.bitcoinj.script.ScriptPattern
 
 // ── Shielded activity → Home history rows ─────────────────────────────
 //
@@ -113,9 +118,6 @@ enum class CounterpartyOwnership {
  */
 class ShieldedStoreReadException(cause: Throwable) : Exception("shielded store read failed", cause)
 
-/** The Base58 version bytes of the active network's Core addresses. */
-data class CoreAddressVersions(val pubKeyHash: Int, val scriptHash: Int)
-
 /** What has to be looked up to resolve one entry's [CounterpartyOwnership]. */
 sealed class CounterpartyQuery {
     /** The kind's ownership is fixed (or irrelevant): no lookup. */
@@ -143,22 +145,26 @@ sealed class CounterpartyQuery {
 private const val HASH160_BYTES = 20
 private const val IDENTITY_ID_BYTES = 32
 
+/** Byte length of the minimal P2PKH template `76 a9 14 <20> 88 ac`. */
+private const val P2PKH_SCRIPT_BYTES = 25
+
 /**
- * Decode a Core output script to its Base58 address on the network given by
- * [versions]: P2PKH (`76 a9 14 <20> 88 ac`) or P2SH (`a9 14 <20> 87`) only;
- * anything else (and a null [versions]) is null. Pure.
+ * Decode a Core output script to its Base58 address on [params]'s network (the
+ * decoder [counterpartyQueryFor] is given in production): P2PKH (`76 a9 14 <20> 88 ac`) or P2SH
+ * (`a9 14 <20> 87`) only, via [TxInfoConverter.standardAddressOf]; anything
+ * else (including an unparseable script) is null. dashj's P2PKH pattern also
+ * accepts a non-minimal push of the hash (`OP_PUSHDATA1 0x14 …`), so P2PKH is
+ * held to the 25-byte template — exactly the scripts a Core output pays.
  */
-internal fun coreScriptToAddress(script: ByteArray, versions: CoreAddressVersions?): String? {
-    if (versions == null) return null
-    val op = { i: Int -> script[i].toInt() and 0xff }
-    return when {
-        script.size == 25 && op(0) == 0x76 && op(1) == 0xa9 && op(2) == HASH160_BYTES &&
-            op(23) == 0x88 && op(24) == 0xac ->
-            org.bitcoinj.core.Base58.encodeChecked(versions.pubKeyHash, script.copyOfRange(3, 23))
-        script.size == 23 && op(0) == 0xa9 && op(1) == HASH160_BYTES && op(22) == 0x87 ->
-            org.bitcoinj.core.Base58.encodeChecked(versions.scriptHash, script.copyOfRange(2, 22))
-        else -> null
+internal fun decodeCoreScriptAddress(bytes: ByteArray, params: NetworkParameters): String? = try {
+    val script = Script(bytes)
+    if (ScriptPattern.isP2PKH(script) && bytes.size != P2PKH_SCRIPT_BYTES) {
+        null
+    } else {
+        TxInfoConverter.standardAddressOf(script, params)
     }
+} catch (e: ScriptException) {
+    null
 }
 
 /**
@@ -173,14 +179,20 @@ internal fun platformAddressHashOf(counterparty: ByteArray): ByteArray? {
     return counterparty.copyOfRange(1, 1 + HASH160_BYTES)
 }
 
-/** What [entry] needs looked up to know whose its counterparty is. Pure. */
-internal fun counterpartyQueryFor(entry: ShieldedActivityEntry, versions: CoreAddressVersions?): CounterpartyQuery =
+/**
+ * What [entry] needs looked up to know whose its counterparty is. Pure given a
+ * pure [coreScriptToAddress] (see [decodeCoreScriptAddress]; null = undecodable).
+ */
+internal fun counterpartyQueryFor(
+    entry: ShieldedActivityEntry,
+    coreScriptToAddress: (ByteArray) -> String?
+): CounterpartyQuery =
     when (entry.kindTag) {
         ShieldedActivityKindTag.UNSHIELD ->
             platformAddressHashOf(entry.counterparty)?.let { CounterpartyQuery.PlatformAddressHash(it) }
                 ?: CounterpartyQuery.Undecodable
         ShieldedActivityKindTag.WITHDRAWAL ->
-            coreScriptToAddress(entry.counterparty, versions)?.let { CounterpartyQuery.CoreAddress(it) }
+            coreScriptToAddress(entry.counterparty)?.let { CounterpartyQuery.CoreAddress(it) }
                 ?: CounterpartyQuery.Undecodable
         ShieldedActivityKindTag.IDENTITY_TOP_UP ->
             entry.identityId.takeIf { it.size == IDENTITY_ID_BYTES }?.let { CounterpartyQuery.Identity(it.copyOf()) }
@@ -188,7 +200,11 @@ internal fun counterpartyQueryFor(entry: ShieldedActivityEntry, versions: CoreAd
         else -> CounterpartyQuery.NotNeeded
     }
 
-/** How one surfaced kind renders. [outgoing] = it lowers the Home total by principal + fee. */
+/**
+ * How one surfaced kind renders. [outgoing] = it lowers the Home total by principal + fee.
+ * [isSend] = a spend to someone else ([SENT_TO_OTHER]): titled "Sending" while in flight,
+ * with no "Processing" status.
+ */
 private data class ShieldedKindSpec(
     @StringRes val rowTitleRes: Int,
     @StringRes val detailTitleRes: Int,
@@ -196,7 +212,8 @@ private data class ShieldedKindSpec(
     val iconBgType: Int,
     val outgoing: Boolean,
     @StringRes val fromBalanceRes: Int?,
-    @StringRes val toBalanceRes: Int?
+    @StringRes val toBalanceRes: Int?,
+    val isSend: Boolean = false
 )
 
 /**
@@ -206,7 +223,7 @@ private data class ShieldedKindSpec(
 private val SENT_TO_OTHER = ShieldedKindSpec(
     R.string.transaction_row_status_sent, R.string.transaction_details_amount_sent,
     TxDisplayCacheEntry.ICON_SENT, TxDisplayCacheEntry.BG_SENT, outgoing = true,
-    R.string.external_send_balance_name_shielded, null
+    R.string.external_send_balance_name_shielded, null, isSend = true
 )
 
 /**
@@ -278,7 +295,7 @@ private fun fixedKindSpec(kindTag: Int): ShieldedKindSpec? = when (kindTag) {
     else -> null
 }
 
-/** Why [planShieldedHistoryRow] produced no row (value-free, loggable). */
+/** Why [planShieldedHistoryRowOrSkip] produced no row (value-free, loggable). */
 enum class ShieldedRowSkip {
     /** De-dup (Core tx row), no honest amount, or unknown kind — by design. */
     KIND_NOT_SHOWN,
@@ -299,22 +316,28 @@ sealed class ShieldedRowPlan {
     data class Skipped(val reason: ShieldedRowSkip) : ShieldedRowPlan()
 }
 
+/** [signedTotalDuffs]'s result: the signed value, or why there is none. */
+private sealed class SignedTotal {
+    data class Value(val duffs: Long) : SignedTotal()
+    data class Skip(val reason: ShieldedRowSkip) : SignedTotal()
+}
+
 /**
  * The signed effect of [entry] on the Home total, in duffs: +principal for an
  * incoming kind, −(principal + fee) for an outgoing one, summed in credits
  * and THEN floored (2_796_148_800 + 203_851_200 credits = 3_000_000 duffs,
- * where flooring each part first would lose a duff). Null when an outgoing
- * kind's fee is unknown or the sum overflows.
+ * where flooring each part first would lose a duff). A [SignedTotal.Skip]
+ * when an outgoing kind's fee is unknown or the sum overflows.
  */
-private fun signedTotalDuffs(entry: ShieldedActivityEntry, outgoing: Boolean): Pair<Long?, ShieldedRowSkip?> {
-    if (!outgoing) return creditsToDash(entry.amountCredits).duffs to null
-    val fee = entry.feeCredits ?: return null to ShieldedRowSkip.FEE_UNKNOWN
+private fun signedTotalDuffs(entry: ShieldedActivityEntry, outgoing: Boolean): SignedTotal {
+    if (!outgoing) return SignedTotal.Value(creditsToDash(entry.amountCredits).duffs)
+    val fee = entry.feeCredits ?: return SignedTotal.Skip(ShieldedRowSkip.FEE_UNKNOWN)
     val total = try {
         Math.addExact(entry.amountCredits, fee)
     } catch (e: ArithmeticException) {
-        return null to ShieldedRowSkip.OVERFLOW
+        return SignedTotal.Skip(ShieldedRowSkip.OVERFLOW)
     }
-    return -creditsToDash(total).duffs to null
+    return SignedTotal.Value(-creditsToDash(total).duffs)
 }
 
 /**
@@ -339,10 +362,12 @@ internal fun planShieldedHistoryRowOrSkip(
                 ShieldedRowSkip.KIND_NOT_SHOWN
             }
         )
-    val (value, skip) = signedTotalDuffs(entry, spec.outgoing)
-    if (value == null) return ShieldedRowPlan.Skipped(skip ?: ShieldedRowSkip.OVERFLOW)
+    val value = when (val total = signedTotalDuffs(entry, spec.outgoing)) {
+        is SignedTotal.Value -> total.duffs
+        is SignedTotal.Skip -> return ShieldedRowPlan.Skipped(total.reason)
+    }
     val inFlight = entry.status != ShieldedActivityStatus.CONFIRMED
-    val isSend = spec === SENT_TO_OTHER
+    val isSend = spec.isSend
     val titleRes = if (isSend && inFlight) R.string.transaction_row_status_sending else spec.rowTitleRes
     val statusText = if (inFlight && !isSend) resolveString(R.string.transaction_row_status_processing) else ""
     return ShieldedRowPlan.Row(
@@ -371,14 +396,6 @@ internal fun planShieldedHistoryRowOrSkip(
         )
     )
 }
-
-/** [planShieldedHistoryRowOrSkip] without the skip reason. */
-internal fun planShieldedHistoryRow(
-    entry: ShieldedActivityEntry,
-    ownership: CounterpartyOwnership,
-    resolveString: (Int) -> String
-): TxDisplayCacheEntry? =
-    (planShieldedHistoryRowOrSkip(entry, ownership, resolveString) as? ShieldedRowPlan.Row)?.entry
 
 /** Every row planned from one activity snapshot, plus value-free skip counts for the log. */
 internal data class ShieldedHistoryPlan(
@@ -446,7 +463,7 @@ data class PlatformActivityDetail(
  */
 fun platformActivityDetailOf(entry: ShieldedActivityEntry, ownership: CounterpartyOwnership): PlatformActivityDetail? {
     val spec = kindSpec(entry.kindTag, ownership) ?: return null
-    if (signedTotalDuffs(entry, spec.outgoing).first == null) return null
+    if (signedTotalDuffs(entry, spec.outgoing) is SignedTotal.Skip) return null
     return PlatformActivityDetail(
         titleRes = spec.detailTitleRes,
         iconType = spec.iconType,

@@ -20,6 +20,7 @@ package de.schildbach.wallet.database.entity
 import android.content.Context
 import android.graphics.Bitmap
 import android.text.format.DateUtils
+import androidx.annotation.DrawableRes
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
@@ -134,6 +135,18 @@ data class TxDisplayCacheEntry(
         /** Cached date/time format — same as [TxResourceMapper.dateTimeFormat] but avoids instantiation. */
         private const val DATE_TIME_FORMAT = DateUtils.FORMAT_SHOW_TIME
 
+        /** The drawable for a stable [iconType] constant ([ICON_*]); unknown types render as received. */
+        @DrawableRes
+        fun iconResFor(iconType: Int): Int = when (iconType) {
+            ICON_SENT      -> R.drawable.ic_transaction_sent
+            ICON_INTERNAL  -> R.drawable.ic_internal
+            ICON_ERROR     -> R.drawable.ic_transaction_failed
+            ICON_GIFT_CARD -> R.drawable.ic_gift_card_tx
+            ICON_COINJOIN  -> R.drawable.ic_coinjoin_mixing_group
+            ICON_CONVERT   -> R.drawable.ic_convert_circle
+            else           -> R.drawable.ic_transaction_received
+        }
+
         /** Convert a [TransactionRowView] (which uses current resource IDs) to a cache entry. */
         fun fromTransactionRowView(
             row: TransactionRowView,
@@ -194,15 +207,7 @@ data class TxDisplayCacheEntry(
         contact: DashPayProfile? = null,
         iconBitmap: Bitmap? = null
     ): TransactionRowView {
-        val iconRes = when (iconType) {
-            ICON_SENT      -> R.drawable.ic_transaction_sent
-            ICON_INTERNAL  -> R.drawable.ic_internal
-            ICON_ERROR     -> R.drawable.ic_transaction_failed
-            ICON_GIFT_CARD -> R.drawable.ic_gift_card_tx
-            ICON_COINJOIN  -> R.drawable.ic_coinjoin_mixing_group
-            ICON_CONVERT   -> R.drawable.ic_convert_circle
-            else           -> R.drawable.ic_transaction_received
-        }
+        val iconRes = iconResFor(iconType)
         val bgRes = when (iconBgType) {
             BG_SENT    -> R.style.TxSentBackground
             BG_ERROR   -> R.style.TxErrorBackground

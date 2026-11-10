@@ -47,7 +47,7 @@ interface TxDisplayCacheDao {
      * the known-zero rebuild gate), and a shielded row must neither mask missing L1 rows
      * nor keep an empty L1 cache from being rebuilt.
      */
-    @Query("SELECT COUNT(*) FROM tx_display_cache WHERE source = 0")
+    @Query("SELECT COUNT(*) FROM tx_display_cache WHERE source = ${TxDisplayCacheEntry.SOURCE_L1}")
     suspend fun getCount(): Int
 
     /**
@@ -56,7 +56,7 @@ interface TxDisplayCacheDao {
      * line (restore birth-date calibration; see
      * [de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService]).
      */
-    @Query("SELECT MIN(time) FROM tx_display_cache WHERE source = 0")
+    @Query("SELECT MIN(time) FROM tx_display_cache WHERE source = ${TxDisplayCacheEntry.SOURCE_L1}")
     suspend fun oldestTimeMs(): Long?
 
     /** Fetch all entries ordered newest-first — used for in-memory snapshot on startup. */
@@ -129,15 +129,15 @@ interface TxDisplayCacheDao {
     suspend fun deleteAll()
 
     /** Delete every L1 ([TxDisplayCacheEntry.SOURCE_L1]) row; shielded rows are kept. */
-    @Query("DELETE FROM tx_display_cache WHERE source = 0")
+    @Query("DELETE FROM tx_display_cache WHERE source = ${TxDisplayCacheEntry.SOURCE_L1}")
     suspend fun deleteAllL1()
 
     /** Every shielded-activity row ([TxDisplayCacheEntry.SOURCE_SHIELDED]). */
-    @Query("SELECT * FROM tx_display_cache WHERE source = 1")
+    @Query("SELECT * FROM tx_display_cache WHERE source = ${TxDisplayCacheEntry.SOURCE_SHIELDED}")
     suspend fun getShieldedRows(): List<TxDisplayCacheEntry>
 
     /** Delete every shielded row. */
-    @Query("DELETE FROM tx_display_cache WHERE source = 1")
+    @Query("DELETE FROM tx_display_cache WHERE source = ${TxDisplayCacheEntry.SOURCE_SHIELDED}")
     suspend fun deleteAllShielded()
 
     /** Delete specific rows by rowId. */
@@ -170,25 +170,34 @@ interface TxDisplayCacheDao {
     }
 
     /**
-     * Atomically make the shielded rows exactly [rows]: upsert them and delete every
-     * other [TxDisplayCacheEntry.SOURCE_SHIELDED] row. [keepIds] is the set of row ids to
-     * keep (normally `rows.map { it.rowId }`). L1 rows are never touched — every row in
-     * [rows] must carry [TxDisplayCacheEntry.SOURCE_SHIELDED] and a `shielded:` row id,
-     * so the upsert cannot overwrite an L1 row either.
+     * Atomically make the shielded rows exactly [rows], returning false (and writing
+     * nothing) when they already are. Reads the stored shielded set once, deletes every
+     * stored [TxDisplayCacheEntry.SOURCE_SHIELDED] row whose id is not in [rows] and
+     * upserts only the rows that differ from (or are missing in) that set — all in one
+     * transaction, so a reader never sees a half-applied set. L1 rows are never touched —
+     * every row in [rows] must carry [TxDisplayCacheEntry.SOURCE_SHIELDED] and a
+     * `shielded:` row id, so the upsert cannot overwrite an L1 row either.
      */
     @Transaction
-    suspend fun replaceShieldedRows(rows: List<TxDisplayCacheEntry>, keepIds: Set<String>) {
+    suspend fun replaceShieldedRows(rows: List<TxDisplayCacheEntry>): Boolean {
         require(rows.all { it.source == TxDisplayCacheEntry.SOURCE_SHIELDED }) {
             "replaceShieldedRows accepts shielded rows only"
         }
-        if (keepIds.isEmpty()) {
+        val stored = getShieldedRows()
+        val storedSet = stored.toHashSet()
+        val wanted = rows.toHashSet()
+        if (storedSet == wanted) return false
+        if (rows.isEmpty()) {
             deleteAllShielded()
-        } else {
-            // A `NOT IN (:keepIds)` delete would bind the whole keep-set, and SQLite caps
-            // bound variables (999 on older devices): diff in memory, delete in chunks.
-            val stale = getShieldedRows().map { it.rowId }.filterNot { it in keepIds }
-            stale.chunked(DELETE_CHUNK).forEach { deleteByIds(it) }
+            return true
         }
-        if (rows.isNotEmpty()) insertAll(rows)
+        // A `NOT IN (:keepIds)` delete would bind the whole keep-set, and SQLite caps
+        // bound variables (999 on older devices): diff in memory, delete in chunks.
+        val keepIds = rows.mapTo(HashSet()) { it.rowId }
+        val stale = stored.map { it.rowId }.filterNot { it in keepIds }
+        stale.chunked(DELETE_CHUNK).forEach { deleteByIds(it) }
+        val changed = rows.filterNot { it in storedSet }
+        if (changed.isNotEmpty()) insertAll(changed)
+        return true
     }
 }
