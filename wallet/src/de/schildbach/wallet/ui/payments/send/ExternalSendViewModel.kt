@@ -30,6 +30,7 @@ import de.schildbach.wallet.service.platform.sdk.IdentityResolution
 import de.schildbach.wallet.service.platform.sdk.SendBalance
 import de.schildbach.wallet.service.platform.sdk.SendDestination
 import de.schildbach.wallet.service.platform.sdk.SendSupport
+import de.schildbach.wallet.service.platform.sdk.balanceKindOf
 import de.schildbach.wallet.service.platform.sdk.detectSendDestination
 import de.schildbach.wallet.service.platform.sdk.externalSendSupport
 import de.schildbach.wallet.ui.shielded.parseDashOrNull
@@ -565,14 +566,14 @@ class ExternalSendViewModel internal constructor(
     private fun restartBalance() {
         balanceJob?.cancel()
         val state = _uiState.value
-        val destination = state.destination ?: return
+        val destinationKind = balanceKindOf(state.destination ?: return)
         val source = state.source
         val generation = ++balanceGeneration
         balanceJob = service.observeBalance(source)
             .onEach { balance ->
                 if (generation == balanceGeneration) _uiState.update { it.copy(balance = balance) }
             }
-            .mapLatest { balance -> balance to if (balance == null) null else service.maxSendable(source, destination) }
+            .mapLatest { balance -> balance to if (balance == null) null else service.maxSendable(source, destinationKind) }
             .onEach { (balance, max) ->
                 if (generation == balanceGeneration) onMaxSendable(balance, max)
             }
@@ -640,7 +641,7 @@ class ExternalSendViewModel internal constructor(
         _uiState.update { it.copy(confirm = ExternalSendConfirm(request)) }
         feeJob?.cancel()
         feeJob = viewModelScope.launch {
-            val fee = service.estimateFee(request.source, request.destination, request.amount)
+            val fee = service.estimateFee(request.source, balanceKindOf(request.destination))
             _uiState.update { state ->
                 val confirm = state.confirm
                 if (confirm?.request == request) {

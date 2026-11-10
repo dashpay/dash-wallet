@@ -63,6 +63,14 @@ sealed class SendDestination {
     }
 }
 
+/** The kind of balance [destination] is paid into: what keys its fee, Max, icon and name. */
+fun balanceKindOf(destination: SendDestination): SendBalance = when (destination) {
+    is SendDestination.Core -> SendBalance.CORE
+    is SendDestination.Shielded -> SendBalance.SHIELDED
+    is SendDestination.Platform -> SendBalance.PLATFORM
+    is SendDestination.Identity -> SendBalance.IDENTITY
+}
+
 /** The result of [detectSendDestination]. */
 sealed class DestinationParse {
     /**

@@ -27,6 +27,7 @@ import android.view.ViewGroup
 import androidx.activity.compose.BackHandler
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.fragment.app.Fragment
@@ -75,9 +76,10 @@ class ExternalSendFragment : Fragment() {
                 DashWalletTheme {
                     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
                     BackHandler { onBack() }
-                    ExternalSendScreen(
-                        uiState = uiState,
-                        actions = ExternalSendActions(
+                    // Built once: a new instance per uiState emission (every key press) would
+                    // make every child taking it recompose.
+                    val actions = remember {
+                        ExternalSendActions(
                             onBack = ::onBack,
                             onAddressChanged = viewModel::onAddressChanged,
                             onScanClick = ::scan,
@@ -97,7 +99,8 @@ class ExternalSendFragment : Fragment() {
                             onLeave = ::leave,
                             onResultClosed = ::onResultClosed
                         )
-                    )
+                    }
+                    ExternalSendScreen(uiState = uiState, actions = actions)
                 }
             }
         }
