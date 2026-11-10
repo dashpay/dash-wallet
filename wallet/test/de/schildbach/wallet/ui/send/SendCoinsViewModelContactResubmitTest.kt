@@ -264,7 +264,6 @@ class SendCoinsViewModelContactResubmitTest {
             runner.sendCoins(
                 any<SendRequest>(),
                 any<Boolean>(),
-                any<Boolean>(),
                 any<Consumer<Transaction>>(),
                 any<String>(),
                 any<Address>(),
@@ -275,9 +274,9 @@ class SendCoinsViewModelContactResubmitTest {
             )
         } coAnswers {
             @Suppress("UNCHECKED_CAST")
-            val onBroadcast = args[8] as ((String?) -> Unit)?
+            val onBroadcast = args[7] as ((String?) -> Unit)?
             val first = synchronized(sends) {
-                sends.recipients += args[5] as Address?
+                sends.recipients += args[4] as Address?
                 sends.recipients.size == 1
             }
             if (first) {
@@ -299,7 +298,6 @@ class SendCoinsViewModelContactResubmitTest {
             runner.sendCoins(
                 any<SendRequest>(),
                 any<Boolean>(),
-                any<Boolean>(),
                 any<Consumer<Transaction>>(),
                 any<String>(),
                 any<Address>(),
@@ -310,8 +308,8 @@ class SendCoinsViewModelContactResubmitTest {
             )
         } coAnswers {
             @Suppress("UNCHECKED_CAST")
-            val onBroadcast = args[8] as ((String?) -> Unit)?
-            synchronized(sends) { sends.recipients += args[5] as Address? }
+            val onBroadcast = args[7] as ((String?) -> Unit)?
+            synchronized(sends) { sends.recipients += args[4] as Address? }
             onBroadcast?.invoke("cc".repeat(32))
             mockk<Transaction>(relaxed = true)
         }
@@ -335,7 +333,6 @@ class SendCoinsViewModelContactResubmitTest {
             runner.sendCoins(
                 any<SendRequest>(),
                 any<Boolean>(),
-                any<Boolean>(),
                 any<Consumer<Transaction>>(),
                 any<String>(),
                 any<Address>(),
@@ -346,8 +343,8 @@ class SendCoinsViewModelContactResubmitTest {
             )
         } coAnswers {
             @Suppress("UNCHECKED_CAST")
-            val onBroadcast = args[8] as ((String?) -> Unit)?
-            sends.recipients += args[5] as Address?
+            val onBroadcast = args[7] as ((String?) -> Unit)?
+            sends.recipients += args[4] as Address?
             if (sends.recipients.size == 1) {
                 onBroadcast?.invoke("aa".repeat(32))
                 throw failure()
@@ -416,12 +413,11 @@ class SendCoinsViewModelContactResubmitTest {
         val viewModel = buildViewModel(chain, runner)
         open(viewModel)
 
-        runBlocking { viewModel.signAndSendPayment(Coin.COIN, null, true) }
+        runBlocking { viewModel.signAndSendPayment(Coin.COIN, null) }
 
         coVerify(exactly = 1) {
             runner.sendCoins(
                 any<SendRequest>(),
-                any<Boolean>(),
                 any<Boolean>(),
                 any<Consumer<Transaction>>(),
                 any<String>(),
@@ -446,7 +442,7 @@ class SendCoinsViewModelContactResubmitTest {
         open(viewModel)
 
         assertThrows(PaymentSubmissionPendingException::class.java) {
-            runBlocking { viewModel.signAndSendPayment(Coin.COIN, null, true) }
+            runBlocking { viewModel.signAndSendPayment(Coin.COIN, null) }
         }
         assertTrue(viewModel.paymentOutcomeUnknown.value)
 
@@ -455,7 +451,7 @@ class SendCoinsViewModelContactResubmitTest {
         idle()
         assertFalse(viewModel.everythingPlausible())
         assertThrows(SendRefusedException::class.java) {
-            runBlocking { viewModel.signAndSendPayment(Coin.COIN, null, true) }
+            runBlocking { viewModel.signAndSendPayment(Coin.COIN, null) }
         }
         assertEquals(listOf<Address?>(keys[0]), sends.recipients)
     }
@@ -470,7 +466,7 @@ class SendCoinsViewModelContactResubmitTest {
 
         // 1st confirmation: broadcast, then an ordinary failure.
         assertThrows(RuntimeException::class.java) {
-            runBlocking { viewModel.signAndSendPayment(Coin.COIN, null, true) }
+            runBlocking { viewModel.signAndSendPayment(Coin.COIN, null) }
         }
         assertEquals(listOf<Address?>(keys[0]), sends.recipients)
         idle()
@@ -482,7 +478,7 @@ class SendCoinsViewModelContactResubmitTest {
         awaitResolvedAgain("contact address resolved again", viewModel, sends, dryRunMark, keys[1])
 
         // 2nd confirmation pays the new address.
-        runBlocking { viewModel.signAndSendPayment(Coin.COIN, null, true) }
+        runBlocking { viewModel.signAndSendPayment(Coin.COIN, null) }
         assertEquals(listOf<Address?>(keys[0], keys[1]), sends.recipients)
     }
 
@@ -496,7 +492,7 @@ class SendCoinsViewModelContactResubmitTest {
         open(viewModel)
 
         assertThrows(RuntimeException::class.java) {
-            runBlocking { viewModel.signAndSendPayment(Coin.COIN, null, true) }
+            runBlocking { viewModel.signAndSendPayment(Coin.COIN, null) }
         }
         viewModel.resetState()
         awaitCondition("re-resolution attempted") { chain.marks.size >= 2 }
@@ -506,7 +502,7 @@ class SendCoinsViewModelContactResubmitTest {
         // A confirmation that gets through anyway is refused before sending:
         // the failed re-resolution left no payee to send to.
         assertThrows(PayeeNotResolvedException::class.java) {
-            runBlocking { viewModel.signAndSendPayment(Coin.COIN, null, true) }
+            runBlocking { viewModel.signAndSendPayment(Coin.COIN, null) }
         }
         assertEquals(listOf<Address?>(keys[0]), sends.recipients)
         assertTrue(viewModel.resolvedAddress() == keys[0].toBase58())
@@ -530,12 +526,12 @@ class SendCoinsViewModelContactResubmitTest {
         assertEquals(keys[0].toBase58(), screen2.resolvedAddress())
 
         // Screen 1 confirms; its send is held before any broadcast signal.
-        val firstSend = thread { runBlocking { screen1.signAndSendPayment(Coin.COIN, null, true) } }
+        val firstSend = thread { runBlocking { screen1.signAndSendPayment(Coin.COIN, null) } }
         assertTrue(firstInSend.await(10, TimeUnit.SECONDS))
 
         // Screen 2 confirms the same address: refused, nothing sent.
         assertThrows(ContactAddressAlreadyPaidException::class.java) {
-            runBlocking { screen2.signAndSendPayment(Coin.COIN, null, true) }
+            runBlocking { screen2.signAndSendPayment(Coin.COIN, null) }
         }
         assertEquals(listOf<Address?>(keys[0]), sends.recipients)
         idle()
@@ -548,7 +544,7 @@ class SendCoinsViewModelContactResubmitTest {
 
         releaseFirst.countDown()
         firstSend.join(10_000)
-        runBlocking { screen2.signAndSendPayment(Coin.COIN, null, true) }
+        runBlocking { screen2.signAndSendPayment(Coin.COIN, null) }
         assertEquals(listOf<Address?>(keys[0], keys[1]), sends.recipients)
     }
 
@@ -571,7 +567,7 @@ class SendCoinsViewModelContactResubmitTest {
         assertEquals(keys[0].toBase58(), screen1.resolvedAddress())
 
         // Screen 2 pays A.
-        runBlocking { screen2.signAndSendPayment(Coin.COIN, null, true) }
+        runBlocking { screen2.signAndSendPayment(Coin.COIN, null) }
         assertEquals(listOf<Address?>(keys[0]), sends.recipients)
 
         // Screen 1 is recreated: its re-initialization is held in the lookup.
@@ -582,7 +578,7 @@ class SendCoinsViewModelContactResubmitTest {
 
         assertFalse("nothing can be confirmed while resolving", screen1.everythingPlausible())
         assertThrows(PayeeNotResolvedException::class.java) {
-            runBlocking { screen1.signAndSendPayment(Coin.COIN, null, true) }
+            runBlocking { screen1.signAndSendPayment(Coin.COIN, null) }
         }
         assertEquals("no send occurred", listOf<Address?>(keys[0]), sends.recipients)
 
@@ -598,7 +594,7 @@ class SendCoinsViewModelContactResubmitTest {
                 screen1.everythingPlausible() &&
                 screen1.dryrunSendRequest != null
         }
-        runBlocking { screen1.signAndSendPayment(Coin.COIN, null, true) }
+        runBlocking { screen1.signAndSendPayment(Coin.COIN, null) }
         assertEquals(listOf<Address?>(keys[0], keys[1]), sends.recipients)
     }
 
@@ -618,7 +614,7 @@ class SendCoinsViewModelContactResubmitTest {
 
         assertFalse(viewModel.everythingPlausible())
         assertThrows(PayeeNotResolvedException::class.java) {
-            runBlocking { viewModel.signAndSendPayment(Coin.COIN, null, true) }
+            runBlocking { viewModel.signAndSendPayment(Coin.COIN, null) }
         }
         assertTrue(sends.recipients.isEmpty())
     }
@@ -672,7 +668,7 @@ class SendCoinsViewModelContactResubmitTest {
         )
         assertFalse(viewModel.everythingPlausible())
         assertThrows(PayeeNotResolvedException::class.java) {
-            runBlocking { viewModel.signAndSendPayment(Coin.COIN, null, true) }
+            runBlocking { viewModel.signAndSendPayment(Coin.COIN, null) }
         }
         assertTrue("nothing was sent", sends.recipients.isEmpty())
         assertTrue("no address was marked", chain.marks.isEmpty())
@@ -709,7 +705,7 @@ class SendCoinsViewModelContactResubmitTest {
         assertEquals(null, viewModel.dryrunSendRequest)
 
         assertThrows(DryRunNotReadyException::class.java) {
-            runBlocking { viewModel.signAndSendPayment(Coin.COIN, null, true) }
+            runBlocking { viewModel.signAndSendPayment(Coin.COIN, null) }
         }
         assertTrue(sends.recipients.isEmpty())
         assertTrue(chain.marks.isEmpty())
@@ -738,7 +734,7 @@ class SendCoinsViewModelContactResubmitTest {
         open(viewModel)
 
         assertThrows(ContactPaymentNotRecordableException::class.java) {
-            runBlocking { viewModel.signAndSendPayment(Coin.COIN, null, true) }
+            runBlocking { viewModel.signAndSendPayment(Coin.COIN, null) }
         }
         assertTrue(sends.recipients.isEmpty())
         assertTrue(chain.marks.isEmpty())
@@ -771,7 +767,7 @@ class SendCoinsViewModelContactResubmitTest {
         sendBuildGate.armed.set(true)
         var outcome: Result<Transaction>? = null
         val send = thread {
-            outcome = runCatching { runBlocking { viewModel.signAndSendPayment(Coin.COIN, null, true) } }
+            outcome = runCatching { runBlocking { viewModel.signAndSendPayment(Coin.COIN, null) } }
         }
         assertTrue(sendBuildGate.entered.await(10, TimeUnit.SECONDS))
 
@@ -805,7 +801,7 @@ class SendCoinsViewModelContactResubmitTest {
                 viewModel.everythingPlausible() &&
                 viewModel.dryrunSendRequest != null
         }
-        runBlocking { viewModel.signAndSendPayment(Coin.COIN, null, true) }
+        runBlocking { viewModel.signAndSendPayment(Coin.COIN, null) }
         assertEquals(listOf<Address?>(keys[0]), sends.recipients)
     }
 
@@ -825,7 +821,7 @@ class SendCoinsViewModelContactResubmitTest {
         )
         open(viewModel)
 
-        val send = thread { runBlocking { viewModel.signAndSendPayment(Coin.COIN, null, true) } }
+        val send = thread { runBlocking { viewModel.signAndSendPayment(Coin.COIN, null) } }
         assertTrue(firstInSend.await(10, TimeUnit.SECONDS)) // claimed, in the send
         assertTrue(keys[0].toBase58() in store.paid())
 

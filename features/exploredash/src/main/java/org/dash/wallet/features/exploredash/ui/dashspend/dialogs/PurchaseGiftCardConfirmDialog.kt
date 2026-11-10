@@ -63,7 +63,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.data.ServiceName
-import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.payments.parsers.isPaymentUriParseError
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.DirectPayException
@@ -79,7 +78,6 @@ import org.dash.wallet.common.ui.components.Size
 import org.dash.wallet.common.ui.components.Style
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.ComposeBottomSheet
-import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.features.exploredash.R
@@ -479,29 +477,6 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
                         }
                     }
                     return@launch
-                }
-
-                val totalAmount = Dash.valueOf(
-                    data.sumOf {
-                        if (!it.cryptoAmount.isNullOrEmpty()) {
-                            Dash.parse(it.cryptoAmount).duffs
-                        } else {
-                            0L
-                        }
-                    }
-                )
-
-                if (!totalAmount.isZero && viewModel.needsCrowdNodeWarning(totalAmount)) {
-                    if (!isAdded) {
-                        hideLoading()
-                        return@launch
-                    }
-                    val shouldContinue = MinimumBalanceDialog().showAsync(requireActivity())
-
-                    if (shouldContinue != true) {
-                        hideLoading()
-                        return@launch
-                    }
                 }
 
                 val dashPaymentUrl = data.first().paymentUrls?.get("DASH.DASH")

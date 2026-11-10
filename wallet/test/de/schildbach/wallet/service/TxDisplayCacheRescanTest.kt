@@ -193,7 +193,7 @@ class TxDisplayCacheRescanTest {
             if (txStream != null) {
                 every { observeTransactions(any(), *anyVararg()) } returns txStream
             }
-            every { wrapAllTransactions(any(), any()) } answers {
+            every { wrapAllTransactions(any()) } answers {
                 // Record the CoinJoin factory each rebuild wraps with (the vararg may
                 // surface expanded or as one array, so scan rather than index). The
                 // CopyOnWriteArrayList is appended on the service's worker thread and

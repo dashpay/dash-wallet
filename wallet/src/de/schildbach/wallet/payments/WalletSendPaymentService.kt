@@ -24,7 +24,6 @@ import org.bitcoinj.core.TransactionOutput
 import org.bitcoinj.wallet.CoinSelector
 import org.bitcoinj.wallet.SendRequest
 import org.bitcoinj.wallet.Wallet
-import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.PaymentRecoveryMetadata
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.WalletSession
@@ -37,13 +36,11 @@ import java.util.function.Predicate
  * use the neutral [SendPaymentService] instead.
  */
 interface WalletSendPaymentService : SendPaymentService {
-    @Throws(LeftoverBalanceException::class)
     suspend fun sendCoins(
         address: Address,
         amount: Coin,
         coinSelector: CoinSelector? = null,
         emptyWallet: Boolean = false,
-        checkBalanceConditions: Boolean = true,
         beforeSending: Consumer<Transaction>? = null,
         canSendLockedOutput: Predicate<TransactionOutput>? = null,
         /** The wallet the payment was confirmed on; refused once it is wiped. Null: the installed one. */

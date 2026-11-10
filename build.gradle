@@ -3,46 +3,21 @@ buildscript {
         kotlin_version = '2.1.0'
         coroutinesVersion = '1.6.4'
         ok_http_version = '4.12.0'
-        dashjVersion = '22.0.5'
+        dashjVersion = '24.0.0' // Dash Core v24 support; required by dppVersion 5.0.1
         // Dash Platform Kotlin SDK (org.dashj:dash-sdk-android). Single source of
         // truth for both the dependency coordinate (wallet/build.gradle) and the
         // DASH_SDK_VERSION BuildConfig field shown on the About screen once the
         // cutover hands L1 ownership to the SDK.
-        // Pre-release SDK snapshot published to the Sonatype snapshots repository
-        // (declared below as 'Central Portal Snapshots'; anonymous read). Pinned to
-        // the exact timestamped build, not the -SNAPSHOT name, so a later upload
-        // can't change what this commit builds. 5.0.0-int32: HashEngineering/platform
-        // integration/5.0.0-int32 @ 0495544fd5 = int31 (0c5fcfec1c) with v5.0-dev
-        // 78d494f525 (5.0.0-rc.8) merged in; engine HashEngineering/rust-dashcore
-        // integration/5.0.0-int32-engine @ 0398ec0a (rust-dashcore v0.45.0 plus #1016
-        // and #1063). Carries, as int31: #4312/#4313 (shielded), #5259, #5256, the
-        // dashj-legacy ECDH fallback and the asset-lock 1 s re-poll; still no
-        // transaction-record folding. Recipe: HashEngineering/dash-wallet-qa
-        // recipes/platform/5.0.0-int32.yaml.
-        dashSdkVersion = '5.0.0-int32-20261026.223239-1'
-        // 5.0.0 carries a libsdklib.so that knows document serialization
-        // format 3. Format 3 arrives with Platform protocol version 14 (it
-        // stamps the document with the contract version its bytes conform to,
-        // enabling `requiredSince` properties), so once testnet activated v14
-        // every DPNS document Drive wrote came back in a format 4.0.1's bundled
-        // rs-dpp could not decode. Its local proof verification failed with
-        //   Proof verification error: dash drive: protocol: dpp unknown version
-        //   on Document::from_bytes (deserialization),
-        //   known versions: [0, 1, 2], received: 3
-        // surfacing as "Attempted to unwrap a Failure" out of
-        // org.dashj.platform.sdk.base.Result.unwrap() and stranding identity
-        // creation at USERNAME_REGISTERING (PlatformRepo.recoverUsernames ->
-        // BlockchainIdentity.recoverUsernames). This is the legacy SDK only:
-        // the Kotlin SDK's libdash_sdk_jni.so already handles format 3.
-        // 5.0.0 keeps the 4.0.1 CBOR fix that aborted every identity read:
-        // IdentityPublicKey.toObject() put the raw ContractBounds object
-        // (SingleContractDocumentType) into the map handed to Cbor, which has
-        // no converter for it -> IllegalArgumentException("No converter for ...").
-        // It calls this.toObject() first. Cbor.kt itself is unchanged.
-        // Pinned to the exact timestamped build of 5.0.0-SNAPSHOT (dash-sdk-java,
-        // -kotlin and -android all published 20261016.200955-3), not the moving
-        // -SNAPSHOT name; switch to the 5.0.0 release once it is published.
-        dppVersion = "5.0.0-20261016.200955-3"
+        // Recipe: HashEngineering/dash-wallet-qa
+        // recipes/platform/5.1.0-int36.yaml.
+        dashSdkVersion = '5.1.0-int36-20261106.165805-1'
+        // Legacy dashj-platform SDK (org.dashj.platform), master's pin. It replaces the
+        // 5.0.0-20261016.200955-3 snapshot this branch pinned for document serialization
+        // format 3 (Platform protocol 14) and the IdentityPublicKey.toObject() CBOR fix;
+        // DashConnect needs 5.0.1's client calls (getProtocolVersion, getPlatformTime,
+        // contract groups), and 5.0.1 requires dashj 24.0.0. The Kotlin SDK
+        // (dashSdkVersion) is unaffected.
+        dppVersion = "5.0.1"
         hiltVersion = '2.53'
         hiltCompilerVersion = '1.2.0'
         hiltWorkVersion = '1.2.0'
@@ -159,6 +134,7 @@ allprojects {
     }
     configurations.all {
         resolutionStrategy {
+            force "org.dashj:dashj-core:$dashjVersion"
             force 'com.google.android.recaptcha:recaptcha:18.4.0'
         }
     }

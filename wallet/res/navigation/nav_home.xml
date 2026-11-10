@@ -395,6 +395,10 @@
             android:defaultValue="@null"
             app:argType="string"
             app:nullable="true" />
+        <argument
+            android:name="openedFromUrl"
+            android:defaultValue="false"
+            app:argType="boolean" />
     </fragment>
 
     <fragment

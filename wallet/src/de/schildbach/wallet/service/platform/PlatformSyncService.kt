@@ -35,6 +35,7 @@ import de.schildbach.wallet.database.dao.UsernameRequestDao
 import de.schildbach.wallet.database.dao.UsernameVoteDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
+import de.schildbach.wallet.database.entity.IdentityRecordKey
 import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.database.entity.DashPayContactRequest
 import de.schildbach.wallet.database.entity.DashPayProfile
@@ -267,6 +268,9 @@ class PlatformSynchronizationService @Inject constructor(
     // The DashPay half of the user-facing "still syncing" state; this service
     // is the only component that knows whether DashPay applies at all.
     private val dashPaySyncStatus: de.schildbach.wallet.service.DashPaySyncStatus,
+    // A Provider: only the identity reconcile below reads it.
+    private val transparentUsernameCreation:
+        javax.inject.Provider<de.schildbach.wallet.service.platform.sdk.SdkTransparentUsernameCreation>,
 ) : PlatformSyncService {
     companion object {
         private val log: Logger = LoggerFactory.getLogger(PlatformSynchronizationService::class.java)
@@ -687,6 +691,22 @@ class PlatformSynchronizationService @Inject constructor(
         txMetadataJob?.cancel(CancellationException("re-arming the tx metadata ticker"))
         platformSyncJob = TickerFlow(UPDATE_TIMER_DELAY)
             .onEach {
+                // Every pass, not only discovery's (which runs once per service lifetime once an
+                // identity exists): a reconcile deferred on an unreadable ownership read is
+                // retried here. A DataStore read and nothing more when nothing is pending; off
+                // this pass, and single-flight inside, so a slow Platform read never stacks.
+                syncScope.launch { reconcileInterruptedNameRetry("sync tick") }
+                // a contested name's pending verification link (single-flight and best effort
+                // inside; nothing but a DataStore read when none is pending)
+                syncScope.launch {
+                    try {
+                        transparentUsernameCreation.get().reconcileVerificationLink()
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        log.warn("sync tick: could not reconcile the verification link", e)
+                    }
+                }
                 // Background-aware cadence (docs/upgrade-memory-and-sync-plan.md
                 // §10.4, emulator finding 11): the full contact/profile/invite/
                 // metadata cycle every 15 s is for a user looking at the app.
@@ -1068,9 +1088,10 @@ class PlatformSynchronizationService @Inject constructor(
                                 // creation showed no card at any point — none during
                                 // voting (deliberate: nothing is usable yet) and none on
                                 // winning.
+                                val loaded = IdentityRecordKey.of(blockchainIdentityData)
                                 blockchainIdentityData.creationState =
                                     IdentityCreationState.DONE
-                                identityRepository.updateBlockchainIdentityData(blockchainIdentityData)
+                                updateIfUnchanged(loaded, blockchainIdentityData)
                             }
                         }
                     }
@@ -1678,6 +1699,8 @@ class PlatformSynchronizationService @Inject constructor(
                     }
                 }
 
+                preferOwnRecordPrimary(nameById, nameDocuments)
+
                 for (id in profileById.keys) {
                     if (nameById.containsKey(id)) {
                         updateDashPayProfile(nameById, id, profileById, checkingIntegrity)
@@ -1718,6 +1741,31 @@ class PlatformSynchronizationService @Inject constructor(
             }
         } catch (e: Exception) {
             platformRepo.formatExceptionMessage("update contact profiles", e)
+        }
+    }
+
+    /**
+     * This wallet's own identity owns several names (a replacement registered next to the old
+     * instant secondary): its profile carries the identity record's chosen primary, the same
+     * rule profile recovery applies ([IdentityRepository.ownProfileUsername]), not whichever
+     * name the heuristic above kept. Best effort: an unreadable record keeps that choice.
+     */
+    private suspend fun preferOwnRecordPrimary(
+        nameById: HashMap<Identifier, DomainDocument>,
+        nameDocuments: List<DomainDocument>
+    ) {
+        try {
+            val ownUserId = identityRepository.loadBlockchainIdentityBaseData().userId ?: return
+            val ownId = Identifier.from(ownUserId)
+            val owned = nameDocuments.filter { it.ownerId == ownId }
+            if (owned.isEmpty()) return
+            val chosen = identityRepository.ownProfileUsername(owned.map { it.label }) ?: return
+            val normalized = Names.normalizeString(chosen)
+            owned.firstOrNull { Names.normalizeString(it.label) == normalized }?.let { nameById[ownId] = it }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("could not apply the record's primary to the own profile name", e)
         }
     }
 
@@ -2864,14 +2912,32 @@ class PlatformSynchronizationService @Inject constructor(
         }
         // update contacts, profiles and other platform data
         else {
-            checkVotingStatus(identityData)
-            reconcileUsernameStatus(identityData)
+            // A name-only retry the process lost (killed during its registration) is finished
+            // first; when it changed the record, the checks below wait for the next trigger
+            // rather than act on the record read before it.
+            if (!reconcileInterruptedNameRetry("discoverAndRecoverIdentity")) {
+                checkVotingStatus(identityData)
+                reconcileUsernameStatus(identityData)
+            }
 
             if (!updatingContacts.get()) {
                 updateContactRequests(initialSync = true)
             }
             return false
         }
+    }
+
+    /**
+     * See [de.schildbach.wallet.service.platform.sdk.SdkTransparentUsernameCreation.reconcileInterruptedNameRetry].
+     * Never throws, except for cancellation.
+     */
+    private suspend fun reconcileInterruptedNameRetry(caller: String): Boolean = try {
+        transparentUsernameCreation.get().reconcileInterruptedNameRetry()
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        log.warn("{}: could not reconcile an interrupted name-only retry", caller, e)
+        false
     }
 
     override suspend fun checkUsernameVotingStatus() {
@@ -2915,6 +2981,7 @@ class PlatformSynchronizationService @Inject constructor(
         } catch (e: Exception) {
             return
         }
+        val loaded = IdentityRecordKey.of(identityData)
         var confirmedName: String? = null
         var updated = false
 
@@ -2960,7 +3027,9 @@ class PlatformSynchronizationService @Inject constructor(
             identityData.creationState = IdentityCreationState.DONE_AND_DISMISS
             identityData.creationStateErrorMessage = null
         }
-        identityRepository.updateBlockchainIdentityData(identityData)
+        if (!updateIfUnchanged(loaded, identityData)) {
+            return
+        }
 
         // Same follow-up as the won-vote path: the local profile row must
         // carry the confirmed name.
@@ -2993,38 +3062,53 @@ class PlatformSynchronizationService @Inject constructor(
         }
     }
 
+    /**
+     * Writes [identityData] back only while the stored record is still the one it was [loaded]
+     * as: a name-only retry can replace the name, or record its error, during a lookup for the
+     * old name, and this whole-record write would put the old name back. The compare and the
+     * write are one store edit, so a retry cannot land between them. Returns true when it wrote.
+     */
+    private suspend fun updateIfUnchanged(loaded: IdentityRecordKey, identityData: BlockchainIdentityData): Boolean {
+        val written = try {
+            identityRepository.updateBlockchainIdentityDataIfUnchanged(identityData, loaded)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("could not write the lookup's result for '{}'", loaded.username, e)
+            return false
+        }
+        if (written) {
+            return true
+        }
+        log.info(
+            "the identity record changed during the lookup for '{}'; not writing its result",
+            loaded.username
+        )
+        return false
+    }
+
     private suspend fun checkVotingStatus(identityData: BlockchainIdentityData) {
         if (identityData.username != null && identityData.creationState == IdentityCreationState.VOTING) {
             log.info("checking the vote status of {}", identityData.username)
+            val loaded = IdentityRecordKey.of(identityData)
             // query username first to load the data contract cache
             val resource = platformRepo.getUsername(identityData.username!!)
             val voteResults = platformRepo.getVoteContenders(identityData.username!!)
             if (voteResults.winner.isPresent) {
                 val winner = voteResults.winner.get().first
+                var changed = true
+                var won = false
                 when {
-                    winner.isLocked -> {
-                        identityData.usernameRequested = UsernameRequestStatus.LOCKED
-                        syncScope.launch { identityRepository.updateBlockchainIdentityData(identityData) }
-                    }
+                    winner.isLocked -> identityData.usernameRequested = UsernameRequestStatus.LOCKED
 
                     winner.isWinner(Identifier.from(identityData.userId)) -> {
                         identityData.usernameRequested = UsernameRequestStatus.APPROVED
-                        syncScope.launch {
-                            identityRepository.updateBlockchainIdentityData(identityData)
-                            identityRepository.getLocalUserProfile()?.let {
-                                dashPayProfileDao.insert(it.copy(username = identityData.username!!))
-                            }
-                        }
+                        won = true
                     }
 
-                    winner.noWinner -> {
-                        // ?
-                    }
+                    winner.noWinner -> changed = false
 
-                    else -> {
-                        identityData.usernameRequested = UsernameRequestStatus.LOST_VOTE
-                        syncScope.launch { identityRepository.updateBlockchainIdentityData(identityData) }
-                    }
+                    else -> identityData.usernameRequested = UsernameRequestStatus.LOST_VOTE
                 }
                 if (resource.status == Status.SUCCESS && resource.data != null) {
                     val domainDocument = DomainDocument(resource.data)
@@ -3033,10 +3117,17 @@ class PlatformSynchronizationService @Inject constructor(
                         // checkUsernameVotingStatus. This branch is likewise reachable
                         // only from VOTING (guarded at the top of checkVotingStatus).
                         identityData.creationState = IdentityCreationState.DONE
-                        identityRepository.updateBlockchainIdentityData(identityData)
+                        changed = true
                     }
-                } else {
-
+                }
+                // The result and the completion in ONE conditional write: as two writes against
+                // the same loaded key, the second was always refused (with the profile update
+                // that followed it).
+                if (!changed || !updateIfUnchanged(loaded, identityData)) return
+                if (won) {
+                    identityRepository.getLocalUserProfile()?.let {
+                        dashPayProfileDao.insert(it.copy(username = identityData.username!!))
+                    }
                 }
             }
         }

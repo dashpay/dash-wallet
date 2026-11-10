@@ -80,7 +80,8 @@ class PlatformSyncEngineTeardownTest {
         cutoverTxSeamService = mockk(relaxed = true),
         shieldedTransferExecutor = mockk(relaxed = true),
         contactRequestNotificationService = mockk(relaxed = true),
-        dashPaySyncStatus = de.schildbach.wallet.service.DashPaySyncStatus()
+        dashPaySyncStatus = de.schildbach.wallet.service.DashPaySyncStatus(),
+        transparentUsernameCreation = javax.inject.Provider { mockk(relaxed = true) }
     )
 
     @Test

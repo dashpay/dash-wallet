@@ -12,7 +12,6 @@ SRC_DIRS=(
     "features/exploredash/src/main/java"
     "integrations/uphold/src/main/java"
     "integrations/coinbase/src/main/java"
-    "integrations/crowdnode/src/main/java"
     "integration-android/src/main/java"
     "sample-integration-android/src/main/java"
 )
@@ -53,7 +52,6 @@ resolve_context_class() {
         features/exploredash/src/main/res/*) pkg="org.dash.wallet.features.exploredash" ;;
         integrations/uphold/src/main/res/*) pkg="org.dash.wallet.integrations.uphold" ;;
         integrations/coinbase/src/main/res/*) pkg="org.dash.wallet.integrations.coinbase" ;;
-        integrations/crowdnode/src/main/res/*) pkg="org.dash.wallet.integrations.crowdnode" ;;
         integration-android/src/main/res/*) pkg="de.schildbach.wallet.integration.android" ;;
         sample-integration-android/src/main/res/*) pkg="de.schildbach.wallet.integration.sample" ;;
     esac

@@ -30,7 +30,6 @@ import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.coordinatorlayout.widget.CoordinatorLayout
-import androidx.core.net.toUri
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
@@ -59,7 +58,6 @@ import de.schildbach.wallet.ui.*
 import de.schildbach.wallet.ui.payments.PaymentsFragment
 import de.schildbach.wallet.ui.payments.SweepWalletActivity
 import de.schildbach.wallet.ui.send.SendCoinsActivity
-import de.schildbach.wallet.ui.staking.StakingActivity
 import de.schildbach.wallet.ui.transactions.TaxCategoryExplainerDialogFragment
 import de.schildbach.wallet.ui.transactions.TransactionDetailsDialogFragment
 import de.schildbach.wallet.ui.more.connections.protocol.DashConnectUri
@@ -83,7 +81,6 @@ import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.scan.ScanActivity
 import org.dash.wallet.common.ui.toastIfStillAttached
 import org.dash.wallet.common.ui.viewBinding
-import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.openCustomTab
 import org.dash.wallet.common.util.safeNavigate
@@ -115,14 +112,6 @@ class WalletFragment : Fragment(R.layout.home_content) {
         if (result.resultCode == Activity.RESULT_OK && intent != null) {
             val input = intent.getStringExtra(ScanActivity.INTENT_EXTRA_RESULT)
             input?.let { handleString(input, R.string.button_scan, R.string.input_parser_cannot_classify) }
-        }
-    }
-
-    private val stakingLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Constants.USER_BUY_SELL_DASH) {
-            safeNavigate(WalletFragmentDirections.homeToBuySell())
         }
     }
 
@@ -333,10 +322,10 @@ class WalletFragment : Fragment(R.layout.home_content) {
     private fun handleString(input: String, errorDialogTitleResId: Int, cannotClassifyCustomMessageResId: Int) {
         // fully qualified: this file already imports org.dash.wallet.common.util.Constants
         if (de.schildbach.wallet.Constants.SUPPORTS_CONNECT &&
-            (DashConnectUri.isKeyUri(input) || DashConnectUri.isStUri(input))
+            DashConnectUri.isConnectUri(input)
         ) {
-            // DashConnect QR (dash-key:/dash-st:) — handled by the Connections screen. Where the
-            // feature is off (prod) these URIs fall through to the normal unrecognised-QR error.
+            // DashConnect QR, handled by the Connections screen, which also says when the network is
+            // too old for it. Where the feature is off these URIs fall through to the unrecognised-QR error.
             safeNavigate(WalletFragmentDirections.homeToConnections(input))
             return
         }
@@ -455,9 +444,6 @@ class WalletFragment : Fragment(R.layout.home_content) {
             ShortcutOption.ATMS -> {
                 safeNavigate(WalletFragmentDirections.homeToSearch(type = ExploreTopic.ATMs))
             }
-            ShortcutOption.STAKING -> {
-                handleStakingNavigation()
-            }
             ShortcutOption.TOPPER -> {
                 // The VIEW's scope, not the fragment's: forward navigation from
                 // Home keeps this fragment on the back stack (Send pops up to
@@ -506,26 +492,5 @@ class WalletFragment : Fragment(R.layout.home_content) {
         }.show(requireActivity())
 
         shortcutViewModel.hideShortcutInfo() // Assume user is aware of this feature already
-    }
-
-    private fun handleStakingNavigation() {
-        lifecycleScope.launch {
-            if (viewModel.syncStatus.value.isSynced) {
-                stakingLauncher.launch(Intent(requireContext(), StakingActivity::class.java))
-            } else {
-                val openWebsite = AdaptiveDialog.create(
-                    null,
-                    getString(R.string.chain_syncing),
-                    getString(R.string.crowdnode_wait_for_sync),
-                    getString(R.string.button_close),
-                    getString(R.string.crowdnode_open_website)
-                ).showAsync(requireActivity())
-
-                if (openWebsite == true) {
-                    val browserIntent = Intent(Intent.ACTION_VIEW, getString(R.string.crowdnode_website).toUri())
-                    startActivity(browserIntent)
-                }
-            }
-        }
     }
 }
