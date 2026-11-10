@@ -65,6 +65,7 @@ import de.schildbach.wallet.service.platform.sdk.NotSentReason
 import de.schildbach.wallet.service.platform.sdk.SendBalance
 import de.schildbach.wallet.service.platform.sdk.SendDestination
 import de.schildbach.wallet.service.platform.sdk.SendSupport
+import de.schildbach.wallet.service.platform.sdk.balanceKindOf
 import de.schildbach.wallet.ui.shielded.toDisplay
 import de.schildbach.wallet.ui.shielded.toDisplayString
 import de.schildbach.wallet.ui.shielded.toFiatAt
@@ -263,10 +264,14 @@ private fun ClipboardEntries(entries: List<String>, onSelected: (String) -> Unit
 
 // ── Amount page ─────────────────────────────────────────────────────────────
 
+/** The amount bar's currencies: Dash, then the fiat currency when there is one. */
+private fun currencyCodesFor(fiatCode: String?): List<String> =
+    if (fiatCode != null) listOf(DASH_CURRENCY_CODE, fiatCode) else listOf(DASH_CURRENCY_CODE)
+
 @Composable
 private fun AmountPage(uiState: ExternalSendUIState, actions: ExternalSendActions) {
     val fiatCode = uiState.fiatCode
-    val codes = if (fiatCode != null) listOf(DASH_CURRENCY_CODE, fiatCode) else listOf(DASH_CURRENCY_CODE)
+    val codes = remember(fiatCode) { currencyCodesFor(fiatCode) }
     Column(modifier = Modifier.fillMaxSize()) {
         TopNavBase(
             leadingIcon = MyImages.MenuChevron,
@@ -677,7 +682,7 @@ private fun ConfirmAmount(amount: Dash, rate: Fiat?, fiatCode: String?) {
     EnterAmount(
         primaryAmount = localizeAmountForDisplay(amount.toDisplayString(), separator),
         secondaryAmount = fiat?.let { localizeAmountForDisplay(it.toPlainString(), separator) } ?: "0",
-        currencyCodes = if (fiatCode != null) listOf(DASH_CURRENCY_CODE, fiatCode) else listOf(DASH_CURRENCY_CODE),
+        currencyCodes = remember(fiatCode) { currencyCodesFor(fiatCode) },
         selectedCurrencyIndex = 0,
         showMaxButton = false,
         showBalanceButton = false,
@@ -855,7 +860,7 @@ internal fun iconFor(source: SendBalance): Int = when (source) {
 }
 
 @DrawableRes
-internal fun iconFor(destination: SendDestination): Int = iconFor(balanceOf(destination))
+internal fun iconFor(destination: SendDestination): Int = iconFor(balanceKindOf(destination))
 
 @StringRes
 internal fun titleFor(source: SendBalance): Int = when (source) {
@@ -866,7 +871,7 @@ internal fun titleFor(source: SendBalance): Int = when (source) {
 }
 
 @StringRes
-internal fun titleFor(destination: SendDestination): Int = titleFor(balanceOf(destination))
+internal fun titleFor(destination: SendDestination): Int = titleFor(balanceKindOf(destination))
 
 @StringRes
 internal fun balanceNameFor(source: SendBalance): Int = when (source) {
@@ -874,14 +879,6 @@ internal fun balanceNameFor(source: SendBalance): Int = when (source) {
     SendBalance.SHIELDED -> R.string.external_send_balance_name_shielded
     SendBalance.PLATFORM -> R.string.external_send_balance_name_platform
     SendBalance.IDENTITY -> R.string.external_send_balance_name_identity
-}
-
-/** The kind of balance a destination is paid into, for its icon and name. */
-private fun balanceOf(destination: SendDestination): SendBalance = when (destination) {
-    is SendDestination.Core -> SendBalance.CORE
-    is SendDestination.Shielded -> SendBalance.SHIELDED
-    is SendDestination.Platform -> SendBalance.PLATFORM
-    is SendDestination.Identity -> SendBalance.IDENTITY
 }
 
 @Preview(showBackground = true, widthDp = 420, heightDp = 926)
