@@ -81,6 +81,18 @@ enum class ShieldFromWalletOutcome {
 }
 
 /**
+ * Outcome payload of [ShieldedBalanceService.shieldFromWalletToAddress] on the
+ * [SdkWriteResult.Broadcast] arm: the staged [outcome] plus, best-effort, the txid of the L1
+ * asset lock the call built ([lockTxIdOrNull], DISPLAY-order hex, the `AssetLockEntity` key).
+ * It is only reported with [ShieldFromWalletOutcome.COMPLETED]; null when the lock could not be
+ * identified, which never changes [outcome].
+ */
+data class ShieldToAddressOutcome(
+    val outcome: ShieldFromWalletOutcome,
+    val lockTxIdOrNull: String? = null
+)
+
+/**
  * Readiness/sync state of the shielded runtime, for UI that must not show a
  * bare "0" while the pool is still catching up:
  *
@@ -622,12 +634,15 @@ interface ShieldedBalanceService {
      * that may have submitted is [SdkWriteResult.Ambiguous]: the recipient may have been
      * paid, and if not the same sweep returns the lock to the sender (the lock is
      * single-use, so it is never paid twice).
+     *
+     * A [ShieldFromWalletOutcome.COMPLETED] result carries the new lock's display txid
+     * ([ShieldToAddressOutcome.lockTxIdOrNull]) when it could be identified.
      */
     suspend fun shieldFromWalletToAddress(
         toShieldedAddress: String,
         amount: Dash,
         expectedWalletIdHex: String
-    ): SdkWriteResult<ShieldFromWalletOutcome>
+    ): SdkWriteResult<ShieldToAddressOutcome>
 
     /**
      * The consensus-pinned flat pool fee, in credits, of a single-note (2-action)

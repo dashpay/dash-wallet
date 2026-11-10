@@ -150,8 +150,10 @@ fun ExternalSendScreen(uiState: ExternalSendUIState, actions: ExternalSendAction
 
         when (val status = uiState.status) {
             is ExternalSendStatus.Sending -> SendingOverlay(status.shieldedLeg, actions.onLeave)
-            is ExternalSendStatus.Done ->
+            // A sent outcome with its txid opens the transaction result screen instead (the fragment).
+            is ExternalSendStatus.Done -> if (uiState.openTransactionResult == null) {
                 ResultOverlay(status.result, status.afterRestart) { actions.onResultClosed(status.result) }
+            }
             ExternalSendStatus.Idle, ExternalSendStatus.Restoring -> {}
         }
     }

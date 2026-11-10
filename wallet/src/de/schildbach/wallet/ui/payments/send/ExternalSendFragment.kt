@@ -37,10 +37,14 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.service.platform.sdk.ExternalSendResult
+import de.schildbach.wallet.ui.transactions.TransactionResultActivity
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.launch
+import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.services.AuthenticationManager
+import org.dash.wallet.common.services.LockScreenBroadcaster
 import org.dash.wallet.common.ui.LockScreenHost
+import org.dash.wallet.common.ui.handleWhenResumed
 import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.scan.ScanActivity
 import javax.inject.Inject
@@ -60,6 +64,9 @@ class ExternalSendFragment : Fragment() {
 
     @Inject
     lateinit var authManager: AuthenticationManager
+
+    @Inject
+    lateinit var lockScreenBroadcaster: LockScreenBroadcaster
 
     private val scanLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -106,6 +113,23 @@ class ExternalSendFragment : Fragment() {
             }
         }
 
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        // A sent outcome with its txid opens the transaction result screen, once, and only while
+        // this screen is resumed and the wallet unlocked (nothing over the PIN screen). The
+        // executor keeps the outcome until it is acknowledged, so a screen recreated or returned
+        // to meanwhile opens it then. Opening acknowledges it in the same turn.
+        handleWhenResumed(
+            viewModel.openTransactionResult,
+            lockScreenBroadcaster.unlocked,
+            viewModel::takeTransactionResult,
+            putBack = {}
+        ) { txId ->
+            showTransactionResult(txId)
+            true
+        }
+    }
+
     /**
      * Back is ignored while the lock screen covers this screen: the activity's own callback,
      * which ignores it too, runs only after this one. While the outcome shows, Back acknowledges
@@ -113,7 +137,13 @@ class ExternalSendFragment : Fragment() {
      */
     private fun onBack() {
         if ((activity as? LockScreenHost)?.lockScreenDisplayed == true) return
-        val status = viewModel.uiState.value.status
+        val state = viewModel.uiState.value
+        val txId = state.openTransactionResult
+        if (txId != null) {
+            showTransactionResult(txId)
+            return
+        }
+        val status = state.status
         if (status is ExternalSendStatus.Done) {
             onResultClosed(status.result)
             return
@@ -169,6 +199,19 @@ class ExternalSendFragment : Fragment() {
         if (result !is ExternalSendResult.NotSent) {
             leaveToHome()
         }
+    }
+
+    /**
+     * Opens the transaction result screen for [txId] (as [de.schildbach.wallet.ui.send.SendCoinsFragment]
+     * does after a send), acknowledges the outcome and returns Home. Called on the main thread
+     * with [txId] the current [ExternalSendUIState.openTransactionResult]; acknowledging clears
+     * it before anything else can run, so it is opened once.
+     */
+    private fun showTransactionResult(txId: String) {
+        if (!isAdded) return
+        startActivity(TransactionResultActivity.createIntent(requireActivity(), Sha256Hash.wrap(txId), false))
+        viewModel.onResultAcknowledged()
+        leaveToHome()
     }
 
     /**
