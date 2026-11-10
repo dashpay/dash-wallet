@@ -538,10 +538,12 @@ class SdkTxDetailTest {
         // Same ambiguous-wallet state as the test above (more than one SDK
         // wallet loaded, so foreignContactTxoExclusion returns null). Real TXO
         // rows exist for both outputs, but without the exclusion sets neither
-        // can be told apart from a contact's foreign output, so the raw TXO
+        // can be told apart from a contact's foreign output, so the OUTPUT
         // walk must not run at all: BOTH directions stay fail-closed, not just
         // OUTGOING — closing the gap where a foreign DashPay watch-only output
-        // could render under "Received at" (DW-1658).
+        // could render under "Received at" (DW-1658). The INPUT walk is
+        // unconditional (load() always resolves input TXOs to show the sender),
+        // so it still runs exactly once, for the fixture's one input.
         val manager = mockk<org.dashfoundation.dashsdk.wallet.PlatformWalletManager> {
             every { wallets } returns MutableStateFlow(
                 mapOf("01".repeat(32) to mockk(relaxed = true), "02".repeat(32) to mockk(relaxed = true))
@@ -605,14 +607,30 @@ class SdkTxDetailTest {
                     "unexcluded raw TXO walk, when ownership is unknown",
                 incoming.outputAddresses.isEmpty()
             )
-            coVerify(exactly = 0) { incomingDb.txoDao().getByOutpoint(any()) }
+            // The OUTPUT walk (the gap this fix closes) must not run at all — scoped to the
+            // two output outpoints, since the UNCONDITIONAL input walk below still calls
+            // getByOutpoint once, for the fixture's one input, and `any()` would wrongly
+            // match that call too.
+            coVerify(exactly = 0) { incomingDb.txoDao().getByOutpoint(txoOutpoint(decoded.txid, 0)) }
+            coVerify(exactly = 0) { incomingDb.txoDao().getByOutpoint(txoOutpoint(decoded.txid, 1)) }
+            coVerify(exactly = 1) {
+                incomingDb.txoDao().getByOutpoint(
+                    txoOutpoint(decoded.inputs[0].prevTxid, decoded.inputs[0].prevVout)
+                )
+            }
 
             val (outgoing, outgoingDb) = loadWithDirection(1)
             assertTrue(
                 "OUTGOING must stay fail-closed on ownershipUnknown regardless of what the walk found",
                 outgoing.outputAddresses.isEmpty()
             )
-            coVerify(exactly = 0) { outgoingDb.txoDao().getByOutpoint(any()) }
+            coVerify(exactly = 0) { outgoingDb.txoDao().getByOutpoint(txoOutpoint(decoded.txid, 0)) }
+            coVerify(exactly = 0) { outgoingDb.txoDao().getByOutpoint(txoOutpoint(decoded.txid, 1)) }
+            coVerify(exactly = 1) {
+                outgoingDb.txoDao().getByOutpoint(
+                    txoOutpoint(decoded.inputs[0].prevTxid, decoded.inputs[0].prevVout)
+                )
+            }
         } finally {
             unmockkObject(TransactionDecoder)
         }

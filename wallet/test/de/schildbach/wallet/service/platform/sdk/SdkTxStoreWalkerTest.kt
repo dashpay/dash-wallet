@@ -434,7 +434,8 @@ class SdkTxStoreWalkerTest {
         vout: Int,
         amount: Long,
         address: String,
-        spendingTxid: ByteArray? = null
+        spendingTxid: ByteArray? = null,
+        accountId: Long? = null
     ): ByteArray {
         val outpoint = ByteArray(36).also {
             it[0] = (outpointSeed and 0xff).toByte()
@@ -445,7 +446,7 @@ class SdkTxStoreWalkerTest {
             "INSERT INTO txos (outpoint, vout, amount, address, scriptPubKey, height, isCoinbase, " +
                 "isConfirmed, isInstantLocked, isLocked, isSpent, createdAt, lastUpdated, walletId, " +
                 "txid, spendingTxid, spendingInputIndex, accountId, coreAddressId) " +
-                "VALUES (?, ?, ?, ?, ?, 0, 0, 1, 0, 0, ?, 0, 0, ?, ?, ?, NULL, NULL, ?)",
+                "VALUES (?, ?, ?, ?, ?, 0, 0, 1, 0, 0, ?, 0, 0, ?, ?, ?, NULL, ?, ?)",
             outpoint,
             vout,
             amount,
@@ -455,6 +456,7 @@ class SdkTxStoreWalkerTest {
             walletId,
             txid,
             spendingTxid,
+            accountId,
             address
         )
         return outpoint
@@ -833,6 +835,82 @@ class SdkTxStoreWalkerTest {
         for (member in listOf(ids.receive, ids.sweep, ids.drain, ids.faucet)) {
             assertTrue(displayHexOf(member) in walked)
         }
+    }
+
+    /**
+     * [isForeignTxo] and [txoIsForeignSql] must classify every row the same
+     * way. They read different primary signals (`accountId` first in
+     * Kotlin; only `address` via `core_addresses` in SQL), which is safe
+     * only because the SDK's own persistence layer is the sole writer of
+     * both `txos.accountId` and `core_addresses`, and never writes a row
+     * the two could disagree on — see [isForeignTxo]'s KDoc for the
+     * on-device evidence. Four row shapes, covering every combination the
+     * two signals can take:
+     * - `accountId`-classified: `accountId` resolves to the external
+     *   account; `address` ALSO does (the writer's invariant — a row where
+     *   only `accountId` resolved has never been observed, see the KDoc);
+     * - address-classified: `accountId` NULL (the only shape ever observed
+     *   on Android for a DIP-15 friendship send), `address` resolves;
+     * - both: `accountId` and `address` both resolve, to the same account;
+     * - neither: an ordinary owned row, `accountId` points at the wallet's
+     *   own BIP44 account and `address` does not resolve externally.
+     */
+    @Test
+    fun isForeignTxo_and_txoIsForeignSql_agreeAcrossAccountIdAndAddressSignals() = runBlocking {
+        insertAccount(bip44Account, 0)
+        insertAccount(extAccount, 13)
+
+        insertCoreAddress("acctid_and_addr", extAccount)
+        insertCoreAddress("addr_only", extAccount)
+        insertCoreAddress("both_signals", extAccount)
+        insertCoreAddress("owned_addr", bip44Account)
+
+        for (n in 20..23) {
+            insertTx(txid(n), direction = 0, netAmount = 1_000, payload = ByteArray(0), firstSeen = 1_700_000_000L + n)
+        }
+
+        val rows = listOf(
+            "accountId-classified" to insertTxo(txid(20), 0, 1_000, "acctid_and_addr", accountId = extAccount),
+            "address-classified" to insertTxo(txid(21), 0, 1_000, "addr_only", accountId = null),
+            "both" to insertTxo(txid(22), 0, 1_000, "both_signals", accountId = extAccount),
+            "neither" to insertTxo(txid(23), 0, 1_000, "owned_addr", accountId = bip44Account)
+        )
+
+        val (externalAccountIds, externalAddresses) = foreignTxoExclusionSets(db, walletId)
+
+        fun sqlSaysForeign(outpoint: ByteArray): Boolean =
+            db.openHelper.readableDatabase.query(
+                androidx.sqlite.db.SimpleSQLiteQuery(
+                    "SELECT CASE WHEN ${txoIsForeignSql("t")} THEN 1 ELSE 0 END FROM txos t WHERE t.outpoint = ?",
+                    arrayOf<Any?>(outpoint)
+                )
+            ).use { c -> assertTrue(c.moveToFirst()); c.getInt(0) != 0 }
+
+        fun kotlinSaysForeign(outpoint: ByteArray): Boolean =
+            db.openHelper.readableDatabase.query(
+                androidx.sqlite.db.SimpleSQLiteQuery(
+                    "SELECT accountId, coreAddressId, address FROM txos WHERE outpoint = ?",
+                    arrayOf<Any?>(outpoint)
+                )
+            ).use { c ->
+                assertTrue(c.moveToFirst())
+                val accountId = if (c.isNull(0)) null else c.getLong(0)
+                val coreAddressId = if (c.isNull(1)) null else c.getString(1)
+                val address = if (c.isNull(2)) null else c.getString(2)
+                isForeignTxo(accountId, coreAddressId, address, externalAccountIds, externalAddresses)
+            }
+
+        for ((label, outpoint) in rows) {
+            val sql = sqlSaysForeign(outpoint)
+            val kotlin = kotlinSaysForeign(outpoint)
+            assertEquals("$label: txoIsForeignSql vs isForeignTxo disagree", sql, kotlin)
+        }
+        // The three external shapes are foreign, the owned one is not —
+        // proving the fixture actually exercises both outcomes.
+        assertTrue(sqlSaysForeign(rows[0].second))
+        assertTrue(sqlSaysForeign(rows[1].second))
+        assertTrue(sqlSaysForeign(rows[2].second))
+        assertFalse(sqlSaysForeign(rows[3].second))
     }
 
     @Test

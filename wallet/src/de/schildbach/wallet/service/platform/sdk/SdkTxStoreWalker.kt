@@ -46,7 +46,9 @@ import org.dashfoundation.dashsdk.persistence.DashDatabase
  * persistence layer writes friendship TXOs with a NULL `accountId` — the same
  * verified fallback [SdkTxContactResolver.signedNetsFor] uses. A row whose
  * address maps to no account (or no `core_addresses` row at all) is treated as
- * owned — the pre-existing behavior for unclassifiable rows.
+ * owned — the pre-existing behavior for unclassifiable rows. Never looks at
+ * `txos.accountId` at all — see [isForeignTxo]'s KDoc for why that still
+ * agrees with this fragment rather than being a second, divergent rule.
  */
 internal fun txoIsForeignSql(alias: String): String =
     "EXISTS (SELECT 1 FROM core_addresses fca JOIN accounts fa ON fa.id = fca.accountId " +
@@ -62,6 +64,22 @@ internal fun txoIsForeignSql(alias: String): String =
  * `accountId` NULL (see [txoIsForeignSql]'s KDoc), so `coreAddressId` — the
  * `core_addresses` PK, always populated — is the authoritative fallback,
  * with `address` covering a row that predates that column.
+ *
+ * Agrees with [txoIsForeignSql] — which never looks at `accountId`, only at
+ * `address` via `core_addresses` — because the SDK's own persistence layer is
+ * the sole writer of both `txos.accountId` and `core_addresses`, and it does
+ * not produce a row the two could disagree on: on Android `txos.accountId`
+ * is NULL on every row (verified on-device; see
+ * [SdkAssetLockFundingPreflight]'s `ASSET_LOCK_TXO_JOINS` KDoc), so this
+ * function's `accountId`-primary branch never fires there, and every row
+ * falls to the same `coreAddressId`/`address` → `core_addresses` join
+ * [txoIsForeignSql] runs in SQL — verified to agree for a real DIP-15
+ * friendship send (S22 `ca05a582…`/`6cee34d3…`, see
+ * [SdkTxContactResolver.signedNetsFor]'s KDoc). `SdkTxStoreWalkerTest`'s
+ * `isForeignTxo_and_txoIsForeignSql_agreeAcrossAccountIdAndAddressSignals`
+ * pins this agreement, including the `accountId`-populated shape neither
+ * writer has produced yet, so a future AAR change that starts filling
+ * `txos.accountId` cannot silently split the two expressions apart.
  */
 internal fun isForeignTxo(
     accountId: Long?,
