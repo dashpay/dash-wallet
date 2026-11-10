@@ -39,21 +39,15 @@ enum class ShieldedActivityDirection { IN, OUT, INTERNAL }
  * @param id stable row id — the SDK's `entryId` (sha256 of the entry's
  *   visible output commitments) as lowercase hex; usable as a list key.
  * @param direction see [ShieldedActivityDirection].
- * @param amount principal amount (fees excluded), converted from Platform
- *   credits to [Dash] (floor at 1e11 credits / DASH → 1e8 duffs / DASH).
  * @param timestampMs record time, Unix milliseconds.
  * @param memo decoded UTF-8 text memo, or null when the entry carries no
  *   (readable) memo. Never logged by the service.
- * @param pending true while the entry's state transition has not been
- *   confirmed by a shielded sync pass. Failed entries are not surfaced.
  */
 data class ShieldedActivityEntry(
     val id: String,
     val direction: ShieldedActivityDirection,
-    val amount: Dash,
     val timestampMs: Long,
     val memo: String?,
-    val pending: Boolean,
     /**
      * The SDK's `ShieldedActivityKind::tag` (see [ShieldedActivityKindTag]).
      * Passed through unchanged: an unknown future tag is kept so a consumer
@@ -62,7 +56,7 @@ data class ShieldedActivityEntry(
     val kindTag: Int,
     /** ZIP-32 account index of the sub-wallet the entry belongs to (part of the row key). */
     val accountIndex: Int,
-    /** Principal amount in Platform credits, exact (the unfloored source of [amount]). */
+    /** Principal amount in Platform credits (never negative), exact (the unfloored source of [amount]). */
     val amountCredits: Long,
     /**
      * The state-transition fee in Platform credits, or null when the SDK did
@@ -84,6 +78,21 @@ data class ShieldedActivityEntry(
      */
     val identityId: ByteArray = ByteArray(0)
 ) {
+    /**
+     * Principal amount (fees excluded), [amountCredits] converted from Platform
+     * credits to [Dash] (floor at 1e11 credits / DASH → 1e8 duffs / DASH).
+     */
+    val amount: Dash
+        get() = creditsToDash(amountCredits)
+
+    /**
+     * True while the entry's state transition has not been confirmed by a
+     * shielded sync pass ([ShieldedActivityStatus.PENDING]). Failed entries are
+     * not surfaced.
+     */
+    val pending: Boolean
+        get() = status == ShieldedActivityStatus.PENDING
+
     /** Value-free: amounts, memo, ids and counterparties never reach a log. */
     override fun toString(): String =
         "ShieldedActivityEntry(kindTag=$kindTag, direction=$direction, status=$status)"

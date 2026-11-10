@@ -28,7 +28,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
-import org.dash.wallet.common.money.Dash
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -49,10 +48,8 @@ class PlatformActivityDetailFeedTest {
     ) = ShieldedActivityEntry(
         id = id,
         direction = ShieldedActivityDirection.OUT,
-        amount = Dash(2_796_148L),
         timestampMs = 1_000L,
         memo = null,
-        pending = status == ShieldedActivityStatus.PENDING,
         kindTag = kindTag,
         accountIndex = 0,
         amountCredits = 2_796_148_800L,

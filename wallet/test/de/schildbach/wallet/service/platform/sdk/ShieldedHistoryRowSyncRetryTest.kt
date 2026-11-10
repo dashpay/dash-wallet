@@ -23,13 +23,14 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.spyk
+import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
-import org.dash.wallet.common.money.Dash
 import org.junit.Test
 
 /**
@@ -42,10 +43,8 @@ class ShieldedHistoryRowSyncRetryTest {
     private val entry = ShieldedActivityEntry(
         id = "01".repeat(32),
         direction = ShieldedActivityDirection.OUT,
-        amount = Dash(2_796_148L),
         timestampMs = 1_000L,
         memo = null,
-        pending = false,
         kindTag = ShieldedActivityKindTag.IDENTITY_CREATE,
         accountIndex = 0,
         amountCredits = 2_796_148_800L,
@@ -60,11 +59,11 @@ class ShieldedHistoryRowSyncRetryTest {
         every { service.observeShieldedActivityOrNotReady() } returns feed
         coEvery { service.counterpartyOwnership(any(), any()) } returns CounterpartyOwnership.UNKNOWN
         val dao = mockk<TxDisplayCacheDao>()
-        coEvery { dao.getShieldedRows() } returns emptyList()
         var calls = 0
-        coEvery { dao.replaceShieldedRows(any(), any()) } answers {
+        coEvery { dao.replaceShieldedRows(any()) } answers {
             calls++
             if (calls == 1) throw IllegalStateException("database is locked")
+            true
         }
         val sync = ShieldedHistoryRowSync(
             service, dao, DisplayCacheRefreshBus(), { "res:$it" }, backgroundScope,
@@ -73,16 +72,16 @@ class ShieldedHistoryRowSyncRetryTest {
 
         sync.start()
         runCurrent()
-        coVerify(exactly = 1) { dao.replaceShieldedRows(any(), any()) }
+        coVerify(exactly = 1) { dao.replaceShieldedRows(any()) }
 
         // Nothing re-emits; only the retry path can bring the rows in.
         advanceTimeBy(29_999L)
         runCurrent()
-        coVerify(exactly = 1) { dao.replaceShieldedRows(any(), any()) }
+        coVerify(exactly = 1) { dao.replaceShieldedRows(any()) }
         advanceTimeBy(2L)
         runCurrent()
         coVerify(exactly = 2) {
-            dao.replaceShieldedRows(match { rows -> rows.single().rowId == "shielded:0:${"01".repeat(32)}" }, any())
+            dao.replaceShieldedRows(match { rows -> rows.single().rowId == "shielded:0:${"01".repeat(32)}" })
         }
     }
 
@@ -103,8 +102,7 @@ class ShieldedHistoryRowSyncRetryTest {
             CounterpartyOwnership.EXTERNAL
         }
         val dao = mockk<TxDisplayCacheDao>()
-        coEvery { dao.getShieldedRows() } returns emptyList()
-        coEvery { dao.replaceShieldedRows(any(), any()) } returns Unit
+        coEvery { dao.replaceShieldedRows(any()) } returns true
         val sync = ShieldedHistoryRowSync(
             service, dao, DisplayCacheRefreshBus(), { "res:$it" }, backgroundScope,
             StandardTestDispatcher(testScheduler), retryDelayMs = 30_000L
@@ -112,11 +110,11 @@ class ShieldedHistoryRowSyncRetryTest {
 
         sync.start()
         runCurrent()
-        coVerify(exactly = 0) { dao.replaceShieldedRows(any(), any()) }
+        coVerify(exactly = 0) { dao.replaceShieldedRows(any()) }
 
         advanceTimeBy(30_001L)
         runCurrent()
-        coVerify(exactly = 1) { dao.replaceShieldedRows(match { it.size == 1 }, any()) }
+        coVerify(exactly = 1) { dao.replaceShieldedRows(match { it.size == 1 }) }
     }
 
     @Test
@@ -127,13 +125,16 @@ class ShieldedHistoryRowSyncRetryTest {
         coEvery { service.counterpartyOwnership(any(), any()) } returns CounterpartyOwnership.UNKNOWN
         val planned = planShieldedHistoryRows(listOf(entry), { CounterpartyOwnership.UNKNOWN }, { "res:$it" }).rows
         val dao = mockk<TxDisplayCacheDao>()
-        coEvery { dao.getShieldedRows() } returns planned
+        // The DAO reports "already exactly these rows": nothing written.
+        coEvery { dao.replaceShieldedRows(any()) } returns false
+        val bus = spyk(DisplayCacheRefreshBus())
         val sync = ShieldedHistoryRowSync(
-            service, dao, DisplayCacheRefreshBus(), { "res:$it" }, backgroundScope,
+            service, dao, bus, { "res:$it" }, backgroundScope,
             StandardTestDispatcher(testScheduler), retryDelayMs = 30_000L
         )
         sync.start()
         runCurrent()
-        coVerify(exactly = 0) { dao.replaceShieldedRows(any(), any()) }
+        coVerify(exactly = 1) { dao.replaceShieldedRows(planned) }
+        verify(exactly = 0) { bus.signalChanged() }
     }
 }

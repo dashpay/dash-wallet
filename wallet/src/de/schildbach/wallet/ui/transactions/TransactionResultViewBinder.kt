@@ -278,43 +278,24 @@ class TransactionResultViewBinder(
         this.sdkDetail = detail
         val isSent = detail.isSent
 
-        if (isSent) {
-            binding.transactionTitle.setTextColor(ContextCompat.getColor(context, R.color.dash_blue))
+        val title = if (isSent) {
             // A Platform-funding asset lock (upgrade / top-up / invite) surfaces
             // its "…Fee" title instead of the generic "Amount Sent".
             sdkAssetLockKind = detail.assetLockKind
-            binding.transactionTitle.text = detail.assetLockKind
+            detail.assetLockKind
                 ?.let { context.getText(assetLockTitleRes(it)) }
                 ?: context.getText(R.string.transaction_details_amount_sent)
-            binding.transactionAmountSignal.text = "-"
         } else {
-            binding.transactionTitle.setTextColor(ContextCompat.getColor(context, R.color.system_green))
-            binding.transactionTitle.text = context.getText(R.string.transaction_details_amount_received)
-            binding.transactionAmountSignal.text = "+"
+            context.getText(R.string.transaction_details_amount_received)
         }
-        binding.transactionAmountSignal.isVisible = true
-        updateIcon()
-
-        binding.dashAmount.setFormat(dashFormat)
-        binding.dashAmount.setAmount(Coin.valueOf(kotlin.math.abs(detail.netAmountDuffs)))
         // No exchange rate is recorded for SDK-only transactions.
-        binding.fiatValue.isVisible = false
-
-        val fee = detail.feeDuffs?.let { Coin.valueOf(it) }
-        binding.feeContainer.isVisible = isFeeAvailable(fee)
-        if (isFeeAvailable(fee)) {
-            binding.transactionFee.setFormat(dashFormat)
-            binding.transactionFee.setAmount(fee)
-        }
-
-        binding.dateContainer.isVisible = detail.timestampMs > 0
-        if (detail.timestampMs > 0) {
-            binding.transactionDateAndTime.text = DateUtils.formatDateTime(
-                context,
-                detail.timestampMs,
-                DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_SHOW_TIME
-            )
-        }
+        bindHeader(
+            outgoing = isSent,
+            title = title,
+            amountDuffs = kotlin.math.abs(detail.netAmountDuffs),
+            feeDuffs = detail.feeDuffs,
+            timestampMs = detail.timestampMs
+        )
 
         val inflater = LayoutInflater.from(context)
         when {
@@ -339,33 +320,13 @@ class TransactionResultViewBinder(
     fun bindPlatformActivityDetail(detail: PlatformActivityDetail) {
         this.platformDetail = detail
 
-        binding.transactionTitle.setTextColor(
-            ContextCompat.getColor(context, if (detail.outgoing) R.color.dash_blue else R.color.system_green)
+        bindHeader(
+            outgoing = detail.outgoing,
+            title = context.getText(detail.titleRes),
+            amountDuffs = detail.principalDuffs,
+            feeDuffs = detail.feeDuffs,
+            timestampMs = detail.timestampMs
         )
-        binding.transactionTitle.text = context.getText(detail.titleRes)
-        binding.transactionAmountSignal.text = if (detail.outgoing) "-" else "+"
-        binding.transactionAmountSignal.isVisible = true
-        updateIcon()
-
-        binding.dashAmount.setFormat(dashFormat)
-        binding.dashAmount.setAmount(Coin.valueOf(detail.principalDuffs))
-        binding.fiatValue.isVisible = false
-
-        val fee = detail.feeDuffs?.let { Coin.valueOf(it) }
-        binding.feeContainer.isVisible = isFeeAvailable(fee)
-        if (fee != null && isFeeAvailable(fee)) {
-            binding.transactionFee.setFormat(dashFormat)
-            binding.transactionFee.setAmount(fee)
-        }
-
-        binding.dateContainer.isVisible = detail.timestampMs > 0
-        if (detail.timestampMs > 0) {
-            binding.transactionDateAndTime.text = DateUtils.formatDateTime(
-                context,
-                detail.timestampMs,
-                DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_SHOW_TIME
-            )
-        }
 
         binding.statusContainer.isVisible = detail.pending
         if (detail.pending) {
@@ -392,6 +353,48 @@ class TransactionResultViewBinder(
         binding.openExplorerCard.isVisible = false
         binding.openProviderExplorerCard.isVisible = false
         binding.reportIssueCard.isVisible = false
+    }
+
+    /**
+     * The header shared by [bindSdkDetail] and [bindPlatformActivityDetail]: title
+     * (blue for [outgoing], green otherwise) with its sign, the icon, the amount
+     * without fiat (no rate is recorded for either), the fee when positive, and the
+     * date when known.
+     */
+    private fun bindHeader(
+        outgoing: Boolean,
+        title: CharSequence,
+        amountDuffs: Long,
+        feeDuffs: Long?,
+        timestampMs: Long
+    ) {
+        binding.transactionTitle.setTextColor(
+            ContextCompat.getColor(context, if (outgoing) R.color.dash_blue else R.color.system_green)
+        )
+        binding.transactionTitle.text = title
+        binding.transactionAmountSignal.text = if (outgoing) "-" else "+"
+        binding.transactionAmountSignal.isVisible = true
+        updateIcon()
+
+        binding.dashAmount.setFormat(dashFormat)
+        binding.dashAmount.setAmount(Coin.valueOf(amountDuffs))
+        binding.fiatValue.isVisible = false
+
+        val fee = feeDuffs?.let { Coin.valueOf(it) }
+        binding.feeContainer.isVisible = isFeeAvailable(fee)
+        if (fee != null && isFeeAvailable(fee)) {
+            binding.transactionFee.setFormat(dashFormat)
+            binding.transactionFee.setAmount(fee)
+        }
+
+        binding.dateContainer.isVisible = timestampMs > 0
+        if (timestampMs > 0) {
+            binding.transactionDateAndTime.text = DateUtils.formatDateTime(
+                context,
+                timestampMs,
+                DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_SHOW_TIME
+            )
+        }
     }
 
     private fun setStringInputs(addresses: List<String>, inflater: LayoutInflater) {
@@ -524,11 +527,7 @@ class TransactionResultViewBinder(
         } else if (iconRes != null) {
             iconRes!!
         } else if (platformDetail != null) {
-            when (platformDetail.iconType) {
-                TxDisplayCacheEntry.ICON_INTERNAL -> R.drawable.ic_internal
-                TxDisplayCacheEntry.ICON_SENT -> R.drawable.ic_transaction_sent
-                else -> R.drawable.ic_transaction_received
-            }
+            TxDisplayCacheEntry.iconResFor(platformDetail.iconType)
         } else if (sdkDetail != null) {
             when {
                 !sdkDetail.isSent -> R.drawable.ic_transaction_received

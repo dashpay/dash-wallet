@@ -35,7 +35,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.yield
-import org.dash.wallet.common.money.Dash
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -96,10 +95,8 @@ class ShieldedHistoryRowSyncTest {
     ) = ShieldedActivityEntry(
         id = id,
         direction = ShieldedActivityDirection.OUT,
-        amount = Dash(2_796_148L),
         timestampMs = 1_000L,
         memo = null,
-        pending = status == ShieldedActivityStatus.PENDING,
         kindTag = kindTag,
         accountIndex = 0,
         amountCredits = 2_796_148_800L,
@@ -134,6 +131,10 @@ class ShieldedHistoryRowSyncTest {
         val sync = sync()
         dao.insertAll(listOf(l1Row(l1Txid)))
         assertTrue(sync.applySnapshot(ShieldedActivitySnapshot(walletA, listOf(entry("01".repeat(32))))))
+        assertEquals(setOf(l1Txid, "shielded:0:${"01".repeat(32)}"), ids())
+
+        // An identical snapshot is a no-op: the stored set already matches.
+        assertFalse(sync.applySnapshot(ShieldedActivitySnapshot(walletA, listOf(entry("01".repeat(32))))))
         assertEquals(setOf(l1Txid, "shielded:0:${"01".repeat(32)}"), ids())
 
         // Not ready (unknown) is not empty: nothing changes.
@@ -186,7 +187,8 @@ class ShieldedHistoryRowSyncTest {
 
     @Test(expected = IllegalArgumentException::class)
     fun replaceShieldedRows_refusesAnL1Row() = runBlocking {
-        dao.replaceShieldedRows(listOf(l1Row(l1Txid)), setOf(l1Txid))
+        dao.replaceShieldedRows(listOf(l1Row(l1Txid)))
+        Unit
     }
 
     @Test

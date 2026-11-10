@@ -19,7 +19,6 @@ package de.schildbach.wallet.service.platform.sdk
 
 import de.schildbach.wallet.database.entity.TxDisplayCacheEntry
 import de.schildbach.wallet_test.R
-import org.dash.wallet.common.money.Dash
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -35,7 +34,7 @@ class ShieldedHistoryRowsTest {
 
     // The pre-ownership cases: every counterparty is the wallet's own.
     private fun planRow(e: ShieldedActivityEntry, r: (Int) -> String, own: CounterpartyOwnership = CounterpartyOwnership.OWN) =
-        planShieldedHistoryRow(e, own, r)
+        (planShieldedHistoryRowOrSkip(e, own, r) as? ShieldedRowPlan.Row)?.entry
 
     private fun planOrSkip(e: ShieldedActivityEntry, r: (Int) -> String, own: CounterpartyOwnership = CounterpartyOwnership.OWN) =
         planShieldedHistoryRowOrSkip(e, own, r)
@@ -66,10 +65,8 @@ class ShieldedHistoryRowsTest {
     ) = ShieldedActivityEntry(
         id = id,
         direction = ShieldedActivityDirection.OUT,
-        amount = Dash(amountCredits / 1_000L),
         timestampMs = timestampMs,
         memo = memo,
-        pending = status == ShieldedActivityStatus.PENDING,
         kindTag = kindTag,
         accountIndex = accountIndex,
         amountCredits = amountCredits,
@@ -418,32 +415,36 @@ class ShieldedHistoryRowsTest {
 
     // ── Counterparty decoding ──────────────────────────────────────────
 
-    private val versions = CoreAddressVersions(pubKeyHash = 140, scriptHash = 19)
+    private val testnet = org.bitcoinj.params.TestNet3Params.get()
+    private val decode: (ByteArray) -> String? = { decodeCoreScriptAddress(it, testnet) }
     private val hash = ByteArray(20) { (it + 1).toByte() }
 
     @Test
     fun coreScript_decodesP2pkhAndP2shOnly() {
         val p2pkh = byteArrayOf(0x76, 0xa9.toByte(), 0x14) + hash + byteArrayOf(0x88.toByte(), 0xac.toByte())
         val p2sh = byteArrayOf(0xa9.toByte(), 0x14) + hash + byteArrayOf(0x87.toByte())
-        val p2pkhAddress = coreScriptToAddress(p2pkh, versions)!!
-        val p2shAddress = coreScriptToAddress(p2sh, versions)!!
-        // Round-trip through Base58Check: version byte + the script's hash160.
+        val p2pkhAddress = decode(p2pkh)!!
+        val p2shAddress = decode(p2sh)!!
+        // Round-trip through Base58Check: version byte + the script's hash160 (testnet 140 / 19).
         assertTrue(org.bitcoinj.core.Base58.decodeChecked(p2pkhAddress).contentEquals(byteArrayOf(140.toByte()) + hash))
         assertTrue(org.bitcoinj.core.Base58.decodeChecked(p2shAddress).contentEquals(byteArrayOf(19) + hash))
         assertTrue(p2pkhAddress.startsWith("y")) // testnet P2PKH
         // The same hash on the testnet params the app uses.
-        val params = org.bitcoinj.params.TestNet3Params.get()
-        assertEquals(
-            org.bitcoinj.core.Address.fromPubKeyHash(params, hash).toString(),
-            coreScriptToAddress(p2pkh, CoreAddressVersions(params.addressHeader, params.p2SHHeader))
-        )
+        assertEquals(org.bitcoinj.core.Address.fromPubKeyHash(testnet, hash).toString(), p2pkhAddress)
 
-        assertNull(coreScriptToAddress(p2pkh, null))
-        assertNull(coreScriptToAddress(p2pkh.copyOf(24), versions))
-        assertNull(coreScriptToAddress(byteArrayOf(0x6a, 0x01, 0x00), versions)) // OP_RETURN
+        assertNull(decode(p2pkh.copyOf(24)))
+        assertNull(decode(byteArrayOf(0x6a, 0x01, 0x00))) // OP_RETURN
         val wrongOp = p2pkh.copyOf().also { it[23] = 0x87.toByte() }
-        assertNull(coreScriptToAddress(wrongOp, versions))
-        assertNull(coreScriptToAddress(ByteArray(0), versions))
+        assertNull(decode(wrongOp))
+        assertNull(decode(ByteArray(0)))
+        // Non-minimal pushes of the hash are not the P2PKH / P2SH templates.
+        val pushData1 = byteArrayOf(0x76, 0xa9.toByte(), 0x4c, 0x14) + hash + byteArrayOf(0x88.toByte(), 0xac.toByte())
+        assertNull(decode(pushData1))
+        assertNull(decode(byteArrayOf(0xa9.toByte(), 0x4c, 0x14) + hash + byteArrayOf(0x87.toByte())))
+        // An unparseable script (push longer than the script) and a trailing byte.
+        assertNull(decode(byteArrayOf(0x76, 0xa9.toByte(), 0x14) + ByteArray(5)))
+        assertNull(decode(p2pkh + byteArrayOf(0x00)))
+        assertNull(decode(p2sh + byteArrayOf(0x00)))
     }
 
     @Test
@@ -459,36 +460,36 @@ class ShieldedHistoryRowsTest {
     fun counterpartyQuery_perKind() {
         val p2pkh = byteArrayOf(0x76, 0xa9.toByte(), 0x14) + hash + byteArrayOf(0x88.toByte(), 0xac.toByte())
         assertTrue(
-            counterpartyQueryFor(entry(ShieldedActivityKindTag.WITHDRAWAL, counterparty = p2pkh), versions)
+            counterpartyQueryFor(entry(ShieldedActivityKindTag.WITHDRAWAL, counterparty = p2pkh), decode)
                 is CounterpartyQuery.CoreAddress
         )
         assertEquals(
             CounterpartyQuery.Undecodable,
-            counterpartyQueryFor(entry(ShieldedActivityKindTag.WITHDRAWAL, counterparty = ByteArray(43)), versions)
+            counterpartyQueryFor(entry(ShieldedActivityKindTag.WITHDRAWAL, counterparty = ByteArray(43)), decode)
         )
         assertTrue(
-            counterpartyQueryFor(entry(ShieldedActivityKindTag.UNSHIELD, counterparty = byteArrayOf(0) + hash), versions)
+            counterpartyQueryFor(entry(ShieldedActivityKindTag.UNSHIELD, counterparty = byteArrayOf(0) + hash), decode)
                 is CounterpartyQuery.PlatformAddressHash
         )
         assertEquals(
             CounterpartyQuery.Undecodable,
-            counterpartyQueryFor(entry(ShieldedActivityKindTag.UNSHIELD, counterparty = p2pkh), versions)
+            counterpartyQueryFor(entry(ShieldedActivityKindTag.UNSHIELD, counterparty = p2pkh), decode)
         )
         assertTrue(
-            counterpartyQueryFor(entry(ShieldedActivityKindTag.IDENTITY_TOP_UP, identityId = ByteArray(32)), versions)
+            counterpartyQueryFor(entry(ShieldedActivityKindTag.IDENTITY_TOP_UP, identityId = ByteArray(32)), decode)
                 is CounterpartyQuery.Identity
         )
         assertEquals(
             CounterpartyQuery.Undecodable,
-            counterpartyQueryFor(entry(ShieldedActivityKindTag.IDENTITY_TOP_UP), versions)
+            counterpartyQueryFor(entry(ShieldedActivityKindTag.IDENTITY_TOP_UP), decode)
         )
         for (tag in listOf(0, 1, 2, 3, 6, 7, 8)) {
-            assertEquals("tag $tag", CounterpartyQuery.NotNeeded, counterpartyQueryFor(entry(tag, counterparty = p2pkh), versions))
+            assertEquals("tag $tag", CounterpartyQuery.NotNeeded, counterpartyQueryFor(entry(tag, counterparty = p2pkh), decode))
         }
         // Address-bearing queries never print the address.
         assertFalse(
-            counterpartyQueryFor(entry(ShieldedActivityKindTag.WITHDRAWAL, counterparty = p2pkh), versions)
-                .toString().contains(coreScriptToAddress(p2pkh, versions)!!)
+            counterpartyQueryFor(entry(ShieldedActivityKindTag.WITHDRAWAL, counterparty = p2pkh), decode)
+                .toString().contains(decode(p2pkh)!!)
         )
     }
 }

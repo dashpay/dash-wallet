@@ -529,7 +529,9 @@ class ShieldedBalanceServiceTest {
         afterStopFallbackBump: suspend () -> Unit = {},
         freshFundingBlocked: suspend () -> Boolean = { false },
         seedAssetLockKind: (String, AssetLockKind) -> Unit = { _, _ -> },
-        coreAddressVersions: CoreAddressVersions? = CoreAddressVersions(pubKeyHash = 140, scriptHash = 19)
+        coreScriptToAddress: (ByteArray) -> String? = {
+            decodeCoreScriptAddress(it, org.bitcoinj.params.TestNet3Params.get())
+        }
     ) = ShieldedBalanceServiceImpl(
         source = source,
         dashPayConfig = config(enabled, l1ShadowEnabled, lastBalanceDuffs, consumed),
@@ -547,7 +549,7 @@ class ShieldedBalanceServiceTest {
         freshFundingBlocked = freshFundingBlocked,
         seedAssetLockKind = seedAssetLockKind,
         fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock(),
-        coreAddressVersions = { coreAddressVersions }
+        coreScriptToAddress = coreScriptToAddress
     )
 
     // ── Plan §37: stop() must not wait forever on a bring-up parked in the native bind ──
@@ -1656,7 +1658,7 @@ class ShieldedBalanceServiceTest {
     @Test
     fun counterpartyOwnership_withoutNetworkVersions_isUnknownForWithdrawals() = runBlocking {
         val source = readySource()
-        val service = service(source, coreAddressVersions = null)
+        val service = service(source, coreScriptToAddress = { null })
         val p2pkh = byteArrayOf(0x76, 0xa9.toByte(), 0x14) + ByteArray(20) + byteArrayOf(0x88.toByte(), 0xac.toByte())
         assertEquals(
             CounterpartyOwnership.UNKNOWN,
