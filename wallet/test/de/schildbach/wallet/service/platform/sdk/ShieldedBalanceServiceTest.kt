@@ -3666,9 +3666,28 @@ class ShieldedBalanceServiceTest {
 
         val result = service.shieldFromWalletToAddress(recipientAddress, Dash.COIN, walletIdHex)
 
-        assertEquals(SdkWriteResult.Broadcast(ShieldFromWalletOutcome.COMPLETED), result)
+        // No tracked lock to identify: still COMPLETED, without a txid.
+        assertEquals(SdkWriteResult.Broadcast(ShieldToAddressOutcome(ShieldFromWalletOutcome.COMPLETED, null)), result)
         assertArrayEquals(recipientRaw43, source.lastFundRecipient)
         assertEquals(Dash.COIN.duffs, source.lastFundAmountDuffs)
+    }
+
+    @Test
+    fun shieldFromWalletToAddress_completed_reportsTheNewLocksDisplayTxId_notAnEarlierLock() = runBlocking {
+        val source = readySource()
+        val service = service(source, progress = { caughtUpProgress() })
+        val earlier = PendingWalletShieldLock("aa".repeat(32) + ":0", 1, 100_000)
+        val built = PendingWalletShieldLock("bb".repeat(32) + ":1", 1, 100_000)
+        var funded = false
+        source.shieldLocks = { if (funded) listOf(earlier, built) else listOf(earlier) }
+        source.onFund = { funded = true }
+
+        val result = service.shieldFromWalletToAddress(recipientAddress, Dash.COIN, walletIdHex)
+
+        assertEquals(
+            SdkWriteResult.Broadcast(ShieldToAddressOutcome(ShieldFromWalletOutcome.COMPLETED, "bb".repeat(32))),
+            result
+        )
     }
 
     @Test
@@ -3711,7 +3730,11 @@ class ShieldedBalanceServiceTest {
             source.onFund = { funded = true; throw DashSdkError.InvalidParameter("shield transition rejected") }
 
             val result = service.shieldFromWalletToAddress(recipientAddress, Dash.COIN, walletIdHex)
-            assertEquals(SdkWriteResult.Broadcast(ShieldFromWalletOutcome.SHIELD_PENDING_RETRY), result)
+            // A lock that did not pay the recipient carries no txid.
+            assertEquals(
+                SdkWriteResult.Broadcast(ShieldToAddressOutcome(ShieldFromWalletOutcome.SHIELD_PENDING_RETRY, null)),
+                result
+            )
 
             // The sweep finishes the externally-addressed lock to the SENDER's own address.
             assertEquals(1, service.resumePendingWalletShields())

@@ -44,13 +44,17 @@ import de.schildbach.wallet.ui.shielded.toKeypadStringTwoDecimals
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.data.WalletUIConfig
@@ -61,6 +65,8 @@ import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.ui.enter_amount.processAmountKeyInput
 import org.dash.wallet.common.util.toFiat
 import javax.inject.Inject
+
+private fun Char.isHexDigitChar(): Boolean = this in '0'..'9' || this in 'a'..'f' || this in 'A'..'F'
 
 /** The two pages of the external send flow. */
 enum class ExternalSendStep { ADDRESS, AMOUNT }
@@ -151,6 +157,20 @@ data class ExternalSendUIState(
     val status: ExternalSendStatus = ExternalSendStatus.Idle,
     val finished: Boolean = false
 ) {
+    /**
+     * The txid of a sent outcome that is shown by the transaction result screen (the fragment
+     * opens it once, then acknowledges) instead of the in-screen result. Null for every other
+     * outcome, for a Sent without a well-formed txid (64 hex characters, so `Sha256Hash.wrap`
+     * cannot throw), and once acknowledged ([finished]).
+     */
+    val openTransactionResult: String?
+        get() = if (finished) {
+            null
+        } else {
+            ((status as? ExternalSendStatus.Done)?.result as? ExternalSendResult.Sent)?.txIdOrNull
+                ?.takeIf { txId -> txId.length == 64 && txId.all { it.isHexDigitChar() } }
+        }
+
     /** The form can be edited: no send running or unacknowledged, and the flow not over. */
     val formEditable: Boolean
         get() = status == ExternalSendStatus.Idle && !finished
@@ -275,6 +295,16 @@ class ExternalSendViewModel internal constructor(
 
     private val _uiState = MutableStateFlow(ExternalSendUIState())
     val uiState: StateFlow<ExternalSendUIState> = _uiState.asStateFlow()
+
+    /**
+     * [ExternalSendUIState.openTransactionResult] as its own flow, for the fragment's
+     * resumed-and-unlocked delivery. It may lag [uiState] by a dispatch; [takeTransactionResult]
+     * checks the live state.
+     */
+    val openTransactionResult: StateFlow<String?> = _uiState
+        .map { it.openTransactionResult }
+        .distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     private var balanceJob: Job? = null
     private var balanceGeneration = 0
@@ -675,6 +705,13 @@ class ExternalSendViewModel internal constructor(
         _uiState.update { it.copy(confirm = null) }
         return true
     }
+
+    /**
+     * Whether [txId] is still the sent outcome to open in the transaction result screen. The
+     * caller opens it and then calls [onResultAcknowledged] in the same main-thread turn, which
+     * clears it, so it is opened once.
+     */
+    fun takeTransactionResult(txId: String): Boolean = _uiState.value.openTransactionResult == txId
 
     /**
      * The user closed the outcome. Not sent → back to editing the amount; every other outcome

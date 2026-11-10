@@ -67,6 +67,7 @@ import java.nio.ByteBuffer
 import java.nio.charset.CodingErrorAction
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -2278,7 +2279,12 @@ class ShieldedBalanceServiceImpl internal constructor(
          * address — [shieldFromWalletToAddress]. Changes the stage (b) classification, see
          * [classifyWalletShieldFailure].
          */
-        externalRecipientRaw43: ByteArray? = null
+        externalRecipientRaw43: ByteArray? = null,
+        /**
+         * Receives the display txid of the lock this call built, after a COMPLETED attempt,
+         * when it can be identified (best-effort; [shieldFromWalletToAddress]). Never throws.
+         */
+        onLockTxId: (String) -> Unit = {}
     ): SdkWriteResult<ShieldFromWalletOutcome> {
         val operation = if (fundingPath == null) "shieldFromWallet" else "shieldMixedFundsFromWallet"
         if (!isEnabled()) return SdkWriteResult.NotBroadcast("flag off")
@@ -2477,14 +2483,18 @@ class ShieldedBalanceServiceImpl internal constructor(
                             // classification instead of "Internal". The new lock is the
                             // outPointHex absent from lockedBefore; its txid part (before
                             // ':') is ALREADY display hex (AssetLockEntity keys on display),
-                            // so it is the resolver's seed key directly.
+                            // so it is the resolver's seed key directly. The same txid is
+                            // reported to [onLockTxId] (External Send's result screen).
                             try {
                                 source.walletShieldLocks(walletId)
                                     .map { it.outPointHex }
                                     .firstOrNull { it !in lockedBefore }
                                     ?.substringBefore(':')
                                     ?.takeIf { it.length == 64 }
-                                    ?.let { seedAssetLockKind(it, AssetLockKind.SHIELD) }
+                                    ?.let {
+                                        onLockTxId(it)
+                                        seedAssetLockKind(it, AssetLockKind.SHIELD)
+                                    }
                             } catch (t: Throwable) {
                                 if (t is CancellationException) throw t
                                 log.warn("shield funding-lock kind seed failed; the row may momentarily read Internal", t)
@@ -2788,15 +2798,28 @@ class ShieldedBalanceServiceImpl internal constructor(
         toShieldedAddress: String,
         amount: Dash,
         expectedWalletIdHex: String
-    ): SdkWriteResult<ShieldFromWalletOutcome> {
+    ): SdkWriteResult<ShieldToAddressOutcome> {
         val recipientRaw43 = decodeOrchardAddress(toShieldedAddress, displayHrpSafe())
             ?: return notBroadcast("shieldFromWallet", "malformed or wrong-network shielded address", null)
-        return shieldFromWalletInternal(
-            amount,
-            fundingPath = null,
-            expectedWalletIdHex = expectedWalletIdHex,
-            externalRecipientRaw43 = recipientRaw43
-        )
+        val lockTxId = AtomicReference<String?>(null)
+        return when (
+            val result = shieldFromWalletInternal(
+                amount,
+                fundingPath = null,
+                expectedWalletIdHex = expectedWalletIdHex,
+                externalRecipientRaw43 = recipientRaw43,
+                onLockTxId = { lockTxId.set(it) }
+            )
+        ) {
+            is SdkWriteResult.Broadcast -> SdkWriteResult.Broadcast(
+                ShieldToAddressOutcome(
+                    result.value,
+                    lockTxId.get().takeIf { result.value == ShieldFromWalletOutcome.COMPLETED }
+                )
+            )
+            is SdkWriteResult.NotBroadcast -> result
+            is SdkWriteResult.Ambiguous -> result
+        }
     }
 
     override suspend fun estimateShieldedFeeCredits(kind: ShieldedFeeKind): Long? {
