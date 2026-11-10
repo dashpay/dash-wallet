@@ -36,6 +36,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -329,6 +331,86 @@ internal fun ResultDialog(result: ExternalSendResult, afterRestart: Boolean, onC
             )
         )
     )
+}
+
+/**
+ * The terminal outcome. Only Not sent offers to go back and edit; nothing offers a retry.
+ *
+ * Drawn inside the screen, like [SheetOverlay] and [SendingOverlay], rather than as a
+ * [ModalDialog]: a dialog is its own window, which stays above the lock screen and could be
+ * closed without the PIN. In the screen it is covered by the lock screen and shows again after
+ * unlock. The card copies that dialog's layout so it looks the same. Back is handled by the
+ * fragment, which acknowledges the outcome as the dialog's dismiss-on-back did.
+ */
+@Composable
+internal fun ResultOverlay(result: ExternalSendResult, afterRestart: Boolean, onClose: () -> Unit) {
+    val colors = LocalDashColors.current
+    val content = resultContentFor(result, afterRestart)
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0x800A0B0D))
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
+                onClose()
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 15.dp)
+                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {},
+            shape = RoundedCornerShape(16.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = colors.backgroundSecondary,
+                contentColor = colors.textPrimary
+            )
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(colors.backgroundSecondary)
+                    .padding(start = 20.dp, end = 20.dp, top = 32.dp, bottom = 20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Icon(
+                    imageVector = ImageVector.vectorResource(content.icon),
+                    contentDescription = null,
+                    tint = Color.Unspecified,
+                    modifier = Modifier.size(46.dp)
+                )
+                Spacer(modifier = Modifier.height(20.dp))
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Text(
+                        text = stringResource(content.title),
+                        style = MyTheme.SubtitleSemibold,
+                        textAlign = TextAlign.Center,
+                        color = colors.textPrimary
+                    )
+                    Text(
+                        text = stringResource(content.message),
+                        style = MyTheme.Body2Regular,
+                        textAlign = TextAlign.Center,
+                        color = colors.textPrimary
+                    )
+                    Spacer(modifier = Modifier.height(20.dp))
+                }
+                Spacer(modifier = Modifier.height(32.dp))
+                DashButton(
+                    text = stringResource(content.button),
+                    onClick = onClose,
+                    modifier = Modifier.fillMaxWidth(),
+                    size = Size.Medium,
+                    style = Style.TintedGray
+                )
+            }
+        }
+    }
 }
 
 /** What the outcome dialog shows for [result]. */

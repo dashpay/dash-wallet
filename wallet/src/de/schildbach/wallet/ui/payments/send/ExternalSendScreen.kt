@@ -72,7 +72,6 @@ import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.Menu
-import org.dash.wallet.common.ui.components.ModalDialog
 import org.dash.wallet.common.ui.components.MyImages
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.Size
@@ -108,7 +107,7 @@ class ExternalSendActions(
  * The external send flow (MO-1121, Figma 6860:47472): the address page (7057:48055 /
  * 7062:48931 / 7062:48871), the amount page (7058:48231), the source sheet (7076:47424) and the
  * confirm sheet (7076:47968 / 7107:48421). Progress and outcome have no frames; they follow the
- * shielded flows (a dimmed progress card) and [ModalDialog].
+ * shielded flows (a dimmed progress card) and [org.dash.wallet.common.ui.components.ModalDialog].
  */
 @Composable
 fun ExternalSendScreen(uiState: ExternalSendUIState, actions: ExternalSendActions) {
@@ -135,7 +134,7 @@ fun ExternalSendScreen(uiState: ExternalSendUIState, actions: ExternalSendAction
         when (val status = uiState.status) {
             is ExternalSendStatus.Sending -> SendingOverlay(status.shieldedLeg, actions.onLeave)
             is ExternalSendStatus.Done ->
-                ResultDialog(status.result, status.afterRestart) { actions.onResultClosed(status.result) }
+                ResultOverlay(status.result, status.afterRestart) { actions.onResultClosed(status.result) }
             ExternalSendStatus.Idle, ExternalSendStatus.Restoring -> {}
         }
     }
