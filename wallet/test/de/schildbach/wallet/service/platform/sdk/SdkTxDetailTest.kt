@@ -714,6 +714,174 @@ class SdkTxDetailTest {
         }
     }
 
+    // ── Mirror-completeness guard for a not-yet-mirrored own output (DW-1659) ─
+
+    @Test
+    fun `load withholds the recipient list when the change TXO row has not landed yet`() {
+        // The timing race DW-1659 fixes: txoDao.getByOutpoint returns null for
+        // the change output because its async mirror write has not landed —
+        // exactly what a genuine external payee's output also looks like —
+        // but this address IS the wallet's own, so the walk must withhold the
+        // recipient list instead of reporting the change as a second recipient
+        // alongside the real payee (MO-1108's symptom, reached via this race).
+        val walletIdHex = "01".repeat(32)
+        val ownAccountId = 1L
+
+        val manager = mockk<org.dashfoundation.dashsdk.wallet.PlatformWalletManager> {
+            every { wallets } returns MutableStateFlow(mapOf(walletIdHex to mockk(relaxed = true)))
+        }
+        val entity = mockk<TransactionEntity> {
+            every { txid } returns decoded.txid
+            every { transactionData } returns rawTxBytes
+            every { netAmount } returns -70_247L
+            every { fee } returns 247L
+            every { context } returns 1
+            every { direction } returns 1 // outgoing
+            every { firstSeen } returns 1_770_000_000L
+            every { blockTimestamp } returns 0
+        }
+        // Output 0 (recipientAddress): settled, external — never gets a row.
+        val recipientTxo = mockk<org.dashfoundation.dashsdk.persistence.entities.TxoEntity> {
+            every { accountId } returns null
+            every { coreAddressId } returns null
+            every { address } returns recipientAddress
+        }
+        // Output 1 (changeAddress): ours, but its mirror row has not landed yet.
+        val outpointToTxo = mapOf(
+            org.bitcoinj.core.Utils.HEX.encode(txoOutpoint(decoded.txid, 0)) to recipientTxo
+        )
+        val db = mockk<DashDatabase>(relaxed = true)
+        every { db.transactionDao() } returns mockk { coEvery { getByTxid(any()) } returns entity }
+        coEvery { db.txoDao().getByOutpoint(any()) } answers {
+            outpointToTxo[org.bitcoinj.core.Utils.HEX.encode(firstArg<ByteArray>())]
+        }
+        val externalAccountType = SdkTxContactResolver.ACCOUNT_TYPE_DASHPAY_EXTERNAL
+        every { db.accountDao().observeByWalletAndType(any(), externalAccountType) } returns flowOf(emptyList())
+        every { db.accountDao().observeByWallet(any()) } returns flowOf(
+            listOf(
+                org.dashfoundation.dashsdk.persistence.entities.AccountEntity(
+                    id = ownAccountId,
+                    walletId = org.bitcoinj.core.Utils.HEX.decode(walletIdHex),
+                    accountType = 0,
+                    accountIndex = 0,
+                    accountTypeName = "BIP44"
+                )
+            )
+        )
+        every { db.coreAddressDao().observeByAccount(ownAccountId) } returns flowOf(
+            listOf(
+                org.dashfoundation.dashsdk.persistence.entities.CoreAddressEntity(
+                    changeAddress, poolTypeTag = 0, addressIndex = 0, derivationPath = "", accountId = ownAccountId
+                )
+            )
+        )
+        val sdkService = mockk<DashSdkService> {
+            coEvery { ensureStarted() } returns Unit
+            every { databaseOrNull() } returns db
+            every { walletManagerOrNull() } returns manager
+        }
+        val displayCacheDao = mockk<de.schildbach.wallet.database.dao.TxDisplayCacheDao> {
+            coEvery { getEntriesByIds(any()) } returns emptyList()
+        }
+
+        mockkObject(TransactionDecoder)
+        try {
+            every { TransactionDecoder.decode(any(), any()) } returns decoded
+            val detail = requireNotNull(
+                runBlocking {
+                    SdkTxDetailProvider(sdkService, displayCacheDao, mockk(relaxed = true)) { _, _ -> null }
+                        .load(decoded.txidDisplayHex)
+                }
+            )
+            assertTrue(
+                "a not-yet-mirrored OWN output must withhold the recipient list, not show the " +
+                    "change address as a second recipient",
+                detail.outputAddresses.isEmpty()
+            )
+        } finally {
+            unmockkObject(TransactionDecoder)
+        }
+    }
+
+    @Test
+    fun `load still shows the real recipient when only a genuinely external output has no TXO row`() {
+        // The common, permanent case the guard must not regress: an external
+        // payee's output never gets a txos row at all. Here the change row IS
+        // mirrored, so the walk has no reason to doubt the recipient's absence
+        // — the guard must not blank the recipient list on every ordinary send.
+        val walletIdHex = "01".repeat(32)
+        val ownAccountId = 1L
+
+        val manager = mockk<org.dashfoundation.dashsdk.wallet.PlatformWalletManager> {
+            every { wallets } returns MutableStateFlow(mapOf(walletIdHex to mockk(relaxed = true)))
+        }
+        val entity = mockk<TransactionEntity> {
+            every { txid } returns decoded.txid
+            every { transactionData } returns rawTxBytes
+            every { netAmount } returns -70_247L
+            every { fee } returns 247L
+            every { context } returns 1
+            every { direction } returns 1 // outgoing
+            every { firstSeen } returns 1_770_000_000L
+            every { blockTimestamp } returns 0
+        }
+        val changeTxo = mockk<org.dashfoundation.dashsdk.persistence.entities.TxoEntity> {
+            every { accountId } returns null
+            every { coreAddressId } returns null
+            every { address } returns changeAddress
+        }
+        val outpointToTxo = mapOf(
+            org.bitcoinj.core.Utils.HEX.encode(txoOutpoint(decoded.txid, 1)) to changeTxo
+        )
+        val db = mockk<DashDatabase>(relaxed = true)
+        every { db.transactionDao() } returns mockk { coEvery { getByTxid(any()) } returns entity }
+        coEvery { db.txoDao().getByOutpoint(any()) } answers {
+            outpointToTxo[org.bitcoinj.core.Utils.HEX.encode(firstArg<ByteArray>())]
+        }
+        val externalAccountType = SdkTxContactResolver.ACCOUNT_TYPE_DASHPAY_EXTERNAL
+        every { db.accountDao().observeByWalletAndType(any(), externalAccountType) } returns flowOf(emptyList())
+        every { db.accountDao().observeByWallet(any()) } returns flowOf(
+            listOf(
+                org.dashfoundation.dashsdk.persistence.entities.AccountEntity(
+                    id = ownAccountId,
+                    walletId = org.bitcoinj.core.Utils.HEX.decode(walletIdHex),
+                    accountType = 0,
+                    accountIndex = 0,
+                    accountTypeName = "BIP44"
+                )
+            )
+        )
+        every { db.coreAddressDao().observeByAccount(ownAccountId) } returns flowOf(
+            listOf(
+                org.dashfoundation.dashsdk.persistence.entities.CoreAddressEntity(
+                    changeAddress, poolTypeTag = 0, addressIndex = 0, derivationPath = "", accountId = ownAccountId
+                )
+            )
+        )
+        val sdkService = mockk<DashSdkService> {
+            coEvery { ensureStarted() } returns Unit
+            every { databaseOrNull() } returns db
+            every { walletManagerOrNull() } returns manager
+        }
+        val displayCacheDao = mockk<de.schildbach.wallet.database.dao.TxDisplayCacheDao> {
+            coEvery { getEntriesByIds(any()) } returns emptyList()
+        }
+
+        mockkObject(TransactionDecoder)
+        try {
+            every { TransactionDecoder.decode(any(), any()) } returns decoded
+            val detail = requireNotNull(
+                runBlocking {
+                    SdkTxDetailProvider(sdkService, displayCacheDao, mockk(relaxed = true)) { _, _ -> null }
+                        .load(decoded.txidDisplayHex)
+                }
+            )
+            assertEquals(listOf(recipientAddress), detail.outputAddresses)
+        } finally {
+            unmockkObject(TransactionDecoder)
+        }
+    }
+
     // ── Metadata source (SDK-only txs) ────────────────────────────────
 
     @Test

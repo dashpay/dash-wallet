@@ -411,6 +411,41 @@ internal suspend fun foreignContactTxoExclusion(
     null
 }
 
+/**
+ * This wallet's own tracked addresses — every non-external account's
+ * `core_addresses` rows. [load]'s output walk uses this to tell a not-yet-
+ * persisted TXO row for an output THIS WALLET actually tracks (an in-flight
+ * mirror write for, e.g., a change output — DW-1659) apart from an output
+ * that genuinely pays an external party, whose absence from `txos` is
+ * expected and permanent. Inverse of [foreignContactTxoExclusion]'s excluded
+ * set, built the same way.
+ *
+ * Null — not empty — when the wallet isn't resolvable or the read fails:
+ * an empty result would read as "nothing is ours", which is exactly the
+ * wrong default for a guard whose job is to catch outputs that ARE ours.
+ */
+internal suspend fun knownWalletAddressesOrNull(
+    sdkService: DashSdkService,
+    db: DashDatabase
+): Set<String>? = try {
+    val loadedWalletIds = sdkService.walletManagerOrNull()?.wallets?.value?.keys ?: emptySet()
+    val walletId = loadedWalletIds.singleOrNull()?.let(::walletIdFromHex) ?: return null
+    val ownAccountIds = db.accountDao().observeByWallet(walletId).first()
+        .filter { it.accountType != SdkTxContactResolver.ACCOUNT_TYPE_DASHPAY_EXTERNAL }
+        .map { it.id }
+    val addresses = HashSet<String>()
+    for (accountId in ownAccountIds) {
+        db.coreAddressDao().observeByAccount(accountId).first().mapTo(addresses) { it.address }
+    }
+    addresses
+} catch (e: CancellationException) {
+    throw e
+} catch (t: Throwable) {
+    LoggerFactory.getLogger(SdkTxDetailProvider::class.java)
+        .warn("known-wallet-address lookup failed; the TXO mirror-completeness guard is left unknown", t)
+    null
+}
+
 // ── The provider ──────────────────────────────────────────────────────
 
 /**
@@ -520,8 +555,29 @@ class SdkTxDetailProvider internal constructor(
                 ownershipUnknown = true
             }
             val (externalAccountIds, externalAddresses) = exclusion ?: (emptySet<Long>() to emptySet<String>())
-            decoded?.outputs?.forEachIndexed { index, _ ->
-                val txo = txoDao.getByOutpoint(txoOutpoint(wireTxid, index)) ?: return@forEachIndexed
+            var knownWalletAddresses: Set<String>? = null
+            var knownWalletAddressesAttempted = false
+            decoded?.outputs?.forEachIndexed { index, output ->
+                val txo = txoDao.getByOutpoint(txoOutpoint(wireTxid, index))
+                if (txo == null) {
+                    // A missing TXO row is ordinarily just an external payee (never
+                    // mirrored at all), but when the output pays an address THIS
+                    // WALLET tracks, the row is still in flight (the SDK's async
+                    // mirror write for a just-broadcast change output, DW-1659) —
+                    // not a real external recipient. Same completeness guard as
+                    // SdkTxStoreWalker.firstUnmirroredKnownOutput, applied per-output
+                    // since this walk already visits one output at a time; resolved
+                    // lazily since the common case (mirror fully landed) never needs it.
+                    if (output.address != null) {
+                        if (!knownWalletAddressesAttempted) {
+                            knownWalletAddresses = knownWalletAddressesOrNull(sdkService, db)
+                            knownWalletAddressesAttempted = true
+                        }
+                        val known = knownWalletAddresses
+                        if (known == null || output.address in known) ownershipUnknown = true
+                    }
+                    return@forEachIndexed
+                }
                 // Mirrors SdkTxContactResolver.signedNetsFor's NULL-accountId classification:
                 // a friendship-send TXO persists with accountId NULL, so coreAddressId (the
                 // core_addresses PK, always populated) is the authoritative fallback — address
