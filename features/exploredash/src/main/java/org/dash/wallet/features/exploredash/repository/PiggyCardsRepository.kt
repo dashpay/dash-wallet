@@ -31,8 +31,6 @@ import org.dash.wallet.features.exploredash.data.dashspend.model.UpdatedMerchant
 import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.Brand
 import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.ExchangeRateResult
 import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.Giftcard
-import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.LoginRequest
-import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.LoginResponse
 import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.Order
 import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.OrderRequest
 import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.OrderResponse
@@ -40,6 +38,7 @@ import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.Sign
 import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.User
 import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.UserMetadata
 import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.VerifyOtpRequest
+import org.dash.wallet.features.exploredash.network.authenticator.PiggyCardsAuthenticator
 import org.dash.wallet.features.exploredash.network.service.piggycards.PiggyCardsApi
 import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardShoppingCart
 import org.dash.wallet.features.exploredash.utils.PiggyCardsConfig
@@ -52,7 +51,8 @@ import kotlin.math.max
 
 class PiggyCardsRepository @Inject constructor(
     private val api: PiggyCardsApi,
-    private val config: PiggyCardsConfig
+    private val config: PiggyCardsConfig,
+    private val authenticator: PiggyCardsAuthenticator
 ) : DashSpendRepository {
     companion object {
         const val DEFAULT_COUNTRY = "US"
@@ -101,32 +101,10 @@ class PiggyCardsRepository @Inject constructor(
     }
 
     private suspend fun performAutoLogin(): Boolean {
-        return try {
-            val userId = config.getSecuredData(PiggyCardsConfig.PREFS_KEY_USER_ID)
-            val password = config.getSecuredData(PiggyCardsConfig.PREFS_KEY_PASSWORD)
-
-            if (userId != null && password != null) {
-                val response = api.login(LoginRequest(userId = userId, password = password))
-                handleLoginResponse(response)
-            } else {
-                false
-            }
-        } catch (e: Exception) {
-            log.error("Failed to perform auto login: ${e.message}", e)
-            false
-        }
-    }
-
-    private suspend fun handleLoginResponse(response: LoginResponse): Boolean {
-        config.setSecuredData(PiggyCardsConfig.PREFS_KEY_ACCESS_TOKEN, response.accessToken)
-
-        val expiresAt = LocalDateTime.now().plusSeconds(response.expiresIn.toLong())
-        config.setSecuredData(
-            PiggyCardsConfig.PREFS_KEY_TOKEN_EXPIRES_AT,
-            expiresAt.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
-        )
-
-        return response.accessToken.isNotEmpty()
+        // Delegate to the authenticator so this shares the same process-wide lock and token
+        // persistence as the OkHttp retry path, avoiding overlapping logins that could leave
+        // the cached token in an inconsistent state.
+        return authenticator.reLogin() != null
     }
 
     override suspend fun isUserSignedIn(): Boolean {
