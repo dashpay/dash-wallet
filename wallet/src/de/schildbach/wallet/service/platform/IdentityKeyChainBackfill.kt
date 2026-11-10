@@ -42,6 +42,12 @@ import org.bitcoinj.core.Utils
  */
 object IdentityKeyChainBackfill {
 
+    /** Size of a compressed secp256k1 public key (ECDSA_SECP256K1 key data). */
+    const val PUBLIC_KEY_SIZE = 33
+
+    /** Size of a HASH160 of a public key (ECDSA_HASH160 key data). */
+    const val HASH160_SIZE = 20
+
     /** A registered identity key: its keyId and its on-platform key data. */
     class IdentityKeyRef(val keyId: Int, val keyData: ByteArray)
 
@@ -55,7 +61,7 @@ object IdentityKeyChainBackfill {
         return when {
             identityKeyData.size == derivedPublicKey.size ->
                 identityKeyData.contentEquals(derivedPublicKey)
-            identityKeyData.size == 20 ->
+            identityKeyData.size == HASH160_SIZE ->
                 identityKeyData.contentEquals(Utils.sha256hash160(derivedPublicKey))
             else -> false
         }
@@ -71,27 +77,39 @@ object IdentityKeyChainBackfill {
      * actually matches the identity key's data, so foreign or non-chain keys are skipped rather
      * than blindly issued.
      *
+     * A key whose data already resolves on the chain is skipped without deriving anything (a key
+     * the chain holds is by definition this wallet's issued key), as is key data that is neither a
+     * compressed public key nor a HASH160, which no derived key can match.
+     *
      * @param identityKeys the identity's registered public keys (keyId + key data)
+     * @param isIssued true if the chain already resolves this key data (raw public key or
+     *        HASH160): nothing to do
      * @param derivePublicKey derives the serialized public key at a chain index, or null if the
-     *        index cannot be derived
-     * @param isIssued true if the chain can already find this public key (nothing to do)
+     *        index cannot be derived and should be skipped; an exception it throws propagates, so
+     *        a strict caller fails closed instead of treating the key as foreign
      * @return distinct chain indexes to issue, in ascending order (ascending keeps the chain's
      *         issued-key counter consistent as each key is imported)
      */
     fun indexesToIssue(
         identityKeys: List<IdentityKeyRef>,
-        derivePublicKey: (Int) -> ByteArray?,
-        isIssued: (ByteArray) -> Boolean
+        isIssued: (ByteArray) -> Boolean,
+        derivePublicKey: (Int) -> ByteArray?
     ): List<Int> {
         return identityKeys
             .asSequence()
             .filter { it.keyId >= 0 }
+            .filter { it.keyData.size == PUBLIC_KEY_SIZE || it.keyData.size == HASH160_SIZE }
+            .filterNot { isIssued(it.keyData) }
             .mapNotNull { key ->
                 val derived = derivePublicKey(key.keyId) ?: return@mapNotNull null
-                if (matchesKeyData(derived, key.keyData) && !isIssued(derived)) key.keyId else null
+                if (matchesKeyData(derived, key.keyData)) key.keyId else null
             }
             .distinct()
             .sorted()
             .toList()
     }
 }
+
+/** Thrown by `PlatformRepo.requireIdentityChainKeys`, which lists the failure reasons. */
+class IdentityKeyChainBackfillException(message: String, cause: Throwable? = null) :
+    IllegalStateException(message, cause)

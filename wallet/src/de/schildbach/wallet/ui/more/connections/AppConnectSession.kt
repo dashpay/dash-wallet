@@ -2,6 +2,7 @@
 package de.schildbach.wallet.ui.more.connections
 
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.service.platform.IdentityKeyChainBackfillException
 import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.PlatformService
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
@@ -14,6 +15,7 @@ import org.bitcoinj.core.Base58
 import org.bitcoinj.core.ECKey
 import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.core.Sha256Hash
+import org.bouncycastle.crypto.params.KeyParameter
 import org.dashj.platform.dapiclient.model.DocumentQuery
 import org.dashj.platform.dashpay.callback.WalletSignerCallback
 import org.dashj.platform.dpp.contract.VerifiedContractGroup
@@ -73,6 +75,20 @@ internal class AppConnectSession(
     private fun readIdentity(): Identity = platform.client.getIdentity(identityId().toBuffer(), true) ?: error("Identity not found")
 
     /**
+     * [readIdentity] for an operation that signs: first issues the identity's wallet keys on the
+     * dashj identity chain ([PlatformRepo.requireIdentityChainKeys]), failing before any signing.
+     */
+    internal fun readSigningIdentity(keyParameter: KeyParameter?): Identity {
+        val identity = readIdentity()
+        try {
+            walletRepo.requireIdentityChainKeys(identity, keyParameter)
+        } catch (e: IdentityKeyChainBackfillException) {
+            throw IllegalStateException("Unable to read this wallet's identity keys. Try again.", e)
+        }
+        return identity
+    }
+
+    /**
      * Call after a proven query such as [readIdentity]: its verified response set the SDK's version. A
      * refresh that fails returns the SDK's starting version instead, which says nothing about the network.
      */
@@ -122,7 +138,7 @@ internal class AppConnectSession(
             check(!wallet.isEncrypted || keyParameter != null) { "Wallet password unavailable. Unlock the wallet and try again." }
             authorize()
             checkScope(approval.scope)
-            val identity = readIdentity()
+            val identity = readSigningIdentity(keyParameter)
             check(identity.id.toString() == approval.ownerId) { "Purchase targets a different identity" }
             val summary = nativeBytes(dashsdk.prepareTokenPurchaseSdk(platform.rustSdk,
                 approval.request.transitionBytes, identity.id.toNative()))
@@ -284,7 +300,7 @@ internal class AppConnectSession(
             val privateKeys = mutableListOf<ByteArray>()
             var ephemeral: ByteArray? = null
             try {
-                var identity = readIdentity()
+                var identity = readSigningIdentity(keyParameter)
                 check(identity.id.toString() == plan.identityId) { "Identity changed. Scan again." }
                 requireProtocolVersion()
                 val time = platform.client.getPlatformTime(identity.id)
@@ -490,7 +506,8 @@ internal class AppConnectSession(
     private fun exact(doc: Document, record: JSONObject) = fields(record).all { (name, bytes) ->
         (doc.data[name] as? ByteArray)?.contentEquals(bytes as ByteArray) == true
     }
-    private fun signingKey(identity: Identity, level: SecurityLevel, time: Long): IdentityPublicKey = identity.publicKeys.firstOrNull {
+    @androidx.annotation.VisibleForTesting
+    internal fun signingKey(identity: Identity, level: SecurityLevel, time: Long): IdentityPublicKey = identity.publicKeys.firstOrNull {
         it.purpose == Purpose.AUTHENTICATION && it.securityLevel == level &&
             (level != SecurityLevel.HIGH || it.type == KeyType.ECDSA_SECP256K1) && it.contractBounds == null && live(it, time) &&
             (walletRepo.authenticationGroupExtension?.identityKeyChain?.findKeyFromPubKey(it.data) != null ||
@@ -574,7 +591,7 @@ internal class AppConnectSession(
         val keyParameter = walletRepo.getWalletEncryptionKey()
         check(!wallet.isEncrypted || keyParameter != null) { "Wallet password unavailable. Unlock the wallet and try again." }
         checkScope(scope)
-        var identity = readIdentity()
+        var identity = readSigningIdentity(keyParameter)
         val time = platform.client.getPlatformTime(identity.id)
         val disable = AppConnectKeyState.revocableIds(AppConnectKeyState.inspect(
             records.flatMap { decodeKeys(it) }, identity.publicKeys, time))

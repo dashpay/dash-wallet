@@ -668,8 +668,36 @@ class IdentityRepositoryImpl @Inject constructor(
         if (hasBlockchainIdentity && identity != null) {
             walletDataProvider.wallet?.let { wallet ->
                 check(identity.wallet === wallet && _blockchainIdentity === identity) { "Wallet or identity changed" }
-                if (!identity.hasTransferKey() || !identity.hasEncryptionKey() ||
-                    (includeCriticalAuthenticationKey && !identity.hasCriticalAuthenticationKey())) {
+                fun keysMissing() = !identity.hasTransferKey() || !identity.hasEncryptionKey() ||
+                    (includeCriticalAuthenticationKey && !identity.hasCriticalAuthenticationKey())
+                if (keysMissing()) {
+                    // Identities the Kotlin SDK created reach dashj without their keys issued on
+                    // the identity chain, and both the key checks and the MASTER-key signature
+                    // only find issued keys. Without this an SDK identity's existing CRITICAL key
+                    // looks absent and a duplicate would be registered.
+                    checkAuthorized()
+                    try {
+                        platformRepo.requireIdentityChainKeys(identity.identity, keyParameter)
+                    } catch (e: IdentityKeyChainBackfillException) {
+                        // Fail closed: an incomplete backfill makes keys the identity already has
+                        // look missing, and registering them again is a paid identity update that
+                        // adds duplicates. Register nothing; the next upgrade check retries.
+                        log.error("cannot verify the identity's existing keys; not adding missing keys", e)
+                        dashPayConfig.set(UPGRADE_IDENTITY_REQUIRED, true)
+                        if (includeCriticalAuthenticationKey) {
+                            throw IllegalStateException(
+                                "Unable to read this wallet's identity keys, so no purchase signing key was " +
+                                    "registered. Try again.",
+                                e
+                            )
+                        }
+                        return false
+                    }
+                    check(walletDataProvider.wallet === wallet && _blockchainIdentity === identity) {
+                        "Wallet or identity changed"
+                    }
+                }
+                if (keysMissing()) {
                     dashPayConfig.set(UPGRADE_IDENTITY_REQUIRED, true)
                     try {
                         log.info(

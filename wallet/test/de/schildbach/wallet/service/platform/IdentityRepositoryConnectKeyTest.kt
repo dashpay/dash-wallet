@@ -227,6 +227,87 @@ class IdentityRepositoryConnectKeyTest {
             runBlocking { repository.ensureCriticalAuthenticationKey(id, null) { throw kotlinx.coroutines.CancellationException("Locked") } }
         }
         verify(exactly = 0) { identity.addMissingKeys(any(), any()) }
+        verify(exactly = 0) { platform.requireIdentityChainKeys(any(), any()) }
+    }
+
+    @Test fun sdkIdentityCriticalKeyIsFoundAfterBackfillAndNoSecondKeyIsRegistered() = runBlocking {
+        fundedWallet()
+        // An SDK-created identity already registered keyId 1 CRITICAL/AUTH, but dashj only sees it
+        // once the backfill has issued it on the identity chain.
+        var issued = false
+        every { platform.requireIdentityChainKeys(any(), any()) } answers { issued = true; 4 }
+        every { identity.hasCriticalAuthenticationKey() } answers { issued }
+
+        repository.ensureCriticalAuthenticationKey(id, null) {}
+
+        verify(exactly = 1) { platform.requireIdentityChainKeys(identity.identity, null) }
+        verify(exactly = 0) { identity.addMissingKeys(any(), any()) }
+    }
+
+    @Test fun backfillRunsOnlyWhenAKeyLooksMissingAndBeforeTheMasterSignature() {
+        fundedWallet()
+        val passedThrough = mutableListOf<String>()
+        every { platform.requireIdentityChainKeys(any(), any()) } answers { passedThrough += "backfill"; 0 }
+        every { identity.hasCriticalAuthenticationKey() } answers { passedThrough += "critical check"; false }
+        every { identity.addMissingKeys(any(), true) } answers { passedThrough += "register" }
+        assertThrows(IllegalStateException::class.java) {
+            runBlocking { repository.ensureCriticalAuthenticationKey(id, null) {} }
+        }
+        org.junit.Assert.assertEquals(
+            listOf("critical check", "backfill", "critical check", "register"),
+            passedThrough.take(4)
+        )
+    }
+
+    @Test fun noBackfillWhenNoKeyLooksMissing() = runBlocking {
+        fundedWallet()
+        every { identity.hasCriticalAuthenticationKey() } returns true
+        repository.ensureCriticalAuthenticationKey(id, null) {}
+        verify(exactly = 0) { platform.requireIdentityChainKeys(any(), any()) }
+        verify(exactly = 0) { identity.addMissingKeys(any(), any()) }
+        coVerify { config.set(de.schildbach.wallet.ui.dashpay.utils.DashPayConfig.UPGRADE_IDENTITY_REQUIRED, false) }
+    }
+
+    @Test fun failedBackfillOnPurchaseSetupRegistersNoKeyAndReportsTheFailure() {
+        fundedWallet()
+        // the SDK identity's existing CRITICAL key stays invisible to dashj, so it looks missing
+        every { platform.requireIdentityChainKeys(any(), any()) } throws
+            IdentityKeyChainBackfillException("no identity key chain")
+        val error = assertThrows(IllegalStateException::class.java) {
+            runBlocking { repository.ensureCriticalAuthenticationKey(id, null) {} }
+        }
+        org.junit.Assert.assertTrue(error.message!!.contains("no purchase signing key was registered"))
+        org.junit.Assert.assertTrue(error.cause is IdentityKeyChainBackfillException)
+        verify(exactly = 0) { identity.addMissingKeys(any(), any()) }
+        val client = platform.platform.client
+        verify(exactly = 0) { client.getIdentityBalance(any()) }
+        coVerify { config.set(de.schildbach.wallet.ui.dashpay.utils.DashPayConfig.UPGRADE_IDENTITY_REQUIRED, true) }
+    }
+
+    @Test fun failedBackfillOnSyncUpgradeRegistersNothingAndReportsNoUpgrade() = runBlocking {
+        fundedWallet()
+        // transfer and encryption keys look missing too, but re-registering them costs fees as well
+        every { identity.hasTransferKey() } returns false
+        every { identity.hasEncryptionKey() } returns false
+        every { platform.requireIdentityChainKeys(any(), any()) } throws
+            IdentityKeyChainBackfillException("wallet is encrypted but no key was provided")
+        org.junit.Assert.assertFalse(repository.upgradeIdentity(null))
+        verify(exactly = 0) { identity.addMissingKeys(any(), any()) }
+        val client = platform.platform.client
+        verify(exactly = 0) { client.getIdentityBalance(any()) }
+        coVerify { config.set(de.schildbach.wallet.ui.dashpay.utils.DashPayConfig.UPGRADE_IDENTITY_REQUIRED, true) }
+        coVerify(exactly = 0) {
+            config.set(de.schildbach.wallet.ui.dashpay.utils.DashPayConfig.UPGRADE_IDENTITY_REQUIRED, false)
+        }
+    }
+
+    @Test fun cancellationDuringBackfillPropagates() {
+        fundedWallet()
+        every { platform.requireIdentityChainKeys(any(), any()) } throws CancellationException("Locked")
+        assertThrows(CancellationException::class.java) {
+            runBlocking { repository.ensureCriticalAuthenticationKey(id, null) {} }
+        }
+        verify(exactly = 0) { identity.addMissingKeys(any(), any()) }
     }
 
     private fun fundedWallet() {

@@ -22,6 +22,8 @@ import org.bitcoinj.core.ECKey
 import org.bitcoinj.core.Utils
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertSame
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -80,38 +82,54 @@ class IdentityKeyChainBackfillTest {
 
     // --- indexesToIssue ---
 
+    private fun indexesToIssue(
+        keys: List<IdentityKeyRef>,
+        isIssued: (ByteArray) -> Boolean = { false },
+        derivePublicKey: (Int) -> ByteArray? = ::derive
+    ) = IdentityKeyChainBackfill.indexesToIssue(keys, isIssued, derivePublicKey)
+
     @Test
     fun sdkIdentityWithNothingIssued_needsAllFourKeys() {
         // The live failure: a first-ever SDK-created identity restored into dashj; the
         // BLOCKCHAIN_IDENTITY chain has zero issued keys, so all 4 canonical keys are missing.
-        val indexes = IdentityKeyChainBackfill.indexesToIssue(
-            sdkCanonicalKeys(),
-            derivePublicKey = ::derive,
-            isIssued = { false }
-        )
-        assertEquals(listOf(0, 1, 2, 3), indexes)
+        assertEquals(listOf(0, 1, 2, 3), indexesToIssue(sdkCanonicalKeys()))
     }
 
     @Test
-    fun legacyIdentityWithAllKeysIssued_isNoOp() {
-        val indexes = IdentityKeyChainBackfill.indexesToIssue(
+    fun legacyIdentityWithAllKeysIssued_isNoOpAndDerivesNothing() {
+        // the PlatformRepo caller decrypts the chain only on the first derivation, so a fully
+        // issued chain never needs the wallet's key
+        val indexes = indexesToIssue(
             sdkCanonicalKeys(),
-            derivePublicKey = ::derive,
-            isIssued = { true }
+            isIssued = { true },
+            derivePublicKey = { throw AssertionError("derived an already issued key") }
         )
         assertTrue(indexes.isEmpty())
     }
 
     @Test
-    fun partiallyIssuedChain_onlyMissingIndexesAreIssued() {
+    fun partiallyIssuedChain_onlyMissingIndexesAreDerivedAndIssued() {
         // e.g. key 0 became findable (used for recovery) but 1..3 were never issued
         val issuedPubs = setOf(chainKeys.getValue(0).toList())
-        val indexes = IdentityKeyChainBackfill.indexesToIssue(
+        val derived = mutableListOf<Int>()
+        val indexes = indexesToIssue(
             sdkCanonicalKeys(),
-            derivePublicKey = ::derive,
-            isIssued = { pub -> pub.toList() in issuedPubs }
+            isIssued = { data -> data.toList() in issuedPubs },
+            derivePublicKey = { index -> derived += index; derive(index) }
         )
         assertEquals(listOf(1, 2, 3), indexes)
+        assertEquals(listOf(1, 2, 3), derived)
+    }
+
+    @Test
+    fun isIssued_isAskedWithTheIdentityKeyData() {
+        // HASH160 key data is looked up by hash (findKeyFromPubHash), raw data by public key
+        val hash3 = Utils.sha256hash160(chainKeys.getValue(3))
+        val keys = listOf(IdentityKeyRef(0, chainKeys.getValue(0)), IdentityKeyRef(3, hash3))
+        val asked = mutableListOf<List<Byte>>()
+        val indexes = indexesToIssue(keys, isIssued = { data -> asked += data.toList(); data.size == 20 })
+        assertEquals(listOf(0), indexes)
+        assertEquals(listOf(chainKeys.getValue(0).toList(), hash3.toList()), asked)
     }
 
     @Test
@@ -121,12 +139,7 @@ class IdentityKeyChainBackfillTest {
             IdentityKeyRef(0, chainKeys.getValue(0)),
             IdentityKeyRef(3, Utils.sha256hash160(chainKeys.getValue(3)))
         )
-        val indexes = IdentityKeyChainBackfill.indexesToIssue(
-            keys,
-            derivePublicKey = ::derive,
-            isIssued = { false }
-        )
-        assertEquals(listOf(0, 3), indexes)
+        assertEquals(listOf(0, 3), indexesToIssue(keys))
     }
 
     @Test
@@ -138,12 +151,18 @@ class IdentityKeyChainBackfillTest {
             IdentityKeyRef(0, chainKeys.getValue(0)),
             IdentityKeyRef(1, foreign)
         )
-        val indexes = IdentityKeyChainBackfill.indexesToIssue(
+        assertEquals(listOf(0), indexesToIssue(keys))
+    }
+
+    @Test
+    fun keyDataNoDerivedKeyCanMatch_isSkippedWithoutDerivation() {
+        // e.g. a 48-byte BLS key: neither a compressed public key nor a HASH160
+        val keys = listOf(IdentityKeyRef(1, ByteArray(48) { 1 }))
+        val indexes = indexesToIssue(
             keys,
-            derivePublicKey = ::derive,
-            isIssued = { false }
+            derivePublicKey = { throw AssertionError("derived for unmatchable key data") }
         )
-        assertEquals(listOf(0), indexes)
+        assertTrue(indexes.isEmpty())
     }
 
     @Test
@@ -152,21 +171,33 @@ class IdentityKeyChainBackfillTest {
             IdentityKeyRef(0, chainKeys.getValue(0)),
             IdentityKeyRef(99, chainKeys.getValue(1))
         )
-        val indexes = IdentityKeyChainBackfill.indexesToIssue(
-            keys,
-            derivePublicKey = ::derive, // returns null for 99
-            isIssued = { false }
+        assertEquals(listOf(0), indexesToIssue(keys)) // derive returns null for 99
+    }
+
+    @Test
+    fun derivationException_propagatesInsteadOfLookingLikeAForeignKey() {
+        // a strict caller (PlatformRepo.requireIdentityChainKeys) relies on this to fail closed: a
+        // key that could not be derived must not be reported as "not this wallet's key"
+        val keys = listOf(
+            IdentityKeyRef(0, chainKeys.getValue(0)),
+            IdentityKeyRef(1, ECKey().pubKey), // mismatch: skipped, not an error
+            IdentityKeyRef(2, chainKeys.getValue(2))
         )
-        assertEquals(listOf(0), indexes)
+        val failure = IllegalStateException("derivation failed")
+        val thrown = assertThrows(IllegalStateException::class.java) {
+            indexesToIssue(keys, derivePublicKey = { index -> if (index == 2) throw failure else derive(index) })
+        }
+        assertSame(failure, thrown)
     }
 
     @Test
     fun negativeKeyId_isSkipped() {
         val keys = listOf(IdentityKeyRef(-1, chainKeys.getValue(0)))
-        val indexes = IdentityKeyChainBackfill.indexesToIssue(
+        val indexes = indexesToIssue(
             keys,
-            derivePublicKey = { index -> if (index >= 0) derive(index) else throw AssertionError("derived negative index") },
-            isIssued = { false }
+            derivePublicKey = { index ->
+                if (index >= 0) derive(index) else throw AssertionError("derived negative index")
+            }
         )
         assertTrue(indexes.isEmpty())
     }
@@ -180,11 +211,6 @@ class IdentityKeyChainBackfillTest {
             IdentityKeyRef(3, chainKeys.getValue(3)),
             IdentityKeyRef(0, chainKeys.getValue(0))
         )
-        val indexes = IdentityKeyChainBackfill.indexesToIssue(
-            keys,
-            derivePublicKey = ::derive,
-            isIssued = { false }
-        )
-        assertEquals(listOf(0, 1, 3), indexes)
+        assertEquals(listOf(0, 1, 3), indexesToIssue(keys))
     }
 }
