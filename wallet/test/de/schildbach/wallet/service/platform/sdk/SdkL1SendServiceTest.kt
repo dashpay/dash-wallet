@@ -449,7 +449,7 @@ class SdkL1SendServiceTest {
     @Test
     fun classify_typedArms_reachTheDeferredTableToo() {
         // classifyDeferredBroadcastFailure defers to classifyCoreSendFailure,
-        // so the typed trio must classify identically on the BIP70 deferred
+        // so the typed arms must classify identically on the BIP70 deferred
         // broadcast path.
         for (
             error in listOf<Throwable>(
@@ -459,10 +459,19 @@ class SdkL1SendServiceTest {
                 DashSdkError.PlatformWallet.StaleReservationToken("reservation aged out")
             )
         ) {
+            val result = classifyDeferredBroadcastFailure(error)
             assertTrue(
                 "${error.javaClass.simpleName} must be NotBroadcast on the deferred path",
-                classifyDeferredBroadcastFailure(error) is SdkWriteResult.NotBroadcast
+                result is SdkWriteResult.NotBroadcast
             )
+            // The deferred table keeps its own stale-token arm only to name the
+            // deferred surface; pin that so removing it can't pass silently.
+            if (error is DashSdkError.PlatformWallet.StaleReservationToken) {
+                assertTrue(
+                    (result as SdkWriteResult.NotBroadcast).reason
+                        .startsWith("deferred broadcast refused pre-network")
+                )
+            }
         }
     }
 
