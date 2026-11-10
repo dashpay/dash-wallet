@@ -109,6 +109,19 @@ class TransactionResultActivity : LockScreenActivity() {
             }
         }
 
+        /**
+         * For a send that reports only its txid (no dashj [Transaction] in hand), e.g. an SDK-built
+         * asset lock. [txId] is the transaction hash as [Transaction.getTxId] returns it
+         * (`Sha256Hash.wrap` of the display-order hex).
+         */
+        @JvmStatic
+        fun createIntent(context: Context, txId: Sha256Hash, userAuthorized: Boolean): Intent {
+            return Intent(context, TransactionResultActivity::class.java).apply {
+                putExtra(EXTRA_TX_ID, txId)
+                putExtra(EXTRA_USER_AUTHORIZED, userAuthorized)
+            }
+        }
+
         @JvmStatic
         fun createIntent(context: Context, action: String?, transaction: Transaction, userAuthorized: Boolean,
                          userData: UsernameSearchResult?): Intent {

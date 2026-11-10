@@ -38,10 +38,15 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
+import androidx.navigation.NavController
+import androidx.navigation.fragment.findNavController
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.ui.main.MainActivity
+import de.schildbach.wallet.ui.main.MainActivityExt.setBottomNavigationVisible
 import de.schildbach.wallet.ui.payments.PaymentsFragment.Companion.ACTIVE_TAB_INTERNAL
 import de.schildbach.wallet.ui.payments.PaymentsFragment.Companion.ACTIVE_TAB_RECEIVE
 import de.schildbach.wallet.ui.payments.PaymentsFragment.Companion.ARG_ACTIVE_TAB
@@ -50,6 +55,8 @@ import de.schildbach.wallet.ui.payments.internal.InternalTransferFragment
 import de.schildbach.wallet.ui.payments.send.AdvancedSendFragment
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentAdvancedPaymentsBinding
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.observeOnDestroy
@@ -60,8 +67,9 @@ import org.dash.wallet.common.ui.viewBinding
 
 /**
  * The Advanced mode payments screen (MO-1123, Figma 6860:47472 / 7062:49303): a
- * Receive / Internal / Send picker right under the status bar, above the bottom
- * navigation (`ShowNavBar` on the destination), over the payments pages.
+ * Receive / Internal / Send picker right under the status bar, over the payments pages.
+ * MainActivity's bottom navigation shows on the Receive tab only ([showsBottomNavigation]):
+ * the destination has `ShowNavBar`, and this screen hides the bar on the other tabs.
  *
  * Receive is [AdvancedReceiveFragment] (the Compose [ReceivePage]), Send is
  * [AdvancedSendFragment] (MO-1121) and Internal is [InternalTransferFragment] (MO-1125), shown
@@ -87,6 +95,10 @@ class AdvancedPaymentsFragment : Fragment(R.layout.fragment_advanced_payments) {
         @VisibleForTesting
         fun positionOf(tabIds: List<Int>, tabId: Int): Int =
             tabIds.indexOf(tabId).takeIf { it >= 0 } ?: 0
+
+        /** MainActivity's bottom navigation shows on the Receive tab only. */
+        @VisibleForTesting
+        fun showsBottomNavigation(tabId: Int): Boolean = tabId == ACTIVE_TAB_RECEIVE
     }
 
     private val binding by viewBinding(FragmentAdvancedPaymentsBinding::bind)
@@ -139,6 +151,7 @@ class AdvancedPaymentsFragment : Fragment(R.layout.fragment_advanced_payments) {
             override fun onPageSelected(position: Int) {
                 val tabId = TAB_IDS.getOrNull(position) ?: return
                 selectedTabId = tabId
+                applyBottomNavigation()
 
                 if (arguments?.containsKey(ARG_ACTIVE_TAB) != true) {
                     requireActivity().getPreferences(Context.MODE_PRIVATE)
@@ -155,6 +168,37 @@ class AdvancedPaymentsFragment : Fragment(R.layout.fragment_advanced_payments) {
         binding.pager.adapter = adapter
         selectedTabId = TAB_IDS[position]
         binding.pager.setCurrentItem(position, false)
+        // setCurrentItem reports no selection when the position is unchanged.
+        applyBottomNavigation()
+
+        // MainActivity's destination listener sets the bottom navigation from `ShowNavBar` (true
+        // here) whenever this destination becomes current: on a return from a pushed destination
+        // or a dialog destination. It can be registered after this one (setupBottomNavigation runs
+        // again once the wallet is set up), so the tab's visibility is applied after every
+        // listener has run, from the main queue. Registering dispatches the current
+        // destination, so a recreated view (back from a fragment destination) applies it too.
+        val navController = findNavController()
+        val destinationListener = NavController.OnDestinationChangedListener { _, destination, _ ->
+            if (destination.id == R.id.advancedPaymentsFragment) {
+                // Dispatchers.Main (not immediate) always posts; cancelled with the view.
+                viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) { applyBottomNavigation() }
+            }
+        }
+        navController.addOnDestinationChangedListener(destinationListener)
+        viewLifecycleOwner.observeOnDestroy { navController.removeOnDestinationChangedListener(destinationListener) }
+    }
+
+    /**
+     * Shows the bottom navigation for the selected tab, only while this destination is current:
+     * once another destination is, its `ShowNavBar` (set by the destination listener) owns the bar,
+     * and a page selection during this screen's exit must not override it.
+     */
+    private fun applyBottomNavigation() {
+        val tabId = selectedTabId
+        if (!isAdded) return
+        val mainActivity = activity as? MainActivity ?: return
+        if (findNavController().currentDestination?.id != R.id.advancedPaymentsFragment) return
+        mainActivity.setBottomNavigationVisible(showsBottomNavigation(tabId))
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -208,6 +252,7 @@ class AdvancedPaymentsFragment : Fragment(R.layout.fragment_advanced_payments) {
         ) { _, index ->
             val tabId = ids.getOrNull(index) ?: return@SegmentedPicker
             selectedTabId = tabId
+            applyBottomNavigation()
             binding.pager.currentItem = positionOf(ids, tabId)
         }
     }

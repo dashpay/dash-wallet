@@ -388,8 +388,8 @@ internal interface ExternalSendSource {
         walletIdHex: String,
         address: String,
         amount: Dash
-    ): SdkWriteResult<ShieldFromWalletOutcome>
-    suspend fun coreTopUpIdentity(identityIdBase58: String, amountDuffs: Long): SdkWriteResult<Long>
+    ): SdkWriteResult<ShieldToAddressOutcome>
+    suspend fun coreTopUpIdentity(identityIdBase58: String, amountDuffs: Long): SdkWriteResult<TopUpOutcome>
     suspend fun platformTransfer(walletIdHex: String, to: PlatformAddressBytes, amountCredits: Long)
     suspend fun platformTopUpIdentity(walletIdHex: String, identityId: ByteArray, inputs: List<FundingInput>)
     suspend fun identityWithdraw(walletIdHex: String, fromId: ByteArray, amountCredits: Long, coreAddress: String)
@@ -619,8 +619,8 @@ internal class DashSdkExternalSendSource(
     override suspend fun shieldFromCore(walletIdHex: String, address: String, amount: Dash) =
         shieldedBalanceService.shieldFromWalletToAddress(address, amount, walletIdHex)
 
-    override suspend fun coreTopUpIdentity(identityIdBase58: String, amountDuffs: Long): SdkWriteResult<Long> =
-        transparentTopUp.topUp(identityIdBase58, amountDuffs, newUserIntent = true)
+    override suspend fun coreTopUpIdentity(identityIdBase58: String, amountDuffs: Long): SdkWriteResult<TopUpOutcome> =
+        transparentTopUp.topUpReportingLockTxId(identityIdBase58, amountDuffs, newUserIntent = true)
 
     override suspend fun platformTransfer(walletIdHex: String, to: PlatformAddressBytes, amountCredits: Long) {
         val manager = manager()
@@ -1209,7 +1209,11 @@ class ExternalSendServiceImpl internal constructor(
                 if (!stillBound(pair, walletIdHex)) {
                     ExternalSendResult.NotSent(NotSentReason.GENERIC)
                 } else {
-                    mapWrite(pair, this.source.coreTopUpIdentity(destination.identityIdBase58, amount.duffs))
+                    when (val result = this.source.coreTopUpIdentity(destination.identityIdBase58, amount.duffs)) {
+                        is SdkWriteResult.Broadcast ->
+                            ExternalSendResult.Sent(displayTxIdOrNull(result.value.lockTxIdDisplayHexOrNull))
+                        else -> mapWrite(pair, result)
+                    }
                 }
             }
             is SendDestination.Platform -> sendCoreToPlatform(pair, walletIdHex, destination, amount, amountCredits)
@@ -1329,7 +1333,8 @@ class ExternalSendServiceImpl internal constructor(
         if (outcome is SdkWriteResult.Broadcast) {
             clearPlatformFunding(pair, record.id)
             log.info("external send {}: sent", pair)
-            return ExternalSendResult.Sent(null)
+            // The lock's txid is the display-hex part of `<display txid>:<vout>`.
+            return ExternalSendResult.Sent(displayTxIdOrNull(outPointHex.substringBefore(':')))
         }
         // The lock was built (and may be on the network): never NotSent. Make sure the
         // outpoint is durable even if the callback's write failed; the sweep pays the payee.
@@ -1549,8 +1554,9 @@ class ExternalSendServiceImpl internal constructor(
             return notSent(pair, NotSentReason.GENERIC, "amount out of range")
         }
         return when (val result = shieldFromCoreChecked(pair, walletIdHex, destination.address, lock)) {
-            is SdkWriteResult.Broadcast -> when (result.value) {
-                ShieldFromWalletOutcome.COMPLETED -> ExternalSendResult.Sent(null)
+            is SdkWriteResult.Broadcast -> when (result.value.outcome) {
+                ShieldFromWalletOutcome.COMPLETED ->
+                    ExternalSendResult.Sent(displayTxIdOrNull(result.value.lockTxIdOrNull))
                 ShieldFromWalletOutcome.SHIELD_PENDING_RETRY -> {
                     log.warn("external send {}: lock out, shield not submitted — returns to own shielded", pair)
                     ExternalSendResult.InterruptedFundsReturnToShielded
@@ -1565,7 +1571,7 @@ class ExternalSendServiceImpl internal constructor(
         walletIdHex: String,
         address: String,
         amount: Dash
-    ): SdkWriteResult<ShieldFromWalletOutcome> =
+    ): SdkWriteResult<ShieldToAddressOutcome> =
         if (!stillBound(pair, walletIdHex)) {
             SdkWriteResult.NotBroadcast("the bound wallet changed")
         } else {
@@ -1736,6 +1742,15 @@ class ExternalSendServiceImpl internal constructor(
         if (result is SdkWriteResult.Broadcast) log.info("external send {}: sent", pair)
         return mapWrite(pair, result)
     }
+
+    /**
+     * [hex] when it is a 64-char hex txid (the display-order form `AssetLockEntity` and the
+     * transaction result screen key on), else null: a missing or malformed txid is only a
+     * missing detail of a [ExternalSendResult.Sent], never a failure.
+     */
+    private fun displayTxIdOrNull(hex: String?): String? =
+        hex?.takeIf { it.length == 64 && it.all { c -> c in '0'..'9' || c in 'a'..'f' || c in 'A'..'F' } }
+            ?.lowercase()
 
     private fun mapWrite(pair: String, result: SdkWriteResult<*>): ExternalSendResult = when (result) {
         is SdkWriteResult.Broadcast -> ExternalSendResult.Sent(null)
