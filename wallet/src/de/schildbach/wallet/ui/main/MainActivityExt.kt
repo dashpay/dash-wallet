@@ -83,6 +83,15 @@ object MainActivityExt {
     private const val EXPLORE_BUTTON_INDEX = 3
 
 
+    /**
+     * Shows or hides the bottom navigation. The destination listener in [setupBottomNavigation]
+     * sets it from `ShowNavBar` on every destination change; a destination that varies it while
+     * current (the Advanced payments tabs) calls this after that listener has run.
+     */
+    fun MainActivity.setBottomNavigationVisible(visible: Boolean) {
+        findViewById<BottomNavigationView>(R.id.bottom_navigation)?.isVisible = visible
+    }
+
     fun MainActivity.setupBottomNavigation(viewModel: MainViewModel) {
         val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
         val navController = navHostFragment.navController
