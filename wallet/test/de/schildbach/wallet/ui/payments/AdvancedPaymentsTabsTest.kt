@@ -41,10 +41,17 @@ class AdvancedPaymentsTabsTest {
     }
 
     @Test
-    fun `Basic mode keeps its shielded gating`() {
-        // PaymentsFragment shows Internal only with the shielded flag on; Advanced no longer reads it.
-        assertEquals(twoTabs, PaymentsFragment.tabIdsFor(showInternalTab = false))
+    fun `Basic mode never shows Internal`() {
+        // PaymentsFragment shows Receive | Send whatever the flags; Internal is Advanced only.
+        assertEquals(twoTabs, PaymentsFragment.BASIC_TAB_IDS)
         assertEquals(threeTabs, PaymentsFragment.tabIdsFor(showInternalTab = true))
+    }
+
+    @Test
+    fun `a stored Internal tab opens Receive in Basic mode`() {
+        assertEquals(0, AdvancedPaymentsFragment.positionOf(PaymentsFragment.BASIC_TAB_IDS, ACTIVE_TAB_INTERNAL))
+        assertEquals(ACTIVE_TAB_RECEIVE, PaymentsFragment.BASIC_TAB_IDS[0])
+        assertEquals(1, AdvancedPaymentsFragment.positionOf(PaymentsFragment.BASIC_TAB_IDS, ACTIVE_TAB_PAY))
     }
 
     @Test
