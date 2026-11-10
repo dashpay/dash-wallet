@@ -39,6 +39,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -73,7 +75,6 @@ import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.money.Fiat
 import org.dash.wallet.common.ui.components.ActionItem
 import org.dash.wallet.common.ui.components.AddressField
-import org.dash.wallet.common.ui.components.ButtonData
 import org.dash.wallet.common.ui.components.DASH_CURRENCY_CODE
 import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.DashWalletTheme
@@ -83,7 +84,6 @@ import org.dash.wallet.common.ui.components.ListItem1
 import org.dash.wallet.common.ui.components.ListItem
 import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.Menu
-import org.dash.wallet.common.ui.components.ModalDialog
 import org.dash.wallet.common.ui.components.MyImages
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.Size
@@ -123,7 +123,7 @@ class ExternalSendActions(
  * The external send flow (MO-1121, Figma 6860:47472): the address page (7057:48055 /
  * 7062:48931 / 7062:48871), the amount page (7058:48231), the source sheet (7076:47424) and the
  * confirm sheet (7076:47968 / 7107:48421). Progress and outcome have no frames; they follow the
- * shielded flows (a dimmed progress card) and [ModalDialog].
+ * shielded flows (a dimmed progress card) and [org.dash.wallet.common.ui.components.ModalDialog].
  */
 @Composable
 fun ExternalSendScreen(uiState: ExternalSendUIState, actions: ExternalSendActions) {
@@ -150,7 +150,7 @@ fun ExternalSendScreen(uiState: ExternalSendUIState, actions: ExternalSendAction
         when (val status = uiState.status) {
             is ExternalSendStatus.Sending -> SendingOverlay(status.shieldedLeg, actions.onLeave)
             is ExternalSendStatus.Done ->
-                ResultDialog(status.result, status.afterRestart) { actions.onResultClosed(status.result) }
+                ResultOverlay(status.result, status.afterRestart) { actions.onResultClosed(status.result) }
             ExternalSendStatus.Idle, ExternalSendStatus.Restoring -> {}
         }
     }
@@ -776,25 +776,85 @@ private fun SendingOverlay(shieldedLeg: Boolean, onLeave: () -> Unit) {
     }
 }
 
-/** The terminal outcome. Only Not sent offers to go back and edit; nothing offers a retry. */
+/**
+ * The terminal outcome. Only Not sent offers to go back and edit; nothing offers a retry.
+ *
+ * Drawn inside the screen, like [SheetOverlay] and [SendingOverlay], rather than as a
+ * [org.dash.wallet.common.ui.components.ModalDialog]: a dialog is its own window, which stays
+ * above the lock screen and could be closed without the PIN. In the screen it is covered by the
+ * lock screen and shows again after unlock. The card copies that dialog's layout so it looks the
+ * same. Back is handled by the
+ * fragment, which acknowledges the outcome as the dialog's dismiss-on-back did.
+ */
 @Composable
-private fun ResultDialog(result: ExternalSendResult, afterRestart: Boolean, onClose: () -> Unit) {
+private fun ResultOverlay(result: ExternalSendResult, afterRestart: Boolean, onClose: () -> Unit) {
+    val colors = LocalDashColors.current
     val content = resultContentFor(result, afterRestart)
-    ModalDialog(
-        showDialog = true,
-        onDismissRequest = onClose,
-        icon = ImageVector.vectorResource(content.icon),
-        heading = stringResource(content.title),
-        textBlocks = listOf(stringResource(content.message)),
-        buttons = listOf(
-            ButtonData(
-                label = stringResource(content.button),
-                onClick = onClose,
-                isPrimary = true,
-                style = Style.TintedGray
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0x800A0B0D))
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
+                onClose()
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 15.dp)
+                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {},
+            shape = RoundedCornerShape(16.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = colors.backgroundSecondary,
+                contentColor = colors.textPrimary
             )
-        )
-    )
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(colors.backgroundSecondary)
+                    .padding(start = 20.dp, end = 20.dp, top = 32.dp, bottom = 20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Icon(
+                    imageVector = ImageVector.vectorResource(content.icon),
+                    contentDescription = null,
+                    tint = Color.Unspecified,
+                    modifier = Modifier.size(46.dp)
+                )
+                Spacer(modifier = Modifier.height(20.dp))
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Text(
+                        text = stringResource(content.title),
+                        style = MyTheme.SubtitleSemibold,
+                        textAlign = TextAlign.Center,
+                        color = colors.textPrimary
+                    )
+                    Text(
+                        text = stringResource(content.message),
+                        style = MyTheme.Body2Regular,
+                        textAlign = TextAlign.Center,
+                        color = colors.textPrimary
+                    )
+                    Spacer(modifier = Modifier.height(20.dp))
+                }
+                Spacer(modifier = Modifier.height(32.dp))
+                DashButton(
+                    text = stringResource(content.button),
+                    onClick = onClose,
+                    modifier = Modifier.fillMaxWidth(),
+                    size = Size.Medium,
+                    style = Style.TintedGray
+                )
+            }
+        }
+    }
 }
 
 /** What the outcome dialog shows for [result]. */
