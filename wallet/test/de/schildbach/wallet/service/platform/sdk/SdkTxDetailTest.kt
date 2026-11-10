@@ -17,6 +17,8 @@
 
 package de.schildbach.wallet.service.platform.sdk
 
+import androidx.sqlite.db.SupportSQLiteProgram
+import androidx.sqlite.db.SupportSQLiteQuery
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -146,6 +148,35 @@ class SdkTxDetailTest {
         firstSeenSec = firstSeenSec,
         blockTimestampSec = 0
     )
+
+    /**
+     * Stubs [knownWalletAddressesAmong]'s scoped `core_addresses` JOIN `accounts`
+     * raw query on [db] as if [ownAddresses] were this wallet's own tracked
+     * addresses: whichever of the query's bound IN-list candidates are in
+     * [ownAddresses] come back as rows, same as the real join would filter them.
+     */
+    private fun stubKnownWalletAddresses(db: DashDatabase, ownAddresses: Set<String>) {
+        every { db.openHelper.readableDatabase.query(any<SupportSQLiteQuery>()) } answers {
+            val boundAddresses = mutableListOf<String>()
+            firstArg<SupportSQLiteQuery>().bindTo(
+                object : SupportSQLiteProgram {
+                    override fun bindNull(index: Int) = Unit
+                    override fun bindLong(index: Int, value: Long) = Unit
+                    override fun bindDouble(index: Int, value: Double) = Unit
+                    override fun bindString(index: Int, value: String) { boundAddresses += value }
+                    override fun bindBlob(index: Int, value: ByteArray) = Unit
+                    override fun clearBindings() = Unit
+                    override fun close() = Unit
+                }
+            )
+            val matched = boundAddresses.filter { it in ownAddresses }
+            var cursorIndex = -1
+            mockk<android.database.Cursor>(relaxed = true) {
+                every { moveToNext() } answers { cursorIndex++; cursorIndex < matched.size }
+                every { getString(0) } answers { matched[cursorIndex] }
+            }
+        }
+    }
 
     // ── Outgoing send ─────────────────────────────────────────────────
 
@@ -725,7 +756,6 @@ class SdkTxDetailTest {
         // recipient list instead of reporting the change as a second recipient
         // alongside the real payee (MO-1108's symptom, reached via this race).
         val walletIdHex = "01".repeat(32)
-        val ownAccountId = 1L
 
         val manager = mockk<org.dashfoundation.dashsdk.wallet.PlatformWalletManager> {
             every { wallets } returns MutableStateFlow(mapOf(walletIdHex to mockk(relaxed = true)))
@@ -757,24 +787,7 @@ class SdkTxDetailTest {
         }
         val externalAccountType = SdkTxContactResolver.ACCOUNT_TYPE_DASHPAY_EXTERNAL
         every { db.accountDao().observeByWalletAndType(any(), externalAccountType) } returns flowOf(emptyList())
-        every { db.accountDao().observeByWallet(any()) } returns flowOf(
-            listOf(
-                org.dashfoundation.dashsdk.persistence.entities.AccountEntity(
-                    id = ownAccountId,
-                    walletId = org.bitcoinj.core.Utils.HEX.decode(walletIdHex),
-                    accountType = 0,
-                    accountIndex = 0,
-                    accountTypeName = "BIP44"
-                )
-            )
-        )
-        every { db.coreAddressDao().observeByAccount(ownAccountId) } returns flowOf(
-            listOf(
-                org.dashfoundation.dashsdk.persistence.entities.CoreAddressEntity(
-                    changeAddress, poolTypeTag = 0, addressIndex = 0, derivationPath = "", accountId = ownAccountId
-                )
-            )
-        )
+        stubKnownWalletAddresses(db, ownAddresses = setOf(changeAddress))
         val sdkService = mockk<DashSdkService> {
             coEvery { ensureStarted() } returns Unit
             every { databaseOrNull() } returns db
@@ -810,7 +823,6 @@ class SdkTxDetailTest {
         // mirrored, so the walk has no reason to doubt the recipient's absence
         // — the guard must not blank the recipient list on every ordinary send.
         val walletIdHex = "01".repeat(32)
-        val ownAccountId = 1L
 
         val manager = mockk<org.dashfoundation.dashsdk.wallet.PlatformWalletManager> {
             every { wallets } returns MutableStateFlow(mapOf(walletIdHex to mockk(relaxed = true)))
@@ -840,24 +852,7 @@ class SdkTxDetailTest {
         }
         val externalAccountType = SdkTxContactResolver.ACCOUNT_TYPE_DASHPAY_EXTERNAL
         every { db.accountDao().observeByWalletAndType(any(), externalAccountType) } returns flowOf(emptyList())
-        every { db.accountDao().observeByWallet(any()) } returns flowOf(
-            listOf(
-                org.dashfoundation.dashsdk.persistence.entities.AccountEntity(
-                    id = ownAccountId,
-                    walletId = org.bitcoinj.core.Utils.HEX.decode(walletIdHex),
-                    accountType = 0,
-                    accountIndex = 0,
-                    accountTypeName = "BIP44"
-                )
-            )
-        )
-        every { db.coreAddressDao().observeByAccount(ownAccountId) } returns flowOf(
-            listOf(
-                org.dashfoundation.dashsdk.persistence.entities.CoreAddressEntity(
-                    changeAddress, poolTypeTag = 0, addressIndex = 0, derivationPath = "", accountId = ownAccountId
-                )
-            )
-        )
+        stubKnownWalletAddresses(db, ownAddresses = setOf(changeAddress))
         val sdkService = mockk<DashSdkService> {
             coEvery { ensureStarted() } returns Unit
             every { databaseOrNull() } returns db

@@ -412,13 +412,17 @@ internal suspend fun foreignContactTxoExclusion(
 }
 
 /**
- * This wallet's own tracked addresses — every non-external account's
- * `core_addresses` rows. [load]'s output walk uses this to tell a not-yet-
+ * Which of [candidates] are this wallet's own tracked addresses —
+ * [SdkTxStoreWalker]'s own wallet-scoped, external-account-excluded
+ * `core_addresses` query ([knownWalletAddressesAmong]), resolved to this
+ * bound SDK wallet. [load]'s output walk uses this to tell a not-yet-
  * persisted TXO row for an output THIS WALLET actually tracks (an in-flight
  * mirror write for, e.g., a change output — DW-1659) apart from an output
  * that genuinely pays an external party, whose absence from `txos` is
- * expected and permanent. Inverse of [foreignContactTxoExclusion]'s excluded
- * set, built the same way.
+ * expected and permanent. [candidates] is this transaction's own output
+ * addresses, never the whole wallet — an ordinary external payee's output
+ * also has no TXO row, so the lookup runs on most outgoing detail views and
+ * must stay bounded to this one transaction's candidates.
  *
  * Null — not empty — when the wallet isn't resolvable or the read fails:
  * an empty result would read as "nothing is ours", which is exactly the
@@ -426,18 +430,12 @@ internal suspend fun foreignContactTxoExclusion(
  */
 internal suspend fun knownWalletAddressesOrNull(
     sdkService: DashSdkService,
-    db: DashDatabase
+    db: DashDatabase,
+    candidates: Collection<String>
 ): Set<String>? = try {
     val loadedWalletIds = sdkService.walletManagerOrNull()?.wallets?.value?.keys ?: emptySet()
     val walletId = loadedWalletIds.singleOrNull()?.let(::walletIdFromHex) ?: return null
-    val ownAccountIds = db.accountDao().observeByWallet(walletId).first()
-        .filter { it.accountType != SdkTxContactResolver.ACCOUNT_TYPE_DASHPAY_EXTERNAL }
-        .map { it.id }
-    val addresses = HashSet<String>()
-    for (accountId in ownAccountIds) {
-        db.coreAddressDao().observeByAccount(accountId).first().mapTo(addresses) { it.address }
-    }
-    addresses
+    withContext(Dispatchers.IO) { knownWalletAddressesAmong(db, walletId, candidates) }
 } catch (e: CancellationException) {
     throw e
 } catch (t: Throwable) {
@@ -555,6 +553,7 @@ class SdkTxDetailProvider internal constructor(
                 ownershipUnknown = true
             }
             val (externalAccountIds, externalAddresses) = exclusion ?: (emptySet<Long>() to emptySet<String>())
+            val outputAddressCandidates = decoded?.outputs.orEmpty().mapNotNull { it.address }.distinct()
             var knownWalletAddresses: Set<String>? = null
             var knownWalletAddressesAttempted = false
             decoded?.outputs?.forEachIndexed { index, output ->
@@ -568,9 +567,13 @@ class SdkTxDetailProvider internal constructor(
                     // SdkTxStoreWalker.firstUnmirroredKnownOutput, applied per-output
                     // since this walk already visits one output at a time; resolved
                     // lazily since the common case (mirror fully landed) never needs it.
-                    if (output.address != null) {
+                    // Skipped once ownershipUnknown is already true (e.g. the exclusion
+                    // read above failed): OUTGOING withholds either way, so the lookup
+                    // would just spend a DB read for no change in outcome.
+                    if (output.address != null && !ownershipUnknown) {
                         if (!knownWalletAddressesAttempted) {
-                            knownWalletAddresses = knownWalletAddressesOrNull(sdkService, db)
+                            knownWalletAddresses =
+                                knownWalletAddressesOrNull(sdkService, db, outputAddressCandidates)
                             knownWalletAddressesAttempted = true
                         }
                         val known = knownWalletAddresses
