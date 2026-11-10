@@ -91,6 +91,9 @@ data class InternalTransferConfirm(
  * @property confirmRefused Confirm was refused because the captured request no longer fits the
  *   balance or pair (see [InternalTransferViewModel.confirmedRequest]); the sheet was closed and
  *   the form says so until the user edits it or continues again.
+ * @property lockScreenShown the app's lock screen covers the activity: the sending overlay and the
+ *   outcome dialog (their own windows, which would sit above the lock screen) are not shown until
+ *   the wallet is unlocked; the outcome is not acknowledged (see [InternalTransferViewModel.onLockScreen]).
  */
 data class InternalTransferUIState(
     val from: SendBalance = SendBalance.CORE,
@@ -110,7 +113,8 @@ data class InternalTransferUIState(
     val confirm: InternalTransferConfirm? = null,
     val status: ExternalSendStatus = ExternalSendStatus.Idle,
     val sendingHidden: Boolean = false,
-    val confirmRefused: Boolean = false
+    val confirmRefused: Boolean = false,
+    val lockScreenShown: Boolean = false
 ) {
     val pair: InternalTransferPair get() = InternalTransferPair(from, to)
 
@@ -533,6 +537,28 @@ class InternalTransferViewModel @Inject constructor(
     /** Close on the sending overlay: the transfer continues on the app scope. */
     fun onHideSending() {
         if (_uiState.value.status is ExternalSendStatus.Sending) _uiState.update { it.copy(sendingHidden = true) }
+    }
+
+    /**
+     * The lock screen came up. The picker, confirm sheet, sending overlay and outcome are drawn in
+     * their own windows, which would stay above it: the picker and the confirm sheet are closed
+     * (the amount is kept; an authentication in progress is cancelled by the lock itself and
+     * transfers nothing). The sending overlay and the outcome are withheld until
+     * [onLockScreenDismissed]: a transfer still running (on the app scope) shows its overlay again
+     * after the unlock, and the outcome is not acknowledged.
+     *
+     * The confirm is closed whatever the status: while not Idle it is not on show and cannot be
+     * submitted ([stillValid]), so closing it cancels nothing but its fee estimate.
+     */
+    fun onLockScreen() {
+        onDismissPicker()
+        onDismissConfirm()
+        _uiState.update { it.copy(lockScreenShown = true) }
+    }
+
+    /** The wallet is unlocked: an outcome withheld by [onLockScreen] shows again. */
+    fun onLockScreenDismissed() {
+        if (_uiState.value.lockScreenShown) _uiState.update { it.copy(lockScreenShown = false) }
     }
 
     /** Back closes an open sheet; false when there is nothing to close. */

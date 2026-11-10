@@ -165,12 +165,16 @@ fun InternalTransferScreen(uiState: InternalTransferUIState, actions: InternalTr
             // A shielded leg's ~30 s proof can be left: Close hides the overlay (the form stays
             // disabled) and the outcome shows when it arrives. Back does what Close does, and
             // nothing while a Core / Platform transfer (seconds, not leavable) runs.
-            is ExternalSendStatus.Sending -> if (!uiState.sendingHidden) {
+            // Its own window would sit above the lock screen: withheld while it is up.
+            is ExternalSendStatus.Sending -> if (!uiState.sendingHidden && !uiState.lockScreenShown) {
                 AboveBottomNavigation(onBack = if (status.shieldedLeg) actions.onHideSending else null) {
                     SendingOverlay(status.shieldedLeg, actions.onHideSending)
                 }
             }
-            is ExternalSendStatus.Done -> ResultDialog(status.result, status.afterRestart, actions.onResultClosed)
+            // Its own window would sit above the lock screen: withheld (not acknowledged) until unlock.
+            is ExternalSendStatus.Done -> if (!uiState.lockScreenShown) {
+                ResultDialog(status.result, status.afterRestart, actions.onResultClosed)
+            }
             ExternalSendStatus.Idle, ExternalSendStatus.Restoring -> {}
         }
     }

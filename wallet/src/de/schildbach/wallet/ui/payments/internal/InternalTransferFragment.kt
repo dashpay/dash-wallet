@@ -32,13 +32,16 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.currentStateAsState
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.service.platform.sdk.ExternalSendResult
+import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.ui.payments.send.ExternalSendStatus
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.AuthenticationManager
+import org.dash.wallet.common.ui.LockScreenAware
 import org.dash.wallet.common.ui.components.DashWalletTheme
 import javax.inject.Inject
 
@@ -51,9 +54,13 @@ import javax.inject.Inject
  * path), then hands it to the app-scoped [InternalTransferExecutor]: leaving the screen does not
  * cancel the transfer. Back closes an open sheet; otherwise it belongs to the host. Closing a
  * finished transfer's outcome returns Home, as the External Send does; Not sent stays here.
+ *
+ * The lock screen is drawn in MainActivity's content, under this page's overlay windows: on lock
+ * ([onLockScreenActivated]) the sheets close and the outcome is withheld until the wallet is
+ * unlocked ([LockScreenActivity.walletLocked] turns false).
  */
 @AndroidEntryPoint
-class InternalTransferFragment : Fragment() {
+class InternalTransferFragment : Fragment(), LockScreenAware {
 
     companion object {
         fun newInstance() = InternalTransferFragment()
@@ -97,6 +104,24 @@ class InternalTransferFragment : Fragment() {
                 }
             }
         }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        val walletLocked = (activity as? LockScreenActivity)?.walletLocked ?: return
+        viewLifecycleOwner.lifecycleScope.launch {
+            // The lock screen covers the activity in place, so this page stays RESUMED under it:
+            // the lock state, not the lifecycle, says when it is gone. A state, so a view
+            // recreated after the unlock still releases the withheld outcome.
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                walletLocked.collect { locked -> if (!locked) viewModel.onLockScreenDismissed() }
+            }
+        }
+    }
+
+    /** Called (synchronously) by LockScreenActivity as the lock screen comes up. */
+    override fun onLockScreenActivated() {
+        viewModel.onLockScreen()
+    }
 
     /**
      * A terminal outcome (sent, may have gone through — including the one shown after a process
