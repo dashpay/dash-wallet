@@ -49,6 +49,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -199,8 +201,13 @@ private fun BalancePicker(
     onSelectTab: (ReceiveBalanceTab) -> Unit
 ) {
     val colors = LocalDashColors.current
-    val titles = ReceiveBalanceTab.entries.associateWith { stringResource(tabTitleFor(it)) }
-    val options = remember(tabs, titles) { tabs.map { SegmentedOption(titles.getValue(it)) } }
+    // Resolved as stringResource does (it reads LocalConfiguration so a locale change
+    // recomposes), but only when the tabs or the configuration change.
+    val configuration = LocalConfiguration.current
+    val resources = LocalContext.current.resources
+    val options = remember(tabs, configuration, resources) {
+        tabs.map { SegmentedOption(resources.getString(tabTitleFor(it))) }
+    }
     SegmentedPicker(
         options = options,
         modifier = Modifier
@@ -245,11 +252,12 @@ private fun QrCode(uiState: ReceiveUIState) {
         contentAlignment = Alignment.Center
     ) {
         val bitmap = rememberQrBitmap(payload)
+        val imageBitmap = remember(bitmap) { bitmap?.asImageBitmap() }
         when {
-            bitmap != null -> {
+            imageBitmap != null -> {
                 val description = stringResource(R.string.receive_qr_code_description)
                 Image(
-                    bitmap = bitmap.asImageBitmap(),
+                    bitmap = imageBitmap,
                     contentDescription = description,
                     colorFilter = ColorFilter.tint(Color.Black, BlendMode.SrcIn),
                     filterQuality = FilterQuality.None,

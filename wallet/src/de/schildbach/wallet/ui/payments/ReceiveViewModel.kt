@@ -71,8 +71,15 @@ data class ReceiveUIState(
     val loading: Boolean = true,
     val username: String? = null
 ) {
-    /** The QR content for [address]: a `dash:` URI on Core, the bare address or ID elsewhere. */
-    val qrPayload: String? = address?.let { ReceiveViewModel.qrPayloadOrNull(selectedTab, it, username) }
+    /**
+     * The QR content for [address]: a `dash:` URI on Core, the bare address or ID elsewhere.
+     * Built on first read and cached for this instance, not in the constructor, so the many
+     * `copy`s that only change other fields never build the URI unless someone reads it. Not
+     * part of equals/hashCode: it is derived from [selectedTab], [address] and [username].
+     */
+    val qrPayload: String? by lazy(LazyThreadSafetyMode.PUBLICATION) {
+        address?.let { ReceiveViewModel.qrPayloadOrNull(selectedTab, it, username) }
+    }
 
     /** The last read for [selectedTab] could not produce an address. */
     val unavailable: Boolean
@@ -302,9 +309,10 @@ class ReceiveViewModel internal constructor(
                 if (state.selectedTab != tab) {
                     state
                 } else {
-                    // Fail closed: an address the URI builder rejects is not advertised.
-                    val shown = address?.takeIf { qrPayloadOrNull(tab, it, state.username) != null }
-                    state.copy(address = shown, loading = false)
+                    // Fail closed: an address the URI builder rejects is not advertised. The
+                    // check reads the published state's own (cached) payload: built once.
+                    val next = state.copy(address = address, loading = false)
+                    if (address != null && next.qrPayload == null) next.copy(address = null) else next
                 }
             }
         }

@@ -21,18 +21,17 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
-import org.dash.wallet.common.util.readRetryDelayMs
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.dash.wallet.common.util.readRetryDelayMs
+import org.dash.wallet.common.util.retryReadErrors
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
@@ -71,7 +70,8 @@ class AdvancedPaymentsViewModel @Inject constructor(
 /**
  * The shielded flag as a never-failing flow: a failed read counts as off (as
  * [DashPayConfig.get] reading absent does for [PaymentsFragment]), is reported to
- * [onError] and is retried, so the flow never completes on an error. Shared by the
+ * [onError] and is retried, so the flow never completes on an [Exception] (see
+ * [retryReadErrors]: a cancellation or an [Error] still propagates). Shared by the
  * Advanced payments tabs ([advancedPaymentsTabsFlow]) and the Receive balance tabs.
  */
 internal fun shieldedEnabledFlow(
@@ -80,12 +80,7 @@ internal fun shieldedEnabledFlow(
     retryDelayMs: (Long) -> Long = ::readRetryDelayMs
 ): Flow<Boolean> = shieldedFlag
     .map { it == true }
-    .retryWhen { e, attempt ->
-        onError(e, attempt)
-        emit(false)
-        delay(retryDelayMs(attempt))
-        true
-    }
+    .retryReadErrors(false, retryDelayMs, onError)
     .distinctUntilChanged()
 
 /**

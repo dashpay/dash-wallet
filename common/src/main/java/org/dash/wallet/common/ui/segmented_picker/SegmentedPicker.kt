@@ -35,13 +35,15 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -51,6 +53,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import org.dash.wallet.common.R
@@ -334,17 +337,17 @@ private fun FitContentSegmentedPicker(
                     Modifier
                         // Offscreen so DstIn masks only this row, not what is behind it.
                         .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-                        .drawWithContent {
-                            drawContent()
-                            drawRect(
-                                brush = Brush.horizontalGradient(
-                                    0f to Color.Transparent,
-                                    edgeFade to Color.Black,
-                                    1f - edgeFade to Color.Black,
-                                    1f to Color.Transparent
-                                ),
-                                blendMode = BlendMode.DstIn
+                        .drawWithCache {
+                            val mask = Brush.horizontalGradient(
+                                0f to Color.Transparent,
+                                edgeFade to Color.Black,
+                                1f - edgeFade to Color.Black,
+                                1f to Color.Transparent
                             )
+                            onDrawWithContent {
+                                drawContent()
+                                drawRect(brush = mask, blendMode = BlendMode.DstIn)
+                            }
                         }
                 } else {
                     Modifier
@@ -366,9 +369,20 @@ private fun FitContentSegmentedPicker(
                 SelectionThumb(
                     style = style,
                     color = thumbColor,
+                    // The animated values are read in the placement and measure lambdas, not in
+                    // composition, so an animation frame relayouts the thumb without recomposing.
+                    // Same rounding as absoluteOffset(x =) and width(): roundToPx, clamped to the
+                    // incoming constraints.
                     modifier = Modifier
-                        .absoluteOffset(x = thumbOffset)
-                        .width(thumbWidth)
+                        .absoluteOffset { IntOffset(thumbOffset.roundToPx(), 0) }
+                        .layout { measurable, constraints ->
+                            val width = thumbWidth.roundToPx().coerceAtLeast(0)
+                                .coerceIn(constraints.minWidth, constraints.maxWidth)
+                            val placeable = measurable.measure(
+                                constraints.copy(minWidth = width, maxWidth = width)
+                            )
+                            layout(placeable.width, placeable.height) { placeable.place(0, 0) }
+                        }
                         .fillMaxHeight()
                 )
             }
@@ -385,7 +399,9 @@ private fun FitContentSegmentedPicker(
                         },
                         modifier = Modifier
                             .fillMaxHeight()
-                            .onGloballyPositioned { coordinates ->
+                            // onPlaced, not onGloballyPositioned: the offset is in the Row, so
+                            // it need not re-run on every scroll frame.
+                            .onPlaced { coordinates ->
                                 val entry = coordinates.positionInParent().x.toInt() to coordinates.size.width
                                 if (index < bounds.size && bounds[index] != entry) {
                                     bounds[index] = entry
