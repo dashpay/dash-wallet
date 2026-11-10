@@ -152,4 +152,5 @@
     <string name="from_dash_wallet_on_this_device">從此設備上的達世幣錢包</string>
     <string name="preposition_at">在</string>
     <string name="info">資訊</string>
+    <string name="scan_qr">掃描二維碼</string>
 </resources>

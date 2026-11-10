@@ -3,7 +3,7 @@ buildscript {
         kotlin_version = '2.1.0'
         coroutinesVersion = '1.6.4'
         ok_http_version = '4.12.0'
-        dashjVersion = '22.0.5'
+        dashjVersion = '24.0.0' // Dash Core v24 support; required by dppVersion 5.0.1
         // Dash Platform Kotlin SDK (org.dashj:dash-sdk-android). Single source of
         // truth for both the dependency coordinate (wallet/build.gradle) and the
         // DASH_SDK_VERSION BuildConfig field shown on the About screen once the
@@ -20,29 +20,13 @@ buildscript {
         // (Type 15, Platform → Shielded) and .shieldedShieldFromIdentityToRecipient
         // (Type 21, Identity → Shielded).
         dashSdkVersion = '5.1.0-int37-20261108.041023-1'
-        // 5.0.0 carries a libsdklib.so that knows document serialization
-        // format 3. Format 3 arrives with Platform protocol version 14 (it
-        // stamps the document with the contract version its bytes conform to,
-        // enabling `requiredSince` properties), so once testnet activated v14
-        // every DPNS document Drive wrote came back in a format 4.0.1's bundled
-        // rs-dpp could not decode. Its local proof verification failed with
-        //   Proof verification error: dash drive: protocol: dpp unknown version
-        //   on Document::from_bytes (deserialization),
-        //   known versions: [0, 1, 2], received: 3
-        // surfacing as "Attempted to unwrap a Failure" out of
-        // org.dashj.platform.sdk.base.Result.unwrap() and stranding identity
-        // creation at USERNAME_REGISTERING (PlatformRepo.recoverUsernames ->
-        // BlockchainIdentity.recoverUsernames). This is the legacy SDK only:
-        // the Kotlin SDK's libdash_sdk_jni.so already handles format 3.
-        // 5.0.0 keeps the 4.0.1 CBOR fix that aborted every identity read:
-        // IdentityPublicKey.toObject() put the raw ContractBounds object
-        // (SingleContractDocumentType) into the map handed to Cbor, which has
-        // no converter for it -> IllegalArgumentException("No converter for ...").
-        // It calls this.toObject() first. Cbor.kt itself is unchanged.
-        // Pinned to the exact timestamped build of 5.0.0-SNAPSHOT (dash-sdk-java,
-        // -kotlin and -android all published 20261016.200955-3), not the moving
-        // -SNAPSHOT name; switch to the 5.0.0 release once it is published.
-        dppVersion = "5.0.0-20261016.200955-3"
+        // Legacy dashj-platform SDK (org.dashj.platform), master's pin. It replaces the
+        // 5.0.0-20261016.200955-3 snapshot this branch pinned for document serialization
+        // format 3 (Platform protocol 14) and the IdentityPublicKey.toObject() CBOR fix;
+        // DashConnect needs 5.0.1's client calls (getProtocolVersion, getPlatformTime,
+        // contract groups), and 5.0.1 requires dashj 24.0.0. The Kotlin SDK
+        // (dashSdkVersion) is unaffected.
+        dppVersion = "5.0.1"
         hiltVersion = '2.53'
         hiltCompilerVersion = '1.2.0'
         hiltWorkVersion = '1.2.0'
@@ -159,6 +143,7 @@ allprojects {
     }
     configurations.all {
         resolutionStrategy {
+            force "org.dashj:dashj-core:$dashjVersion"
             force 'com.google.android.recaptcha:recaptcha:18.4.0'
         }
     }

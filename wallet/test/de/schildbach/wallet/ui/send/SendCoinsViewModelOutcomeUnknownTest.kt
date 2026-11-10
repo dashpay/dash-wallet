@@ -88,7 +88,6 @@ class SendCoinsViewModelOutcomeUnknownTest {
             runner.sendCoins(
                 any<SendRequest>(),
                 any<Boolean>(),
-                any<Boolean>(),
                 any<Consumer<Transaction>>(),
                 any<String>(),
                 any<Address>(),
@@ -154,7 +153,7 @@ class SendCoinsViewModelOutcomeUnknownTest {
     }
 
     private fun send(viewModel: SendCoinsViewModel) =
-        runBlocking { viewModel.signAndSendPayment(amount, null, true) }
+        runBlocking { viewModel.signAndSendPayment(amount, null) }
 
     private fun outcomeUnknown(): Transaction =
         throw PaymentSubmissionPendingException("unknown", IllegalStateException("timeout"))
@@ -268,7 +267,7 @@ class SendCoinsViewModelOutcomeUnknownTest {
         val viewModel = buildViewModel(runner(sends) { held.hold() }, SavedStateHandle())
         open(viewModel)
 
-        val waiter = CoroutineScope(Dispatchers.IO).launch { viewModel.signAndSendPayment(amount, null, true) }
+        val waiter = CoroutineScope(Dispatchers.IO).launch { viewModel.signAndSendPayment(amount, null) }
         held.awaitEntered()
         waiter.cancel()
         runBlocking { waiter.join() }
@@ -309,14 +308,14 @@ class SendCoinsViewModelOutcomeUnknownTest {
         val viewModel = buildViewModel(runner(sends) { held.hold() }, SavedStateHandle())
         open(viewModel)
 
-        assertTrue(viewModel.submitPayment(amount, null, checkBalance = true, autoAcceptContactRequest = false))
+        assertTrue(viewModel.submitPayment(amount, null, autoAcceptContactRequest = false))
         held.awaitEntered()
 
         // The recreated screen initialises the payment again: it must not reset the send to INPUT.
         runBlocking { viewModel.initPaymentIntent(PaymentIntent.fromAddress(payee.toBase58(), null)) }
         idle()
         assertFalse(viewModel.everythingPlausible())
-        assertFalse(viewModel.submitPayment(amount, null, checkBalance = true, autoAcceptContactRequest = false))
+        assertFalse(viewModel.submitPayment(amount, null, autoAcceptContactRequest = false))
 
         held.release.complete(Unit)
         awaitCondition("the send's outcome") { viewModel.sendOutcome.value != null }
@@ -337,7 +336,7 @@ class SendCoinsViewModelOutcomeUnknownTest {
         open(viewModel)
 
         // The send goes out, but its result waits for the screen (the wallet is locked).
-        assertTrue(viewModel.submitPayment(amount, null, checkBalance = true, autoAcceptContactRequest = false))
+        assertTrue(viewModel.submitPayment(amount, null, autoAcceptContactRequest = false))
         awaitCondition("the send's outcome") { viewModel.sendOutcome.value != null }
         assertTrue(viewModel.sendOutcome.value is SendCoinsViewModel.SendOutcome.Sent)
 
@@ -357,7 +356,7 @@ class SendCoinsViewModelOutcomeUnknownTest {
         val viewModel = buildViewModel(runner(sends) { mockk(relaxed = true) }, savedState)
         open(viewModel)
 
-        assertTrue(viewModel.submitPayment(amount, null, checkBalance = true, autoAcceptContactRequest = false))
+        assertTrue(viewModel.submitPayment(amount, null, autoAcceptContactRequest = false))
         awaitCondition("the send's outcome") { viewModel.sendOutcome.value != null }
         assertTrue(viewModel.consumeSendOutcome(requireNotNull(viewModel.sendOutcome.value)))
 
@@ -371,12 +370,12 @@ class SendCoinsViewModelOutcomeUnknownTest {
         val viewModel = buildViewModel(runner(sends) { mockk(relaxed = true) }, SavedStateHandle())
         open(viewModel)
 
-        assertTrue(viewModel.submitPayment(amount, null, checkBalance = true, autoAcceptContactRequest = false))
+        assertTrue(viewModel.submitPayment(amount, null, autoAcceptContactRequest = false))
         awaitCondition("the send's outcome") { viewModel.sendOutcome.value != null }
 
         // Sent; its result waits for the screen (e.g. locked). A pending confirmation callback
         // fires meanwhile: nothing more is sent.
-        assertFalse(viewModel.submitPayment(amount, null, checkBalance = true, autoAcceptContactRequest = false))
+        assertFalse(viewModel.submitPayment(amount, null, autoAcceptContactRequest = false))
         assertThrows(SendRefusedException::class.java) { send(viewModel) }
         assertEquals(1, sends.get())
     }

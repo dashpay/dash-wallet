@@ -18,7 +18,6 @@
 package de.schildbach.wallet.ui.more.connections
 
 import de.schildbach.wallet.ui.more.connections.protocol.DashKeyRequest
-import de.schildbach.wallet.ui.more.connections.protocol.DashStRequest
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -31,11 +30,14 @@ import javax.inject.Singleton
  *  - [APPROVED] — connection approved, awaiting login ("Scan the QR code to complete your login")
  *  - [ACTIVE] — session is active ("Touch to disconnect at any time")
  *  - [DISCONNECTED] — session ended ("Scan the QR code to log back in")
+ *  - [EXPIRED] — every authentication key passed its expiry but none was revoked, so they stay
+ *    enabled on Platform until the user disconnects
  */
 enum class ConnectionStatus {
     APPROVED,
     ACTIVE,
-    DISCONNECTED
+    DISCONNECTED,
+    EXPIRED
 }
 
 /**
@@ -49,7 +51,11 @@ data class DAppConnection(
     val url: String,
     val status: ConnectionStatus,
     /** Millis since epoch of the last status change. */
-    val updatedAt: Long
+    val updatedAt: Long,
+    val scope: String? = null,
+    val legacyOnly: Boolean = false,
+    /** When the latest login became active, millis since epoch; null when unknown (e.g. never approved). */
+    val connectedAt: Long? = null
 )
 
 /**
@@ -69,7 +75,27 @@ data class ConnectionRequest(
     /** The wallet user's own DashPay username (verified, resolved locally). */
     val walletUsername: String,
     /** The wallet user's own identity id, Base58-encoded (verified). */
-    val walletIdentityId: String
+    val walletIdentityId: String,
+    val permissionText: String = "",
+    val grantChoices: List<GrantChoice> = emptyList(),
+    val recovering: Boolean = false,
+    /** The funding-limit preset matching [fundingLimit], or -1 for a custom limit. */
+    val budgetPreset: Int = -1,
+    /** The expiration preset matching [expiresAt], or -1 for a custom date. */
+    val lifetimePreset: Int = -1,
+    /** Platform time the limits are measured from; the latest custom expiry is a year after it. */
+    val blockTime: Long = 0,
+    val requiresGroupReapproval: Boolean = false,
+    val groupScopeChangeApproved: Boolean = false,
+    /** Plain-language lines for the approved grants; empty for a legacy login. */
+    val capabilities: List<AppCapability> = emptyList(),
+    /** Credits the app's keys may spend together; null when unlimited or nothing is budgeted. */
+    val fundingLimit: java.math.BigInteger? = null,
+    val expiresAt: Long? = null,
+    /** When the app created the request, millis since epoch; 0 when unknown. */
+    val requestedAt: Long = 0,
+    /** True when no connection to this app is on record. */
+    val firstConnection: Boolean = false
 )
 
 /**
@@ -92,45 +118,66 @@ object DashConnectBranding {
 }
 
 /** The decoded payload of a scanned DashConnect QR code. */
-sealed class DashConnectQr {
-    /** First QR (`dash-key:`): an app requests a login the user must approve. */
-    data class Login(val request: DashKeyRequest) : DashConnectQr()
-
-    /** Second QR (`dash-st:`): first-login key registration on the identity. */
-    data class KeyRegistration(val request: DashStRequest) : DashConnectQr()
-}
+data class DashConnectQr(val request: DashKeyRequest)
 
 /**
  * Boundary for DashConnect data, backed by Dash Platform. [MockDashConnectRepository] provides
  * placeholder data for tests and Compose previews.
  */
 interface DashConnectRepository {
+    /**
+     * Whether this build supports DashConnect and the network runs Platform protocol version 14 or later;
+     * null when the network's version could not be read.
+     */
+    suspend fun isAvailable(): Boolean?
+
     fun observeConnections(): Flow<List<DAppConnection>>
 
-    /** Decodes and validates a scanned QR into a login request or a key-registration request. */
+    /** Decodes and validates a scanned QR into a login request. */
     suspend fun parseQr(qrContent: String): DashConnectQr
 
-    /**
-     * Approves a `dash-key:` login request: derives the login key, encrypts it against the app's
-     * ephemeral key, and publishes (or replaces) the `loginKeyResponse` document on the
-     * key-exchange contract. Returns the resulting connection.
-     */
+    suspend fun prepareTokenPurchase(request: de.schildbach.wallet.ui.more.connections.protocol.DashStRequest): TokenPurchaseApproval =
+        error("Token purchase requests are unavailable")
+
+    suspend fun approveTokenPurchase(approval: TokenPurchaseApproval) {
+        error("Token purchase requests are unavailable")
+    }
+
+    suspend fun setupPurchaseSigningKey(approval: TokenPurchaseApproval) {
+        error("Purchase signing-key setup is unavailable")
+    }
+
+    /** Legacy/mock entry point. The real repository requires explicit prepared consent. */
     suspend fun approveLogin(request: DashKeyRequest): DAppConnection
 
-    /**
-     * Completes a `dash-st:` first-login key registration: validates the transition end-to-end,
-     * signs it with the identity master key and broadcasts it.
-     */
-    suspend fun completeKeyRegistration(request: DashStRequest)
+    suspend fun prepareLogin(request: DashKeyRequest): AppConnectPlan? = null
 
-    suspend fun disconnect(connectionId: String)
+    suspend fun approvePreparedLogin(request: DashKeyRequest, plan: AppConnectPlan?): DAppConnection =
+        approveLogin(request)
 
-    /**
-     * Removes the local connection record so the user can start the login flow over.
-     * Any published `loginKeyResponse` document is left on Platform — a future login
-     * replaces it (unique index on owner + contract).
-     */
-    suspend fun removeConnection(connectionId: String)
+    /** Reconcile and revoke this request before reporting a previously attempted approval as declined. */
+    suspend fun revokePreparedLogin(request: DashKeyRequest, plan: AppConnectPlan?) {
+        error("Pending approval revocation is unavailable")
+    }
+
+    suspend fun disconnect(connectionId: String, scope: String? = null)
+
+    suspend fun connectionDetails(connectionId: String, scope: String? = null): String = ""
+
+    /** What the recorded keys of a connection allow, with their current Platform limits; null if none are recorded. */
+    suspend fun connectionTerms(connectionId: String, scope: String? = null): ConnectionTerms? = null
+
+    /** Unlinked DashPay profile keys the user has not dismissed; null when there are none. */
+    suspend fun sharedProfileKeys(): SharedProfileKeys? = null
+
+    suspend fun dismissSharedProfileKeys(keys: SharedProfileKeys) {}
+
+    suspend fun revokeSharedProfileKeys(keys: SharedProfileKeys) {
+        error("Key revocation is unavailable")
+    }
+
+    /** Revoke before removal; the real repository retains the public grant audit record. */
+    suspend fun removeConnection(connectionId: String, scope: String? = null)
 
     /**
      * The wallet's own DPNS username in display form (the `label`, e.g. "John.Doe"), resolved from
@@ -149,6 +196,9 @@ interface DashConnectRepository {
     suspend fun resolveAppDisplay(contractId: ByteArray, qrLabel: String): AppDisplay
 }
 
+/** Enabled identity keys that can edit the DashPay profile but belong to no connection on record. */
+data class SharedProfileKeys(val scope: String, val keyIds: List<Int>)
+
 /** Display name and website for an app, as resolved by [DashConnectRepository.resolveAppDisplay]. */
 data class AppDisplay(
     val name: String,
@@ -162,6 +212,8 @@ data class AppDisplay(
 @Singleton
 class MockDashConnectRepository @Inject constructor() : DashConnectRepository {
     private val connections = MutableStateFlow<List<DAppConnection>>(emptyList())
+
+    override suspend fun isAvailable(): Boolean? = ConnectAvailability.isSupported
 
     override fun observeConnections(): Flow<List<DAppConnection>> = connections.asStateFlow()
 
@@ -182,9 +234,7 @@ class MockDashConnectRepository @Inject constructor() : DashConnectRepository {
         return connection
     }
 
-    override suspend fun completeKeyRegistration(request: DashStRequest) = Unit
-
-    override suspend fun disconnect(connectionId: String) {
+    override suspend fun disconnect(connectionId: String, scope: String?) {
         connections.value = connections.value.map {
             if (it.id == connectionId) {
                 it.copy(status = ConnectionStatus.DISCONNECTED, updatedAt = System.currentTimeMillis())
@@ -194,7 +244,7 @@ class MockDashConnectRepository @Inject constructor() : DashConnectRepository {
         }
     }
 
-    override suspend fun removeConnection(connectionId: String) {
+    override suspend fun removeConnection(connectionId: String, scope: String?) {
         connections.value = connections.value.filter { it.id != connectionId }
     }
 
