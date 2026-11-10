@@ -407,6 +407,7 @@
     <string name="turned_off">オフ</string>
     <string name="coinjoin_mixing_transactions">ミキシングの取引</string>
     <string name="coinjoin_transaction_group">ミキシングに関する取引があります。</string>
+    <string name="coinjoin_transaction_group_title">なぜこのような取引があるのですか。</string>
     <string name="intermediate">通常のもの</string>
     <string name="advanced">高度なもの</string>
     <string name="intermediate_level_card_decs">非常に高いレベルの技術的な専門知識を持つ上級ユーザーは、取引履歴を判別することができます</string>

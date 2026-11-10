@@ -122,7 +122,8 @@ class PlatformSyncContactGuardTest {
         externalSendExecutor = { mockk(relaxed = true) },
         contactRequestNotificationService = mockk(relaxed = true),
         dashPaySyncStatus = de.schildbach.wallet.service.DashPaySyncStatus(),
-        shieldedHistoryRowSync = dagger.Lazy { mockk<de.schildbach.wallet.service.platform.sdk.ShieldedHistoryRowSync>(relaxed = true) }
+        shieldedHistoryRowSync = dagger.Lazy { mockk<de.schildbach.wallet.service.platform.sdk.ShieldedHistoryRowSync>(relaxed = true) },
+        transparentUsernameCreation = javax.inject.Provider { mockk(relaxed = true) }
     )
 
     @Test

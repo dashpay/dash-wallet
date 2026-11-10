@@ -1085,7 +1085,7 @@ class CutoverUiDataServiceTest {
         )
         assertFalse(single.isMultiTxGroupRow)
         assertTrue(single.copy(wrapperType = TxGroupCacheEntry.TYPE_COINJOIN).isMultiTxGroupRow)
-        assertTrue(single.copy(wrapperType = TxGroupCacheEntry.TYPE_CROWDNODE).isMultiTxGroupRow)
+        assertTrue(single.copy(wrapperType = "crowdnode").isMultiTxGroupRow)
     }
 
     @Test
@@ -4246,7 +4246,7 @@ class CutoverUiDataServiceTest {
         coEvery { groupDao.getGroupsForTxIds(any()) } returns listOf(
             TxGroupCacheEntry(
                 groupId = "group-1", txId = txid,
-                wrapperType = TxGroupCacheEntry.TYPE_CROWDNODE, groupDate = "", sortOrder = 0
+                wrapperType = "crowdnode", groupDate = "", sortOrder = 0
             )
         )
         val events = kotlinx.coroutines.flow.MutableSharedFlow<L1TxEvent>(extraBufferCapacity = 8)
@@ -5024,7 +5024,7 @@ class CutoverUiDataServiceTest {
                 FakeGroup(correct, TxGroupCacheEntry.TYPE_COINJOIN, listOf(memberHex(3))),
                 FakeGroup(partial, TxGroupCacheEntry.TYPE_COINJOIN, listOf(memberHex(4), memberHex(5))),
                 FakeGroup(big, TxGroupCacheEntry.TYPE_COINJOIN, bigMembers),
-                FakeGroup("crowdnode", TxGroupCacheEntry.TYPE_CROWDNODE, listOf(memberHex(6), memberHex(7), memberHex(8)))
+                FakeGroup("crowdnode", "crowdnode", listOf(memberHex(6), memberHex(7), memberHex(8)))
             )
         )
         val source = FakeSource(records = MutableStateFlow(emptyList())).apply {
@@ -5150,7 +5150,7 @@ class CutoverUiDataServiceTest {
         val groupDao = groupDaoOver(
             listOf(
                 FakeGroup(groupId, TxGroupCacheEntry.TYPE_COINJOIN, listOf(memberHex(1))),
-                FakeGroup("crowdnode", TxGroupCacheEntry.TYPE_CROWDNODE, listOf(memberHex(2)))
+                FakeGroup("crowdnode", "crowdnode", listOf(memberHex(2)))
             )
         )
         val source = FakeSource(records = MutableStateFlow(emptyList())).apply {

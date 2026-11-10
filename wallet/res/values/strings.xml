@@ -506,10 +506,6 @@
     <string name="upgrade_pin_description">Set up a new PIN</string>
     <string name="upgrade_pin_continue">Continue</string>
 
-    <!-- CrowdNode withdrawal reminder -->
-    <string name="crowdnode_withdrawal_reminder_title">You have a balance on CrowdNode</string>
-    <string name="crowdnode_withdrawal_reminder_message">These funds should be withdrawn from CrowdNode. You can transfer these funds to this wallet or via your online account on some other device.</string>
-    <string name="crowdnode_withdraw_funds">Withdraw funds</string>
     <string name="buy_credits_current_identity_balance">Current Identity Balance: %1$s</string>
     <string name="buy_credits_current_identity_balance_unavailable">unavailable</string>
     <string name="payment_request_resending_earlier_payment">This request was paid before, but that payment was never confirmed. Confirming sends the same payment again, so you cannot be charged twice.</string>
@@ -606,4 +602,5 @@
     <string name="internal_transfer_completes_automatically_title">Transfer in progress</string>
     <string name="internal_transfer_completes_automatically_message">Your funds left your Core balance and will arrive in your Shielded balance automatically. Do not transfer them again.</string>
     <string name="receive_address_unavailable">This address is not available right now</string>
+    <string name="dash_connect_revoke_access">Revoke access</string>
 </resources>

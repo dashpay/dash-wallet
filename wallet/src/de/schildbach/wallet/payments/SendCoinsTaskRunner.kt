@@ -50,10 +50,8 @@ import org.bitcoinj.crypto.IKey
 import org.bitcoinj.crypto.KeyCrypterException
 import org.dash.wallet.common.payments.bip70.PaymentProtocol
 import org.dash.wallet.common.payments.bip70.PaymentProtocolException.InvalidPaymentRequestURL
-import org.bitcoinj.script.ScriptException
 import org.bitcoinj.wallet.*
 import de.schildbach.wallet.data.WalletData
-import de.schildbach.wallet.transactions.ExactOutputsSelector
 import de.schildbach.wallet.transactions.toTxInfo
 import de.schildbach.wallet.util.toCoin
 import de.schildbach.wallet.util.toDashjCoin
@@ -65,7 +63,6 @@ import org.dash.wallet.common.payments.parsers.AddressNetwork
 import org.dash.wallet.common.payments.parsers.DashPaymentIntentParser
 import org.dash.wallet.common.payments.parsers.Scripts
 import org.dash.wallet.common.services.DirectPayException
-import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.PaymentRecoveryMetadata
 import org.dash.wallet.common.services.PaymentSubmissionPendingException
 import org.dash.wallet.common.services.SendPaymentService
@@ -80,8 +77,6 @@ import org.dash.wallet.common.util.call
 import org.dash.wallet.common.util.ensureSuccessful
 import org.slf4j.LoggerFactory
 import org.dash.wallet.common.transactions.TxInfo
-import org.dash.wallet.common.services.SpendSelection
-import org.bitcoinj.script.ScriptPattern
 import org.bitcoinj.core.Sha256Hash
 import java.net.ConnectException
 import java.net.NoRouteToHostException
@@ -108,21 +103,17 @@ import de.schildbach.wallet.util.toSha256Hash
  *   dashj wallet so the caller still gets the live dashj [Transaction].
  * - [FAIL_CLOSED]: cutover committed but the send needs dashj-only
  *   machinery the SDK has no equivalent for (a custom [CoinSelector] or a
- *   `canSendLockedOutput` predicate — CrowdNode), OR it is an empty-wallet
+ *   `canSendLockedOutput` predicate), OR it is an empty-wallet
  *   send-all on the TYPED overloads. Failing with a clear error BEATS
  *   falling through to dashj: its peergroup is held, so a dashj "send"
  *   would commit a tx that silently queues and then broadcasts on a later
  *   ROLLBACK, long after the user was told it failed.
  *
  * Why the typed overloads' `emptyWallet` FAILS CLOSED (funds-critical):
- * their only emptyWallet caller is CrowdNode ([sendCoinsSelected]), whose
- * deposit-all is a TWO-step flow — topUp (drain everything to the account
- * address, `SpendSelection.Any` ⇒ no selector) then deposit (ByAddress
- * selector ⇒ always FAIL_CLOSED post-cutover). Routing step 1 to the SDK
- * drain would succeed and step 2 would then deterministically throw —
- * wedging the FULL balance at the account address (half-executed
- * deposit-all). Refusing step 1 makes the failure atomic: no funds move.
- * Only the MAIN-UI funnel path ([extractSdkRoutablePayment] with
+ * a send-all there may be the first step of a multi-step flow (CrowdNode's
+ * deposit-all was: drain to an address, then a ByAddress-selected deposit
+ * that always FAIL_CLOSEs post-cutover), and routing only step 1 to the SDK
+ * drain would wedge the full balance half way. Only the MAIN-UI funnel path ([extractSdkRoutablePayment] with
  * `sendAll = true` — a single-shot send-max with no dependent follow-up)
  * may route a send-all to the SDK drain.
  */
@@ -548,13 +539,11 @@ class SendCoinsTaskRunner @Inject constructor(
 
     private val paymentIntentParser = DashPaymentIntentParser(org.dash.wallet.common.payments.parsers.AddressNetwork.fromId(NETWORK_PARAMETERS.id))
 
-    @Throws(LeftoverBalanceException::class)
     override suspend fun sendCoins(
         address: Address,
         amount: Coin,
         coinSelector: CoinSelector?,
         emptyWallet: Boolean,
-        checkBalanceConditions: Boolean,
         beforeSending: Consumer<Transaction>?,
         canSendLockedOutput: Predicate<TransactionOutput>?,
         originWallet: Wallet?
@@ -565,11 +554,6 @@ class SendCoinsTaskRunner @Inject constructor(
         val wallet = originWallet?.also { ensureStillOwned(it, "sending it") }
             ?: walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
         Context.propagate(wallet.context)
-
-        if (checkBalanceConditions && !wallet.isAddressMine(address)) {
-            // This can throw LeftoverBalanceException
-            walletData.checkSendingConditions(address, amount)
-        }
 
         // Phase 5d: once the cutover is committed the dashj engine is held,
         // so this path must not build/commit a dashj send (see
@@ -604,7 +588,6 @@ class SendCoinsTaskRunner @Inject constructor(
             createSendRequest(address, amount, coinSelector, emptyWallet, canSendLockedOutput = canSendLockedOutput)
         return sendCoins(
             sendRequest,
-            checkBalanceConditions = false,
             beforeSending = beforeSending,
             // the wallet resolved above, which the request was built from
             originWallet = wallet
@@ -832,24 +815,18 @@ class SendCoinsTaskRunner @Inject constructor(
      *   via dashj (its coin selection may pick different UTXOs — a dashj
      *   retry after a maybe-sent SDK tx is a potential double PAY).
      *
-     * The SDK route replicates this path's only pre-send condition (the
-     * leftover-balance check) via `beforeBroadcast`, so
-     * [LeftoverBalanceException] surfaces identically on both routes.
-     *
      * `emptyWallet = true` here (Coinbase's transfer-max is the only such
      * caller) DELIBERATELY keeps the post-cutover SDK drain, unlike the
      * dashj-typed overloads (which FAIL_CLOSED — see [cutoverSendRoute]):
      * this is a single-shot send-all with no dependent follow-up send, so
-     * it cannot half-execute like CrowdNode's two-step deposit-all, and
+     * it cannot half-execute like a two-step deposit-all, and
      * [SdkL1SendService] independently refuses the drain while any
-     * app-locked (CrowdNode) output exists.
+     * app-locked output exists.
      */
-    @Throws(LeftoverBalanceException::class)
     override suspend fun sendCoins(
         address: String,
         amount: Dash,
         emptyWallet: Boolean,
-        checkBalanceConditions: Boolean,
         session: WalletSession?
     ): String {
         // Taken before anything here can suspend; refused at once if that wallet is already gone.
@@ -860,16 +837,9 @@ class SendCoinsTaskRunner @Inject constructor(
         // Same barrier as every other payment entry point (see awaitPaymentReadiness).
         pendingPaymentVerifier.awaitRestored()
         val sdkResult = sdkL1SendService.sendToAddress(address, amount, emptyWallet) {
-            // Same conditions the dashj-typed overload enforces before its
-            // broadcast; throws (e.g. LeftoverBalanceException) propagate
-            // to the caller exactly as they do on the dashj path. The wallet
-            // the payment was confirmed on is asked again here, right before
-            // the broadcast.
-            val wallet = origin.also { ensureStillOwned(it, "sending it") }
-            val dashAddress = Address.fromString(walletData.networkParameters, address)
-            if (checkBalanceConditions && !wallet.isAddressMine(dashAddress)) {
-                walletData.checkSendingConditions(dashAddress, amount.toCoin())
-            }
+            // The wallet the payment was confirmed on is asked again here, right
+            // before the broadcast; a throw propagates to the caller.
+            ensureStillOwned(origin, "sending it")
         }
         when (sdkResult) {
             is SdkWriteResult.Broadcast -> {
@@ -912,7 +882,6 @@ class SendCoinsTaskRunner @Inject constructor(
                 dashAddress,
                 amount.toCoin(),
                 emptyWallet = emptyWallet,
-                checkBalanceConditions = checkBalanceConditions,
                 originWallet = origin
             )
         } catch (t: Throwable) {
@@ -1040,62 +1009,6 @@ class SendCoinsTaskRunner @Inject constructor(
         session: WalletSession?,
         onTransactionCreated: (suspend (String) -> Unit)?
     ): TxInfo = sentTxInfo(payWithDashUrlTx(dashUri, serviceName, recovery, session, onTransactionCreated), walletData)
-
-    @Throws(LeftoverBalanceException::class)
-    override suspend fun sendCoinsSelected(
-        address: String,
-        amount: Dash,
-        selection: SpendSelection,
-        emptyWallet: Boolean,
-        checkBalanceConditions: Boolean,
-        lockSentOutputsTo: String?,
-        canSpendLockedOutputsTo: String?,
-        session: WalletSession?
-    ): TxInfo {
-        // Taken before anything here can suspend; refused at once if that wallet is already gone.
-        // With no session, the wallet installed now, resolved once so the selection and the send
-        // below are bound to the same one.
-        val origin = walletOf(session) ?: walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
-        val params = walletData.networkParameters
-        val dashjAddress = Address.fromBase58(params, address)
-        val selector = when (selection) {
-            is SpendSelection.Any -> null
-            is SpendSelection.ByAddress -> ByAddressCoinSelector(Address.fromBase58(params, selection.address))
-            is SpendSelection.ExactOutput -> {
-                val tx = origin.getTransaction(Sha256Hash.wrap(selection.txId))
-                    ?: throw IllegalArgumentException("unknown transaction: " + selection.txId)
-                ExactOutputsSelector(listOf(tx.getOutput(selection.outputIndex.toLong())))
-            }
-        }
-        val lockAddress = lockSentOutputsTo?.let { Address.fromBase58(params, it) }
-        val canSpendAddress = canSpendLockedOutputsTo?.let { Address.fromBase58(params, it) }
-        val tx = sendCoins(
-            dashjAddress,
-            amount.toCoin(),
-            selector,
-            emptyWallet,
-            checkBalanceConditions,
-            beforeSending = lockAddress?.let { la ->
-                Consumer<Transaction> { t -> lockOutputsPayingTo(t, la) }
-            },
-            canSendLockedOutput = canSpendAddress?.let { ca ->
-                Predicate<TransactionOutput> { it.scriptPubKey.getToAddress(params) == ca }
-            },
-            originWallet = origin
-        )
-        return tx.toTxInfo(walletData.transactionBag, params)
-    }
-
-    /** Locks the P2PKH outputs of [tx] paying [address] (the CrowdNode account-output locking). */
-    private fun lockOutputsPayingTo(tx: Transaction, address: Address) {
-        val params = walletData.networkParameters
-        tx.outputs.filter { output ->
-            ScriptPattern.isP2PKH(output.scriptPubKey) &&
-                Address.fromPubKeyHash(params, ScriptPattern.extractHashFromP2PKH(output.scriptPubKey)) == address
-        }.forEach { output ->
-            walletData.lockOutput(output.outPointFor)
-        }
-    }
 
     /**
      * Fetches a BIP70/BIP270 payment request from the given URL.
@@ -1293,16 +1206,6 @@ class SendCoinsTaskRunner @Inject constructor(
             // Fail fast BEFORE reserving inputs for a payment that could
             // never be submitted.
             throw InvalidPaymentRequestURL("Final payment intent URL is null")
-        }
-
-        // The same pre-send condition the dashj path enforces at commit
-        // time (checkBalanceConditions → the FIRST foreign output).
-        for ((addressBase58, amountDuffs) in recipients) {
-            val address = Address.fromString(NETWORK_PARAMETERS, addressBase58)
-            if (!wallet.isAddressMine(address)) {
-                walletData.checkSendingConditions(address, Coin.valueOf(amountDuffs))
-                break
-            }
         }
 
         // Ownership asked again under the SDK's funding hold, right before it selects: the
@@ -2191,11 +2094,9 @@ class SendCoinsTaskRunner @Inject constructor(
 
     private fun getMaxOutputCoinSelector() = MaxOutputAmountCoinSelector()
 
-    @Throws(LeftoverBalanceException::class)
     suspend fun sendCoins(
         sendRequest: SendRequest,
         txCompleted: Boolean = false,
-        checkBalanceConditions: Boolean = true,
         beforeSending: Consumer<Transaction>? = null,
         serviceName: String? = null,
         intendedRecipient: Address? = null,
@@ -2329,7 +2230,6 @@ class SendCoinsTaskRunner @Inject constructor(
                         wallet,
                         sendRequest,
                         txCompleted,
-                        checkBalanceConditions,
                         beforeSending,
                         serviceName,
                         watch,
@@ -2395,16 +2295,12 @@ class SendCoinsTaskRunner @Inject constructor(
         wallet: Wallet,
         sendRequest: SendRequest,
         txCompleted: Boolean,
-        checkBalanceConditions: Boolean,
         beforeSending: Consumer<Transaction>?,
         serviceName: String?,
         watch: Stopwatch,
         onBroadcast: ((txid: String?) -> Unit)?,
         onCommitting: () -> Unit
     ): Transaction {
-        if (checkBalanceConditions) {
-            checkBalanceConditions(wallet, sendRequest.tx)
-        }
         log.info("sending: {}", sendRequest)
         if (!txCompleted) {
             signSendRequest(wallet, sendRequest)
@@ -2467,23 +2363,6 @@ class SendCoinsTaskRunner @Inject constructor(
             }
         }
         return false
-    }
-
-    @Throws(LeftoverBalanceException::class)
-    private fun checkBalanceConditions(wallet: Wallet, tx: Transaction) {
-        for (output in tx.outputs) {
-            try {
-                if (!output.isMine(wallet)) {
-                    val script = output.scriptPubKey
-                    val address = script.getToAddress(
-                        de.schildbach.wallet.Constants.NETWORK_PARAMETERS,
-                        true
-                    )
-                    walletData.checkSendingConditions(address, output.value)
-                    return
-                }
-            } catch (ignored: ScriptException) { }
-        }
     }
 
     private fun buildOkHttpPaymentRequest(requestUrl: String): Request {

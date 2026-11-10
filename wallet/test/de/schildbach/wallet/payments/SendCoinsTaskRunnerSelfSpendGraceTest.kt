@@ -135,7 +135,7 @@ class SendCoinsTaskRunnerSelfSpendGraceTest {
     @Test
     fun successfulDashjSend_armsTheSelfSpendGrace() = runTest {
         // sign-and-commit branch (main UI / CrowdNode): sendCoinsOffline succeeds.
-        runner.sendCoins(sendRequest(), checkBalanceConditions = false)
+        runner.sendCoins(sendRequest())
 
         verify(exactly = 1) { l1ShadowSyncService.noteSelfSpendBroadcast() }
     }
@@ -145,7 +145,7 @@ class SendCoinsTaskRunnerSelfSpendGraceTest {
         // already-completed branch (BIP70): maybeCommitTx succeeds.
         every { wallet.maybeCommitTx(any()) } returns true
 
-        runner.sendCoins(sendRequest(), txCompleted = true, checkBalanceConditions = false)
+        runner.sendCoins(sendRequest(), txCompleted = true)
 
         verify(exactly = 1) { l1ShadowSyncService.noteSelfSpendBroadcast() }
     }
@@ -155,7 +155,7 @@ class SendCoinsTaskRunnerSelfSpendGraceTest {
         every { wallet.sendCoinsOffline(any()) } throws InsufficientMoneyException(Coin.COIN)
 
         try {
-            runner.sendCoins(sendRequest(), checkBalanceConditions = false)
+            runner.sendCoins(sendRequest())
             fail("expected InsufficientMoneyException")
         } catch (expected: InsufficientMoneyException) {
             // the send never committed — the grace must stay unarmed

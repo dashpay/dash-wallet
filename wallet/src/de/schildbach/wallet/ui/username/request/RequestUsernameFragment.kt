@@ -17,9 +17,12 @@ import com.google.android.material.textfield.TextInputLayout
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import org.dash.wallet.common.services.AuthenticationManager
+import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.ui.main.MainActivity
+import de.schildbach.wallet.ui.main.needsNewName
 import de.schildbach.wallet.database.entity.UsernameRequest
+import de.schildbach.wallet.service.platform.sdk.SdkTransparentUsernameCreation
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.username.CreateUsernameActions
 import de.schildbach.wallet.ui.username.UsernameType
@@ -70,16 +73,7 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
         
         // Get username type from arguments if provided. Consider error states
         usernameType = if (dashPayViewModel.createUsernameArgs?.actions == CreateUsernameActions.REUSE_TRANSACTION) {
-            val identityData = requestUserNameViewModel.identity
-            if (identityData != null && identityData.creationError) {
-                when {
-                    identityData.usernameSecondary != null && identityData.creationState == IdentityCreationState.USERNAME_REGISTERING -> UsernameType.Secondary
-                    identityData.creationState == IdentityCreationState.USERNAME_REGISTERING -> UsernameType.Primary
-                    else -> args.usernameType
-                }
-            } else {
-                args.usernameType
-            }
+            reuseEntryUsernameType(requestUserNameViewModel.identity, args.usernameType)
         } else {
             args.usernameType
         }
@@ -379,8 +373,9 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
                 // balance…" pending state that re-enables automatically at
                 // READY — never a stale-cache enabled button that lets a
                 // submit reach the SDK and bounce. L1 path is unaffected.
+                // ...and never while a submission is being routed: it was taken at the tap
                 binding.requestUsernameButton.isEnabled =
-                    buttonState == UsernameSubmitButtonState.Enabled
+                    buttonState == UsernameSubmitButtonState.Enabled && !it.usernameSubmitPreflight
                 binding.requestUsernameButton.setText(
                     if (buttonState == UsernameSubmitButtonState.PreparingShielded) {
                         R.string.username_preparing_shielded_balance
@@ -413,9 +408,12 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
                 // could not be typed in and back was the only way out. Derive it from
                 // the state each emission so it is restored the moment the submit
                 // ends.
-                binding.usernameInput.isFocusable = !it.usernameRequestSubmitting
-                binding.usernameInput.isFocusableInTouchMode = !it.usernameRequestSubmitting
-                if (it.usernameRequestSubmitting) {
+                // Also while a submission is being routed (its preflight): an edit then would not
+                // be what is submitted.
+                val inputLocked = it.usernameRequestSubmitting || it.usernameSubmitPreflight
+                binding.usernameInput.isFocusable = !inputLocked
+                binding.usernameInput.isFocusableInTouchMode = !inputLocked
+                if (inputLocked) {
                     hideKeyboard()
                 }
             } else {
@@ -540,7 +538,9 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
                 // keeps the two from racing / double-routing. Contested
                 // completions route to the More screen's voting tile instead
                 // of Home (see finishAfterCompletion).
-                if (!requestUserNameViewModel.uiState.value.usernameRequestSubmitting) {
+                // Nor while this session's submit is being routed: a name-only retry's start write
+                // moves the record before it is accepted, and finishing then could cancel it.
+                if (!requestUserNameViewModel.uiState.value.submissionUnderway) {
                     finishAfterCompletion()
                 }
             }
@@ -742,3 +742,34 @@ internal fun Fragment.finishUsernameCreationToCompletionRoute(
     }
     requireActivity().finish()
 }
+
+/**
+ * Which name a REUSE_TRANSACTION entry asks for, given the record it reuses. A failed name-only
+ * retry ([SdkTransparentUsernameCreation.NAME_ONLY_RETRY_ERROR]) always replaces the primary, even
+ * when the identity keeps a registered secondary, and so does a taken name on the primary's step
+ * (a dual request's primary rejected as a duplicate). Both are checked before the older heuristic,
+ * which reads "a secondary at USERNAME_REGISTERING with an error" as a failed secondary.
+ */
+internal fun reuseUsernameType(identityData: BlockchainIdentityData?, fallback: UsernameType): UsernameType {
+    if (identityData == null || !identityData.creationError) return fallback
+    return when {
+        SdkTransparentUsernameCreation.isNameOnlyRetryError(identityData.creationStateErrorMessage) -> UsernameType.Primary
+        // A taken name on the primary's own step: the primary is what was rejected (the SDK
+        // registers it first, the secondary has its own registering state), so it is replaced.
+        identityData.creationState == IdentityCreationState.USERNAME_REGISTERING &&
+            needsNewName(identityData.creationStateErrorMessage) -> UsernameType.Primary
+        identityData.usernameSecondary != null &&
+            identityData.creationState == IdentityCreationState.USERNAME_REGISTERING -> UsernameType.Secondary
+        identityData.creationState == IdentityCreationState.USERNAME_REGISTERING -> UsernameType.Primary
+        else -> fallback
+    }
+}
+
+/**
+ * The name a REUSE_TRANSACTION screen asks for: the instant-name screen ([requested] Secondary,
+ * reached from the confirmation of a replacement primary) always asks for the secondary; only the
+ * primary entry follows the reused record ([reuseUsernameType]). Letting the record's old error
+ * flip the instant screen to Primary made the typed instant name overwrite the replacement.
+ */
+internal fun reuseEntryUsernameType(identityData: BlockchainIdentityData?, requested: UsernameType): UsernameType =
+    if (requested == UsernameType.Secondary) UsernameType.Secondary else reuseUsernameType(identityData, requested)

@@ -152,4 +152,5 @@
     <string name="from_dash_wallet_on_this_device">이 기기의 대시 지갑으로부터</string>
     <string name="preposition_at">이곳에서</string>
     <string name="info">정보</string>
+    <string name="scan_qr">QR 코드 스캔</string>
 </resources>

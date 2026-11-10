@@ -415,6 +415,7 @@
     <string name="turned_off">Désactivé</string>
     <string name="coinjoin_mixing_transactions">Transactions de mélange</string>
     <string name="coinjoin_transaction_group">Ce sont des transactions de mélange.</string>
+    <string name="coinjoin_transaction_group_title">Pourquoi vois-je toutes ces transactions ?</string>
     <string name="intermediate">Intermédiaire</string>
     <string name="advanced">Avancé</string>
     <string name="intermediate_level_card_decs">Les utilisateurs avancés, ceux qui ont un très haut niveau d\'expertise technique, peuvent déterminer votre historique de transaction</string>
@@ -561,4 +562,6 @@
     <string name="dash_connect_confirm">Confirmer</string>
     <string name="dash_connect_testnet_only_heading">Disponible uniquement sur le testnet</string>
     <string name="dash_connect_testnet_only_message">La connexion DashConnect n\'est pas encore disponible sur le mainnet</string>
+    <string name="dash_connect_group_scope_changed">La portée de ce groupe a changé depuis votre dernière approbation, ou sa portée précédente n\'a pas été enregistrée. Vérifiez les membres et administrateurs actuels ci-dessous avant de continuer. Les clés enregistrées précédemment peuvent encore être actives ; l\'option Révoquer l\'accès reste disponible.</string>
+    <string name="dash_connect_group_scope_approve">J\'approuve la portée mise à jour du groupe affichée ci-dessus.</string>
     </resources>

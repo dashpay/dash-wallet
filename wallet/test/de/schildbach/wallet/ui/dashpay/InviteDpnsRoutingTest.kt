@@ -295,4 +295,12 @@ class InviteDpnsRoutingTest {
         // Distinct names — healthy dual record — still never trip.
         assertFalse(isDualPrimaryClobbered("brimoztest", "brimoztest3"))
     }
+
+    @Test
+    fun `an SDK-claimed invite leaves its verification link to the one SDK publisher`() {
+        // its name registered through the SDK, which recorded the obligation the
+        // VerifyLinkReconciler publishes: an inline publish here would create it twice
+        org.junit.Assert.assertFalse(publishesVerifyLinkInline(sdkClaimedInvite = true))
+        org.junit.Assert.assertTrue("the legacy dashj creation still publishes it", publishesVerifyLinkInline(sdkClaimedInvite = false))
+    }
 }

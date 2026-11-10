@@ -1485,9 +1485,8 @@ class SdkL1SendService internal constructor(
      *   engine decides the deliverable — but must still be positive.
      * @param beforeBroadcast invoked after ALL preflights pass and before
      *   ANY broadcast — immediately before the single broadcast attempt.
-     *   The call site's dashj-equivalent pre-send conditions
-     *   (leftover-balance check, which may throw
-     *   `LeftoverBalanceException`). A throw here propagates
+     *   The call site's dashj-equivalent pre-send conditions (such as
+     *   its check that the confirmed wallet is still installed). A throw here propagates
      *   unclassified, exactly as it would on the dashj path; nothing has
      *   been broadcast yet.
      */
@@ -1540,7 +1539,7 @@ class SdkL1SendService internal constructor(
         // Send-all guards and floor. Order matters:
         // 1. the app-locked-output guards (pre-everything, fail closed);
         // 2. beforeBroadcast() — the call site's pre-send conditions may
-        //    throw (LeftoverBalanceException), and a throw must leave
+        //    throw, and a throw must leave
         //    NOTHING broadcast;
         // 3. the reserve + floor reads. Every failure through step 3 is
         //    NotBroadcast by construction (the payment was never built),
@@ -1613,7 +1612,7 @@ class SdkL1SendService internal constructor(
             if (pendingPaymentInputsExposed()) {
                 return@withSharedOrNotBroadcast notBroadcast(operation, L1_PENDING_PAYMENT_UNPROTECTED_REASON, null)
             }
-            // Call-site pre-send conditions (may throw, e.g. LeftoverBalanceException; the
+            // Call-site pre-send conditions (may throw, e.g. the
             // caller's own check that the wallet it confirmed on is still installed) — under the
             // hold, which a wipe cancels and drains first, and deliberately outside the
             // classification try: nothing broadcast yet and the dashj path surfaces the same

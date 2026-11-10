@@ -54,6 +54,7 @@ object DatabaseModule {
                 AppDatabaseMigrations.migration21to22,
                 AppDatabaseMigrations.migration22to23
             )
+            .addCallback(AppDatabaseMigrations.removeCrowdNodeCacheRows)
             // destructive migrations are used from versions 1 to 11
             .fallbackToDestructiveMigration()
             .build()

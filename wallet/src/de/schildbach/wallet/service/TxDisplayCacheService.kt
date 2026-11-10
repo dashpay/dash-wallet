@@ -89,8 +89,6 @@ import de.schildbach.wallet.transactions.toTxInfo
 import org.dash.wallet.common.data.TxId
 import org.dash.wallet.common.transactions.TransactionWrapper
 import de.schildbach.wallet.transactions.batchAndFilterUpdates
-import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
-import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSetFactory
 import org.slf4j.LoggerFactory
 import java.time.Instant
 import java.time.LocalDate
@@ -181,7 +179,6 @@ class TxDisplayCacheService @Inject constructor(
 
     // Published on one serviceScope worker thread and read on others (the same-wallet
     // fast-path check, and tests polling across threads), so the write must be visible.
-    @Volatile private var crowdNodeWrapperFactory: FullCrowdNodeSignUpTxSetFactory? = null
     @Volatile private var coinJoinWrapperFactory: CoinJoinTxWrapperFactory? = null
 
     /**
@@ -590,7 +587,6 @@ class TxDisplayCacheService @Inject constructor(
                 txGroupCacheDao.deleteAll()
                 walletData.wallet?.let { wallet ->
                     coinJoinWrapperFactory = CoinJoinTxWrapperFactory(walletData.networkParameters, wallet as WalletEx)
-                    crowdNodeWrapperFactory = FullCrowdNodeSignUpTxSetFactory(walletData.networkId)
                 }
                 _currentPagingSource.value?.invalidate()
             }
@@ -909,12 +905,11 @@ class TxDisplayCacheService @Inject constructor(
             walletData.wallet?.let { wallet ->
                 val t0 = System.currentTimeMillis()
                 val cjFactory = CoinJoinTxWrapperFactory(walletData.networkParameters, wallet as WalletEx)
-                val cnFactory = FullCrowdNodeSignUpTxSetFactory(walletData.networkId)
 
                 val rawCount = wallet.getTransactions(true).size
                 val t1 = System.currentTimeMillis()
 
-                val wrapped = walletData.wrapAllTransactions(cnFactory, cjFactory)
+                val wrapped = walletData.wrapAllTransactions(cjFactory)
                 val t2 = System.currentTimeMillis()
 
                 wrappedTransactionList = wrapped.sortedByDescending { it.groupDate }
@@ -941,7 +936,6 @@ class TxDisplayCacheService @Inject constructor(
                 // same-wallet ones a wallet reset installs) to be matched by the fast path
                 // over this rebuild's rows, with no later re-hydration.
                 coinJoinWrapperFactory = cjFactory
-                crowdNodeWrapperFactory = cnFactory
 
                 persistGroupCache(wrapped)
                 updateDisplayCache(wrapped.toList(), filter.direction.toFilterFlag())
@@ -992,7 +986,6 @@ class TxDisplayCacheService @Inject constructor(
         val entries = wrappers.flatMap { wrapper ->
             val type = when (wrapper) {
                 is CoinJoinMixingTxSet     -> TxGroupCacheEntry.TYPE_COINJOIN
-                is FullCrowdNodeSignUpTxSet -> TxGroupCacheEntry.TYPE_CROWDNODE
                 else                       -> TxGroupCacheEntry.TYPE_SINGLE
             }
             wrapper.transactions.values
@@ -1014,7 +1007,6 @@ class TxDisplayCacheService @Inject constructor(
         val wallet = walletData.wallet ?: return
         val t0 = System.currentTimeMillis()
         val cjFactory = CoinJoinTxWrapperFactory(walletData.networkParameters, wallet as WalletEx)
-        val cnFactory = FullCrowdNodeSignUpTxSetFactory(walletData.networkId)
 
         val today = LocalDate.now().toString()
         val activeEntries = txGroupCacheDao.getActiveGroups(today)
@@ -1038,10 +1030,6 @@ class TxDisplayCacheService @Inject constructor(
                     txs.forEach { cjFactory.tryInclude(it.toTxInfo(wallet, walletData.networkParameters)) }
                     cjFactory.wrappers.find { it.id == groupId }
                 }
-                TxGroupCacheEntry.TYPE_CROWDNODE -> {
-                    txs.forEach { cnFactory.tryInclude(it.toTxInfo(wallet, walletData.networkParameters)) }
-                    cnFactory.wrappers.find { it.id == groupId }
-                }
                 else -> null
             }
             wrapper?.let { activeWrappers.add(it) }
@@ -1055,7 +1043,6 @@ class TxDisplayCacheService @Inject constructor(
         // rows — a cancellation before this point must leave the factories untouched
         // (see the comment above that check).
         coinJoinWrapperFactory = cjFactory
-        crowdNodeWrapperFactory = cnFactory
         log.info("initializeFactoriesFromCache: {} active groups loaded in {}ms",
             byGroup.size, System.currentTimeMillis() - t0)
     }
@@ -1071,7 +1058,6 @@ class TxDisplayCacheService @Inject constructor(
         // hydration would be skipped. Each caller dedupes groups within a call, so a
         // per-call factory loses nothing.
         val cjFactory = coinJoinWrapperFactory ?: CoinJoinTxWrapperFactory(walletData.networkParameters, wallet as WalletEx)
-        val cnFactory = crowdNodeWrapperFactory ?: FullCrowdNodeSignUpTxSetFactory(walletData.networkId)
 
         val entries = txGroupCacheDao.getGroupEntries(groupId)
         val txs = entries.sortedBy { it.sortOrder }.mapNotNull { row ->
@@ -1088,10 +1074,6 @@ class TxDisplayCacheService @Inject constructor(
             TxGroupCacheEntry.TYPE_COINJOIN -> {
                 txs.forEach { cjFactory.tryInclude(it.toTxInfo(wallet, walletData.networkParameters)) }
                 cjFactory.wrappers.find { it.id == groupId }
-            }
-            TxGroupCacheEntry.TYPE_CROWDNODE -> {
-                txs.forEach { cnFactory.tryInclude(it.toTxInfo(wallet, walletData.networkParameters)) }
-                cnFactory.wrappers.find { it.id == groupId }
             }
             else -> txs.firstOrNull()?.let { createSingleTxWrapper(it) }
         } ?: return null
@@ -1163,17 +1145,6 @@ class TxDisplayCacheService @Inject constructor(
                 }
 
                 if (!added) {
-                    val (cnIncluded, cnWrapper) = crowdNodeWrapperFactory?.tryInclude(txInfo) ?: (false to null)
-                    if (cnIncluded && cnWrapper != null) {
-                        if (mutableList.none { it.id == cnWrapper.id }) {
-                            mutableList.add(cnWrapper)
-                        }
-                        affectedWrappers.add(cnWrapper)
-                        added = true
-                    }
-                }
-
-                if (!added) {
                     val wrapper = createSingleTxWrapper(tx)
                     affectedWrappers.add(wrapper)
                     mutableList.add(wrapper)
@@ -1221,7 +1192,6 @@ class TxDisplayCacheService @Inject constructor(
         val groupEntries = affectedWrappers.flatMap { wrapper ->
             val type = when (wrapper) {
                 is CoinJoinMixingTxSet     -> TxGroupCacheEntry.TYPE_COINJOIN
-                is FullCrowdNodeSignUpTxSet -> TxGroupCacheEntry.TYPE_CROWDNODE
                 else                       -> TxGroupCacheEntry.TYPE_SINGLE
             }
             wrapper.transactions.values

@@ -46,7 +46,6 @@ import de.schildbach.wallet.transactions.dashjTx
 import de.schildbach.wallet.transactions.toTxInfo
 import org.dash.wallet.common.data.TxId
 import org.dash.wallet.common.transactions.TransactionWrapper
-import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
 import javax.inject.Inject
 import de.schildbach.wallet.util.toCoin
 
@@ -111,7 +110,6 @@ class TransactionGroupViewModel @Inject constructor(
         metadata: Map<TxId, PresentableTxMetadata>
     ) {
         val resourceMapper = when (transactionWrapper) {
-            is FullCrowdNodeSignUpTxSet -> CrowdNodeTxResourceMapper()
             is CoinJoinMixingTxSet -> CoinJoinTxResourceMapper()
             else -> TxResourceMapper()
         }

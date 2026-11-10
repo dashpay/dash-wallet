@@ -48,7 +48,7 @@ import org.dash.wallet.common.util.ResourceString
  */
 @Entity(tableName = "tx_display_cache")
 data class TxDisplayCacheEntry(
-    /** Unique row id: txId (hex) for individual transactions, groupId for CoinJoin/CrowdNode. */
+    /** Unique row id: txId (hex) for individual transactions, groupId for CoinJoin. */
     @PrimaryKey val rowId: String,
     /** Resolved display title (e.g. "Received", "CoinJoin mixing"). Never a resource ID. */
     val title: String,
@@ -62,12 +62,12 @@ data class TxDisplayCacheEntry(
     val statusText: String,
     /** User memo / payment comment. */
     val comment: String,
-    /** Number of underlying transactions (> 1 for CoinJoin/CrowdNode groups). */
+    /** Number of underlying transactions (> 1 for CoinJoin groups). */
     val transactionAmount: Int,
     /** Epoch-millis of the primary transaction's update time. Used for ORDER BY in paging query. */
     val time: Long,
     val hasErrors: Boolean,
-    /** Service name (e.g. "CrowdNode") or null for plain sends/receives. */
+    /** Service name (e.g. "uphold") or null for plain sends/receives. */
     val service: String?,
     /** [SwapOrderStatus] name of the DEX swap this tx funded, or null if it isn't a swap. */
     val swapStatus: String? = null,
@@ -115,7 +115,7 @@ data class TxDisplayCacheEntry(
         const val ICON_ERROR     = 3
         const val ICON_GIFT_CARD = 4
         const val ICON_COINJOIN  = 5
-        const val ICON_CROWDNODE = 6
+        // 6 was ICON_CROWDNODE; do not reuse
         const val ICON_CONVERT   = 7
 
         // ── Filter flag bitmask constants ────────────────────────────────────────────
@@ -147,7 +147,6 @@ data class TxDisplayCacheEntry(
                 R.drawable.ic_transaction_failed      -> ICON_ERROR
                 R.drawable.ic_gift_card_tx            -> ICON_GIFT_CARD
                 R.drawable.ic_coinjoin_mixing_group   -> ICON_COINJOIN
-                R.drawable.ic_crowdnode_logo          -> ICON_CROWDNODE
                 R.drawable.ic_convert_circle          -> ICON_CONVERT
                 else                                  -> ICON_RECEIVED
             }
@@ -201,7 +200,6 @@ data class TxDisplayCacheEntry(
             ICON_ERROR     -> R.drawable.ic_transaction_failed
             ICON_GIFT_CARD -> R.drawable.ic_gift_card_tx
             ICON_COINJOIN  -> R.drawable.ic_coinjoin_mixing_group
-            ICON_CROWDNODE -> R.drawable.ic_crowdnode_logo
             ICON_CONVERT   -> R.drawable.ic_convert_circle
             else           -> R.drawable.ic_transaction_received
         }

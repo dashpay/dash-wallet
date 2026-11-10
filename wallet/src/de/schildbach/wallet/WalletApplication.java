@@ -93,7 +93,6 @@ import de.schildbach.wallet.data.WalletData;
 import org.dash.wallet.common.data.OnboardingState;
 import org.dash.wallet.common.data.WalletUIConfig;
 import org.dash.wallet.common.integrations.ExchangeIntegrationProvider;
-import org.dash.wallet.common.services.LeftoverBalanceException;
 import org.dash.wallet.common.services.ReceiveAddressUnavailableException;
 import org.dash.wallet.common.services.TransactionMetadataProvider;
 import org.dash.wallet.common.services.analytics.AnalyticsService;
@@ -126,10 +125,7 @@ import de.schildbach.wallet.transactions.WalletBalanceObserver;
 import de.schildbach.wallet.ui.buy_sell.LiquidClient;
 import org.dash.wallet.integrations.uphold.api.UpholdClient;
 import org.dash.wallet.integrations.uphold.data.UpholdConstants;
-import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig;
-import de.schildbach.wallet.payments.BalanceConditionBridge;
 import de.schildbach.wallet.payments.MaxOutputAmountCoinSelector;
-import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeBalanceCondition;
 import org.dash.wallet.integrations.maya.api.SwapTrackingService;
 import org.dash.wallet.integrations.uphold.utils.UpholdConfig;
 import org.jetbrains.annotations.NotNull;
@@ -328,8 +324,6 @@ public class WalletApplication extends MultiDexApplication
     @Inject
     BlockchainStateDataProvider blockchainStateDataProvider;
     @Inject
-    CrowdNodeConfig crowdNodeConfig;
-    @Inject
     TransactionMetadataProvider transactionMetadataProvider;
     @Inject
     PlatformRepo platformRepo;
@@ -384,6 +378,8 @@ public class WalletApplication extends MultiDexApplication
     // The payment paths' wipe barrier: raised when Reset Wallet starts, lowered once the old wallet is gone.
     @Inject
     public de.schildbach.wallet.payments.FundingSelectionLock fundingSelectionLock;
+    @Inject
+    de.schildbach.wallet.ui.more.connections.DashConnectConfig dashConnectConfig;
     private WalletBalanceObserver walletBalanceObserver;
     @Inject
     public ExchangeIntegrationProvider exchangeIntegrationProvider;
@@ -1296,6 +1292,7 @@ public class WalletApplication extends MultiDexApplication
         afterLoadWallet();
         log.info("STARTUP finalizeInit: afterLoadWallet done in {}ms", System.currentTimeMillis() - _t); _t = System.currentTimeMillis();
         StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_AFTER_LOAD_WALLET_DONE, "AFTER_LOAD_WALLET_DONE");
+        removeCrowdNodeData();
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             createNotificationChannels();
@@ -2415,6 +2412,19 @@ public class WalletApplication extends MultiDexApplication
         });
     }
 
+    // CrowdNode was removed: drop its preferences, DataStore file and any pending sign-up work
+    private void removeCrowdNodeData() {
+        final boolean hadPrefs = config.removeObsoleteCrowdNodePrefs();
+        final File dataStore = new File(new File(getFilesDir(), Constants.Files.DATASTORE_PREFS_DIRECTORY),
+                "crowdnode.preferences_pb");
+        final boolean hadDataStore = dataStore.delete();
+
+        if (hadPrefs || hadDataStore) {
+            log.info("removing obsolete CrowdNode data");
+            WorkManager.getInstance(this).cancelUniqueWork("CrowdNode.WORK");
+        }
+    }
+
     /**
      * The Kotlin SDK's {@code WalletStorage} DataStore
      * ({@code org.dashfoundation.wallet.secrets}).
@@ -2466,7 +2476,9 @@ public class WalletApplication extends MultiDexApplication
 
             if (files != null) {
                 for (File file : files) {
-                    if (DATASTORE_FILES_KEPT_ON_WIPE.contains(file.getName())) {
+                    if (DATASTORE_FILES_KEPT_ON_WIPE.contains(file.getName())
+                            // This scoped authorization/replay audit must survive same-seed recovery.
+                            || de.schildbach.wallet.ui.more.connections.DashConnectConfig.AUDIT_FILE_NAME.equals(file.getName())) {
                         fileKept.add(file.getName());
                     } else if (!apiCleared.contains(file.getName())) {
                         if (file.delete()) {
@@ -3700,19 +3712,6 @@ public class WalletApplication extends MultiDexApplication
     @Override
     public void detachOnWalletWipedListener(@NonNull Function1<? super Continuation<? super Unit>,?> listener) {
         wipeListeners.remove(listener);
-    }
-
-    @Override
-    public void checkSendingConditions(
-            @Nullable Address address,
-            @NonNull Coin amount
-    ) throws LeftoverBalanceException {
-        BalanceConditionBridge.check(
-                getWalletBalance(),
-                address,
-                amount,
-                crowdNodeConfig
-        );
     }
 
     @Override
