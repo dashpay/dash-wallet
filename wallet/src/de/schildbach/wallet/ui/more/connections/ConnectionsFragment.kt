@@ -43,6 +43,7 @@ import de.schildbach.wallet.ui.compose_views.ConnectionDetailsDialog
 import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.ui.main.MainViewModel
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -57,6 +58,8 @@ class ConnectionsFragment : Fragment() {
     private val viewModel: ConnectionsViewModel by viewModels()
     // Hosts the shared create-username flow (and its mix-first prompt), as Join DashPay does.
     private val mainViewModel: MainViewModel by activityViewModels()
+    // A list row's Disconnect confirmation; one at a time, and dropped on lock like the details sheet's.
+    private var rowDisconnect: Job? = null
 
     private val scanLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -81,6 +84,8 @@ class ConnectionsFragment : Fragment() {
                         onBackClick = { findNavController().popBackStack() },
                         onScanClick = { launchScanner() },
                         onConnectionClick = viewModel::openConnection,
+                        onDisconnectClick = ::disconnectFromRow,
+                        onReconnectClick = { launchScanner() },
                         onDismissSharedKeys = viewModel::dismissSharedProfileKeys,
                         onRevokeSharedKeys = viewModel::revokeSharedProfileKeys,
                         onTabSelected = viewModel::selectTab,
@@ -142,6 +147,7 @@ class ConnectionsFragment : Fragment() {
                 combine(viewModel.uiState, lockState) { state, locked -> state to locked }.collect { (state, locked) ->
                     if (locked || !viewModel.isWalletUnlocked || state.recordsStatus == ConnectionRecordsStatus.UNAVAILABLE ||
                         state.recordsStatus == ConnectionRecordsStatus.NO_IDENTITY) {
+                        rowDisconnect?.cancel()
                         listOf(APPROVAL_DIALOG, PURCHASE_DIALOG, DETAILS_DIALOG).forEach { tag ->
                             (childFragmentManager.findFragmentByTag(tag) as? androidx.fragment.app.DialogFragment)?.let {
                                 it.dialog?.hide()
@@ -193,6 +199,12 @@ class ConnectionsFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         viewModel.refreshConnections()
+    }
+
+    /** An Active row's Disconnect does what its details sheet's does. */
+    private fun disconnectFromRow(connection: DAppConnection) {
+        if (rowDisconnect?.isActive == true) return
+        rowDisconnect = launchConnectionDisconnect(viewModel, connection)
     }
 
     internal fun launchScanner() {
