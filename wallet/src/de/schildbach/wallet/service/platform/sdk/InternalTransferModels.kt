@@ -80,14 +80,6 @@ fun internalTransferPairSupported(from: SendBalance, to: SendBalance): Boolean =
     SendBalance.IDENTITY -> to == SendBalance.CORE || to == SendBalance.PLATFORM
 }
 
-/**
- * The balances the From / To pickers list, in order. Identity only for a user known to have
- * an identity ([hasIdentity] true); unknown hides it. Shielded is always listed: when the
- * feature is off it shows disabled.
- */
-fun internalTransferBalances(hasIdentity: Boolean?): List<SendBalance> =
-    SendBalance.entries.filter { it != SendBalance.IDENTITY || hasIdentity == true }
-
 /** An ordered pair of own balances; [from] != [to] always. [toString] carries no amounts or ids. */
 data class InternalTransferPair(val from: SendBalance, val to: SendBalance) {
     init {
@@ -125,7 +117,3 @@ fun defaultInternalTransferPair(shieldedEnabled: Boolean, hasIdentity: Boolean):
             else -> SendBalance.PLATFORM
         }
     )
-
-/** Whether a transfer [from] → [to] involves a ~30 s shielded proof. */
-fun internalTransferHasShieldedLeg(from: SendBalance, to: SendBalance): Boolean =
-    from == SendBalance.SHIELDED || to == SendBalance.SHIELDED

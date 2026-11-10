@@ -81,7 +81,7 @@ class InternalTransferViewModelTest {
         override fun observeHasIdentity(): Flow<Boolean?> = hasIdentity
         override fun observeShieldedEnabled(): Flow<Boolean?> = shielded
         override fun currentWalletIdOrNull(): String? = walletId
-        override suspend fun estimateFee(from: SendBalance, to: SendBalance, amount: Dash) = fee
+        override suspend fun estimateFee(from: SendBalance, to: SendBalance) = fee
         override suspend fun maxSendable(from: SendBalance, to: SendBalance): Dash? = max[from to to]
         override suspend fun transfer(
             from: SendBalance,

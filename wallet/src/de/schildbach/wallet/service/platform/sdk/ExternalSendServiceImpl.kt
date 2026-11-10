@@ -43,7 +43,6 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.withContext
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.payments.parsers.AddressNetwork
@@ -53,6 +52,7 @@ import org.dash.wallet.common.services.PaymentSubmissionPendingException
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.WalletSession
 import org.dash.wallet.common.util.readRetryDelayMs
+import org.dash.wallet.common.util.retryReadErrors
 import org.dashfoundation.dashsdk.credits.FundingInput
 import org.slf4j.LoggerFactory
 import java.util.UUID
@@ -261,24 +261,14 @@ internal fun shieldPoolFeeDuffs(shieldFeeCredits: Long): Long =
     Math.addExact(ceilCreditsToDuffs(shieldFeeCredits), ShieldedBalanceServiceImpl.ASSET_LOCK_BASE_COST_DUFFS)
 
 /**
- * Keep a live observation alive across read failures: on a (non-cancellation) [Exception]
- * emit [unknown] and re-subscribe after [retryDelayMs] (attempt counted from 0) — never
- * complete on a transient error. A [Throwable] that is not an [Exception] is rethrown.
+ * The [retryReadErrors] `onError` for an external-send observation: logs that [what] is
+ * unreadable (so unknown) and when it is re-read ([retryDelayMs] of the attempt).
  */
-internal fun <T> Flow<T>.retryReadErrors(
+internal fun logReadRetry(
     what: String,
-    unknown: T,
     retryDelayMs: (Long) -> Long = ::readRetryDelayMs
-): Flow<T> = retryWhen { cause, attempt ->
-    if (cause is CancellationException || cause !is Exception) {
-        false
-    } else {
-        val delayMs = retryDelayMs(attempt)
-        retryLog.warn("external send: {} unreadable; unknown, retrying in {} ms", what, delayMs, cause)
-        emit(unknown)
-        delay(delayMs)
-        true
-    }
+): (Exception, Long) -> Unit = { cause, attempt ->
+    retryLog.warn("external send: {} unreadable; unknown, retrying in {} ms", what, retryDelayMs(attempt), cause)
 }
 
 /**
@@ -289,6 +279,29 @@ internal fun ownRegisteredIdentity(id: String?, state: String?): String? {
     val creation = IdentityCreationState.valueOf(state ?: IdentityCreationState.NONE.name)
     return id?.takeIf { it.isNotBlank() && creation >= IdentityCreationState.IDENTITY_REGISTERED }
 }
+
+/**
+ * [ownRegisteredIdentity] of the stored identity record, error-preserving: throws when it is
+ * unreadable. Shared by the External Send and the internal transfer sources.
+ */
+internal suspend fun BlockchainIdentityConfig.ownIdentityIdOrThrow(): String? = ownRegisteredIdentity(
+    getPreservingErrors(BlockchainIdentityConfig.IDENTITY_ID),
+    getPreservingErrors(BlockchainIdentityConfig.CREATION_STATE)
+)
+
+/** `USE_KOTLIN_SDK_SHIELDED`, error-preserving (absent = off): throws when unreadable. */
+internal suspend fun DashPayConfig.shieldedEnabledOrThrow(): Boolean =
+    getPreservingErrors(DashPayConfig.USE_KOTLIN_SDK_SHIELDED) == true
+
+/** The started SDK's wallet manager (starts the SDK first); throws when it is missing. */
+internal suspend fun DashSdkService.startedWalletManager(): org.dashfoundation.dashsdk.wallet.PlatformWalletManager {
+    ensureStarted()
+    return checkNotNull(walletManagerOrNull()) { "SDK wallet manager missing after ensureStarted()" }
+}
+
+/** The SDK wallet bound now: the single loaded one, null when none (or not exactly one) is. */
+internal suspend fun DashSdkService.boundWalletIdOrNull(): String? =
+    startedWalletManager().wallets.value.keys.singleOrNull()
 
 private val retryLog = LoggerFactory.getLogger("de.schildbach.wallet.service.platform.sdk.ExternalSendRetry")
 
@@ -490,10 +503,8 @@ internal class DashSdkExternalSendSource(
     private val fundingGate: PendingPaymentFundingGate
 ) : ExternalSendSource {
 
-    private suspend fun manager(): org.dashfoundation.dashsdk.wallet.PlatformWalletManager {
-        sdkService.ensureStarted()
-        return checkNotNull(sdkService.walletManagerOrNull()) { "SDK wallet manager missing after ensureStarted()" }
-    }
+    private suspend fun manager(): org.dashfoundation.dashsdk.wallet.PlatformWalletManager =
+        sdkService.startedWalletManager()
 
     /** The PINNED wallet — never "whichever is current". */
     private suspend fun wallet(walletIdHex: String): org.dashfoundation.dashsdk.wallet.ManagedPlatformWallet =
@@ -501,28 +512,25 @@ internal class DashSdkExternalSendSource(
 
     override fun currentCoreSession(): WalletSession? = sendPaymentService.currentWalletSession()
 
-    override suspend fun boundWalletIdOrNull(): String? = manager().wallets.value.keys.singleOrNull()
+    override suspend fun boundWalletIdOrNull(): String? = sdkService.boundWalletIdOrNull()
 
     override fun currentBoundWalletIdOrNull(): String? = sdkService.loadedWalletIds().singleOrNull()
 
     override suspend fun cutoverCommittedOrThrow(): Boolean = sdkL1SendService.cutoverCommittedOrThrow()
 
-    override suspend fun shieldedEnabledOrThrow(): Boolean =
-        dashPayConfig.getPreservingErrors(DashPayConfig.USE_KOTLIN_SDK_SHIELDED) == true
+    override suspend fun shieldedEnabledOrThrow(): Boolean = dashPayConfig.shieldedEnabledOrThrow()
 
-    override suspend fun ownIdentityIdOrThrow(): String? = ownIdentity(
-        identityConfig.getPreservingErrors(BlockchainIdentityConfig.IDENTITY_ID),
-        identityConfig.getPreservingErrors(BlockchainIdentityConfig.CREATION_STATE)
-    )
+    override suspend fun ownIdentityIdOrThrow(): String? = identityConfig.ownIdentityIdOrThrow()
 
     override fun observeOwnIdentityId(): Flow<Result<String?>> =
         combine(
             identityConfig.observePreservingErrors(BlockchainIdentityConfig.IDENTITY_ID),
             identityConfig.observePreservingErrors(BlockchainIdentityConfig.CREATION_STATE)
-        ) { id, state -> Result.success(ownIdentity(id, state)) }
-            .retryReadErrors("identity record", Result.failure(IllegalStateException("identity record unreadable")))
-
-    private fun ownIdentity(id: String?, state: String?): String? = ownRegisteredIdentity(id, state)
+        ) { id, state -> Result.success(ownRegisteredIdentity(id, state)) }
+            .retryReadErrors(
+                Result.failure(IllegalStateException("identity record unreadable")),
+                onError = logReadRetry("identity record")
+            )
 
     override suspend fun managedIdentityIds(walletIdHex: String): List<ByteArray> =
         wallet(walletIdHex).inMemoryIdentityStates().filter { !it.watched }.map { it.identityId }
@@ -549,6 +557,8 @@ internal class DashSdkExternalSendSource(
 
     override fun observeShieldedBalance(): Flow<Dash?> =
         flow { emitAll(dashPayConfig.observePreservingErrors(DashPayConfig.USE_KOTLIN_SDK_SHIELDED)) }
+            // Any other DashPayConfig write re-emits the flag; don't restart the balance feeds for it.
+            .distinctUntilChanged()
             .flatMapLatest { enabled ->
                 if (enabled != true) {
                     flowOf(null)
@@ -562,7 +572,7 @@ internal class DashSdkExternalSendSource(
                     }
                 }
             }
-            .retryReadErrors("shielded balance", null)
+            .retryReadErrors(null, onError = logReadRetry("shielded balance"))
 
     override suspend fun platformAddressBalances(walletIdHex: String): List<FundingInput> =
         wallet(walletIdHex).addressesWithBalances()
@@ -853,7 +863,9 @@ class ExternalSendServiceImpl internal constructor(
                 .fold(0L) { acc, input -> Math.addExact(acc, input.credits) }
             creditsToDash(credits)
         }
-        SendBalance.IDENTITY -> this.source.observeOwnIdentityId().flatMapLatest { own ->
+        // distinctUntilChanged: an unrelated config write re-emits the same identity, which
+        // would otherwise restart the poll and re-fetch the balance at once.
+        SendBalance.IDENTITY -> this.source.observeOwnIdentityId().distinctUntilChanged().flatMapLatest { own ->
             val id = own.getOrNull()
             if (own.isFailure || id == null) {
                 flowOf(null)
@@ -861,7 +873,7 @@ class ExternalSendServiceImpl internal constructor(
                 polled { _ -> this.source.identityBalanceCredits(id)?.takeIf { it >= 0 }?.let(::creditsToDash) }
             }
         }
-    }.retryReadErrors("$source balance", null, retryDelayMs).distinctUntilChanged()
+    }.retryReadErrors(null, retryDelayMs, logReadRetry("$source balance", retryDelayMs)).distinctUntilChanged()
 
     /** Poll [read] (null on failure) on IO every [balancePollMs] while collected. */
     private fun polled(read: suspend (walletIdHex: String) -> Dash?): Flow<Dash?> = flow {
@@ -882,7 +894,7 @@ class ExternalSendServiceImpl internal constructor(
     override fun observeHasIdentity(): Flow<Boolean?> =
         source.observeOwnIdentityId()
             .map<Result<String?>, Boolean?> { result -> if (result.isFailure) null else result.getOrNull() != null }
-            .retryReadErrors("identity record", null, retryDelayMs)
+            .retryReadErrors(null, retryDelayMs, logReadRetry("identity record", retryDelayMs))
             .distinctUntilChanged()
 
     override fun currentWalletIdOrNull(): String? = try {
@@ -931,14 +943,7 @@ class ExternalSendServiceImpl internal constructor(
         return IdentityResolution.Found(username)
     }
 
-    override suspend fun estimateFee(source: SendBalance, destination: SendDestination, amount: Dash): FeeEstimate? =
-        estimateFeeForPair(source, balanceKindOf(destination), amount)
-
-    override suspend fun estimateFeeForPair(
-        source: SendBalance,
-        destinationKind: SendBalance,
-        amount: Dash
-    ): FeeEstimate? =
+    override suspend fun estimateFee(source: SendBalance, destinationKind: SendBalance): FeeEstimate? =
         try {
             withContext(ioDispatcher) { estimateFeeInner(source, destinationKind) }
         } catch (e: CancellationException) {
@@ -967,9 +972,9 @@ class ExternalSendServiceImpl internal constructor(
      *   fee of the asset unlock comes out of the amount on top; Platform/Identity → Shielded
      *   add the shielded compute fee to the metered one.)
      */
-    private suspend fun estimateFeeInner(source: SendBalance, destination: SendBalance): FeeEstimate? =
+    private suspend fun estimateFeeInner(source: SendBalance, destinationKind: SendBalance): FeeEstimate? =
         when (source) {
-            SendBalance.CORE -> when (destination) {
+            SendBalance.CORE -> when (destinationKind) {
                 SendBalance.CORE -> FeeEstimate(Dash(coreSendFeeReserveDuffs()), exact = false)
                 SendBalance.SHIELDED -> this.source.shieldedFeeCredits(ShieldedFeeKind.TRANSFER)?.let {
                     FeeEstimate(Dash(shieldPoolFeeDuffs(it)), exact = false)
@@ -979,7 +984,7 @@ class ExternalSendServiceImpl internal constructor(
                 }
                 SendBalance.IDENTITY -> null
             }
-            SendBalance.SHIELDED -> this.source.shieldedFeeCredits(shieldedKindFor(destination))?.let {
+            SendBalance.SHIELDED -> this.source.shieldedFeeCredits(shieldedKindFor(destinationKind))?.let {
                 FeeEstimate(Dash(ceilCreditsToDuffs(it)), exact = false)
             }
             SendBalance.PLATFORM, SendBalance.IDENTITY -> null
@@ -998,13 +1003,9 @@ class ExternalSendServiceImpl internal constructor(
      *   retries once with the exact deficit the note selection reports.
      * - Everything else: null (no pre-send fee figure).
      */
-    override suspend fun maxSendable(source: SendBalance, destination: SendDestination): Dash? =
-        maxSendableForPair(source, balanceKindOf(destination))
-
-    override suspend fun maxSendableForPair(source: SendBalance, destinationKind: SendBalance): Dash? = try {
-        val destination = destinationKind
+    override suspend fun maxSendable(source: SendBalance, destinationKind: SendBalance): Dash? = try {
         when (source) {
-            SendBalance.CORE -> when (destination) {
+            SendBalance.CORE -> when (destinationKind) {
                 SendBalance.CORE -> withContext(ioDispatcher) { coreToCoreMaxDuffs() }?.let(::Dash)
                 SendBalance.SHIELDED -> withContext(ioDispatcher) { coreToShieldedMaxDuffs() }?.let(::Dash)
                 SendBalance.PLATFORM -> withContext(ioDispatcher) { coreToPlatformMaxDuffsOrNull() }?.let(::Dash)
@@ -1013,7 +1014,7 @@ class ExternalSendServiceImpl internal constructor(
             SendBalance.SHIELDED -> {
                 val balance = this.source.observeShieldedBalance().first()
                 val feeCredits = withContext(ioDispatcher) {
-                    this@ExternalSendServiceImpl.source.shieldedFeeCredits(shieldedKindFor(destination))
+                    this@ExternalSendServiceImpl.source.shieldedFeeCredits(shieldedKindFor(destinationKind))
                 }
                 if (balance == null || feeCredits == null) {
                     null
@@ -1601,10 +1602,7 @@ class ExternalSendServiceImpl internal constructor(
                 result = attempt(adjustment.adjustedAmount)
             }
         }
-        return when (result) {
-            is SdkWriteResult.Broadcast -> ExternalSendResult.Sent(null)
-            else -> mapWrite(pair, result)
-        }
+        return mapWrite(pair, result)
     }
 
     private suspend fun sendFromPlatform(
@@ -1735,12 +1733,8 @@ class ExternalSendServiceImpl internal constructor(
             // A native-boundary failure before the call ran (e.g. UnsatisfiedLinkError).
             SdkWriteResult.NotBroadcast("native library unavailable", e)
         }
-        return if (result is SdkWriteResult.Broadcast) {
-            log.info("external send {}: sent", pair)
-            ExternalSendResult.Sent(null)
-        } else {
-            mapWrite(pair, result)
-        }
+        if (result is SdkWriteResult.Broadcast) log.info("external send {}: sent", pair)
+        return mapWrite(pair, result)
     }
 
     private fun mapWrite(pair: String, result: SdkWriteResult<*>): ExternalSendResult = when (result) {
@@ -1801,7 +1795,7 @@ class ExternalSendServiceImpl internal constructor(
             is SendDestination.Identity -> "Identity"
         }
 
-        private fun shieldedKindFor(destination: SendBalance): ShieldedFeeKind = when (destination) {
+        private fun shieldedKindFor(destinationKind: SendBalance): ShieldedFeeKind = when (destinationKind) {
             SendBalance.CORE -> ShieldedFeeKind.WITHDRAWAL
             SendBalance.SHIELDED -> ShieldedFeeKind.TRANSFER
             SendBalance.PLATFORM -> ShieldedFeeKind.UNSHIELD

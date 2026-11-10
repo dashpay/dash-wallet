@@ -22,14 +22,13 @@ import androidx.datastore.core.DataMigration
 import androidx.datastore.preferences.SharedPreferencesMigration
 import androidx.datastore.preferences.core.*
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.readRetryDelayMs
+import org.dash.wallet.common.util.retryReadErrors
 import javax.inject.Inject
 import javax.inject.Singleton
 import androidx.core.content.edit
@@ -102,19 +101,17 @@ private val advancedModeLog = org.slf4j.LoggerFactory.getLogger("WalletUIConfig.
 
 /**
  * The saved Advanced mode value as a flow that never completes on a failed read:
- * an error emits false (basic mode) and re-subscribes to [source] after
+ * an [Exception] emits false (basic mode) and re-subscribes to [source] after
  * [retryDelayMs], so a save made once storage recovers still reaches collectors.
+ * Cancellation and [Error]s are not retried; they propagate. See [retryReadErrors].
  */
 fun advancedModeFlow(
     source: Flow<Boolean?>,
     retryDelayMs: (Long) -> Long = ::readRetryDelayMs
 ): Flow<Boolean> = source
     .map { it ?: false }
-    .retryWhen { e, attempt ->
+    .retryReadErrors(false, retryDelayMs) { e, attempt ->
         advancedModeLog.warn("advanced mode read failed (attempt {})", attempt, e)
-        emit(false)
-        delay(retryDelayMs(attempt))
-        true
     }
 
 class ExchangeCurrencyMigration(

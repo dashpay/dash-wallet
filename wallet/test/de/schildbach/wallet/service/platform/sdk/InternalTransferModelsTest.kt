@@ -70,9 +70,9 @@ class InternalTransferModelsTest {
 
     @Test
     fun `identity is listed only for a user known to have one`() {
-        assertEquals(listOf(CORE, SHIELDED, PLATFORM, IDENTITY), internalTransferBalances(true))
-        assertEquals(listOf(CORE, SHIELDED, PLATFORM), internalTransferBalances(false))
-        assertEquals(listOf(CORE, SHIELDED, PLATFORM), internalTransferBalances(null))
+        assertEquals(listOf(CORE, SHIELDED, PLATFORM, IDENTITY), pickerBalances(true))
+        assertEquals(listOf(CORE, SHIELDED, PLATFORM), pickerBalances(false))
+        assertEquals(listOf(CORE, SHIELDED, PLATFORM), pickerBalances(null))
     }
 
     @Test
@@ -109,8 +109,8 @@ class InternalTransferModelsTest {
 
     @Test
     fun `shielded leg`() {
-        assertTrue(internalTransferHasShieldedLeg(SHIELDED, CORE))
-        assertTrue(internalTransferHasShieldedLeg(PLATFORM, SHIELDED))
-        assertFalse(internalTransferHasShieldedLeg(IDENTITY, PLATFORM))
+        assertTrue(hasShieldedLeg(SHIELDED, CORE))
+        assertTrue(hasShieldedLeg(PLATFORM, SHIELDED))
+        assertFalse(hasShieldedLeg(IDENTITY, PLATFORM))
     }
 }

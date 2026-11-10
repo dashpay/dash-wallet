@@ -32,6 +32,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.util.readRetryDelayMs
+import org.dash.wallet.common.util.retryReadErrors
 import org.slf4j.LoggerFactory
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
@@ -89,22 +90,14 @@ internal class DashSdkInternalTransferSource(
 
     override suspend fun cutoverCommittedOrThrow(): Boolean = sdkL1SendService.cutoverCommittedOrThrow()
 
-    override suspend fun shieldedEnabledOrThrow(): Boolean =
-        dashPayConfig.getPreservingErrors(DashPayConfig.USE_KOTLIN_SDK_SHIELDED) == true
+    override suspend fun shieldedEnabledOrThrow(): Boolean = dashPayConfig.shieldedEnabledOrThrow()
 
     override fun observeShieldedFlag(): Flow<Boolean?> =
         flow { emitAll(dashPayConfig.observePreservingErrors(DashPayConfig.USE_KOTLIN_SDK_SHIELDED)) }
 
-    override suspend fun boundWalletIdOrNull(): String? {
-        sdkService.ensureStarted()
-        val manager = checkNotNull(sdkService.walletManagerOrNull()) { "SDK wallet manager missing after ensureStarted()" }
-        return manager.wallets.value.keys.singleOrNull()
-    }
+    override suspend fun boundWalletIdOrNull(): String? = sdkService.boundWalletIdOrNull()
 
-    override suspend fun ownIdentityIdOrThrow(): String? = ownRegisteredIdentity(
-        identityConfig.getPreservingErrors(BlockchainIdentityConfig.IDENTITY_ID),
-        identityConfig.getPreservingErrors(BlockchainIdentityConfig.CREATION_STATE)
-    )
+    override suspend fun ownIdentityIdOrThrow(): String? = identityConfig.ownIdentityIdOrThrow()
 
     override fun unadvertisedCoreAddress(): String = walletData.unadvertisedDestinationLive().toBase58()
 
@@ -115,13 +108,13 @@ internal class DashSdkInternalTransferSource(
         shieldedBalanceService.estimateShieldedFeeCredits(kind)
 
     override suspend fun shieldFromWallet(amount: Dash, walletIdHex: String) =
-        shieldedBalanceService.shieldFromWalletPinned(amount, walletIdHex)
+        shieldedBalanceService.shieldFromWallet(amount, walletIdHex)
 
     override suspend fun shieldFromCredits(amount: Dash, walletIdHex: String) =
-        shieldedBalanceService.shieldFromCreditsPinned(amount, walletIdHex)
+        shieldedBalanceService.shieldFromCredits(amount, walletIdHex)
 
     override suspend fun unshieldToCredits(amount: Dash, walletIdHex: String) =
-        shieldedBalanceService.unshieldToCreditsPinned(amount, walletIdHex)
+        shieldedBalanceService.unshieldToCredits(amount, walletIdHex)
 }
 
 /**
@@ -130,7 +123,7 @@ internal class DashSdkInternalTransferSource(
  * classification apply unchanged) or one of [ShieldedBalanceService]'s pinned self routes.
  *
  * Routes (the 10 supported pairs of [internalTransferSupport]):
- * - Core → Shielded: [ShieldedBalanceService.shieldFromWalletPinned] of `amount + pool fee`
+ * - Core → Shielded: [ShieldedBalanceService.shieldFromWallet] (pinned) of `amount + pool fee`
  *   ([shieldPoolFeeDuffs]), so the own shielded balance receives the confirmed amount (the
  *   External Send's Core → Shielded convention). A lock that went out with the shield still
  *   pending is [ExternalSendResult.CompletesAutomatically].
@@ -141,9 +134,9 @@ internal class DashSdkInternalTransferSource(
  *   Not sent. Platform → Core is the External Send's partial withdrawal: [amount] is the gross
  *   withdrawal (the asset unlock's Core fee comes out of it) and one below the withdrawal
  *   minimum is refused there before anything is signed.
- * - Shielded → Platform: [ShieldedBalanceService.unshieldToCreditsPinned] (own Platform address),
+ * - Shielded → Platform: [ShieldedBalanceService.unshieldToCredits] (pinned; own Platform address),
  *   with the shielded Max fee retry.
- * - Platform → Shielded: [ShieldedBalanceService.shieldFromCreditsPinned].
+ * - Platform → Shielded: [ShieldedBalanceService.shieldFromCredits] (pinned).
  * - Identity → Platform: [ExternalSendService.send] to the confirmed wallet's own Platform address
  *   ([ShieldedBalanceService.ownPlatformAddressOf], no shielded flag needed); unavailable = Not sent.
  *
@@ -188,23 +181,23 @@ class InternalTransferServiceImpl internal constructor(
     override fun observeShieldedEnabled(): Flow<Boolean?> =
         source.observeShieldedFlag()
             .map<Boolean?, Boolean?> { it == true }
-            .retryReadErrors("shielded flag", null, retryDelayMs)
+            .retryReadErrors(null, retryDelayMs, logReadRetry("shielded flag", retryDelayMs))
             .distinctUntilChanged()
 
     override fun currentWalletIdOrNull(): String? = externalSendService.currentWalletIdOrNull()
 
     /**
      * Every supported pair's figure depends only on the pair, so the External Send's per-pair
-     * estimate applies ([ExternalSendService.estimateFeeForPair]): Core → Shielded the shield
+     * estimate applies ([ExternalSendService.estimateFee]): Core → Shielded the shield
      * pool fee (on top), Shielded → * the flat single-note pool fee; Core → Identity,
      * Platform → * and Identity → * are metered by Rust at execution, so null.
      */
-    override suspend fun estimateFee(from: SendBalance, to: SendBalance, amount: Dash): FeeEstimate? =
-        if (internalTransferPairSupported(from, to)) externalSendService.estimateFeeForPair(from, to, amount) else null
+    override suspend fun estimateFee(from: SendBalance, to: SendBalance): FeeEstimate? =
+        if (internalTransferPairSupported(from, to)) externalSendService.estimateFee(from, to) else null
 
-    /** [ExternalSendService.maxSendableForPair] for a supported pair (null for metered pairs). */
+    /** [ExternalSendService.maxSendable] for a supported pair (null for metered pairs). */
     override suspend fun maxSendable(from: SendBalance, to: SendBalance): Dash? =
-        if (internalTransferPairSupported(from, to)) externalSendService.maxSendableForPair(from, to) else null
+        if (internalTransferPairSupported(from, to)) externalSendService.maxSendable(from, to) else null
 
     // ── Transfer ──────────────────────────────────────────────────────
 
@@ -250,7 +243,7 @@ class InternalTransferServiceImpl internal constructor(
         val committed = readOrNull("cutover state") { source.cutoverCommittedOrThrow() }
             ?: return notSent(pair, NotSentReason.GENERIC, "cutover state unreadable")
         if (!committed) return notSent(pair, NotSentReason.NOT_SUPPORTED, "cutover not committed")
-        val shieldedEnabled = if (internalTransferHasShieldedLeg(from, to)) {
+        val shieldedEnabled = if (hasShieldedLeg(from, to)) {
             readOrNull("shielded flag") { source.shieldedEnabledOrThrow() }
                 ?: return notSent(pair, NotSentReason.GENERIC, "shielded flag unreadable")
         } else {

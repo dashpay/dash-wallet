@@ -76,13 +76,9 @@ class InternalTransferServiceImplTest {
         override fun currentWalletIdOrNull(): String? = walletId
         override suspend fun isOwnIdentity(identityIdBase58: String): Boolean? = true
         override suspend fun resolveIdentity(identityIdBase58: String) = IdentityResolution.Found(null)
-        override suspend fun estimateFee(source: SendBalance, destination: SendDestination, amount: Dash) =
-            error("internal transfers use the per-pair estimate")
-        override suspend fun maxSendable(source: SendBalance, destination: SendDestination): Dash? =
-            error("internal transfers use the per-pair max")
-        override suspend fun estimateFeeForPair(source: SendBalance, destinationKind: SendBalance, amount: Dash) =
+        override suspend fun estimateFee(source: SendBalance, destinationKind: SendBalance) =
             pairFees[source to destinationKind]
-        override suspend fun maxSendableForPair(source: SendBalance, destinationKind: SendBalance) =
+        override suspend fun maxSendable(source: SendBalance, destinationKind: SendBalance) =
             pairMax[source to destinationKind]
         override suspend fun send(
             source: SendBalance,
@@ -365,17 +361,17 @@ class InternalTransferServiceImplTest {
         external.pairMax[SHIELDED to CORE] = Dash(5000)
         external.pairFees[CORE to PLATFORM] = fee
         external.pairMax[CORE to PLATFORM] = Dash(5000)
-        assertEquals(fee, service.estimateFee(SHIELDED, CORE, amount))
+        assertEquals(fee, service.estimateFee(SHIELDED, CORE))
         assertEquals(Dash(5000), service.maxSendable(SHIELDED, CORE))
-        assertNull(service.estimateFee(CORE, PLATFORM, amount))
+        assertNull(service.estimateFee(CORE, PLATFORM))
         assertNull(service.maxSendable(CORE, PLATFORM))
-        assertNull(service.estimateFee(PLATFORM, SHIELDED, amount))
+        assertNull(service.estimateFee(PLATFORM, SHIELDED))
         // Platform → Core asks the External Send's own figures (null today: metered by Rust).
-        assertNull(service.estimateFee(PLATFORM, CORE, amount))
+        assertNull(service.estimateFee(PLATFORM, CORE))
         assertNull(service.maxSendable(PLATFORM, CORE))
         external.pairFees[PLATFORM to CORE] = fee
         external.pairMax[PLATFORM to CORE] = Dash(5000)
-        assertEquals(fee, service.estimateFee(PLATFORM, CORE, amount))
+        assertEquals(fee, service.estimateFee(PLATFORM, CORE))
         assertEquals(Dash(5000), service.maxSendable(PLATFORM, CORE))
     }
 

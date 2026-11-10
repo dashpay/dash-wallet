@@ -23,6 +23,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.fragment.app.Fragment
@@ -72,9 +73,10 @@ class InternalTransferFragment : Fragment() {
                     BackHandler(enabled = selectedPage && (uiState.picker != null || uiState.confirm != null)) {
                         viewModel.onBack()
                     }
-                    InternalTransferScreen(
-                        uiState = uiState,
-                        actions = InternalTransferActions(
+                    // Built once: a new instance per uiState emission (every key press) would
+                    // make every child taking it recompose.
+                    val actions = remember {
+                        InternalTransferActions(
                             onKeyInput = viewModel::onKeyInput,
                             onCurrencySelected = viewModel::onCurrencySelected,
                             onMaxClick = viewModel::onMaxClick,
@@ -88,7 +90,8 @@ class InternalTransferFragment : Fragment() {
                             onHideSending = viewModel::onHideSending,
                             onResultClosed = viewModel::onResultAcknowledged
                         )
-                    )
+                    }
+                    InternalTransferScreen(uiState = uiState, actions = actions)
                 }
             }
         }

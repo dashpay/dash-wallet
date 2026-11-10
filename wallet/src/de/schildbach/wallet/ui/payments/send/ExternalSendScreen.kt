@@ -41,6 +41,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -67,7 +68,6 @@ import de.schildbach.wallet_test.R
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.ui.components.ActionItem
 import org.dash.wallet.common.ui.components.AddressField
-import org.dash.wallet.common.ui.components.DASH_CURRENCY_CODE
 import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.components.LocalDashColors
@@ -251,7 +251,7 @@ private fun ClipboardEntries(entries: List<String>, onSelected: (String) -> Unit
 @Composable
 private fun AmountPage(uiState: ExternalSendUIState, actions: ExternalSendActions) {
     val fiatCode = uiState.fiatCode
-    val codes = if (fiatCode != null) listOf(DASH_CURRENCY_CODE, fiatCode) else listOf(DASH_CURRENCY_CODE)
+    val codes = remember(fiatCode) { currencyCodesFor(fiatCode) }
     Column(modifier = Modifier.fillMaxSize()) {
         TopNavBase(
             leadingIcon = MyImages.MenuChevron,
@@ -608,7 +608,6 @@ internal fun balanceNameFor(source: SendBalance): Int = when (source) {
     SendBalance.PLATFORM -> R.string.external_send_balance_name_platform
     SendBalance.IDENTITY -> R.string.external_send_balance_name_identity
 }
-
 
 @Preview(showBackground = true, widthDp = 420, heightDp = 926)
 @Composable

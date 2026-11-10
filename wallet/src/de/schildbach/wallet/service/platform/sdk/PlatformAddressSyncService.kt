@@ -18,7 +18,6 @@ package de.schildbach.wallet.service.platform.sdk
 
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
@@ -58,9 +57,7 @@ private class DashSdkPlatformAddressSyncSource(
     private fun liveManager() = sdkService.walletManagerOrNull()?.takeUnless { it.isClosed }
 
     override suspend fun ready(): Boolean {
-        val cutoverCommitted = !dashjEngineMayStart(
-            CutoverState.fromStored(dashPayConfig.observePreservingErrors(DashPayConfig.CUTOVER_STATE).first())
-        )
+        val cutoverCommitted = dashPayConfig.cutoverCommittedOrThrow()
         if (!cutoverCommitted || !sdkWalletBinder.bindEstablished.value) return false
         return liveManager()?.wallets?.value?.size == 1
     }

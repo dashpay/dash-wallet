@@ -23,6 +23,10 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
@@ -35,6 +39,7 @@ import org.dash.wallet.common.payments.parsers.AddressNetwork
 import org.dash.wallet.common.payments.parsers.Base58
 import org.dash.wallet.common.services.PaymentSubmissionPendingException
 import org.dash.wallet.common.services.WalletSession
+import org.dash.wallet.common.util.retryReadErrors
 import org.dashfoundation.dashsdk.errors.DashSdkError
 import org.dashfoundation.dashsdk.credits.FundingInput
 import org.junit.Assert.assertArrayEquals
@@ -115,7 +120,11 @@ class ExternalSendServiceImplTest {
         var shieldedFlow: Flow<Dash?>? = null
         override fun observeShieldedBalance(): Flow<Dash?> = shieldedFlow ?: flowOf(shieldedBalance)
         override suspend fun platformAddressBalances(walletIdHex: String): List<FundingInput> = platformBalances()
-        override suspend fun identityBalanceCredits(identityIdBase58: String): Long? = 2_000_000_000L
+        var identityBalanceReads = 0
+        override suspend fun identityBalanceCredits(identityIdBase58: String): Long? {
+            identityBalanceReads++
+            return 2_000_000_000L
+        }
         override suspend fun identityExists(identityIdBase58: String): Boolean = identityIdBase58 == ownIdentity
         override suspend fun usernameOf(identityIdBase58: String): String? = "alice"
         override suspend fun shieldedFeeCredits(kind: ShieldedFeeKind): Long? = 2_000_500L
@@ -581,8 +590,8 @@ class ExternalSendServiceImplTest {
     fun int37Pairs_haveNoPreSendFee_andNoMax() = runBlocking {
         val service = service(source().apply { platformBalances = { listOf(address(1, 900_000_000L)) } })
         for ((from, to) in listOf(SendBalance.PLATFORM to core, SendBalance.PLATFORM to shielded, SendBalance.IDENTITY to shielded)) {
-            assertNull("$from → $to", service.estimateFee(from, to, amount))
-            assertNull("$from → $to", service.maxSendable(from, to))
+            assertNull("$from → $to", service.estimateFee(from, balanceKindOf(to)))
+            assertNull("$from → $to", service.maxSendable(from, balanceKindOf(to)))
         }
     }
 
@@ -863,7 +872,7 @@ class ExternalSendServiceImplTest {
         assertNull(service.observeBalance(SendBalance.SHIELDED).first())
         assertNull(service.observeBalance(SendBalance.PLATFORM).first())
         assertNull(service(source(ownIdentity = null)).observeBalance(SendBalance.IDENTITY).first())
-        assertNull(service.maxSendable(SendBalance.SHIELDED, core))
+        assertNull(service.maxSendable(SendBalance.SHIELDED, balanceKindOf(core)))
     }
 
     @Test
@@ -875,19 +884,19 @@ class ExternalSendServiceImplTest {
         assertEquals(Dash(1_500L), service.observeBalance(SendBalance.PLATFORM).first())
         assertEquals(Dash(2_000_000L), service.observeBalance(SendBalance.IDENTITY).first())
         // Shielded max: balance − ceil(2_000_500 credits) = 1_000_000 − 2_001 duffs.
-        assertEquals(Dash(997_999L), service.maxSendable(SendBalance.SHIELDED, core))
-        assertNull(service.maxSendable(SendBalance.PLATFORM, platform))
+        assertEquals(Dash(997_999L), service.maxSendable(SendBalance.SHIELDED, balanceKindOf(core)))
+        assertNull(service.maxSendable(SendBalance.PLATFORM, balanceKindOf(platform)))
     }
 
     @Test
     fun fees_areNullWhereNoPreSendFigureExists() = runBlocking {
         val service = service(source())
         // The size-based reserve over the spendable UTXO count (2).
-        assertEquals(FeeEstimate(Dash(sendAllFeeReserveDuffs(2)), exact = false), service.estimateFee(SendBalance.CORE, core, amount))
-        assertEquals(FeeEstimate(Dash(2_001L), exact = false), service.estimateFee(SendBalance.SHIELDED, core, amount))
-        assertNull(service.estimateFee(SendBalance.PLATFORM, platform, amount))
-        assertNull(service.estimateFee(SendBalance.IDENTITY, core, amount))
-        assertNull(service.estimateFee(SendBalance.CORE, ownIdentity, amount))
+        assertEquals(FeeEstimate(Dash(sendAllFeeReserveDuffs(2)), exact = false), service.estimateFee(SendBalance.CORE, balanceKindOf(core)))
+        assertEquals(FeeEstimate(Dash(2_001L), exact = false), service.estimateFee(SendBalance.SHIELDED, balanceKindOf(core)))
+        assertNull(service.estimateFee(SendBalance.PLATFORM, balanceKindOf(platform)))
+        assertNull(service.estimateFee(SendBalance.IDENTITY, balanceKindOf(core)))
+        assertNull(service.estimateFee(SendBalance.CORE, balanceKindOf(ownIdentity)))
     }
 
     @Test
@@ -909,10 +918,10 @@ class ExternalSendServiceImplTest {
         val service = service(source)
         val poolFee = Dash(52_001L)
         // The fee shown is exactly what the lock adds on top of the amount.
-        assertEquals(FeeEstimate(poolFee, exact = false), service.estimateFee(SendBalance.CORE, shielded, amount))
+        assertEquals(FeeEstimate(poolFee, exact = false), service.estimateFee(SendBalance.CORE, balanceKindOf(shielded)))
         // Max: the eligible balance less the L1 reserve is locked; the recipient receives it
         // minus the pool fee.
-        val max = requireNotNull(service.maxSendable(SendBalance.CORE, shielded))
+        val max = requireNotNull(service.maxSendable(SendBalance.CORE, balanceKindOf(shielded)))
         assertEquals(Dash(5_000_000L) - assetLockMaxFeeReserve(2) - poolFee, max)
         assertEquals(ExternalSendResult.Sent(null), service.send(SendBalance.CORE, shielded, max, isMax = true))
         assertEquals(listOf(Dash(5_000_000L) - assetLockMaxFeeReserve(2)), source.shieldedAmounts)
@@ -929,18 +938,18 @@ class ExternalSendServiceImplTest {
         val service = service(source)
         assertEquals(
             Dash(3_000_000L) - assetLockMaxFeeReserve(2) - poolFee,
-            service.maxSendable(SendBalance.CORE, shielded)
+            service.maxSendable(SendBalance.CORE, balanceKindOf(shielded))
         )
         // Fail closed: an unknown eligible balance or UTXO count is no Max.
         source.coreEligible = null
-        assertNull(service.maxSendable(SendBalance.CORE, shielded))
+        assertNull(service.maxSendable(SendBalance.CORE, balanceKindOf(shielded)))
         source.coreEligible = 3_000_000L
         source.utxoCount = null
-        assertNull(service.maxSendable(SendBalance.CORE, shielded))
+        assertNull(service.maxSendable(SendBalance.CORE, balanceKindOf(shielded)))
         // Too small to cover the reserve and the pool fee: no Max, never negative.
         source.utxoCount = 2
         source.coreEligible = assetLockMaxFeeReserve(2).duffs + poolFee.duffs
-        assertNull(service.maxSendable(SendBalance.CORE, shielded))
+        assertNull(service.maxSendable(SendBalance.CORE, balanceKindOf(shielded)))
     }
 
     @Test
@@ -949,7 +958,7 @@ class ExternalSendServiceImplTest {
             shieldFromCoreResult = { SdkWriteResult.NotBroadcast("asset lock coin selection is short") }
         }
         val service = service(source)
-        val max = requireNotNull(service.maxSendable(SendBalance.CORE, shielded))
+        val max = requireNotNull(service.maxSendable(SendBalance.CORE, balanceKindOf(shielded)))
         assertEquals(
             ExternalSendResult.NotSent(NotSentReason.INSUFFICIENT_FUNDS),
             service.send(SendBalance.CORE, shielded, max, isMax = true)
@@ -963,22 +972,22 @@ class ExternalSendServiceImplTest {
         val service = service(source)
         val reserve = sendAllFeeReserveDuffs(2)
         source.coreMax = reserve
-        assertNull(service.maxSendable(SendBalance.CORE, core))
+        assertNull(service.maxSendable(SendBalance.CORE, balanceKindOf(core)))
         source.coreMax = 1L
-        assertNull(service.maxSendable(SendBalance.CORE, core))
+        assertNull(service.maxSendable(SendBalance.CORE, balanceKindOf(core)))
         // Just above the reserve: Max is the gross figure, and amount − fee stays positive.
         source.coreMax = reserve + 1
-        val max = requireNotNull(service.maxSendable(SendBalance.CORE, core))
-        val fee = requireNotNull(service.estimateFee(SendBalance.CORE, core, max)).fee
+        val max = requireNotNull(service.maxSendable(SendBalance.CORE, balanceKindOf(core)))
+        val fee = requireNotNull(service.estimateFee(SendBalance.CORE, balanceKindOf(core))).fee
         assertEquals(Dash(reserve + 1), max)
         assertTrue((max - fee).isPositive)
         // Unknown UTXO count: the flat reserve applies to both the fee and the Max gate.
         source.utxoCount = null
         source.coreMax = SEND_ALL_FEE_RESERVE_DUFFS
-        assertNull(service.maxSendable(SendBalance.CORE, core))
+        assertNull(service.maxSendable(SendBalance.CORE, balanceKindOf(core)))
         assertEquals(
             FeeEstimate(Dash(SEND_ALL_FEE_RESERVE_DUFFS), exact = false),
-            service.estimateFee(SendBalance.CORE, core, amount)
+            service.estimateFee(SendBalance.CORE, balanceKindOf(core))
         )
     }
 
@@ -1074,13 +1083,46 @@ class ExternalSendServiceImplTest {
     }
 
     @Test
+    fun identityBalance_aReEmittedSameIdentity_doesNotRestartThePoll() = runBlocking {
+        val reEmitted = CompletableDeferred<Unit>()
+        val source = source().apply {
+            identityFlow = flow {
+                // An unrelated config write re-emits the unchanged identity record.
+                repeat(3) {
+                    emit(Result.success(ownIdBase58))
+                    delay(50)
+                }
+                reEmitted.complete(Unit)
+                awaitCancellation()
+            }
+        }
+        val service = ExternalSendServiceImpl(
+            source,
+            AddressNetwork.DASH_TESTNET,
+            FakeStore(),
+            ioDispatcher = Dispatchers.Unconfined,
+            balancePollMs = 60_000L
+        )
+        val values = mutableListOf<Dash?>()
+        val job = launch { service.observeBalance(SendBalance.IDENTITY).collect { values += it } }
+        reEmitted.await()
+        job.cancelAndJoin()
+        assertEquals(listOf<Dash?>(Dash(2_000_000L)), values)
+        assertEquals(1, source.identityBalanceReads)
+    }
+
+    @Test
     fun retryReadErrors_emitsUnknown_thenResubscribes_andNeverCompletesOnAnError() = runBlocking {
         var reads = 0
         val values = flow {
             reads++
             if (reads <= 2) throw IllegalStateException("unknown creation state")
             emit(Result.success<String?>("id"))
-        }.retryReadErrors("identity record", Result.failure(IllegalStateException("unknown")), retryDelayMs = { 0L })
+        }.retryReadErrors(
+            Result.failure(IllegalStateException("unknown")),
+            retryDelayMs = { 0L },
+            onError = logReadRetry("identity record") { 0L }
+        )
             .take(3)
             .toList()
         assertTrue(values[0].isFailure)
@@ -1300,24 +1342,24 @@ class ExternalSendServiceImplTest {
         val source = source()
         val service = service(source)
         val fee = Dash(assetLockMaxFeeReserve(2).duffs + PLATFORM_FUNDING_FEE_MARGIN_DUFFS)
-        assertEquals(FeeEstimate(fee, exact = false), service.estimateFee(SendBalance.CORE, platform, amount))
-        assertEquals(Dash(5_000_000L) - fee, service.maxSendable(SendBalance.CORE, platform))
+        assertEquals(FeeEstimate(fee, exact = false), service.estimateFee(SendBalance.CORE, balanceKindOf(platform)))
+        assertEquals(Dash(5_000_000L) - fee, service.maxSendable(SendBalance.CORE, balanceKindOf(platform)))
 
         // Unknown figures are no Max / no fee, never zero.
         source.coreEligible = null
-        assertNull(service.maxSendable(SendBalance.CORE, platform))
+        assertNull(service.maxSendable(SendBalance.CORE, balanceKindOf(platform)))
         source.coreEligible = 5_000_000L
         source.utxoCount = null
-        assertNull(service.maxSendable(SendBalance.CORE, platform))
-        assertNull(service.estimateFee(SendBalance.CORE, platform, amount))
+        assertNull(service.maxSendable(SendBalance.CORE, balanceKindOf(platform)))
+        assertNull(service.estimateFee(SendBalance.CORE, balanceKindOf(platform)))
         // Too small to cover the reserve and the margin (or Platform's minimum output): no Max.
         source.utxoCount = 2
         source.coreEligible = fee.duffs
-        assertNull(service.maxSendable(SendBalance.CORE, platform))
+        assertNull(service.maxSendable(SendBalance.CORE, balanceKindOf(platform)))
         source.coreEligible = fee.duffs + 499L
-        assertNull(service.maxSendable(SendBalance.CORE, platform))
+        assertNull(service.maxSendable(SendBalance.CORE, balanceKindOf(platform)))
         source.coreEligible = fee.duffs + 500L
-        assertEquals(Dash(500L), service.maxSendable(SendBalance.CORE, platform))
+        assertEquals(Dash(500L), service.maxSendable(SendBalance.CORE, balanceKindOf(platform)))
     }
 
     @Test

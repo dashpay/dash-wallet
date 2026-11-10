@@ -46,6 +46,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.window.Dialog
@@ -80,6 +81,7 @@ import de.schildbach.wallet.ui.payments.send.SendConfirmSheet
 import de.schildbach.wallet.ui.payments.send.SendingOverlay
 import de.schildbach.wallet.ui.payments.send.SheetOverlay
 import de.schildbach.wallet.ui.payments.send.balanceNameFor
+import de.schildbach.wallet.ui.payments.send.currencyCodesFor
 import de.schildbach.wallet.ui.payments.send.iconFor
 import de.schildbach.wallet.ui.payments.send.titleFor
 import de.schildbach.wallet.ui.shielded.toDisplay
@@ -87,7 +89,6 @@ import de.schildbach.wallet.ui.shielded.toDisplayString
 import de.schildbach.wallet.ui.shielded.toFiatAt
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.money.Dash
-import org.dash.wallet.common.ui.components.DASH_CURRENCY_CODE
 import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.Menu
@@ -277,7 +278,7 @@ internal fun internalConfirmNotes(from: SendBalance, to: SendBalance): List<Int>
 @Composable
 private fun AmountPage(uiState: InternalTransferUIState, actions: InternalTransferActions) {
     val fiatCode = uiState.fiatCode
-    val codes = if (fiatCode != null) listOf(DASH_CURRENCY_CODE, fiatCode) else listOf(DASH_CURRENCY_CODE)
+    val codes = remember(fiatCode) { currencyCodesFor(fiatCode) }
     AmountEntryPage(
         amount = uiState.amountText,
         currencyCodes = codes,
