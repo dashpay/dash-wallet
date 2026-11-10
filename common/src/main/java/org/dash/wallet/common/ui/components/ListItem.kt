@@ -117,6 +117,7 @@ fun ListItem(
     helpTextAbove: String? = null,
     title: String? = null,
     titleColor: Color? = null,
+    titleStyle: TextStyle? = null,
     subtitle: String? = null,
     bottomHelpText: String? = null,
     // ── Right side: text content ──────────────────────────────────────────
@@ -186,7 +187,7 @@ fun ListItem(
                         ) {
                             Text(
                                 text = titleText,
-                                style = MyTheme.Typography.LabelLarge,
+                                style = titleStyle ?: MyTheme.Typography.LabelLarge,
                                 color = titleColor ?: colors.textPrimary
                             )
                             if (showInfoIcon) {

@@ -47,4 +47,10 @@ class ConnectionDialogsTest {
             assertEquals(1, ConnectionsTab.entries.count { it.includes(connection(status)) })
         }
     }
+
+    @Test fun `Active rows disconnect while Disconnected and Expired rows reconnect`() {
+        assertEquals(ConnectionRowAction.DISCONNECT, ConnectionsTab.ACTIVE.rowAction)
+        assertEquals(ConnectionRowAction.RECONNECT, ConnectionsTab.DISCONNECTED.rowAction)
+        assertEquals(ConnectionRowAction.RECONNECT, ConnectionsTab.EXPIRED.rowAction)
+    }
 }
