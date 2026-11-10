@@ -43,7 +43,6 @@ import org.dash.wallet.common.ui.*
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.PaymentOutcomeUnknownWarning
 import org.dash.wallet.common.ui.dialogs.TaggedProgressDialog
-import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
 import org.dash.wallet.common.util.*
 import org.dash.wallet.integrations.coinbase.CoinbaseConstants
 import org.dash.wallet.integrations.coinbase.R
@@ -312,10 +311,9 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
                         transferDashViewModel.logTransfer(enterAmountToTransferViewModel.isFiatSelected)
                         // The view model runs the send (and shows progress), so a recreation of
                         // this screen cannot cancel it once it may be on the network. Bound once,
-                        // at the confirm: a send after the leftover-balance question must still
-                        // come from the wallet the transfer was confirmed on.
+                        // at the confirm, to the wallet the transfer was confirmed on.
                         val session = transferDashViewModel.currentWalletSession()
-                        if (!transferDashViewModel.submitTransfer(dashValue, isEmptyWallet, true, session)) {
+                        if (!transferDashViewModel.submitTransfer(dashValue, isEmptyWallet, session)) {
                             log.info("transfer refused: a send is in progress or an earlier outcome is unknown")
                         }
                     }
@@ -332,8 +330,7 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
             ).show(requireActivity())
         }
 
-        // The transfer's result and the leftover-balance question: once each, only while
-        // resumed and unlocked (see handleWhenResumed).
+        // The transfer's result: once, only while resumed and unlocked (see handleWhenResumed).
         handleWhenResumed(
             transferDashViewModel.observeSendDashToCoinbaseState,
             lockScreenBroadcaster.unlocked,
@@ -341,28 +338,6 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
             transferDashViewModel::retainSendDashToCoinbaseState,
             TRANSACTION_STATE_DIALOG_TAG
         ) { setTransactionState(it, this) }
-
-        handleWhenResumed(
-            transferDashViewModel.leftoverBalanceWarning,
-            lockScreenBroadcaster.unlocked,
-            transferDashViewModel::consumeLeftoverBalanceWarning,
-            transferDashViewModel::retainLeftoverBalanceWarning,
-            // A question restored after process death lost its pending transfer.
-            MinimumBalanceDialog.TAG,
-            requireActivity().supportFragmentManager
-        ) { pending ->
-            val sendAnyway = MinimumBalanceDialog().showAsync(requireActivity(), MinimumBalanceDialog.TAG)
-                ?: return@handleWhenResumed false
-            if (sendAnyway) {
-                transferDashViewModel.submitTransfer(
-                    pending.dashValue,
-                    pending.isEmptyWallet,
-                    checkConditions = false,
-                    session = pending.session
-                )
-            }
-            true
-        }
 
         transferDashViewModel.onBuildTransactionParamsCallback.observe(viewLifecycleOwner){
             transferDashViewModel.logTransfer(enterAmountToTransferViewModel.isFiatSelected)

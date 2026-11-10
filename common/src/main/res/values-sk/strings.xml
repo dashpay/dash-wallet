@@ -152,4 +152,5 @@
     <string name="from_dash_wallet_on_this_device">Z peňaženky Dash na tomto zariadení</string>
     <string name="preposition_at">v</string>
     <string name="info">Informácie</string>
+    <string name="scan_qr">Skenovať QR kód</string>
 </resources>

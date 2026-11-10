@@ -22,7 +22,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import org.dash.wallet.common.money.Dash
-import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.transactions.filters.LockedTransaction
 
 // ---------------------------------------------------------------------------------------------
@@ -99,15 +98,3 @@ fun WalletDataProvider.getTransactionValue(txId: String): Dash? =
 fun WalletDataProvider.getTransactionHex(txId: String): String? =
     getTransaction(txId)?.rawHex
 
-/**
- * True when sending [amount] would trip the leftover-balance check
- * (i.e. [WalletDataProvider.checkSendingConditions] would throw [LeftoverBalanceException]).
- */
-fun WalletDataProvider.needsLeftoverBalanceWarning(amount: Dash): Boolean {
-    return try {
-        checkSendingConditions(null, amount)
-        false
-    } catch (_: LeftoverBalanceException) {
-        true
-    }
-}

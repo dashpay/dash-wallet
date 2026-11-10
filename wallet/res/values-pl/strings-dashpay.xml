@@ -415,6 +415,7 @@
     <string name="turned_off">Wyłączony</string>
     <string name="coinjoin_mixing_transactions">Miksowanie transakcji</string>
     <string name="coinjoin_transaction_group">Te transakcje są stworzone przez miksowanie</string>
+    <string name="coinjoin_transaction_group_title">Dlaczego widzę te wszystkie transakcje?</string>
     <string name="intermediate">Średni</string>
     <string name="advanced">Zaawansowany</string>
     <string name="intermediate_level_card_decs">Zaawansowani użytkownicy, którzy posiadają bardzo wysoki poziom wiedzy technicznej, mogą być w stanie odkryć historię twoich transakcji.</string>
@@ -561,4 +562,6 @@
     <string name="dash_connect_confirm">Potwierdź</string>
     <string name="dash_connect_testnet_only_heading">Dostępne tylko w sieci testowej</string>
     <string name="dash_connect_testnet_only_message">Logowanie DashConnect nie jest jeszcze dostępne w sieci głównej</string>
+    <string name="dash_connect_group_scope_changed">Zakres tej grupy zmienił się od Twojego poprzedniego zatwierdzenia lub jej poprzedni zakres nie został zapisany. Przed kontynuowaniem przejrzyj poniżej obecnych członków i administratorów. Wcześniej zarejestrowane klucze mogą być nadal aktywne; opcja Cofnij dostęp pozostaje dostępna.</string>
+    <string name="dash_connect_group_scope_approve">Zatwierdzam zaktualizowany zakres grupy pokazany powyżej.</string>
     </resources>

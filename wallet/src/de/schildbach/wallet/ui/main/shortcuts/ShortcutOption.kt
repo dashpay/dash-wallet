@@ -76,11 +76,7 @@ enum class ShortcutOption(
         R.drawable.ic_shortcut_atm,
         R.string.explore_atms
     ),
-    STAKING(
-        10,
-        R.drawable.ic_shortcut_staking,
-        R.string.staking_title
-    ),
+    // 10 was STAKING (CrowdNode); do not reuse
     TOPPER(
         11,
         R.drawable.logo_topper,
@@ -103,8 +99,9 @@ enum class ShortcutOption(
     );
 
     companion object  {
-        fun fromId(id: Int): ShortcutOption {
-            return entries.first { it.id == id }
+        // Returns null for ids of removed options that may still be saved in user settings
+        fun fromId(id: Int): ShortcutOption? {
+            return entries.firstOrNull { it.id == id }
         }
     }
 }

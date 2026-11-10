@@ -1058,8 +1058,6 @@ class SwapKitApiAggregator @Inject constructor(
             val sentTxId = sendPaymentService.sendCoins(
                 swapTradeUIModel.vaultAddress,
                 amount,
-                // Mirror the Maya builder, which bypasses leftover-balance checks for swaps.
-                checkBalanceConditions = false,
                 session = session
             )
             swapTradeUIModel.txid = sentTxId

@@ -168,7 +168,6 @@ class SendCoinsTaskRunnerBroadcastSignalTest {
     private suspend fun sendCollecting(signals: MutableList<String?>): Transaction =
         runner.sendCoins(
             sendRequest(),
-            checkBalanceConditions = false,
             intendedRecipient = recipient,
             onBroadcast = { signals += it },
             onNotBroadcast = { signals += NOT_BROADCAST }
@@ -207,7 +206,6 @@ class SendCoinsTaskRunnerBroadcastSignalTest {
         try {
             runner.sendCoins(
                 sendRequest(),
-                checkBalanceConditions = false,
                 beforeSending = { throw IllegalStateException("memo could not be written") },
                 intendedRecipient = recipient
             )
@@ -252,7 +250,6 @@ class SendCoinsTaskRunnerBroadcastSignalTest {
         try {
             runner.sendCoins(
                 SendRequest.to(recipient, Coin.CENT).apply { tx.addOutput(Coin.CENT, recipient) },
-                checkBalanceConditions = false,
                 intendedRecipient = null,
                 onBroadcast = { signals += it },
                 onNotBroadcast = { signals += NOT_BROADCAST }
@@ -293,7 +290,6 @@ class SendCoinsTaskRunnerBroadcastSignalTest {
 
         val tx = runner.sendCoins(
             sendRequest(),
-            checkBalanceConditions = false,
             intendedRecipient = recipient,
             onBroadcast = { throw IllegalStateException("boom") }
         )
@@ -339,7 +335,7 @@ class SendCoinsTaskRunnerBroadcastSignalTest {
         bridgeReturns(BridgedTxResult.Bridged(mockk(relaxed = true), adoptedWalletInstance = false))
 
         try {
-            runner.sendCoins(recipient, Coin.CENT, checkBalanceConditions = false, originWallet = null)
+            runner.sendCoins(recipient, Coin.CENT, originWallet = null)
             fail("a payment confirmed on a wiped wallet was broadcast from its replacement")
         } catch (expected: IllegalStateException) {
             // refused before the broadcast
@@ -434,7 +430,7 @@ class SendCoinsTaskRunnerBroadcastSignalTest {
         bridgeReturns(BridgedTxResult.Bridged(mockk(relaxed = true), adoptedWalletInstance = false))
         every { verifier.stillOwnedBy(wallet) } returns true
 
-        runner.sendCoins(recipient, Coin.CENT, checkBalanceConditions = false, originWallet = null)
+        runner.sendCoins(recipient, Coin.CENT, originWallet = null)
 
         coVerify(exactly = 1) { bridgeFactory.bridge(sdkTxid, any(), any(), any(), originWallet = wallet) }
     }
@@ -476,7 +472,7 @@ class SendCoinsTaskRunnerBroadcastSignalTest {
         }
 
         try {
-            neutral.sendCoins(recipient.toBase58(), org.dash.wallet.common.money.Dash(1_000_000), false, false, null)
+            neutral.sendCoins(recipient.toBase58(), org.dash.wallet.common.money.Dash(1_000_000), false, null)
             fail("a payment begun on a wiped wallet was let through on its replacement")
         } catch (expected: IllegalStateException) {
             // refused before the broadcast
@@ -656,7 +652,6 @@ class SendCoinsTaskRunnerBroadcastSignalTest {
             provider.sendThenMarkUsed(contactPayment) { signals ->
                 runner.sendCoins(
                     sendRequest(),
-                    checkBalanceConditions = false,
                     intendedRecipient = recipient,
                     onBroadcast = signals::broadcast,
                     onNotBroadcast = signals::notBroadcast
@@ -679,7 +674,6 @@ class SendCoinsTaskRunnerBroadcastSignalTest {
             provider.sendThenMarkUsed(contactPayment) { signals ->
                 runner.sendCoins(
                     sendRequest(),
-                    checkBalanceConditions = false,
                     intendedRecipient = recipient,
                     onBroadcast = signals::broadcast,
                     onNotBroadcast = signals::notBroadcast
@@ -707,7 +701,6 @@ class SendCoinsTaskRunnerBroadcastSignalTest {
                 provider.sendThenMarkUsed(contactPayment) { signals ->
                     runner.sendCoins(
                         SendRequest.emptyWallet(recipient),
-                        checkBalanceConditions = false,
                         intendedRecipient = recipient,
                         onBroadcast = signals::broadcast,
                         onNotBroadcast = signals::notBroadcast
@@ -733,7 +726,6 @@ class SendCoinsTaskRunnerBroadcastSignalTest {
             provider.sendThenMarkUsed(contactPayment) { signals ->
                 runner.sendCoins(
                     sendRequest(),
-                    checkBalanceConditions = false,
                     intendedRecipient = recipient,
                     onBroadcast = signals::broadcast,
                     onNotBroadcast = signals::notBroadcast

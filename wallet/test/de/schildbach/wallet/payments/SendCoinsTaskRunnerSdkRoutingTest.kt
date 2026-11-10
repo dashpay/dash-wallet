@@ -43,7 +43,6 @@ import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.WalletProtobufSerializer
 import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.money.Dash
-import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.PaymentSubmissionPendingException
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -137,7 +136,7 @@ class SendCoinsTaskRunnerSdkRoutingTest {
         val tx = mockk<Transaction>()
         every { tx.txId } returns org.bitcoinj.core.Sha256Hash.wrap("cd".repeat(32))
         coEvery {
-            runner.sendCoins(any<Address>(), any<Coin>(), any(), any(), any(), any(), any(), any())
+            runner.sendCoins(any<Address>(), any<Coin>(), any(), any(), any(), any(), any())
         } returns tx
         return tx
     }
@@ -153,7 +152,7 @@ class SendCoinsTaskRunnerSdkRoutingTest {
 
         assertEquals(sdkTxid, txid)
         coVerify(exactly = 0) {
-            runner.sendCoins(any<Address>(), any<Coin>(), any(), any(), any(), any(), any(), any())
+            runner.sendCoins(any<Address>(), any<Coin>(), any(), any(), any(), any(), any())
         }
     }
 
@@ -168,7 +167,7 @@ class SendCoinsTaskRunnerSdkRoutingTest {
 
         assertEquals("cd".repeat(32), txid)
         coVerify(exactly = 1) {
-            runner.sendCoins(any<Address>(), any<Coin>(), any(), any(), any(), any(), any(), any())
+            runner.sendCoins(any<Address>(), any<Coin>(), any(), any(), any(), any(), any())
         }
     }
 
@@ -188,7 +187,7 @@ class SendCoinsTaskRunnerSdkRoutingTest {
             assertSame(cause, e.cause)
         }
         coVerify(exactly = 0) {
-            runner.sendCoins(any<Address>(), any<Coin>(), any(), any(), any(), any(), any(), any())
+            runner.sendCoins(any<Address>(), any<Coin>(), any(), any(), any(), any(), any())
         }
     }
 
@@ -199,76 +198,15 @@ class SendCoinsTaskRunnerSdkRoutingTest {
         val tx = mockk<Transaction>()
         every { tx.txId } returns org.bitcoinj.core.Sha256Hash.wrap("ef".repeat(32))
         coEvery {
-            runner.sendCoins(capture(addressSlot), capture(amountSlot), any(), any(), any(), any(), any(), any())
+            runner.sendCoins(capture(addressSlot), capture(amountSlot), any(), any(), any(), any(), any())
         } returns tx
         coEvery {
             sdkL1SendService.sendToAddress(any(), any(), any(), any())
         } returns SdkWriteResult.NotBroadcast("gate closed")
 
-        runner.sendCoins(recipientAddress, amount, emptyWallet = false, checkBalanceConditions = false)
+        runner.sendCoins(recipientAddress, amount, emptyWallet = false)
 
         assertEquals(recipientAddress, addressSlot.captured.toBase58())
         assertEquals(amount.duffs, amountSlot.captured.value)
-    }
-
-    @Test
-    fun beforeBroadcastHook_runsTheLeftoverBalanceCheck_whenConditionsRequested() = runTest {
-        stubDashjSend()
-        // Make the SDK service invoke the hook, as the real service does
-        // after its preflights pass.
-        coEvery {
-            sdkL1SendService.sendToAddress(recipientAddress, amount, false, any())
-        } coAnswers {
-            arg<suspend () -> Unit>(3).invoke()
-            SdkWriteResult.Broadcast(sdkTxid)
-        }
-
-        runner.sendCoins(recipientAddress, amount, checkBalanceConditions = true)
-
-        coVerify(exactly = 1) {
-            walletDataProvider.checkSendingConditions(
-                match { it.toBase58() == recipientAddress },
-                Coin.valueOf(amount.duffs)
-            )
-        }
-    }
-
-    @Test
-    fun beforeBroadcastHook_skipsTheCheck_whenConditionsNotRequested() = runTest {
-        stubDashjSend()
-        coEvery {
-            sdkL1SendService.sendToAddress(recipientAddress, amount, false, any())
-        } coAnswers {
-            arg<suspend () -> Unit>(3).invoke()
-            SdkWriteResult.Broadcast(sdkTxid)
-        }
-
-        runner.sendCoins(recipientAddress, amount, checkBalanceConditions = false)
-
-        coVerify(exactly = 0) { walletDataProvider.checkSendingConditions(any(), any()) }
-    }
-
-    @Test
-    fun leftoverBalanceException_fromTheHook_propagatesLikeTheDashjPath() = runTest {
-        stubDashjSend()
-        val leftover = LeftoverBalanceException(org.dash.wallet.common.money.Dash.COIN, "leftover")
-        coEvery { walletDataProvider.checkSendingConditions(any(), any()) } throws leftover
-        coEvery {
-            sdkL1SendService.sendToAddress(recipientAddress, amount, false, any())
-        } coAnswers {
-            arg<suspend () -> Unit>(3).invoke()
-            fail("must not reach the broadcast after a failed pre-send condition")
-            SdkWriteResult.Broadcast(sdkTxid)
-        }
-
-        try {
-            runner.sendCoins(recipientAddress, amount, checkBalanceConditions = true)
-            fail("expected LeftoverBalanceException")
-        } catch (e: LeftoverBalanceException) {
-            assertSame(leftover, e)
-        }
-        coVerify(exactly = 0) {
-            runner.sendCoins(any<Address>(), any<Coin>(), any(), any(), any(), any(), any(), any())
-        }
     }
 }

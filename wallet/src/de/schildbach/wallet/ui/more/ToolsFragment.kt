@@ -82,6 +82,7 @@ class ToolsFragment : Fragment() {
                 DashWalletTheme {
                     val showMixedFunds by mixedFundsAvailable.collectAsState()
                     ToolsScreen(
+                        uiStateFlow = viewModel.uiState,
                         onBackClick = { findNavController().popBackStack() },
                         onAddressBookClick = { onAddressBook() },
                         onImportPrivateKeyClick = { onImportKeys() },
@@ -106,6 +107,7 @@ class ToolsFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             mixedFundsAvailable.value = migrationService.shouldOfferInTools()
         }
+        viewModel.refreshConnectionsAvailability()
     }
 
     private fun onZenLedgerExport() {

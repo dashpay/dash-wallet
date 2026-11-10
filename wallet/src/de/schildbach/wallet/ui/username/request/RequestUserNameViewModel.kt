@@ -52,7 +52,7 @@ import de.schildbach.wallet.service.platform.sdk.shieldedIdentityFundingRequirem
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.IdentityCreationStatusHolder
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
-import de.schildbach.wallet.ui.dashpay.work.BroadcastIdentityVerifyOperation
+import de.schildbach.wallet.service.platform.sdk.requestVerificationLinkPublication
 import de.schildbach.wallet.ui.main.resolveRequestedUsernameDisplay
 import de.schildbach.wallet.ui.username.CreateUsernameArgs
 import de.schildbach.wallet.ui.username.UsernameType
@@ -95,8 +95,25 @@ import org.slf4j.LoggerFactory
 import javax.inject.Inject
 import kotlin.math.max
 
+/** What one tap on the request button submits, captured at the tap. */
+internal data class UsernameSubmission(val username: String?, val secondary: String?, val link: String?)
+
+/**
+ * A submit from this screen is being routed or was handed off. The identity-state observers that
+ * finish the screen for a creation already in flight stand down then: the submit's own outcome
+ * closes it, and a name-only retry's start write moves the record before the retry is accepted.
+ */
+val RequestUserNameUIState.submissionUnderway: Boolean
+    get() = usernameRequestSubmitting || usernameSubmitPreflight
+
 data class RequestUserNameUIState(
     val usernameRequestSubmitting: Boolean = false,
+    /**
+     * A submit is between the tap and its routing decision (the cutover read, a name-only
+     * retry's preflight). The screen stays open, but its input and submit button are locked: the
+     * submission is the snapshot taken at the tap.
+     */
+    val usernameSubmitPreflight: Boolean = false,
     val usernameRequestSubmitted: Boolean = false,
     val checkingUsername: Boolean = false,
     val usernameCheckSuccess: Boolean = false,
@@ -1086,9 +1103,9 @@ class RequestUserNameViewModel @Inject constructor(
         }
     }
 
-    private fun triggerIdentityCreation(reuseTransaction: Boolean) {
-        val username = requestedUserName!!
-        val usernameSecondary = requestedUsernameSecondary
+    private fun triggerIdentityCreation(submission: UsernameSubmission, reuseTransaction: Boolean) {
+        val username = checkNotNull(submission.username) { "no username to submit" }
+        val usernameSecondary = submission.secondary
         val isUsingInvite = isUsingInvite()
         when {
             isUsingInvite && reuseTransaction -> {
@@ -1132,170 +1149,217 @@ class RequestUserNameViewModel @Inject constructor(
     }
 
     fun submit() {
+        // One submission at a time: the input and the button are locked until this one is routed.
+        if (_uiState.value.usernameSubmitPreflight) {
+            log.info("username submit ignored: the previous submission is still being routed")
+            return
+        }
+        // Everything below reads this snapshot, never the mutable fields: the routing suspends
+        // (the cutover read, a name-only retry's preflight) while the screen is still open.
+        val submission = UsernameSubmission(requestedUserName, requestedUsernameSecondary, _requestedUserNameLink.value)
         // Reset ui state for retry if needed
         resetUiForRetrySubmit()
+        _uiState.update { it.copy(usernameSubmitPreflight = true) }
         viewModelScope.launch {
-            withContext(Dispatchers.IO) { updateConfig() }
-            // send the request / create username, assume not retry
-            // If an identity was already registered but the username step failed (lost vote, locked name,
-            // or the domain document was rejected), keep the identity and only register the new name.
-            val reuseTransaction = identity?.let {
-                it.usernameRequested == UsernameRequestStatus.LOCKED ||
-                    it.usernameRequested == UsernameRequestStatus.LOST_VOTE ||
-                    (it.creationStateErrorMessage != null && it.creationState >= IdentityCreationState.IDENTITY_REGISTERED)
-            } ?: false
-            // Post-cutover the dashj L1 engine is HELD (0 UTXOs), so the
-            // dashj asset-lock funding CreateIdentityService drives fails
-            // InsufficientMoneyException — the funds live in the SDK. Route
-            // transparent (Dash-balance) REGISTRATION funding through the SDK
-            // once the cutover is committed. Invite and reuse-transaction
-            // submissions keep the dashj path (their funding is already
-            // committed elsewhere / has no transparent SDK API); pre-cutover
-            // keeps dashj byte-for-byte.
-            // The EFFECTIVE source — identical to what the balance gate
-            // evaluated for this name, so a contested submission the pool
-            // cannot fund routes through the Dash-balance path the gate
-            // approved instead of dead-ending in the shielded preflight
-            // (QA Mo-973; see effectivePaymentSource).
-            val submitSource = effectivePaymentSource(
-                requestedUserName?.let { Names.isUsernameContestable(it) } ?: false
-            )
-            // After the cutover an identity that already exists on chain gets ONLY its name
-            // retried (review 4299080469): the legacy reuse path below resets it to NONE and
-            // looks for a dashj funding transaction an SDK-created identity never had, so it
-            // would start fresh legacy funding. Before the cutover the legacy path is master's
-            // (#1567) and stays as it is.
-            val existingIdentityId = identity?.userId
-            val nameOnlyCandidate = reuseTransaction && existingIdentityId != null && !isUsingInvite()
-            val freshSdkCandidate = !isUsingInvite() && !reuseTransaction &&
-                submitSource != UsernamePaymentSource.SHIELDED_BALANCE
-            // Fail closed (review 4299080469, reopened): for both of these, "not committed" starts
-            // CreateIdentityService, which resets a registered identity to NONE or funds through
-            // the dashj engine. The lenient read turns an unreadable cutover state into exactly
-            // that answer, so these read the state strictly, and an unknown one refuses the
-            // submission, starting and resetting nothing.
-            val cutover: Boolean? = if (nameOnlyCandidate || freshSdkCandidate) {
-                transparentUsernameCreation.cutoverStateOrUnknown()
-            } else {
-                false
+            try {
+                submitNow(submission)
+            } finally {
+                _uiState.update { it.copy(usernameSubmitPreflight = false) }
             }
-            if (cutover == null) {
-                log.warn("username submit refused: the cutover state cannot be read")
-                _uiState.update { it.copy(usernameSubmittedError = true) }
-                return@launch
-            }
-            if (nameOnlyCandidate && cutover) {
-                log.info("name-only retry for the existing identity (cutover committed)")
-                // Accepted means the retry runs on the application scope and survives this screen,
-                // which the submitting state closes; publish it only then.
-                val accepted = transparentUsernameCreation.retryNameForExistingIdentity(
-                    requireNotNull(existingIdentityId) { "a name-only retry needs the identity id" },
-                    requestedUserName!!,
-                    requestedUsernameSecondary
+        }
+    }
+
+    private suspend fun submitNow(submission: UsernameSubmission) {
+        // send the request / create username, assume not retry
+        // master's reuse rule (#1567): an identity whose name lost its vote or was locked, or
+        // that is registered but whose name step failed, keeps the identity and only registers
+        // the new name
+        val lockedOrLost = identity?.let {
+            it.usernameRequested == UsernameRequestStatus.LOCKED ||
+                it.usernameRequested == UsernameRequestStatus.LOST_VOTE
+        } ?: false
+        val rejectedAfterRegistration = identity?.let {
+            it.creationStateErrorMessage != null && it.creationState >= IdentityCreationState.IDENTITY_REGISTERED
+        } ?: false
+        // after the cutover also a failed name-only retry, whatever state the record shows: only
+        // an identity that exists on chain is ever given that error
+        val nameOnlyRetryFailed = identity?.let {
+            SdkTransparentUsernameCreation.isNameOnlyRetryError(it.creationStateErrorMessage)
+        } ?: false
+        // Post-cutover the dashj L1 engine is HELD (0 UTXOs), so the
+        // dashj asset-lock funding CreateIdentityService drives fails
+        // InsufficientMoneyException — the funds live in the SDK. Route
+        // transparent (Dash-balance) REGISTRATION funding through the SDK
+        // once the cutover is committed. Invite and reuse-transaction
+        // submissions keep the dashj path (their funding is already
+        // committed elsewhere / has no transparent SDK API); pre-cutover
+        // keeps dashj byte-for-byte.
+        // The EFFECTIVE source — identical to what the balance gate
+        // evaluated for this name, so a contested submission the pool
+        // cannot fund routes through the Dash-balance path the gate
+        // approved instead of dead-ending in the shielded preflight
+        // (QA Mo-973; see effectivePaymentSource).
+        val submitSource = effectivePaymentSource(
+            submission.username?.let { Names.isUsernameContestable(it) } ?: false
+        )
+        // After the cutover an identity that already exists on chain gets ONLY its name
+        // retried: the legacy reuse path below resets it to NONE and looks for a dashj
+        // funding transaction an SDK-created identity never had, so it would start fresh
+        // legacy funding. Before the cutover the legacy path is master's and stays as it is.
+        val existingIdentityId = identity?.userId
+        // Fail closed: "not committed" starts CreateIdentityService, which resets a registered
+        // identity to NONE or funds through the dashj engine, and the lenient read gives
+        // exactly that answer for an unreadable state. Unknown refuses, changing nothing.
+        val cutover: Boolean? = if (
+            !isUsingInvite() &&
+            (
+                lockedOrLost || rejectedAfterRegistration || nameOnlyRetryFailed ||
+                    submitSource != UsernamePaymentSource.SHIELDED_BALANCE
                 )
-                _uiState.update {
-                    if (accepted) it.copy(usernameRequestSubmitting = true) else it.copy(usernameSubmittedError = true)
-                }
-                return@launch
+        ) {
+            transparentUsernameCreation.cutoverStateOrUnknown()
+        } else {
+            false
+        }
+        if (cutover == null) {
+            log.warn("username submit refused: the cutover state cannot be read")
+            _uiState.update { it.copy(usernameSubmittedError = true) }
+            return
+        }
+        val reuseTransaction = lockedOrLost || rejectedAfterRegistration || (nameOnlyRetryFailed && cutover)
+        if (reuseTransaction && !isUsingInvite() && cutover) {
+            // After the cutover a reuse submission is a name-only retry or nothing: the legacy
+            // path below resets the record and can fund a new identity. A record with no
+            // identity id cannot be retried, so it is refused.
+            log.info("name-only retry for the existing identity (cutover committed)")
+            // Accepted means the retry runs on the application scope and survives this screen,
+            // which the submitting state closes; publish it only then.
+            // No requested name or no identity id: nothing to register, treated as a refusal.
+            val requestedName = submission.username
+            if (existingIdentityId == null) {
+                log.warn("username submit refused: the identity to retry has no identity id")
             }
-            val cutoverCommitted = freshSdkCandidate && cutover
-            if (submitSource == UsernamePaymentSource.SHIELDED_BALANCE &&
-                !isUsingInvite() && !reuseTransaction
-            ) {
-                // The user picked the shielded balance on the payment-option
-                // sheet: fund the identity DIRECTLY from the shielded pool
-                // (Type 20) instead of the L1 asset-lock path. Invite and
-                // reuse-transaction submissions never reach here — their
-                // funding is already committed elsewhere.
-                log.info("routing username creation to the shielded-funded SDK path")
-                val accepted = shieldedUsernameCreation.submit(requestedUserName!!, requestedUsernameSecondary)
-                if (accepted) {
-                    // Same as the transparent path: the funding runs on the
-                    // app-scoped executor, but the app could still go cached on
-                    // a screen lock and be reaped mid-proof. Hold the process
-                    // foreground for the duration and drive the home identity
-                    // tile via CreateIdentityService's lightweight SDK-hold
-                    // action (it does NO funding). The shielded=true flag makes
-                    // the hold observe the shielded executor's submit state.
-                    // Started here, from the tap path with the activity visible,
-                    // to satisfy the Android 12+ FGS-start rules.
-                    walletApplication.startService(
-                        CreateIdentityService.createIntentForSdkForegroundHold(
-                            walletApplication,
-                            requestedUserName!!,
-                            requestedUsernameSecondary,
-                            shielded = true
-                        )
-                    )
-                } else {
-                    // A refused submit must NEVER die silently (observed
-                    // live: a swallowed submit reads as a broken app).
-                    // Surface a state the dialogs react to, matched to why
-                    // the executor refused.
-                    val state = shieldedUsernameCreation.submitState.value
-                    log.info("username submit rejected: shielded creation refused (executor state: {})", state)
-                    _uiState.update {
-                        when (state) {
-                            // An earlier operation is still proving — show
-                            // its processing status instead of an error.
-                            ShieldedUsernameSubmitState.Proving ->
-                                it.copy(usernameRequestSubmitting = true)
-                            // Sticky unconfirmed outcome: never a retryable
-                            // error dialog.
-                            ShieldedUsernameSubmitState.MayHaveGoneThrough ->
-                                it.copy(usernameSubmittedAmbiguous = true)
-                            else -> it.copy(usernameSubmittedError = true)
-                        }
-                    }
+            val accepted = requestedName != null && existingIdentityId != null &&
+                transparentUsernameCreation.retryNameForExistingIdentity(
+                    existingIdentityId,
+                    requestedName,
+                    submission.secondary
+                )
+            // A refusal changes nothing; the request is recorded only once the retry runs.
+            // The retry is already running, so a failed config write must not hide that.
+            if (accepted) {
+                try {
+                    withContext(Dispatchers.IO) { updateConfig(submission) }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    log.warn("name-only retry accepted but the requested name was not saved", e)
                 }
-            } else if (cutoverCommitted) {
-                // Committed cutover, Dash-balance funding: the identity's
-                // asset lock is built from the transparent UTXOs the SDK now
-                // holds (register / resume), NOT dashj. Same app-scoped
-                // single-flight + no-double-broadcast contract as the
-                // shielded path.
-                log.info("routing username creation to the transparent-funded SDK path (cutover committed)")
-                val accepted = transparentUsernameCreation.submit(requestedUserName!!, requestedUsernameSecondary)
-                if (accepted) {
-                    // The funding runs on the app-scoped executor (survives the
-                    // screen), but the app would still go cached on a screen
-                    // lock and could be reaped mid-proof. Hold the process
-                    // foreground for the duration of the creation and drive the
-                    // home identity tile via CreateIdentityService's lightweight
-                    // SDK-hold action (it does NO funding). Started here, from
-                    // the tap path with the activity visible, to satisfy the
-                    // Android 12+ FGS-start rules.
-                    walletApplication.startService(
-                        CreateIdentityService.createIntentForSdkForegroundHold(
-                            walletApplication,
-                            requestedUserName!!,
-                            requestedUsernameSecondary
-                        )
+            }
+            _uiState.update {
+                if (accepted) it.copy(usernameRequestSubmitting = true) else it.copy(usernameSubmittedError = true)
+            }
+            return
+        }
+        withContext(Dispatchers.IO) { updateConfig(submission) }
+        val cutoverCommitted = !isUsingInvite() && !reuseTransaction &&
+            submitSource != UsernamePaymentSource.SHIELDED_BALANCE && cutover
+        if (submitSource == UsernamePaymentSource.SHIELDED_BALANCE &&
+            !isUsingInvite() && !reuseTransaction
+        ) {
+            // The user picked the shielded balance on the payment-option
+            // sheet: fund the identity DIRECTLY from the shielded pool
+            // (Type 20) instead of the L1 asset-lock path. Invite and
+            // reuse-transaction submissions never reach here — their
+            // funding is already committed elsewhere.
+            log.info("routing username creation to the shielded-funded SDK path")
+            val accepted = shieldedUsernameCreation.submit(checkNotNull(submission.username) { "no username to submit" }, submission.secondary)
+            if (accepted) {
+                // Same as the transparent path: the funding runs on the
+                // app-scoped executor, but the app could still go cached on
+                // a screen lock and be reaped mid-proof. Hold the process
+                // foreground for the duration and drive the home identity
+                // tile via CreateIdentityService's lightweight SDK-hold
+                // action (it does NO funding). The shielded=true flag makes
+                // the hold observe the shielded executor's submit state.
+                // Started here, from the tap path with the activity visible,
+                // to satisfy the Android 12+ FGS-start rules.
+                walletApplication.startService(
+                    CreateIdentityService.createIntentForSdkForegroundHold(
+                        walletApplication,
+                        checkNotNull(submission.username) { "no username to submit" },
+                        submission.secondary,
+                        shielded = true
                     )
-                } else {
-                    val state = transparentUsernameCreation.submitState.value
-                    log.info("username submit rejected: transparent creation refused (executor state: {})", state)
-                    _uiState.update {
-                        when (state) {
-                            ShieldedUsernameSubmitState.Proving ->
-                                it.copy(usernameRequestSubmitting = true)
-                            ShieldedUsernameSubmitState.MayHaveGoneThrough ->
-                                it.copy(usernameSubmittedAmbiguous = true)
-                            else -> it.copy(usernameSubmittedError = true)
-                        }
-                    }
-                }
+                )
             } else {
-                // The L1/asset-lock path (Dash balance, invite, dual and
-                // reuse-transaction submissions): CreateIdentityService
-                // takes over and the screen closes once the identity state
-                // machine starts, but that leaves a feedback gap between
-                // the tap and the state flip. Show the same processing
-                // status the shielded path shows; it is dismissed with the
-                // screen (or replaced by the error state below).
-                _uiState.update { it.copy(usernameRequestSubmitting = true) }
-                triggerIdentityCreation(reuseTransaction)
+                // A refused submit must NEVER die silently (observed
+                // live: a swallowed submit reads as a broken app).
+                // Surface a state the dialogs react to, matched to why
+                // the executor refused.
+                val state = shieldedUsernameCreation.submitState.value
+                log.info("username submit rejected: shielded creation refused (executor state: {})", state)
+                _uiState.update {
+                    when (state) {
+                        // An earlier operation is still proving — show
+                        // its processing status instead of an error.
+                        ShieldedUsernameSubmitState.Proving ->
+                            it.copy(usernameRequestSubmitting = true)
+                        // Sticky unconfirmed outcome: never a retryable
+                        // error dialog.
+                        ShieldedUsernameSubmitState.MayHaveGoneThrough ->
+                            it.copy(usernameSubmittedAmbiguous = true)
+                        else -> it.copy(usernameSubmittedError = true)
+                    }
+                }
             }
+        } else if (cutoverCommitted) {
+            // Committed cutover, Dash-balance funding: the identity's
+            // asset lock is built from the transparent UTXOs the SDK now
+            // holds (register / resume), NOT dashj. Same app-scoped
+            // single-flight + no-double-broadcast contract as the
+            // shielded path.
+            log.info("routing username creation to the transparent-funded SDK path (cutover committed)")
+            val accepted = transparentUsernameCreation.submit(checkNotNull(submission.username) { "no username to submit" }, submission.secondary)
+            if (accepted) {
+                // The funding runs on the app-scoped executor (survives the
+                // screen), but the app would still go cached on a screen
+                // lock and could be reaped mid-proof. Hold the process
+                // foreground for the duration of the creation and drive the
+                // home identity tile via CreateIdentityService's lightweight
+                // SDK-hold action (it does NO funding). Started here, from
+                // the tap path with the activity visible, to satisfy the
+                // Android 12+ FGS-start rules.
+                walletApplication.startService(
+                    CreateIdentityService.createIntentForSdkForegroundHold(
+                        walletApplication,
+                        checkNotNull(submission.username) { "no username to submit" },
+                        submission.secondary
+                    )
+                )
+            } else {
+                val state = transparentUsernameCreation.submitState.value
+                log.info("username submit rejected: transparent creation refused (executor state: {})", state)
+                _uiState.update {
+                    when (state) {
+                        ShieldedUsernameSubmitState.Proving ->
+                            it.copy(usernameRequestSubmitting = true)
+                        ShieldedUsernameSubmitState.MayHaveGoneThrough ->
+                            it.copy(usernameSubmittedAmbiguous = true)
+                        else -> it.copy(usernameSubmittedError = true)
+                    }
+                }
+            }
+        } else {
+            // The L1/asset-lock path (Dash balance, invite, dual and
+            // reuse-transaction submissions): CreateIdentityService
+            // takes over and the screen closes once the identity state
+            // machine starts, but that leaves a feedback gap between
+            // the tap and the state flip. Show the same processing
+            // status the shielded path shows; it is dismissed with the
+            // screen (or replaced by the error state below).
+            _uiState.update { it.copy(usernameRequestSubmitting = true) }
+            triggerIdentityCreation(submission, reuseTransaction)
         }
     }
 
@@ -1337,11 +1401,11 @@ class RequestUserNameViewModel @Inject constructor(
         _requestedUserNameLink.value = link
     }
 
-    private suspend fun updateConfig() {
-        requestedUserName?.let { name ->
+    private suspend fun updateConfig(submission: UsernameSubmission) {
+        submission.username?.let { name ->
             identityConfig.set(USERNAME, name)
         }
-        _requestedUserNameLink.value.let { link ->
+        submission.link.let { link ->
             identityConfig.set(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK, link ?: "")
         }
     }
@@ -1830,12 +1894,33 @@ class RequestUserNameViewModel @Inject constructor(
         return Names.isUsernameContestable(requestedUserName!!)
     }
 
+    /**
+     * Verifies the request already in its vote: through the verification-link obligation, which
+     * the [de.schildbach.wallet.service.platform.sdk.VerifyLinkReconciler] publishes once (never
+     * when the document already exists), not a direct enqueue that could publish it twice.
+     */
     fun publishIdentityVerifyDocument() {
-        _requestedUserNameLink.value?.let { url ->
-            BroadcastIdentityVerifyOperation(walletApplication).create(
-                requestedUserName!!,
-                url
-            ).enqueue()
+        val identityId = identity?.userId
+        val username = requestedUserName
+        val url = _requestedUserNameLink.value
+        viewModelScope.launch {
+            try {
+                val recorded = withContext(Dispatchers.IO) {
+                    requestVerificationLinkPublication(
+                        identityId,
+                        username,
+                        url,
+                        { identityConfig.set(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK, it) },
+                        identityConfig,
+                        { transparentUsernameCreation.reconcileVerificationLink() }
+                    )
+                }
+                if (!recorded) log.warn("verification link not recorded: no identity, name or valid link")
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                log.warn("could not record the verification link", e)
+            }
         }
     }
 
@@ -1957,3 +2042,31 @@ internal fun usernameCheckResultIsCurrent(checkedToken: Long, currentToken: Long
 internal fun secondaryNameCollidesWithPrimary(secondary: String, primary: String?): Boolean =
     !primary.isNullOrBlank() && secondary.isNotBlank() &&
         Names.normalizeString(secondary) == Names.normalizeString(primary)
+
+/** What the Verify button of the request flow does; see [verifyRoute]. */
+internal enum class VerifyRoute { SUBMIT_NEW, SUBMIT_REPLACEMENT, UPDATE_EXISTING_REQUEST }
+
+/**
+ * The Verify button: an identity still being created SUBMITS a new request; an existing identity
+ * SUBMITS a replacement (the same name-only route [RequestUserNameViewModel.submit] takes) when its
+ * name lost or was locked in its vote, failed or was taken (an error on record), or when the
+ * requested name is not the one on record; only the request already in its vote is merely
+ * verified (its IdentityVerify document published). The record of a lost vote stays VOTING or
+ * DONE, so the state alone cannot tell a replacement from a verification update.
+ */
+internal fun verifyRoute(identity: BlockchainIdentityData?, requestedUsername: String?): VerifyRoute {
+    if (identity == null || identity.creationState < IdentityCreationState.VOTING &&
+        identity.creationStateErrorMessage == null
+    ) {
+        return VerifyRoute.SUBMIT_NEW
+    }
+    val lostOrLocked = identity.usernameRequested == UsernameRequestStatus.LOST_VOTE ||
+        identity.usernameRequested == UsernameRequestStatus.LOCKED
+    val sameName = requestedUsername != null && identity.username != null &&
+        Names.normalizeString(requestedUsername) == Names.normalizeString(identity.username!!)
+    return if (lostOrLocked || identity.creationStateErrorMessage != null || !sameName) {
+        VerifyRoute.SUBMIT_REPLACEMENT
+    } else {
+        VerifyRoute.UPDATE_EXISTING_REQUEST
+    }
+}
