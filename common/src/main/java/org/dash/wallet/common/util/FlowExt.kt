@@ -4,12 +4,14 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.AbstractFlow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.launch
 import kotlin.time.Duration
 
@@ -37,6 +39,33 @@ class TickerFlow(
  * at 60 s.
  */
 fun readRetryDelayMs(attempt: Long): Long = (attempt.coerceIn(0L, 11L) + 1) * 5_000L
+
+/**
+ * Keeps a read flow alive across read errors, for a collector held for a
+ * screen's (or the app's) lifetime.
+ *
+ * When upstream throws an [Exception], [onError] is called with the cause and
+ * the retry attempt (counted from 0), [fallback] is emitted, the flow waits
+ * [retryDelayMs] (attempt) milliseconds and then re-subscribes to upstream. A
+ * transient [Exception] therefore never completes the flow.
+ *
+ * A [CancellationException], or any [Throwable] that is not an [Exception]
+ * (an [Error] such as [OutOfMemoryError]), is not retried: it propagates to the
+ * collector without emitting [fallback].
+ */
+fun <T> Flow<T>.retryReadErrors(
+    fallback: T,
+    retryDelayMs: (Long) -> Long = ::readRetryDelayMs,
+    onError: (cause: Exception, attempt: Long) -> Unit = { _, _ -> }
+): Flow<T> = retryWhen { cause, attempt ->
+    if (cause !is Exception || cause is CancellationException) {
+        return@retryWhen false
+    }
+    onError(cause, attempt)
+    emit(fallback)
+    delay(retryDelayMs(attempt))
+    true
+}
 
 /**
  * @author Tobias Preuss @johnjohndoe
