@@ -117,6 +117,17 @@ class BuyAndSellViewModel @Inject constructor(
             }
             .launchIn(viewModelScope)
 
+        // The seed in _uiState can be a startup-race `false`: the stored Coinbase token is
+        // read back on an IO dispatcher, which may not have happened yet. Track the state
+        // so the row and the balance catch up when it lands (MO-995).
+        coinBaseRepository.isAuthenticatedFlow
+            .onEach { isAuthenticated ->
+                _uiState.update { it.copy(isCoinbaseAuthenticated = isAuthenticated) }
+                updateServicesStatus()
+                updateBalances()
+            }
+            .launchIn(viewModelScope)
+
         viewModelScope.launch {
             topperClient.refreshSupportedAssets()
             topperClient.refreshPaymentMethods()
