@@ -95,8 +95,8 @@ class ExternalSendViewModelTest {
         override fun observeHasIdentity(): Flow<Boolean?> = hasIdentity
         override suspend fun isOwnIdentity(identityIdBase58: String): Boolean? = ownIdentity
         override suspend fun resolveIdentity(identityIdBase58: String): IdentityResolution = resolution
-        override suspend fun estimateFee(source: SendBalance, destination: SendDestination, amount: Dash) = fee
-        override suspend fun maxSendable(source: SendBalance, destination: SendDestination): Dash? {
+        override suspend fun estimateFee(source: SendBalance, destinationKind: SendBalance) = fee
+        override suspend fun maxSendable(source: SendBalance, destinationKind: SendBalance): Dash? {
             maxGates[source]?.await()
             return max[source]
         }
