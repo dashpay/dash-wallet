@@ -173,7 +173,8 @@ class SdkShieldedUsernameCreationTest {
         balance: ShieldedBalanceService = balanceService(),
         handoff: HandoffRecorder = HandoffRecorder(),
         overages: OverageRecorder = OverageRecorder(),
-        scope: TestScope? = null
+        scope: TestScope? = null,
+        obligations: MutableList<String> = mutableListOf()
     ) = SdkShieldedUsernameCreation(
         source = source,
         dashPayConfig = config(flag),
@@ -184,7 +185,8 @@ class SdkShieldedUsernameCreationTest {
         displayHrp = { "tdash" },
         handOffToLegacy = handoff::invoke,
         recordInviteOverage = overages::invoke,
-        executorScope = scope
+        executorScope = scope,
+        recordVerifyObligation = { _, label -> obligations += label }
     )
 
     // ── Fee → denomination mapping ────────────────────────────────────────
@@ -429,6 +431,29 @@ class SdkShieldedUsernameCreationTest {
         } finally {
             balanceFlow.value = denomination
         }
+    }
+
+    @Test
+    fun contestedUsername_recordsItsVerificationLink_aNonContestedOneDoesNot() = runTest {
+        // recovery only reads a verification link back: the registration owner records the
+        // obligation the VerifyLinkReconciler publishes
+        balanceFlow.value = contestedDenomination
+        try {
+            val source = happySource()
+            coEvery {
+                source.createIdentityFromPool(walletIdHex, 0, registrationKeys, contestedDenominationCredits, any())
+            } returns identityId
+            val obligations = mutableListOf<String>()
+
+            assertTrue(service(source = source, obligations = obligations).createUsernameFromShielded("alice") is SdkWriteResult.Broadcast)
+
+            assertEquals(listOf("alice"), obligations)
+        } finally {
+            balanceFlow.value = denomination
+        }
+        val obligations = mutableListOf<String>()
+        assertTrue(service(obligations = obligations).createUsernameFromShielded("alice2") is SdkWriteResult.Broadcast)
+        assertTrue(obligations.isEmpty())
     }
 
     @Test

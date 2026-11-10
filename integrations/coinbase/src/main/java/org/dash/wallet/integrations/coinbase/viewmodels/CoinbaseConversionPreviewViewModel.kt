@@ -343,7 +343,7 @@ class CoinbaseConversionPreviewViewModel @Inject constructor(
         // From here the mark armed at the tap is kept unless the send is refused.
         sendStarted.set(true)
         return try {
-            val txId = sendPaymentService.sendCoins(address, coin, checkBalanceConditions = false, session = session)
+            val txId = sendPaymentService.sendCoins(address, coin, session = session)
             transactionMetadataProvider.markAddressAsTransferOutAsync(
                 address,
                 ServiceName.Coinbase

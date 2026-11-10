@@ -47,8 +47,6 @@ import de.schildbach.wallet.database.entity.DashPayContactRequest
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.service.TxDisplayCacheService
-import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
-import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
 import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.PlatformService
 import de.schildbach.wallet.service.platform.PlatformSyncService
@@ -184,7 +182,6 @@ class MainViewModelTest {
     }
 
     private val blockchainStateMock = mockk<BlockchainStateProvider> {
-        //every { getMasternodeAPY() } returns 5.9
     }
 
     private val transactionMetadataMock = mockk<TransactionMetadataProvider> {
@@ -227,10 +224,6 @@ class MainViewModelTest {
     }
 
     private val txDisplayCacheService = mockk<TxDisplayCacheService>(relaxed = true)
-    private val crowdNodeApi = mockk<CrowdNodeApi> {
-        every { signUpStatus } returns MutableStateFlow(SignUpStatus.NotStarted)
-        every { balance } returns MutableStateFlow(Resource.success(Dash.ZERO))
-    }
     /**
      * The engine-agnostic sync seam. The ViewModel no longer knows which L1
      * engine produced the status — see [de.schildbach.wallet.service.L1SyncStatusService].
@@ -321,7 +314,6 @@ class MainViewModelTest {
         mockkStatic(WorkManager::class)
         every { WorkManager.getInstance(any()) } returns workManagerMock
         every { savedStateMock.get<TxFilterType>(eq("tx_direction")) } returns TxFilterType.ALL
-        every { savedStateMock.get<Boolean>(eq("crowdnode_withdrawal_reminder_shown")) } returns false
         every { savedStateMock.set<TxFilterType>(any(), any()) } just runs
     }
 
@@ -353,7 +345,6 @@ class MainViewModelTest {
                 mockDashPayConfig,
                 dashPayContactRequestDao,
                 txDisplayCacheService,
-                crowdNodeApi,
                 coinJoinFundsMigrationService,
                 l1SyncStatusService,
                 contactRequestNotificationService,
@@ -398,7 +389,6 @@ class MainViewModelTest {
                 mockDashPayConfig,
                 dashPayContactRequestDao,
                 txDisplayCacheService,
-                crowdNodeApi,
                 coinJoinFundsMigrationService,
                 l1SyncStatusService,
                 contactRequestNotificationService,
@@ -490,7 +480,6 @@ class MainViewModelTest {
             mockDashPayConfig,
             dashPayContactRequestDao,
             txDisplayCacheService,
-            crowdNodeApi,
             coinJoinFundsMigrationService,
             l1SyncStatusService,
             contactRequestNotificationService,
@@ -553,7 +542,6 @@ class MainViewModelTest {
             mockDashPayConfig,
             dashPayContactRequestDao,
             txDisplayCacheService,
-            crowdNodeApi,
             coinJoinFundsMigrationService,
             l1SyncStatusService,
             contactRequestNotificationService,
@@ -598,7 +586,6 @@ class MainViewModelTest {
             mockDashPayConfig,
             dashPayContactRequestDao,
             txDisplayCacheService,
-            crowdNodeApi,
             coinJoinFundsMigrationService,
             l1SyncStatusService,
             contactRequestNotificationService,
@@ -658,7 +645,6 @@ class MainViewModelTest {
             mockDashPayConfig,
             dashPayContactRequestDao,
             txDisplayCacheService,
-            crowdNodeApi,
             coinJoinFundsMigrationService,
             l1SyncStatusService,
             contactRequestNotificationService,
@@ -714,7 +700,6 @@ class MainViewModelTest {
             mockDashPayConfig,
             dashPayContactRequestDao,
             txDisplayCacheService,
-            crowdNodeApi,
             coinJoinFundsMigrationService,
             l1SyncStatusService,
             contactRequestNotificationService,

@@ -27,7 +27,7 @@
             android:layout_height="wrap_content"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            tools:text="CrowdNode Account" />
+            tools:text="Transaction Group" />
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:id="@+id/dash_amount_container"
@@ -88,8 +88,8 @@
             android:background="@drawable/rounded_background"
             android:paddingHorizontal="10dp"
             android:paddingVertical="10dp"
-            android:src="@drawable/ic_crowdnode_logo"
-            android:theme="@style/CrowdNodeLogoBackground"
+            android:src="@drawable/ic_coinjoin_mixing_group"
+            android:theme="@style/TxGroupIconBackground"
             app:layout_constraintBottom_toBottomOf="@id/fiat_value"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="@id/group_title" />
@@ -115,7 +115,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:textSize="13sp"
-            tools:text="@string/crowdnode_tx_set_title" />
+            tools:text="Group Details Title" />
 
         <TextView
             android:id="@+id/details_message"
@@ -124,7 +124,7 @@
             android:layout_height="match_parent"
             android:layout_marginTop="6dp"
             android:textSize="13sp"
-            tools:text="@string/crowdnode_tx_set_explainer" />
+            tools:text="Details of the group" />
     </LinearLayout>
 
     <androidx.cardview.widget.CardView

@@ -20,13 +20,6 @@ package org.dash.wallet.common.services
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.transactions.TxInfo
 
-/**
- * Thrown when a send would leave less than the required leftover balance in the wallet
- * (e.g. for CrowdNode withdrawals). [missing] is the amount that is missing to satisfy
- * the requirement.
- */
-class LeftoverBalanceException(val missing: Dash, message: String) : InsufficientFundsException(message)
-
 class DirectPayException(message: String) : Exception(message)
 
 /**
@@ -65,21 +58,6 @@ data class PaymentRecoveryMetadata(
 )
 
 /**
- * Describes which outputs a send may draw on. The wallet module maps these onto its
- * dashj coin selectors.
- */
-sealed class SpendSelection {
-    /** Default selection over all spendable outputs. */
-    object Any : SpendSelection()
-
-    /** Only outputs paying the given base58 address (mirrors `ByAddressCoinSelector`). */
-    data class ByAddress(val address: String) : SpendSelection()
-
-    /** Exactly the given output of the given transaction (mirrors `ExactOutputsSelector`). */
-    data class ExactOutput(val txId: String, val outputIndex: Int) : SpendSelection()
-}
-
-/**
  * Neutral (dashj-free) payment service facade: amounts are [Dash], addresses are base58
  * strings, created transactions are returned as [TxInfo] snapshots or hex tx ids.
  */
@@ -105,35 +83,12 @@ interface SendPaymentService {
      * as a hex string. Failures surface as exceptions classifiable with the neutral
      * `Throwable.is*` helpers.
      */
-    @Throws(LeftoverBalanceException::class)
     suspend fun sendCoins(
         address: String,
         amount: Dash,
         emptyWallet: Boolean = false,
-        checkBalanceConditions: Boolean = true,
         session: WalletSession? = null
     ): String
-
-    /**
-     * Full-control send used by integrations that steer coin selection and output locking
-     * (CrowdNode). Returns the created transaction as a [TxInfo].
-     *
-     * @param selection which outputs the send may draw on.
-     * @param lockSentOutputsTo before broadcasting, lock the created transaction's P2PKH outputs
-     *        paying this base58 address (mirrors the CrowdNode account-output locking).
-     * @param canSpendLockedOutputsTo allow spending locked outputs that pay this base58 address.
-     */
-    @Throws(LeftoverBalanceException::class)
-    suspend fun sendCoinsSelected(
-        address: String,
-        amount: Dash,
-        selection: SpendSelection = SpendSelection.Any,
-        emptyWallet: Boolean = false,
-        checkBalanceConditions: Boolean = true,
-        lockSentOutputsTo: String? = null,
-        canSpendLockedOutputsTo: String? = null,
-        session: WalletSession? = null
-    ): TxInfo
 
     /** Fee/total estimate for sending [amount] to [address]. */
     suspend fun estimateNetworkFee(

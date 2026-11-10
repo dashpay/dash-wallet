@@ -18,6 +18,7 @@
 package de.schildbach.wallet.ui.more.connections.protocol
 
 import org.bitcoinj.core.Base58
+import java.util.Locale
 
 /**
  * Network identifiers used in the `?n=` query parameter of DashConnect URIs, matching the
@@ -36,27 +37,35 @@ enum class DashConnectNetwork(val code: String) {
 /** Thrown when a scanned QR is not a well-formed DashConnect URI, or fails validation. */
 class DashConnectUriException(message: String, cause: Throwable? = null) : Exception(message, cause)
 
+data class DashStRequest(val transitionBytes: ByteArray, val network: DashConnectNetwork)
+
 /**
- * A parsed and fully validated `dash-key:` login request (QR #1). The [label] is
+ * A parsed `dash-key:` login request. Operational entry points require the v2 [appConnect] payload.
+ * The [label] is
  * UNAUTHENTICATED — it is a claim by the app about itself and MUST be treated as
  * spoofable in the UI.
  *
- * Payload layout (after plain Base58 decode, min 67 bytes):
- * `version(1B=0x01) || appEphemeralPubKey(33B) || contractId(32B) || labelLen(1B, 0..64) || label(UTF-8)`
+ * V2 payload decoding and validation are handled by [AppConnectParser].
  */
 data class DashKeyRequest(
     val appEphemeralPubKey: ByteArray,
     val contractId: ByteArray,
     val label: String,
-    val network: DashConnectNetwork
+    val network: DashConnectNetwork,
+    val appConnect: AppConnectRequest? = null
 ) {
+    fun requireAppConnect(): AppConnectRequest = appConnect
+        ?: throw DashConnectUriException(DashConnectUri.LEGACY_KEY_REQUEST_ERROR)
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is DashKeyRequest) return false
         return appEphemeralPubKey.contentEquals(other.appEphemeralPubKey) &&
             contractId.contentEquals(other.contractId) &&
             label == other.label &&
-            network == other.network
+            network == other.network &&
+            ((appConnect == null && other.appConnect == null) || (appConnect != null && other.appConnect != null &&
+                appConnect.bytes.contentEquals(other.appConnect.bytes) && appConnect.callback == other.appConnect.callback))
     }
 
     override fun hashCode(): Int {
@@ -64,36 +73,19 @@ data class DashKeyRequest(
         result = 31 * result + contractId.contentHashCode()
         result = 31 * result + label.hashCode()
         result = 31 * result + network.hashCode()
+        result = 31 * result + (appConnect?.bytes?.contentHashCode() ?: 0)
+        result = 31 * result + (appConnect?.callback?.hashCode() ?: 0)
         return result
     }
 }
 
 /**
- * A parsed `dash-st:` first-login key-registration request (QR #2). Holds the raw serialized
- * [IdentityUpdateTransition] bytes; semantic validation (identity ownership, key shape, and the
- * strong end-to-end derivation check) happens against the deserialized transition in the
- * repository, which is where the SDK and the login key are available.
- */
-data class DashStRequest(
-    val transitionBytes: ByteArray,
-    val network: DashConnectNetwork
-) {
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is DashStRequest) return false
-        return transitionBytes.contentEquals(other.transitionBytes) && network == other.network
-    }
-
-    override fun hashCode(): Int = 31 * transitionBytes.contentHashCode() + network.hashCode()
-}
-
-/**
- * Parsers for the two DashConnect URI schemes. Pure and Android-free.
+ * Parser for the DashConnect login URI scheme. Pure and Android-free.
  *
- * Common rules enforced for both schemes:
+ * Rules enforced:
  *  - scheme literal followed by `:` and NO `//` authority component
  *  - the `?` query separator must be present
- *  - query params `n` and `v` are both required; `v` must equal `1`
+ *  - query params `n` and `v` are both required; `v` must equal `2` for login
  *  - `n` must decode to a known network; callers additionally gate on the wallet's active network
  *  - the body between `:` and `?` is plain Base58 (NO checksum)
  */
@@ -102,12 +94,17 @@ object DashConnectUri {
     const val KEY_SCHEME = "dash-key:"
     const val ST_SCHEME = "dash-st:"
 
-    const val VERSION = 1
-    const val PAYLOAD_VERSION_BYTE: Byte = 0x01
+    const val DASHPAY_PREFIX = "dashpay://"
+    const val CONNECT_VERB = "connect"
+    const val INVITE_VERB = "invite"
+    const val NEEDS_NEWER_WALLET_ERROR = "This link needs a newer version of the wallet"
+    private const val MAX_CONNECT_URI_BYTES = 4096
+    private const val MAX_CONNECT_R_CHARS = 1366
+    private const val MAX_CONNECT_R_BYTES = 1024
+    private val CONNECT_SINGLE_VALUED_PARAMS = setOf("v", "n", "r", "cb")
 
-    const val MIN_KEY_PAYLOAD_LENGTH =
-        1 + KeyExchangeCrypto.COMPRESSED_PUBKEY_LENGTH + 32 + 1 // 67
-    const val MAX_LABEL_LENGTH = 64
+    const val VERSION = 2
+    const val LEGACY_KEY_REQUEST_ERROR = "Unsupported legacy connection request. Generate a new QR code."
 
     /**
      * Parses and validates a `dash-key:` login-request URI. Returns a [DashKeyRequest] with the
@@ -117,112 +114,163 @@ object DashConnectUri {
      * @throws DashConnectUriException on any malformed input or validation failure.
      */
     fun parseKeyRequest(uri: String): DashKeyRequest {
-        val (body, network) = parseEnvelope(uri, KEY_SCHEME)
-        val payload = decodeBase58(body)
-
-        if (payload.size < MIN_KEY_PAYLOAD_LENGTH) {
-            throw DashConnectUriException(
-                "dash-key payload too short: ${payload.size} < $MIN_KEY_PAYLOAD_LENGTH"
-            )
-        }
-        var offset = 0
-        val version = payload[offset]; offset += 1
-        if (version != PAYLOAD_VERSION_BYTE) {
-            throw DashConnectUriException("unsupported dash-key payload version: $version")
-        }
-        val appEphemeralPubKey = payload.copyOfRange(offset, offset + KeyExchangeCrypto.COMPRESSED_PUBKEY_LENGTH)
-        offset += KeyExchangeCrypto.COMPRESSED_PUBKEY_LENGTH
-        val contractId = payload.copyOfRange(offset, offset + 32)
-        offset += 32
-        val labelLen = payload[offset].toInt() and 0xff; offset += 1
-
-        if (labelLen > MAX_LABEL_LENGTH) {
-            throw DashConnectUriException("label length $labelLen exceeds max $MAX_LABEL_LENGTH")
-        }
-        if (offset + labelLen > payload.size) {
-            throw DashConnectUriException("label length $labelLen overruns payload")
-        }
-        val label = String(payload.copyOfRange(offset, offset + labelLen), Charsets.UTF_8)
-
-        // Reject an ephemeral pubkey that is not a valid secp256k1 point before it ever
-        // reaches ECDH. The QR is untrusted input.
-        if (!KeyExchangeCrypto.isValidCompressedPoint(appEphemeralPubKey)) {
-            throw DashConnectUriException("appEphemeralPubKey is not a valid compressed secp256k1 point")
-        }
-
-        return DashKeyRequest(appEphemeralPubKey, contractId, label, network)
+        if (uri.length > 4096) throw DashConnectUriException("Connection QR is too large")
+        if (!isKeyUri(uri) || uri.startsWith("dash-key://") || '#' in uri || '?' !in uri)
+            throw DashConnectUriException("Invalid connection link")
+        try {
+            val query = AppConnectParser.query(uri.substringAfter('?'))
+            if (query["v"] == "1") throw DashConnectUriException(LEGACY_KEY_REQUEST_ERROR)
+            if (query["v"] != VERSION.toString()) throw DashConnectUriException("Unsupported connection version")
+            val network = DashConnectNetwork.fromCode(query["n"])
+                ?: throw DashConnectUriException("Unknown network")
+            return AppConnectParser.parse(decodeBase58(uri.substringAfter(KEY_SCHEME).substringBefore('?')),
+                network, query["cb"])
+        } catch (e: DashConnectUriException) { throw e }
+        catch (e: Exception) { throw DashConnectUriException("Invalid connection request") }
     }
 
     /**
-     * Parses and validates the envelope of a `dash-st:` key-registration URI and returns the raw
-     * serialized transition bytes. Structural/semantic validation of the transition itself is done
-     * by the caller (it needs the SDK + login key).
+     * Parses a `dashpay://connect` request (App Connect DIP, "connect URI"). The body after `r=` is
+     * the same request v2 body as the `dash-key:` carrier and goes through the same
+     * [AppConnectParser]; only the wrapper differs.
      *
-     * @throws DashConnectUriException on a malformed envelope.
+     * Rules: scheme and host compared case-insensitively; path empty or a single `/`; no userinfo,
+     * port or fragment; query split on `&` and form-decoded; a repeated `v`, `n`, `r` or `cb` is
+     * invalid; unknown parameters are ignored; `v` is exactly `2`; `r` is REQUIRED canonical
+     * base64url (at most 1,366 characters, 1,024 bytes); the whole URI is at most 4,096 bytes,
+     * checked before anything is decoded. `cb` keeps the `dash-key:` rules, enforced by
+     * [AppConnectParser.parse]. The caller still compares [DashKeyRequest.network] with the
+     * wallet's network before doing any network read.
+     *
+     * A `dashpay://` URI whose verb this wallet does not implement (for example `sign`) fails with
+     * [NEEDS_NEWER_WALLET_ERROR].
+     *
+     * @throws DashConnectUriException on any malformed input or validation failure.
      */
-    fun parseStRequest(uri: String): DashStRequest {
-        val (body, network) = parseEnvelope(uri, ST_SCHEME)
-        val transitionBytes = decodeBase58(body)
-        if (transitionBytes.isEmpty()) {
-            throw DashConnectUriException("dash-st transition bytes are empty")
+    fun parseConnectRequest(uri: String): DashKeyRequest {
+        val verb = dashPayVerb(uri)
+        if (verb.isNullOrEmpty() || verb == INVITE_VERB) throw DashConnectUriException("Invalid connection link")
+        // userinfo or a port makes a malformed link, not a verb a newer wallet would know
+        val authority = uri.substring(DASHPAY_PREFIX.length).takeWhile { it != '/' && it != '?' && it != '#' }
+        if ('@' in authority || ':' in authority) throw DashConnectUriException("Invalid connection link")
+        if (verb != CONNECT_VERB) throw DashConnectUriException(NEEDS_NEWER_WALLET_ERROR)
+        if (uri.toByteArray(Charsets.UTF_8).size > MAX_CONNECT_URI_BYTES) {
+            throw DashConnectUriException("Connection QR is too large")
         }
-        return DashStRequest(transitionBytes, network)
+        try {
+            val rest = uri.substring(DASHPAY_PREFIX.length)
+            val queryStart = rest.indexOf('?')
+            if ('#' in rest || queryStart < 0) throw DashConnectUriException("Invalid connection link")
+            val authorityAndPath = rest.substring(0, queryStart)
+            val pathStart = authorityAndPath.indexOf('/')
+            val host = if (pathStart < 0) authorityAndPath else authorityAndPath.substring(0, pathStart)
+            val path = if (pathStart < 0) "" else authorityAndPath.substring(pathStart)
+            // userinfo and port both put '@' or ':' in the host part, which then no longer equals "connect"
+            if (!host.equals(CONNECT_VERB, ignoreCase = true) || (path.isNotEmpty() && path != "/")) {
+                throw DashConnectUriException("Invalid connection link")
+            }
+            val query = AppConnectParser.query(rest.substring(queryStart + 1), CONNECT_SINGLE_VALUED_PARAMS)
+            if (query["v"] != VERSION.toString()) throw DashConnectUriException("Unsupported connection version")
+            val network = DashConnectNetwork.fromCode(query["n"])
+                ?: throw DashConnectUriException("Unknown network")
+            val body = decodeBase64Url(
+                query["r"] ?: throw DashConnectUriException("Missing connection request"),
+                MAX_CONNECT_R_CHARS, MAX_CONNECT_R_BYTES
+            )
+            return AppConnectParser.parse(body, network, query["cb"])
+        } catch (e: DashConnectUriException) { throw e }
+        catch (e: Exception) { throw DashConnectUriException("Invalid connection request", e) }
+    }
+
+    /**
+     * Parses a request from either carrier: `dash-key:` or `dashpay://connect`. `dash-st:` is not a
+     * login request and is refused here, as before.
+     */
+    fun parseRequest(uri: String): DashKeyRequest = when {
+        isKeyUri(uri) -> parseKeyRequest(uri)
+        isDashPayVerbUri(uri) -> parseConnectRequest(uri)
+        else -> throw DashConnectUriException("Not a DashConnect QR code")
     }
 
     /** True if [uri] uses the `dash-key:` scheme. */
     fun isKeyUri(uri: String): Boolean = uri.startsWith(KEY_SCHEME)
 
-    /** True if [uri] uses the `dash-st:` scheme. */
     fun isStUri(uri: String): Boolean = uri.startsWith(ST_SCHEME)
 
-    // ── internals ────────────────────────────────────────────────────────────────────
+    /** True for `dashpay://connect...`, comparing scheme and host case-insensitively. */
+    fun isDashPayConnectUri(uri: String): Boolean = dashPayVerb(uri) == CONNECT_VERB
 
     /**
-     * Validates the shared URI envelope: scheme (no `//`), presence of a query, required `n`/`v`
-     * params, `v == 1`, and a known network. Returns the Base58 body and the decoded network.
+     * True for any `dashpay://<verb>` URI other than `invite`, which stays with the invitation
+     * handler. A verb this wallet does not implement is reported as needing a newer wallet.
      */
-    private fun parseEnvelope(uri: String, scheme: String): Pair<String, DashConnectNetwork> {
-        if (!uri.startsWith(scheme)) {
-            throw DashConnectUriException("expected scheme $scheme")
-        }
-        val afterScheme = uri.substring(scheme.length)
-        if (afterScheme.startsWith("//")) {
-            throw DashConnectUriException("scheme must not be followed by //")
-        }
-        val queryIndex = afterScheme.indexOf('?')
-        if (queryIndex < 0) {
-            throw DashConnectUriException("missing query component")
-        }
-        val body = afterScheme.substring(0, queryIndex)
-        if (body.isEmpty()) {
-            throw DashConnectUriException("missing payload")
-        }
-        val query = afterScheme.substring(queryIndex + 1)
-        val params = parseQuery(query)
+    fun isDashPayVerbUri(uri: String): Boolean = dashPayVerb(uri)?.let { it.isNotEmpty() && it != INVITE_VERB } == true
 
-        val version = params["v"] ?: throw DashConnectUriException("missing v param")
-        if (version.toIntOrNull() != VERSION) {
-            throw DashConnectUriException("unsupported version: $version")
-        }
-        val networkCode = params["n"] ?: throw DashConnectUriException("missing n param")
-        val network = DashConnectNetwork.fromCode(networkCode)
-            ?: throw DashConnectUriException("unknown network: $networkCode")
+    fun isConnectUri(uri: String): Boolean = isKeyUri(uri) || isStUri(uri) || isDashPayVerbUri(uri)
 
-        return body to network
+    /** The lowercased verb (host) of a `dashpay://` URI, or null when [uri] is not one. */
+    private fun dashPayVerb(uri: String): String? {
+        // ASCII-only fold: startsWith(ignoreCase) would also accept look-alikes such as U+017F for 's'
+        if (uri.length < DASHPAY_PREFIX.length ||
+            uri.substring(0, DASHPAY_PREFIX.length).lowercase(Locale.ROOT) != DASHPAY_PREFIX) return null
+        val end = uri.indexOfAny(charArrayOf('/', '?', '#', '@', ':'), DASHPAY_PREFIX.length)
+        return uri.substring(DASHPAY_PREFIX.length, if (end < 0) uri.length else end).lowercase(Locale.ROOT)
     }
 
-    private fun parseQuery(query: String): Map<String, String> {
-        if (query.isEmpty()) return emptyMap()
-        return query.split('&').mapNotNull { pair ->
-            val eq = pair.indexOf('=')
-            if (eq < 0) return@mapNotNull null
-            pair.substring(0, eq) to pair.substring(eq + 1)
-        }.toMap()
+    /**
+     * Strict RFC 4648 section 5 base64url without padding. Refuses `=`, `+`, `/` and anything else
+     * outside the alphabet, a length of 1 mod 4, and non-zero trailing bits, so every value has
+     * exactly one encoding. [java.util.Base64] is lenient about padding and trailing bits, so this
+     * decodes by hand.
+     */
+    internal fun decodeBase64Url(value: String, maxChars: Int, maxBytes: Int): ByteArray {
+        require(value.isNotEmpty() && value.length <= maxChars) { "Invalid base64url length" }
+        require(value.length % 4 != 1) { "Invalid base64url length" }
+        val out = ByteArray(value.length * 6 / 8)
+        var accumulator = 0
+        var bits = 0
+        var written = 0
+        for (c in value) {
+            val sextet = when (c) {
+                in 'A'..'Z' -> c - 'A'
+                in 'a'..'z' -> c - 'a' + 26
+                in '0'..'9' -> c - '0' + 52
+                '-' -> 62
+                '_' -> 63
+                else -> throw IllegalArgumentException("Invalid base64url character")
+            }
+            accumulator = (accumulator shl 6) or sextet
+            bits += 6
+            if (bits >= 8) {
+                bits -= 8
+                out[written++] = (accumulator shr bits).toByte()
+                accumulator = accumulator and ((1 shl bits) - 1)
+            }
+        }
+        require(accumulator == 0) { "Non-canonical base64url trailing bits" }
+        require(written <= maxBytes) { "Decoded value too large" }
+        return out
+    }
+
+    fun parseStRequest(uri: String): DashStRequest {
+        if (uri.length > 6144 || !isStUri(uri) || uri.startsWith("dash-st://") || '#' in uri)
+            throw DashConnectUriException("Invalid or oversized dash-st link")
+        val body = uri.substringAfter(ST_SCHEME).substringBefore('?')
+        if ('?' !in uri || body.isEmpty() || body.length > 5594)
+            throw DashConnectUriException("Invalid dash-st payload")
+        val params = try { AppConnectParser.query(uri.substringAfter('?')) }
+        catch (error: Exception) { throw DashConnectUriException("Invalid dash-st query") }
+        if (params["v"] != "1") throw DashConnectUriException("Unsupported dash-st version")
+        val network = DashConnectNetwork.fromCode(params["n"])
+            ?: throw DashConnectUriException("Unknown dash-st network")
+        val bytes = decodeBase58(body)
+        if (bytes.isEmpty() || bytes.size > 4096) throw DashConnectUriException("Invalid dash-st payload size")
+        return DashStRequest(bytes, network)
     }
 
     private fun decodeBase58(body: String): ByteArray = try {
         Base58.decode(body) // plain Base58, no checksum
     } catch (ex: Exception) {
-        throw DashConnectUriException("invalid Base58 payload", ex)
+        throw DashConnectUriException("Invalid Base58 payload")
     }
 }

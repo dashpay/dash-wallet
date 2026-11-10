@@ -78,7 +78,9 @@ abstract class BaseConfig(
 
             for (instance in snapshot) {
                 try {
-                    instance.clearAll()
+                    // The config's own wipe policy (clearAll() unless it keeps records that must
+                    // survive a same-seed restore, as DashConnectConfig's audit does).
+                    instance.onWalletWiped()
                     cleared.add(instance.preferencesFileName)
                 } catch (e: CancellationException) {
                     throw e
@@ -115,8 +117,12 @@ abstract class BaseConfig(
     init {
         synchronized(registryLock) { liveInstances[this] = Unit }
         walletDataProvider.attachOnWalletWipedListener {
-            clearAll()
+            onWalletWiped()
         }
+    }
+
+    protected open suspend fun onWalletWiped() {
+        clearAll()
     }
 
     open fun <T> observe(key: Preferences.Key<T>): Flow<T?> {

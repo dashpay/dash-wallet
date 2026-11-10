@@ -26,7 +26,7 @@ package org.dash.wallet.common.services
  * the Dash Platform Kotlin SDK, whose typed errors
  * (`org.dashfoundation.dashsdk.errors.DashSdkError`) are NOT on the
  * classpath of the feature modules that call [AuthenticationManager]
- * (`:integrations:crowdnode` depends on `:common` only). A caller therefore
+ * (they depend on `:common` only). A caller therefore
  * has no way to `catch` the SDK type. Since the interface being implemented
  * is declared here, its error contract has to be expressible here too — so
  * the wallet-side implementation maps every signing failure onto this type
@@ -36,7 +36,7 @@ package org.dash.wallet.common.services
  *
  * The dashj implementation returned an EMPTY STRING when the wallet did not
  * own the requested address. That silently produced a valid-looking request
- * carrying no signature, which the CrowdNode server then rejected with an
+ * carrying no signature, which the receiving server then rejected with an
  * opaque error — the real cause (wrong/foreign address) never reached the
  * user or the logs. Signing failures are now thrown, never swallowed; there
  * is no dashj fallback (the codebase's fail-closed cutover philosophy, cf.

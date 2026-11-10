@@ -48,12 +48,10 @@ import org.bitcoinj.utils.ExchangeRate
 import org.dash.wallet.common.money.MonetaryFormat
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.services.AuthenticationManager
-import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.LockScreenBroadcaster
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.PaymentOutcomeUnknownWarning
-import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
 import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.common.ui.OutcomeDelivery
@@ -188,10 +186,7 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
             viewModel.sendOutcome,
             lockScreenBroadcaster.unlocked,
             viewModel::consumeSendOutcome,
-            viewModel::retainSendOutcome,
-            // A minimum-balance question restored after process death lost its question.
-            MinimumBalanceDialog.TAG,
-            requireActivity().supportFragmentManager
+            viewModel::retainSendOutcome
         ) { onSendOutcome(it, this) }
 
         // The payment may have gone out: Go stays disabled (everythingPlausible() is false from
@@ -267,7 +262,7 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         updateView()
     }
 
-    private fun handleGo(checkBalance: Boolean, autoAcceptContactRequest: Boolean) {
+    private fun handleGo(autoAcceptContactRequest: Boolean) {
         if (viewModel.currentDryRun() == null) {
             log.error("illegal state: no dry run of the current payment")
             return
@@ -280,7 +275,7 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         // The view model runs the send, so a recreation of this screen cannot cancel it once it
         // may be on the network; its outcome is handled in onSendOutcome, by this screen or the
         // recreated one.
-        if (viewModel.submitPayment(editedAmount.toDashjCoin(), exchangeRate, checkBalance, autoAcceptContactRequest)) {
+        if (viewModel.submitPayment(editedAmount.toDashjCoin(), exchangeRate, autoAcceptContactRequest)) {
             viewModel.logSend()
 
             if (enterAmountFragment?.maxSelected == true) {
@@ -294,7 +289,6 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
     }
 
     /** What follows a send the view model ran; the view model is already back to INPUT. */
-    /** False when the minimum-balance question went unanswered (see handleWhenResumed). */
     private suspend fun onSendOutcome(
         outcome: SendCoinsViewModel.SendOutcome,
         delivery: OutcomeDelivery
@@ -304,15 +298,6 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
                 onSignAndSendPaymentSuccess(outcome.transaction, outcome.autoAcceptContactRequest)
             is SendCoinsViewModel.SendOutcome.Failed -> {
                 val ex = outcome.exception
-                if (ex is LeftoverBalanceException) {
-                    val shouldContinue = MinimumBalanceDialog().showAsync(requireActivity(), MinimumBalanceDialog.TAG)
-                        ?: return false
-
-                    if (shouldContinue) {
-                        handleGo(false, outcome.autoAcceptContactRequest)
-                    }
-                    return true
-                }
                 // Reported once: a failure is not shown again after a recreation or the lock,
                 // and a restored copy of its dialog still closes.
                 delivery.markAnswered()
@@ -387,7 +372,7 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         )
 
         if (confirmed == true) {
-            handleGo(true, dialog.autoAcceptContactRequest)
+            handleGo(dialog.autoAcceptContactRequest)
         }
     }
 
