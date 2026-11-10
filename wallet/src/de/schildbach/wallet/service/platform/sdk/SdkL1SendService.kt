@@ -1138,6 +1138,15 @@ internal class DashSdkL1SendSource(
 // ── The send service ──────────────────────────────────────────────────
 
 /**
+ * Whether the cutover is committed, failing closed: an unreadable state THROWS instead of
+ * reading as "not committed" (read with its errors kept,
+ * [DashPayConfig.observePreservingErrors]); an absent state is a real answer, not
+ * committed. Top-level so services that cannot depend on [SdkL1SendService] (DI) share it.
+ */
+internal suspend fun DashPayConfig.cutoverCommittedOrThrow(): Boolean =
+    !dashjEngineMayStart(CutoverState.fromStored(observePreservingErrors(DashPayConfig.CUTOVER_STATE).first()))
+
+/**
  * Phase 5b of the dashj → Kotlin SDK migration
  * (`docs/kotlin-sdk-migration-plan.md`): route the app's NORMAL L1 SEND —
  * a plain Dash payment to a base58 address — through the Kotlin SDK,
@@ -2357,10 +2366,7 @@ class SdkL1SendService internal constructor(
      * with its errors kept, [DashPayConfig.observePreservingErrors]). An absent
      * state is still a real answer: not committed.
      */
-    suspend fun cutoverCommittedOrThrow(): Boolean =
-        !dashjEngineMayStart(
-            CutoverState.fromStored(dashPayConfig.observePreservingErrors(DashPayConfig.CUTOVER_STATE).first())
-        )
+    suspend fun cutoverCommittedOrThrow(): Boolean = dashPayConfig.cutoverCommittedOrThrow()
 
     /**
      * [cutoverCommittedOrThrow] as a tri-state: null when the state cannot be read. For a decision

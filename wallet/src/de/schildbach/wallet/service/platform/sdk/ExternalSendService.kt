@@ -129,25 +129,19 @@ interface ExternalSendService {
     /** Identity lookup for the confirm step (AC8). Never logs the id. */
     suspend fun resolveIdentity(identityIdBase58: String): IdentityResolution
 
-    /** Fee for this exact send, or null when it cannot be known before the send (never fabricated). */
-    suspend fun estimateFee(source: SendBalance, destination: SendDestination, amount: Dash): FeeEstimate?
-
     /**
-     * [estimateFee] for a destination of the balance kind [destinationKind]: every estimate
-     * depends only on the pair, never on the address, so the internal transfer
-     * ([InternalTransferService]) can show it before its own destination is resolved.
+     * Fee for a send from [source] into a [destinationKind] balance ([balanceKindOf] of the
+     * destination), or null when it cannot be known before the send (never fabricated).
      */
-    suspend fun estimateFeeForPair(source: SendBalance, destinationKind: SendBalance, amount: Dash): FeeEstimate?
-
-    /** [maxSendable] for a destination of the balance kind [destinationKind] (see [estimateFeeForPair]). */
-    suspend fun maxSendableForPair(source: SendBalance, destinationKind: SendBalance): Dash?
+    suspend fun estimateFee(source: SendBalance, destinationKind: SendBalance): FeeEstimate?
 
     /**
      * The Max amount, or null when unknown: for Core → Core the whole spendable balance,
      * GROSS of the drain fee (the drain delivers it minus the fee); for every other pair the
-     * amount the recipient receives (balance minus the fee paid on top).
+     * amount the recipient receives (balance minus the fee paid on top). [destinationKind] is
+     * [balanceKindOf] of the destination.
      */
-    suspend fun maxSendable(source: SendBalance, destination: SendDestination): Dash?
+    suspend fun maxSendable(source: SendBalance, destinationKind: SendBalance): Dash?
 
     /**
      * Send [amount] from [source] to [destination]. The caller has ALREADY

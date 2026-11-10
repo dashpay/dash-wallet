@@ -213,6 +213,10 @@ private fun DashValueRow(label: String, value: String?, unknown: String) {
     )
 }
 
+/** The amount bar's currencies: Dash, then the fiat currency when there is one. */
+internal fun currencyCodesFor(fiatCode: String?): List<String> =
+    if (fiatCode != null) listOf(DASH_CURRENCY_CODE, fiatCode) else listOf(DASH_CURRENCY_CODE)
+
 @Composable
 private fun approximate(value: String, estimate: Boolean): String =
     if (estimate) stringResource(R.string.external_send_approximately, value) else value
@@ -225,7 +229,7 @@ private fun ConfirmAmount(amount: Dash, rate: Fiat?, fiatCode: String?) {
     EnterAmount(
         primaryAmount = localizeAmountForDisplay(amount.toDisplayString(), separator),
         secondaryAmount = fiat?.let { localizeAmountForDisplay(it.toPlainString(), separator) } ?: "0",
-        currencyCodes = if (fiatCode != null) listOf(DASH_CURRENCY_CODE, fiatCode) else listOf(DASH_CURRENCY_CODE),
+        currencyCodes = remember(fiatCode) { currencyCodesFor(fiatCode) },
         selectedCurrencyIndex = 0,
         showMaxButton = false,
         showBalanceButton = false,

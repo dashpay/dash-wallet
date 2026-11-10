@@ -63,6 +63,26 @@ sealed class SendDestination {
     }
 }
 
+/** The kind of balance [destination] is paid into: what keys its fee, Max, icon and name. */
+fun balanceKindOf(destination: SendDestination): SendBalance = when (destination) {
+    is SendDestination.Core -> SendBalance.CORE
+    is SendDestination.Shielded -> SendBalance.SHIELDED
+    is SendDestination.Platform -> SendBalance.PLATFORM
+    is SendDestination.Identity -> SendBalance.IDENTITY
+}
+
+/**
+ * The balances a source / From / To picker lists, in order: Identity only for a user known to
+ * have an identity ([hasIdentity] true; unknown hides it). Shielded is always listed (it shows
+ * disabled when the feature is off). Shared by the External Send and the internal transfer.
+ */
+fun pickerBalances(hasIdentity: Boolean?): List<SendBalance> =
+    SendBalance.entries.filter { it != SendBalance.IDENTITY || hasIdentity == true }
+
+/** Whether a send from [source] into a [destinationKind] balance involves a ~30 s shielded proof. */
+fun hasShieldedLeg(source: SendBalance, destinationKind: SendBalance): Boolean =
+    source == SendBalance.SHIELDED || destinationKind == SendBalance.SHIELDED
+
 /** The result of [detectSendDestination]. */
 sealed class DestinationParse {
     /**
@@ -314,14 +334,6 @@ private fun detectCoreDashUri(input: String, network: AddressNetwork): Destinati
         null -> DestinationParse.Invalid
         else -> core
     }
-}
-
-/** The kind of balance [destination] is paid into. */
-fun balanceKindOf(destination: SendDestination): SendBalance = when (destination) {
-    is SendDestination.Core -> SendBalance.CORE
-    is SendDestination.Shielded -> SendBalance.SHIELDED
-    is SendDestination.Platform -> SendBalance.PLATFORM
-    is SendDestination.Identity -> SendBalance.IDENTITY
 }
 
 /** Whether a pair can be sent, and if not, why (the UI maps each to its own copy). */

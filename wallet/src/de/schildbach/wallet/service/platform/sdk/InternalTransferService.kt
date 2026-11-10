@@ -47,7 +47,7 @@ interface InternalTransferService {
     fun currentWalletIdOrNull(): String?
 
     /** The fee of a [from] → [to] transfer, null when it cannot be known before the send (never fabricated). */
-    suspend fun estimateFee(from: SendBalance, to: SendBalance, amount: Dash): FeeEstimate?
+    suspend fun estimateFee(from: SendBalance, to: SendBalance): FeeEstimate?
 
     /** The Max of a [from] → [to] transfer (the balance minus the fee paid on top), null when unknown. */
     suspend fun maxSendable(from: SendBalance, to: SendBalance): Dash?

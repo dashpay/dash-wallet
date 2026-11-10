@@ -2257,10 +2257,7 @@ class ShieldedBalanceServiceImpl internal constructor(
         }
     }
 
-    override suspend fun shieldFromCredits(amount: Dash): SdkWriteResult<Unit> =
-        shieldFromCreditsInternal(amount, expectedWalletIdHex = null)
-
-    override suspend fun shieldFromCreditsPinned(amount: Dash, expectedWalletIdHex: String): SdkWriteResult<Unit> =
+    override suspend fun shieldFromCredits(amount: Dash, expectedWalletIdHex: String?): SdkWriteResult<Unit> =
         shieldFromCreditsInternal(amount, expectedWalletIdHex)
 
     private suspend fun shieldFromCreditsInternal(amount: Dash, expectedWalletIdHex: String?): SdkWriteResult<Unit> =
@@ -2306,12 +2303,9 @@ class ShieldedBalanceServiceImpl internal constructor(
             }
             .distinctUntilChanged()
 
-    override suspend fun shieldFromWallet(amount: Dash): SdkWriteResult<ShieldFromWalletOutcome> =
-        shieldFromWalletInternal(amount, fundingPath = null)
-
-    override suspend fun shieldFromWalletPinned(
+    override suspend fun shieldFromWallet(
         amount: Dash,
-        expectedWalletIdHex: String
+        expectedWalletIdHex: String?
     ): SdkWriteResult<ShieldFromWalletOutcome> =
         shieldFromWalletInternal(amount, fundingPath = null, expectedWalletIdHex = expectedWalletIdHex)
 
@@ -2860,7 +2854,7 @@ class ShieldedBalanceServiceImpl internal constructor(
         amount: Dash,
         expectedWalletIdHex: String
     ): SdkWriteResult<Unit> {
-        if (identityId.size != 32) {
+        if (identityId.size != IDENTITY_ID_LENGTH) {
             return notBroadcast("topUpIdentityFromShielded", "identity id is not 32 bytes", null)
         }
         val target = identityId.copyOf()
@@ -2887,7 +2881,7 @@ class ShieldedBalanceServiceImpl internal constructor(
         amount: Dash,
         expectedWalletIdHex: String
     ): SdkWriteResult<Unit> {
-        if (identityId.size != 32) {
+        if (identityId.size != IDENTITY_ID_LENGTH) {
             return notBroadcast("shieldFromIdentityToAddress", "identity id is not 32 bytes", null)
         }
         val recipientRaw43 = decodeOrchardAddress(toShieldedAddress, displayHrpSafe())
@@ -2942,10 +2936,7 @@ class ShieldedBalanceServiceImpl internal constructor(
         }
     }
 
-    override suspend fun unshieldToCredits(amount: Dash): SdkWriteResult<Unit> =
-        unshieldToCreditsInternal(amount, expectedWalletIdHex = null)
-
-    override suspend fun unshieldToCreditsPinned(amount: Dash, expectedWalletIdHex: String): SdkWriteResult<Unit> =
+    override suspend fun unshieldToCredits(amount: Dash, expectedWalletIdHex: String?): SdkWriteResult<Unit> =
         unshieldToCreditsInternal(amount, expectedWalletIdHex)
 
     private suspend fun unshieldToCreditsInternal(amount: Dash, expectedWalletIdHex: String?): SdkWriteResult<Unit> =

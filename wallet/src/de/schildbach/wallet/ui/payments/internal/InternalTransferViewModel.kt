@@ -28,9 +28,9 @@ import de.schildbach.wallet.service.platform.sdk.InternalTransferService
 import de.schildbach.wallet.service.platform.sdk.InternalTransferSupport
 import de.schildbach.wallet.service.platform.sdk.SendBalance
 import de.schildbach.wallet.service.platform.sdk.defaultInternalTransferPair
-import de.schildbach.wallet.service.platform.sdk.internalTransferBalances
-import de.schildbach.wallet.service.platform.sdk.internalTransferHasShieldedLeg
+import de.schildbach.wallet.service.platform.sdk.hasShieldedLeg
 import de.schildbach.wallet.service.platform.sdk.internalTransferSupport
+import de.schildbach.wallet.service.platform.sdk.pickerBalances
 import de.schildbach.wallet.ui.payments.send.ExternalSendStatus
 import de.schildbach.wallet.ui.shielded.parseDashOrNull
 import de.schildbach.wallet.ui.shielded.parseDecimalOrNull
@@ -118,7 +118,7 @@ data class InternalTransferUIState(
     val formEditable: Boolean get() = status == ExternalSendStatus.Idle
 
     /** The balances the pickers list, in order; Identity only for a user known to have one. */
-    val balances: List<SendBalance> get() = internalTransferBalances(hasIdentity)
+    val balances: List<SendBalance> get() = pickerBalances(hasIdentity)
 
     val support: InternalTransferSupport
         get() = internalTransferSupport(from, to, shieldedEnabled == true, hasIdentity == true)
@@ -243,7 +243,7 @@ class InternalTransferViewModel @Inject constructor(
                     // An outcome being dismissed: no dialog, nothing can be sent yet.
                     InternalTransferExecution.Acknowledging -> ExternalSendStatus.Restoring
                     is InternalTransferExecution.Sending -> ExternalSendStatus.Sending(
-                        internalTransferHasShieldedLeg(execution.request.from, execution.request.to)
+                        hasShieldedLeg(execution.request.from, execution.request.to)
                     )
                     is InternalTransferExecution.Finished -> ExternalSendStatus.Done(execution.result)
                 }
@@ -450,7 +450,7 @@ class InternalTransferViewModel @Inject constructor(
         _uiState.update { it.copy(confirm = InternalTransferConfirm(request), picker = null, confirmRefused = false) }
         feeJob?.cancel()
         feeJob = viewModelScope.launch {
-            val fee = service.estimateFee(request.from, request.to, request.amount)
+            val fee = service.estimateFee(request.from, request.to)
             _uiState.update { current ->
                 val confirm = current.confirm
                 if (confirm?.request == request) {

@@ -29,12 +29,15 @@ import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -42,6 +45,8 @@ import org.dash.wallet.common.money.Coin
 import org.dash.wallet.common.payments.parsers.AddressNetwork
 import org.dash.wallet.common.payments.parsers.PaymentURI
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.util.readRetryDelayMs
+import org.dash.wallet.common.util.retryReadErrors
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
@@ -71,8 +76,15 @@ data class ReceiveUIState(
     val loading: Boolean = true,
     val username: String? = null
 ) {
-    /** The QR content for [address]: a `dash:` URI on Core, the bare address or ID elsewhere. */
-    val qrPayload: String? = address?.let { ReceiveViewModel.qrPayloadOrNull(selectedTab, it, username) }
+    /**
+     * The QR content for [address]: a `dash:` URI on Core, the bare address or ID elsewhere.
+     * Built on first read and cached for this instance, not in the constructor, so the many
+     * `copy`s that only change other fields never build the URI unless someone reads it. Not
+     * part of equals/hashCode: it is derived from [selectedTab], [address] and [username].
+     */
+    val qrPayload: String? by lazy(LazyThreadSafetyMode.PUBLICATION) {
+        address?.let { ReceiveViewModel.qrPayloadOrNull(selectedTab, it, username) }
+    }
 
     /** The last read for [selectedTab] could not produce an address. */
     val unavailable: Boolean
@@ -302,11 +314,28 @@ class ReceiveViewModel internal constructor(
                 if (state.selectedTab != tab) {
                     state
                 } else {
-                    // Fail closed: an address the URI builder rejects is not advertised.
-                    val shown = address?.takeIf { qrPayloadOrNull(tab, it, state.username) != null }
-                    state.copy(address = shown, loading = false)
+                    // Fail closed: an address the URI builder rejects is not advertised. The
+                    // check reads the published state's own (cached) payload: built once.
+                    val next = state.copy(address = address, loading = false)
+                    if (address != null && next.qrPayload == null) next.copy(address = null) else next
                 }
             }
         }
     }
 }
+
+/**
+ * The shielded flag as a never-failing flow: a failed read counts as off (as
+ * [DashPayConfig.get] reading absent does for [PaymentsFragment]), is reported to
+ * [onError] and is retried, so the flow never completes on an [Exception] (see
+ * [retryReadErrors]: a cancellation or an [Error] still propagates). Used by the Receive
+ * balance tabs.
+ */
+internal fun shieldedEnabledFlow(
+    shieldedFlag: Flow<Boolean?>,
+    onError: (Throwable, Long) -> Unit = { _, _ -> },
+    retryDelayMs: (Long) -> Long = ::readRetryDelayMs
+): Flow<Boolean> = shieldedFlag
+    .map { it == true }
+    .retryReadErrors(false, retryDelayMs, onError)
+    .distinctUntilChanged()

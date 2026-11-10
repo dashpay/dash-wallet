@@ -50,7 +50,7 @@ class InternalTransferExecutorTest {
         override fun observeHasIdentity(): Flow<Boolean?> = flowOf(null)
         override fun observeShieldedEnabled(): Flow<Boolean?> = flowOf(null)
         override fun currentWalletIdOrNull(): String? = null
-        override suspend fun estimateFee(from: SendBalance, to: SendBalance, amount: Dash): FeeEstimate? = null
+        override suspend fun estimateFee(from: SendBalance, to: SendBalance): FeeEstimate? = null
         override suspend fun maxSendable(from: SendBalance, to: SendBalance): Dash? = null
         override suspend fun transfer(
             from: SendBalance,

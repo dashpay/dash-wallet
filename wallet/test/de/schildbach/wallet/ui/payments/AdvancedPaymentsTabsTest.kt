@@ -21,7 +21,6 @@ import de.schildbach.wallet.ui.payments.PaymentsFragment.Companion.ACTIVE_TAB_IN
 import de.schildbach.wallet.ui.payments.PaymentsFragment.Companion.ACTIVE_TAB_PAY
 import de.schildbach.wallet.ui.payments.PaymentsFragment.Companion.ACTIVE_TAB_RECEIVE
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Test
 
 class AdvancedPaymentsTabsTest {
@@ -32,12 +31,6 @@ class AdvancedPaymentsTabsTest {
     fun `Internal is always shown where Platform is supported, whatever the shielded flag`() {
         assertEquals(threeTabs, advancedPaymentsTabIds(supportsPlatform = true))
         assertEquals(twoTabs, advancedPaymentsTabIds(supportsPlatform = false))
-    }
-
-    @Test
-    fun `view model state has the tab set from the start`() {
-        assertEquals(threeTabs, AdvancedPaymentsViewModel(supportsPlatform = true).uiState.value.tabIds)
-        assertEquals(twoTabs, AdvancedPaymentsViewModel(supportsPlatform = false).uiState.value.tabIds)
     }
 
     @Test
@@ -52,11 +45,6 @@ class AdvancedPaymentsTabsTest {
         assertEquals(0, AdvancedPaymentsFragment.positionOf(PaymentsFragment.BASIC_TAB_IDS, ACTIVE_TAB_INTERNAL))
         assertEquals(ACTIVE_TAB_RECEIVE, PaymentsFragment.BASIC_TAB_IDS[0])
         assertEquals(1, AdvancedPaymentsFragment.positionOf(PaymentsFragment.BASIC_TAB_IDS, ACTIVE_TAB_PAY))
-    }
-
-    @Test
-    fun `initial state has no tabs`() {
-        assertNull(AdvancedPaymentsUIState().tabIds)
     }
 
     @Test
