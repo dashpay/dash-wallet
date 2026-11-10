@@ -32,7 +32,11 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.currentStateAsState
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.service.platform.sdk.ExternalSendResult
+import de.schildbach.wallet.ui.payments.send.ExternalSendStatus
+import de.schildbach.wallet_test.R
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.ui.components.DashWalletTheme
@@ -45,7 +49,8 @@ import javax.inject.Inject
  *
  * Confirm captures the exact request, then asks for PIN/biometric (the External Send's auth
  * path), then hands it to the app-scoped [InternalTransferExecutor]: leaving the screen does not
- * cancel the transfer. Back closes an open sheet; otherwise it belongs to the host.
+ * cancel the transfer. Back closes an open sheet; otherwise it belongs to the host. Closing a
+ * finished transfer's outcome returns Home, as the External Send does; Not sent stays here.
  */
 @AndroidEntryPoint
 class InternalTransferFragment : Fragment() {
@@ -86,12 +91,41 @@ class InternalTransferFragment : Fragment() {
                             onDismissConfirm = viewModel::onDismissConfirm,
                             onConfirm = ::authenticateAndTransfer,
                             onHideSending = viewModel::onHideSending,
-                            onResultClosed = viewModel::onResultAcknowledged
+                            onResultClosed = ::onResultClosed
                         )
                     )
                 }
             }
         }
+
+    /**
+     * A terminal outcome (sent, may have gone through — including the one shown after a process
+     * restart — or any other result but Not sent) returns Home. Not sent stays on this tab so the
+     * user can try again. The outcome is read before acknowledging, which clears it.
+     */
+    private fun onResultClosed() {
+        val result = (viewModel.uiState.value.status as? ExternalSendStatus.Done)?.result
+        viewModel.onResultAcknowledged()
+        // Only the selected (RESUMED) pager page shows the outcome and may navigate.
+        val selectedPage = viewLifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
+        if (result != null && result !is ExternalSendResult.NotSent && selectedPage) {
+            leaveToHome()
+        }
+    }
+
+    /**
+     * Pops back to Home (the bottom navigation follows the destination change). Falls back to a
+     * single pop when Home is not on the back stack so the user is never stranded here.
+     */
+    private fun leaveToHome() {
+        val navController = findNavController()
+        // A second tap while the pop runs would act on the screen below.
+        if (navController.currentDestination?.id == R.id.advancedPaymentsFragment) {
+            if (!navController.popBackStack(R.id.walletFragment, false)) {
+                navController.popBackStack()
+            }
+        }
+    }
 
     /**
      * Capture what the confirm sheet shows BEFORE authenticating, then transfer exactly that.
