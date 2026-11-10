@@ -17,8 +17,6 @@
 
 package de.schildbach.wallet.ui.payments.internal
 
-import android.os.Build
-import android.view.Window
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -29,40 +27,23 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.systemBars
-import androidx.compose.foundation.layout.union
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.SideEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import androidx.compose.ui.window.DialogWindowProvider
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.core.view.WindowCompat
-import androidx.lifecycle.compose.currentStateAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.Layout
-import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -95,7 +76,6 @@ import org.dash.wallet.common.ui.components.Menu
 import org.dash.wallet.common.ui.components.MyImages
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.TopNavBase
-import org.dash.wallet.common.ui.getActivity
 import org.dash.wallet.common.ui.enter_amount.AmountEntryPage
 import org.dash.wallet.common.ui.enter_amount.AmountEntryPrimaryButton
 
@@ -122,7 +102,13 @@ private const val DISABLED_ROW_ALPHA = 0.4f
  * The Internal tab of the Advanced payments screen (MO-1125, Figma 3342:12176) under the
  * Receive / Internal / Send picker the host draws: the amount, the From / To cards with the swap
  * button, the keypad and Continue; the "Transfer from / to" picker (3342:12177); and the shared
- * confirm sheet, sending overlay and outcome dialog of the External Send.
+ * confirm sheet, sending overlay and outcome dialog of the External Send, drawn as
+ * [de.schildbach.wallet.ui.payments.send.ExternalSendScreen] draws them. The host hides the
+ * bottom navigation on this tab, so the page reaches the bottom of MainActivity's content.
+ *
+ * The outcome dialog is its own window and would sit above the lock screen: it is withheld while
+ * the lock screen is up ([InternalTransferUIState.lockScreenShown]). The sheets and the sending
+ * overlay are drawn in the page, which the lock screen covers.
  */
 @Composable
 fun InternalTransferScreen(uiState: InternalTransferUIState, actions: InternalTransferActions) {
@@ -136,123 +122,47 @@ fun InternalTransferScreen(uiState: InternalTransferUIState, actions: InternalTr
 
         val picker = uiState.picker
         if (picker != null && uiState.formEditable) {
-            AboveBottomNavigation(onBack = actions.onDismissPicker) {
-                PickerSheet(uiState, picker, actions)
-            }
+            PickerSheet(uiState, picker, actions)
         }
 
         val confirm = uiState.confirm
         if (confirm != null && uiState.status == ExternalSendStatus.Idle) {
-            val request = confirm.request
-            AboveBottomNavigation(onBack = actions.onDismissConfirm) {
-                SendConfirmSheet(
-                    amount = request.amount,
-                    rate = uiState.rate,
-                    fiatCode = uiState.fiatCode,
-                    fromValue = stringResource(balanceNameFor(request.from)),
-                    toValue = stringResource(balanceNameFor(request.to)),
-                    fee = confirm.fee,
-                    feeLoading = confirm.feeLoading,
-                    total = confirm.total,
-                    feeIncluded = false,
-                    notes = internalConfirmNotes(request.from, request.to),
-                    onDismiss = actions.onDismissConfirm,
-                    onConfirm = actions.onConfirm
-                )
-            }
+            ConfirmSheet(uiState, confirm, actions)
         }
 
         when (val status = uiState.status) {
             // A shielded leg's ~30 s proof can be left: Close hides the overlay (the form stays
-            // disabled) and the outcome shows when it arrives. Back does what Close does, and
-            // nothing while a Core / Platform transfer (seconds, not leavable) runs.
+            // disabled) and the outcome shows when it arrives.
             is ExternalSendStatus.Sending -> if (!uiState.sendingHidden) {
-                AboveBottomNavigation(onBack = if (status.shieldedLeg) actions.onHideSending else null) {
-                    SendingOverlay(status.shieldedLeg, actions.onHideSending)
-                }
+                SendingOverlay(status.shieldedLeg, actions.onHideSending)
             }
-            is ExternalSendStatus.Done -> ResultDialog(status.result, status.afterRestart, actions.onResultClosed)
+            // Withheld (not acknowledged) while the lock screen is up.
+            is ExternalSendStatus.Done -> if (!uiState.lockScreenShown) {
+                ResultDialog(status.result, status.afterRestart, actions.onResultClosed)
+            }
             ExternalSendStatus.Idle, ExternalSendStatus.Restoring -> {}
         }
     }
 }
 
-/**
- * Shows [content] (a full-screen scrim with a sheet or a card) in its own window, over the host's
- * tab picker and the app's bottom navigation. The Internal page is a pager page of
- * AdvancedPaymentsFragment, whose `nav_home` destination keeps MainActivity's bottom navigation
- * drawn over the bottom of the nav host: drawn in the page, the sheet's lower rows would sit under
- * it, and the scrim would leave the tab picker and the navigation tappable. The External Send has
- * no bottom navigation, so it draws the same overlays in place.
- *
- * The window covers the whole screen (`decorFitsSystemWindows = false`) and the content is inset by
- * the system bars and the display cutout, as MainActivity's `fitsSystemWindows` content is: the
- * scrim starts at the bottom of the status bar and the sheet ends at the top of the system
- * navigation, exactly where they are in the External Send. A decor-fitted dialog window is laid out
- * by the platform instead, which left an un-dimmed band under the status bar. The status and
- * navigation bars stay MainActivity's: the window draws no bar backgrounds of its own and copies
- * the activity's light/dark bar icons. The window has no dim of its own: the overlay's scrim is the
- * only one, so it looks as it does in the External Send. Back calls [onBack] (null: Back does
- * nothing while the window shows).
- *
- * Only the selected pager page (RESUMED; ViewPager2 keeps the offscreen one at STARTED) opens the
- * window: an offscreen Internal page draws the overlay in place, where it is not seen.
- */
+/** Figma 3342:12176 confirm, through the shared [SendConfirmSheet]. */
 @Composable
-private fun AboveBottomNavigation(onBack: (() -> Unit)?, content: @Composable () -> Unit) {
-    val lifecycleState by LocalLifecycleOwner.current.lifecycle.currentStateAsState()
-    if (!lifecycleState.isAtLeast(Lifecycle.State.RESUMED)) {
-        content()
-        return
-    }
-    val hostWindow = LocalContext.current.getActivity()?.window
-    Dialog(
-        onDismissRequest = { onBack?.invoke() },
-        properties = DialogProperties(
-            dismissOnBackPress = onBack != null,
-            dismissOnClickOutside = false,
-            usePlatformDefaultWidth = false,
-            decorFitsSystemWindows = false
-        )
-    ) {
-        val window = (LocalView.current.parent as? DialogWindowProvider)?.window
-        SideEffect {
-            window?.let { matchHostSystemBars(it, hostWindow) }
-        }
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .windowInsetsPadding(WindowInsets.systemBars.union(WindowInsets.displayCutout))
-        ) {
-            content()
-        }
-    }
-}
-
-/**
- * The overlay [window] leaves the system bars to the [hostWindow]: no dim, no animation, transparent
- * bar backgrounds (MainActivity's show through) and the host's light/dark bar icons.
- */
-private fun matchHostSystemBars(window: Window, hostWindow: Window?) {
-    window.setDimAmount(0f)
-    window.setWindowAnimations(0)
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) {
-        // No-ops on API 35+, where the bar backgrounds are always transparent.
-        @Suppress("DEPRECATION")
-        window.statusBarColor = android.graphics.Color.TRANSPARENT
-        @Suppress("DEPRECATION")
-        window.navigationBarColor = android.graphics.Color.TRANSPARENT
-    }
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-        window.isStatusBarContrastEnforced = false
-        window.isNavigationBarContrastEnforced = false
-    }
-    if (hostWindow != null) {
-        val host = WindowCompat.getInsetsController(hostWindow, hostWindow.decorView)
-        val overlay = WindowCompat.getInsetsController(window, window.decorView)
-        overlay.isAppearanceLightStatusBars = host.isAppearanceLightStatusBars
-        overlay.isAppearanceLightNavigationBars = host.isAppearanceLightNavigationBars
-    }
+private fun ConfirmSheet(uiState: InternalTransferUIState, confirm: InternalTransferConfirm, actions: InternalTransferActions) {
+    val request = confirm.request
+    SendConfirmSheet(
+        amount = request.amount,
+        rate = uiState.rate,
+        fiatCode = uiState.fiatCode,
+        fromValue = stringResource(balanceNameFor(request.from)),
+        toValue = stringResource(balanceNameFor(request.to)),
+        fee = confirm.fee,
+        feeLoading = confirm.feeLoading,
+        total = confirm.total,
+        feeIncluded = false,
+        notes = internalConfirmNotes(request.from, request.to),
+        onDismiss = actions.onDismissConfirm,
+        onConfirm = actions.onConfirm
+    )
 }
 
 /**
@@ -284,12 +194,12 @@ private fun AmountPage(uiState: InternalTransferUIState, actions: InternalTransf
         currencyCodes = codes,
         selectedCurrencyIndex = if (uiState.dashMode || fiatCode == null) 0 else 1,
         onKeyInput = actions.onKeyInput,
-        // Figma 3342:12176: the content column starts 10dp under the tab picker.
-        // The bottom clears MainActivity's bottom navigation, drawn over the pager (as the other
-        // bottom-nav screens do, e.g. More): the keypad and Continue sit right above it.
+        // Figma 3342:12176: the content column starts 10dp under the tab picker. No bottom
+        // navigation on this tab: Continue sits at the bottom of MainActivity's content, which
+        // (fitsSystemWindows) ends above the system navigation, as in the External Send.
         modifier = Modifier
             .fillMaxSize()
-            .padding(top = 10.dp, bottom = dimensionResource(R.dimen.bottom_nav_bar_height)),
+            .padding(top = 10.dp),
         secondaryAmount = uiState.secondaryAmountText,
         showPrimaryChevron = false,
         keypadEnabled = uiState.formEditable,

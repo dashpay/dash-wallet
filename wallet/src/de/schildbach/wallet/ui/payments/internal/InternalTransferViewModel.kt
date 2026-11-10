@@ -91,6 +91,9 @@ data class InternalTransferConfirm(
  * @property confirmRefused Confirm was refused because the captured request no longer fits the
  *   balance or pair (see [InternalTransferViewModel.confirmedRequest]); the sheet was closed and
  *   the form says so until the user edits it or continues again.
+ * @property lockScreenShown the app's lock screen covers the activity: the outcome dialog (its own
+ *   window, which would sit above the lock screen) is not shown, nor acknowledged, until the wallet
+ *   is unlocked, and Back does not close the covered sheets (see [InternalTransferViewModel.onLockScreen]).
  */
 data class InternalTransferUIState(
     val from: SendBalance = SendBalance.CORE,
@@ -110,7 +113,8 @@ data class InternalTransferUIState(
     val confirm: InternalTransferConfirm? = null,
     val status: ExternalSendStatus = ExternalSendStatus.Idle,
     val sendingHidden: Boolean = false,
-    val confirmRefused: Boolean = false
+    val confirmRefused: Boolean = false,
+    val lockScreenShown: Boolean = false
 ) {
     val pair: InternalTransferPair get() = InternalTransferPair(from, to)
 
@@ -516,7 +520,8 @@ class InternalTransferViewModel @Inject constructor(
 
     /**
      * The user closed the outcome. Not sent → back to the same amount (Max chosen again
-     * deliberately); any other outcome clears the amount for a new transfer (the tab stays).
+     * deliberately); any other outcome clears the amount for a new transfer (the
+     * fragment then returns Home; the cleared amount is what a later visit finds).
      */
     fun onResultAcknowledged() {
         val status = _uiState.value.status as? ExternalSendStatus.Done ?: return
@@ -532,6 +537,22 @@ class InternalTransferViewModel @Inject constructor(
     /** Close on the sending overlay: the transfer continues on the app scope. */
     fun onHideSending() {
         if (_uiState.value.status is ExternalSendStatus.Sending) _uiState.update { it.copy(sendingHidden = true) }
+    }
+
+    /**
+     * The lock screen came up. The picker, the confirm sheet and the sending overlay are drawn in
+     * the page, which the lock screen covers: they stay as they are and show again after the
+     * unlock (an authentication in progress is cancelled by the lock itself and transfers
+     * nothing). The outcome dialog is its own window and would sit above the lock screen: it is
+     * withheld, not acknowledged, until [onLockScreenDismissed].
+     */
+    fun onLockScreen() {
+        _uiState.update { it.copy(lockScreenShown = true) }
+    }
+
+    /** The wallet is unlocked: an outcome withheld by [onLockScreen] shows. */
+    fun onLockScreenDismissed() {
+        if (_uiState.value.lockScreenShown) _uiState.update { it.copy(lockScreenShown = false) }
     }
 
     /** Back closes an open sheet; false when there is nothing to close. */
