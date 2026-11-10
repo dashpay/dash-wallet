@@ -17,6 +17,8 @@
 
 package de.schildbach.wallet.ui.payments.internal
 
+import android.os.Build
+import android.view.Window
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -27,24 +29,31 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.currentStateAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,6 +61,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -84,6 +94,7 @@ import org.dash.wallet.common.ui.components.Menu
 import org.dash.wallet.common.ui.components.MyImages
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.TopNavBase
+import org.dash.wallet.common.ui.getActivity
 import org.dash.wallet.common.ui.enter_amount.AmountEntryPage
 import org.dash.wallet.common.ui.enter_amount.AmountEntryPrimaryButton
 
@@ -173,9 +184,15 @@ fun InternalTransferScreen(uiState: InternalTransferUIState, actions: InternalTr
  * it, and the scrim would leave the tab picker and the navigation tappable. The External Send has
  * no bottom navigation, so it draws the same overlays in place.
  *
- * The window fits the system bars, as MainActivity's content does, and has no dim of its own: the
- * overlay's scrim is the only one, so it looks as it does in the External Send. Back calls [onBack]
- * (null: Back does nothing while the window shows).
+ * The window covers the whole screen (`decorFitsSystemWindows = false`) and the content is inset by
+ * the system bars and the display cutout, as MainActivity's `fitsSystemWindows` content is: the
+ * scrim starts at the bottom of the status bar and the sheet ends at the top of the system
+ * navigation, exactly where they are in the External Send. A decor-fitted dialog window is laid out
+ * by the platform instead, which left an un-dimmed band under the status bar. The status and
+ * navigation bars stay MainActivity's: the window draws no bar backgrounds of its own and copies
+ * the activity's light/dark bar icons. The window has no dim of its own: the overlay's scrim is the
+ * only one, so it looks as it does in the External Send. Back calls [onBack] (null: Back does
+ * nothing while the window shows).
  *
  * Only the selected pager page (RESUMED; ViewPager2 keeps the offscreen one at STARTED) opens the
  * window: an offscreen Internal page draws the overlay in place, where it is not seen.
@@ -187,22 +204,53 @@ private fun AboveBottomNavigation(onBack: (() -> Unit)?, content: @Composable ()
         content()
         return
     }
+    val hostWindow = LocalContext.current.getActivity()?.window
     Dialog(
         onDismissRequest = { onBack?.invoke() },
         properties = DialogProperties(
             dismissOnBackPress = onBack != null,
             dismissOnClickOutside = false,
-            usePlatformDefaultWidth = false
+            usePlatformDefaultWidth = false,
+            decorFitsSystemWindows = false
         )
     ) {
         val window = (LocalView.current.parent as? DialogWindowProvider)?.window
         SideEffect {
-            window?.setDimAmount(0f)
-            window?.setWindowAnimations(0)
+            window?.let { matchHostSystemBars(it, hostWindow) }
         }
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .windowInsetsPadding(WindowInsets.systemBars.union(WindowInsets.displayCutout))
+        ) {
             content()
         }
+    }
+}
+
+/**
+ * The overlay [window] leaves the system bars to the [hostWindow]: no dim, no animation, transparent
+ * bar backgrounds (MainActivity's show through) and the host's light/dark bar icons.
+ */
+private fun matchHostSystemBars(window: Window, hostWindow: Window?) {
+    window.setDimAmount(0f)
+    window.setWindowAnimations(0)
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+        // No-ops on API 35+, where the bar backgrounds are always transparent.
+        @Suppress("DEPRECATION")
+        window.statusBarColor = android.graphics.Color.TRANSPARENT
+        @Suppress("DEPRECATION")
+        window.navigationBarColor = android.graphics.Color.TRANSPARENT
+    }
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        window.isStatusBarContrastEnforced = false
+        window.isNavigationBarContrastEnforced = false
+    }
+    if (hostWindow != null) {
+        val host = WindowCompat.getInsetsController(hostWindow, hostWindow.decorView)
+        val overlay = WindowCompat.getInsetsController(window, window.decorView)
+        overlay.isAppearanceLightStatusBars = host.isAppearanceLightStatusBars
+        overlay.isAppearanceLightNavigationBars = host.isAppearanceLightNavigationBars
     }
 }
 
@@ -236,9 +284,11 @@ private fun AmountPage(uiState: InternalTransferUIState, actions: InternalTransf
         selectedCurrencyIndex = if (uiState.dashMode || fiatCode == null) 0 else 1,
         onKeyInput = actions.onKeyInput,
         // Figma 3342:12176: the content column starts 10dp under the tab picker.
+        // The bottom clears MainActivity's bottom navigation, drawn over the pager (as the other
+        // bottom-nav screens do, e.g. More): the keypad and Continue sit right above it.
         modifier = Modifier
             .fillMaxSize()
-            .padding(top = 10.dp),
+            .padding(top = 10.dp, bottom = dimensionResource(R.dimen.bottom_nav_bar_height)),
         secondaryAmount = uiState.secondaryAmountText,
         showPrimaryChevron = false,
         keypadEnabled = uiState.formEditable,
