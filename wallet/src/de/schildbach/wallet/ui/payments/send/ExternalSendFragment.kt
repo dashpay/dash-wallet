@@ -40,6 +40,7 @@ import de.schildbach.wallet.service.platform.sdk.ExternalSendResult
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.AuthenticationManager
+import org.dash.wallet.common.ui.LockScreenHost
 import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.scan.ScanActivity
 import javax.inject.Inject
@@ -105,7 +106,18 @@ class ExternalSendFragment : Fragment() {
             }
         }
 
+    /**
+     * Back is ignored while the lock screen covers this screen: the activity's own callback,
+     * which ignores it too, runs only after this one. While the outcome shows, Back acknowledges
+     * it, as the dialog it replaced did on dismiss-on-back.
+     */
     private fun onBack() {
+        if ((activity as? LockScreenHost)?.lockScreenDisplayed == true) return
+        val status = viewModel.uiState.value.status
+        if (status is ExternalSendStatus.Done) {
+            onResultClosed(status.result)
+            return
+        }
         if (!viewModel.onBack()) leave()
     }
 
