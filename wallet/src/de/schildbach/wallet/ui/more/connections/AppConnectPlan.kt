@@ -21,7 +21,13 @@ internal object AppConnectLimits {
     fun clamp(grant: AuthBinding, blockTime: Long, requireUsableExpiry: Boolean = true): AuthBinding = grant.copy(
         totalBudget = grant.totalBudget?.min(MAX_BUDGET),
         expiresAt = minOf(grant.expiresAt ?: (blockTime + 90 * DAY), blockTime + MAX_LIFETIME)
-    ).also { require(!requireUsableExpiry || it.expiresAt!! > blockTime + MIN_LIFETIME) { "Requested grant expires too soon" } }
+    ).also { if (requireUsableExpiry) requireUsableExpiry(it, blockTime) }
+
+    /** The grant's own expiry, not one it will be replaced with, must outlast [MIN_LIFETIME]. */
+    fun requireUsableExpiry(grant: AuthBinding, blockTime: Long) {
+        val expiresAt = grant.expiresAt
+        require(expiresAt != null && expiresAt > blockTime + MIN_LIFETIME) { "Requested grant expires too soon" }
+    }
 }
 
 /** The immutable terms presented for explicit consent. No private keys are kept here. */

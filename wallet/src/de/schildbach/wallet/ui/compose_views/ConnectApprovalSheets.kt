@@ -60,6 +60,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import android.app.DatePickerDialog
+import androidx.annotation.VisibleForTesting
 import de.schildbach.wallet.ui.more.connections.AppConnectLimits
 import java.math.BigInteger
 import java.text.DecimalFormatSymbols
@@ -153,11 +154,22 @@ class ConnectLimitPickerDialog : OffsetDialogFragment(R.layout.dialog_compose_co
         dismiss()
     }
 
+    /**
+     * The date picker is a plain dialog, outside the fragment manager. It is dismissed with this sheet's
+     * view, so locking the wallet, which dismisses the approve sheet and with it this child sheet, takes
+     * it down too instead of leaving it above the lock screen.
+     */
+    @VisibleForTesting
+    internal var expiryDatePicker: DatePickerDialog? = null
+        private set
+
     /** Any day from tomorrow to a year after the request; the connection expires at the end of that day. */
-    private fun showDatePicker(blockTime: Long, current: Long?) {
+    @VisibleForTesting
+    internal fun showDatePicker(blockTime: Long, current: Long?) {
         val latest = blockTime + AppConnectLimits.MAX_LIFETIME
         val initial = Calendar.getInstance().apply { timeInMillis = current ?: latest }
-        DatePickerDialog(requireContext(), { _, year, month, day ->
+        expiryDatePicker?.dismiss()
+        expiryDatePicker = DatePickerDialog(requireContext(), { _, year, month, day ->
             val endOfDay = Calendar.getInstance().apply {
                 set(year, month, day, 23, 59, 59)
                 set(Calendar.MILLISECOND, 0)
@@ -167,7 +179,14 @@ class ConnectLimitPickerDialog : OffsetDialogFragment(R.layout.dialog_compose_co
         }, initial.get(Calendar.YEAR), initial.get(Calendar.MONTH), initial.get(Calendar.DAY_OF_MONTH)).apply {
             datePicker.minDate = blockTime + AppConnectLimits.DAY
             datePicker.maxDate = latest
-        }.show()
+            show()
+        }
+    }
+
+    override fun onDestroyView() {
+        expiryDatePicker?.dismiss()
+        expiryDatePicker = null
+        super.onDestroyView()
     }
 }
 

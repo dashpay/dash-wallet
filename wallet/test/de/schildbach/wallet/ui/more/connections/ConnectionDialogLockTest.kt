@@ -65,6 +65,46 @@ class ConnectionDialogLockTest {
         }
     }
 
+    /** Owns the screen's ViewModel, as ConnectionsFragment does for the approve sheet and its child sheets. */
+    class ScreenHost : androidx.fragment.app.Fragment() {
+        lateinit var model: ConnectionsViewModel
+        override val defaultViewModelProviderFactory = object : androidx.lifecycle.ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T = model as T
+        }
+    }
+
+    @Test fun `the expiry date picker goes down with the approve sheet when the wallet locks`() {
+        val controller = Robolectric.buildActivity(FragmentActivity::class.java)
+        controller.get().setTheme(org.dash.wallet.common.R.style.My_Theme)
+        val activity = controller.setup().get()
+        val request = ConnectionRequest("App", "", "app", "alice", "identity", blockTime = System.currentTimeMillis())
+        val screen = ScreenHost().apply {
+            model = io.mockk.mockk(relaxed = true) {
+                io.mockk.every { uiState } returns MutableStateFlow(ConnectionsUIState(pendingRequest = request))
+            }
+        }
+        try {
+            activity.supportFragmentManager.beginTransaction().add(screen, "screen").commitNow()
+            // Stands in for the approve sheet, which the lock path dismisses with its child sheets.
+            val approveSheet = androidx.fragment.app.DialogFragment()
+            approveSheet.showNow(screen.childFragmentManager, "approve")
+            val picker = de.schildbach.wallet.ui.compose_views.ConnectLimitPickerDialog
+                .newInstance(de.schildbach.wallet.ui.compose_views.ConnectLimit.EXPIRATION)
+            picker.showNow(approveSheet.childFragmentManager, "picker")
+            picker.showDatePicker(request.blockTime, null)
+            val datePicker = checkNotNull(picker.expiryDatePicker)
+            assertTrue(datePicker.isShowing)
+            approveSheet.dismissAllowingStateLoss()
+            screen.childFragmentManager.executePendingTransactions()
+            org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()
+            assertFalse(datePicker.isShowing)
+            assertNull(picker.expiryDatePicker)
+        } finally {
+            controller.pause().stop().destroy()
+        }
+    }
+
     @Test fun `details arriving after auto lock are withheld until unlock`() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         val controller = Robolectric.buildActivity(FragmentActivity::class.java)

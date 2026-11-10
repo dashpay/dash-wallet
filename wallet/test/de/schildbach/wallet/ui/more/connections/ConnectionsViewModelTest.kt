@@ -64,7 +64,7 @@ class ConnectionsViewModelTest {
         every { identities.blockchainIdentityFlow } returns MutableStateFlow(null)
         every { identities.initializationResult } returns MutableStateFlow(Result.success(Unit))
         every { identityConfig.observeIdentityPresence() } returns MutableStateFlow(true)
-        every { auditConfig.observeHasRecords() } returns MutableStateFlow(false)
+        every { auditConfig.observeRetainedRecords() } returns MutableStateFlow(RetainedConnectRecords(emptyList(), false))
         every { walletData.wallet } returns mockk(relaxed = true)
         coEvery { repository.parseQr(any()) } returns DashConnectQr(request)
         coEvery { repository.prepareLogin(any()) } returns plan
@@ -532,7 +532,7 @@ class ConnectionsViewModelTest {
 
     @Test fun `saved audits without an identity remain unavailable rather than confirmed empty`() {
         every { identityConfig.observeIdentityPresence() } returns MutableStateFlow(false)
-        every { auditConfig.observeHasRecords() } returns MutableStateFlow(true)
+        every { auditConfig.observeRetainedRecords() } returns MutableStateFlow(RetainedConnectRecords(emptyList(), true))
         every { repository.observeConnections() } returns kotlinx.coroutines.flow.flow { error("Identity unavailable") }
         model.refreshConnections()
         dispatcher.scheduler.runCurrent()

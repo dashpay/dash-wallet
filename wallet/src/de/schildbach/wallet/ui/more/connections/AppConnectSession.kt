@@ -41,6 +41,17 @@ import de.schildbach.wallet.ui.more.connections.AppConnectKeyState.live
 import de.schildbach.wallet.ui.more.connections.AppConnectKeyState.sameKey
 import de.schildbach.wallet.ui.more.connections.AppConnectKeyState.sameKeyIdentity
 
+/**
+ * The network and wallet part of a connection scope, `network:devnet:watching-key hash`. A record whose
+ * scope starts with it and a `:` was written by this wallet (or a restore of its seed), whichever identity
+ * it then held.
+ */
+internal fun connectWalletScope(wallet: org.bitcoinj.wallet.Wallet): String {
+    val network = Constants.NETWORK_PARAMETERS
+    val devnet = if (network.id == NetworkParameters.ID_DEVNET) network.devNetName else ""
+    return "${network.id}:$devnet:${Sha256Hash.of(wallet.watchingKey.pubKey)}"
+}
+
 /** One-QR, PV14 grant lifecycle. The mutex covers approval, recovery and revocation. */
 internal class AppConnectSession(
     private val service: PlatformService,
@@ -65,9 +76,7 @@ internal class AppConnectSession(
 
     fun scope(): String {
         val wallet = walletRepo.walletApplication.wallet ?: error("Wallet unavailable")
-        val network = Constants.NETWORK_PARAMETERS
-        val devnet = if (network.id == NetworkParameters.ID_DEVNET) network.devNetName else ""
-        return "${network.id}:$devnet:${Sha256Hash.of(wallet.watchingKey.pubKey)}:${identityId()}"
+        return "${connectWalletScope(wallet)}:${identityId()}"
     }
 
     private fun identityId() = identities.blockchainIdentity?.uniqueIdentifier ?: error("Identity unavailable")
@@ -215,15 +224,16 @@ internal class AppConnectSession(
         val prior = config.getGrants().firstOrNull { it.getString("id") == "$scope:${requestHash(request)}" }
         val selectedAuth = prior?.let { indices(it, "authIndices") } ?: parsed.auth.indices.toSet()
         check(0 in selectedAuth && selectedAuth.all { it in parsed.auth.indices }) { "Stored grant does not match request" }
-        var grants = parsed.auth.mapIndexed { index, grant ->
-            AppConnectLimits.clamp(grant, blockTime, requireUsableExpiry = index in selectedAuth)
-        }
-        if (prior != null) {
-            val saved = decodeKeys(prior).filter { it.purpose == Purpose.AUTHENTICATION }
-            check(saved.size == selectedAuth.size) { "Stored grant does not match request" }
-            grants = grants.mapIndexed { index, grant ->
-                val position = selectedAuth.sorted().indexOf(index)
-                if (position < 0) grant else grant.copy(totalBudget = saved[position].totalBudget, expiresAt = saved[position].expiresAt)
+        val saved = prior?.let { record -> decodeKeys(record).filter { it.purpose == Purpose.AUTHENTICATION } }
+        check(saved == null || saved.size == selectedAuth.size) { "Stored grant does not match request" }
+        // The approved limits replace the QR's before the expiry check, so it judges the expiry that will be used.
+        val grants = parsed.auth.mapIndexed { index, grant ->
+            val position = selectedAuth.sorted().indexOf(index)
+            if (saved == null || position < 0) {
+                AppConnectLimits.clamp(grant, blockTime, requireUsableExpiry = index in selectedAuth)
+            } else {
+                grant.copy(totalBudget = saved[position].totalBudget, expiresAt = saved[position].expiresAt)
+                    .also { AppConnectLimits.requireUsableExpiry(it, blockTime) }
             }
         }
         val groupScopes = validateOwnership(request, grants)
