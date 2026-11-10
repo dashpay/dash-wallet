@@ -152,4 +152,5 @@
     <string name="from_dash_wallet_on_this_device">Dari dompet Dash di perangkat ini</string>
     <string name="preposition_at">pada</string>
     <string name="info">Info</string>
+    <string name="scan_qr">Pindai QR</string>
 </resources>

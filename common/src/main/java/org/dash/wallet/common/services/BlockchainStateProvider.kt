@@ -27,16 +27,11 @@ import org.dash.wallet.common.data.entity.BlockchainState
  *
  * This data provider gives access to the current BlockchainState (block height, isSynced)
  * as well as other data that depends on the current state of the blockchain.
- *
- * This includes:
- *  - Masternode APY (function of block height, difficulty, and network)
  */
 
 interface BlockchainStateProvider {
     suspend fun getState(): BlockchainState?
     fun observeState() : Flow<BlockchainState?>
-    suspend fun getMasternodeAPY(): Double
-    suspend fun getLastMasternodeAPY(): Double
 
     fun getNetworkStatus(): NetworkStatus
     fun observeNetworkStatus(): Flow<NetworkStatus>

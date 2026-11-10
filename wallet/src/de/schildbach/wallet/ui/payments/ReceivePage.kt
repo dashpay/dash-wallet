@@ -47,6 +47,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -186,7 +187,11 @@ private fun tabTitleFor(tab: ReceiveBalanceTab): Int = when (tab) {
     ReceiveBalanceTab.IDENTITY -> R.string.receive_balance_identity
 }
 
-/** Figma 7062:49313: text-only segments sized to their labels, the selected one on a gray pill. */
+/**
+ * Figma 7062:49313: text-only segments sized to their labels, the selected one on a gray pill.
+ * The row spans the card's full width: the 20dp side inset is padding inside the scroll, and the
+ * ends fade out so segments scroll to the card edge.
+ */
 @Composable
 private fun BalancePicker(
     tabs: List<ReceiveBalanceTab>,
@@ -199,13 +204,14 @@ private fun BalancePicker(
     SegmentedPicker(
         options = options,
         modifier = Modifier
-            .padding(horizontal = 20.dp, vertical = 20.dp)
+            .padding(vertical = 20.dp)
             .fillMaxWidth()
             .height(40.dp),
         selectedIndex = tabs.indexOf(selectedTab).coerceAtLeast(0),
         style = SegmentedPickerStyle(
             backgroundColor = Color.Transparent,
-            thumbColor = colors.gray400.copy(alpha = 0.15f),
+            // segment/bg: Gray300 at 15%.
+            thumbColor = colors.gray300.copy(alpha = 0.15f),
             cornerRadius = 12f,
             thumbCornerRadius = 12f,
             containerPadding = 0f,
@@ -213,7 +219,11 @@ private fun BalancePicker(
             showDividers = false,
             textStyle = MyTheme.Typography.BodyMediumSemibold,
             optionPaddingHorizontal = 20f,
-            fitOptionsToContent = true
+            fitOptionsToContent = true,
+            unselectedContentAlpha = 0.35f,
+            contentPaddingHorizontal = 20f,
+            // Figma 7062:49310 mask: alpha 0 at 0%, opaque from 4.792% to 95.297%, 0 at 100%.
+            edgeFadeFraction = 0.04792f
         )
     ) { _, index ->
         tabs.getOrNull(index)?.let(onSelectTab)
@@ -242,6 +252,7 @@ private fun QrCode(uiState: ReceiveUIState) {
                     bitmap = bitmap.asImageBitmap(),
                     contentDescription = description,
                     colorFilter = ColorFilter.tint(Color.Black, BlendMode.SrcIn),
+                    filterQuality = FilterQuality.None,
                     modifier = Modifier.size(200.dp)
                 )
                 Image(
@@ -296,7 +307,7 @@ private fun CopyRow(label: String, value: String, copyDescription: String, onCop
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             Text(text = label, style = MyTheme.Typography.Footnote, color = colors.textSecondary)
-            Text(text = value, style = MyTheme.Typography.BodyLarge, color = colors.textPrimary)
+            Text(text = value, style = MyTheme.Typography.Callout, color = colors.textPrimary)
         }
         CopyButton(description = copyDescription, onClick = onCopy)
     }
@@ -319,7 +330,8 @@ private fun CopyButton(description: String, onClick: () -> Unit) {
             painter = painterResource(org.dash.wallet.common.R.drawable.ic_copy),
             contentDescription = null,
             tint = colors.textPrimary,
-            modifier = Modifier.size(18.dp)
+            // Figma: a 15dp glyph in a 20dp slot with a 5% outset.
+            modifier = Modifier.size(16.5.dp)
         )
     }
 }

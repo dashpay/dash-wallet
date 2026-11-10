@@ -52,7 +52,6 @@ dependencies {
     implementation project(path: ":features:exploredash")
     implementation project(path: ':integrations:uphold')
     implementation project(path: ":integrations:coinbase")
-    implementation project(path: ":integrations:crowdnode")
     implementation project(path: ":integrations:maya")
 
     implementation(project(':integration-android')) {
@@ -298,7 +297,7 @@ try {
 }
 
 android {
-    android.ndkVersion '21.3.6528147'
+    android.ndkVersion '29.0.14206865'
     namespace "de.schildbach.wallet_test"
 
     compileSdk 36

@@ -194,4 +194,5 @@
     <string name="invitation_fee_title">ค่าธรรมเนียมการเชิญ</string>
     <string name="create_instant_username_cancel">ยกเลิก</string>
 
+    <string name="coinjoin_transaction_group_title">ทำไมฉันถึงเห็นธุรกรรมเหล่านี้ทั้งหมด?</string>
 </resources>

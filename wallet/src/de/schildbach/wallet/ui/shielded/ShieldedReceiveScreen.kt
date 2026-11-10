@@ -45,6 +45,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -195,6 +196,7 @@ private fun ReceiveCard(
                     bitmap = bitmap.asImageBitmap(),
                     contentDescription = null,
                     colorFilter = ColorFilter.tint(Color.Black, BlendMode.SrcIn),
+                    filterQuality = FilterQuality.None,
                     modifier = Modifier.size(176.dp)
                 )
             }

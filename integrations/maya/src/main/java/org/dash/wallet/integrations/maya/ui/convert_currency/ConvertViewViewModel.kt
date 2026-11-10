@@ -35,7 +35,6 @@ import org.dash.wallet.common.getEstimatedDashBalance
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.money.FiatValue
 import org.dash.wallet.common.money.MoneyFormat
-import org.dash.wallet.common.needsLeftoverBalanceWarning
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -330,7 +329,7 @@ class ConvertViewViewModel @Inject constructor(
         validSwapValue.call()
     }
 
-    fun checkEnteredAmountValue(checkSendingConditions: Boolean): SwapValueErrorType {
+    fun checkEnteredAmountValue(): SwapValueErrorType {
         val coin = try {
             if (dashToCrypto.value == true) {
                 Dash.parse(maxForDashWalletAmount.replace(',', '.'))
@@ -349,9 +348,6 @@ class ConvertViewViewModel @Inject constructor(
                 it.isLessThan(minAllowedSwapDashCoin) -> SwapValueErrorType.LessThanMin
                 it.isGreaterThan(coin) -> SwapValueErrorType.MoreThanMax.apply {
                     amount = maxCoinBaseAccountAmount
-                }
-                checkSendingConditions && !doesMeetSendingConditions(it) -> {
-                    SwapValueErrorType.SendingConditionsUnmet
                 }
                 else -> SwapValueErrorType.NOError
             }
@@ -491,15 +487,6 @@ class ConvertViewViewModel @Inject constructor(
         savedStateHandle[KEY_AMOUNT] = amount.copy()
         maxAmountSelected = true
         updateAmounts()
-    }
-
-    private fun doesMeetSendingConditions(value: Dash): Boolean {
-        if (dashToCrypto.value != true) {
-            // No need to check
-            return true
-        }
-
-        return !walletDataProvider.needsLeftoverBalanceWarning(value)
     }
 
     private fun logEnteredAmountCurrency(inputType: CurrencyInputType) {

@@ -95,7 +95,8 @@ class IdentityDiscoveryLatchTest {
         shieldedTransferExecutor = mockk(relaxed = true),
         externalSendExecutor = { mockk(relaxed = true) },
         contactRequestNotificationService = mockk(relaxed = true),
-        dashPaySyncStatus = de.schildbach.wallet.service.DashPaySyncStatus()
+        dashPaySyncStatus = de.schildbach.wallet.service.DashPaySyncStatus(),
+        transparentUsernameCreation = javax.inject.Provider { mockk(relaxed = true) }
     )
 
     private fun PlatformSynchronizationService.discoveryLatch(): AtomicBoolean {

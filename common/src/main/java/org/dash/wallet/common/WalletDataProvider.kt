@@ -19,7 +19,6 @@ package org.dash.wallet.common
 
 import kotlinx.coroutines.flow.Flow
 import org.dash.wallet.common.money.Dash
-import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.common.transactions.TransactionWrapperFactory
 import org.dash.wallet.common.transactions.TxInfo
@@ -128,16 +127,7 @@ interface WalletDataProvider {
 
     fun detachOnWalletWipedListener(listener: suspend () -> Unit)
 
-    @Throws(LeftoverBalanceException::class)
-    fun checkSendingConditions(address: String?, amount: Dash)
-
     fun observeTotalBalance(): Flow<Dash>
-
-    /**
-     * Locks the outputs of the wallet transaction [txId] that pay the base58 [address]
-     * (P2PKH outputs only, mirroring the original CrowdNode account-output locking).
-     */
-    fun lockOutputsPayingTo(txId: String, address: String)
 
     /**
      * Suspends until the wallet transaction [txId] is locked (IS-lock, mined, or seen by

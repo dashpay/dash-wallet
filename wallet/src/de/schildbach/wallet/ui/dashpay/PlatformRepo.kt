@@ -117,6 +117,7 @@ class PlatformRepo @Inject constructor(
          * chain-lock retry waits ~2.5 minutes per attempt.
          */
         const val REGISTRATION_SLOW_HINT_DELAY_MS = 35_000L
+        private val PROTOCOL_VERSION_PROBE_ID = Identifier.from(ByteArray(32))
     }
 
     private val onSeriousErrorListeneners = arrayListOf<SeriousErrorListener>()
@@ -179,10 +180,11 @@ class PlatformRepo @Inject constructor(
                 null
             }
             // Don't bother with DeriveKeyTask here, just call deriveKey
+            if (password == null) return null
             val encryptionKey = wallet.keyCrypter!!.deriveKey(password)
             wallet.keyChainSeed.decrypt(wallet.keyCrypter, "", encryptionKey)
         } else {
-            null
+            wallet.keyChainSeed
         }
     }
 
@@ -234,6 +236,15 @@ class PlatformRepo @Inject constructor(
         log.info("getVoteContenders took {}", watch)
         return contenders
     }
+
+    /**
+     * The DPNS labels [userId] owns, through the same lookup the profile refresh uses (the Kotlin
+     * SDK read, else dashj). Throws when they cannot be read: a caller deciding whether to submit
+     * a name again must not mistake an unreadable answer for "owns none".
+     */
+    suspend fun getOwnedUsernamesOrThrow(userId: String): List<String> =
+        (sdkUsernameQueries.getDomainDocumentsByOwnerOrNull(userId) ?: platform.names.getByOwnerId(userId))
+            .map { DomainDocument(it).label }
 
     fun getFromProfiles(
         profiles: Map<String, DashPayProfile?>,
@@ -710,6 +721,32 @@ class PlatformRepo @Inject constructor(
     suspend fun getIdentityBalance(identifier: Identifier): CreditBalanceInfo {
         return withContext(Dispatchers.IO) {
             CreditBalanceInfo(platform.client.getIdentityBalance(identifier))
+        }
+    }
+
+
+    /**
+     * The protocol version the network reported, or null when it did not answer. A refresh that fails
+     * still returns a number, the SDK's starting version (13 on mainnet and testnet), so the version
+     * counts only after a proven query succeeds: its verified response sets it. The query asks for an
+     * identity no wallet owns, whose proven absence carries the same metadata, so a wallet without a
+     * username can read the version too.
+     */
+    suspend fun readProtocolVersion(): Int? {
+        return withContext(Dispatchers.IO) {
+            try {
+                platform.client.getPlatformTime(PROTOCOL_VERSION_PROBE_ID)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                log.warn("unable to read the platform protocol version", e)
+                return@withContext null
+            }
+            // DashConnect's gate only. Contested-username fees follow the SDK's latched version
+            // (DashSdkService.currentProtocolVersion), not this legacy read.
+            platform.client.getProtocolVersion().also {
+                log.info("platform protocol version: {}", it)
+            }
         }
     }
 }

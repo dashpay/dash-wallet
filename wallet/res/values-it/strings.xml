@@ -450,4 +450,5 @@
     <string name="crowdnode_withdrawal_reminder_title">Hai un saldo su CrowdNode</string>
     <string name="crowdnode_withdrawal_reminder_message">Questi fondi devono essere prelevati da CrowdNode. Puoi trasferire questi fondi a questo portafoglio oppure tramite il tuo account online su un altro dispositivo.</string>
     <string name="crowdnode_withdraw_funds">Prelevare fondi</string>
+    <string name="dash_connect_revoke_access">Revoca accesso</string>
 </resources>
