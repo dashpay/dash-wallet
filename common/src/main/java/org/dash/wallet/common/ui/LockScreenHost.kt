@@ -19,7 +19,6 @@ package org.dash.wallet.common.ui
 
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentManager
-import androidx.navigation.fragment.NavHostFragment
 
 /** An activity that can cover its content with the wallet's lock screen. */
 interface LockScreenHost {
@@ -47,8 +46,12 @@ fun dismissDialogsForLockScreen(fragmentManager: FragmentManager) {
             }
 
             if (fragment is DialogFragment) {
+                // Hidden at once: the dismissal itself is a posted transaction.
+                fragment.dialog?.hide()
                 fragment.dismissAllowingStateLoss()
-            } else if (fragment is NavHostFragment) {
+            } else {
+                // Any parent, not only a NavHostFragment: a sheet shown from an ordinary
+                // fragment's child manager would otherwise stay above the PIN screen.
                 dismissDialogsForLockScreen(fragment.childFragmentManager)
             }
         }

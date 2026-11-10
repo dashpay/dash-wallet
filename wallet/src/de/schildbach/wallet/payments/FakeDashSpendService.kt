@@ -29,7 +29,6 @@ import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.services.PaymentRecoveryMetadata
 import org.dash.wallet.common.services.SendPaymentService
-import org.dash.wallet.common.services.SpendSelection
 import org.dash.wallet.common.services.WalletSession
 import org.dash.wallet.common.transactions.TxInfo
 import java.util.function.Consumer
@@ -49,7 +48,6 @@ class FakeDashSpendService @Inject constructor(
         amount: Coin,
         coinSelector: CoinSelector?,
         emptyWallet: Boolean,
-        checkBalanceConditions: Boolean,
         beforeSending: Consumer<Transaction>?,
         canSendLockedOutput: Predicate<TransactionOutput>?,
         originWallet: Wallet?
@@ -59,7 +57,6 @@ class FakeDashSpendService @Inject constructor(
             amount,
             coinSelector,
             emptyWallet,
-            checkBalanceConditions,
             beforeSending,
             canSendLockedOutput,
             originWallet
@@ -74,10 +71,9 @@ class FakeDashSpendService @Inject constructor(
         address: String,
         amount: Dash,
         emptyWallet: Boolean,
-        checkBalanceConditions: Boolean,
         session: WalletSession?
     ): String {
-        return realService.sendCoins(address, amount, emptyWallet, checkBalanceConditions, session)
+        return realService.sendCoins(address, amount, emptyWallet, session)
     }
 
     override suspend fun estimateNetworkFee(
@@ -129,22 +125,6 @@ class FakeDashSpendService @Inject constructor(
         onTransactionCreated: (suspend (String) -> Unit)?
     ): TxInfo {
         return sentTxInfo(payWithDashUrlTx(dashUri, serviceName, recovery, session, onTransactionCreated), walletDataProvider)
-    }
-
-    override suspend fun sendCoinsSelected(
-        address: String,
-        amount: Dash,
-        selection: SpendSelection,
-        emptyWallet: Boolean,
-        checkBalanceConditions: Boolean,
-        lockSentOutputsTo: String?,
-        canSpendLockedOutputsTo: String?,
-        session: WalletSession?
-    ): TxInfo {
-        return realService.sendCoinsSelected(
-            address, amount, selection, emptyWallet, checkBalanceConditions, lockSentOutputsTo, canSpendLockedOutputsTo,
-            session
-        )
     }
 
 }

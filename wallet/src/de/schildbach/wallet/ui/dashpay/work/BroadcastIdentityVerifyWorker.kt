@@ -22,6 +22,11 @@ import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
+import de.schildbach.wallet.service.platform.IdentityRepository
+import de.schildbach.wallet.service.platform.verifyWorkStillCurrent
+import de.schildbach.wallet.service.platform.uniqueIdStringOrNull
+import org.slf4j.LoggerFactory
 import de.schildbach.wallet.service.platform.PlatformBroadcastService
 import de.schildbach.wallet.service.work.BaseWorker
 import org.bitcoinj.crypto.KeyCrypterException
@@ -35,8 +40,12 @@ class BroadcastIdentityVerifyWorker @AssistedInject constructor(
     @Assisted parameters: WorkerParameters,
     val analytics: AnalyticsService,
     val platformBroadcastService: PlatformBroadcastService,
-    val walletDataProvider: WalletData
+    val walletDataProvider: WalletData,
+    val identityRepository: IdentityRepository,
+    val identityConfig: BlockchainIdentityConfig
 ) : BaseWorker(context, parameters) {
+    private val log = LoggerFactory.getLogger(BroadcastIdentityVerifyWorker::class.java)
+
 
     companion object {
         const val KEY_PASSWORD = "BroadcastIdentityVerifyWorker.PASSWORD"
@@ -61,6 +70,26 @@ class BroadcastIdentityVerifyWorker @AssistedInject constructor(
             return Result.failure(workDataOf(KEY_ERROR_MESSAGE to msg))
         }
 
+        // Not loaded yet (recovery still running): nothing was submitted. A registration's
+        // obligation stays pending, and the verification-link reconcile publishes it later
+        // (VerifyLinkReconciler); no retry budget to run out.
+        val identity = identityRepository.blockchainIdentity
+        if (identity?.identity == null) {
+            return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "the identity is not loaded yet; nothing published"))
+        }
+
+        // Only the link the pending obligation still carries: it may have been replaced by a newer
+        // link, or settled, since this work was enqueued. Unreadable: retried by the reconcile.
+        val current = try {
+            verifyWorkStillCurrent(identityConfig.verifyObligation(), username, url)
+        } catch (e: Exception) {
+            log.warn("verification-link obligation unreadable; not publishing", e)
+            false
+        }
+        if (!current) {
+            return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "the verification link is no longer pending; nothing published"))
+        }
+
         return try {
             val identityVerifyDocument = platformBroadcastService.broadcastIdentityVerify(username, url, encryptionKey)
             Result.success(workDataOf(
@@ -69,6 +98,16 @@ class BroadcastIdentityVerifyWorker @AssistedInject constructor(
             ))
         } catch (ex: Exception) {
             analytics.logError(ex, "Identity Verify: failed to broadcast identity verify document")
+            // Fail safe: past this point the document may have been submitted (the SDK throws
+            // for an Ambiguous outcome). Recorded on the obligation, so the reconcile publishes
+            // again only once a lookup proves the document absent.
+            try {
+                identity.uniqueIdStringOrNull()?.let {
+                    identityConfig.markVerifyUncertain(it, username, System.currentTimeMillis())
+                }
+            } catch (e: Exception) {
+                log.warn("could not record the uncertain verification-link publication", e)
+            }
             Result.failure(workDataOf(
                     KEY_ERROR_MESSAGE to formatExceptionMessage("broadcast identity verify", ex)))
         }

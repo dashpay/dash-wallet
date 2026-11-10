@@ -53,7 +53,6 @@ import org.dash.wallet.common.money.FiatValue
 import org.dash.wallet.common.money.MoneyFormat
 import org.dash.wallet.common.money.fiatToDash
 import org.dash.wallet.common.money.moneyFormat
-import org.dash.wallet.common.needsLeftoverBalanceWarning
 import org.dash.wallet.common.observeTotalDashBalance
 import org.dash.wallet.common.services.*
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -849,10 +848,6 @@ class DashSpendViewModel @Inject constructor(
             )
         }
         giftCardDao.insertGiftCards(giftCard)
-    }
-
-    fun needsCrowdNodeWarning(dashAmount: Dash): Boolean {
-        return walletDataProvider.needsLeftoverBalanceWarning(dashAmount)
     }
 
     fun setIsFixedDenomination(isFixed: Boolean?) {

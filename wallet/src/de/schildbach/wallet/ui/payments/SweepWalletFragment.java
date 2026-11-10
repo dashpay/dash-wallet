@@ -61,7 +61,6 @@ import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.Wallet.BalanceType;
 import org.bitcoinj.wallet.WalletTransaction;
 import org.dash.wallet.common.Configuration;
-import org.dash.wallet.common.services.LeftoverBalanceException;
 import org.dash.wallet.common.services.analytics.AnalyticsConstants;
 import org.dash.wallet.common.ui.CurrencyTextView;
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog;
@@ -692,7 +691,7 @@ public class SweepWalletFragment extends Fragment {
             log.info("Using exchange rate: " + sendRequest.exchangeRate.coinToFiat(Coin.COIN).toFriendlyString());
         }
 
-        new SendCoinsOfflineTask(walletToSweep, application, backgroundHandler) {
+        new SendCoinsOfflineTask(walletToSweep, backgroundHandler) {
             @Override
             protected void onSuccess(final Transaction transaction) {
                 sentTransaction = transaction;
@@ -713,11 +712,6 @@ public class SweepWalletFragment extends Fragment {
                 setState(State.FAILED);
 
                 showInsufficientMoneyDialog();
-            }
-
-            @Override
-            protected void onLeftoverBalanceError(@NonNull LeftoverBalanceException ex) {
-                // pass
             }
 
             @Override
@@ -753,7 +747,7 @@ public class SweepWalletFragment extends Fragment {
                         null
                 ).show(requireActivity(), result -> Unit.INSTANCE);
             }
-        }.sendCoinsOffline(sendRequest, false, false); // send asynchronously
+        }.sendCoinsOffline(sendRequest, false); // send asynchronously
     }
 
     private void showTransactionResult(Transaction sentTransaction) {

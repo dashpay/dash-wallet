@@ -49,14 +49,10 @@ val Throwable.isDustySend: Boolean
         "org.bitcoinj.wallet.Wallet\$CouldNotAdjustDownwards"
     )
 
-/** True when this is the [LeftoverBalanceException] thrown by the leftover-balance check. */
-val Throwable.isLeftoverBalanceWarning: Boolean
-    get() = this is LeftoverBalanceException
-
 /**
  * Pays the given payment URI and returns the created transaction's txId as a hex string.
  *
- * Dashj-side insufficient-funds failures (including [LeftoverBalanceException]) are rethrown as
+ * Dashj-side insufficient-funds failures are rethrown as
  * the neutral [InsufficientFundsException]; all other exceptions propagate unchanged.
  */
 suspend fun SendPaymentService.payAndGetTxId(

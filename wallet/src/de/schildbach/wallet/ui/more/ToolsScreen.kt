@@ -329,8 +329,8 @@ private fun ToolsScreenContent(
                     action = onCsvExportClick
                 )
 
-                if (Constants.SUPPORTS_CONNECT) {
-                    // Connections (DashConnect)
+                if (uiState.connectionsAvailable) {
+                    // Connections (DashConnect), also without a username: it offers to create one
                     MenuItem(
                         title = stringResource(R.string.dash_connect_connections_title),
                         icon = R.drawable.ic_menu_connections,
@@ -440,6 +440,6 @@ private val DiagnosticPurple = Color(0xFF9C27B0)
 @Preview(name = "Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
 fun ToolsScreenPreview() {
     DashWalletTheme {
-        ToolsScreenContent(uiState = ToolsUIState(false, false, true))
+        ToolsScreenContent(uiState = ToolsUIState(false, false, true, connectionsAvailable = true))
     }
 }
