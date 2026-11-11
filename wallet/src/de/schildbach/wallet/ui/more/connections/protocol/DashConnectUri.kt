@@ -34,8 +34,12 @@ enum class DashConnectNetwork(val code: String) {
     }
 }
 
-/** Thrown when a scanned QR is not a well-formed DashConnect URI, or fails validation. */
-class DashConnectUriException(message: String, cause: Throwable? = null) : Exception(message, cause)
+/**
+ * Thrown when a scanned QR is not a well-formed DashConnect URI, or fails validation. It carries no
+ * cause: a parser exception's message can quote the link, including callback tokens, and this one is
+ * logged with its whole chain.
+ */
+class DashConnectUriException(message: String) : Exception(message)
 
 data class DashStRequest(val transitionBytes: ByteArray, val network: DashConnectNetwork)
 
@@ -179,7 +183,7 @@ object DashConnectUri {
             )
             return AppConnectParser.parse(body, network, query["cb"])
         } catch (e: DashConnectUriException) { throw e }
-        catch (e: Exception) { throw DashConnectUriException("Invalid connection request", e) }
+        catch (e: Exception) { throw DashConnectUriException("Invalid connection request") }
     }
 
     /**

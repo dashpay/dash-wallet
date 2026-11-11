@@ -182,10 +182,47 @@ class AppConnectOwnershipTest {
             restarted.requireMatches(bounded)
         }
         record.put("authIndices", org.json.JSONArray(listOf(0, 1)))
-        assertThrows(IllegalArgumentException::class.java) { runBlocking { session.prepare(bounded) } }
+        val mismatch = assertThrows(IllegalStateException::class.java) { runBlocking { session.prepare(bounded) } }
+        assertEquals("Stored grant does not match request", mismatch.message)
+        // A restored second grant is held to its own approved expiry, here as short as the QR's.
+        record.put("keys", org.json.JSONArray().put(org.json.JSONObject(key.toJSON()))
+            .put(org.json.JSONObject(savedKey(5, approved.id, start + 65L * 60_000).toJSON())))
+        val short = assertThrows(IllegalArgumentException::class.java) { runBlocking { session.prepare(bounded) } }
+        assertEquals("Requested grant expires too soon", short.message)
         coEvery { config.getGrants() } returns emptyList()
         assertThrows(IllegalArgumentException::class.java) { runBlocking { session.prepare(bounded) } }
         coVerify(exactly = 0) { repo.getWalletSeed() }
+        coVerify(exactly = 0) { config.saveGrant(any()) }
+    }
+
+    private fun savedKey(id: Int, bound: ByteArray, expiresAt: Long) = org.dashj.platform.dpp.identity.IdentityPublicKey(id,
+        org.dashj.platform.sdk.KeyType.ECDSA_HASH160, org.dashj.platform.sdk.Purpose.AUTHENTICATION,
+        org.dashj.platform.sdk.SecurityLevel.HIGH, org.dashj.platform.dpp.identity.SingleContractBounds(Identifier.from(bound)),
+        ByteArray(20), false, totalBudget = java.math.BigInteger.ONE, expiresAt = expiresAt, version = 1)
+
+    @Test fun `a retry checks the approved expiry, not the QR expiry it replaces`() = runBlocking {
+        val start = System.currentTimeMillis()
+        val raw = request.requireAppConnect()
+        fun withQrExpiry(expiresAt: Long) = request.copy(appConnect = raw.copy(auth = listOf(raw.auth[0].copy(expiresAt = expiresAt))))
+        every { service.platform.client.getPlatformTime(any()) } returns start
+        val prepared = session.prepare(withQrExpiry(start + 90L * 86_400_000))
+        val record = org.json.JSONObject().put("id", "${prepared.scope}:${prepared.requestHash}").put("state", "pending")
+            .put("authIndices", org.json.JSONArray(listOf(0))).put("encIndices", org.json.JSONArray())
+        coEvery { config.getGrants() } returns listOf(record)
+        // The user approved a day, longer than the QR asked for, so the QR's expiry is now too close.
+        every { service.platform.client.getPlatformTime(any()) } returns start + 6L * 60_000
+        record.put("keys", org.json.JSONArray().put(org.json.JSONObject(savedKey(4, raw.auth[0].id, start + 86_400_000).toJSON())))
+        val shortQr = withQrExpiry(start + 65L * 60_000)
+        val restarted = session.prepare(shortQr)
+        assertTrue(restarted.recovering)
+        assertEquals(start + 86_400_000, restarted.grants[0].expiresAt)
+        restarted.requireMatches(shortQr)
+        // The approved expiry is about to lapse, so the QR's long one cannot carry the retry.
+        record.put("keys", org.json.JSONArray().put(org.json.JSONObject(savedKey(4, raw.auth[0].id, start + 65L * 60_000).toJSON())))
+        val error = assertThrows(IllegalArgumentException::class.java) {
+            runBlocking { session.prepare(withQrExpiry(start + 90L * 86_400_000)) }
+        }
+        assertEquals("Requested grant expires too soon", error.message)
         coVerify(exactly = 0) { config.saveGrant(any()) }
     }
 

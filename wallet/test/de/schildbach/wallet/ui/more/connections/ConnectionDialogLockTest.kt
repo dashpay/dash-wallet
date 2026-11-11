@@ -1,18 +1,33 @@
 package de.schildbach.wallet.ui.more.connections
 
 import android.app.Application
+import android.os.Looper
+import android.view.View
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsNode
+import androidx.compose.ui.semantics.SemanticsOwner
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.fragment.app.FragmentActivity
+import de.schildbach.wallet.ui.compose_views.ApproveConnectionDialog
+import de.schildbach.wallet.ui.compose_views.ConnectLimitPickerDialog
+import de.schildbach.wallet_test.R
+import de.schildbach.wallet_test.databinding.DialogComposeContainerBinding
+import io.mockk.every
+import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.*
+import org.dash.wallet.common.ui.dismissDialogsForLockScreen
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import org.robolectric.util.ReflectionHelpers
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -63,6 +78,139 @@ class ConnectionDialogLockTest {
             controller.pause().stop().destroy()
             Dispatchers.resetMain()
         }
+    }
+
+    /** Owns the screen's ViewModel, as ConnectionsFragment does for the approve sheet and its child sheets. */
+    class ScreenHost : androidx.fragment.app.Fragment() {
+        lateinit var model: ConnectionsViewModel
+        override val defaultViewModelProviderFactory = object : androidx.lifecycle.ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T = model as T
+        }
+    }
+
+    @Test fun `the expiry date picker goes down with the approve sheet when the wallet locks`() {
+        val controller = Robolectric.buildActivity(FragmentActivity::class.java)
+        controller.get().setTheme(org.dash.wallet.common.R.style.My_Theme)
+        val activity = controller.setup().get()
+        val request = ConnectionRequest("App", "", "app", "alice", "identity", blockTime = System.currentTimeMillis())
+        val screen = ScreenHost().apply {
+            model = io.mockk.mockk(relaxed = true) {
+                io.mockk.every { uiState } returns MutableStateFlow(ConnectionsUIState(pendingRequest = request))
+            }
+        }
+        try {
+            activity.supportFragmentManager.beginTransaction().add(screen, "screen").commitNow()
+            // Stands in for the approve sheet, which the lock path dismisses with its child sheets.
+            val approveSheet = androidx.fragment.app.DialogFragment()
+            approveSheet.showNow(screen.childFragmentManager, "approve")
+            val picker = de.schildbach.wallet.ui.compose_views.ConnectLimitPickerDialog
+                .newInstance(de.schildbach.wallet.ui.compose_views.ConnectLimit.EXPIRATION)
+            picker.showNow(approveSheet.childFragmentManager, "picker")
+            picker.showDatePicker(request.blockTime, null)
+            val datePicker = checkNotNull(picker.expiryDatePicker)
+            assertTrue(datePicker.isShowing)
+            approveSheet.dismissAllowingStateLoss()
+            screen.childFragmentManager.executePendingTransactions()
+            org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()
+            assertFalse(datePicker.isShowing)
+            assertNull(picker.expiryDatePicker)
+        } finally {
+            controller.pause().stop().destroy()
+        }
+    }
+
+    @Test fun `locking with the expiry date picker open closes the approve sheet, its picker and the date picker`() {
+        val controller = Robolectric.buildActivity(FragmentActivity::class.java)
+        controller.get().setTheme(org.dash.wallet.common.R.style.My_Theme)
+        val activity = controller.setup().get()
+        val blockTime = System.currentTimeMillis()
+        // A grant with capabilities, so the approve sheet offers the funding and expiry limits.
+        val request = ConnectionRequest(
+            "App", "", "app", "alice", "identity", blockTime = blockTime,
+            capabilities = listOf(AppCapability(AppCapabilityKind.ACT_IN_APP)),
+            expiresAt = blockTime + 90 * AppConnectLimits.DAY
+        )
+        var unlocked = true
+        val screen = ScreenHost().apply {
+            model = mockk(relaxed = true) {
+                every { uiState } returns MutableStateFlow(ConnectionsUIState(pendingRequest = request))
+                every { approveResult } returns MutableStateFlow(ConnectionsViewModel.ApproveResult.Idle)
+                every { isWalletUnlocked } answers { unlocked }
+            }
+        }
+        try {
+            activity.supportFragmentManager.beginTransaction().add(screen, "screen").commitNow()
+            // The real approve sheet, as ConnectionsFragment shows it in its child fragment manager.
+            val approveSheet = ApproveConnectionDialog()
+            approveSheet.showNow(screen.childFragmentManager, "approve_connection_dialog")
+            assertTrue(approveSheet.requireDialog().isShowing)
+
+            // The user taps Change on the Expires row of the approve sheet ...
+            val expiresLabel = activity.getString(R.string.dash_connect_expires)
+            val changeLabel = activity.getString(R.string.dash_connect_change)
+            val approveRoot = semanticsRoot(approveSheet)
+            val expires = textNodes(approveRoot, expiresLabel).single()
+            val changeExpiry = textNodes(approveRoot, changeLabel).single { change ->
+                change.boundsInRoot.top < expires.boundsInRoot.bottom &&
+                    change.boundsInRoot.bottom > expires.boundsInRoot.top
+            }
+            click(changeExpiry)
+            approveSheet.childFragmentManager.executePendingTransactions()
+            val picker = approveSheet.childFragmentManager.fragments
+                .filterIsInstance<ConnectLimitPickerDialog>().single()
+            assertTrue(picker.requireDialog().isShowing)
+
+            // ... then Set date in the expiry picker, which opens the date picker.
+            click(textNodes(semanticsRoot(picker), activity.getString(R.string.dash_connect_set_date)).single())
+            val datePicker = checkNotNull(picker.expiryDatePicker) { "Set date did not open the date picker" }
+            assertTrue(datePicker.isShowing)
+
+            // What LockScreenActivity does when the wallet locks.
+            unlocked = false
+            dismissDialogsForLockScreen(activity.supportFragmentManager)
+            screen.childFragmentManager.executePendingTransactions()
+            shadowOf(Looper.getMainLooper()).idle()
+
+            assertFalse(approveSheet.dialog?.isShowing == true)
+            assertFalse(approveSheet.isAdded)
+            assertFalse(picker.dialog?.isShowing == true)
+            assertFalse(picker.isAdded)
+            assertFalse(datePicker.isShowing)
+            assertNull(picker.expiryDatePicker)
+        } finally {
+            controller.pause().stop().destroy()
+        }
+    }
+
+    /** Lays out a compose sheet's content and returns its semantics root. */
+    private fun semanticsRoot(sheet: androidx.fragment.app.DialogFragment): SemanticsNode {
+        shadowOf(Looper.getMainLooper()).idle()
+        val view = DialogComposeContainerBinding.bind(sheet.requireView()).composeContainer
+        view.measure(
+            View.MeasureSpec.makeMeasureSpec(1080, View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec(1920, View.MeasureSpec.AT_MOST)
+        )
+        view.layout(0, 0, 1080, view.measuredHeight)
+        shadowOf(Looper.getMainLooper()).idle()
+        return ReflectionHelpers.callInstanceMethod<SemanticsOwner>(view.getChildAt(0), "getSemanticsOwner")
+            .rootSemanticsNode
+    }
+
+    private fun textNodes(root: SemanticsNode, text: String): List<SemanticsNode> {
+        fun all(node: SemanticsNode): List<SemanticsNode> = listOf(node) + node.children.flatMap { all(it) }
+        return all(root).filter { node ->
+            node.config.contains(SemanticsProperties.Text) &&
+                node.config[SemanticsProperties.Text].any { it.text == text }
+        }
+    }
+
+    /** Invokes the click of the node, or of its nearest clickable ancestor (a button's label sits inside it). */
+    private fun click(node: SemanticsNode) {
+        val clickable = generateSequence(node) { it.parent }.first { it.config.contains(SemanticsActions.OnClick) }
+        val action = checkNotNull(clickable.config[SemanticsActions.OnClick].action) { "No click action" }
+        assertTrue(action())
+        shadowOf(Looper.getMainLooper()).idle()
     }
 
     @Test fun `details arriving after auto lock are withheld until unlock`() = runTest {
