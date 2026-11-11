@@ -585,6 +585,13 @@ internal fun classifyCoinJoinFunding(
 // ── Source seam ───────────────────────────────────────────────────────
 
 /**
+ * The lowest-[index] row of [rows] that is not [isUsed], or null when every row is used (or
+ * there are none). No fallback to a used row: see [ShieldedSource.unusedPlatformAddressOrNull].
+ */
+internal fun <T, K : Comparable<K>> lowestUnusedOrNull(rows: List<T>, isUsed: (T) -> Boolean, index: (T) -> K): T? =
+    rows.filter { !isUsed(it) }.minByOrNull(index)
+
+/**
  * Seam over the Kotlin SDK's shielded surface
  * ([org.dashfoundation.dashsdk.wallet.PlatformWalletManager]'s shielded
  * section + the shielded Room DAOs + [ShieldedProver]), so the
@@ -685,6 +692,14 @@ interface ShieldedSource {
      * row for the wallet yet.
      */
     suspend fun ownPlatformAddressOrNull(walletId: ByteArray): String?
+
+    /**
+     * The wallet's lowest-index UNUSED DIP-17 Platform address (bech32m), or null when the SDK's
+     * address store has no unused row for the wallet. Unlike [ownPlatformAddressOrNull] it never
+     * falls back to a used address: this one is shown to payers, and reusing an address would
+     * link their payments.
+     */
+    suspend fun unusedPlatformAddressOrNull(walletId: ByteArray): String?
 
     /** Type 15: shield credits into the wallet's own pool. Blocks for the proof. */
     suspend fun shield(walletId: ByteArray, amountCredits: Long)
@@ -876,6 +891,11 @@ internal class DashSdkShieldedSource(
         val row = rows.filter { !it.isUsed }.minByOrNull { it.addressIndex }
             ?: rows.minByOrNull { it.addressIndex }
         return row?.address
+    }
+
+    override suspend fun unusedPlatformAddressOrNull(walletId: ByteArray): String? {
+        val rows = database().platformAddressDao().observeByWallet(walletId).first()
+        return lowestUnusedOrNull(rows, isUsed = { it.isUsed }, index = { it.addressIndex })?.address
     }
 
     override suspend fun shield(walletId: ByteArray, amountCredits: Long) =
@@ -2131,7 +2151,7 @@ class ShieldedBalanceServiceImpl internal constructor(
         if (!ensureShieldedReady()) return null
         val walletId = readyWalletIdHex.value?.let(::walletIdFromHex) ?: return null
         return try {
-            source.ownPlatformAddressOrNull(walletId)
+            source.unusedPlatformAddressOrNull(walletId)
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             log.warn("failed to read the platform receive address", t)

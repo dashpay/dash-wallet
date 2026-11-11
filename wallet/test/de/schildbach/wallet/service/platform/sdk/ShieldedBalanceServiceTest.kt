@@ -118,6 +118,7 @@ class ShieldedBalanceServiceTest {
 
         var defaultAddress: ByteArray? = ByteArray(43) { 7 }
         var platformAddress: () -> String? = { "tdash1ownplatformaddress" }
+        var unusedPlatformAddress: () -> String? = { "tdash1unusedplatformaddress" }
 
         val notesFlow = MutableStateFlow<List<ShieldedNoteEntity>>(emptyList())
         val activityFlow = MutableStateFlow<List<ShieldedActivityEntity>>(emptyList())
@@ -272,6 +273,8 @@ class ShieldedBalanceServiceTest {
         override suspend fun shieldedDefaultAddress(walletId: ByteArray): ByteArray? = defaultAddress
 
         override suspend fun ownPlatformAddressOrNull(walletId: ByteArray): String? = platformAddress()
+
+        override suspend fun unusedPlatformAddressOrNull(walletId: ByteArray): String? = unusedPlatformAddress()
 
         override suspend fun shield(walletId: ByteArray, amountCredits: Long) {
             broadcastCalls++
@@ -1489,9 +1492,33 @@ class ShieldedBalanceServiceTest {
     }
 
     @Test
-    fun platformReceiveAddress_isTheSourcesOwnPlatformAddress() = runBlocking {
-        val source = readySource().apply { platformAddress = { "tdash1qown" } }
-        assertEquals("tdash1qown", service(source).platformReceiveAddress())
+    fun platformReceiveAddress_isTheSourcesUnusedPlatformAddress() = runBlocking {
+        val source = readySource().apply {
+            platformAddress = { "tdash1qownused" }
+            unusedPlatformAddress = { "tdash1qunused" }
+        }
+        assertEquals("tdash1qunused", service(source).platformReceiveAddress())
+    }
+
+    @Test
+    fun platformReceiveAddress_nullWhenNoUnusedAddress_neverTheUsedFallback() = runBlocking {
+        // The self-unshield lookup still has a (used) address; Receive must not show it.
+        val source = readySource().apply {
+            platformAddress = { "tdash1qownused" }
+            unusedPlatformAddress = { null }
+        }
+        assertNull(service(source).platformReceiveAddress())
+    }
+
+    @Test
+    fun lowestUnusedOrNull_allUsed_isNull_oneUnused_isThatRow() {
+        data class Row(val index: Int, val used: Boolean)
+        fun pick(rows: List<Row>) = lowestUnusedOrNull(rows, isUsed = { it.used }, index = { it.index })
+
+        assertNull(pick(emptyList()))
+        assertNull(pick(listOf(Row(0, true), Row(1, true), Row(2, true))))
+        assertEquals(Row(1, false), pick(listOf(Row(0, true), Row(1, false), Row(2, true))))
+        assertEquals(Row(2, false), pick(listOf(Row(5, false), Row(0, true), Row(2, false))))
     }
 
     @Test
@@ -1504,7 +1531,7 @@ class ShieldedBalanceServiceTest {
     @Test
     fun platformReceiveAddress_lookupFailure_isNullNotThrown() = runBlocking {
         val source = readySource().apply {
-            platformAddress = { throw DashSdkError.InternalError("room read failed") }
+            unusedPlatformAddress = { throw DashSdkError.InternalError("room read failed") }
         }
         assertNull(service(source).platformReceiveAddress())
     }

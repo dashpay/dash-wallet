@@ -321,20 +321,17 @@
         tools:layout="@layout/fragment_receive">
 
         <!--
-            Advanced Receive's Specify amount on a tab other than Core (Shield, Platform,
-            Identity): the tab's address or identity ID and the string resource of its label.
-            Null (every other caller) keeps the Core flow, which reads a fresh address.
+            Advanced Receive's Specify amount on a tab other than Core: the balance's
+            ReceiveBalanceTab name (SHIELD, PLATFORM, IDENTITY). Never an address: this
+            destination is reachable from other apps, so ReceiveFragment reads the address from
+            the wallet itself and shows no request for an unknown value. Null (every other
+            caller) keeps the Core flow, which reads a fresh address.
         -->
         <argument
-            android:name="request_address"
+            android:name="request_balance"
             android:defaultValue="@null"
             app:argType="string"
             app:nullable="true" />
-
-        <argument
-            android:name="request_address_label"
-            android:defaultValue="0"
-            app:argType="reference" />
     </fragment>
 
     <fragment

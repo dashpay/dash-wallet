@@ -32,6 +32,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.ui.AbsoluteAlignment
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,7 +47,6 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -54,7 +54,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import org.dash.wallet.common.R
 import org.dash.wallet.common.ui.components.DashWalletTheme
@@ -135,7 +134,6 @@ fun SegmentedPicker(
     }
 
     val density = LocalDensity.current
-    val layoutDirection = LocalLayoutDirection.current
 
     // Resolve theme-aware defaults so the picker tracks light/dark; explicit style colors win.
     val colors = LocalDashColors.current
@@ -165,14 +163,10 @@ fun SegmentedPicker(
         val optionSizePx = if (containerSize > 0) containerSize * itemSize else 0f
         val positionPx = optionSizePx * internalSelectedIndex
 
-        // Calculate animation position
-        val positionDp = with(density) { positionPx.toDp() }
-        val targetPosition = if (isHorizontal && layoutDirection == LayoutDirection.Rtl) {
-            // For RTL horizontal mode, calculate position from the right side
-            with(density) { (containerWidth - optionSizePx - positionPx).toDp() }
-        } else {
-            positionDp
-        }
+        // The thumb's offset from the start edge. The thumb is start-aligned and Modifier.offset is
+        // direction-aware, so in RTL both already measure from the right, where option 0 sits;
+        // mirroring the position here as well would put the thumb over the mirrored option.
+        val targetPosition = with(density) { positionPx.toDp() }
 
         val animatedPosition by animateDpAsState(
             targetValue = targetPosition,
@@ -359,7 +353,11 @@ private fun FitContentSegmentedPicker(
             .horizontalScroll(rememberScrollState())
     ) {
         // The inset sits inside the scroll, around both the thumb and the row, so the measured
-        // option offsets and the thumb's absoluteOffset share one origin.
+        // option offsets and the thumb's absoluteOffset share one origin. positionInParent() is
+        // the physical x in the Row, and this Box is as wide as the Row (the scroll gives it no
+        // minimum width), so the thumb is anchored at the physical left (TopLeft): the default
+        // TopStart would, in RTL, put it at the right edge and the offset would then be added
+        // on top. Checked in LTR and RTL that the thumb lands on the selected option.
         Box(
             modifier = Modifier
                 .fillMaxHeight()
@@ -374,6 +372,7 @@ private fun FitContentSegmentedPicker(
                     // Same rounding as absoluteOffset(x =) and width(): roundToPx, clamped to the
                     // incoming constraints.
                     modifier = Modifier
+                        .align(AbsoluteAlignment.TopLeft)
                         .absoluteOffset { IntOffset(thumbOffset.roundToPx(), 0) }
                         .layout { measurable, constraints ->
                             val width = thumbWidth.roundToPx().coerceAtLeast(0)

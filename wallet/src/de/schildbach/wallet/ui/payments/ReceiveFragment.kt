@@ -29,6 +29,7 @@ import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentReceiveBinding
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import de.schildbach.wallet.data.WalletData
@@ -55,6 +56,7 @@ class ReceiveFragment : Fragment(R.layout.fragment_receive) {
     private val enterAmountViewModel by activityViewModels<EnterAmountViewModel>()
     private val binding by viewBinding(FragmentReceiveBinding::bind)
     @Inject lateinit var walletData: WalletData
+    @Inject lateinit var amountRequestAddressResolver: AmountRequestAddressResolver
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -81,48 +83,59 @@ class ReceiveFragment : Fragment(R.layout.fragment_receive) {
         }
         enterAmountViewModel.setMaxAmount(org.dash.wallet.common.money.Coin.ZERO)
         enterAmountViewModel.setMinAmount(org.dash.wallet.common.money.Coin.ZERO)
-        // Set only by Advanced Receive's Shield/Platform/Identity tabs; every other caller
-        // leaves it null and gets a fresh Core address below.
-        val args = ReceiveFragmentArgs.fromBundle(arguments ?: Bundle())
-        val requestAddress = args.requestAddress
+        // A balance name, set only by Advanced Receive's Shield/Platform/Identity tabs; every
+        // other caller leaves it null and gets a fresh Core address below. This destination is
+        // reachable from other apps, so the argument never carries an address: the resolver
+        // reads it from the wallet (and shows no request for an unknown balance).
+        val requestBalance = ReceiveFragmentArgs.fromBundle(arguments ?: Bundle()).requestBalance
         enterAmountViewModel.onContinueEvent.observe(viewLifecycleOwner) {
             val dashAmount = it.first
             val fiatAmount = it.second
-            if (requestAddress != null) {
-                // Both arguments are set together; the generic label covers a caller that did not.
-                val label = args.requestAddressLabel.takeIf { label -> label != 0 }
-                    ?: org.dash.wallet.common.R.string.dash_address
-                ReceiveDetailsDialog.createAmountRequestDialog(
-                    getString(label),
-                    requestAddress,
-                    dashAmount.toDashjCoin(),
-                    fiatAmount?.toDashjFiat()
-                ).show(requireActivity())
-                return@observe
-            }
-            // OFF THE MAIN THREAD: this observer runs on Main, and dashj's
-            // freshReceiveAddress() forces a synchronous full-wallet save
-            // (measured 1.2s at 215 friend chains) — see freshReceiveAddressOffMain.
             viewLifecycleOwner.lifecycleScope.launch {
-                try {
-                    val address = walletData.freshReceiveAddressOffMain()
-                    val dialogFragment = ReceiveDetailsDialog.createDialog(
-                        address, dashAmount.toDashjCoin(), fiatAmount?.toDashjFiat()
-                    )
-                    dialogFragment.show(requireActivity())
-                } catch (ex: ReceiveAddressUnavailableException) {
-                    // No safe address to put in the request — see
-                    // PaymentsReceiveFragment. Better no invoice than one the
-                    // chain has already paid.
-                    //
-                    // Guarded: the read parks uncancellably, so this arm can run
-                    // after the VIEW scope was cancelled, which on this screen
-                    // means the user navigated on with the fragment still on the
-                    // back stack — attached, so only the cancellation half of the
-                    // guard suppresses the toast.
-                    toastIfStillAttached(org.dash.wallet.common.R.string.loading_error)
+                when (val target = amountRequestAddressResolver.resolve(requestBalance)) {
+                    AmountRequestTarget.Core -> showCoreRequest(dashAmount, fiatAmount)
+                    is AmountRequestTarget.Address -> {
+                        // The read may return after the view scope was cancelled.
+                        ensureActive()
+                        ReceiveDetailsDialog.createAmountRequestDialog(
+                            getString(addressLabelFor(target.tab)),
+                            target.address,
+                            dashAmount.toDashjCoin(),
+                            fiatAmount?.toDashjFiat()
+                        ).show(requireActivity())
+                    }
+                    // Nothing from the wallet to put in the request: no request.
+                    AmountRequestTarget.Unavailable ->
+                        toastIfStillAttached(org.dash.wallet.common.R.string.loading_error)
                 }
             }
+        }
+    }
+
+    private suspend fun showCoreRequest(
+        dashAmount: org.dash.wallet.common.money.Coin,
+        fiatAmount: org.dash.wallet.common.money.Fiat?
+    ) {
+        // OFF THE MAIN THREAD: the caller runs on Main, and dashj's
+        // freshReceiveAddress() forces a synchronous full-wallet save
+        // (measured 1.2s at 215 friend chains) — see freshReceiveAddressOffMain.
+        try {
+            val address = walletData.freshReceiveAddressOffMain()
+            val dialogFragment = ReceiveDetailsDialog.createDialog(
+                address, dashAmount.toDashjCoin(), fiatAmount?.toDashjFiat()
+            )
+            dialogFragment.show(requireActivity())
+        } catch (ex: ReceiveAddressUnavailableException) {
+            // No safe address to put in the request — see
+            // PaymentsReceiveFragment. Better no invoice than one the
+            // chain has already paid.
+            //
+            // Guarded: the read parks uncancellably, so this arm can run
+            // after the VIEW scope was cancelled, which on this screen
+            // means the user navigated on with the fragment still on the
+            // back stack — attached, so only the cancellation half of the
+            // guard suppresses the toast.
+            toastIfStillAttached(org.dash.wallet.common.R.string.loading_error)
         }
     }
 
