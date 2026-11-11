@@ -65,10 +65,10 @@ class ReceiveDetailsDialog : OffsetDialogFragment(R.layout.dialog_receive_detail
         }
 
         /**
-         * The same dialog for an address [PaymentURI][org.dash.wallet.common.payments.parsers.PaymentURI]
-         * cannot carry (Advanced Receive's shielded and Platform addresses and identity ID):
-         * the QR holds [ReceiveViewModel.amountRequestPayload] and the address shows under
-         * [addressLabel]. There is no username row.
+         * The same dialog for an address that is not a base58 Core address (Advanced Receive's
+         * shielded and Platform addresses and identity ID): the QR holds
+         * [ReceiveViewModel.amountRequestPayload] and the address shows under [addressLabel].
+         * There is no username row.
          */
         fun createAmountRequestDialog(
             addressLabel: String,
