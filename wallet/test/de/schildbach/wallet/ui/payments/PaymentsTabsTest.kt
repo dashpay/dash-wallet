@@ -40,6 +40,11 @@ class PaymentsTabsTest {
     }
 
     @Test
+    fun `Basic mode shows exactly the two legacy tabs`() {
+        assertEquals(PaymentsFragment.tabIdsFor(showInternalTab = false), PaymentsFragment.BASIC_TAB_IDS)
+    }
+
+    @Test
     fun `flags on - Internal tab sits between Receive and Send`() {
         assertEquals(
             listOf(

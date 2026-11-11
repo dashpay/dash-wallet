@@ -2159,8 +2159,22 @@ class ShieldedBalanceServiceImpl internal constructor(
         }
     }
 
-    override suspend fun shieldFromCredits(amount: Dash): SdkWriteResult<Unit> =
-        runShieldedWrite("shieldFromCredits", amount) { walletId, credits ->
+    override suspend fun ownPlatformAddressOf(walletIdHex: String): String? {
+        val walletId = walletIdFromHex(walletIdHex) ?: return null
+        return try {
+            source.ownPlatformAddressOrNull(walletId)
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("failed to read the wallet's own platform address", t)
+            null
+        }
+    }
+
+    override suspend fun shieldFromCredits(amount: Dash, expectedWalletIdHex: String?): SdkWriteResult<Unit> =
+        shieldFromCreditsInternal(amount, expectedWalletIdHex)
+
+    private suspend fun shieldFromCreditsInternal(amount: Dash, expectedWalletIdHex: String?): SdkWriteResult<Unit> =
+        runShieldedWrite("shieldFromCredits", amount, expectedWalletIdHex) { walletId, credits ->
             source.shield(walletId, credits)
         }
 
@@ -2202,8 +2216,11 @@ class ShieldedBalanceServiceImpl internal constructor(
             }
             .distinctUntilChanged()
 
-    override suspend fun shieldFromWallet(amount: Dash): SdkWriteResult<ShieldFromWalletOutcome> =
-        shieldFromWalletInternal(amount, fundingPath = null)
+    override suspend fun shieldFromWallet(
+        amount: Dash,
+        expectedWalletIdHex: String?
+    ): SdkWriteResult<ShieldFromWalletOutcome> =
+        shieldFromWalletInternal(amount, fundingPath = null, expectedWalletIdHex = expectedWalletIdHex)
 
     /** Tracked locks with [PendingWalletShieldLock.platformConsumed] applied; unreadable → none (fail closed). */
     private suspend fun trackedShieldLocks(walletId: ByteArray): List<PendingWalletShieldLock> {
@@ -2759,7 +2776,7 @@ class ShieldedBalanceServiceImpl internal constructor(
         amount: Dash,
         expectedWalletIdHex: String
     ): SdkWriteResult<Unit> {
-        if (identityId.size != 32) {
+        if (identityId.size != IDENTITY_ID_LENGTH) {
             return notBroadcast("topUpIdentityFromShielded", "identity id is not 32 bytes", null)
         }
         val target = identityId.copyOf()
@@ -2786,7 +2803,7 @@ class ShieldedBalanceServiceImpl internal constructor(
         amount: Dash,
         expectedWalletIdHex: String
     ): SdkWriteResult<Unit> {
-        if (identityId.size != 32) {
+        if (identityId.size != IDENTITY_ID_LENGTH) {
             return notBroadcast("shieldFromIdentityToAddress", "identity id is not 32 bytes", null)
         }
         val recipientRaw43 = decodeOrchardAddress(toShieldedAddress, displayHrpSafe())
@@ -2854,8 +2871,11 @@ class ShieldedBalanceServiceImpl internal constructor(
         }
     }
 
-    override suspend fun unshieldToCredits(amount: Dash): SdkWriteResult<Unit> =
-        runShieldedWrite("unshieldToCredits", amount) { walletId, credits ->
+    override suspend fun unshieldToCredits(amount: Dash, expectedWalletIdHex: String?): SdkWriteResult<Unit> =
+        unshieldToCreditsInternal(amount, expectedWalletIdHex)
+
+    private suspend fun unshieldToCreditsInternal(amount: Dash, expectedWalletIdHex: String?): SdkWriteResult<Unit> =
+        runShieldedWrite("unshieldToCredits", amount, expectedWalletIdHex) { walletId, credits ->
             val target = try {
                 source.ownPlatformAddressOrNull(walletId)
             } catch (t: Throwable) {

@@ -347,3 +347,19 @@ class ReceiveViewModel internal constructor(
         }
     }
 }
+
+/**
+ * The shielded flag as a never-failing flow: a failed read counts as off (as
+ * [DashPayConfig.get] reading absent does for [PaymentsFragment]), is reported to
+ * [onError] and is retried, so the flow never completes on an [Exception] (see
+ * [retryReadErrors]: a cancellation or an [Error] still propagates). Used by the Receive
+ * balance tabs.
+ */
+internal fun shieldedEnabledFlow(
+    shieldedFlag: Flow<Boolean?>,
+    onError: (Throwable, Long) -> Unit = { _, _ -> },
+    retryDelayMs: (Long) -> Long = ::readRetryDelayMs
+): Flow<Boolean> = shieldedFlag
+    .map { it == true }
+    .retryReadErrors(false, retryDelayMs, onError)
+    .distinctUntilChanged()
