@@ -310,7 +310,7 @@ open class BlockchainIdentityConfig @Inject constructor(
     }
 
     /** Unlike ordinary preference reads, absence here must never be inferred from an I/O fallback. */
-    fun observeIdentityPresence(): Flow<Boolean> = context.dataStore.data.map { prefs ->
+    fun observeIdentityPresence(): Flow<Boolean> = dataPreservingErrors.map { prefs ->
         IdentityCreationState.valueOf(prefs[CREATION_STATE] ?: "NONE") != IdentityCreationState.NONE ||
             prefs.asMap().keys.any { it != CREATION_STATE }
     }
@@ -372,6 +372,14 @@ open class BlockchainIdentityConfig @Inject constructor(
     fun observe() : Flow<BlockchainIdentityData> {
         return identityData
     }
+
+    /**
+     * [observe] WITHOUT [data]'s IOException rescue (see [BaseConfig.observePreservingErrors]):
+     * an unreadable store THROWS instead of reading as "no identity". [observe] completes
+     * after such a read; collect this with a retry (`retryReadErrors`) for a subscription
+     * that must survive a transient failure and fail closed while it lasts.
+     */
+    fun observePreservingErrors(): Flow<BlockchainIdentityData> = dataPreservingErrors.map(::identityDataFrom)
 
     suspend fun loadBase() : BlockchainIdentityBaseData {
         return identityBaseData.first()
