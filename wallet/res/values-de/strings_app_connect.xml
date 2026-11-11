@@ -11,7 +11,7 @@
     <string name="dash_st_purchase_title">Tokens kaufen?</string>
     <string name="dash_st_key_setup">Signaturschlüssel einrichten</string>
     <string name="dash_st_key_setup_title">Kaufsignatur einrichten?</string>
-    <string name="dash_st_key_setup_warning">Diese Wallet benötigt einen Signaturschlüssel für Käufe. Bei der Einrichtung wird ein von der Wallet kontrollierter Schlüssel für deine Identität registriert und eine Netzwerkgebühr in Platform Credits berechnet. Dabei werden keine Tokens gekauft. Den Kauf prüfst und genehmigst du anschließend separat.</string>
+    <string name="dash_st_key_setup_warning">Die Kaufsignierung muss in dieser Wallet eingerichtet werden. Bei der Einrichtung wird der Zugriff auf einen vorhandenen, von der Wallet kontrollierten Schlüssel wiederhergestellt oder, falls nötig, ein neuer Schlüssel für deine Identität registriert. Eine Netzwerkgebühr in Platform Credits fällt nur an, wenn ein neuer Schlüssel registriert wird. Dabei werden keine Tokens gekauft. Den Kauf prüfst und genehmigst du anschließend separat.</string>
     <string name="dash_connect_records_unavailable">Verbindungsdaten nicht verfügbar</string>
     <string name="dash_connect_records_unavailable_message">Deine gespeicherten Verbindungsdaten konnten nicht gelesen werden. Bestehende App-Zugriffe können weiterhin aktiv sein. Es wurde kein Zugriff widerrufen.</string>
     <string name="dash_connect_records_retry">Erneut versuchen</string>

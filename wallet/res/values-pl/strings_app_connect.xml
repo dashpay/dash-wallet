@@ -11,7 +11,7 @@
     <string name="dash_st_purchase_title">Kupić tokeny?</string>
     <string name="dash_st_key_setup">Skonfiguruj klucz podpisu</string>
     <string name="dash_st_key_setup_title">Skonfigurować podpisywanie zakupów?</string>
-    <string name="dash_st_key_setup_warning">Ten portfel potrzebuje klucza do podpisywania zakupów. Jego konfiguracja rejestruje w Twojej tożsamości klucz kontrolowany przez portfel i pobiera opłatę sieciową w kredytach Platform. Nie powoduje to zakupu tokenów. Zakup przejrzysz i zatwierdzisz osobno w kolejnym kroku.</string>
+    <string name="dash_st_key_setup_warning">Podpisywanie zakupów musi zostać skonfigurowane w tym portfelu. Konfiguracja przywraca dostęp do istniejącego klucza kontrolowanego przez portfel lub, w razie potrzeby, rejestruje nowy klucz w Twojej tożsamości. Opłata sieciowa w kredytach Platform jest pobierana tylko wtedy, gdy rejestrowany jest nowy klucz. Nie powoduje to zakupu tokenów. Zakup przejrzysz i zatwierdzisz osobno w kolejnym kroku.</string>
     <string name="dash_connect_records_unavailable">Zapisy połączeń niedostępne</string>
     <string name="dash_connect_records_unavailable_message">Nie udało się odczytać zapisanych połączeń. Dotychczasowy dostęp aplikacji może być nadal aktywny. Żaden dostęp nie został cofnięty.</string>
     <string name="dash_connect_records_retry">Ponów</string>

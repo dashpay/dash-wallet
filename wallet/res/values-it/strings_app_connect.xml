@@ -11,7 +11,7 @@
     <string name="dash_st_purchase_title">Acquistare token?</string>
     <string name="dash_st_key_setup">Configura chiave di firma</string>
     <string name="dash_st_key_setup_title">Configurare la firma degli acquisti?</string>
-    <string name="dash_st_key_setup_warning">Questo portafoglio ha bisogno di una chiave di firma per gli acquisti. Configurarla registra sulla tua identità una chiave controllata dal portafoglio e addebita una commissione di rete in crediti Platform. Questa operazione non acquista token. Esaminerai e approverai l\'acquisto separatamente in seguito.</string>
+    <string name="dash_st_key_setup_warning">La firma degli acquisti deve essere configurata su questo portafoglio. La configurazione ripristina l\'accesso a una chiave esistente controllata dal portafoglio oppure, se necessario, registra una nuova chiave sulla tua identità. Una commissione di rete in crediti Platform viene addebitata solo se viene registrata una nuova chiave. Questa operazione non acquista token. Esaminerai e approverai l\'acquisto separatamente in seguito.</string>
     <string name="dash_connect_records_unavailable">Registro connessioni non disponibile</string>
     <string name="dash_connect_records_unavailable_message">Non è stato possibile leggere i registri delle connessioni salvate. L\'accesso esistente delle app potrebbe essere ancora attivo. Nessun accesso è stato revocato.</string>
     <string name="dash_connect_records_retry">Riprova</string>
