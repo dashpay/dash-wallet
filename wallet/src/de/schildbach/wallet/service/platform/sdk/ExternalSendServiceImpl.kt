@@ -1389,8 +1389,12 @@ class ExternalSendServiceImpl internal constructor(
      * - Outpoint, lock Consumed: done, clear.
      * - Outpoint, lock not tracked: keep (nothing to resume, nothing to prove it never went out).
      * - Outpoint, lock not Consumed: resume with exactly the persisted recipients, at most
-     *   [MAX_PLATFORM_RESUME_ATTEMPTS_PER_PROCESS] times per process; clear on success or when
-     *   Platform answers already consumed.
+     *   [MAX_PLATFORM_RESUME_ATTEMPTS_PER_PROCESS] times per process; clear on success, when
+     *   Platform answers already consumed, or when Platform already has the identical
+     *   transition ([isTransitionAlreadyKnownToPlatform]: submitted before a process death,
+     *   so no resume can submit anything new). Clearing never pays twice: Platform consumes
+     *   a lock's outpoint once (drive-abci `verify_asset_lock_is_not_spent_and_has_enough_balance`),
+     *   and a later send builds a new lock.
      */
     private suspend fun resumePendingPlatformFundingInner(): Int {
         val first = try {
@@ -1460,6 +1464,16 @@ class ExternalSendServiceImpl internal constructor(
                 if (isAssetLockAlreadyConsumed(e)) {
                     platformFundingStore.clear(record.id)
                     log.warn("pending platform funding {}: Platform reports the lock already consumed; cleared", record.id)
+                } else if (isTransitionAlreadyKnownToPlatform(e)) {
+                    // The same transition (this lock, these recipients) was submitted before;
+                    // every resume rebuilds identical bytes, so nothing more can be done here
+                    // and keeping the record would only block every later Core → Platform send.
+                    platformFundingStore.clear(record.id)
+                    log.warn(
+                        "pending platform funding {}: Platform already has this funding transition; " +
+                            "its outcome is Platform's — cleared",
+                        record.id
+                    )
                 } else {
                     log.warn("pending platform funding {}: resume failed (attempt {}); kept", record.id, attempts + 1, e)
                 }
