@@ -161,6 +161,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         // into the fresh ConcatAdapter(header, cacheAdapter) below and blocks the new swap forever.
         cacheAdapterAttached = true
         cacheHasRows = false
+        lastRefreshState = LoadState.Loading
 
         val clickHandler = { rowView: HistoryRowView, _: Int, isProfileClick: Boolean ->
             viewLifecycleOwner.lifecycleScope.launch {
