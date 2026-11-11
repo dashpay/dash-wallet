@@ -571,8 +571,8 @@ class PlatformRepo @Inject constructor(
      * `AuthenticationGroupExtension.addNewKey` (which imports it into the chain's basic key
      * chain and persists the wallet).
      *
-     * Never throws: failures are logged and the number of keys issued so far is returned.
-     * Callers that act on the result must use [requireIdentityChainKeys].
+     * Never throws except [CancellationException]: failures are logged and the number of keys
+     * issued so far is returned. Callers that act on the result must use [requireIdentityChainKeys].
      *
      * @return the number of keys that were newly issued (0 if nothing was missing)
      */
@@ -585,7 +585,8 @@ class PlatformRepo @Inject constructor(
      * is still skipped as "not this wallet's key", but a missing identity, authentication
      * extension, identity chain or wallet, an encrypted wallet without [keyParameter] (only when
      * some key is still unresolved on the chain), and any decryption, derivation or import failure
-     * throw. Failures are not logged here; the caller logs them.
+     * throw. Failures are not logged here; the caller logs them. A [CancellationException] is
+     * rethrown as is, never wrapped.
      *
      * @return the number of keys that were newly issued (0 if nothing was missing)
      * @throws IdentityKeyChainBackfillException if the backfill did not complete
@@ -619,6 +620,8 @@ class PlatformRepo @Inject constructor(
                 keyParameter ?: throw IdentityKeyChainBackfillException("wallet is encrypted but no key was provided")
                 try {
                     watchingKey.decrypt(keyCrypter, keyParameter) as IDeterministicKey
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     throw IdentityKeyChainBackfillException("cannot decrypt the identity chain", e)
                 }
@@ -642,6 +645,8 @@ class PlatformRepo @Inject constructor(
                     decryptedParent() // outside the per-key catch: an unusable parent aborts
                     try {
                         derive(index).pubKey
+                    } catch (e: CancellationException) {
+                        throw e
                     } catch (e: Exception) {
                         // a failed derivation is not "not ours": a strict caller fails closed
                         if (strict) throw e
@@ -668,6 +673,9 @@ class PlatformRepo @Inject constructor(
                     identity.id
                 )
             }
+        } catch (e: CancellationException) {
+            // cancellation is neither a backfill failure nor something to swallow, in either mode
+            throw e
         } catch (e: IdentityKeyChainBackfillException) {
             if (strict) throw e
             log.warn("ensureIdentityChainKeys: {}", e.message, e.cause)

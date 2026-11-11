@@ -26,12 +26,14 @@ import de.schildbach.wallet.ui.dashpay.testPlatformRepo
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import kotlinx.coroutines.CancellationException
 import org.bitcoinj.core.Context
 import org.bitcoinj.core.ECKey
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.crypto.ChildNumber
 import org.bitcoinj.crypto.EncryptableItem
 import org.bitcoinj.crypto.IDeterministicKey
+import org.bitcoinj.crypto.KeyCrypter
 import org.bitcoinj.crypto.KeyCrypterScrypt
 import org.bitcoinj.params.TestNet3Params
 import org.bitcoinj.script.Script
@@ -244,6 +246,56 @@ class AppConnectSigningKeyTest {
             realParent.deriveChildKey(firstArg<ChildNumber>())
         }
         assertEquals(3, walletRepo.requireIdentityChainKeys(identity, null))
+    }
+
+    /** An extension whose identity chain resolves nothing and whose parent key is [parent]. */
+    private fun authWithParent(parent: IDeterministicKey): AuthenticationGroupExtension {
+        val mockChain = mockk<AuthenticationKeyChain>(relaxed = true)
+        every { mockChain.watchingKey } returns parent
+        every { mockChain.findKeyFromPubKey(any()) } returns null
+        val auth = mockk<AuthenticationGroupExtension>(relaxed = true)
+        every { auth.getKeyChain(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY) } returns mockChain
+        return auth
+    }
+
+    /** Cancellation is neither "not our key" nor a backfill failure: it is never wrapped or swallowed. */
+    private fun assertUnwrappedCancellation(expected: CancellationException, block: () -> Unit) {
+        val thrown = assertThrows(CancellationException::class.java) { block() }
+        assertSame(expected, thrown)
+    }
+
+    @Test fun `cancellation while deriving a key propagates unwrapped from every caller and imports nothing`() {
+        val cancellation = CancellationException("cancelled while deriving")
+        val realParent = chain.watchingKey
+        val parent = mockk<IDeterministicKey>()
+        every { parent.deriveChildKey(any<ChildNumber>()) } answers {
+            val child = firstArg<ChildNumber>()
+            if (child.num() == 2) throw cancellation else realParent.deriveChildKey(child)
+        }
+        val auth = authWithParent(parent)
+        val walletRepo = platformRepo(auth = auth)
+        val identity = sdkIdentity(walletAuth)
+
+        assertUnwrappedCancellation(cancellation) { walletRepo.requireIdentityChainKeys(identity, null) }
+        assertUnwrappedCancellation(cancellation) { walletRepo.ensureIdentityChainKeys(identity, null) }
+        assertUnwrappedCancellation(cancellation) { session(identity, walletRepo).readSigningIdentity(null) }
+        verify(exactly = 0) { auth.addNewKey(any(), any()) }
+    }
+
+    @Test fun `cancellation while decrypting the identity chain propagates unwrapped and imports nothing`() {
+        val cancellation = CancellationException("cancelled while decrypting")
+        val parent = mockk<IDeterministicKey>()
+        every { parent.decrypt(any<KeyCrypter>(), any<KeyParameter>()) } throws cancellation
+        val auth = authWithParent(parent)
+        val walletRepo = platformRepo(auth = auth, encrypted = true)
+        val identity = sdkIdentity(walletAuth)
+        val aesKey = KeyParameter(ByteArray(32) { 3 })
+
+        assertUnwrappedCancellation(cancellation) { walletRepo.requireIdentityChainKeys(identity, aesKey) }
+        assertUnwrappedCancellation(cancellation) { walletRepo.ensureIdentityChainKeys(identity, aesKey) }
+        assertUnwrappedCancellation(cancellation) { session(identity, walletRepo).readSigningIdentity(aesKey) }
+        verify(exactly = 0) { parent.deriveChildKey(any<ChildNumber>()) }
+        verify(exactly = 0) { auth.addNewKey(any(), any()) }
     }
 
     // --- a genuinely encrypted wallet (no mocked isEncrypted) ---------------------------------
