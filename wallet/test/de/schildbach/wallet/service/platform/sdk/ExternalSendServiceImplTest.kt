@@ -1461,6 +1461,43 @@ class ExternalSendServiceImplTest {
     }
 
     @Test
+    fun resume_transitionAlreadyKnownToPlatform_clearsTheRecord_andUnblocksTheNextSend() = runBlocking {
+        // Observed on-device after a process death mid-send: every resume rebuilt the same
+        // transition and Tenderdash refused it, so the record blocked all later sends.
+        val alreadyKnown = DashSdkError.PlatformWallet.Generic(
+            1,
+            "SDK error: Object already exists: tx already exists in cache",
+            RuntimeException("SDK error: Object already exists: tx already exists in cache")
+        )
+        val source = source().apply { resume = { throw alreadyKnown } }
+        val store = FakeStore().apply { record = pendingRecord() }
+        val service = service(source, store)
+        assertEquals(0, service.resumePendingPlatformFunding())
+        assertEquals(1, source.resumed.size)
+        assertNull(store.record)
+
+        // The next Core → Platform send is no longer refused as "still confirming".
+        source.resume = { throw AssertionError("nothing left to resume") }
+        assertEquals(ExternalSendResult.Sent(LOCK_TXID), service.send(SendBalance.CORE, platform, amount, false))
+        assertEquals(1, source.funded.size)
+    }
+
+    @Test
+    fun transitionAlreadyKnown_matchesOnlyTheSdkAlreadyExistsShape() {
+        val wrapped = DashSdkError.PlatformWallet.Generic(
+            1,
+            "resume failed",
+            RuntimeException("SDK error: Object already exists: state transition already in chain")
+        )
+        assertTrue(isTransitionAlreadyKnownToPlatform(wrapped))
+        assertTrue(
+            !isTransitionAlreadyKnownToPlatform(RuntimeException("SDK error: Object already exists: tx already exists in cache"))
+        )
+        assertTrue(!isTransitionAlreadyKnownToPlatform(DashSdkError.PlatformWallet.Generic(1, "Wallet already exists: x")))
+        assertTrue(!isTransitionAlreadyKnownToPlatform(DashSdkError.PlatformWallet.Generic(1, "platform timeout")))
+    }
+
+    @Test
     fun resume_failure_keepsTheRecord_andAttemptsAreCappedPerProcess() = runBlocking {
         val source = source().apply { resume = { throw RuntimeException("platform timeout") } }
         val store = FakeStore().apply { record = pendingRecord() }
