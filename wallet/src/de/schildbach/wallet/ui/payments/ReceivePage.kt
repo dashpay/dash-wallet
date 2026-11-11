@@ -51,6 +51,7 @@ import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -89,11 +90,14 @@ fun ReceivePage(
     modifier: Modifier = Modifier
 ) {
     val colors = LocalDashColors.current
+    // The screen's bottom navigation (ShowNavBar) is drawn over the page, so the scroll ends a
+    // bar's height lower: the last buttons scroll clear of it and keep the design's 20dp gap.
+    val navBarClearance = dimensionResource(R.dimen.bottom_nav_bar_height)
     Column(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(start = 20.dp, end = 20.dp, bottom = 20.dp)
+            .padding(start = 20.dp, end = 20.dp, bottom = 20.dp + navBarClearance)
     ) {
         Column(
             modifier = Modifier
