@@ -289,6 +289,20 @@ class AppDatabaseMigrations {
         }
 
         /**
+         * The `tx_display_cache.source` discriminator: 0 = an L1 (Core) row, 1 = a shielded
+         * pool activity row written by `ShieldedHistoryRowSync`. Every existing row is an L1
+         * row, hence the default. Kept as a constant so the unit test checks the exact SQL.
+         */
+        internal const val SQL_22_TO_23_ADD_SOURCE =
+            "ALTER TABLE `tx_display_cache` ADD COLUMN `source` INTEGER NOT NULL DEFAULT 0"
+
+        val migration22to23 = object : Migration(22, 23) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(SQL_22_TO_23_ADD_SOURCE)
+            }
+        }
+
+        /**
          * CrowdNode was removed, so its transactions are no longer grouped. If the cache still
          * holds a "crowdnode" group, clear both caches when the database opens, before any query
          * runs. TxDisplayCacheService then rebuilds history from the wallet as soon as it loads,

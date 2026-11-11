@@ -127,9 +127,14 @@ class WelcomeToDashPayFragment : Fragment(R.layout.fragment_welcome_to_dashpay) 
                 } else {
                     contestedFee.toPlainString()
                 }
+                val quotedBalance = usernameDisclaimerBalance(
+                    canPayFeeFromShielded = canPayFromShielded,
+                    shieldedBalance = paymentViewModel.uiState.value.shieldedBalance,
+                    walletBalanceDuffs = requestUserNameViewModel.walletBalance.value.value
+                )
                 binding.balanceRequirementDisclaimer.text = getString(
                     R.string.welcome_request_username_min_balance_disclaimer_all,
-                    requestUserNameViewModel.walletBalance.value.toPlainString(),
+                    quotedBalance.toPlainString(),
                     maxContestedCost
                 )
             }

@@ -91,6 +91,7 @@ import de.schildbach.wallet.util.toNeutralFiat
 import de.schildbach.wallet.util.toTxId
 import de.schildbach.wallet.util.toSha256Hash
 import de.schildbach.wallet.service.L1SyncUiStatus
+import de.schildbach.wallet.service.platform.sdk.isShieldedActivityRowId
 import de.schildbach.wallet.service.syncHeaderPercentLabel
 import kotlinx.coroutines.flow.map
 
@@ -159,6 +160,13 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                 if (rowView is TransactionRowView) {
                     if (isProfileClick && rowView.contact != null) {
                         DashPayUserBottomSheet.newInstance(rowView.contact).show(requireActivity())
+                    } else if (isShieldedActivityRowId(rowView.id)) {
+                        // A shielded-pool activity row ("shielded:<account>:<entry>"): no
+                        // Core tx and never a txid — open the Platform activity detail
+                        // instead of the txid / group-loader paths below.
+                        viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS)
+                        TransactionDetailsDialogFragment.newInstance(activityRowId = rowView.id)
+                            .show(requireActivity())
                     } else {
                         // For rows loaded from the display cache, txWrapper is null.
                         // Fall back to the live wrapper list so CoinJoin groups still open.

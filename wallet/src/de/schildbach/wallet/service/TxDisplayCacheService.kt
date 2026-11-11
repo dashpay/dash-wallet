@@ -583,7 +583,7 @@ class TxDisplayCacheService @Inject constructor(
                 wrappedTransactionList = emptyList()
                 contactsByTxId = mapOf()
                 _cachedRows.value = emptyList()
-                txDisplayCacheDao.deleteAll()
+                txDisplayCacheDao.deleteAllL1() // shielded rows are not dashj-derived
                 txGroupCacheDao.deleteAll()
                 walletData.wallet?.let { wallet ->
                     coinJoinWrapperFactory = CoinJoinTxWrapperFactory(walletData.networkParameters, wallet as WalletEx)
@@ -828,7 +828,7 @@ class TxDisplayCacheService @Inject constructor(
                 )
                 return@launch
             }
-            txDisplayCacheDao.deleteAll()
+            txDisplayCacheDao.deleteAllL1() // the rebuild re-derives L1 rows only
             txGroupCacheDao.deleteAll()
             wrappedTransactionList = emptyList()
             _txDataSource.value = TxDataSource.Empty

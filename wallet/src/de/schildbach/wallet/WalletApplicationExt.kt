@@ -363,6 +363,11 @@ object WalletApplicationExt {
             // tx_group_cache. It stays fenced until resumeAfterWalletWipe.
             runCatching { cutoverUiDataService.stopForWalletWipe() }
                 .onFailure { rethrowCancellation(it); cleared = false; log.warn("SDK UI pipeline stop failed during wipe", it) }
+            // Same for the Home history's shielded-activity rows: cancel AND join their
+            // writer before the display cache is cleared below, so a snapshot of the
+            // wiped wallet cannot be re-inserted after the clear.
+            runCatching { shieldedHistoryRowSync.get().stopForWalletWipe() }
+                .onFailure { rethrowCancellation(it); cleared = false; log.warn("shielded history sync stop failed during wipe", it) }
         }
         try {
             runCatching { identityRepository.clearDatabase(isWalletWipe) }
@@ -385,7 +390,12 @@ object WalletApplicationExt {
             // SDK wallet clear failed too, the pipeline keeps holding until a
             // bind is confirmed against the next app wallet (see
             // CutoverUiDataService.staleWipedWalletHold).
-            if (isWalletWipe) cutoverUiDataService.resumeAfterWalletWipe()
+            if (isWalletWipe) {
+                cutoverUiDataService.resumeAfterWalletWipe()
+                // Restarts on "not ready" until the next wallet's shielded bring-up.
+                runCatching { shieldedHistoryRowSync.get().resumeAfterWalletWipe() }
+                    .onFailure { rethrowCancellation(it); log.warn("shielded history sync resume failed after wipe", it) }
+            }
         }
         WorkManager.getInstance(this).cancelAllWork()
         // The wipe just emptied the DashPay DataStore mid-process, and the

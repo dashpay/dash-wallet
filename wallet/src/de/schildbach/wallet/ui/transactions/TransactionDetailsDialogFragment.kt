@@ -17,6 +17,7 @@ package de.schildbach.wallet.ui.transactions
 
 import android.content.DialogInterface
 import android.os.Bundle
+import android.widget.Toast
 import android.view.View
 import androidx.core.content.ContextCompat
 import de.schildbach.wallet.database.entity.DashPayProfile
@@ -88,11 +89,17 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment(R.layout.transacti
 
         const val TX_ID = "tx_id"
 
+        /** A shielded-activity history row id (`shielded:…`); never a txid. */
+        const val ACTIVITY_ROW_ID = "activity_row_id"
+
         @JvmStatic
-        fun newInstance(txId: Sha256Hash? = null): TransactionDetailsDialogFragment {
+        @JvmOverloads
+        fun newInstance(txId: Sha256Hash? = null, activityRowId: String? = null): TransactionDetailsDialogFragment {
             val fragment = TransactionDetailsDialogFragment()
 
-            if (txId != null) {
+            if (activityRowId != null) {
+                fragment.arguments = bundleOf(ACTIVITY_ROW_ID to activityRowId)
+            } else if (txId != null) {
                 fragment.arguments = bundleOf(TX_ID to txId)
             }
             return fragment
@@ -110,6 +117,14 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment(R.layout.transacti
         ) {
             DashPayUserBottomSheet.newInstance(it).show(requireActivity())
             dismissAllowingStateLoss()
+        }
+
+        // A shielded-pool activity row has no transaction: bind the Platform
+        // activity detail and skip every txid-keyed path below.
+        val activityRowId = arguments?.getString(ACTIVITY_ROW_ID)
+        if (activityRowId != null) {
+            bindPlatformActivity(activityRowId)
+            return
         }
 
         viewModel.init(txId)
@@ -207,6 +222,23 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment(R.layout.transacti
                     )
                 }
             }
+        }
+    }
+
+    private fun bindPlatformActivity(activityRowId: String) {
+        viewModel.loadPlatformActivity(activityRowId)
+        viewModel.platformActivityDetail.filterNotNull().observe(viewLifecycleOwner) { detail ->
+            transactionResultViewBinder.bindPlatformActivityDetail(detail)
+        }
+        viewModel.platformActivityLoadFailed.observe(viewLifecycleOwner) { failed ->
+            if (failed) {
+                Toast.makeText(requireContext(), R.string.transaction_details_activity_unavailable, Toast.LENGTH_SHORT)
+                    .show()
+                dismissAllowingStateLoss()
+            }
+        }
+        dialog?.window?.let { window ->
+            window.callback = UserInteractionAwareCallback(window.callback, requireActivity())
         }
     }
 
