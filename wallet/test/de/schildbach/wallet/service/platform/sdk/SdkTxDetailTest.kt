@@ -567,7 +567,9 @@ class SdkTxDetailTest {
             coEvery { getEntriesByIds(any()) } returns emptyList()
         }
 
-        fun loadWithDirection(directionCode: Int): Pair<SdkTxDetail, DashDatabase> {
+        fun loadWithDirection(
+            directionCode: Int
+        ): Pair<SdkTxDetail, org.dashfoundation.dashsdk.persistence.dao.TxoDao> {
             val entity = mockk<TransactionEntity> {
                 every { txid } returns decoded.txid
                 every { transactionData } returns rawTxBytes
@@ -578,11 +580,14 @@ class SdkTxDetailTest {
                 every { firstSeen } returns 1_770_000_000L
                 every { blockTimestamp } returns 0
             }
+            val txoDao = mockk<org.dashfoundation.dashsdk.persistence.dao.TxoDao> {
+                coEvery { getByOutpoint(any()) } answers {
+                    outpointToTxo[org.bitcoinj.core.Utils.HEX.encode(firstArg<ByteArray>())]
+                }
+            }
             val db = mockk<DashDatabase>(relaxed = true)
             every { db.transactionDao() } returns mockk { coEvery { getByTxid(any()) } returns entity }
-            coEvery { db.txoDao().getByOutpoint(any()) } answers {
-                outpointToTxo[org.bitcoinj.core.Utils.HEX.encode(firstArg<ByteArray>())]
-            }
+            every { db.txoDao() } returns txoDao
             val sdkService = mockk<DashSdkService> {
                 coEvery { ensureStarted() } returns Unit
                 every { databaseOrNull() } returns db
@@ -594,14 +599,14 @@ class SdkTxDetailTest {
                         .load(decoded.txidDisplayHex)
                 }
             )
-            return detail to db
+            return detail to txoDao
         }
 
         mockkObject(TransactionDecoder)
         try {
             every { TransactionDecoder.decode(any(), any()) } returns decoded
 
-            val (incoming, incomingDb) = loadWithDirection(0)
+            val (incoming, incomingTxoDao) = loadWithDirection(0)
             assertTrue(
                 "INCOMING must withhold the recipient list, not attribute outputs from an " +
                     "unexcluded raw TXO walk, when ownership is unknown",
@@ -611,23 +616,23 @@ class SdkTxDetailTest {
             // two output outpoints, since the UNCONDITIONAL input walk below still calls
             // getByOutpoint once, for the fixture's one input, and `any()` would wrongly
             // match that call too.
-            coVerify(exactly = 0) { incomingDb.txoDao().getByOutpoint(txoOutpoint(decoded.txid, 0)) }
-            coVerify(exactly = 0) { incomingDb.txoDao().getByOutpoint(txoOutpoint(decoded.txid, 1)) }
+            coVerify(exactly = 0) { incomingTxoDao.getByOutpoint(txoOutpoint(decoded.txid, 0)) }
+            coVerify(exactly = 0) { incomingTxoDao.getByOutpoint(txoOutpoint(decoded.txid, 1)) }
             coVerify(exactly = 1) {
-                incomingDb.txoDao().getByOutpoint(
+                incomingTxoDao.getByOutpoint(
                     txoOutpoint(decoded.inputs[0].prevTxid, decoded.inputs[0].prevVout)
                 )
             }
 
-            val (outgoing, outgoingDb) = loadWithDirection(1)
+            val (outgoing, outgoingTxoDao) = loadWithDirection(1)
             assertTrue(
                 "OUTGOING must stay fail-closed on ownershipUnknown regardless of what the walk found",
                 outgoing.outputAddresses.isEmpty()
             )
-            coVerify(exactly = 0) { outgoingDb.txoDao().getByOutpoint(txoOutpoint(decoded.txid, 0)) }
-            coVerify(exactly = 0) { outgoingDb.txoDao().getByOutpoint(txoOutpoint(decoded.txid, 1)) }
+            coVerify(exactly = 0) { outgoingTxoDao.getByOutpoint(txoOutpoint(decoded.txid, 0)) }
+            coVerify(exactly = 0) { outgoingTxoDao.getByOutpoint(txoOutpoint(decoded.txid, 1)) }
             coVerify(exactly = 1) {
-                outgoingDb.txoDao().getByOutpoint(
+                outgoingTxoDao.getByOutpoint(
                     txoOutpoint(decoded.inputs[0].prevTxid, decoded.inputs[0].prevVout)
                 )
             }
