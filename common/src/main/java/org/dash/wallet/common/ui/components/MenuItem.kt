@@ -39,6 +39,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextMeasurer
@@ -236,6 +237,8 @@ fun MenuItem(
             if (isToggled != null || checked != null) {
                 DashSwitch(
                     checked = effectiveChecked,
+                    // The switch is its own accessibility node; name it after the row
+                    modifier = Modifier.semantics { contentDescription = title },
                     enabled = enabled,
                     onCheckedChange = { newState ->
                         if (checked == null) internalChecked = newState
