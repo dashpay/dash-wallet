@@ -21,10 +21,12 @@ import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.WalletData
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.IdentityCreationState
+import de.schildbach.wallet.payments.FundingSelectionLock
 import de.schildbach.wallet.payments.SendEngineNotSyncedException
 import de.schildbach.wallet.payments.SendNotSdkRoutableException
 import de.schildbach.wallet.payments.SendSignerLockedException
 import de.schildbach.wallet.payments.PendingPaymentFundingGate
+import de.schildbach.wallet.payments.SubmissionMark
 import de.schildbach.wallet.payments.isCompleteTxFailure
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.shielded.assetLockMaxFeeReserve
@@ -828,7 +830,13 @@ class ExternalSendServiceImpl internal constructor(
      * lands — mirroring the shield/top-up/invite paths. No-op default keeps the
      * host-JVM tests inert.
      */
-    private val seedAssetLockKind: (displayHex: String, kind: AssetLockKind) -> Unit = { _, _ -> }
+    private val seedAssetLockKind: (displayHex: String, kind: AssetLockKind) -> Unit = { _, _ -> },
+    /**
+     * The wallet-wipe barrier every submission holds shared ([submitUnderWipeBarrier]): the app's
+     * one [FundingSelectionLock], the one Reset Wallet raises. No default: a private lock is one
+     * no wipe raises.
+     */
+    private val fundingSelection: FundingSelectionLock
 ) : ExternalSendService {
 
     @Inject
@@ -852,7 +860,8 @@ class ExternalSendServiceImpl internal constructor(
         ),
         network = AddressNetwork.fromId(Constants.NETWORK_PARAMETERS.id),
         platformFundingStore = DashPayConfigPlatformFundingStore(dashPayConfig),
-        seedAssetLockKind = { displayHex, kind -> assetLockKindResolver.seed(displayHex, kind) }
+        seedAssetLockKind = { displayHex, kind -> assetLockKindResolver.seed(displayHex, kind) },
+        fundingSelection = fundingGate.selectionLock
     )
 
     /** Single-flight for [send] AND [resumePendingPlatformFunding]: the one owner of the funding record. */
@@ -1232,19 +1241,21 @@ class ExternalSendServiceImpl internal constructor(
             is SendDestination.Core -> sendCoreToCore(pair, walletIdHex, destination, amount, isMax, coreSession)
             is SendDestination.Shielded -> sendCoreToShielded(pair, walletIdHex, destination, amount)
             is SendDestination.Identity -> {
-                if (!stillBound(pair, walletIdHex)) {
-                    ExternalSendResult.NotSent(NotSentReason.GENERIC)
-                } else {
-                    when (val result = this.source.coreTopUpIdentity(destination.identityIdBase58, amount.duffs)) {
-                        // The resume gate completed an earlier, unfinished top-up of this
-                        // identity instead: this request was not executed (no new lock).
-                        is SdkWriteResult.Broadcast -> if (result.value.resumedEarlier) {
-                            notSent(pair, NotSentReason.EARLIER_TOP_UP_COMPLETED, "an earlier top-up was completed instead")
-                        } else {
-                            ExternalSendResult.Sent(displayTxIdOrNull(result.value.lockTxIdDisplayHexOrNull))
-                        }
-                        else -> mapWrite(pair, result)
+                // The top-up marks no submission point of its own: from its start a wipe that
+                // cancels it leaves the outcome unknown.
+                val result = submitUnderWipeBarrier(pair, walletIdHex) { mark ->
+                    mark.submitting()
+                    this.source.coreTopUpIdentity(destination.identityIdBase58, amount.duffs)
+                }
+                when (result) {
+                    // The resume gate completed an earlier, unfinished top-up of this
+                    // identity instead: this request was not executed (no new lock).
+                    is SdkWriteResult.Broadcast -> if (result.value.resumedEarlier) {
+                        notSent(pair, NotSentReason.EARLIER_TOP_UP_COMPLETED, "an earlier top-up was completed instead")
+                    } else {
+                        ExternalSendResult.Sent(displayTxIdOrNull(result.value.lockTxIdDisplayHexOrNull))
                     }
+                    else -> mapWrite(pair, result)
                 }
             }
             is SendDestination.Platform -> sendCoreToPlatform(pair, walletIdHex, destination, amount, amountCredits)
@@ -1302,6 +1313,24 @@ class ExternalSendServiceImpl internal constructor(
         } catch (e: IllegalArgumentException) {
             return notSent(pair, NotSentReason.GENERIC, "malformed funding record")
         }
+        // Under the wallet-wipe barrier from the record's write to its last update, so a Reset
+        // Wallet waits for all of it and its config clear can never be undone by a write of
+        // this record afterwards. The fresh-funding hold inside nests in this one.
+        return fundingSelection.withSharedSubmission(
+            refused = { notSent(pair, NotSentReason.GENERIC, "a wallet wipe is under way") },
+            cancelled = { e, submitted ->
+                mapWrite(pair, wipeCancelledWriteResult("external send $pair", null, e, submitted))
+            }
+        ) { mark -> fundPlatformUnderWipeBarrier(pair, walletIdHex, record, mark) }
+    }
+
+    /** [sendCoreToPlatform] from the record's write on, under the wipe barrier ([mark]). */
+    private suspend fun fundPlatformUnderWipeBarrier(
+        pair: String,
+        walletIdHex: String,
+        record: PendingPlatformFunding,
+        mark: SubmissionMark
+    ): ExternalSendResult {
         try {
             platformFundingStore.write(record)
         } catch (e: CancellationException) {
@@ -1319,6 +1348,7 @@ class ExternalSendServiceImpl internal constructor(
         } else {
             try {
                 this.source.withFreshCoreFunding {
+                    mark.submitting()
                     this.source.fundPlatformExternal(record) { outPointHex ->
                         // SDK thread, before broadcast: short, no SDK calls, never throws.
                         builtOutPoint.set(outPointHex)
@@ -1506,39 +1536,61 @@ class ExternalSendServiceImpl internal constructor(
                 return 0
             }
             platformResumeAttempts[record.id] = attempts + 1
-            if (!stillBound("Core → Platform resume", record.walletIdHex)) return 0
-            try {
-                this.source.resumePlatformFundingExternal(record)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                if (isAssetLockAlreadyConsumed(e)) {
-                    platformFundingStore.clear(record.id)
-                    log.warn("pending platform funding {}: Platform reports the lock already consumed; cleared", record.id)
-                } else if (isTransitionAlreadyKnownToPlatform(e)) {
-                    // The same transition (this lock, these recipients) was submitted before;
-                    // every resume rebuilds identical bytes, so nothing more can be done here
-                    // and keeping the record would only block every later Core → Platform send.
-                    platformFundingStore.clear(record.id)
-                    log.warn(
-                        "pending platform funding {}: Platform already has this funding transition; " +
-                            "its outcome is Platform's — cleared",
-                        record.id
-                    )
-                } else {
-                    log.warn("pending platform funding {}: resume failed (attempt {}); kept", record.id, attempts + 1, e)
+            // Under the wallet-wipe barrier, with the wallet re-checked inside it: a Reset Wallet
+            // waits for the resume and its record updates, and one under way refuses it. Either
+            // way the record is kept (the wipe clears it with the wallet's configs).
+            return fundingSelection.withSharedSubmission(
+                refused = {
+                    log.info("pending platform funding {}: a wallet wipe is under way; kept", record.id)
+                    0
+                },
+                cancelled = { _, _ ->
+                    log.warn("pending platform funding {}: a wallet wipe cancelled the resume; kept", record.id)
+                    0
                 }
-                return 0
-            } catch (e: LinkageError) {
-                log.warn("pending platform funding {}: native library unavailable; kept", record.id, e)
-                return 0
-            }
-            platformFundingStore.clear(record.id)
-            log.info("pending platform funding {}: resumed and consumed", record.id)
-            return 1
+            ) { mark -> resumePlatformFundingUnderWipeBarrier(record, attempts + 1, mark) }
         } finally {
             inFlight.set(false)
         }
+    }
+
+    /** One resume of [record] (attempt [attempt]), under the wipe barrier ([mark]). */
+    private suspend fun resumePlatformFundingUnderWipeBarrier(
+        record: PendingPlatformFunding,
+        attempt: Int,
+        mark: SubmissionMark
+    ): Int {
+        if (!stillBound("Core → Platform resume", record.walletIdHex)) return 0
+        try {
+            mark.submitting()
+            this.source.resumePlatformFundingExternal(record)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            if (isAssetLockAlreadyConsumed(e)) {
+                platformFundingStore.clear(record.id)
+                log.warn("pending platform funding {}: Platform reports the lock already consumed; cleared", record.id)
+            } else if (isTransitionAlreadyKnownToPlatform(e)) {
+                // The same transition (this lock, these recipients) was submitted before;
+                // every resume rebuilds identical bytes, so nothing more can be done here
+                // and keeping the record would only block every later Core → Platform send.
+                platformFundingStore.clear(record.id)
+                log.warn(
+                    "pending platform funding {}: Platform already has this funding transition; " +
+                        "its outcome is Platform's — cleared",
+                    record.id
+                )
+            } else {
+                log.warn("pending platform funding {}: resume failed (attempt {}); kept", record.id, attempt, e)
+            }
+            return 0
+        } catch (e: LinkageError) {
+            log.warn("pending platform funding {}: native library unavailable; kept", record.id, e)
+            return 0
+        }
+        platformFundingStore.clear(record.id)
+        log.info("pending platform funding {}: resumed and consumed", record.id)
+        return 1
     }
 
     /**
@@ -1568,6 +1620,8 @@ class ExternalSendServiceImpl internal constructor(
                 return notSent(pair, NotSentReason.BALANCE_CHANGED, "the balance changed since the Max was confirmed")
             }
         }
+        // Not under [submitUnderWipeBarrier]: the Core send funnel takes the wipe barrier itself
+        // around its broadcast (SendCoinsTaskRunner), and [coreSession] pins it to this wallet.
         if (!stillBound(pair, walletIdHex)) return ExternalSendResult.NotSent(NotSentReason.GENERIC)
         return try {
             val txId = this.source.sendCore(destination.address, amount, emptyWallet = isMax, session = coreSession)
@@ -1617,11 +1671,8 @@ class ExternalSendServiceImpl internal constructor(
         address: String,
         amount: Dash
     ): SdkWriteResult<ShieldToAddressOutcome> =
-        if (!stillBound(pair, walletIdHex)) {
-            SdkWriteResult.NotBroadcast("the bound wallet changed")
-        } else {
-            this.source.shieldFromCore(walletIdHex, address, amount)
-        }
+        // The shield's own submission hold nests in this one and marks its submission point.
+        submitUnderWipeBarrier(pair, walletIdHex) { this.source.shieldFromCore(walletIdHex, address, amount) }
 
     private suspend fun sendFromShielded(
         pair: String,
@@ -1631,9 +1682,9 @@ class ExternalSendServiceImpl internal constructor(
         isMax: Boolean
     ): ExternalSendResult {
         val identityId = (destination as? SendDestination.Identity)?.let { decodeIdentityId(it.identityIdBase58) }
-        suspend fun attempt(value: Dash): SdkWriteResult<Unit> {
-            if (!stillBound(pair, walletIdHex)) return SdkWriteResult.NotBroadcast("the bound wallet changed")
-            return when (destination) {
+        suspend fun attempt(value: Dash): SdkWriteResult<Unit> = submitUnderWipeBarrier(pair, walletIdHex) { mark ->
+            mark.submitting()
+            when (destination) {
                 is SendDestination.Core -> this.source.shieldedWithdrawToCore(walletIdHex, destination.address, value)
                 is SendDestination.Shielded -> this.source.shieldedTransfer(walletIdHex, destination.address, value)
                 is SendDestination.Platform -> this.source.shieldedUnshield(walletIdHex, destination.address, value)
@@ -1771,35 +1822,70 @@ class ExternalSendServiceImpl internal constructor(
 
     /**
      * One [ShieldedBalanceService] write (it pins [walletIdHex] itself and classifies its own
-     * outcome), after the bound-wallet re-check; mapped by [mapWrite].
+     * outcome), under the wipe barrier after the bound-wallet re-check; mapped by [mapWrite].
      */
     private suspend fun shieldedWrite(
         pair: String,
         walletIdHex: String,
         call: suspend () -> SdkWriteResult<Unit>
     ): ExternalSendResult {
-        if (!stillBound(pair, walletIdHex)) return ExternalSendResult.NotSent(NotSentReason.GENERIC)
-        val result = call()
+        val result = submitUnderWipeBarrier(pair, walletIdHex) { mark ->
+            mark.submitting()
+            call()
+        }
         if (result is SdkWriteResult.Broadcast) log.info("external send {}: sent", pair)
         return mapWrite(pair, result)
     }
 
-    /** One raw SDK credits call, after the wallet re-check, classified by [classifyBroadcastFailure]. */
+    /**
+     * One raw SDK credits call, under the wipe barrier after the wallet re-check, classified by
+     * [classifyBroadcastFailure].
+     */
     private suspend fun nativeWrite(pair: String, walletIdHex: String, call: suspend () -> Unit): ExternalSendResult {
-        if (!stillBound(pair, walletIdHex)) return ExternalSendResult.NotSent(NotSentReason.GENERIC)
-        val result: SdkWriteResult<Unit> = try {
-            call()
-            SdkWriteResult.Broadcast(Unit)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            classifyBroadcastFailure(e)
-        } catch (e: LinkageError) {
-            // A native-boundary failure before the call ran (e.g. UnsatisfiedLinkError).
-            SdkWriteResult.NotBroadcast("native library unavailable", e)
+        val result: SdkWriteResult<Unit> = submitUnderWipeBarrier(pair, walletIdHex) { mark ->
+            try {
+                mark.submitting()
+                call()
+                SdkWriteResult.Broadcast(Unit)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                classifyBroadcastFailure(e)
+            } catch (e: LinkageError) {
+                // A native-boundary failure before the call ran (e.g. UnsatisfiedLinkError).
+                SdkWriteResult.NotBroadcast("native library unavailable", e)
+            }
         }
         if (result is SdkWriteResult.Broadcast) log.info("external send {}: sent", pair)
         return mapWrite(pair, result)
+    }
+
+    /**
+     * [write] under the wallet-wipe barrier: a shared [FundingSelectionLock] submission hold,
+     * as every SDK broadcast takes ([FundingSelectionLock.withSharedSubmission]), with the final
+     * bound-wallet check ([stillBound]) INSIDE it, so a Reset Wallet either refuses the write
+     * before the check or waits for it to return. [write] calls [SubmissionMark.submitting]
+     * right before the call that may put something on the network (a nested submission hold
+     * marks it itself).
+     * - Refused (a wipe was under way): nothing ran, NotBroadcast (Not sent).
+     * - Cancelled by a wipe: NotBroadcast before the mark, Ambiguous after it
+     *   ([wipeCancelledWriteResult]), never a cancellation that reads as "nothing happened".
+     * - Not the bound wallet: NotBroadcast, nothing called.
+     * Shared holds are reentrant, so a write whose own path holds the lock again nests in this one.
+     */
+    private suspend fun <T> submitUnderWipeBarrier(
+        pair: String,
+        walletIdHex: String,
+        write: suspend (SubmissionMark) -> SdkWriteResult<T>
+    ): SdkWriteResult<T> = fundingSelection.withSharedSubmission<SdkWriteResult<T>>(
+        refused = { e -> SdkWriteResult.NotBroadcast("a wallet wipe is under way", e) },
+        cancelled = { e, submitted -> wipeCancelledWriteResult("external send $pair", null, e, submitted) }
+    ) { mark ->
+        if (!stillBound(pair, walletIdHex)) {
+            SdkWriteResult.NotBroadcast("the bound wallet changed")
+        } else {
+            write(mark)
+        }
     }
 
     /**
