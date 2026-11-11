@@ -39,6 +39,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
@@ -867,6 +868,57 @@ class ExternalSendViewModelTest {
         assertEquals(1, marker.clearCalls)
         gate.complete(ExternalSendResult.MayHaveGoneThrough)
         assertTrue(marker.value)
+    }
+
+    // ── Reset Wallet ─────────────────────────────────────────────────────────
+
+    @Test
+    fun aWalletWipe_forgetsAnUnacknowledgedOutcome_soTheNextWalletNeitherShowsNorOpensIt() {
+        val txId = "0123456789abcdef".repeat(4)
+        service.sendResult = ExternalSendResult.Sent(txId)
+        sendOnce()
+        assertTrue(executor.state.value is ExternalSendExecution.Finished)
+        assertTrue(marker.value)
+
+        runBlocking { executor.forgetWalletState() }
+
+        assertEquals(ExternalSendExecution.Idle, executor.state.value)
+        assertFalse(marker.value)
+        val next = buildViewModel()
+        assertEquals(ExternalSendStatus.Idle, next.uiState.value.status)
+        assertNull(next.openTransactionResult.value)
+        // The executor is free for the next wallet.
+        service.sendResult = ExternalSendResult.NotSent(NotSentReason.NOT_SYNCED)
+        assertTrue(executor.submit(service.sends.single()))
+    }
+
+    @Test
+    fun aSendOfTheWipedWallet_completingLate_neverPublishes_norTouchesTheNextWalletsMarker() {
+        val lateResults = listOf(
+            ExternalSendResult.Sent("ab".repeat(32)),
+            ExternalSendResult.NotSent(NotSentReason.GENERIC)
+        )
+        for (late in lateResults) {
+            marker.value = false
+            executor = newExecutor()
+            val gate = CompletableDeferred<ExternalSendResult>()
+            service.sendGate = gate
+            sendOnce()
+            assertTrue(executor.state.value is ExternalSendExecution.Sending)
+
+            runBlocking { executor.forgetWalletState() }
+            assertEquals(ExternalSendExecution.Idle, executor.state.value)
+            assertFalse(marker.value)
+            // The next wallet's send has written its own marker by the time the old one returns.
+            marker.value = true
+            val clearsBefore = marker.clearCalls
+
+            gate.complete(late)
+            assertEquals("$late", ExternalSendExecution.Idle, executor.state.value)
+            assertTrue("$late", marker.value)
+            assertEquals("$late", clearsBefore, marker.clearCalls)
+            service.sendGate = null
+        }
     }
 
     // ── the transaction result screen (a Sent with its txid) ─────────────────
