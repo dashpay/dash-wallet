@@ -136,11 +136,17 @@ internal fun firstUnmirroredKnownOutput(
  * scoped join [SdkTxStoreWalker] runs for its mirror-completeness probe
  * ([firstUnmirroredKnownOutput]); [SdkTxDetailProvider.load] reuses it with
  * one transaction's own output addresses as the candidate set.
+ *
+ * @param onQuery [SdkTxStoreWalker]'s own query-count test hook — passed
+ *        through so this query is counted like every other one the walker
+ *        issues (its own KDoc: "invoked once per SQL statement issued").
+ *        The detail-provider call site has no such hook and leaves it null.
  */
 internal fun knownWalletAddressesAmong(
     db: DashDatabase,
     walletId: ByteArray,
-    candidates: Collection<String>
+    candidates: Collection<String>,
+    onQuery: ((String) -> Unit)? = null
 ): Set<String> {
     val result = HashSet<String>()
     for (chunk in candidates.distinct().chunked(SdkTxStoreWalker.TXID_IN_CHUNK)) {
@@ -148,16 +154,14 @@ internal fun knownWalletAddressesAmong(
         val args = ArrayList<Any?>(1 + chunk.size)
         args.add(walletId)
         args.addAll(chunk)
-        db.openHelper.readableDatabase.query(
-            SimpleSQLiteQuery(
-                "SELECT ca.address FROM core_addresses ca " +
-                    "JOIN accounts a ON a.id = ca.accountId " +
-                    "WHERE a.walletId = ? " +
-                    "AND a.accountType != ${SdkTxContactResolver.ACCOUNT_TYPE_DASHPAY_EXTERNAL} " +
-                    "AND ca.address IN ($placeholders)",
-                args.toTypedArray()
-            )
-        ).use { c -> while (c.moveToNext()) result += c.getString(0) }
+        val sql = "SELECT ca.address FROM core_addresses ca " +
+            "JOIN accounts a ON a.id = ca.accountId " +
+            "WHERE a.walletId = ? " +
+            "AND a.accountType != ${SdkTxContactResolver.ACCOUNT_TYPE_DASHPAY_EXTERNAL} " +
+            "AND ca.address IN ($placeholders)"
+        onQuery?.invoke(sql)
+        db.openHelper.readableDatabase.query(SimpleSQLiteQuery(sql, args.toTypedArray()))
+            .use { c -> while (c.moveToNext()) result += c.getString(0) }
     }
     return result
 }
@@ -1066,7 +1070,7 @@ internal class SdkTxStoreWalker(
         }
         // Scoped to THIS wallet, excluding DIP-15 external accounts — see
         // [knownWalletAddressesAmong]'s KDoc for why both matter.
-        val knownWalletAddresses = knownWalletAddressesAmong(db, walletId, knownAddressCandidates)
+        val knownWalletAddresses = knownWalletAddressesAmong(db, walletId, knownAddressCandidates, onQuery)
         // mirroredVouts was filled above, from the SAME read as the funded sums.
 
         val needsFactsHexes = needsFacts.mapTo(HashSet()) { it.record.txidHex }

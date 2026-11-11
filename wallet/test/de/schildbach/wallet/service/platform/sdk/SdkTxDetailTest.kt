@@ -770,13 +770,14 @@ class SdkTxDetailTest {
             every { firstSeen } returns 1_770_000_000L
             every { blockTimestamp } returns 0
         }
-        // Output 0 (recipientAddress): settled, external — never gets a row.
+        // Output 0 (recipientAddress): settled, external — already has its row.
         val recipientTxo = mockk<org.dashfoundation.dashsdk.persistence.entities.TxoEntity> {
             every { accountId } returns null
             every { coreAddressId } returns null
             every { address } returns recipientAddress
         }
-        // Output 1 (changeAddress): ours, but its mirror row has not landed yet.
+        // Output 1 (changeAddress): ours, but its mirror row has not landed yet —
+        // no entry below, so the lookup falls through to null.
         val outpointToTxo = mapOf(
             org.bitcoinj.core.Utils.HEX.encode(txoOutpoint(decoded.txid, 0)) to recipientTxo
         )
