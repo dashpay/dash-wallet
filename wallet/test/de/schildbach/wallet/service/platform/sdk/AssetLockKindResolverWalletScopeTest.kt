@@ -142,6 +142,30 @@ class AssetLockKindResolverWalletScopeTest {
     }
 
     @Test
+    fun seededExternalShieldKind_winsBeforeTheSdkRowLands() = runTest {
+        // Core → third-party Shielded send: only the authoring path knows the recipient
+        // was external, so the in-memory seed is what makes the row read as a send.
+        every { sdkService.loadedWalletIds() } returns setOf(walletIdHex)
+        val resolver = resolver()
+        resolver.seed(hex, AssetLockKind.SHIELD_EXTERNAL)
+
+        assertEquals(AssetLockKind.SHIELD_EXTERNAL, resolver.kindFor(hex))
+        coVerify(exactly = 0) { transactionDao.transactionKindForDisplayTxid(any()) }
+    }
+
+    @Test
+    fun shieldFundingType_withoutASeed_resolvesToTheOwnShield() = runTest {
+        // The documented limit: funding type 5 cannot tell own from third-party, so
+        // after a restart (no seed) an external shield reads SHIELD again.
+        every { db.assetLockDao() } returns mockk<AssetLockDao> {
+            coEvery { fundingTypeForTxid(hex) } returns 5
+        }
+        every { sdkService.loadedWalletIds() } returns setOf(walletIdHex)
+
+        assertEquals(AssetLockKind.SHIELD, resolver().kindFor(hex))
+    }
+
+    @Test
     fun noLoadedWallet_failsClosedAndIsNotNegativeCached() = runTest {
         every { sdkService.loadedWalletIds() } returns emptySet()
         assertUnknownWalletVerdictIsPartial()
