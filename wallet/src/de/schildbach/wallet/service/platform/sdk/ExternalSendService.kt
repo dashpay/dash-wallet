@@ -62,6 +62,13 @@ enum class NotSentReason {
      */
     BALANCE_CHANGED,
 
+    /**
+     * Core → own identity: an earlier top-up of that identity was left unfinished, and the
+     * top-up's resume gate completed IT (its own amount) instead. This request was not
+     * executed; sending again tops up the requested amount.
+     */
+    EARLIER_TOP_UP_COMPLETED,
+
     /** Anything else refused before submission (including the wallet changing under the send). */
     GENERIC
 }
@@ -129,9 +136,10 @@ interface ExternalSendService {
 
     /**
      * The Max amount, or null when unknown: for Core → Core the whole spendable balance,
-     * GROSS of the drain fee (the drain delivers it minus the fee); for every other pair the
-     * amount the recipient receives (balance minus the fee paid on top). [destinationKind] is
-     * [balanceKindOf] of the destination.
+     * GROSS of the drain fee (the drain delivers it minus the fee); for Shielded → Core the
+     * amount withdrawn (the recipient receives it minus the asset unlock's Core fee); for every
+     * other pair the amount the recipient receives (balance minus the fee paid on top).
+     * [destinationKind] is [balanceKindOf] of the destination.
      */
     suspend fun maxSendable(source: SendBalance, destinationKind: SendBalance): Dash?
 
@@ -156,10 +164,13 @@ interface ExternalSendService {
      * persisted before the SDK call ([PendingPlatformFunding]); while an earlier one is still
      * pending a new Core → Platform send is [NotSentReason.PAYMENT_STILL_CONFIRMING].
      *
-     * Platform → Core: a partial withdrawal of exactly [amount] from the wallet's Platform
-     * addresses (the inputs are selected here, never above an address's balance); the Core fee
-     * of the asset unlock comes out of [amount], the Platform fee out of what the fee-paying
-     * address keeps. Below the withdrawal minimum it is refused before anything is signed.
+     * Platform / Identity / Shielded → Core: DPP takes the Core fee of the asset unlock out of
+     * the withdrawn amount, so [amount] plus that fee is withdrawn and the recipient receives
+     * exactly [amount] (a Shielded → Core [isMax] send withdraws [amount] itself, and the
+     * recipient receives it minus the Core fee). Platform → Core is a partial withdrawal from
+     * the wallet's Platform addresses (the inputs are selected here, never above an address's
+     * balance), the Platform fee out of what the fee-paying address keeps. Outside the
+     * withdrawal bounds a Platform / Identity → Core send is refused before anything is signed.
      * Platform / Identity → Shielded: a shield of [amount] to the third-party Orchard address,
      * fees on top; the wallet's own shielded address is refused (nothing submitted).
      */

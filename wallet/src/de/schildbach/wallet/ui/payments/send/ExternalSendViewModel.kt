@@ -30,6 +30,7 @@ import de.schildbach.wallet.service.platform.sdk.IdentityResolution
 import de.schildbach.wallet.service.platform.sdk.SendBalance
 import de.schildbach.wallet.service.platform.sdk.SendDestination
 import de.schildbach.wallet.service.platform.sdk.SendSupport
+import de.schildbach.wallet.service.platform.sdk.WITHDRAWAL_CORE_FEE_DUFFS
 import de.schildbach.wallet.service.platform.sdk.balanceKindOf
 import de.schildbach.wallet.service.platform.sdk.detectSendDestination
 import de.schildbach.wallet.service.platform.sdk.externalSendSupport
@@ -102,12 +103,30 @@ data class ExternalSendConfirm(
     val feeIncluded: Boolean
         get() = request.isMax && request.source == SendBalance.CORE && request.destination is SendDestination.Core
 
-    /** What the recipient receives: the amount, or for a drain the amount minus the fee (when known). */
-    val recipientAmount: Dash
-        get() = if (feeIncluded) fee?.let { request.amount - it.fee } ?: request.amount else request.amount
+    /**
+     * A Shielded → Core Max withdraws [ExternalSendRequest.amount] itself, and DPP takes the asset
+     * unlock's Core fee ([WITHDRAWAL_CORE_FEE_DUFFS]) out of it: the recipient receives the amount
+     * minus that fee. Every other withdrawal to Core withdraws the fee on top of the amount.
+     */
+    val coreFeeIncluded: Boolean
+        get() = request.isMax && request.source == SendBalance.SHIELDED && request.destination is SendDestination.Core
 
-    /** What leaves the balance: amount plus fee (null while the fee is unknown), or for a drain the amount. */
-    val total: Dash? get() = if (feeIncluded) request.amount else fee?.let { request.amount + it.fee }
+    /**
+     * What the recipient receives: the amount; for a drain the amount minus the fee (when known);
+     * for a Shielded → Core Max the amount minus the Core fee.
+     */
+    val recipientAmount: Dash
+        get() = when {
+            feeIncluded -> fee?.let { request.amount - it.fee } ?: request.amount
+            coreFeeIncluded -> request.amount - Dash(WITHDRAWAL_CORE_FEE_DUFFS)
+            else -> request.amount
+        }
+
+    /**
+     * What leaves the balance: what the recipient receives plus the fee (null while the fee is
+     * unknown), or for a drain the amount.
+     */
+    val total: Dash? get() = if (feeIncluded) request.amount else fee?.let { recipientAmount + it.fee }
 }
 
 /**

@@ -588,12 +588,16 @@ private fun ConfirmSheet(uiState: ExternalSendUIState, confirm: ExternalSendConf
             trailingPart = false,
             title = stringResource(R.string.external_send_confirm_title)
         )
+        // Weighted (not filling) so the scrolling details shrink on a short screen or with large
+        // text and the Cancel/Confirm row below always keeps its height.
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .weight(1f, fill = false)
                 .verticalScroll(rememberScrollState())
         ) {
-            // What the recipient receives (a Core Max drain: the amount minus the fee).
+            // What the recipient receives (a Core Max drain: the amount minus the fee; a
+            // Shielded → Core Max: the amount minus the Core fee).
             ConfirmAmount(confirm.recipientAmount, uiState.rate, uiState.fiatCode)
             Spacer(modifier = Modifier.height(20.dp))
             Menu {
@@ -908,6 +912,7 @@ internal fun notSentMessageFor(reason: NotSentReason): Int = when (reason) {
     NotSentReason.PAYMENT_STILL_CONFIRMING -> R.string.external_send_not_sent_still_confirming
     NotSentReason.IN_PROGRESS -> R.string.external_send_not_sent_in_progress
     NotSentReason.BALANCE_CHANGED -> R.string.external_send_not_sent_balance_changed
+    NotSentReason.EARLIER_TOP_UP_COMPLETED -> R.string.external_send_not_sent_earlier_top_up_completed
     NotSentReason.GENERIC -> R.string.external_send_not_sent_generic
 }
 

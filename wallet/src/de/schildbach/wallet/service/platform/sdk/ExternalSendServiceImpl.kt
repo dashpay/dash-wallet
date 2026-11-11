@@ -155,19 +155,48 @@ internal const val PLATFORM_WITHDRAW_ACCOUNT_INDEX = 0
 private const val ASSET_UNLOCK_TX_SIZE_BYTES = 190L
 
 /**
+ * The Core fee of a withdrawal's asset unlock, in duffs, at [PLATFORM_WITHDRAW_CORE_FEE_PER_BYTE]
+ * (the rate every withdrawal here uses): 190 bytes × the rate. From protocol version 14 DPP
+ * carves it OUT of the withdrawn amount (rs-dpp `core_fee_in_credits`) for Platform-address,
+ * identity and shielded withdrawals alike, so [ExternalSendService.send] withdraws the confirmed
+ * amount PLUS this fee and the recipient receives exactly the confirmed amount (a Shielded →
+ * Core Max withdraws the amount itself, and the recipient receives it minus this fee).
+ */
+internal const val WITHDRAWAL_CORE_FEE_DUFFS = ASSET_UNLOCK_TX_SIZE_BYTES * PLATFORM_WITHDRAW_CORE_FEE_PER_BYTE
+
+/** [WITHDRAWAL_CORE_FEE_DUFFS] in credits. */
+internal const val WITHDRAWAL_CORE_FEE_CREDITS = WITHDRAWAL_CORE_FEE_DUFFS * CREDITS_PER_DUFF
+
+/**
  * The smallest Platform → Core withdrawal, in credits, at [PLATFORM_WITHDRAW_CORE_FEE_PER_BYTE]:
  * `min_withdrawal_amount` (1 000 000 credits, rs-platform-version system limits v2–v4) plus the
  * Core fee of the asset unlock, which from protocol version 14 is carved out of the withdrawn
  * amount (rs-dpp `min_withdrawal_amount_with_core_fee`: 190 bytes × the rate × 1000 credits per
  * duff). The SDK exposes no reader for it, and DPP would reject a smaller withdrawal only while
  * validating the signed transition, so [ExternalSendService.send] refuses it before anything is
- * selected or signed.
+ * selected or signed. It bounds the GROSS withdrawal ([coreWithdrawalCreditsOrNull]): the
+ * recipient's amount plus [WITHDRAWAL_CORE_FEE_CREDITS].
  */
-internal const val PLATFORM_MIN_WITHDRAWAL_CREDITS =
-    1_000_000L + ASSET_UNLOCK_TX_SIZE_BYTES * PLATFORM_WITHDRAW_CORE_FEE_PER_BYTE * CREDITS_PER_DUFF
+internal const val PLATFORM_MIN_WITHDRAWAL_CREDITS = 1_000_000L + WITHDRAWAL_CORE_FEE_CREDITS
 
 /** The largest Platform → Core withdrawal, in credits (`max_withdrawal_amount`, 500 DASH, system limits v1–v4). */
 internal const val PLATFORM_MAX_WITHDRAWAL_CREDITS = 50_000_000_000_000L
+
+/**
+ * The gross amount, in credits, a Platform-address or identity withdrawal paying the recipient
+ * exactly [recipientCredits] must withdraw: [recipientCredits] + [WITHDRAWAL_CORE_FEE_CREDITS]
+ * (DPP carves the Core fee out of the withdrawn amount). Null when that sum overflows or falls
+ * outside DPP's [PLATFORM_MIN_WITHDRAWAL_CREDITS]..[PLATFORM_MAX_WITHDRAWAL_CREDITS], which bound
+ * the gross amount.
+ */
+internal fun coreWithdrawalCreditsOrNull(recipientCredits: Long): Long? {
+    val gross = try {
+        Math.addExact(recipientCredits, WITHDRAWAL_CORE_FEE_CREDITS)
+    } catch (e: ArithmeticException) {
+        return null
+    }
+    return gross.takeIf { it in PLATFORM_MIN_WITHDRAWAL_CREDITS..PLATFORM_MAX_WITHDRAWAL_CREDITS }
+}
 
 /** DPP's `max_address_inputs` (dpp state-transition versions v2–v4): at most this many inputs per transition. */
 internal const val PLATFORM_MAX_ADDRESS_INPUTS = 16
@@ -946,11 +975,14 @@ class ExternalSendServiceImpl internal constructor(
      *   part lands on the wallet's own Platform address. Not exact; null when the UTXO
      *   count is unknown.
      * - Shielded → *: the flat single-note pool fee of the transition; more notes cost more.
+     *   Shielded → Core adds the asset unlock's [WITHDRAWAL_CORE_FEE_DUFFS], withdrawn on top
+     *   of the amount.
      * - Core → Identity, Platform → *, Identity → *: Rust meters these at execution; no
      *   pre-send figure exists, so null. (Platform → Core's withdrawal preflight estimate is
-     *   only the fee payer's reserve, not the fee of this exact set of inputs, and the Core
-     *   fee of the asset unlock comes out of the amount on top; Platform/Identity → Shielded
-     *   add the shielded compute fee to the metered one.)
+     *   only the fee payer's reserve, not the fee of this exact set of inputs; the Core fee of
+     *   the asset unlock, [WITHDRAWAL_CORE_FEE_DUFFS], is withdrawn on top of the amount, so
+     *   the recipient still receives the confirmed amount exactly. Platform/Identity →
+     *   Shielded add the shielded compute fee to the metered one.)
      */
     private suspend fun estimateFeeInner(source: SendBalance, destinationKind: SendBalance): FeeEstimate? =
         when (source) {
@@ -965,7 +997,13 @@ class ExternalSendServiceImpl internal constructor(
                 SendBalance.IDENTITY -> null
             }
             SendBalance.SHIELDED -> this.source.shieldedFeeCredits(shieldedKindFor(destinationKind))?.let {
-                FeeEstimate(Dash(ceilCreditsToDuffs(it)), exact = false)
+                val poolFee = ceilCreditsToDuffs(it)
+                val fee = if (destinationKind == SendBalance.CORE) {
+                    Math.addExact(poolFee, WITHDRAWAL_CORE_FEE_DUFFS)
+                } else {
+                    poolFee
+                }
+                FeeEstimate(Dash(fee), exact = false)
             }
             SendBalance.PLATFORM, SendBalance.IDENTITY -> null
         }
@@ -980,7 +1018,10 @@ class ExternalSendServiceImpl internal constructor(
      * - Core → Platform: [coreToPlatformMaxDuffsOrNull] — the same eligible balance less the
      *   L1 fee reserve and the Platform-fee margin.
      * - Shielded → *: the READY balance minus the single-note pool fee; a Max send also
-     *   retries once with the exact deficit the note selection reports.
+     *   retries once with the exact deficit the note selection reports. Shielded → Core
+     *   withdraws the Max itself (the recipient receives it minus [WITHDRAWAL_CORE_FEE_DUFFS]),
+     *   so it is null unless it reaches DPP's [PLATFORM_MIN_WITHDRAWAL_CREDITS] (the recipient
+     *   amount is then always positive).
      * - Everything else: null (no pre-send fee figure).
      */
     override suspend fun maxSendable(source: SendBalance, destinationKind: SendBalance): Dash? = try {
@@ -999,7 +1040,12 @@ class ExternalSendServiceImpl internal constructor(
                 if (balance == null || feeCredits == null) {
                     null
                 } else {
-                    (balance - Dash(ceilCreditsToDuffs(feeCredits))).takeIf { it.isPositive }
+                    val max = balance - Dash(ceilCreditsToDuffs(feeCredits))
+                    if (destinationKind == SendBalance.CORE) {
+                        max.takeIf { it.duffs >= ceilCreditsToDuffs(PLATFORM_MIN_WITHDRAWAL_CREDITS) }
+                    } else {
+                        max.takeIf { it.isPositive }
+                    }
                 }
             }
             SendBalance.PLATFORM, SendBalance.IDENTITY -> null
@@ -1190,8 +1236,13 @@ class ExternalSendServiceImpl internal constructor(
                     ExternalSendResult.NotSent(NotSentReason.GENERIC)
                 } else {
                     when (val result = this.source.coreTopUpIdentity(destination.identityIdBase58, amount.duffs)) {
-                        is SdkWriteResult.Broadcast ->
+                        // The resume gate completed an earlier, unfinished top-up of this
+                        // identity instead: this request was not executed (no new lock).
+                        is SdkWriteResult.Broadcast -> if (result.value.resumedEarlier) {
+                            notSent(pair, NotSentReason.EARLIER_TOP_UP_COMPLETED, "an earlier top-up was completed instead")
+                        } else {
                             ExternalSendResult.Sent(displayTxIdOrNull(result.value.lockTxIdDisplayHexOrNull))
+                        }
                         else -> mapWrite(pair, result)
                     }
                 }
@@ -1593,10 +1644,22 @@ class ExternalSendServiceImpl internal constructor(
                 )
             }
         }
-        var result = attempt(amount)
+        // To Core the asset unlock's Core fee comes out of the withdrawn amount: withdraw it on
+        // top so the recipient receives exactly the confirmed amount. A Max withdraws the Max
+        // itself (the confirm sheet shows the recipient receiving it minus the Core fee).
+        val value = if (destination is SendDestination.Core && !isMax) {
+            try {
+                Dash(Math.addExact(amount.duffs, WITHDRAWAL_CORE_FEE_DUFFS))
+            } catch (e: ArithmeticException) {
+                return notSent(pair, NotSentReason.GENERIC, "amount out of range")
+            }
+        } else {
+            amount
+        }
+        var result = attempt(value)
         val first = result
         if (isMax && first is SdkWriteResult.NotBroadcast) {
-            val adjustment = shieldedMaxFeeAdjustment(amount, first)
+            val adjustment = shieldedMaxFeeAdjustment(value, first)
             if (adjustment != null) {
                 log.info("external send {}: max spend short by the pool fee; retrying once", pair)
                 result = attempt(adjustment.adjustedAmount)
@@ -1636,12 +1699,13 @@ class ExternalSendServiceImpl internal constructor(
     }
 
     /**
-     * Partial withdrawal: the inputs take exactly [amountCredits] ([selectPlatformWithdrawalInputs]
+     * Partial withdrawal: the inputs take exactly the gross withdrawal ([selectPlatformWithdrawalInputs]
      * over the cached address balances), the fee payer keeping the SDK preflight's estimated
-     * transition fee. [amountCredits] is the GROSS withdrawal: the Core fee of the asset unlock
-     * comes out of it, as for Identity → Core. Every refusal here happens before anything is
-     * signed (NotSent); the SDK re-checks each input against its on-chain balance before
-     * signing.
+     * transition fee. The Core fee of the asset unlock comes out of the withdrawn amount, so the
+     * gross withdrawal is [amountCredits] + [WITHDRAWAL_CORE_FEE_CREDITS]
+     * ([coreWithdrawalCreditsOrNull], as for Identity → Core) and the recipient receives exactly
+     * [amountCredits]. Every refusal here happens before anything is signed (NotSent); the SDK
+     * re-checks each input against its on-chain balance before signing.
      */
     private suspend fun sendPlatformToCore(
         pair: String,
@@ -1649,12 +1713,8 @@ class ExternalSendServiceImpl internal constructor(
         destination: SendDestination.Core,
         amountCredits: Long
     ): ExternalSendResult {
-        if (amountCredits < PLATFORM_MIN_WITHDRAWAL_CREDITS) {
-            return notSent(pair, NotSentReason.GENERIC, "below the platform withdrawal minimum")
-        }
-        if (amountCredits > PLATFORM_MAX_WITHDRAWAL_CREDITS) {
-            return notSent(pair, NotSentReason.GENERIC, "above the platform withdrawal maximum")
-        }
+        val grossCredits = coreWithdrawalCreditsOrNull(amountCredits)
+            ?: return notSent(pair, NotSentReason.GENERIC, "outside the platform withdrawal bounds")
         val candidates = readOrNull("platform address balances") { this.source.platformAddressBalances(walletIdHex) }
             ?: return notSent(pair, NotSentReason.GENERIC, "platform address balances unreadable")
         val minInput = readOrNull("platform minimum input") { this.source.platformMinInputCredits(walletIdHex) }
@@ -1668,7 +1728,7 @@ class ExternalSendServiceImpl internal constructor(
         // A zero estimate would let the fee payer be drained: unknown, not free.
         val feeReserve = preflight.estimatedFeeCredits.takeIf { it > 0 }
             ?: return notSent(pair, NotSentReason.GENERIC, "withdrawal fee estimate unknown")
-        val inputs = selectPlatformWithdrawalInputs(candidates, amountCredits, feeReserve, minInput)
+        val inputs = selectPlatformWithdrawalInputs(candidates, grossCredits, feeReserve, minInput)
             ?: return notSent(pair, NotSentReason.INSUFFICIENT_FUNDS, "platform addresses cannot cover the amount and fee")
         return nativeWrite(pair, walletIdHex) { this.source.platformWithdraw(walletIdHex, destination.address, inputs) }
     }
@@ -1682,10 +1742,15 @@ class ExternalSendServiceImpl internal constructor(
         amountCredits: Long
     ): ExternalSendResult {
         return when (destination) {
-            is SendDestination.Core ->
+            is SendDestination.Core -> {
+                // The Core fee comes out of the withdrawn amount: withdraw it on top, so the
+                // recipient receives exactly the confirmed amount (as Platform → Core).
+                val grossCredits = coreWithdrawalCreditsOrNull(amountCredits)
+                    ?: return notSent(pair, NotSentReason.GENERIC, "outside the withdrawal bounds")
                 nativeWrite(pair, walletIdHex) {
-                    this.source.identityWithdraw(walletIdHex, fromId, amountCredits, destination.address)
+                    this.source.identityWithdraw(walletIdHex, fromId, grossCredits, destination.address)
                 }
+            }
             is SendDestination.Platform -> {
                 val to = decodePlatformAddress(destination.address, network)
                     ?: return notSent(pair, NotSentReason.GENERIC, "invalid platform address")
