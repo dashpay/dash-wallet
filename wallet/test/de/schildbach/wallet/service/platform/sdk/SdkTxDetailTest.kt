@@ -26,9 +26,14 @@ import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
 import java.util.Date
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Context
@@ -559,6 +564,10 @@ class SdkTxDetailTest {
                 "ownership unknown must withhold the recipient list, not fall back to all addresses",
                 detail.outputAddresses.isEmpty()
             )
+            assertTrue(
+                "withholding for an ambiguous wallet count is reload-able, same as the mirror-lag case",
+                detail.recipientsPendingMirror
+            )
         } finally {
             unmockkObject(TransactionDecoder)
         }
@@ -640,6 +649,10 @@ class SdkTxDetailTest {
             assertTrue(
                 "OUTGOING must stay fail-closed on ownershipUnknown regardless of what the walk found",
                 outgoing.outputAddresses.isEmpty()
+            )
+            assertTrue(
+                "fail-closed OUTGOING withholding is reload-able once the wallet binding settles",
+                outgoing.recipientsPendingMirror
             )
         } finally {
             unmockkObject(TransactionDecoder)
@@ -812,6 +825,10 @@ class SdkTxDetailTest {
                     "change address as a second recipient",
                 detail.outputAddresses.isEmpty()
             )
+            assertTrue(
+                "withholding for a not-yet-mirrored own output is reload-able once the write lands",
+                detail.recipientsPendingMirror
+            )
         } finally {
             unmockkObject(TransactionDecoder)
         }
@@ -873,8 +890,110 @@ class SdkTxDetailTest {
                 }
             )
             assertEquals(listOf(recipientAddress), detail.outputAddresses)
+            assertFalse(
+                "an ordinary send with its recipient resolved has nothing pending a reload",
+                detail.recipientsPendingMirror
+            )
         } finally {
             unmockkObject(TransactionDecoder)
+        }
+    }
+
+    // ── observeTxoCountChanges: the signal the ViewModel watches instead of
+    // ── polling load() on a timer (DW-1659 review round) ──────────────
+
+    @Test
+    fun `observeTxoCountChanges returns the bound wallet's txos count flow`() {
+        val walletIdHex = "01".repeat(32)
+        val manager = mockk<org.dashfoundation.dashsdk.wallet.PlatformWalletManager> {
+            every { wallets } returns MutableStateFlow(mapOf(walletIdHex to mockk(relaxed = true)))
+        }
+        val db = mockk<DashDatabase>(relaxed = true)
+        val counts = flowOf(3L)
+        every { db.txoDao().countByWallet(any()) } returns counts
+        val sdkService = mockk<DashSdkService> {
+            coEvery { ensureStarted() } returns Unit
+            every { databaseOrNull() } returns db
+            every { walletManagerOrNull() } returns manager
+        }
+        val displayCacheDao = mockk<de.schildbach.wallet.database.dao.TxDisplayCacheDao>(relaxed = true)
+
+        val changes = runBlocking {
+            SdkTxDetailProvider(sdkService, displayCacheDao, mockk(relaxed = true)) { _, _ -> null }
+                .observeTxoCountChanges()
+        }
+
+        assertNotNull("a single bound wallet must resolve to its DAO's count flow", changes)
+        // take(1), not toList(): the flow now tracks PlatformWalletManager.wallets
+        // (finding 3), a StateFlow that never completes on its own, so collecting
+        // to completion would hang forever instead of asserting the one emission.
+        assertEquals(listOf(3L), runBlocking { requireNotNull(changes).take(1).toList() })
+    }
+
+    @Test
+    fun `observeTxoCountChanges returns null when the SDK db itself is not resolvable`() {
+        // The true fail-soft case — not the ambiguous-wallet case below,
+        // which must stay observable (review round finding 3).
+        val sdkService = mockk<DashSdkService> {
+            coEvery { ensureStarted() } returns Unit
+            every { databaseOrNull() } returns null
+        }
+        val displayCacheDao = mockk<de.schildbach.wallet.database.dao.TxDisplayCacheDao>(relaxed = true)
+
+        val changes = runBlocking {
+            SdkTxDetailProvider(sdkService, displayCacheDao, mockk(relaxed = true)) { _, _ -> null }
+                .observeTxoCountChanges()
+        }
+
+        assertNull(changes)
+    }
+
+    @Test
+    fun `observeTxoCountChanges keeps watching an ambiguous wallet set until it resolves to one`() {
+        // DW-1659 review round (06b-prereview.md finding 3): the ambiguous-
+        // wallet-binding case is one of the two documented triggers for
+        // recipientsPendingMirror, so a one-shot wallets.value.keys.singleOrNull()
+        // snapshot that gives up with null here leaves the withheld recipient
+        // hidden forever once the ambiguity resolves. The flow must keep
+        // tracking the wallet manager's own wallets set and attach to the
+        // single wallet's TXO flow once it becomes resolvable.
+        val walletIdHex = "01".repeat(32)
+        val walletsFlow =
+            MutableStateFlow<Map<String, org.dashfoundation.dashsdk.wallet.ManagedPlatformWallet>>(emptyMap())
+        val manager = mockk<org.dashfoundation.dashsdk.wallet.PlatformWalletManager> {
+            every { wallets } returns walletsFlow
+        }
+        val db = mockk<DashDatabase>(relaxed = true)
+        every { db.txoDao().countByWallet(any()) } returns flowOf(5L)
+        val sdkService = mockk<DashSdkService> {
+            coEvery { ensureStarted() } returns Unit
+            every { databaseOrNull() } returns db
+            every { walletManagerOrNull() } returns manager
+        }
+        val displayCacheDao = mockk<de.schildbach.wallet.database.dao.TxDisplayCacheDao>(relaxed = true)
+
+        val changes = runBlocking {
+            SdkTxDetailProvider(sdkService, displayCacheDao, mockk(relaxed = true)) { _, _ -> null }
+                .observeTxoCountChanges()
+        }
+        assertNotNull("an ambiguous wallet set must still return an observable flow, not null", changes)
+
+        runBlocking {
+            val collected = mutableListOf<Long>()
+            val job = launch { requireNotNull(changes).collect { collected.add(it) } }
+            delay(20)
+            assertEquals(
+                "nothing to emit while the wallet set is still ambiguous",
+                emptyList<Long>(),
+                collected
+            )
+
+            // Orphan pruning resolves the ambiguity to exactly one wallet.
+            walletsFlow.value = mapOf(walletIdHex to mockk(relaxed = true))
+            withTimeout(5_000) { while (collected.isEmpty()) delay(5) }
+
+            assertEquals(listOf(5L), collected)
+            job.cancel()
         }
     }
 

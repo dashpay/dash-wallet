@@ -201,8 +201,24 @@ class TransactionResultActivity : LockScreenActivity() {
                 transactionResultViewBinder.setTransactionMetadata(it)
             }
 
+            var contactLoaded = false
+            var latestProfile: DashPayProfile? = null
             viewModel.contact.observe(this) { profile ->
+                latestProfile = profile
+                contactLoaded = true
                 finishInitialization(tx, profile)
+            }
+            // DW-1659: parity with TransactionDetailsDialogFragment — the Bug A
+            // direction/amount override can refresh once a withheld recipient's
+            // TXO mirror write lands (ViewModel's observeUntilRecipientsMirrored),
+            // and this is the screen shown immediately after broadcasting a send,
+            // so it must re-bind too. Skipped until the first finishInitialization
+            // has already bound with the actual contact profile, so this never
+            // races ahead of it with a not-yet-loaded (null) profile.
+            viewModel.sdkDirectionOverride.filterNotNull().observe(this) {
+                if (contactLoaded) {
+                    initiateTransactionBinder(tx, latestProfile)
+                }
             }
         }
 
