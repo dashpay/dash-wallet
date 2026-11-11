@@ -27,6 +27,7 @@ import de.schildbach.wallet.service.platform.sdk.IdentityResolution
 import de.schildbach.wallet.service.platform.sdk.NotSentReason
 import de.schildbach.wallet.service.platform.sdk.SendBalance
 import de.schildbach.wallet.service.platform.sdk.SendDestination
+import de.schildbach.wallet.service.platform.sdk.WITHDRAWAL_CORE_FEE_DUFFS
 import de.schildbach.wallet.ui.shielded.toKeypadString
 import de.schildbach.wallet_test.R
 import io.mockk.every
@@ -736,6 +737,40 @@ class ExternalSendViewModelTest {
         assertFalse(shieldMax.feeIncluded)
         assertEquals(oneDash, shieldMax.recipientAmount)
         assertEquals(oneDash + Dash(52_001), shieldMax.total)
+    }
+
+    @Test
+    fun confirm_withdrawalsToCore_payTheRecipientTheAmount_exceptAShieldedMax_whichCarriesTheCoreFee() {
+        val toCore = SendDestination.Core(coreAddress)
+        // Shielded → Core, not Max: the Core fee is withdrawn on top (and is part of the fee).
+        val shieldedSend = ExternalSendConfirm(
+            ExternalSendRequest(SendBalance.SHIELDED, toCore, oneDash, false, WALLET_A),
+            FeeEstimate(Dash(2_191), exact = false),
+            feeLoading = false
+        )
+        assertFalse(shieldedSend.coreFeeIncluded)
+        assertEquals(oneDash, shieldedSend.recipientAmount)
+        assertEquals(oneDash + Dash(2_191), shieldedSend.total)
+
+        // Shielded → Core Max: the Max itself is withdrawn, the recipient gets it minus the Core fee.
+        val shieldedMax = shieldedSend.copy(request = shieldedSend.request.copy(isMax = true))
+        assertTrue(shieldedMax.coreFeeIncluded)
+        assertFalse(shieldedMax.feeIncluded)
+        assertEquals(oneDash - Dash(WITHDRAWAL_CORE_FEE_DUFFS), shieldedMax.recipientAmount)
+        // What leaves the balance: the Max plus the pool fee (2 191 − 190).
+        assertEquals(oneDash + Dash(2_001), shieldedMax.total)
+
+        // Platform / Identity → Core: the recipient gets the confirmed amount; the fee is unknown.
+        for (source in listOf(SendBalance.PLATFORM, SendBalance.IDENTITY)) {
+            val confirm = ExternalSendConfirm(
+                ExternalSendRequest(source, toCore, oneDash, false, WALLET_A),
+                null,
+                feeLoading = false
+            )
+            assertFalse(confirm.coreFeeIncluded)
+            assertEquals(oneDash, confirm.recipientAmount)
+            assertNull(confirm.total)
+        }
     }
 
     @Test
