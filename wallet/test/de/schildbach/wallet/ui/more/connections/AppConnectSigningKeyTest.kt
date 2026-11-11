@@ -25,6 +25,7 @@ import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.testPlatformRepo
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.spyk
 import io.mockk.verify
 import kotlinx.coroutines.CancellationException
 import org.bitcoinj.core.Context
@@ -52,6 +53,7 @@ import org.dashj.platform.sdk.Purpose
 import org.dashj.platform.sdk.SecurityLevel
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
@@ -63,7 +65,10 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import java.util.Collections
 import java.util.EnumSet
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.TimeUnit
 
 /**
  * DashConnect key lookups against a REAL dashj identity chain, in the state an identity created
@@ -296,6 +301,52 @@ class AppConnectSigningKeyTest {
         assertUnwrappedCancellation(cancellation) { session(identity, walletRepo).readSigningIdentity(aesKey) }
         verify(exactly = 0) { parent.deriveChildKey(any<ChildNumber>()) }
         verify(exactly = 0) { auth.addNewKey(any(), any()) }
+    }
+
+    @Test(timeout = 60_000)
+    fun `concurrent backfills import each missing key once and leave the issued count of one backfill`() {
+        // the count a single backfill leaves on an identical chain: what the race must not change
+        val baselineAuth = AuthenticationGroupExtension(params).apply {
+            addKeyChains(params, seed(1), EnumSet.of(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY))
+        }
+        assertEquals(2, platformRepo(auth = baselineAuth).requireIdentityChainKeys(sdkIdentity(baselineAuth), null))
+        val expectedIssued = baselineAuth.identityKeyChain.issuedKeyCount
+
+        // Both workers select {2, 3} (0 and 1 already resolve) and only then import: an import waits
+        // until the other worker has also reached an import, i.e. has selected too, or is BLOCKED on
+        // the backfill lock. Without the lock both import both keys, and dashj's addNewKey counts the
+        // already-present keys again; with it the second worker selects only after the first imported.
+        val identity = sdkIdentity(walletAuth)
+        val workers = mutableListOf<Thread>()
+        val atImport = ConcurrentHashMap.newKeySet<Thread>()
+        val imported = Collections.synchronizedList(mutableListOf<Int>())
+        val auth = spyk(walletAuth)
+        every { auth.addNewKey(any(), any()) } answers {
+            atImport.add(Thread.currentThread())
+            val others = workers.filter { it !== Thread.currentThread() }
+            val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(20)
+            while (atImport.size < workers.size && others.none { it.state == Thread.State.BLOCKED }) {
+                check(System.nanoTime() < deadline) { "the other backfill neither imported nor blocked" }
+                Thread.sleep(5)
+            }
+            imported.add(secondArg<IDeterministicKey>().childNumber.num())
+            callOriginal()
+        }
+        val walletRepo = platformRepo(auth = auth)
+        val results = ConcurrentHashMap<Int, Result<Int>>()
+        repeat(2) { n ->
+            workers += Thread {
+                results[n] = runCatching { walletRepo.requireIdentityChainKeys(identity, null) }
+            }
+        }
+        workers.forEach { it.start() }
+        workers.forEach { it.join(TimeUnit.SECONDS.toMillis(30)) }
+        workers.forEach { assertFalse("a backfill did not finish", it.isAlive) }
+
+        assertEquals(listOf(0, 2), results.values.map { it.getOrThrow() }.sorted())
+        assertEquals(listOf(2, 3), imported.sorted())
+        assertEquals(expectedIssued, chain.issuedKeyCount)
+        identity.publicKeys.forEach { assertNotNull(chain.findKeyFromPubKey(it.data)) }
     }
 
     // --- a genuinely encrypted wallet (no mocked isEncrypted) ---------------------------------

@@ -123,6 +123,15 @@ class PlatformRepo @Inject constructor(
 
     private val onSeriousErrorListeneners = arrayListOf<SeriousErrorListener>()
 
+    /**
+     * Serializes [issueIdentityChainKeys]' select-then-import across threads. dashj's
+     * `AuthenticationKeyChain.addNewKey` re-counts a key that is already on the chain (it bumps the
+     * issued-key counter again while that counter is <= the key's index), so two backfills that both
+     * selected the same unresolved index would advance the counter twice and a later fresh
+     * authentication key could reuse that index.
+     */
+    private val identityChainBackfillLock = Any()
+
     val authenticationGroupExtension: AuthenticationGroupExtension?
         get() = walletApplication.authenticationGroupExtension
 
@@ -632,37 +641,42 @@ class PlatformRepo @Inject constructor(
                 decryptedParent().deriveChildKey(ChildNumber(index, true))
             }
 
-            val indexes = IdentityKeyChainBackfill.indexesToIssue(
-                identity.publicKeys.map { IdentityKeyChainBackfill.IdentityKeyRef(it.id, it.data) },
-                isIssued = { keyData ->
-                    when (keyData.size) {
-                        IdentityKeyChainBackfill.PUBLIC_KEY_SIZE -> identityChain.findKeyFromPubKey(keyData) != null
-                        IdentityKeyChainBackfill.HASH160_SIZE -> identityChain.findKeyFromPubHash(keyData) != null
-                        else -> false
+            // Selection and import are one atomic step with respect to other backfills (see
+            // identityChainBackfillLock); nothing in here suspends.
+            val indexes = synchronized(identityChainBackfillLock) {
+                val selected = IdentityKeyChainBackfill.indexesToIssue(
+                    identity.publicKeys.map { IdentityKeyChainBackfill.IdentityKeyRef(it.id, it.data) },
+                    isIssued = { keyData ->
+                        when (keyData.size) {
+                            IdentityKeyChainBackfill.PUBLIC_KEY_SIZE -> identityChain.findKeyFromPubKey(keyData) != null
+                            IdentityKeyChainBackfill.HASH160_SIZE -> identityChain.findKeyFromPubHash(keyData) != null
+                            else -> false
+                        }
+                    },
+                    derivePublicKey = { index ->
+                        decryptedParent() // outside the per-key catch: an unusable parent aborts
+                        try {
+                            derive(index).pubKey
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            // a failed derivation is not "not ours": a strict caller fails closed
+                            if (strict) throw e
+                            log.warn("ensureIdentityChainKeys: cannot derive identity key at index $index", e)
+                            null
+                        }
                     }
-                },
-                derivePublicKey = { index ->
-                    decryptedParent() // outside the per-key catch: an unusable parent aborts
-                    try {
-                        derive(index).pubKey
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        // a failed derivation is not "not ours": a strict caller fails closed
-                        if (strict) throw e
-                        log.warn("ensureIdentityChainKeys: cannot derive identity key at index $index", e)
-                        null
-                    }
-                }
-            )
+                )
 
-            indexes.forEach { index ->
-                var key = derive(index)
-                if (wallet.isEncrypted) {
-                    key = key.encrypt(wallet.keyCrypter, keyParameter, watchingKey)
+                selected.forEach { index ->
+                    var key = derive(index)
+                    if (wallet.isEncrypted) {
+                        key = key.encrypt(wallet.keyCrypter, keyParameter, watchingKey)
+                    }
+                    authExtension.addNewKey(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY, key)
+                    issued++
                 }
-                authExtension.addNewKey(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY, key)
-                issued++
+                selected
             }
             if (issued > 0) {
                 log.info(
