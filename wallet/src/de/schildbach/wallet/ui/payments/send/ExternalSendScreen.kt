@@ -324,7 +324,7 @@ private fun FromToCards(uiState: ExternalSendUIState, actions: ExternalSendActio
     val destination = uiState.destination ?: return
     Box(modifier = Modifier.fillMaxWidth()) {
         Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-            Card {
+            SendCard {
                 val balance = uiState.balance
                 val changeDescription = stringResource(R.string.external_send_change_source)
                 DirectionRow(
@@ -379,7 +379,7 @@ private fun FromToCards(uiState: ExternalSendUIState, actions: ExternalSendActio
                     }
                 )
             }
-            Card {
+            SendCard {
                 DirectionRow(
                     icon = iconFor(destination),
                     label = stringResource(R.string.external_send_to),
@@ -419,7 +419,7 @@ private fun FromToCards(uiState: ExternalSendUIState, actions: ExternalSendActio
 
 /** A Figma "menu" card: secondary background, 20dp corners, 6dp padding. */
 @Composable
-private fun Card(content: @Composable ColumnScope.() -> Unit) {
+private fun SendCard(content: @Composable ColumnScope.() -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
