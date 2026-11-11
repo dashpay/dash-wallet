@@ -406,6 +406,20 @@ class ExternalSendServiceImplTest {
     }
 
     @Test
+    fun coreToOwnIdentity_anEarlierTopUpCompletedInstead_isNotSent_neverReportedAsThisSend() = runBlocking {
+        val source = source().apply {
+            coreTopUpResult = {
+                SdkWriteResult.Broadcast(TopUpOutcome(1L, TOP_UP_LOCK_TXID, resumedEarlier = true))
+            }
+        }
+        assertEquals(
+            ExternalSendResult.NotSent(NotSentReason.EARLIER_TOP_UP_COMPLETED),
+            service(source).send(SendBalance.CORE, ownIdentity, amount, false)
+        )
+        assertEquals(listOf("coreTopUpIdentity"), source.calls)
+    }
+
+    @Test
     fun shieldedToEachDestination_callsItsShieldedWrite() = runBlocking {
         val expected = mapOf(
             core to "shieldedWithdrawToCore",
@@ -417,8 +431,25 @@ class ExternalSendServiceImplTest {
             val source = source()
             assertEquals(ExternalSendResult.Sent(null), service(source).send(SendBalance.SHIELDED, dest, amount, false))
             assertEquals(listOf(call), source.calls)
-            assertEquals(listOf(amount), source.shieldedAmounts)
+            // To Core the asset unlock's Core fee is withdrawn on top: the recipient gets `amount`.
+            val expectedValue = if (dest == core) Dash(amount.duffs + WITHDRAWAL_CORE_FEE_DUFFS) else amount
+            assertEquals(listOf(expectedValue), source.shieldedAmounts)
         }
+    }
+
+    @Test
+    fun shieldedToCoreMax_withdrawsTheMaxItself_andIsAvailableOnlyAboveTheWithdrawalMinimum() = runBlocking {
+        val source = source()
+        assertEquals(ExternalSendResult.Sent(null), service(source).send(SendBalance.SHIELDED, core, amount, isMax = true))
+        assertEquals(listOf(amount), source.shieldedAmounts)
+
+        // Pool fee 2 001 duffs: 3 191 − 2 001 = 1 190 duffs, exactly DPP's gross minimum.
+        source.shieldedBalance = Dash(3_191L)
+        assertEquals(Dash(1_190L), service(source).maxSendable(SendBalance.SHIELDED, balanceKindOf(core)))
+        source.shieldedBalance = Dash(3_190L)
+        assertNull(service(source).maxSendable(SendBalance.SHIELDED, balanceKindOf(core)))
+        // Other destinations keep the plain positive bound.
+        assertEquals(Dash(1_189L), service(source).maxSendable(SendBalance.SHIELDED, balanceKindOf(shielded)))
     }
 
     @Test
@@ -467,8 +498,41 @@ class ExternalSendServiceImplTest {
             assertEquals(ExternalSendResult.Sent(null), service(source).send(SendBalance.IDENTITY, dest, amount, false))
             assertEquals(listOf(call), source.calls)
             assertArrayEquals(ownId, source.lastFromId)
-            assertEquals(amountCredits, source.lastCredits)
+            // A withdrawal to Core withdraws the Core fee on top: the recipient gets `amount`.
+            val expectedCredits = if (dest == core) amountCredits + WITHDRAWAL_CORE_FEE_CREDITS else amountCredits
+            assertEquals(expectedCredits, source.lastCredits)
         }
+    }
+
+    @Test
+    fun identityToCore_outsideTheWithdrawalBounds_isNotSent_withNoCall() = runBlocking {
+        // 999 duffs + the 190-duff Core fee is below 1 000 000 + 190 000 credits.
+        for (outside in listOf(Dash(999L), Dash(PLATFORM_MAX_WITHDRAWAL_CREDITS / 1_000L))) {
+            val source = source()
+            assertEquals(
+                ExternalSendResult.NotSent(NotSentReason.GENERIC),
+                service(source).send(SendBalance.IDENTITY, core, outside, false)
+            )
+            assertTrue(source.calls.isEmpty())
+        }
+        val source = source()
+        assertEquals(ExternalSendResult.Sent(null), service(source).send(SendBalance.IDENTITY, core, Dash(1_000L), false))
+        assertEquals(PLATFORM_MIN_WITHDRAWAL_CREDITS, source.lastCredits)
+    }
+
+    @Test
+    fun coreWithdrawalCredits_addsTheCoreFee_andBoundsTheGrossAmount() {
+        assertEquals(190L, WITHDRAWAL_CORE_FEE_DUFFS)
+        assertEquals(190_000L, WITHDRAWAL_CORE_FEE_CREDITS)
+        assertEquals(amountCredits + 190_000L, coreWithdrawalCreditsOrNull(amountCredits))
+        assertEquals(PLATFORM_MIN_WITHDRAWAL_CREDITS, coreWithdrawalCreditsOrNull(1_000_000L))
+        assertNull(coreWithdrawalCreditsOrNull(999_999L))
+        assertEquals(
+            PLATFORM_MAX_WITHDRAWAL_CREDITS,
+            coreWithdrawalCreditsOrNull(PLATFORM_MAX_WITHDRAWAL_CREDITS - WITHDRAWAL_CORE_FEE_CREDITS)
+        )
+        assertNull(coreWithdrawalCreditsOrNull(PLATFORM_MAX_WITHDRAWAL_CREDITS - WITHDRAWAL_CORE_FEE_CREDITS + 1))
+        assertNull(coreWithdrawalCreditsOrNull(Long.MAX_VALUE))
     }
 
     // ── int37 pairs: Platform → Core, Platform / Identity → Shielded ──
@@ -487,7 +551,8 @@ class ExternalSendServiceImplTest {
         assertEquals(listOf("platformWithdraw"), source.calls)
         assertEquals(core.address, source.lastCoreAddress)
         val inputs = requireNotNull(source.lastInputs)
-        assertEquals(amountCredits, inputs.sumOf { it.credits })
+        // The amount plus the Core fee DPP takes out of the withdrawal: the recipient gets `amount`.
+        assertEquals(amountCredits + WITHDRAWAL_CORE_FEE_CREDITS, inputs.sumOf { it.credits })
         val payer = inputs.first { it.hash[0] == 1.toByte() }
         assertTrue(450_000_000L - payer.credits >= reserve)
         assertTrue(inputs.all { input -> input.credits <= (if (input.hash[0] == 1.toByte()) 450_000_000L else 80_000_000L) })
@@ -536,15 +601,20 @@ class ExternalSendServiceImplTest {
                 listOf(address(1, 900_000_000L))
             }
         }
-        // 1 189 duffs = 1 189 000 credits < 1 000 000 + 190 × 1 000.
+        // 999 duffs + the 190-duff Core fee withdrawn on top = 1 189 000 credits < 1 000 000 + 190 × 1 000.
         assertEquals(
             ExternalSendResult.NotSent(NotSentReason.GENERIC),
-            service(source).send(SendBalance.PLATFORM, core, Dash(1_189L), false)
+            service(source).send(SendBalance.PLATFORM, core, Dash(999L), false)
+        )
+        // Above 500 DASH gross (500 DASH + the Core fee).
+        assertEquals(
+            ExternalSendResult.NotSent(NotSentReason.GENERIC),
+            service(source).send(SendBalance.PLATFORM, core, Dash(PLATFORM_MAX_WITHDRAWAL_CREDITS / 1_000L), false)
         )
         assertTrue(source.calls.isEmpty())
         assertTrue(!read)
-        // Exactly at the minimum is sent.
-        assertEquals(ExternalSendResult.Sent(null), service(source).send(SendBalance.PLATFORM, core, Dash(1_190L), false))
+        // Exactly at the minimum (gross) is sent.
+        assertEquals(ExternalSendResult.Sent(null), service(source).send(SendBalance.PLATFORM, core, Dash(1_000L), false))
         assertEquals(PLATFORM_MIN_WITHDRAWAL_CREDITS, source.lastInputs?.sumOf { it.credits })
     }
 
@@ -940,7 +1010,9 @@ class ExternalSendServiceImplTest {
         val service = service(source())
         // The size-based reserve over the spendable UTXO count (2).
         assertEquals(FeeEstimate(Dash(sendAllFeeReserveDuffs(2)), exact = false), service.estimateFee(SendBalance.CORE, balanceKindOf(core)))
-        assertEquals(FeeEstimate(Dash(2_001L), exact = false), service.estimateFee(SendBalance.SHIELDED, balanceKindOf(core)))
+        // Shielded → Core: the pool fee plus the asset unlock's Core fee withdrawn on top.
+        assertEquals(FeeEstimate(Dash(2_191L), exact = false), service.estimateFee(SendBalance.SHIELDED, balanceKindOf(core)))
+        assertEquals(FeeEstimate(Dash(2_001L), exact = false), service.estimateFee(SendBalance.SHIELDED, balanceKindOf(platform)))
         assertNull(service.estimateFee(SendBalance.PLATFORM, balanceKindOf(platform)))
         assertNull(service.estimateFee(SendBalance.IDENTITY, balanceKindOf(core)))
         assertNull(service.estimateFee(SendBalance.CORE, balanceKindOf(ownIdentity)))

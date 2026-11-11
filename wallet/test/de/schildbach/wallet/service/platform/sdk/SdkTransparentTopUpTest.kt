@@ -298,6 +298,53 @@ class SdkTransparentTopUpTest {
     }
 
     @Test
+    fun reportingLockTxId_newIntentResumingAnEarlierLock_isFlaggedResumedEarlier_plainTopUpUnchanged() {
+        val lock = trackedLock(firstByte = 9)
+        val source = fakeSource().apply {
+            unresolvedLock = { lock }
+            onResume = { 42_000L }
+        }
+
+        val result = runBlocking {
+            topUpOf(source).topUpReportingLockTxId(identityBase58, amountDuffs, newUserIntent = true)
+        }
+
+        // The earlier request's lock was completed; nothing of this request's amount was built.
+        assertEquals(
+            SdkWriteResult.Broadcast(TopUpOutcome(42_000L, displayHexOf(lock.outpointTxid), resumedEarlier = true)),
+            result
+        )
+        assertEquals(0, source.topUpFromCoreCalls)
+
+        // topUp's own result (Buy Credits, PerformTopUpWorker) is unchanged.
+        val plain = fakeSource().apply {
+            unresolvedLock = { lock }
+            onResume = { 42_000L }
+        }
+        assertEquals(
+            SdkWriteResult.Broadcast(42_000L),
+            runBlocking { topUpOf(plain).topUp(identityBase58, amountDuffs, newUserIntent = true) }
+        )
+    }
+
+    @Test
+    fun reportingLockTxId_newIntentSkippingAStaleConsumedLock_buildsFresh_notResumedEarlier() {
+        val source = fakeSource().apply {
+            unresolvedLock = { trackedLock() }
+            onResume = { throw alreadyConsumedFailure() }
+            onTopUpFromCore = { 77_000L }
+            builtLockTxid = { "cd".repeat(32) }
+        }
+
+        val result = runBlocking {
+            topUpOf(source).topUpReportingLockTxId(identityBase58, amountDuffs, newUserIntent = true)
+        }
+
+        assertEquals(SdkWriteResult.Broadcast(TopUpOutcome(77_000L, "cd".repeat(32))), result)
+        assertEquals(1, source.topUpFromCoreCalls)
+    }
+
+    @Test
     fun reportingLockTxId_rerunOnItsOwnConsumedLock_carriesThatLocksTxid() {
         val source = fakeSource()
         val lock = trackedLock(firstByte = 5)
