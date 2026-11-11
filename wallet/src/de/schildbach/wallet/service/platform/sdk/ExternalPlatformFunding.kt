@@ -21,6 +21,7 @@ import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.shielded.assetLockMaxFeeReserve
 import kotlinx.coroutines.runBlocking
 import org.bitcoinj.core.Utils
+import org.dashfoundation.dashsdk.errors.DashSdkError
 
 // Advanced-mode External Send, Core → third-party Platform address (MO-1121):
 // the persisted recipient record the SDK's resume contract requires, and the
@@ -64,6 +65,36 @@ internal const val EXTERNAL_FUNDING_PLATFORM_ACCOUNT_INDEX = 0
  * app sweep reads this type (the shielded sweep reads 5, identity recovery 0–2).
  */
 internal const val ASSET_LOCK_FUNDING_TYPE_ADDRESS_TOPUP = 4
+
+/**
+ * Whether an SDK funding call was refused because Platform already knows this exact state
+ * transition: rs-sdk `Error::AlreadyExists`, which the JNI surfaces as a Generic error
+ * reading "Object already exists: …" — Tenderdash's "tx already exists in cache", or
+ * DAPI's "state transition already in mempool" / "already in chain".
+ *
+ * On a resume this is terminal for the record: the transition is signed over the lock and
+ * exactly the persisted recipients and nothing else varies (no fee bump on resume), so every
+ * resume rebuilds the same bytes and Tenderdash refuses them again for as long as its cache
+ * holds the first submission. The SDK does not wait for that submission's result after this
+ * error (rs-sdk `broadcast_and_wait_for_affected_state_with_metadata` returns on the
+ * broadcast error), so the wallet never learns the outcome from the call.
+ *
+ * Message-matched, down the cause chain because the JNI wraps it, until the SDK types it;
+ * only errors raised by the SDK ([DashSdkError]) qualify.
+ */
+internal fun isTransitionAlreadyKnownToPlatform(t: Throwable): Boolean {
+    if (t !is DashSdkError) return false
+    var cause: Throwable? = t
+    var hops = 0
+    while (cause != null && hops++ < 8) {
+        if (cause.message?.contains(SDK_ALREADY_EXISTS_PREFIX) == true) return true
+        cause = cause.cause
+    }
+    return false
+}
+
+/** rs-sdk `Error::AlreadyExists`'s display prefix. */
+private const val SDK_ALREADY_EXISTS_PREFIX = "Object already exists:"
 
 /** The Core → Platform lock in duffs: [amountDuffs] plus [PLATFORM_FUNDING_FEE_MARGIN_DUFFS]. */
 internal fun platformFundingLockDuffs(amountDuffs: Long): Long =

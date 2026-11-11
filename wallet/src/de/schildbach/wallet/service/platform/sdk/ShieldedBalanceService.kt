@@ -490,11 +490,13 @@ interface ShieldedBalanceService {
     suspend fun shieldedReceiveAddress(): String?
 
     /**
-     * The wallet's own Platform (DIP-17) receive address as stored by the SDK
-     * — the lowest unused index, else the lowest index of any state, the same
-     * row [unshieldToCredits] pays itself to — or null when the flag is off,
-     * the runtime is not ready, or the SDK's address store has no row for the
-     * wallet yet. Never throws (except cancellation).
+     * The wallet's Platform (DIP-17) receive address to show to payers: the
+     * lowest-index UNUSED address the SDK has stored — or null when the flag
+     * is off, the runtime is not ready, or the store has no unused row for the
+     * wallet (every row used, or none yet). Never a used address, so payments
+     * cannot be linked through it; unlike the self-unshield target, which falls
+     * back to a used row. Null is retryable: Receive shows "unavailable" and
+     * reads again on its next resume. Never throws (except cancellation).
      */
     suspend fun platformReceiveAddress(): String?
 
