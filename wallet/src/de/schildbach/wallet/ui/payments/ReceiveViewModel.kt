@@ -29,12 +29,15 @@ import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -42,6 +45,8 @@ import org.dash.wallet.common.money.Coin
 import org.dash.wallet.common.payments.parsers.AddressNetwork
 import org.dash.wallet.common.payments.parsers.PaymentURI
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.util.readRetryDelayMs
+import org.dash.wallet.common.util.retryReadErrors
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
@@ -115,7 +120,8 @@ class ReceiveViewModel internal constructor(
     identityConfig: BlockchainIdentityConfig,
     dashPayConfig: DashPayConfig,
     private val analytics: AnalyticsService,
-    private val supportsPlatform: Boolean
+    private val supportsPlatform: Boolean,
+    retryDelayMs: (Long) -> Long = ::readRetryDelayMs
 ) : ViewModel() {
 
     @Inject
@@ -129,6 +135,24 @@ class ReceiveViewModel internal constructor(
 
     companion object {
         private val log = LoggerFactory.getLogger(ReceiveViewModel::class.java)
+
+        /**
+         * The identity, or null while it cannot be read: [BlockchainIdentityConfig.observe]
+         * turns a failed read into "no identity" and then completes, so one transient failure
+         * would hide the Identity tab for good. This keeps the read alive with
+         * [retryReadErrors] and emits null (no identity, no username) while it fails.
+         */
+        internal fun identityFlow(
+            identityConfig: BlockchainIdentityConfig,
+            retryDelayMs: (Long) -> Long = ::readRetryDelayMs
+        ): Flow<BlockchainIdentityData?> = identityConfig.observePreservingErrors()
+            .map<BlockchainIdentityData, BlockchainIdentityData?> { it }
+            .retryReadErrors(null, retryDelayMs) { e, attempt ->
+                // never the identity itself: only that the read failed
+                log.warn("identity read failed (attempt {}); withholding the Identity tab", attempt, e)
+            }
+            // repeated failures each emit null: one is enough
+            .distinctUntilChanged()
 
         /** The balance tabs to show, in display order. */
         @VisibleForTesting
@@ -214,18 +238,20 @@ class ReceiveViewModel internal constructor(
             }
             .launchIn(viewModelScope)
 
-        // Same wiring as PaymentsViewModel's profile observer.
-        identityConfig.observe()
+        // Same wiring as PaymentsViewModel's profile observer, but fail closed and retried: a
+        // failed identity read withholds the Identity tab and the username (null below) until a
+        // later read succeeds, instead of reading as "no identity" for the rest of this screen.
+        identityFlow(identityConfig, retryDelayMs)
             .onEach { data ->
                 val previousId = identity?.userId
                 identity = data
                 applyTabs()
-                if (_uiState.value.selectedTab == ReceiveBalanceTab.IDENTITY && previousId != data.userId) {
+                if (_uiState.value.selectedTab == ReceiveBalanceTab.IDENTITY && previousId != data?.userId) {
                     load(ReceiveBalanceTab.IDENTITY, force = true)
                 }
             }
             .flatMapLatest { data ->
-                val userId = data.userId
+                val userId = data?.userId
                 if (userId != null && data.hasUsername) {
                     platformRepo.observeProfileByUserId(userId)
                 } else {
