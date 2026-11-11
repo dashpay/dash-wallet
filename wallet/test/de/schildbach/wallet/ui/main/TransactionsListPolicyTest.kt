@@ -171,4 +171,39 @@ class TransactionsListPolicyTest {
         )
         assertEquals(TransactionsListPolicy(swapToLive = true, isLoading = true, isEmpty = true), laterRebuild)
     }
+
+    @Test
+    fun `a rebuild that completes on an already-empty cache staying empty shows the empty view, not a blank screen`() {
+        // Already settled empty and swapped away from the cache (same starting point as
+        // "a later rebuild can request loading and empty handling together").
+        val rebuildStarts = transactionsListPolicy(
+            cacheAdapterAttached = false,
+            cacheHasRows = false,
+            refreshState = settled,
+            transactionsLoaded = true,
+            isBuildingCache = true,
+            liveItemCount = 0,
+            headerIsEmpty = true
+        )
+        assertEquals(TransactionsListPolicy(swapToLive = false, isLoading = true, isEmpty = true), rebuildStarts)
+
+        // The rebuild writes replaceAll(emptyList()) over an already-empty table: Room's
+        // trigger-based invalidation never fires (0-row delete, no insert), so loadStateFlow
+        // produces no new emission and refreshState is unchanged from the one above —
+        // only isBuildingCache flips back to false. The screen must still land on the empty
+        // view, not whatever isLoading/isEmpty last resolved to while the spinner was up.
+        val rebuildCompletesWithNoNewEmission = transactionsListPolicy(
+            cacheAdapterAttached = false,
+            cacheHasRows = false,
+            refreshState = settled,
+            transactionsLoaded = true,
+            isBuildingCache = false,
+            liveItemCount = 0,
+            headerIsEmpty = true
+        )
+        assertEquals(
+            TransactionsListPolicy(swapToLive = false, isLoading = false, isEmpty = true),
+            rebuildCompletesWithNoNewEmission
+        )
+    }
 }

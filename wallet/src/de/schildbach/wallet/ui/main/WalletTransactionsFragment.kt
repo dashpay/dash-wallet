@@ -117,6 +117,14 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
     private var cacheHasRows: Boolean = false
 
     /**
+     * The live Pager's most recently observed refresh [LoadState], read by
+     * [viewModel.isBuildingCache]'s observer so it can re-run [transactionsListPolicy] with
+     * the same inputs loadStateFlow's collector uses, instead of guessing from a narrower
+     * formula of its own. Starts at [LoadState.Loading]: the Pager has not settled yet.
+     */
+    private var lastRefreshState: LoadState = LoadState.Loading
+
+    /**
      * One "still syncing" invite notice per launch. The provisional
      * NOT_SYNCED verdict can be re-reached on every sync-state emission,
      * and the notice is informational — repeating it would be a nag.
@@ -415,6 +423,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
             liveAdapter.loadStateFlow
                 .distinctUntilChanged()
                 .collectLatest { loadStates ->
+                    lastRefreshState = loadStates.refresh
                     // Swap/loading/empty decision: see transactionsListPolicy's KDoc for why
                     // these particular inputs and this particular gating.
                     val policy = transactionsListPolicy(
@@ -460,8 +469,23 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         // from scratch (no rows displayed yet). If rows are already visible, suppress the
         // overlay so the existing list stays on screen during background rebuilds.
         viewModel.isBuildingCache.observe(viewLifecycleOwner) { building ->
-            val hasRows = liveAdapter.itemCount > 0 || (cacheAdapterAttached && cacheHasRows)
-            binding.loading.isVisible = building && !hasRows
+            // Re-run the same policy loadStateFlow's collector uses (with its own spinner-only
+            // formula this is the only other write site touching loading/empty-list visibility,
+            // and it previously never called showEmptyView()/showTransactionList() at all) so a
+            // rebuild that completes without a fresh loadStateFlow emission still lands on the
+            // correct loading/empty state instead of leaving the screen at whatever that
+            // emission last decided.
+            val policy = transactionsListPolicy(
+                cacheAdapterAttached = cacheAdapterAttached,
+                cacheHasRows = cacheHasRows,
+                refreshState = lastRefreshState,
+                transactionsLoaded = viewModel.transactionsLoaded.value,
+                isBuildingCache = building,
+                liveItemCount = liveAdapter.itemCount,
+                headerIsEmpty = header.isEmpty()
+            )
+            binding.loading.isVisible = policy.isLoading
+            if (policy.isEmpty) showEmptyView() else showTransactionList()
             if (!building && pendingManualRefresh) {
                 pendingManualRefresh = false
                 Toast.makeText(requireContext(), R.string.history_refresh_complete, Toast.LENGTH_SHORT).show()
