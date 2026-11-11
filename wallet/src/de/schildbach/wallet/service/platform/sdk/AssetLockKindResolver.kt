@@ -42,17 +42,28 @@ import javax.inject.Singleton
 enum class AssetLockKind {
     UPGRADE, TOPUP, INVITE, SHIELD,
 
+    /**
+     * A lock funding a Platform ADDRESS (`AssetLockFundingType::AssetLockAddressTopUp`):
+     * the Core → Platform External Send to a third-party payee. Product decision
+     * (2026-11-06): a send — sent arrow and amount, titled "Platform". A restored
+     * wallet's lock that funded one of its OWN Platform addresses reads the same
+     * way; the funding type cannot tell the two apart.
+     */
+    PLATFORM,
+
     /** An AssetUnlock THIS wallet's shielded pool paid out — a self-move. */
     UNSHIELD,
 
     /**
-     * An AssetUnlock from a FOREIGN pool paying this wallet — at the Core
-     * level a plain incoming payment, and it must keep receive semantics
-     * (green inbound arrow, coins-received notification) under the
-     * "Unshielded" label. Field case: a tester funded a different seed in a
-     * desktop wallet, shielded there, and unshielded a piece back to this
-     * wallet — the unconditional kind-7 → self-move treatment relabelled a
-     * genuine external receive.
+     * An AssetUnlock paying this wallet that this wallet's pool did not
+     * author — at the Core level a plain incoming payment, and it must keep
+     * receive semantics (green inbound arrow, coins-received notification).
+     * It carries no source: a Platform address withdrawal, a Platform identity
+     * credit withdrawal (evonode rewards included) or a foreign pool's
+     * unshield, so the row is titled plain "Withdrawal" (2026-11-08). Field
+     * case: a tester funded a different seed in a desktop wallet, shielded
+     * there, and unshielded a piece back to this wallet — the unconditional
+     * kind-7 → self-move treatment relabelled a genuine external receive.
      */
     UNSHIELD_EXTERNAL
 }
@@ -85,6 +96,7 @@ private const val FUNDING_TYPE_UPGRADE = 0
 private const val FUNDING_TYPE_TOPUP_A = 1
 private const val FUNDING_TYPE_TOPUP_B = 2
 private const val FUNDING_TYPE_INVITATION = 3
+private const val FUNDING_TYPE_PLATFORM_ADDRESS = ASSET_LOCK_FUNDING_TYPE_ADDRESS_TOPUP
 private const val FUNDING_TYPE_SHIELD = 5
 
 /** Table for the allocation-free hex encoders below (lowercase, the app-wide convention). */
@@ -322,6 +334,7 @@ class AssetLockKindResolver @Inject constructor(
             // lock the app-side records never captured (e.g. after a restore).
             val kind = when (db?.assetLockDao()?.fundingTypeForTxid(hex)) {
                 FUNDING_TYPE_SHIELD -> AssetLockKind.SHIELD
+                FUNDING_TYPE_PLATFORM_ADDRESS -> AssetLockKind.PLATFORM
                 FUNDING_TYPE_INVITATION -> AssetLockKind.INVITE
                 FUNDING_TYPE_TOPUP_A, FUNDING_TYPE_TOPUP_B -> AssetLockKind.TOPUP
                 FUNDING_TYPE_UPGRADE -> AssetLockKind.UPGRADE

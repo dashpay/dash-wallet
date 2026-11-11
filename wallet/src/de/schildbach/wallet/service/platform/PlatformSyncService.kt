@@ -56,6 +56,7 @@ import de.schildbach.wallet.service.platform.sdk.SdkBlockchainStateService
 import de.schildbach.wallet.service.platform.sdk.BindHealL1Starter
 import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
 import de.schildbach.wallet.service.platform.sdk.NonInteractiveWalletUnlock
+import de.schildbach.wallet.service.platform.sdk.PlatformAddressSyncService
 import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
 import de.schildbach.wallet.service.platform.sdk.SdkIdentityVerifyQueries
 import de.schildbach.wallet.service.platform.sdk.SdkProfileQueries
@@ -68,6 +69,7 @@ import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.PreBlockStage
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.more.TxMetadataSaveFrequency
+import de.schildbach.wallet.ui.payments.send.ExternalSendExecutor
 import de.schildbach.wallet.ui.shielded.ShieldedTransferExecutor
 import de.schildbach.wallet_test.BuildConfig
 import kotlinx.coroutines.*
@@ -150,9 +152,10 @@ interface PlatformSyncService {
     suspend fun stopSync()
 
     /**
-     * Unconditionally stop the two Kotlin-SDK background engines (the L1
-     * shadow SPV and the shielded sync loop). Both stops are best-effort,
-     * failure-contained no-ops when not running. [shutdown] calls it on
+     * Unconditionally stop the Kotlin-SDK background engines (the L1 shadow
+     * SPV, the shielded sync loop and the Platform-address balance sync
+     * loop). Every stop is best-effort, a failure-contained no-op when not
+     * running. [shutdown] calls it on
      * every build type (debug builds used to skip the engine stops on the
      * routine teardown; that exemption was removed on 2026-09-25). The
      * destructive paths (wallet wipe, before `finalizeWipe()` deletes app
@@ -260,10 +263,15 @@ class PlatformSynchronizationService @Inject constructor(
     private val nonInteractiveWalletUnlock: NonInteractiveWalletUnlock,
     private val l1ShadowSyncService: L1ShadowSyncService,
     private val shieldedBalanceService: ShieldedBalanceService,
+    private val platformAddressSyncService: PlatformAddressSyncService,
     private val cutoverUiDataService: CutoverUiDataService,
     private val sdkBlockchainStateService: SdkBlockchainStateService,
     private val cutoverTxSeamService: CutoverTxSeamService,
     private val shieldedTransferExecutor: ShieldedTransferExecutor,
+    // Lazy: the executor's service graph (ExternalSendServiceImpl → ShieldedBalanceService,
+    // SdkL1SendService, …) is resolved only when a kick first reaches it, off the main thread,
+    // and a dependency path back to this service can never become a construction cycle.
+    private val externalSendExecutor: dagger.Lazy<ExternalSendExecutor>,
     private val contactRequestNotificationService: ContactRequestNotificationService,
     // The DashPay half of the user-facing "still syncing" state; this service
     // is the only component that knows whether DashPay applies at all.
@@ -502,7 +510,16 @@ class PlatformSynchronizationService @Inject constructor(
         bindEstablished = sdkWalletBinder.bindEstablished,
         serviceTearingDown = { de.schildbach.wallet.service.BlockchainServiceImpl.isCleaningUpNow },
         stopGeneration = { l1ShadowSyncService.stopGeneration() },
-        startL1 = { generation -> l1ShadowSyncService.startIfEnabled(expectedExternalStopGeneration = generation) }
+        startL1 = { generation ->
+            // Sampled BEFORE the liveness check: stopSdkEngines() cancels this
+            // waiter before it bumps the Platform-address stop generation, so a
+            // waiter still active here sampled the generation that stop moves.
+            val platformAddressGeneration = platformAddressSyncService.stopGeneration()
+            currentCoroutineContext().ensureActive()
+            l1ShadowSyncService.startIfEnabled(expectedExternalStopGeneration = generation).also { started ->
+                if (started) platformAddressSyncService.startIfReady(platformAddressGeneration)
+            }
+        }
     )
     private var lastTopupUpdateTime = 0L
     private var lastMetadataUpdateTime = 0L
@@ -561,6 +578,9 @@ class PlatformSynchronizationService @Inject constructor(
         StartupBreadcrumbs.mark(StartupBreadcrumbs.STAGE_SDK_BIND_KICKED, "SDK_BIND_KICKED")
         val bindJob = sdkWalletBinder.bindInBackground(nonInteractiveWalletUnlock::unlockOrNull)
         val lifetime = serviceLifetime.get()
+        // Sampled with the lifetime: an engine stop after this point (shutdown,
+        // or the wipe's direct stopSdkEngines) refuses this kick's start.
+        val platformAddressGeneration = platformAddressSyncService.stopGeneration()
         startupKickJob?.cancel()
         startupKickJob = syncScope.launch {
             bindJob.join()
@@ -609,6 +629,14 @@ class PlatformSynchronizationService @Inject constructor(
                 // waiter the current lifetime armed.
                 val stillCurrent = { serviceLifetime.get() == lifetime }
                 if (started) bindHealL1Starter.cancel(stillCurrent) else bindHealL1Starter.arm(stillCurrent)
+                // Platform-address (BLAST) balance sync: without it credits other
+                // wallets send to our Platform addresses never show up. Same
+                // foreground-service lifetime as the L1 engine; it declines until
+                // the SDK wallet is bound (the bind heal above retries it), and
+                // stopSdkEngines() is its teardown. Not gated on Advanced mode:
+                // it keeps the persisted Platform balances correct for every
+                // reader (External Send, invite top-up).
+                platformAddressSyncService.startIfReady(platformAddressGeneration)
             }
             // Phase 5d follow-up: the post-cutover UI data source (balance
             // header / tx list / coins-received detection served from the
@@ -653,6 +681,16 @@ class PlatformSynchronizationService @Inject constructor(
                     }
                 }.onFailure { log.warn("startup shielded bring-up failed", it) }
             }
+            // The External Send counterpart of the pending wallet-shield sweep
+            // above: finish a Core → Platform send whose asset lock was built
+            // but whose Platform funding never completed, without the user
+            // opening External Send (a pending record means they already
+            // confirmed that payment, so Advanced mode is not consulted). Same
+            // trigger as that sweep: every kick, after the bind pass. The sweep
+            // runs on the application scope, off the main thread, one at a time
+            // and single-flight with sends (the service's inFlight); it no-ops
+            // unless the cutover is committed and the record's wallet is bound.
+            resumePendingExternalPlatformFunding()
             // DIP-15 friend-chain backfill (docs/kotlin-sdk-migration-plan.md;
             // scratchpad/txdiff/FINDINGS.md): the app keeps DashPay contacts on
             // dashj and never drives the SDK's contact-sync path, so the bound
@@ -662,6 +700,17 @@ class PlatformSynchronizationService @Inject constructor(
             // promptly on every service (re)start; fire-and-forget and provably
             // inert unless a USE_KOTLIN_SDK_* flag is on and a wallet is bound.
             sdkWalletBinder.provisionContactAccountsInBackground(force = true)
+        }
+    }
+
+    /** Kick [ExternalSendExecutor.resumePendingPlatformFunding]; never throws into the kick. */
+    private fun resumePendingExternalPlatformFunding() {
+        try {
+            externalSendExecutor.get().resumePendingPlatformFunding()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("startup pending external Platform funding sweep could not start", e)
         }
     }
 
@@ -901,6 +950,9 @@ class PlatformSynchronizationService @Inject constructor(
             .onFailure { log.warn("failed to stop the L1 shadow sync on shutdown", it) }
         runCatching { shieldedBalanceService.stop() }
             .onFailure { log.warn("failed to stop the shielded runtime on shutdown", it) }
+        // Last, and after bindHealL1Starter.cancel(): its stop-generation bump
+        // must follow the heal's cancel (see bindHealL1Starter). Failure-contained.
+        platformAddressSyncService.stop()
     }
 
     override suspend fun stopSync() {

@@ -231,15 +231,15 @@ class CutoverUiDataServiceTest {
 
     @Test
     fun rowPlan_externalUnshieldKeepsReceiveSemantics() {
-        // An AssetUnlock this wallet's pool did not author (a foreign pool's
-        // unshield, or a Platform identity credit withdrawal) is a genuine
-        // receive: "Unshielded Withdrawal", the green inbound arrow, Received
+        // An AssetUnlock this wallet's pool did not author (a Platform address
+        // or identity credit withdrawal, or a foreign pool's unshield) is a
+        // genuine receive: "Withdrawal", the green inbound arrow, Received
         // treatment and the coins-received notification.
         val plan = planL1TxRow(
             record(net = 300_000, context = 1, direction = 0),
             AssetLockKind.UNSHIELD_EXTERNAL
         )
-        assertEquals(R.string.transaction_row_unshielded_withdrawal, plan.titleRes)
+        assertEquals(R.string.transaction_row_withdrawal, plan.titleRes)
         assertEquals(TxDisplayCacheEntry.ICON_RECEIVED, plan.iconType)
         assertEquals(TxDisplayCacheEntry.BG_RECEIVED, plan.iconBgType)
         assertEquals(TxDisplayCacheEntry.FLAG_RECEIVED, plan.filterFlags)
@@ -270,7 +270,8 @@ class CutoverUiDataServiceTest {
         val expected = mapOf(
             AssetLockKind.UPGRADE to R.string.dashpay_upgrade_fee,
             AssetLockKind.TOPUP to R.string.dashpay_topup_fee,
-            AssetLockKind.INVITE to R.string.transaction_row_invitation
+            AssetLockKind.INVITE to R.string.transaction_row_invitation,
+            AssetLockKind.PLATFORM to R.string.transaction_row_platform
         )
         for ((kind, title) in expected) {
             val plan = planL1TxRow(outgoingAssetLock(), kind)
@@ -323,6 +324,46 @@ class CutoverUiDataServiceTest {
         )
         val row = plan.inserts.single()
         assertEquals(resolve(R.string.dashpay_upgrade_fee), row.title)
+        assertEquals(-3_000_000L, row.valueSatoshis)
+        assertEquals(TxDisplayCacheEntry.ICON_SENT, row.iconType)
+        assertEquals(TxDisplayCacheEntry.FLAG_SENT, row.filterFlags)
+        assertTrue(plan.notifyIncoming.isEmpty())
+    }
+
+    @Test
+    fun platformAddressSend_isASendNotAPoolTransfer() {
+        // A Core → Platform-address External Send (funding type 4): a payment to a
+        // third party, so it applies to the OUTGOING row and keeps the sent arrow.
+        assertTrue(AssetLockKind.PLATFORM.appliesToOutgoing)
+        assertFalse(AssetLockKind.PLATFORM.isPoolTransfer)
+        assertEquals(R.string.transaction_row_platform, assetLockTitleRes(AssetLockKind.PLATFORM))
+    }
+
+    @Test
+    fun rowPlan_internalPlatformAddressLock_isASendTitledPlatform() {
+        // Before the store walker corrects it to OUTGOING, the lock can be recorded INTERNAL:
+        // it must not keep the "Internal" double-arrows treatment either.
+        val plan = planL1TxRow(record(net = -300_000, context = 1, direction = 2), AssetLockKind.PLATFORM)
+        assertEquals(R.string.transaction_row_platform, plan.titleRes)
+        assertEquals(TxDisplayCacheEntry.ICON_SENT, plan.iconType)
+        assertEquals(TxDisplayCacheEntry.BG_SENT, plan.iconBgType)
+        assertEquals(TxDisplayCacheEntry.FLAG_SENT, plan.filterFlags)
+        assertFalse(plan.isIncoming)
+    }
+
+    @Test
+    fun syncPlan_platformAddressSendCachedAsInternal_isRelabelledAsPlatformSend() {
+        val r = outgoingAssetLock(firstByte = 0x53)
+        val existing = cacheEntry(
+            rowId = r.txidHex,
+            title = resolve(R.string.transaction_row_status_sent_internally)
+        )
+        val plan = planL1DisplaySync(
+            listOf(r), mapOf(existing.rowId to existing), emptySet(), resolve, now,
+            kindByTxid = mapOf(r.txidHex to AssetLockKind.PLATFORM)
+        )
+        val row = plan.updates.single()
+        assertEquals(resolve(R.string.transaction_row_platform), row.title)
         assertEquals(-3_000_000L, row.valueSatoshis)
         assertEquals(TxDisplayCacheEntry.ICON_SENT, row.iconType)
         assertEquals(TxDisplayCacheEntry.FLAG_SENT, row.filterFlags)
@@ -509,7 +550,7 @@ class CutoverUiDataServiceTest {
             mapOf(cached.rowId to cached), emptySet(), resolve, now,
             kindByTxid = mapOf(displayHex(7) to AssetLockKind.UNSHIELD_EXTERNAL)
         )
-        assertEquals(resolve(R.string.transaction_row_unshielded_withdrawal), plan.updates.single().title)
+        assertEquals(resolve(R.string.transaction_row_withdrawal), plan.updates.single().title)
     }
 
     @Test
@@ -920,7 +961,7 @@ class CutoverUiDataServiceTest {
         val richTitles = listOf(
             R.string.transaction_row_shielded,
             R.string.transaction_row_unshielded,
-            R.string.transaction_row_unshielded_withdrawal,
+            R.string.transaction_row_withdrawal,
             R.string.transaction_row_invitation,
             R.string.dashpay_upgrade_fee,
             R.string.dashpay_topup_fee,

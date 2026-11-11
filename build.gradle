@@ -8,9 +8,18 @@ buildscript {
         // truth for both the dependency coordinate (wallet/build.gradle) and the
         // DASH_SDK_VERSION BuildConfig field shown on the About screen once the
         // cutover hands L1 ownership to the SDK.
-        // Recipe: HashEngineering/dash-wallet-qa
-        // recipes/platform/5.1.0-int36.yaml.
-        dashSdkVersion = '5.1.0-int36-20261106.165805-1'
+        // Pre-release SDK snapshot published to the Sonatype snapshots repository
+        // (declared below as 'Central Portal Snapshots'; anonymous read). Pinned to
+        // the exact timestamped build, not the -SNAPSHOT name, so a later upload
+        // can't change what this commit builds. 5.1.0-int37: HashEngineering/platform
+        // integration/5.1.0-int37 @ 45d7bcb1b2 = int36 (fund_from_asset_lock_external,
+        // used by the Core → third-party Platform address send) plus three bindings the
+        // Advanced-mode External Send uses: the partial-amount Platform-address withdrawal
+        // (ManagedPlatformWallet.withdrawCredits with explicit WithdrawalInputs, Platform →
+        // Core), and the third-party shields PlatformWalletManager.shieldedShieldToRecipient
+        // (Type 15, Platform → Shielded) and .shieldedShieldFromIdentityToRecipient
+        // (Type 21, Identity → Shielded).
+        dashSdkVersion = '5.1.0-int37-20261108.041023-1'
         // Legacy dashj-platform SDK (org.dashj.platform), master's pin. It replaces the
         // 5.0.0-20261016.200955-3 snapshot this branch pinned for document serialization
         // format 3 (Platform protocol 14) and the IdentityPublicKey.toObject() CBOR fix;
