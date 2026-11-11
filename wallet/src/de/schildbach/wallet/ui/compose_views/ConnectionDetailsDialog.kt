@@ -39,11 +39,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.lifecycle.lifecycleScope
-import de.schildbach.wallet.ui.LockScreenActivity
-import de.schildbach.wallet.ui.more.connections.awaitUnlockedConnectionDialog
-import de.schildbach.wallet.ui.more.connections.disconnectConfirmationDialog
-import kotlinx.coroutines.launch
+import de.schildbach.wallet.ui.more.connections.launchConnectionDisconnect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -126,18 +122,6 @@ class ConnectionDetailsDialog : OffsetDialogFragment(R.layout.dialog_compose_con
         }
     }
 
-    private fun confirmDisconnect(connection: DAppConnection) {
-        val host = activity as? LockScreenActivity ?: return
-        viewLifecycleOwner.lifecycleScope.launch {
-            val confirmed = awaitUnlockedConnectionDialog(host, viewLifecycleOwner, host.walletLocked,
-                { viewModel.isWalletUnlocked }) { disconnectConfirmationDialog(requireContext(), connection.name) }
-            if (confirmed == true && viewModel.isWalletUnlocked) {
-                viewModel.disconnect(connection)
-                viewModel.closeConnection()
-            }
-        }
-    }
-
     private fun showInfo(info: ConnectInfo) {
         if (childFragmentManager.findFragmentByTag(INFO_SHEET) == null) {
             ConnectInfoDialog.newInstance(info).show(childFragmentManager, INFO_SHEET)
@@ -177,14 +161,7 @@ class ConnectionDetailsDialog : OffsetDialogFragment(R.layout.dialog_compose_con
             modifier = modifier,
             onFundingLimitInfo = { showInfo(ConnectInfo.FUNDING_LIMIT) },
             onSpendableBalanceInfo = { showInfo(ConnectInfo.SPENDABLE_BALANCE) },
-            onDisconnect = {
-                if (viewModel.isWalletUnlocked) {
-                    if (connection.legacyOnly) {
-                        viewModel.removeConnection(connection)
-                        viewModel.closeConnection()
-                    } else confirmDisconnect(connection)
-                }
-            },
+            onDisconnect = { launchConnectionDisconnect(viewModel, connection) { viewModel.closeConnection() } },
             onReconnect = {
                 viewModel.closeConnection()
                 (parentFragment as? ConnectionsFragment)?.launchScanner()
