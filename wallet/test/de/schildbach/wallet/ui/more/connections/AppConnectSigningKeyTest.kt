@@ -23,11 +23,13 @@ import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.PlatformService
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.testPlatformRepo
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
 import io.mockk.verify
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.runBlocking
 import org.bitcoinj.core.Context
 import org.bitcoinj.core.ECKey
 import org.bitcoinj.core.Sha256Hash
@@ -48,6 +50,7 @@ import org.bouncycastle.crypto.params.KeyParameter
 import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.dpp.identity.Identity
 import org.dashj.platform.dpp.identity.IdentityPublicKey
+import org.dashj.platform.dpp.identity.SingleContractDocumentType
 import org.dashj.platform.sdk.KeyType
 import org.dashj.platform.sdk.Purpose
 import org.dashj.platform.sdk.SecurityLevel
@@ -301,6 +304,50 @@ class AppConnectSigningKeyTest {
         assertUnwrappedCancellation(cancellation) { session(identity, walletRepo).readSigningIdentity(aesKey) }
         verify(exactly = 0) { parent.deriveChildKey(any<ChildNumber>()) }
         verify(exactly = 0) { auth.addNewKey(any(), any()) }
+    }
+
+    @Test fun `revoking shared profile keys issues a replacement MASTER key before signing the update`() {
+        // The MASTER key at keyId 0 was replaced by one at keyId 2, an index a new chain has not issued;
+        // keyId 4 is an unlinked DashPay profile key (the DashPay contract id) to revoke.
+        val profileKey = IdentityPublicKey(4, KeyType.ECDSA_HASH160, Purpose.AUTHENTICATION, SecurityLevel.HIGH,
+            SingleContractDocumentType(Identifier.from("Bwr4WHCPz5rFVAD87RqTs3izo4zpzwsEdKPWUT1NS1C7"), "profile"), ByteArray(20) { 4 }, false)
+        val identity = Identity(
+            identityId,
+            listOf(
+                IdentityPublicKey(0, KeyType.ECDSA_SECP256K1, Purpose.AUTHENTICATION, SecurityLevel.MASTER, null,
+                    chainPublicKey(walletAuth, 0), false, disabledAt = 50),
+                key(1, Purpose.AUTHENTICATION, SecurityLevel.CRITICAL, chainPublicKey(walletAuth, 1)),
+                key(2, Purpose.AUTHENTICATION, SecurityLevel.MASTER, chainPublicKey(walletAuth, 2)),
+                key(3, Purpose.TRANSFER, SecurityLevel.CRITICAL, chainPublicKey(walletAuth, 3)),
+                profileKey
+            ),
+            1_000_000L, 1, 1
+        )
+        assertNull(chain.findKeyFromPubKey(identity.publicKeys[2].data))
+        val walletRepo = platformRepo()
+        val wallet = checkNotNull(walletRepo.walletApplication.wallet)
+        every { wallet.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) } returns walletAuth
+        val service = mockk<PlatformService>(relaxed = true)
+        every { service.platform.client.getIdentity(any(), true) } returns identity
+        val identities = mockk<IdentityRepository>(relaxed = true)
+        every { identities.blockchainIdentity?.uniqueIdentifier } returns identityId
+        val config = mockk<DashConnectConfig>(relaxed = true)
+        coEvery { config.getGrants() } returns emptyList()
+        val session = AppConnectSession(service, walletRepo, identities, config)
+
+        // The update is authorized once more right before the native submission, i.e. only after its
+        // MASTER key resolved; stop there, since the native SDK is not loaded in unit tests.
+        var checks = 0
+        val reached = "reached the identity update submission"
+        val authorization = ConnectionAuthorization { if (++checks > 1) error(reached) else true }
+        val error = assertThrows(IllegalStateException::class.java) {
+            runBlocking(authorization) { session.revokeSharedProfileKeys(listOf(4), session.scope()) }
+        }
+
+        // compared by message: coroutines may rethrow a copy of the exception
+        assertEquals(reached, error.message)
+        assertEquals(2, checks)
+        assertEquals(2, session.signingKey(identity, SecurityLevel.MASTER, time).id)
     }
 
     @Test(timeout = 60_000)

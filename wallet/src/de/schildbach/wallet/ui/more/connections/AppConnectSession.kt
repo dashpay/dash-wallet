@@ -669,7 +669,8 @@ internal class AppConnectSession(
             val keyParameter = walletRepo.getWalletEncryptionKey()
             check(!wallet.isEncrypted || keyParameter != null) { "Wallet password unavailable. Unlock the wallet and try again." }
             checkScope(scope)
-            val identity = readIdentity()
+            // signs the update with the MASTER key, which must first be issued on the identity chain
+            val identity = readSigningIdentity(keyParameter)
             val disable = sharedProfileKeyIds(identity, scope).filter { it in ids }
             if (disable.isEmpty()) return@withLock
             rememberIdentity(identity)
