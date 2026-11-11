@@ -735,6 +735,87 @@ class SdkTxDetailTest {
         }
     }
 
+    @Test
+    fun `incoming tx with a foreign mirrored input shows no fee`() {
+        // DW-1658 round 2 finding 2: load()'s input walk fed every resolved input
+        // TXO's value into derivedFeeDuffs unconditionally, with no exclusion at
+        // all. A contact later spending the watch-only mirror output this PR's
+        // output-side fix already excludes ([isForeignTxo]) must have that
+        // input's value excluded too, or the incoming receive shows a fee built
+        // from the contact's own coin instead of null (its own KDoc's contract:
+        // "incoming txs, whose input values the wallet never tracked").
+        val walletIdHex = "01".repeat(32)
+        val contactAccountId = 13L
+        val externalAccountType = SdkTxContactResolver.ACCOUNT_TYPE_DASHPAY_EXTERNAL
+
+        val manager = mockk<org.dashfoundation.dashsdk.wallet.PlatformWalletManager> {
+            every { wallets } returns MutableStateFlow(mapOf(walletIdHex to mockk(relaxed = true)))
+        }
+        val entity = mockk<TransactionEntity> {
+            every { txid } returns decoded.txid
+            every { transactionData } returns rawTxBytes
+            every { netAmount } returns 70_000L
+            every { fee } returns null
+            every { context } returns 1
+            every { direction } returns 0 // incoming
+            every { firstSeen } returns 1_770_000_000L
+            every { blockTimestamp } returns 0
+        }
+        // The single input is the contact's own watch-only mirror of the money
+        // it later spends back to us — foreign by accountId, the exact row
+        // class SdkTxStoreWalker's isForeignTxo/txoIsForeignSql unify.
+        val foreignInputTxo = mockk<org.dashfoundation.dashsdk.persistence.entities.TxoEntity> {
+            every { accountId } returns contactAccountId
+            every { coreAddressId } returns null
+            every { address } returns "contact-mirror-address"
+            every { amount } returns 95_247L
+        }
+        val inputOutpoint = txoOutpoint(decoded.inputs.single().prevTxid, decoded.inputs.single().prevVout)
+        val db = mockk<DashDatabase>(relaxed = true)
+        every { db.transactionDao() } returns mockk { coEvery { getByTxid(any()) } returns entity }
+        coEvery { db.txoDao().getByOutpoint(any()) } answers {
+            if (firstArg<ByteArray>().contentEquals(inputOutpoint)) foreignInputTxo else null
+        }
+        every { db.accountDao().observeByWalletAndType(any(), externalAccountType) } returns
+            flowOf(
+                listOf(
+                    org.dashfoundation.dashsdk.persistence.entities.AccountEntity(
+                        id = contactAccountId,
+                        walletId = ByteArray(32),
+                        accountType = externalAccountType,
+                        accountIndex = 0,
+                        accountTypeName = "DashpayExternalAccount"
+                    )
+                )
+            )
+        every { db.coreAddressDao().observeByAccount(contactAccountId) } returns flowOf(emptyList())
+        val sdkService = mockk<DashSdkService> {
+            coEvery { ensureStarted() } returns Unit
+            every { databaseOrNull() } returns db
+            every { walletManagerOrNull() } returns manager
+        }
+        val displayCacheDao = mockk<de.schildbach.wallet.database.dao.TxDisplayCacheDao> {
+            coEvery { getEntriesByIds(any()) } returns emptyList()
+        }
+
+        mockkObject(TransactionDecoder)
+        try {
+            every { TransactionDecoder.decode(any(), any()) } returns decoded
+            val detail = requireNotNull(
+                runBlocking {
+                    SdkTxDetailProvider(sdkService, displayCacheDao, mockk(relaxed = true)) { _, _ -> null }
+                        .load(decoded.txidDisplayHex)
+                }
+            )
+            assertNull(
+                "a foreign (contact-mirrored) input must not fund the derived fee",
+                detail.feeDuffs
+            )
+        } finally {
+            unmockkObject(TransactionDecoder)
+        }
+    }
+
     // ── Metadata source (SDK-only txs) ────────────────────────────────
 
     @Test
@@ -955,6 +1036,8 @@ class SdkTxDetailTest {
                 coEvery { getByOutpoint(any()) } answers {
                     if (inputTxoAmount != null && firstArg<ByteArray>().contentEquals(inputOutpoint)) {
                         mockk<org.dashfoundation.dashsdk.persistence.entities.TxoEntity> {
+                            every { accountId } returns null
+                            every { coreAddressId } returns null
                             every { amount } returns inputTxoAmount
                             every { address } returns "input-address"
                         }
@@ -963,10 +1046,21 @@ class SdkTxDetailTest {
                     }
                 }
             }
+            // No external (DashPay watch-only) accounts in this fixture's wallet, so the
+            // single input TXO above is never foreign — resolved so load()'s fail-closed
+            // exclusion handling (DW-1658 round 2 finding 2) does not null the derived fee
+            // this test exercises.
+            every { accountDao() } returns mockk {
+                every { observeByWalletAndType(any(), any()) } returns flowOf(emptyList())
+            }
+        }
+        val manager = mockk<org.dashfoundation.dashsdk.wallet.PlatformWalletManager> {
+            every { wallets } returns MutableStateFlow(mapOf("01".repeat(32) to mockk(relaxed = true)))
         }
         val sdkService = mockk<DashSdkService> {
             coEvery { ensureStarted() } returns Unit
             every { databaseOrNull() } returns db
+            every { walletManagerOrNull() } returns manager
         }
         val row = de.schildbach.wallet.database.entity.TxDisplayCacheEntry(
             rowId = decoded.txidDisplayHex,

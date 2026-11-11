@@ -502,8 +502,20 @@ class SdkTxDetailProvider internal constructor(
         val txoDao = db.txoDao()
         val myOutputAddresses = mutableSetOf<String>()
         var ownershipUnknown = false
+        val inputTxos = decoded?.inputs.orEmpty().map { input ->
+            txoDao.getByOutpoint(txoOutpoint(input.prevTxid, input.prevVout))
+        }
+        // Resolved once for both walks below: the output walk needs it to tell
+        // a contact's mirrored output from ours, and the input walk needs the
+        // same sets to tell a contact's mirrored INPUT from ours (DW-1658 round
+        // 2 finding 2) — a foreign input must not fund derivedFeeDuffs's Σin
+        // any more than a foreign output may be shown as ours.
+        val exclusion = if (!decoded?.outputs.isNullOrEmpty() || inputTxos.isNotEmpty()) {
+            foreignContactTxoExclusion(sdkService, db)
+        } else {
+            null
+        }
         if (!decoded?.outputs.isNullOrEmpty()) {
-            val exclusion = foreignContactTxoExclusion(sdkService, db)
             if (exclusion == null) {
                 // Fail-closed for BOTH directions: without the exclusion sets, no TXO
                 // row can be told apart from a contact's foreign output, so the walk
@@ -523,8 +535,25 @@ class SdkTxDetailProvider internal constructor(
                 }
             }
         }
-        val inputTxos = decoded?.inputs.orEmpty().map { input ->
-            txoDao.getByOutpoint(txoOutpoint(input.prevTxid, input.prevVout))
+
+        // Input values feeding the derived fee ([derivedFeeDuffs]): a resolved
+        // input that is a contact's foreign mirror TXO (DIP-15, the same rule
+        // the output walk applies above) is not this wallet's coin, so it must
+        // not fund Σin — treated the same as an UNRESOLVED input (null), which
+        // fails derivedFeeDuffs's all-non-null precondition and leaves the fee
+        // null rather than built from the contact's own money. Exclusion
+        // unavailable → fail closed like the output walk: every resolved input
+        // is treated as unresolved, since none can be told apart from foreign.
+        val inputFeeValues: List<Long?> = if (exclusion == null) {
+            inputTxos.map { null }
+        } else {
+            val (externalAccountIds, externalAddresses) = exclusion
+            inputTxos.map { txo ->
+                val isForeign = txo != null && isForeignTxo(
+                    txo.accountId, txo.coreAddressId, txo.address, externalAccountIds, externalAddresses
+                )
+                if (isForeign) null else txo?.amount
+            }
         }
 
         // The fee the history list used: the store's, or — while the store still has it
@@ -534,7 +563,7 @@ class SdkTxDetailProvider internal constructor(
             storeRecordOf(entity),
             walletRecord = walletRecordFor(db, txIdDisplayHex.lowercase()),
             cacheEntry = cacheEntryFor(txIdDisplayHex),
-            derivedFee = derivedFeeDuffs(decoded, inputTxos.map { it?.amount })
+            derivedFee = derivedFeeDuffs(decoded, inputFeeValues)
         )
 
         // Classify a wallet-authored internal move as a Platform-funding asset
@@ -547,7 +576,7 @@ class SdkTxDetailProvider internal constructor(
             decoded = decoded,
             myOutputAddresses = myOutputAddresses,
             inputTxoAddresses = inputTxos.map { it?.address },
-            inputTxoValues = inputTxos.map { it?.amount },
+            inputTxoValues = inputFeeValues,
             assetLockKind = assetLockKind,
             ownershipUnknown = ownershipUnknown
         )

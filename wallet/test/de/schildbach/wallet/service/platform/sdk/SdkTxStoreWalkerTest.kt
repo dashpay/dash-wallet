@@ -434,6 +434,11 @@ class SdkTxStoreWalkerTest {
         vout: Int,
         amount: Long,
         address: String,
+        // Defaults to [address] — every caller but the parity test wants the
+        // pre-existing fixture shape (coreAddressId == address); the parity
+        // test overrides it to exercise the one case the two classifiers
+        // could disagree on (DW-1658 round 2 finding 1).
+        coreAddressId: String? = address,
         spendingTxid: ByteArray? = null,
         accountId: Long? = null
     ): ByteArray {
@@ -457,7 +462,7 @@ class SdkTxStoreWalkerTest {
             txid,
             spendingTxid,
             accountId,
-            address
+            coreAddressId
         )
         return outpoint
     }
@@ -839,21 +844,28 @@ class SdkTxStoreWalkerTest {
 
     /**
      * [isForeignTxo] and [txoIsForeignSql] must classify every row the same
-     * way. They read different primary signals (`accountId` first in
-     * Kotlin; only `address` via `core_addresses` in SQL), which is safe
-     * only because the SDK's own persistence layer is the sole writer of
-     * both `txos.accountId` and `core_addresses`, and never writes a row
-     * the two could disagree on — see [isForeignTxo]'s KDoc for the
-     * on-device evidence. Four row shapes, covering every combination the
-     * two signals can take:
+     * way. [txoIsForeignSql] now expresses [isForeignTxo]'s own precedence
+     * in SQL BY CONSTRUCTION (`accountId` first, else `coreAddressId ?:
+     * address` via `core_addresses`), so the two cannot silently split apart
+     * — see [txoIsForeignSql]'s KDoc. Six row shapes, covering every
+     * combination the two signals can take, including the two the SQL
+     * fragment used to get wrong when it only ever consulted `address`
+     * (DW-1658 round 2 finding 1):
      * - `accountId`-classified: `accountId` resolves to the external
-     *   account; `address` ALSO does (the writer's invariant — a row where
-     *   only `accountId` resolved has never been observed, see the KDoc);
+     *   account; `address` ALSO does;
      * - address-classified: `accountId` NULL (the only shape ever observed
      *   on Android for a DIP-15 friendship send), `address` resolves;
      * - both: `accountId` and `address` both resolve, to the same account;
      * - neither: an ordinary owned row, `accountId` points at the wallet's
-     *   own BIP44 account and `address` does not resolve externally.
+     *   own BIP44 account and `address` does not resolve externally;
+     * - `coreAddressId`-diverges-from-address: `accountId` NULL,
+     *   `coreAddressId` resolves externally but the row's OWN `address`
+     *   does not resolve at all — the shape the old address-only SQL
+     *   fragment could never classify as foreign;
+     * - `accountId`-populated-directly: `accountId` itself names the
+     *   external account and `address` does not resolve at all — the shape
+     *   the old SQL fragment, which never looked at `accountId`, could
+     *   never classify as foreign either.
      */
     @Test
     fun isForeignTxo_and_txoIsForeignSql_agreeAcrossAccountIdAndAddressSignals() = runBlocking {
@@ -864,8 +876,9 @@ class SdkTxStoreWalkerTest {
         insertCoreAddress("addr_only", extAccount)
         insertCoreAddress("both_signals", extAccount)
         insertCoreAddress("owned_addr", bip44Account)
+        insertCoreAddress("divergent_core_addr", extAccount)
 
-        for (n in 20..23) {
+        for (n in 20..25) {
             insertTx(txid(n), direction = 0, netAmount = 1_000, payload = ByteArray(0), firstSeen = 1_700_000_000L + n)
         }
 
@@ -873,7 +886,15 @@ class SdkTxStoreWalkerTest {
             "accountId-classified" to insertTxo(txid(20), 0, 1_000, "acctid_and_addr", accountId = extAccount),
             "address-classified" to insertTxo(txid(21), 0, 1_000, "addr_only", accountId = null),
             "both" to insertTxo(txid(22), 0, 1_000, "both_signals", accountId = extAccount),
-            "neither" to insertTxo(txid(23), 0, 1_000, "owned_addr", accountId = bip44Account)
+            "neither" to insertTxo(txid(23), 0, 1_000, "owned_addr", accountId = bip44Account),
+            "coreAddressId-diverges-from-address" to insertTxo(
+                txid(24), 0, 1_000, "divergent_own_address",
+                coreAddressId = "divergent_core_addr", accountId = null
+            ),
+            "accountId-populated-directly" to insertTxo(
+                txid(25), 0, 1_000, "unregistered_address_for_accountid_row",
+                coreAddressId = null, accountId = extAccount
+            )
         )
 
         val (externalAccountIds, externalAddresses) = foreignTxoExclusionSets(db, walletId)
@@ -905,12 +926,15 @@ class SdkTxStoreWalkerTest {
             val kotlin = kotlinSaysForeign(outpoint)
             assertEquals("$label: txoIsForeignSql vs isForeignTxo disagree", sql, kotlin)
         }
-        // The three external shapes are foreign, the owned one is not —
-        // proving the fixture actually exercises both outcomes.
+        // Five external shapes are foreign, the owned one is not — proving
+        // the fixture actually exercises both outcomes, including the two
+        // divergent shapes the old address-only SQL fragment misclassified.
         assertTrue(sqlSaysForeign(rows[0].second))
         assertTrue(sqlSaysForeign(rows[1].second))
         assertTrue(sqlSaysForeign(rows[2].second))
         assertFalse(sqlSaysForeign(rows[3].second))
+        assertTrue(sqlSaysForeign(rows[4].second))
+        assertTrue(sqlSaysForeign(rows[5].second))
     }
 
     @Test
