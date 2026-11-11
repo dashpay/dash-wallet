@@ -32,7 +32,9 @@ import io.mockk.mockk
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.take
@@ -70,6 +72,10 @@ class ReceiveViewModelTest {
     private val shieldedFlag = MutableStateFlow<Boolean?>(false)
     private val identity = MutableStateFlow(identityData(hasUsername = false))
 
+    /** What the view model's identity read collects; [identity] unless a test fails it. */
+    private var identitySource: Flow<BlockchainIdentityData> = identity
+    private val mainDispatcher = UnconfinedTestDispatcher()
+
     private var coreAddress: String? = CORE_ADDRESS
     private val reads = mutableListOf<ReceiveBalanceTab>()
 
@@ -81,7 +87,7 @@ class ReceiveViewModelTest {
 
     @Before
     fun setUp() {
-        Dispatchers.setMain(UnconfinedTestDispatcher())
+        Dispatchers.setMain(mainDispatcher)
     }
 
     @After
@@ -106,7 +112,7 @@ class ReceiveViewModelTest {
             every { observeProfileByUserId(any()) } returns flowOf(null)
         }
         val identityConfig = mockk<BlockchainIdentityConfig> {
-            every { observe() } returns identity
+            every { observePreservingErrors() } returns identitySource
         }
         val dashPayConfig = mockk<DashPayConfig> {
             every { observePreservingErrors(DashPayConfig.USE_KOTLIN_SDK_SHIELDED) } returns shieldedFlag
@@ -178,6 +184,76 @@ class ReceiveViewModelTest {
         val state = viewModel.uiState.value
         assertEquals(CORE, state.selectedTab)
         assertEquals(CORE_ADDRESS, state.address)
+    }
+
+    @Test
+    fun `a failed identity read withholds the Identity tab until a retry reads it`() {
+        identity.value = identityData(hasUsername = true)
+        var attempts = 0
+        identitySource = flow {
+            attempts++
+            if (attempts <= 2) throw IOException("datastore")
+            emitAll(identity)
+        }
+        val viewModel = buildViewModel(supportsPlatform = false)
+        viewModel.refresh()
+
+        // failing: no Identity tab, no username, and Core is not reloaded by the fallback
+        assertEquals(1, attempts)
+        assertEquals(listOf(CORE), viewModel.uiState.value.tabs)
+        assertNull(viewModel.uiState.value.username)
+        val coreReads = reads.count { it == CORE }
+
+        mainDispatcher.scheduler.advanceTimeBy(5_001)
+        assertEquals(2, attempts)
+        assertEquals(listOf(CORE), viewModel.uiState.value.tabs)
+        assertNull(viewModel.uiState.value.username)
+        assertEquals(coreReads, reads.count { it == CORE })
+
+        // the read recovers on the same view model
+        mainDispatcher.scheduler.advanceTimeBy(10_001)
+        assertEquals(3, attempts)
+        assertEquals(listOf(CORE, IDENTITY), viewModel.uiState.value.tabs)
+        assertEquals("johndoe", viewModel.uiState.value.username)
+        assertEquals(CORE, viewModel.uiState.value.selectedTab)
+        assertEquals(coreReads, reads.count { it == CORE })
+    }
+
+    @Test
+    fun `a failed identity read while Identity is selected falls back to Core, which stays after recovery`() {
+        identity.value = identityData(hasUsername = true)
+        val fail = CompletableDeferred<Unit>()
+        var attempts = 0
+        identitySource = flow {
+            attempts++
+            if (attempts == 1) {
+                emit(identity.value)
+                fail.await()
+                throw IOException("datastore")
+            }
+            emitAll(identity)
+        }
+        val viewModel = buildViewModel(supportsPlatform = false)
+        viewModel.selectTab(IDENTITY)
+        assertEquals(IDENTITY, viewModel.uiState.value.selectedTab)
+        assertEquals(IDENTITY_ID, viewModel.uiState.value.address)
+
+        fail.complete(Unit)
+        var state = viewModel.uiState.value
+        assertEquals(listOf(CORE), state.tabs)
+        assertEquals(CORE, state.selectedTab)
+        assertEquals(CORE_ADDRESS, state.address)
+        assertNull(state.username)
+        val coreReads = reads.count { it == CORE }
+
+        mainDispatcher.scheduler.advanceTimeBy(5_001)
+        state = viewModel.uiState.value
+        assertEquals(2, attempts)
+        assertEquals(listOf(CORE, IDENTITY), state.tabs)
+        assertEquals(CORE, state.selectedTab)
+        assertEquals(CORE_ADDRESS, state.address)
+        assertEquals("johndoe", state.username)
+        assertEquals(coreReads, reads.count { it == CORE })
     }
 
     // ── switching tabs ───────────────────────────────────────────────────────

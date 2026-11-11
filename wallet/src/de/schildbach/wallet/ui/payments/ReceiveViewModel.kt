@@ -29,12 +29,15 @@ import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -42,6 +45,8 @@ import org.dash.wallet.common.money.Coin
 import org.dash.wallet.common.payments.parsers.AddressNetwork
 import org.dash.wallet.common.payments.parsers.PaymentURI
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.util.readRetryDelayMs
+import org.dash.wallet.common.util.retryReadErrors
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
@@ -115,7 +120,8 @@ class ReceiveViewModel internal constructor(
     identityConfig: BlockchainIdentityConfig,
     dashPayConfig: DashPayConfig,
     private val analytics: AnalyticsService,
-    private val supportsPlatform: Boolean
+    private val supportsPlatform: Boolean,
+    retryDelayMs: (Long) -> Long = ::readRetryDelayMs
 ) : ViewModel() {
 
     @Inject
@@ -129,6 +135,24 @@ class ReceiveViewModel internal constructor(
 
     companion object {
         private val log = LoggerFactory.getLogger(ReceiveViewModel::class.java)
+
+        /**
+         * The identity, or null while it cannot be read: [BlockchainIdentityConfig.observe]
+         * turns a failed read into "no identity" and then completes, so one transient failure
+         * would hide the Identity tab for good. This keeps the read alive with
+         * [retryReadErrors] and emits null (no identity, no username) while it fails.
+         */
+        internal fun identityFlow(
+            identityConfig: BlockchainIdentityConfig,
+            retryDelayMs: (Long) -> Long = ::readRetryDelayMs
+        ): Flow<BlockchainIdentityData?> = identityConfig.observePreservingErrors()
+            .map<BlockchainIdentityData, BlockchainIdentityData?> { it }
+            .retryReadErrors(null, retryDelayMs) { e, attempt ->
+                // never the identity itself: only that the read failed
+                log.warn("identity read failed (attempt {}); withholding the Identity tab", attempt, e)
+            }
+            // repeated failures each emit null: one is enough
+            .distinctUntilChanged()
 
         /** The balance tabs to show, in display order. */
         @VisibleForTesting
@@ -147,8 +171,8 @@ class ReceiveViewModel internal constructor(
         /**
          * The QR content for [address] on [tab]. Core keeps today's `dash:` URI (with the
          * username, as [org.dash.wallet.common.ui.receive.ReceiveInfoView] does); the other
-         * tabs are not base58 L1 addresses, which [PaymentURI] cannot carry, so they encode
-         * the bare value.
+         * tabs are not base58 L1 addresses ([AddressNetwork.fromDashAddress] rejects them), so
+         * they encode the bare value.
          */
         @VisibleForTesting
         fun qrPayloadFor(tab: ReceiveBalanceTab, address: String, username: String?): String =
@@ -164,17 +188,20 @@ class ReceiveViewModel internal constructor(
                 else -> address
             }
 
+        /** The wallet's network, for its `dash:` URI scheme: from its id, never from an address. */
+        private val walletNetwork: AddressNetwork by lazy { AddressNetwork.fromId(Constants.NETWORK_PARAMETERS.id) }
+
         /**
          * The Specify amount request for a tab other than Core: exactly
-         * `dash:<address>?amount=<amount>`, the amount in DASH formatted as Core's `dash:` URI
-         * formats it ([Coin.toPlainString], as [PaymentURI.convertToPaymentURI] does). Built
-         * by hand because [PaymentURI] and [AddressNetwork] accept only base58 L1 addresses,
-         * not bech32 shielded/Platform addresses or identity IDs.
+         * `dash:<address>?amount=<amount>`, built by [PaymentURI.convertToPaymentURI] as Core's
+         * request is. That builder appends [address] as given, so it carries bech32
+         * shielded/Platform addresses and identity IDs too; the network comes from the wallet,
+         * not from [AddressNetwork.fromDashAddress], which accepts only base58 L1 addresses.
          */
         fun amountRequestPayload(address: String, amount: Coin): String {
             require(address.isNotEmpty()) { "no address for the payment request" }
             require(amount.signum() >= 0) { "the requested amount must not be negative" }
-            return "${AddressNetwork.DASH_SCHEME}:$address?amount=${amount.toPlainString()}"
+            return PaymentURI.convertToPaymentURI(walletNetwork, address, amount, null, null)
         }
 
         /** [qrPayloadFor], or null (fail closed) when the URI builder rejects [address]. */
@@ -211,18 +238,20 @@ class ReceiveViewModel internal constructor(
             }
             .launchIn(viewModelScope)
 
-        // Same wiring as PaymentsViewModel's profile observer.
-        identityConfig.observe()
+        // Same wiring as PaymentsViewModel's profile observer, but fail closed and retried: a
+        // failed identity read withholds the Identity tab and the username (null below) until a
+        // later read succeeds, instead of reading as "no identity" for the rest of this screen.
+        identityFlow(identityConfig, retryDelayMs)
             .onEach { data ->
                 val previousId = identity?.userId
                 identity = data
                 applyTabs()
-                if (_uiState.value.selectedTab == ReceiveBalanceTab.IDENTITY && previousId != data.userId) {
+                if (_uiState.value.selectedTab == ReceiveBalanceTab.IDENTITY && previousId != data?.userId) {
                     load(ReceiveBalanceTab.IDENTITY, force = true)
                 }
             }
             .flatMapLatest { data ->
-                val userId = data.userId
+                val userId = data?.userId
                 if (userId != null && data.hasUsername) {
                     platformRepo.observeProfileByUserId(userId)
                 } else {
