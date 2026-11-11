@@ -147,8 +147,8 @@ class ReceiveViewModel internal constructor(
         /**
          * The QR content for [address] on [tab]. Core keeps today's `dash:` URI (with the
          * username, as [org.dash.wallet.common.ui.receive.ReceiveInfoView] does); the other
-         * tabs are not base58 L1 addresses, which [PaymentURI] cannot carry, so they encode
-         * the bare value.
+         * tabs are not base58 L1 addresses ([AddressNetwork.fromDashAddress] rejects them), so
+         * they encode the bare value.
          */
         @VisibleForTesting
         fun qrPayloadFor(tab: ReceiveBalanceTab, address: String, username: String?): String =
@@ -164,17 +164,20 @@ class ReceiveViewModel internal constructor(
                 else -> address
             }
 
+        /** The wallet's network, for its `dash:` URI scheme: from its id, never from an address. */
+        private val walletNetwork: AddressNetwork by lazy { AddressNetwork.fromId(Constants.NETWORK_PARAMETERS.id) }
+
         /**
          * The Specify amount request for a tab other than Core: exactly
-         * `dash:<address>?amount=<amount>`, the amount in DASH formatted as Core's `dash:` URI
-         * formats it ([Coin.toPlainString], as [PaymentURI.convertToPaymentURI] does). Built
-         * by hand because [PaymentURI] and [AddressNetwork] accept only base58 L1 addresses,
-         * not bech32 shielded/Platform addresses or identity IDs.
+         * `dash:<address>?amount=<amount>`, built by [PaymentURI.convertToPaymentURI] as Core's
+         * request is. That builder appends [address] as given, so it carries bech32
+         * shielded/Platform addresses and identity IDs too; the network comes from the wallet,
+         * not from [AddressNetwork.fromDashAddress], which accepts only base58 L1 addresses.
          */
         fun amountRequestPayload(address: String, amount: Coin): String {
             require(address.isNotEmpty()) { "no address for the payment request" }
             require(amount.signum() >= 0) { "the requested amount must not be negative" }
-            return "${AddressNetwork.DASH_SCHEME}:$address?amount=${amount.toPlainString()}"
+            return PaymentURI.convertToPaymentURI(walletNetwork, address, amount, null, null)
         }
 
         /** [qrPayloadFor], or null (fail closed) when the URI builder rejects [address]. */

@@ -47,7 +47,6 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -55,7 +54,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import org.dash.wallet.common.R
 import org.dash.wallet.common.ui.components.DashWalletTheme
@@ -136,7 +134,6 @@ fun SegmentedPicker(
     }
 
     val density = LocalDensity.current
-    val layoutDirection = LocalLayoutDirection.current
 
     // Resolve theme-aware defaults so the picker tracks light/dark; explicit style colors win.
     val colors = LocalDashColors.current
@@ -166,14 +163,10 @@ fun SegmentedPicker(
         val optionSizePx = if (containerSize > 0) containerSize * itemSize else 0f
         val positionPx = optionSizePx * internalSelectedIndex
 
-        // Calculate animation position
-        val positionDp = with(density) { positionPx.toDp() }
-        val targetPosition = if (isHorizontal && layoutDirection == LayoutDirection.Rtl) {
-            // For RTL horizontal mode, calculate position from the right side
-            with(density) { (containerWidth - optionSizePx - positionPx).toDp() }
-        } else {
-            positionDp
-        }
+        // The thumb's offset from the start edge. The thumb is start-aligned and Modifier.offset is
+        // direction-aware, so in RTL both already measure from the right, where option 0 sits;
+        // mirroring the position here as well would put the thumb over the mirrored option.
+        val targetPosition = with(density) { positionPx.toDp() }
 
         val animatedPosition by animateDpAsState(
             targetValue = targetPosition,
