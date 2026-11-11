@@ -155,4 +155,20 @@ class TransactionsListPolicyTest {
         )
         assertEquals(false, rebuildingWithCacheRowsVisible.isLoading)
     }
+
+    @Test
+    fun `a later rebuild can request loading and empty handling together`() {
+        // transactionsLoaded remains true across later rebuilds. showEmptyView()
+        // separately suppresses the empty text while isBuildingCache is true.
+        val laterRebuild = transactionsListPolicy(
+            cacheAdapterAttached = true,
+            cacheHasRows = false,
+            refreshState = settled,
+            transactionsLoaded = true,
+            isBuildingCache = true,
+            liveItemCount = 0,
+            headerIsEmpty = true
+        )
+        assertEquals(TransactionsListPolicy(swapToLive = true, isLoading = true, isEmpty = true), laterRebuild)
+    }
 }
