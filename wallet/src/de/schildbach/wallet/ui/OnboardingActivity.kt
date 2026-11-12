@@ -147,6 +147,9 @@ class OnboardingActivity : RestoreFromFileActivity() {
     private val inviteHandlerViewModel by viewModels<InviteHandlerViewModel>()
     private lateinit var binding: ActivityOnboardingBinding
 
+    /** Set when this screen routed to the Create / Recover choice (see [routeAwayIfWalletAlreadyInstalled]). */
+    private var offeringWalletChoice = false
+
     /** A safe-mode retry is loading the wallet off the main thread; drives the button's spinner. */
     private var safeModeRetryInProgress by mutableStateOf(false)
 
@@ -161,7 +164,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
     lateinit var pinRetryController: PinRetryController
 
     private val selectWordCountLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == RESULT_OK) {
+        if (result.resultCode == RESULT_OK && !routeAwayIfWalletAlreadyInstalled()) {
             viewModel.createNewWallet(
                 result.data!!.extras!!.getInt(SelectSecurityLevelActivity.EXTRA_WORD_COUNT)
             )
@@ -397,7 +400,53 @@ class OnboardingActivity : RestoreFromFileActivity() {
     }
 
     private fun onboarding() {
+        offeringWalletChoice = true
         initViewModel()
+    }
+
+    /**
+     * This screen offers Create / Recover only when it was created with no
+     * wallet on disk. It can outlive that: Reset Wallet followed by an invite
+     * link stacks several onboarding screens, and the one that finishes the
+     * flow leaves the others behind under MainActivity. Resuming one of those
+     * later and tapping Create used to install a second wallet over the live
+     * one without a reset, keeping the first wallet's identity records and
+     * leaving the new SDK wallet without a shielded runtime (MO-975). Before
+     * any create or restore, and whenever the screen comes back, a wallet that
+     * already exists sends the screen back through its routing instead.
+     *
+     * @return true if the screen is routing away and the caller must stop
+     */
+    private fun routeAwayIfWalletAlreadyInstalled(): Boolean {
+        if (isFinishing ||
+            !onboardingScreenIsStale(
+                walletFileExists = walletApplication.walletFileExists(),
+                walletInstalled = walletApplication.hasWallet(),
+                wipeInProgress = walletApplication.isWipeInProgress
+            )
+        ) {
+            return false
+        }
+        if (!isTaskRoot) {
+            // The wallet's own screens are underneath (MainActivity is
+            // singleTop, so routing to it from here would stack a second one).
+            log.info("stale onboarding screen: a wallet already exists — closing it")
+            finish()
+        } else {
+            log.info("stale onboarding screen: a wallet already exists — re-running the onboarding routing")
+            // The invite this screen was opened with was persisted when it was
+            // created; re-saving it on the recreate would replay it.
+            intent.removeExtra(EXTRA_INVITE)
+            recreate()
+        }
+        return true
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (offeringWalletChoice) {
+            routeAwayIfWalletAlreadyInstalled()
+        }
     }
 
     /**
@@ -621,18 +670,21 @@ class OnboardingActivity : RestoreFromFileActivity() {
     }
 
     private fun createNewWallet() {
+        if (routeAwayIfWalletAlreadyInstalled()) return
         selectWordCountLauncher.launch(
             Intent(this, SelectSecurityLevelActivity::class.java)
         )
     }
 
     private fun recoverWalletFromSeedPhrase() {
+        if (routeAwayIfWalletAlreadyInstalled()) return
         viewModel.logEvent(AnalyticsConstants.Onboarding.RECOVERY)
         walletApplication.initEnvironmentIfNeeded()
         startActivityForResult(Intent(this, RestoreWalletFromSeedActivity::class.java), REQUEST_CODE_RESTORE_WALLET)
     }
 
     private fun restoreWallet() {
+        if (routeAwayIfWalletAlreadyInstalled()) return
         viewModel.logEvent(AnalyticsConstants.Onboarding.RESTORE_FROM_FILE)
         restoreWalletFromFile()
     }
@@ -691,3 +743,15 @@ class OnboardingActivity : RestoreFromFileActivity() {
         }
     }
 }
+
+/**
+ * Pure rule behind OnboardingActivity's stale-screen check: a wallet is both
+ * installed and saved, and no reset is tearing it down. Onboarding never
+ * offers Create / Recover in that state (its routing sends it to the wallet),
+ * so a screen showing them is left over from before that wallet existed.
+ */
+internal fun onboardingScreenIsStale(
+    walletFileExists: Boolean,
+    walletInstalled: Boolean,
+    wipeInProgress: Boolean
+): Boolean = !wipeInProgress && walletFileExists && walletInstalled

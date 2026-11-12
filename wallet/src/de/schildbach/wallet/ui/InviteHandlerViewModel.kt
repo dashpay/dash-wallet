@@ -26,6 +26,7 @@ import de.schildbach.wallet.data.InvitationValidationState
 import de.schildbach.wallet.database.entity.BlockchainIdentityBaseData
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.IdentityCreationState
+import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.TopUpRepository
 import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
@@ -49,7 +50,8 @@ class InviteHandlerViewModel @Inject constructor(
     dashPayProfileDao: DashPayProfileDao,
     private val blockchainStateProvider: BlockchainStateProvider,
     private val topUpRepository: TopUpRepository,
-    private val dashPayConfig: DashPayConfig
+    private val dashPayConfig: DashPayConfig,
+    private val identityRepository: IdentityRepository
 ) : BaseProfileViewModel(blockchainIdentityDataDao, dashPayProfileDao) {
     companion object {
         private val log = LoggerFactory.getLogger(InviteHandlerViewModel::class.java)
@@ -177,6 +179,27 @@ class InviteHandlerViewModel @Inject constructor(
      */
     suspend fun isInviteClaimInProgress(): Boolean = withContext(Dispatchers.IO) {
         inviteClaimInProgress(blockchainIdentityDataDao.load())
+    }
+
+    /**
+     * Drops an invite-based identity record whose claim stopped on "Invite has
+     * already been used". That failure is terminal (retrying spends the same
+     * one-time key again and fails the same way), yet only the home tile's
+     * retry ([de.schildbach.wallet.ui.invite.InviteHandler.handleError])
+     * cleared it. Every other retry left it in place, and
+     * [isInviteClaimInProgress] then turned away every invite opened
+     * afterwards (MO-975). Call it before [isInviteClaimInProgress] when a new
+     * invite arrives.
+     *
+     * @return true if a record was cleared
+     */
+    suspend fun clearFailedInviteClaim(): Boolean = withContext(Dispatchers.IO) {
+        if (!inviteClaimFailedTerminally(blockchainIdentityDataDao.load())) {
+            return@withContext false
+        }
+        log.info("clearing an invite claim that failed because the invite was already used")
+        identityRepository.clearBlockchainIdentityData()
+        true
     }
 
     /**
@@ -354,3 +377,22 @@ internal fun inviteClaimInProgress(identity: BlockchainIdentityBaseData?): Boole
         identity.usingInvite &&
         identity.creationState > IdentityCreationState.NONE &&
         identity.creationState < IdentityCreationState.VOTING
+
+/**
+ * The message CreateIdentityService stores when an invite's funding was
+ * already spent by an earlier claim: the shielded note's nullifier is spent,
+ * or the L1 asset-lock outpoint was already used.
+ */
+internal const val INVITE_ALREADY_USED_MESSAGE = "Invite has already been used"
+
+/** Whether [creationStateErrorMessage] is the terminal "invite already used" failure. */
+internal fun isInviteAlreadyUsedError(creationStateErrorMessage: String?): Boolean =
+    creationStateErrorMessage?.contains(INVITE_ALREADY_USED_MESSAGE, ignoreCase = true) == true
+
+/**
+ * Pure rule behind [InviteHandlerViewModel.clearFailedInviteClaim]: an invite
+ * claim that is still recorded as in progress but stopped on the terminal
+ * "invite already used" error, which no retry can get past.
+ */
+internal fun inviteClaimFailedTerminally(identity: BlockchainIdentityBaseData?): Boolean =
+    inviteClaimInProgress(identity) && isInviteAlreadyUsedError(identity?.creationStateErrorMessage)

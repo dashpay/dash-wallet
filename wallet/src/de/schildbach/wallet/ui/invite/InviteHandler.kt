@@ -29,6 +29,7 @@ import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet.ui.OnboardingActivity
+import de.schildbach.wallet.ui.isInviteAlreadyUsedError
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -230,9 +231,7 @@ class InviteHandler(val activity: FragmentActivity, private val analytics: Analy
                 // dashj L1 outpoint-collision type), so without this it fell through to a
                 // generic "unknown reason". Match the message and show the same
                 // already-claimed dialog the L1 path uses.
-                blockchainIdentityData.creationStateErrorMessage?.contains(
-                    "Invite has already been used", ignoreCase = true
-                ) == true -> {
+                isInviteAlreadyUsedError(blockchainIdentityData.creationStateErrorMessage) -> {
                     showInviteAlreadyClaimedDialog(blockchainIdentityData.invite!!)
                     identityRepository.clearBlockchainIdentityData()
                     return true

@@ -1361,8 +1361,26 @@ class ShieldedBalanceServiceImpl internal constructor(
 
     /** The bring-up proper; the caller holds [lock] and sampled [generation] under it. */
     private suspend fun bringUpLocked(generation: Int): Boolean {
-        if (readyWalletIdHex.value != null) return true
         fun superseded() = stopGeneration.get() != generation
+        val readyHex = readyWalletIdHex.value
+        if (readyHex != null) {
+            // Ready means ready on the wallet the app is bound to NOW. A wallet
+            // that replaced the previous one without a reset (MO-975: a stale
+            // onboarding screen's Create) is bound by SdkWalletBinder, which
+            // removes the old SDK wallet but never stops this runtime: it stayed
+            // latched on the removed wallet, so every shielded call, the invite
+            // claim included, asked the new wallet for a sub-wallet it never got.
+            val boundHex = source.boundWalletIdOrNull()
+            if (boundHex == null || boundHex.equals(readyHex, ignoreCase = true)) return true
+            log.warn(
+                "shielded runtime is on SDK wallet {}… but the app wallet is now bound to {}… — restarting it",
+                readyHex.take(8),
+                boundHex.take(8)
+            )
+            tearDownReadyState()
+            stopNativeLoop()
+            if (superseded()) return false
+        }
 
         if (!source.hasShieldedSupport()) {
             log.info("shielded runtime unavailable: native build has no shielded support")

@@ -1164,6 +1164,37 @@ class ShieldedBalanceServiceTest {
         assertEquals(0, source.stopCalls)
     }
 
+    /**
+     * MO-975 (Andrei, 12.0.1-qa03): a wallet created from a stale onboarding
+     * screen replaced the previous one without a reset. SdkWalletBinder
+     * removed the old SDK wallet and bound the new one, but nothing stopped
+     * the shielded runtime, which stayed latched on the removed wallet: the
+     * invite claim's ensureShieldedReady() said ready, and the claim then
+     * found "no bound shielded sub-wallet for the claimer". Ready must mean
+     * ready on the wallet bound now.
+     */
+    @Test
+    fun bringUp_afterTheBoundWalletChanged_restartsOnTheNewWallet() = runBlocking {
+        val newWalletIdHex = "cd".repeat(32)
+        var bound = walletIdHex
+        val source = FakeSource(hasSupport = true, boundWalletId = { bound })
+        val service = service(source)
+        assertTrue(service.ensureShieldedReady())
+        assertEquals(1, source.bindCalls)
+
+        bound = newWalletIdHex // the replacement wallet is bound; nobody called stop()
+        source.syncRunning = true // the old wallet's loop is still running
+
+        assertTrue(service.ensureShieldedReady())
+        assertEquals("the old loop was stopped", 1, source.stopCalls)
+        assertEquals("re-bound on the new wallet", 2, source.bindCalls)
+        assertArrayEquals(ByteArray(32) { 0xcd.toByte() }, source.lastBoundWallet)
+
+        assertTrue("now ready on the new wallet: no further rebind", service.ensureShieldedReady())
+        assertEquals(2, source.bindCalls)
+        assertEquals(1, source.stopCalls)
+    }
+
     /** Regression: after a stop that succeeded, the next bring-up issues no extra native stop. */
     @Test
     fun bringUp_afterASuccessfulStop_issuesNoExtraNativeStop() = runBlocking {
