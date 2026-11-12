@@ -1185,8 +1185,11 @@ class ShieldedBalanceServiceTest {
         bound = newWalletIdHex // the replacement wallet is bound; nobody called stop()
         source.syncRunning = true // the old wallet's loop is still running
 
-        assertTrue(service.ensureShieldedReady())
+        assertFalse("the old runtime ends like a stop()", service.ensureShieldedReady())
         assertEquals("the old loop was stopped", 1, source.stopCalls)
+        assertEquals(ShieldedSyncStatus.NOT_READY, service.shieldedSyncStatus.value)
+
+        assertTrue(service.ensureShieldedReady())
         assertEquals("re-bound on the new wallet", 2, source.bindCalls)
         assertArrayEquals(ByteArray(32) { 0xcd.toByte() }, source.lastBoundWallet)
 
@@ -1224,11 +1227,13 @@ class ShieldedBalanceServiceTest {
 
     /**
      * Pre-review: mid-replacement both SDK wallets exist, so the bound wallet
-     * reads as unknown. The old wallet's runtime must not be served then (its
-     * receive address would be handed out), nor torn down on a transient read.
+     * reads as unknown (and stays so if pruning the orphan fails). The old
+     * wallet's runtime must not stay published to existing subscribers — its
+     * READY status and balance would be shown for the replacement wallet — so
+     * it ends like a stop(), and comes back up once a wallet is bound.
      */
     @Test
-    fun ensureReady_whileTheBoundWalletIsUnknown_isNotReady_andTearsNothingDown() = runBlocking {
+    fun ensureReady_whileTheBoundWalletIsUnknown_withdrawsTheOldRuntime() = runBlocking {
         var bound: String? = walletIdHex
         val source = FakeSource(hasSupport = true, boundWalletId = { bound })
         val service = service(source)
@@ -1236,11 +1241,12 @@ class ShieldedBalanceServiceTest {
 
         bound = null
         assertFalse(service.ensureShieldedReady())
-        assertEquals(0, source.stopCalls)
+        assertEquals(1, source.stopCalls)
+        assertEquals(ShieldedSyncStatus.NOT_READY, service.shieldedSyncStatus.value)
 
         bound = walletIdHex
         assertTrue(service.ensureShieldedReady())
-        assertEquals("still the same runtime: no rebind", 1, source.bindCalls)
+        assertEquals("brought up afresh", 2, source.bindCalls)
     }
 
     /** Regression: after a stop that succeeded, the next bring-up issues no extra native stop. */

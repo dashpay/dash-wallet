@@ -1370,31 +1370,29 @@ class ShieldedBalanceServiceImpl internal constructor(
             // removes the old SDK wallet but never stops this runtime: it stayed
             // latched on the removed wallet, so every shielded call, the invite
             // claim included, asked the new wallet for a sub-wallet it never got.
+            //
+            // Any other binding — a different wallet, or none known (mid-
+            // replacement both SDK wallets exist until the orphan is pruned,
+            // and pruning is best-effort) — ends this runtime exactly as a
+            // stop() does: a new generation first, so the old session's
+            // collectors and poller (fenced on the published generation) can
+            // never publish into the next one; then the published state is
+            // withdrawn and the native loop stopped. A stop that fails keeps
+            // its ownership at the now-older generation, which the next
+            // bring-up retries (retryFailedNativeStopLocked) before it starts a
+            // loop. This pass then declines; the next trigger brings the
+            // runtime up afresh on the bound wallet.
             val boundHex = source.boundWalletIdOrNull()
-            // Unknown binding (mid-replacement both SDK wallets exist until the
-            // orphan is pruned): not ready, but nothing to tear down yet — the
-            // old runtime must not be served for a wallet that may be leaving.
-            if (boundHex == null) return false
-            if (boundHex.equals(readyHex, ignoreCase = true)) return true
+            if (boundHex != null && boundHex.equals(readyHex, ignoreCase = true)) return true
             log.warn(
-                "shielded runtime is on SDK wallet {}… but the app wallet is now bound to {}… — restarting it",
+                "shielded runtime is on SDK wallet {}… but the app wallet is bound to {} — stopping it",
                 readyHex.take(8),
-                boundHex.take(8)
+                boundHex?.let { "${it.take(8)}…" } ?: "no single SDK wallet"
             )
+            stopGeneration.incrementAndGet()
             tearDownReadyState()
-            val owner = loopOwnerGeneration.get()
             stopNativeLoop()
-            if (owner != NO_GENERATION && loopOwnerGeneration.get() == owner) {
-                // The stop failed and kept the ownership at THIS generation,
-                // which retryFailedNativeStopLocked() reads as "never meant to
-                // stop". Record it as the stop it was, so the next bring-up
-                // retries it before starting a loop over the SDK's latched
-                // quiescing gate.
-                stopGeneration.incrementAndGet()
-                log.warn("shielded bring-up aborted: the old wallet's sync loop could not be stopped; the next trigger retries")
-                return false
-            }
-            if (superseded()) return false
+            return false
         }
 
         if (!source.hasShieldedSupport()) {
