@@ -260,6 +260,7 @@ class ExternalSendServiceImplTest {
         var resume: (PendingPlatformFunding) -> Unit = {}
         var lockStatus: () -> Int? = { 2 }
         var unconsumedLocks: () -> Boolean = { false }
+        var lastExcludedOutPoints: Set<String>? = null
         val funded = mutableListOf<PendingPlatformFunding>()
         val resumed = mutableListOf<PendingPlatformFunding>()
 
@@ -285,7 +286,10 @@ class ExternalSendServiceImplTest {
         }
 
         override suspend fun trackedAssetLockStatus(walletIdHex: String, outPointHex: String): Int? = lockStatus()
-        override suspend fun hasUnconsumedAddressFundingLocks(walletIdHex: String): Boolean = unconsumedLocks()
+        override suspend fun hasUnconsumedAddressFundingLocks(walletIdHex: String, excludingOutPoints: Set<String>): Boolean {
+            lastExcludedOutPoints = excludingOutPoints
+            return unconsumedLocks()
+        }
     }
 
     private class FakeStore : PlatformFundingStore {
@@ -314,6 +318,25 @@ class ExternalSendServiceImplTest {
 
         override suspend fun clear(id: String) {
             if (record?.id == id) record = null
+        }
+
+        // Stored encoded, like DashPayConfig, so a "restart" reads them back through decode.
+        val unconfirmed = mutableSetOf<String>()
+        var failMark = false
+        var failReadUnconfirmed = false
+
+        override suspend fun markCompletionUnconfirmed(id: String) {
+            if (failMark) throw java.io.IOException("datastore")
+            val current = record
+            if (current != null && current.id == id && current.outPointHex != null) {
+                unconfirmed += current.asCompletionUnconfirmed().encode()
+                record = null
+            }
+        }
+
+        override suspend fun readCompletionUnconfirmed(): List<PendingPlatformFunding> {
+            if (failReadUnconfirmed) throw java.io.IOException("datastore")
+            return unconfirmed.map(PendingPlatformFunding::decode)
         }
     }
 
@@ -1543,57 +1566,153 @@ class ExternalSendServiceImplTest {
     }
 
     @Test
-    fun resume_consumedLock_orAlreadyConsumedAnswer_clearsTheRecord() = runBlocking {
-        var source = source().apply { lockStatus = { ASSET_LOCK_STATUS_CONSUMED } }
-        var store = FakeStore().apply { record = pendingRecord() }
+    fun resume_consumedLock_clearsTheRecord() = runBlocking {
+        val source = source().apply { lockStatus = { ASSET_LOCK_STATUS_CONSUMED } }
+        val store = FakeStore().apply { record = pendingRecord() }
         assertEquals(0, service(source, store).resumePendingPlatformFunding())
         assertTrue(source.calls.isEmpty())
         assertNull(store.record)
-
-        source = source().apply {
-            resume = { throw DashSdkError.PlatformWallet.AssetLockAlreadyConsumed("already consumed") }
-        }
-        store = FakeStore().apply { record = pendingRecord() }
-        assertEquals(0, service(source, store).resumePendingPlatformFunding())
-        assertEquals(1, source.resumed.size)
-        assertNull(store.record)
     }
 
     @Test
-    fun resume_transitionAlreadyKnownToPlatform_clearsTheRecord_andUnblocksTheNextSend() = runBlocking {
-        // Observed on-device after a process death mid-send: every resume rebuilt the same
-        // transition and Tenderdash refused it, so the record blocked all later sends.
-        val alreadyKnown = DashSdkError.PlatformWallet.Generic(
-            1,
-            "SDK error: Object already exists: tx already exists in cache",
-            RuntimeException("SDK error: Object already exists: tx already exists in cache")
-        )
-        val source = source().apply { resume = { throw alreadyKnown } }
+    fun resume_alreadyConsumedAnswer_keepsTheRecordAsCompletionUnconfirmed_neverResumedAgain_andStopsBlocking() = runBlocking {
+        val source = source().apply {
+            resume = { throw DashSdkError.PlatformWallet.AssetLockAlreadyConsumed("already consumed") }
+        }
         val store = FakeStore().apply { record = pendingRecord() }
         val service = service(source, store)
         assertEquals(0, service.resumePendingPlatformFunding())
+        assertEquals(0, service.resumePendingPlatformFunding())
         assertEquals(1, source.resumed.size)
+        // Kept, marked, out of the pending slot: never deleted for an unauthenticated answer.
         assertNull(store.record)
+        val kept = store.readCompletionUnconfirmed().single()
+        assertTrue(kept.completionUnconfirmed)
+        assertTrue(kept.sameAs(pendingRecord().asCompletionUnconfirmed()))
 
-        // The next Core → Platform send is no longer refused as "still confirming".
-        source.resume = { throw AssertionError("nothing left to resume") }
-        assertEquals(ExternalSendResult.Sent(LOCK_TXID), service.send(SendBalance.CORE, platform, amount, false))
+        // A later process (new service instance, same store) does not resume it either.
+        val restarted = service(source, store)
+        assertEquals(0, restarted.resumePendingPlatformFunding())
+        assertEquals(1, source.resumed.size)
+
+        // The next Core → Platform send is not refused; its own record is the pending one.
+        assertEquals(ExternalSendResult.Sent(LOCK_TXID), restarted.send(SendBalance.CORE, platform, amount, false))
         assertEquals(1, source.funded.size)
+        assertEquals(1, store.readCompletionUnconfirmed().size)
     }
 
     @Test
-    fun transitionAlreadyKnown_matchesOnlyTheSdkAlreadyExistsShape() {
-        val wrapped = DashSdkError.PlatformWallet.Generic(
-            1,
-            "resume failed",
-            RuntimeException("SDK error: Object already exists: state transition already in chain")
+    fun resume_alreadyConsumedAnswer_thatCannotBeMarked_staysPendingAndBlocking() = runBlocking {
+        val source = source().apply {
+            resume = { throw DashSdkError.PlatformWallet.AssetLockAlreadyConsumed("already consumed") }
+        }
+        val store = FakeStore().apply {
+            record = pendingRecord()
+            failMark = true
+        }
+        val service = service(source, store)
+        assertEquals(0, service.resumePendingPlatformFunding())
+        assertEquals(0, service.resumePendingPlatformFunding())
+        assertEquals(1, source.resumed.size)
+        assertEquals("earlier", store.record?.id)
+        assertEquals(
+            ExternalSendResult.NotSent(NotSentReason.PAYMENT_STILL_CONFIRMING),
+            service.send(SendBalance.CORE, platform, amount, false)
         )
-        assertTrue(isTransitionAlreadyKnownToPlatform(wrapped))
-        assertTrue(
-            !isTransitionAlreadyKnownToPlatform(RuntimeException("SDK error: Object already exists: tx already exists in cache"))
+        assertTrue(source.funded.isEmpty())
+    }
+
+    @Test
+    fun resume_withoutAnOutPoint_ignoresOnlyTheCompletionUnconfirmedLocks_ofThisWallet() = runBlocking {
+        val otherOutPoint = "fe".repeat(32) + ":0"
+        val store = FakeStore().apply {
+            record = pendingRecord(outPointHex = null)
+            unconfirmed += pendingRecord().asCompletionUnconfirmed().encode()
+            unconfirmed += PendingPlatformFunding(
+                "other-wallet", walletB, 162_000L, PlatformAddressBytes(0, hash20), amountCredits,
+                PlatformAddressBytes(0, remainderHash), otherOutPoint, completionUnconfirmed = true
+            ).encode()
+        }
+        // Another (genuinely open) funding lock still keeps the record.
+        var source = source().apply { unconsumedLocks = { true } }
+        assertEquals(0, service(source, store).resumePendingPlatformFunding())
+        assertEquals(setOf(OUT_POINT), source.lastExcludedOutPoints)
+        assertEquals("earlier", store.record?.id)
+
+        source = source().apply { unconsumedLocks = { false } }
+        assertEquals(0, service(source, store).resumePendingPlatformFunding())
+        assertNull(store.record)
+
+        // Their set unreadable: fail closed, the record is kept and the SDK is not asked.
+        store.record = pendingRecord(outPointHex = null)
+        store.failReadUnconfirmed = true
+        source = source().apply { unconsumedLocks = { false } }
+        assertEquals(0, service(source, store).resumePendingPlatformFunding())
+        assertNull(source.lastExcludedOutPoints)
+        assertEquals("earlier", store.record?.id)
+    }
+
+    @Test
+    fun resume_unconfirmedOutcome_keepsTheRecord_untilALaterResumeProvesIt() = runBlocking {
+        // dashpay/platform#5556: Tenderdash's "tx already exists in cache" for the identical
+        // transition no longer surfaces as "Object already exists"; the SDK waits for the
+        // proved result and, when that fails, reports the outcome as unconfirmed.
+        val unconfirmed = listOf<Throwable>(
+            DashSdkError.PlatformWallet.TransactionBroadcastUnconfirmed(
+                "state transition outcome is unconfirmed; reconcile the original operation " +
+                    "before submitting a replacement: Object already exists: tx already exists in cache"
+            ),
+            DashSdkError.StateTransitionResultUnconfirmed("wait timeout"),
+            RuntimeException("wrapped", DashSdkError.StateTransitionResultUnconfirmed("wait timeout"))
         )
-        assertTrue(!isTransitionAlreadyKnownToPlatform(DashSdkError.PlatformWallet.Generic(1, "Wallet already exists: x")))
-        assertTrue(!isTransitionAlreadyKnownToPlatform(DashSdkError.PlatformWallet.Generic(1, "platform timeout")))
+        for (error in unconfirmed) {
+            var fail = true
+            val source = source().apply {
+                resume = { if (fail) throw error }
+            }
+            val store = FakeStore().apply { record = pendingRecord() }
+            val service = service(source, store)
+            assertEquals(0, service.resumePendingPlatformFunding())
+            assertEquals("earlier", store.record?.id)
+            // Kept, so a new Core → Platform send is still refused, with nothing built.
+            assertEquals(
+                ExternalSendResult.NotSent(NotSentReason.PAYMENT_STILL_CONFIRMING),
+                service.send(SendBalance.CORE, platform, amount, false)
+            )
+            assertTrue(source.funded.isEmpty())
+
+            // The next sweep resubmits the same transition; its proved success clears it.
+            fail = false
+            assertEquals(1, service.resumePendingPlatformFunding())
+            assertEquals(2, source.resumed.size)
+            assertTrue(source.resumed.all { it.sameAs(pendingRecord()) })
+            assertNull(store.record)
+            assertEquals(ExternalSendResult.Sent(LOCK_TXID), service.send(SendBalance.CORE, platform, amount, false))
+        }
+    }
+
+    @Test
+    fun coreToPlatform_unconfirmedOutcome_isMayHaveGoneThrough_neverNotSent_andKeepsTheRecord() = runBlocking {
+        // The typed error carries an arbitrary SDK diagnostic; a pre-broadcast-looking one must
+        // not turn it into NotSent, whether or not the lock callback has fired.
+        val diagnostics = listOf("no private key stored", "Insufficient funds", "Invalid identity data")
+        for (built in listOf(false, true)) {
+            for (diagnostic in diagnostics) {
+                val source = source().apply {
+                    fund = { _, onBuilt ->
+                        if (built) onBuilt(OUT_POINT)
+                        throw DashSdkError.StateTransitionResultUnconfirmed(diagnostic)
+                    }
+                }
+                val store = FakeStore()
+                assertEquals(
+                    ExternalSendResult.MayHaveGoneThrough,
+                    service(source, store).send(SendBalance.CORE, platform, amount, false)
+                )
+                val kept = requireNotNull(store.record)
+                assertEquals(if (built) OUT_POINT else null, kept.outPointHex)
+            }
+        }
     }
 
     @Test

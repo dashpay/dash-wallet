@@ -47,6 +47,9 @@ internal fun ByteArray.toTxidHex(): String = Utils.HEX.encode(reversedArray())
  */
 internal fun isAlreadyConsumed(t: Throwable): Boolean {
     if (t is DashSdkError.PlatformWallet.AssetLockAlreadyConsumed) return true
+    // A typed unconfirmed outcome (dashpay/platform#5556) is not this answer, whatever its
+    // unproven diagnostic says: the resume is retried, and a definite refusal comes back plain.
+    if (isSubmissionOutcomeUnconfirmed(t)) return false
     var cause: Throwable? = t
     var hops = 0
     while (cause != null && hops < 8) {
