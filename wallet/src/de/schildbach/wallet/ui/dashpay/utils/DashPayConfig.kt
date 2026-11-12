@@ -311,6 +311,16 @@ open class DashPayConfig @Inject constructor(
         val EXTERNAL_PLATFORM_FUNDING_PENDING = stringPreferencesKey("external_platform_funding_pending")
 
         /**
+         * Core → Platform fundings whose automatic resume got Platform's (unauthenticated)
+         * `AssetLockAlreadyConsumed`, each an encoded
+         * [de.schildbach.wallet.service.platform.sdk.PendingPlatformFunding] marked
+         * `completionUnconfirmed`, moved here from [EXTERNAL_PLATFORM_FUNDING_PENDING] in one
+         * transaction. Not resumed automatically and not blocking a new send; kept (never
+         * inferred complete) for an explicit retry. Never logged.
+         */
+        val EXTERNAL_PLATFORM_FUNDING_UNCONFIRMED = stringSetPreferencesKey("external_platform_funding_unconfirmed")
+
+        /**
          * `startedAtMillis` of the in-flight marker whose "could not confirm"
          * guidance the user closed. While it matches the current marker the
          * automatic triggers (startup, resume) stop re-presenting the sheet;

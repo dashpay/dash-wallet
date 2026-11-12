@@ -481,9 +481,10 @@ internal interface ExternalSendSource {
 
     /**
      * Whether [walletIdHex] has any Platform-address funding lock
-     * ([ASSET_LOCK_FUNDING_TYPE_ADDRESS_TOPUP]) that is not Consumed; throws when unreadable.
+     * ([ASSET_LOCK_FUNDING_TYPE_ADDRESS_TOPUP]) that is not Consumed, other than the locks
+     * [excludingOutPoints] (`<display txid>:<vout>`, case-insensitive); throws when unreadable.
      */
-    suspend fun hasUnconsumedAddressFundingLocks(walletIdHex: String): Boolean
+    suspend fun hasUnconsumedAddressFundingLocks(walletIdHex: String, excludingOutPoints: Set<String>): Boolean
 }
 
 /** Production [ExternalSendSource]. */
@@ -777,11 +778,13 @@ internal class DashSdkExternalSendSource(
             ?.statusRaw
     }
 
-    override suspend fun hasUnconsumedAddressFundingLocks(walletIdHex: String): Boolean =
-        database().assetLockDao()
+    override suspend fun hasUnconsumedAddressFundingLocks(walletIdHex: String, excludingOutPoints: Set<String>): Boolean {
+        val excluded = excludingOutPoints.mapTo(HashSet()) { it.lowercase() }
+        return database().assetLockDao()
             .observeByWalletAndFundingType(walletIdBytes(walletIdHex), ASSET_LOCK_FUNDING_TYPE_ADDRESS_TOPUP)
             .first()
-            .any { it.statusRaw != ASSET_LOCK_STATUS_CONSUMED }
+            .any { it.statusRaw != ASSET_LOCK_STATUS_CONSUMED && it.outPointHex.lowercase() !in excluded }
+    }
 
     private companion object {
         private val log = LoggerFactory.getLogger(DashSdkExternalSendSource::class.java)
@@ -1466,16 +1469,26 @@ class ExternalSendServiceImpl internal constructor(
      * just written a record whose lock is not built yet), and acts only for the bound wallet.
      * - No outpoint: clear when the SDK has no unconsumed Platform-address funding lock of the
      *   wallet (the build never happened, or its lock is done); otherwise keep it — that lock
-     *   cannot be attributed by amount or timing.
+     *   cannot be attributed by amount or timing. The locks of completion-unconfirmed records
+     *   are not counted: each is attributed, by outpoint, to its own earlier record (they stay
+     *   non-terminal in the SDK, so counting them would keep this record, and block every
+     *   later send, for good). Their set unreadable: keep (fail closed).
      * - Outpoint, lock Consumed: done, clear.
      * - Outpoint, lock not tracked: keep (nothing to resume, nothing to prove it never went out).
      * - Outpoint, lock not Consumed: resume with exactly the persisted recipients, at most
-     *   [MAX_PLATFORM_RESUME_ATTEMPTS_PER_PROCESS] times per process; clear on success, when
-     *   Platform answers already consumed, or when Platform already has the identical
-     *   transition ([isTransitionAlreadyKnownToPlatform]: submitted before a process death,
-     *   so no resume can submit anything new). Clearing never pays twice: Platform consumes
-     *   a lock's outpoint once (drive-abci `verify_asset_lock_is_not_spent_and_has_enough_balance`),
-     *   and a later send builds a new lock.
+     *   [MAX_PLATFORM_RESUME_ATTEMPTS_PER_PROCESS] times per process; clear only on success,
+     *   which the SDK returns only with the funding's proved address balances. Every failure
+     *   keeps the record, including the typed unconfirmed outcome ([isSubmissionOutcomeUnconfirmed]:
+     *   a later sweep resubmits the same transition and the SDK proves its result) and the
+     *   unauthenticated already-consumed answer ([isAssetLockAlreadyConsumed]). While the
+     *   record is pending, a new Core → Platform send is refused as
+     *   [NotSentReason.PAYMENT_STILL_CONFIRMING].
+     * - Already-consumed answer (iOS `completionUnconfirmed`): the record is moved, marked, to
+     *   the store's completion-unconfirmed set ([PlatformFundingStore.markCompletionUnconfirmed]),
+     *   in one transaction — never deleted, since the answer proves nothing. From there it is
+     *   not resumed automatically (in this process or any later one) and does not block a new
+     *   Core → Platform send; it is kept for an explicit retry. If the move cannot be written
+     *   the record stays pending (still blocking) and is not retried again in this process.
      */
     private suspend fun resumePendingPlatformFundingInner(): Int {
         val first = try {
@@ -1493,6 +1506,11 @@ class ExternalSendServiceImpl internal constructor(
         try {
             // Re-read as the owner: the send that held [inFlight] may have changed it.
             val record = platformFundingStore.read() ?: return 0
+            if (record.completionUnconfirmed) {
+                // Never resumed automatically (the store keeps such records out of this slot).
+                log.warn("pending platform funding {}: completion unconfirmed; not resumed automatically", record.id)
+                return 0
+            }
             val committed = readOrNull("cutover state") { this.source.cutoverCommittedOrThrow() }
             if (committed != true) return 0
             val bound = readOrNull("bound wallet") { this.source.boundWalletIdOrNull() }
@@ -1502,8 +1520,18 @@ class ExternalSendServiceImpl internal constructor(
             }
             val outPointHex = record.outPointHex
             if (outPointHex == null) {
+                val unconfirmedOutPoints = try {
+                    platformFundingStore.readCompletionUnconfirmed()
+                        .filter { it.walletIdHex.equals(record.walletIdHex, ignoreCase = true) }
+                        .mapNotNullTo(HashSet()) { it.outPointHex }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    log.warn("pending platform funding {}: completion-unconfirmed records unreadable; kept", record.id, e)
+                    return 0
+                }
                 val unconsumed = readOrNull("address funding locks") {
-                    this.source.hasUnconsumedAddressFundingLocks(record.walletIdHex)
+                    this.source.hasUnconsumedAddressFundingLocks(record.walletIdHex, unconfirmedOutPoints)
                 } ?: return 0
                 if (unconsumed) {
                     log.warn("pending platform funding {}: no outpoint recorded and a funding lock is open; kept", record.id)
@@ -1567,19 +1595,46 @@ class ExternalSendServiceImpl internal constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            if (isAssetLockAlreadyConsumed(e)) {
-                platformFundingStore.clear(record.id)
-                log.warn("pending platform funding {}: Platform reports the lock already consumed; cleared", record.id)
-            } else if (isTransitionAlreadyKnownToPlatform(e)) {
-                // The same transition (this lock, these recipients) was submitted before;
-                // every resume rebuilds identical bytes, so nothing more can be done here
-                // and keeping the record would only block every later Core → Platform send.
-                platformFundingStore.clear(record.id)
+            // Every failure keeps the record: only a proven completion (the call's success, or
+            // the SDK's Consumed status) clears it. The exception is not logged for the two
+            // typed answers below: their message embeds an unproven SDK diagnostic.
+            if (isSubmissionOutcomeUnconfirmed(e)) {
+                // Submitted, result unproven — e.g. Tenderdash's "tx already exists in cache"
+                // for the identical transition, after which the SDK's wait for its proved
+                // result failed (dashpay/platform#5556). The next sweep submits the same bytes
+                // again and the SDK waits again; DAPI answers that wait with the committed
+                // transition and its proof, which completes the resume and clears the record.
                 log.warn(
-                    "pending platform funding {}: Platform already has this funding transition; " +
-                        "its outcome is Platform's — cleared",
-                    record.id
+                    "pending platform funding {}: submitted, outcome unproven ({}, attempt {}); kept, re-checked on the next sweep",
+                    record.id,
+                    e.javaClass.simpleName,
+                    attempt
                 )
+            } else if (isAssetLockAlreadyConsumed(e)) {
+                // Unauthenticated (the SDK documents that completion must not be inferred from
+                // it), and no proved query shows whether an asset lock is spent
+                // (dashpay/platform#5823 refuses AddressFundingFromAssetLock for that reason).
+                // As iOS: completion unconfirmed — kept for an explicit retry, but no longer
+                // resumed automatically (Platform would only repeat it) and no longer blocking
+                // a new send. Not retried again in this process either way.
+                platformResumeAttempts[record.id] = MAX_PLATFORM_RESUME_ATTEMPTS_PER_PROCESS
+                try {
+                    platformFundingStore.markCompletionUnconfirmed(record.id)
+                    log.warn(
+                        "pending platform funding {}: Platform reports the lock already consumed, unproven; " +
+                            "kept as completion unconfirmed",
+                        record.id
+                    )
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    log.warn(
+                        "pending platform funding {}: Platform reports the lock already consumed, unproven; " +
+                            "could not mark it, kept pending",
+                        record.id,
+                        e
+                    )
+                }
             } else {
                 log.warn("pending platform funding {}: resume failed (attempt {}); kept", record.id, attempt, e)
             }

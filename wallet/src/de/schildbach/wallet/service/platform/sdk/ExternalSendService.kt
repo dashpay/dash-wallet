@@ -162,7 +162,9 @@ interface ExternalSendService {
      * Core → Platform: the payee receives [amount]; the lock carries a Platform-fee margin on
      * top, whose unused part lands on the wallet's own Platform address. Its recipients are
      * persisted before the SDK call ([PendingPlatformFunding]); while an earlier one is still
-     * pending a new Core → Platform send is [NotSentReason.PAYMENT_STILL_CONFIRMING].
+     * pending a new Core → Platform send is [NotSentReason.PAYMENT_STILL_CONFIRMING]. A record
+     * whose resume got Platform's unauthenticated already-consumed answer is kept as
+     * completion unconfirmed and no longer blocks it.
      *
      * Platform / Identity / Shielded → Core: DPP takes the Core fee of the asset unlock out of
      * the withdrawn amount, so [amount] plus that fee is withdrawn and the recipient receives
@@ -186,7 +188,9 @@ interface ExternalSendService {
      * Finish an interrupted Core → Platform send: when a [PendingPlatformFunding] of the bound
      * wallet has a built lock that is not Consumed, resume it with EXACTLY its persisted
      * recipients (`resumeFundFromAssetLockExternal`), so the original payee is paid. The record
-     * is cleared once the lock is consumed (by this resume, earlier, or as Platform reports).
+     * is cleared once the lock is consumed (by this resume or earlier, as the SDK proves).
+     * Platform's unauthenticated already-consumed answer moves it, kept, to completion
+     * unconfirmed: not resumed automatically again and not blocking a new send.
      * Attempts are capped per process. Never throws (except cancellation); returns the number
      * of fundings completed by this call (0 or 1).
      */

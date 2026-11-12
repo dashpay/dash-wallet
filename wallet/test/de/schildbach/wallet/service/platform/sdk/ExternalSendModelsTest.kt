@@ -393,6 +393,37 @@ class ExternalSendModelsTest {
     }
 
     @Test
+    fun pendingPlatformFunding_completionUnconfirmed_roundTrips_andOldRecordsDecodeUnmarked() {
+        // An unmarked record keeps the original ten-field form earlier builds wrote.
+        val unmarked = record().encode()
+        assertEquals(10, unmarked.split('|').size)
+        assertFalse(PendingPlatformFunding.decode(unmarked).completionUnconfirmed)
+
+        val marked = record().asCompletionUnconfirmed()
+        val decoded = PendingPlatformFunding.decode(marked.encode())
+        assertTrue(decoded.completionUnconfirmed)
+        assertTrue(decoded.sameAs(marked))
+        assertFalse(decoded.sameAs(record()))
+        assertFalse(record().toString().contains("completionUnconfirmed=true"))
+
+        // Only a built lock can be marked; any other eleventh field is malformed.
+        try {
+            record(null).asCompletionUnconfirmed()
+            throw AssertionError("marked a record without a lock")
+        } catch (e: IllegalArgumentException) {
+            // expected
+        }
+        for (text in listOf(unmarked + "|x", unmarked + "|", record(null).encode() + "|u")) {
+            try {
+                PendingPlatformFunding.decode(text)
+                throw AssertionError("decoded a malformed record")
+            } catch (e: IllegalStateException) {
+                // expected
+            }
+        }
+    }
+
+    @Test
     fun pendingPlatformFunding_malformed_isAnError_neverAbsent() {
         val good = record().encode()
         val malformed = listOf(
