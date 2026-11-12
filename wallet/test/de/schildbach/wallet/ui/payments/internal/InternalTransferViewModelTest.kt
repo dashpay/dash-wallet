@@ -186,10 +186,35 @@ class InternalTransferViewModelTest {
     @Test
     fun `a pick that leads to an unsupported pair is refused`() {
         val viewModel = buildViewModel()
-        viewModel.onShowPicker(InternalTransferPicker.TO)
-        assertFalse(viewModel.state.pickable(InternalTransferPicker.TO, PLATFORM))
-        viewModel.onBalancePicked(PLATFORM)
+        // Identity → Shielded is not available yet.
+        viewModel.onShowPicker(InternalTransferPicker.FROM)
+        assertFalse(viewModel.state.pickable(InternalTransferPicker.FROM, IDENTITY))
+        viewModel.onBalancePicked(IDENTITY)
         assertEquals(CORE to SHIELDED, viewModel.state.from to viewModel.state.to)
+    }
+
+    @Test
+    fun `Core to Platform is pickable, offers Max and confirms with the fee on top`() {
+        service.balances.getValue(CORE).value = twoDash
+        service.max[CORE to PLATFORM] = oneDash
+        service.fee = FeeEstimate(Dash(1000), exact = false)
+        val viewModel = buildViewModel()
+        viewModel.onShowPicker(InternalTransferPicker.TO)
+        assertTrue(viewModel.state.pickable(InternalTransferPicker.TO, PLATFORM))
+        viewModel.onBalancePicked(PLATFORM)
+        assertEquals(CORE to PLATFORM, viewModel.state.from to viewModel.state.to)
+        assertEquals(InternalTransferSupport.SUPPORTED, viewModel.state.support)
+
+        viewModel.onMaxClick()
+        assertTrue(viewModel.state.isMax)
+        assertEquals(oneDash, viewModel.state.amount)
+        assertTrue(viewModel.state.canContinue)
+        viewModel.onContinue()
+        val confirm = requireNotNull(viewModel.state.confirm)
+        assertEquals(InternalTransferRequest(CORE, PLATFORM, oneDash, true, WALLET_A), confirm.request)
+        // The own Platform address receives the amount; the lock fee is paid on top (not exact).
+        assertEquals(oneDash + Dash(1000), confirm.total)
+        assertFalse(requireNotNull(confirm.fee).exact)
     }
 
     @Test

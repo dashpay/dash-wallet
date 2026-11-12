@@ -124,7 +124,7 @@ internal class DashSdkInternalTransferSource(
  * [ExternalSendService.send] to the resolved OWN destination (that route's gating, pinning and
  * classification apply unchanged) or one of [ShieldedBalanceService]'s pinned self routes.
  *
- * Routes (the 10 supported pairs of [internalTransferSupport]):
+ * Routes (the 11 supported pairs of [internalTransferSupport]):
  * - Core → Shielded: [ShieldedBalanceService.shieldFromWallet] (pinned) of `amount + pool fee`
  *   ([shieldPoolFeeDuffs]), so the own shielded balance receives the confirmed amount (the
  *   External Send's Core → Shielded convention). A lock that went out with the shield still
@@ -139,8 +139,12 @@ internal class DashSdkInternalTransferSource(
  * - Shielded → Platform: [ShieldedBalanceService.unshieldToCredits] (pinned; own Platform address),
  *   with the shielded Max fee retry.
  * - Platform → Shielded: [ShieldedBalanceService.shieldFromCredits] (pinned).
- * - Identity → Platform: [ExternalSendService.send] to the confirmed wallet's own Platform address
- *   ([ShieldedBalanceService.ownPlatformAddressOf], no shielded flag needed); unavailable = Not sent.
+ * - Core → Platform, Identity → Platform: [ExternalSendService.send] to the confirmed wallet's own
+ *   Platform address ([ShieldedBalanceService.ownPlatformAddressOf], no shielded flag needed);
+ *   unavailable = Not sent. Core → Platform is the External Send's `fundFromAssetLockExternal`:
+ *   the own address receives [amount] exactly, the fee is paid on top, the Platform-fee margin's
+ *   remainder goes to another own Platform address, and an earlier lock still pending refuses it
+ *   ([NotSentReason.PAYMENT_STILL_CONFIRMING]).
  *
  * Funds safety, in order, for every [transfer]: single-flight; positive amount; the pair matrix;
  * cutover committed and (for a shielded leg) the shielded flag, error-preserving; the wallet
@@ -204,8 +208,9 @@ class InternalTransferServiceImpl internal constructor(
     /**
      * Every supported pair's figure depends only on the pair, so the External Send's per-pair
      * estimate applies ([ExternalSendService.estimateFee]): Core → Shielded the shield
-     * pool fee (on top), Shielded → * the flat single-note pool fee; Core → Identity,
-     * Platform → * and Identity → * are metered by Rust at execution, so null.
+     * pool fee (on top), Core → Platform the L1 lock reserve plus the Platform-fee margin (on
+     * top), Shielded → * the flat single-note pool fee; Core → Identity, Platform → * and
+     * Identity → * are metered by Rust at execution, so null.
      */
     override suspend fun estimateFee(from: SendBalance, to: SendBalance): FeeEstimate? =
         if (internalTransferPairSupported(from, to)) externalSendService.estimateFee(from, to) else null
