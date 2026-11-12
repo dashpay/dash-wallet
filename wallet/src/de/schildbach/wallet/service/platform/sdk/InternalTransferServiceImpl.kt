@@ -19,6 +19,8 @@ package de.schildbach.wallet.service.platform.sdk
 
 import de.schildbach.wallet.data.WalletData
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
+import de.schildbach.wallet.payments.FundingSelectionLock
+import de.schildbach.wallet.payments.SubmissionMark
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.shielded.shieldedMaxFeeAdjustment
 import kotlinx.coroutines.CancellationException
@@ -145,13 +147,24 @@ internal class DashSdkInternalTransferSource(
  * captured at confirmation is the bound one; the own destination is resolved (fail closed);
  * the wallet is re-checked right before the write, which is pinned to it. Broadcast → Sent,
  * NotBroadcast → Not sent, Ambiguous or anything unclassified → may have gone through.
+ *
+ * Reset Wallet: the delegated routes hold the wallet-wipe barrier inside
+ * [ExternalSendService.send]; the self routes this class submits itself (Core → Shielded,
+ * Shielded → Platform, Platform → Shielded) hold it here ([submitUnderWipeBarrier]), with the
+ * final wallet re-check inside the hold.
  */
 @Singleton
 class InternalTransferServiceImpl internal constructor(
     private val externalSendService: ExternalSendService,
     private val source: InternalTransferSource,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
-    private val retryDelayMs: (Long) -> Long = ::readRetryDelayMs
+    private val retryDelayMs: (Long) -> Long = ::readRetryDelayMs,
+    /**
+     * The wallet-wipe barrier the self routes hold shared ([submitUnderWipeBarrier]): the app's
+     * one [FundingSelectionLock], the one Reset Wallet raises. No default: a private lock is one
+     * no wipe raises.
+     */
+    private val fundingSelection: FundingSelectionLock
 ) : InternalTransferService {
 
     @Inject
@@ -162,12 +175,14 @@ class InternalTransferServiceImpl internal constructor(
         shieldedBalanceService: ShieldedBalanceService,
         dashPayConfig: DashPayConfig,
         identityConfig: BlockchainIdentityConfig,
-        walletData: WalletData
+        walletData: WalletData,
+        fundingSelection: FundingSelectionLock
     ) : this(
         externalSendService,
         DashSdkInternalTransferSource(
             sdkService, sdkL1SendService, shieldedBalanceService, dashPayConfig, identityConfig, walletData
-        )
+        ),
+        fundingSelection = fundingSelection
     )
 
     private val inFlight = AtomicBoolean(false)
@@ -293,15 +308,22 @@ class InternalTransferServiceImpl internal constructor(
             }
             SendBalance.SHIELDED -> when (from) {
                 SendBalance.CORE -> shieldFromOwnCore(pair, walletIdHex, amount)
-                else -> {
-                    if (!stillBound(pair, walletIdHex)) return ExternalSendResult.NotSent(NotSentReason.GENERIC)
-                    mapWrite(pair, source.shieldFromCredits(amount, walletIdHex))
-                }
+                else -> mapWrite(
+                    pair,
+                    submitUnderWipeBarrier(pair, walletIdHex) { mark ->
+                        mark.submitting()
+                        source.shieldFromCredits(amount, walletIdHex)
+                    }
+                )
             }
         }
     }
 
-    /** An existing External Send route to the resolved own [destination], after a wallet re-check. */
+    /**
+     * An existing External Send route to the resolved own [destination], after a wallet re-check.
+     * Not under [submitUnderWipeBarrier]: [ExternalSendService.send] takes the wipe barrier itself
+     * around its write, with its own final wallet check inside it.
+     */
     private suspend fun delegate(
         pair: String,
         walletIdHex: String,
@@ -323,8 +345,9 @@ class InternalTransferServiceImpl internal constructor(
         } catch (e: ArithmeticException) {
             return notSent(pair, NotSentReason.GENERIC, "amount out of range")
         }
-        if (!stillBound(pair, walletIdHex)) return ExternalSendResult.NotSent(NotSentReason.GENERIC)
-        return when (val result = source.shieldFromWallet(lock, walletIdHex)) {
+        // The shield's own submission hold nests in this one and marks its submission point.
+        val result = submitUnderWipeBarrier(pair, walletIdHex) { source.shieldFromWallet(lock, walletIdHex) }
+        return when (result) {
             is SdkWriteResult.Broadcast -> when (result.value) {
                 ShieldFromWalletOutcome.COMPLETED -> ExternalSendResult.Sent(null)
                 ShieldFromWalletOutcome.SHIELD_PENDING_RETRY -> {
@@ -343,9 +366,9 @@ class InternalTransferServiceImpl internal constructor(
         amount: Dash,
         isMax: Boolean
     ): ExternalSendResult {
-        suspend fun attempt(value: Dash): SdkWriteResult<Unit> {
-            if (!stillBound(pair, walletIdHex)) return SdkWriteResult.NotBroadcast("the bound wallet changed")
-            return source.unshieldToCredits(value, walletIdHex)
+        suspend fun attempt(value: Dash): SdkWriteResult<Unit> = submitUnderWipeBarrier(pair, walletIdHex) { mark ->
+            mark.submitting()
+            source.unshieldToCredits(value, walletIdHex)
         }
         var result = attempt(amount)
         val first = result
@@ -372,6 +395,34 @@ class InternalTransferServiceImpl internal constructor(
         is SdkWriteResult.Ambiguous -> {
             log.error("internal transfer {}: outcome unconfirmed — may have gone through; do NOT retry", pair, result.cause)
             ExternalSendResult.MayHaveGoneThrough
+        }
+    }
+
+    /**
+     * [write] under the wallet-wipe barrier: a shared [FundingSelectionLock] submission hold,
+     * as every SDK broadcast takes ([FundingSelectionLock.withSharedSubmission]), with the final
+     * bound-wallet check ([stillBound]) INSIDE it, so a Reset Wallet either refuses the write
+     * before the check or waits for it to return. [write] calls [SubmissionMark.submitting]
+     * right before the call that may put something on the network (a nested submission hold
+     * marks it itself).
+     * - Refused (a wipe was under way): nothing ran, NotBroadcast (Not sent).
+     * - Cancelled by a wipe: NotBroadcast before the mark, Ambiguous after it
+     *   ([wipeCancelledWriteResult]), never a cancellation that reads as "nothing happened".
+     * - Not the bound wallet: NotBroadcast, nothing called.
+     * Shared holds are reentrant, so a write whose own path holds the lock again nests in this one.
+     */
+    private suspend fun <T> submitUnderWipeBarrier(
+        pair: String,
+        walletIdHex: String,
+        write: suspend (SubmissionMark) -> SdkWriteResult<T>
+    ): SdkWriteResult<T> = fundingSelection.withSharedSubmission<SdkWriteResult<T>>(
+        refused = { e -> SdkWriteResult.NotBroadcast("a wallet wipe is under way", e) },
+        cancelled = { e, submitted -> wipeCancelledWriteResult("internal transfer $pair", null, e, submitted) }
+    ) { mark ->
+        if (!stillBound(pair, walletIdHex)) {
+            SdkWriteResult.NotBroadcast("the bound wallet changed")
+        } else {
+            write(mark)
         }
     }
 

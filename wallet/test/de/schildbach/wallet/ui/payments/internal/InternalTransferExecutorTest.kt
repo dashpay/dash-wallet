@@ -28,6 +28,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import org.dash.wallet.common.money.Dash
 import org.junit.Assert.assertEquals
@@ -70,6 +73,7 @@ class InternalTransferExecutorTest {
         var failReads = false
         var failWrites = false
         var readGate: CompletableDeferred<Unit>? = null
+        var setGate: CompletableDeferred<Unit>? = null
         var clearGate: CompletableDeferred<Unit>? = null
         var clearCalls = 0
         val log = mutableListOf<String>()
@@ -81,6 +85,7 @@ class InternalTransferExecutorTest {
         }
 
         override suspend fun set() {
+            setGate?.await()
             if (failWrites) throw java.io.IOException("datastore")
             log += "set"
             value = true
@@ -206,5 +211,139 @@ class InternalTransferExecutorTest {
         assertEquals(1, marker.clearCalls)
         gate.complete(ExternalSendResult.MayHaveGoneThrough)
         assertTrue(marker.value)
+    }
+
+    // ── Reset Wallet ─────────────────────────────────────────────────────────
+
+    @Test
+    fun `a wallet wipe forgets an unacknowledged outcome and clears the marker`() {
+        val executor = newExecutor()
+        assertTrue(executor.submit(request))
+        assertTrue(executor.state.value is InternalTransferExecution.Finished)
+        assertTrue(marker.value)
+
+        runBlocking { executor.forgetWalletState() }
+
+        assertEquals(InternalTransferExecution.Idle, executor.state.value)
+        assertFalse(marker.value)
+        // The executor is free for the next wallet.
+        assertTrue(executor.submit(request))
+    }
+
+    @Test
+    fun `a wallet wipe forgets an interruption by restart`() {
+        marker.value = true
+        val executor = newExecutor()
+        assertEquals(InternalTransferExecution.InterruptedByRestart, executor.state.value)
+
+        runBlocking { executor.forgetWalletState() }
+
+        assertEquals(InternalTransferExecution.Idle, executor.state.value)
+        assertFalse(marker.value)
+        assertTrue(executor.submit(request))
+    }
+
+    @Test
+    fun `a wipe while the startup marker is read leaves the next wallet Idle`() {
+        val readGate = CompletableDeferred<Unit>()
+        marker.readGate = readGate
+        marker.value = true // the wiped wallet's
+        val executor = newExecutor()
+        assertEquals(InternalTransferExecution.Restoring, executor.state.value)
+
+        runBlocking { executor.forgetWalletState() }
+        assertEquals(InternalTransferExecution.Idle, executor.state.value)
+        marker.value = true // as read before the wipe cleared it
+        readGate.complete(Unit)
+
+        assertEquals(InternalTransferExecution.Idle, executor.state.value)
+    }
+
+    @Test
+    fun `a transfer of the wiped wallet completing late never publishes nor touches the next wallet's marker`() {
+        val lateResults = listOf(
+            ExternalSendResult.Sent(null),
+            ExternalSendResult.NotSent(NotSentReason.GENERIC),
+            ExternalSendResult.MayHaveGoneThrough
+        )
+        for (late in lateResults) {
+            marker.value = false
+            val executor = newExecutor()
+            val gate = CompletableDeferred<ExternalSendResult>()
+            service.gate = gate
+            assertTrue(executor.submit(request))
+            assertTrue(executor.state.value is InternalTransferExecution.Sending)
+
+            runBlocking { executor.forgetWalletState() }
+            assertEquals(InternalTransferExecution.Idle, executor.state.value)
+            assertFalse(marker.value)
+            // The next wallet's transfer has written its own marker by the time the old one returns.
+            marker.value = true
+            val clearsBefore = marker.clearCalls
+
+            gate.complete(late)
+            assertEquals("$late", InternalTransferExecution.Idle, executor.state.value)
+            assertTrue("$late", marker.value)
+            assertEquals("$late", clearsBefore, marker.clearCalls)
+            service.gate = null
+        }
+    }
+
+    @Test
+    fun `a wipe while the marker is written sends nothing and clears the marker it wrote`() {
+        val executor = newExecutor()
+        val setGate = CompletableDeferred<Unit>()
+        marker.setGate = setGate
+        assertTrue(executor.submit(request))
+        assertEquals(InternalTransferExecution.Sending(request), executor.state.value)
+
+        runBlocking { executor.forgetWalletState() }
+        assertEquals(InternalTransferExecution.Idle, executor.state.value)
+        // The write lands after the wipe cleared the marker.
+        setGate.complete(Unit)
+
+        assertTrue(service.transfers.isEmpty())
+        assertFalse(marker.value)
+        assertEquals(InternalTransferExecution.Idle, executor.state.value)
+    }
+
+    @Test
+    fun `a wipe before the transfer starts sends nothing and leaves the marker alone`() {
+        val scheduler = TestCoroutineScheduler()
+        val executor = InternalTransferExecutor(service, marker, CoroutineScope(StandardTestDispatcher(scheduler)))
+        scheduler.runCurrent()
+        assertEquals(InternalTransferExecution.Idle, executor.state.value)
+        assertTrue(executor.submit(request))
+
+        runBlocking { executor.forgetWalletState() }
+        val clearsBefore = marker.clearCalls
+        scheduler.runCurrent()
+
+        assertTrue(service.transfers.isEmpty())
+        assertFalse("set" in marker.log)
+        assertEquals(clearsBefore, marker.clearCalls)
+        assertEquals(InternalTransferExecution.Idle, executor.state.value)
+    }
+
+    @Test
+    fun `an acknowledgement after a wipe leaves the next wallet's marker alone`() {
+        val scheduler = TestCoroutineScheduler()
+        val executor = InternalTransferExecutor(service, marker, CoroutineScope(StandardTestDispatcher(scheduler)))
+        scheduler.runCurrent()
+        assertTrue(executor.submit(request))
+        scheduler.runCurrent()
+        assertEquals(InternalTransferExecution.Finished(request, ExternalSendResult.Sent(null)), executor.state.value)
+
+        executor.acknowledge()
+        assertEquals(InternalTransferExecution.Acknowledging, executor.state.value)
+        // The wipe runs before the acknowledgement's clear does.
+        runBlocking { executor.forgetWalletState() }
+        marker.value = true // the next wallet's
+        val clearsBefore = marker.clearCalls
+        scheduler.runCurrent()
+
+        assertTrue(marker.value)
+        assertEquals(clearsBefore, marker.clearCalls)
+        assertEquals(InternalTransferExecution.Idle, executor.state.value)
     }
 }

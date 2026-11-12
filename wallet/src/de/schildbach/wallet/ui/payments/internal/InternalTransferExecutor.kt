@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.ui.payments.internal
 
+import de.schildbach.wallet.data.WalletData
 import de.schildbach.wallet.service.platform.sdk.ExternalSendResult
 import de.schildbach.wallet.service.platform.sdk.InternalTransferService
 import de.schildbach.wallet.service.platform.sdk.NotSentReason
@@ -35,6 +36,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.dash.wallet.common.money.Dash
 import org.slf4j.LoggerFactory
+import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -84,6 +86,11 @@ sealed class InternalTransferExecution {
  * A sibling rather than a generalized External Send executor: that executor's state type is
  * public API of the External Send screen and its tests, and sharing one instance would let one
  * flow's screen show (and acknowledge) the other's outcome.
+ *
+ * Reset Wallet: this singleton outlives the wallet, so a wipe listener ([forgetWalletState])
+ * returns it to Idle and moves it to a new wallet generation. A transfer of the wiped wallet that
+ * completes afterwards publishes nothing and touches no marker: the next wallet never shows the
+ * old one's outcome, nor an interruption the old one left behind.
  */
 @Singleton
 class InternalTransferExecutor internal constructor(
@@ -95,12 +102,15 @@ class InternalTransferExecutor internal constructor(
     constructor(
         service: InternalTransferService,
         dashPayConfig: DashPayConfig,
+        walletData: WalletData,
         applicationScope: CoroutineScope
     ) : this(
         service,
         DashPayConfigInFlightMarker(dashPayConfig, DashPayConfig.INTERNAL_TRANSFER_IN_FLIGHT),
         applicationScope
-    )
+    ) {
+        walletData.attachOnWalletWipedListener { forgetWalletState() }
+    }
 
     companion object {
         private val log = LoggerFactory.getLogger(InternalTransferExecutor::class.java)
@@ -109,8 +119,16 @@ class InternalTransferExecutor internal constructor(
     private val _state = MutableStateFlow<InternalTransferExecution>(InternalTransferExecution.Restoring)
     val state: StateFlow<InternalTransferExecution> = _state.asStateFlow()
 
+    /**
+     * The wallet generation: bumped by every wipe ([forgetWalletState]). A transfer captures it
+     * when submitted and, once the wallet it was for is gone, neither publishes its outcome nor
+     * touches the in-flight marker (which may by then be the next wallet's).
+     */
+    private val generation = AtomicLong(0)
+
     init {
         applicationScope.launch {
+            val restoredIn = generation.get()
             val interrupted = try {
                 marker.isSet()
             } catch (e: CancellationException) {
@@ -121,7 +139,9 @@ class InternalTransferExecutor internal constructor(
             }
             if (interrupted) log.warn("internal transfer: a previous process may have left a transfer in flight")
             _state.update {
-                if (it is InternalTransferExecution.Restoring) {
+                // A wipe while the marker was read already returned the state to Idle (and the
+                // marker it read was the wiped wallet's): the read is not applied.
+                if (it is InternalTransferExecution.Restoring && generation.get() == restoredIn) {
                     if (interrupted) InternalTransferExecution.InterruptedByRestart else InternalTransferExecution.Idle
                 } else {
                     it
@@ -132,6 +152,11 @@ class InternalTransferExecutor internal constructor(
 
     /** Start [request]; refused (false) unless Idle. A terminal result is never silently replaced. */
     fun submit(request: InternalTransferRequest): Boolean {
+        // Read BEFORE the state claim: a wipe that resets the state from here on is seen by
+        // [isCurrent], so this transfer can never publish into the next wallet's state.
+        val submittedIn = generation.get()
+
+        fun isCurrent() = generation.get() == submittedIn
         var accepted = false
         _state.update { current ->
             if (current is InternalTransferExecution.Idle) {
@@ -150,6 +175,11 @@ class InternalTransferExecutor internal constructor(
             var result: ExternalSendResult = ExternalSendResult.MayHaveGoneThrough
             var marked = false
             try {
+                if (!isCurrent()) {
+                    // The wallet was wiped before anything was handed to the service.
+                    result = ExternalSendResult.NotSent(NotSentReason.GENERIC)
+                    return@launch
+                }
                 try {
                     marker.set()
                     marked = true
@@ -158,6 +188,13 @@ class InternalTransferExecutor internal constructor(
                 } catch (e: Exception) {
                     // Nothing handed to the service: provably nothing spent.
                     log.warn("internal transfer: could not record the in-flight marker; not sent", e)
+                    result = ExternalSendResult.NotSent(NotSentReason.GENERIC)
+                }
+                if (marked && !isCurrent()) {
+                    // A wipe ran while the marker was written, possibly after it cleared the
+                    // marker: this one belongs to the wiped wallet. Nothing is sent.
+                    withContext(NonCancellable) { clearMarker() }
+                    marked = false
                     result = ExternalSendResult.NotSent(NotSentReason.GENERIC)
                 }
                 if (marked) {
@@ -175,11 +212,20 @@ class InternalTransferExecutor internal constructor(
                 log.error("internal transfer threw; outcome unknown", e)
             } finally {
                 log.info("internal transfer {} → {} finished: {}", request.from, request.to, kindOf(result))
-                // Cleared BEFORE the outcome is published, and only on Not sent.
-                if (marked && result is ExternalSendResult.NotSent) {
-                    withContext(NonCancellable) { clearMarker() }
+                if (!isCurrent()) {
+                    // The wallet it was for was wiped: its outcome is not the next wallet's to
+                    // see, and the marker (cleared by the wipe) may already be the next one's.
+                    log.warn("internal transfer: finished after a wallet wipe; outcome dropped")
+                } else {
+                    // Cleared BEFORE the outcome is published, and only on Not sent.
+                    if (marked && result is ExternalSendResult.NotSent) {
+                        withContext(NonCancellable) { clearMarker() }
+                    }
+                    // Checked again in the update (after the clear's suspension): a wipe that
+                    // bumped the generation, or already reset the state, wins.
+                    val outcome = result
+                    _state.update { if (isCurrent()) InternalTransferExecution.Finished(request, outcome) else it }
                 }
-                _state.value = InternalTransferExecution.Finished(request, result)
             }
         }
         return true
@@ -197,11 +243,29 @@ class InternalTransferExecutor internal constructor(
             _state.compareAndSet(current, InternalTransferExecution.Idle)
             return
         }
+        val acknowledgedIn = generation.get()
         if (!_state.compareAndSet(current, InternalTransferExecution.Acknowledging)) return
         applicationScope.launch {
-            clearMarker()
+            // After a wipe the marker is the wipe's (cleared) or the next wallet's: left alone.
+            if (generation.get() == acknowledgedIn) clearMarker()
             _state.compareAndSet(InternalTransferExecution.Acknowledging, InternalTransferExecution.Idle)
         }
+    }
+
+    /**
+     * Reset Wallet (a wallet-wipe listener, run after the wipe drained every payment hold and
+     * cleared the configs): forgets every outcome of the wiped wallet, an interruption by restart
+     * included. Bumps [generation] first, so a transfer of that wallet still finishing (or a
+     * restore still reading the marker) publishes nothing, then clears the in-flight marker
+     * (again: [DashPayConfig] is cleared by the wipe too, but a transfer may have written it
+     * after that) and returns to Idle.
+     */
+    internal suspend fun forgetWalletState() {
+        generation.incrementAndGet()
+        // Cleared before Idle, so no transfer of the next wallet can have set it yet.
+        clearMarker()
+        _state.value = InternalTransferExecution.Idle
+        log.info("internal transfer: state reset for a wallet wipe")
     }
 
     private suspend fun clearMarker() {
