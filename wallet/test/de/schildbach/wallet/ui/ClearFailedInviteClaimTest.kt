@@ -21,6 +21,7 @@ import android.app.Application
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.database.entity.IdentityCreationState
+import de.schildbach.wallet.database.entity.IdentityRecordKey
 import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import io.mockk.coEvery
@@ -61,6 +62,9 @@ class ClearFailedInviteClaimTest {
     @Volatile
     private var stored: BlockchainIdentityData? = null
 
+    /** Runs inside the conditional clear, before its compare: where a concurrent retry lands. */
+    private var beforeClear: () -> Unit = {}
+
     private fun record(errorMessage: String?) = BlockchainIdentityData(
         creationState = IdentityCreationState.CREDIT_FUNDING_TX_CREATING,
         creationStateErrorMessage = errorMessage,
@@ -79,7 +83,16 @@ class ClearFailedInviteClaimTest {
         val identityConfig = mockk<BlockchainIdentityConfig>(relaxed = true)
         every { identityConfig.observe() } returns emptyFlow()
         coEvery { identityConfig.load() } answers { stored }
-        coEvery { identityRepository.clearBlockchainIdentityData() } answers { stored = null }
+        coEvery { identityRepository.clearBlockchainIdentityDataIfUnchanged(any()) } answers {
+            beforeClear()
+            val current = stored
+            if (current != null && IdentityRecordKey.of(current) == firstArg<IdentityRecordKey>()) {
+                stored = null
+                true
+            } else {
+                false
+            }
+        }
 
         return InviteHandlerViewModel(
             identityConfig,
@@ -109,7 +122,7 @@ class ClearFailedInviteClaimTest {
 
         assertTrue(viewModel.clearFailedInviteClaim())
 
-        coVerify(exactly = 1) { identityRepository.clearBlockchainIdentityData() }
+        coVerify(exactly = 1) { identityRepository.clearBlockchainIdentityDataIfUnchanged(any()) }
         assertFalse(viewModel.isInviteClaimInProgress())
     }
 
@@ -120,7 +133,7 @@ class ClearFailedInviteClaimTest {
 
         assertFalse(viewModel.clearFailedInviteClaim())
 
-        coVerify(exactly = 0) { identityRepository.clearBlockchainIdentityData() }
+        coVerify(exactly = 0) { identityRepository.clearBlockchainIdentityDataIfUnchanged(any()) }
         assertTrue(viewModel.isInviteClaimInProgress())
     }
 
@@ -131,7 +144,18 @@ class ClearFailedInviteClaimTest {
 
         assertFalse(viewModel.clearFailedInviteClaim())
 
-        coVerify(exactly = 0) { identityRepository.clearBlockchainIdentityData() }
+        coVerify(exactly = 0) { identityRepository.clearBlockchainIdentityDataIfUnchanged(any()) }
         assertTrue(viewModel.isInviteClaimInProgress())
+    }
+
+    @Test
+    fun `a retry that reset the error between the read and the clear keeps its record`() = runBlocking {
+        stored = record("IllegalStateException: Invite has already been used")
+        beforeClear = { stored = record(null) } // the retry reset the error and restarted the claim
+        val viewModel = viewModel()
+
+        assertFalse(viewModel.clearFailedInviteClaim())
+
+        assertTrue("the retry's record survives", viewModel.isInviteClaimInProgress())
     }
 }

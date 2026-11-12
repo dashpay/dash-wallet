@@ -26,6 +26,7 @@ import de.schildbach.wallet.data.InvitationValidationState
 import de.schildbach.wallet.database.entity.BlockchainIdentityBaseData
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.IdentityCreationState
+import de.schildbach.wallet.database.entity.IdentityRecordKey
 import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.TopUpRepository
 import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
@@ -191,15 +192,19 @@ class InviteHandlerViewModel @Inject constructor(
      * afterwards (MO-975). Call it before [isInviteClaimInProgress] when a new
      * invite arrives.
      *
+     * The clear is conditional on the record being unchanged since the read:
+     * a retry that reset the error in between keeps its record.
+     *
      * @return true if a record was cleared
      */
     suspend fun clearFailedInviteClaim(): Boolean = withContext(Dispatchers.IO) {
-        if (!inviteClaimFailedTerminally(blockchainIdentityDataDao.load())) {
+        val record = blockchainIdentityDataDao.load()
+        if (record == null || !inviteClaimFailedTerminally(record)) {
             return@withContext false
         }
-        log.info("clearing an invite claim that failed because the invite was already used")
-        identityRepository.clearBlockchainIdentityData()
-        true
+        val cleared = identityRepository.clearBlockchainIdentityDataIfUnchanged(IdentityRecordKey.of(record))
+        if (cleared) log.info("cleared an invite claim that failed because the invite was already used")
+        cleared
     }
 
     /**

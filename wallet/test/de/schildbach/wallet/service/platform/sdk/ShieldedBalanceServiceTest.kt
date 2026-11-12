@@ -1195,6 +1195,54 @@ class ShieldedBalanceServiceTest {
         assertEquals(1, source.stopCalls)
     }
 
+    /**
+     * Pre-review: the old wallet's stop times out during the wallet change.
+     * The ownership it kept was at the CURRENT generation, so the failed-stop
+     * retry skipped it and the next bring-up started a loop over the SDK's
+     * latched quiescing gate — "ready" but never syncing. The failed stop must
+     * be retried, and no loop started while the gate is latched.
+     */
+    @Test
+    fun bringUp_afterTheBoundWalletChanged_retriesAFailedStopBeforeStarting() = runBlocking {
+        var bound = walletIdHex
+        val source = FakeSource(hasSupport = true, boundWalletId = { bound })
+        val service = service(source)
+        assertTrue(service.ensureShieldedReady())
+
+        bound = "cd".repeat(32)
+        source.syncRunning = true
+        source.stopTimeoutsRemaining = 1
+
+        assertFalse("not ready while the old loop could not be stopped", service.ensureShieldedReady())
+        assertEquals(1, source.stopCalls)
+
+        assertTrue(service.ensureShieldedReady())
+        assertEquals("the failed stop was retried", 2, source.stopCalls)
+        assertEquals("no loop started over the latched gate", 0, source.startsWhileLatched)
+        assertArrayEquals(ByteArray(32) { 0xcd.toByte() }, source.lastBoundWallet)
+    }
+
+    /**
+     * Pre-review: mid-replacement both SDK wallets exist, so the bound wallet
+     * reads as unknown. The old wallet's runtime must not be served then (its
+     * receive address would be handed out), nor torn down on a transient read.
+     */
+    @Test
+    fun ensureReady_whileTheBoundWalletIsUnknown_isNotReady_andTearsNothingDown() = runBlocking {
+        var bound: String? = walletIdHex
+        val source = FakeSource(hasSupport = true, boundWalletId = { bound })
+        val service = service(source)
+        assertTrue(service.ensureShieldedReady())
+
+        bound = null
+        assertFalse(service.ensureShieldedReady())
+        assertEquals(0, source.stopCalls)
+
+        bound = walletIdHex
+        assertTrue(service.ensureShieldedReady())
+        assertEquals("still the same runtime: no rebind", 1, source.bindCalls)
+    }
+
     /** Regression: after a stop that succeeded, the next bring-up issues no extra native stop. */
     @Test
     fun bringUp_afterASuccessfulStop_issuesNoExtraNativeStop() = runBlocking {

@@ -58,6 +58,9 @@ class RestoreWalletFromFileViewModel @Inject constructor(
     /** The app refused the restored wallet (see WalletApplication.isWalletReplacementRefused). */
     val walletReplacementRefused = SingleLiveEvent<Unit>()
 
+    /** Another onboarding screen installed a wallet first; this restore was dropped. */
+    val walletAlreadyInstalled = SingleLiveEvent<Unit>()
+
     /**
      * The wallet last restored from a keys file, whose new recovery phrase
      * must be backed up once the wallet is accepted ([restoreWallet]).
@@ -74,6 +77,10 @@ class RestoreWalletFromFileViewModel @Inject constructor(
     fun restoreWallet(wallet: Wallet, password: String?) {
         if (!wallet.hasKeyChain(Constants.BIP44_PATH) && wallet.isEncrypted) {
             showUpgradeWalletAction.call(wallet)
+        } else if (walletApplication.hasInstalledWallet()) {
+            log.warn("restored wallet dropped: another onboarding screen installed a wallet first")
+            keysFileWallet = null
+            walletAlreadyInstalled.call(Unit)
         } else if (!walletApplication.setWallet(wallet)) {
             log.warn("restored wallet refused: a wallet reset is unfinished or unverified")
             walletReplacementRefused.call(Unit)

@@ -418,13 +418,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
      * @return true if the screen is routing away and the caller must stop
      */
     private fun routeAwayIfWalletAlreadyInstalled(): Boolean {
-        if (isFinishing ||
-            !onboardingScreenIsStale(
-                walletFileExists = walletApplication.walletFileExists(),
-                walletInstalled = walletApplication.hasWallet(),
-                wipeInProgress = walletApplication.isWipeInProgress
-            )
-        ) {
+        if (isFinishing || !walletApplication.hasInstalledWallet()) {
             return false
         }
         if (!isTaskRoot) {
@@ -440,6 +434,10 @@ class OnboardingActivity : RestoreFromFileActivity() {
             recreate()
         }
         return true
+    }
+
+    override fun onWalletAlreadyInstalled() {
+        routeAwayIfWalletAlreadyInstalled()
     }
 
     override fun onResume() {
@@ -700,6 +698,10 @@ class OnboardingActivity : RestoreFromFileActivity() {
             redirectDegradedWallet(walletApplication)
         }
 
+        viewModel.walletAlreadyInstalledAction.observe(this) {
+            routeAwayIfWalletAlreadyInstalled()
+        }
+
         viewModel.finishCreateNewWalletAction.observe(this) {
             startActivityForResult(
                 SetPinActivity.createIntent(
@@ -755,3 +757,13 @@ internal fun onboardingScreenIsStale(
     walletInstalled: Boolean,
     wipeInProgress: Boolean
 ): Boolean = !wipeInProgress && walletFileExists && walletInstalled
+
+/**
+ * [onboardingScreenIsStale] for this app: an onboarding create or restore must
+ * not install over the wallet. Checked right before each onboarding install, as
+ * a create or restore started before another screen installed a wallet can
+ * finish after it. Forgot-PIN recovery replaces the wallet on purpose and does
+ * not ask.
+ */
+internal fun WalletApplication.hasInstalledWallet(): Boolean =
+    onboardingScreenIsStale(walletFileExists(), hasWallet(), isWipeInProgress)

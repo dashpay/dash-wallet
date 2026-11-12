@@ -49,7 +49,10 @@ enum class SeedRestoreResult {
     INVALID_SEED,
 
     /** The app refused the replacement (see WalletApplication.isWalletReplacementRefused); nothing was written. */
-    REFUSED
+    REFUSED,
+
+    /** Another onboarding screen installed a wallet first; nothing was written. */
+    WALLET_ALREADY_INSTALLED
 }
 
 @HiltViewModel
@@ -198,7 +201,10 @@ class RestoreWalletFromSeedViewModel @Inject constructor(
         return words.map { it.lowercase(Locale.getDefault()) }
     }
 
-    suspend fun restoreWalletFromSeed(words: List<String>): SeedRestoreResult = withContext(Dispatchers.IO) {
+    suspend fun restoreWalletFromSeed(
+        words: List<String>,
+        forgotPinRecovery: Boolean = false
+    ): SeedRestoreResult = withContext(Dispatchers.IO) {
         if (isSeedValid(words)) {
             // Before any restore work: a wipe marker refuses the replacement.
             if (walletApplication.isWalletReplacementRefused) {
@@ -207,6 +213,12 @@ class RestoreWalletFromSeedViewModel @Inject constructor(
             }
             val creationTime = selectedCreationDate.value
             val wallet = walletFactory.restoreFromSeed(Constants.NETWORK_PARAMETERS, normalize(words))
+            // Forgot-PIN recovery replaces the installed wallet on purpose; an
+            // onboarding restore must not (see hasInstalledWallet).
+            if (!forgotPinRecovery && walletApplication.hasInstalledWallet()) {
+                log.warn("restored wallet dropped: another onboarding screen installed a wallet first")
+                return@withContext SeedRestoreResult.WALLET_ALREADY_INSTALLED
+            }
             if (!walletApplication.setWallet(wallet)) {
                 log.warn("restored wallet refused: a wallet reset is unfinished or unverified")
                 return@withContext SeedRestoreResult.REFUSED

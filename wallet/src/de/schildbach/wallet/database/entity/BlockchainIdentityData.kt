@@ -665,4 +665,27 @@ open class BlockchainIdentityConfig @Inject constructor(
         log.info("clearing data")
         clearAll()
     }
+
+    /**
+     * Clears the store only while the stored record still has the [expected] identity, name,
+     * creation state and error, checked inside the same edit as the clear (as [insertIfUnchanged]
+     * does for writes). A retry that reset the error first makes this a no-op. Returns true when
+     * it cleared.
+     */
+    suspend fun clearIfUnchanged(expected: IdentityRecordKey): Boolean {
+        var cleared = false
+        context.dataStore.edit { prefs ->
+            val stored = IdentityRecordKey(
+                prefs[IDENTITY_ID],
+                prefs[USERNAME],
+                IdentityCreationState.valueOf(prefs[CREATION_STATE] ?: IdentityCreationState.NONE.name),
+                prefs[CREATION_STATE_ERROR_MESSAGE]
+            )
+            if (stored.creationState != IdentityCreationState.NONE && stored == expected) {
+                prefs.clear()
+                cleared = true
+            }
+        }
+        return cleared
+    }
 }

@@ -1371,14 +1371,29 @@ class ShieldedBalanceServiceImpl internal constructor(
             // latched on the removed wallet, so every shielded call, the invite
             // claim included, asked the new wallet for a sub-wallet it never got.
             val boundHex = source.boundWalletIdOrNull()
-            if (boundHex == null || boundHex.equals(readyHex, ignoreCase = true)) return true
+            // Unknown binding (mid-replacement both SDK wallets exist until the
+            // orphan is pruned): not ready, but nothing to tear down yet — the
+            // old runtime must not be served for a wallet that may be leaving.
+            if (boundHex == null) return false
+            if (boundHex.equals(readyHex, ignoreCase = true)) return true
             log.warn(
                 "shielded runtime is on SDK wallet {}… but the app wallet is now bound to {}… — restarting it",
                 readyHex.take(8),
                 boundHex.take(8)
             )
             tearDownReadyState()
+            val owner = loopOwnerGeneration.get()
             stopNativeLoop()
+            if (owner != NO_GENERATION && loopOwnerGeneration.get() == owner) {
+                // The stop failed and kept the ownership at THIS generation,
+                // which retryFailedNativeStopLocked() reads as "never meant to
+                // stop". Record it as the stop it was, so the next bring-up
+                // retries it before starting a loop over the SDK's latched
+                // quiescing gate.
+                stopGeneration.incrementAndGet()
+                log.warn("shielded bring-up aborted: the old wallet's sync loop could not be stopped; the next trigger retries")
+                return false
+            }
             if (superseded()) return false
         }
 
