@@ -103,6 +103,7 @@ class InternalTransferServiceImplTest {
         var defaultBound: String? = WALLET_A
         var coreAddress: () -> String = { unadvertised }
         var platformAddress: String? = ownPlatform
+        var platformAddressThrows: Throwable? = null
         var feeCredits: Long? = POOL_FEE_CREDITS
         var shieldFromWalletResult: SdkWriteResult<ShieldFromWalletOutcome> =
             SdkWriteResult.Broadcast(ShieldFromWalletOutcome.COMPLETED)
@@ -128,6 +129,7 @@ class InternalTransferServiceImplTest {
         val platformAddressReads = mutableListOf<String>()
         override suspend fun ownPlatformAddress(walletIdHex: String): String? {
             platformAddressReads += walletIdHex
+            platformAddressThrows?.let { throw it }
             return platformAddress
         }
         override suspend fun shieldedFeeCredits(kind: ShieldedFeeKind): Long? = feeCredits
@@ -237,6 +239,47 @@ class InternalTransferServiceImplTest {
     }
 
     @Test
+    fun `Core to Platform funds the own Platform address through the External Send, pinned, isMax passed through`() {
+        source.shielded = null // no shielded leg: never read
+        source.identity = Result.failure(IOException("unreadable")) // nor the identity record
+        assertEquals(ExternalSendResult.Sent("txid"), transfer(CORE, PLATFORM))
+        assertEquals(ExternalSendResult.Sent("txid"), transfer(CORE, PLATFORM, isMax = true))
+        assertEquals(listOf(WALLET_A, WALLET_A), source.platformAddressReads)
+        assertEquals(
+            listOf(
+                Send(CORE, SendDestination.Platform(ownPlatform), amount, false, WALLET_A),
+                Send(CORE, SendDestination.Platform(ownPlatform), amount, true, WALLET_A)
+            ),
+            external.sends
+        )
+        // The External Send's own route (fundFromAssetLockExternal) does the write, not a self route.
+        assertEquals(emptyList<String>(), source.writes)
+    }
+
+    @Test
+    fun `Core to Platform with no own Platform address, or an unreadable one, fails closed`() {
+        source.platformAddress = null
+        assertEquals(ExternalSendResult.NotSent(NotSentReason.GENERIC), transfer(CORE, PLATFORM))
+        source.platformAddress = ownPlatform
+        source.platformAddressThrows = IOException("address store unreadable")
+        assertEquals(ExternalSendResult.NotSent(NotSentReason.GENERIC), transfer(CORE, PLATFORM, isMax = true))
+        assertNothingSubmitted()
+    }
+
+    @Test
+    fun `Core to Platform passes the External Send's outcomes through unchanged`() {
+        for (outcome in listOf(
+            ExternalSendResult.NotSent(NotSentReason.PAYMENT_STILL_CONFIRMING),
+            ExternalSendResult.NotSent(NotSentReason.NOT_SYNCED),
+            ExternalSendResult.NotSent(NotSentReason.GENERIC),
+            ExternalSendResult.MayHaveGoneThrough
+        )) {
+            external.result = outcome
+            assertEquals(outcome, transfer(CORE, PLATFORM))
+        }
+    }
+
+    @Test
     fun `identity destinations are the own identity`() {
         transfer(CORE, IDENTITY)
         transfer(SHIELDED, IDENTITY)
@@ -301,7 +344,7 @@ class InternalTransferServiceImplTest {
 
     @Test
     fun `the matrix is enforced by the service`() {
-        for ((from, to) in listOf(CORE to PLATFORM, IDENTITY to SHIELDED, CORE to CORE)) {
+        for ((from, to) in listOf(IDENTITY to SHIELDED, CORE to CORE)) {
             assertEquals("$from → $to", ExternalSendResult.NotSent(NotSentReason.NOT_SUPPORTED), transfer(from, to))
         }
         assertNothingSubmitted()
@@ -447,8 +490,14 @@ class InternalTransferServiceImplTest {
         external.pairMax[CORE to PLATFORM] = Dash(5000)
         assertEquals(fee, service.estimateFee(SHIELDED, CORE))
         assertEquals(Dash(5000), service.maxSendable(SHIELDED, CORE))
-        assertNull(service.estimateFee(CORE, PLATFORM))
-        assertNull(service.maxSendable(CORE, PLATFORM))
+        // Core → Platform: the External Send's lock reserve + margin fee and its Max.
+        assertEquals(fee, service.estimateFee(CORE, PLATFORM))
+        assertEquals(Dash(5000), service.maxSendable(CORE, PLATFORM))
+        // An unsupported pair never asks the External Send.
+        external.pairFees[IDENTITY to SHIELDED] = fee
+        external.pairMax[IDENTITY to SHIELDED] = Dash(5000)
+        assertNull(service.estimateFee(IDENTITY, SHIELDED))
+        assertNull(service.maxSendable(IDENTITY, SHIELDED))
         assertNull(service.estimateFee(PLATFORM, SHIELDED))
         // Platform → Core asks the External Send's own figures (null today: metered by Rust).
         assertNull(service.estimateFee(PLATFORM, CORE))

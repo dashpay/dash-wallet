@@ -43,12 +43,15 @@ enum class InternalTransferSupport {
  *
  * | From \ To | Core | Shielded | Platform | Identity |
  * |---|---|---|---|---|
- * | Core | — | yes | no (1) | yes |
+ * | Core | — | yes | yes (1) | yes |
  * | Shielded | yes | — | yes | yes |
  * | Platform | yes (2) | yes | — | yes |
  * | Identity | yes | no (3) | yes | — |
  *
- * 1. The Platform-address funding from an asset lock is not wired for this flow yet.
+ * 1. The External Send's Core → Platform (`fundFromAssetLockExternal`) to the wallet's own
+ *    Platform address: the fee (L1 lock reserve plus the Platform-fee margin, whose unused
+ *    part lands on another own Platform address) is paid on top; an interrupted lock is
+ *    resumed by the External Send's pending-funding sweep.
  * 2. The External Send's partial Platform → Core withdrawal (`withdrawCredits` with the
  *    inputs the wallet selects) to the wallet's own unadvertised Core address.
  * 3. `shieldedShieldFromIdentity` (Type 21) is not bound in the wallet yet.
@@ -74,7 +77,7 @@ fun internalTransferSupport(
 
 /** The bare matrix of [internalTransferSupport]: whether the wallet can move [from] → [to] at all. */
 fun internalTransferPairSupported(from: SendBalance, to: SendBalance): Boolean = when (from) {
-    SendBalance.CORE -> to == SendBalance.SHIELDED || to == SendBalance.IDENTITY
+    SendBalance.CORE -> to != SendBalance.CORE
     SendBalance.SHIELDED -> to != SendBalance.SHIELDED
     SendBalance.PLATFORM -> to != SendBalance.PLATFORM
     SendBalance.IDENTITY -> to == SendBalance.CORE || to == SendBalance.PLATFORM
