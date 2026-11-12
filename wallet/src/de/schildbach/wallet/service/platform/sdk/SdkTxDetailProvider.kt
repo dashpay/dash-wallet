@@ -154,6 +154,12 @@ private fun defaultSdkTxMetadata(
  *   the wallet owns/tracks it, else null. Parallel to `decoded.inputs`.
  * @param inputTxoValues per decoded input: the spent TXO's value in duffs
  *   when known, else null. Parallel to `decoded.inputs`.
+ * @param inputTxoForeign per decoded input: true when the caller's resolved
+ *   TXO is a contact's foreign mirror (the same verdict [inputTxoValues]
+ *   already excludes from the fee) — its address is never shown as a sender
+ *   address, not even via the decoded scriptSig hint. Defaults to "none
+ *   foreign" for callers that never resolve a TXO at all. Parallel to
+ *   `decoded.inputs`.
  */
 internal fun buildSdkTxDetail(
     record: L1TxUiRecord,
@@ -161,6 +167,7 @@ internal fun buildSdkTxDetail(
     myOutputAddresses: Set<String>,
     inputTxoAddresses: List<String?>,
     inputTxoValues: List<Long?>,
+    inputTxoForeign: List<Boolean> = emptyList(),
     // Platform-funding role when this internal move is an identified asset lock
     // (identity upgrade / top-up / invite), else null — see [SdkTxDetail.assetLockKind].
     assetLockKind: AssetLockKind? = null,
@@ -217,12 +224,16 @@ internal fun buildSdkTxDetail(
     // authoritative source; the decoded P2PKH scriptSig hint fills gaps for
     // our own inputs (self-authored, so the hint is our own address), and
     // is never used for INCOMING txs where it would be an unauthenticated
-    // third-party claim.
+    // third-party claim. A known-foreign input (contact's mirror TXO) is
+    // dropped outright — the hint is skipped for it too, since restoring it
+    // would show a non-wallet address as if it funded this spend; the hint
+    // still fills in for a genuinely unresolved input (no TXO row at all).
     val inputAddresses = if (record.direction == L1TxUiDirection.INCOMING || decoded == null) {
         emptyList()
     } else {
         decoded.inputs.mapIndexedNotNull { i, input ->
-            inputTxoAddresses.getOrNull(i) ?: input.address
+            if (inputTxoForeign.getOrNull(i) == true) null
+            else inputTxoAddresses.getOrNull(i) ?: input.address
         }.distinct()
     }
 
@@ -536,24 +547,31 @@ class SdkTxDetailProvider internal constructor(
             }
         }
 
-        // Input values feeding the derived fee ([derivedFeeDuffs]): a resolved
-        // input that is a contact's foreign mirror TXO (DIP-15, the same rule
-        // the output walk applies above) is not this wallet's coin, so it must
-        // not fund Σin — treated the same as an UNRESOLVED input (null), which
-        // fails derivedFeeDuffs's all-non-null precondition and leaves the fee
-        // null rather than built from the contact's own money. Exclusion
-        // unavailable → fail closed like the output walk: every resolved input
-        // is treated as unresolved, since none can be told apart from foreign.
-        val inputFeeValues: List<Long?> = if (exclusion == null) {
-            inputTxos.map { null }
+        // Per-input foreign verdict (DIP-15, the same rule the output walk
+        // applies above): true when the resolved TXO is a contact's foreign
+        // mirror, never for a genuinely UNRESOLVED input (no TXO row at all —
+        // that one still gets its decoded scriptSig hint, below). Exclusion
+        // unavailable → fail closed like the output walk: every RESOLVED
+        // input is treated as foreign, since none can be told apart from it;
+        // an unresolved one stays false (no TXO row to classify as foreign).
+        val inputIsForeign: List<Boolean> = if (exclusion == null) {
+            inputTxos.map { it != null }
         } else {
             val (externalAccountIds, externalAddresses) = exclusion
             inputTxos.map { txo ->
-                val isForeign = txo != null && isForeignTxo(
+                txo != null && isForeignTxo(
                     txo.accountId, txo.coreAddressId, txo.address, externalAccountIds, externalAddresses
                 )
-                if (isForeign) null else txo?.amount
             }
+        }
+
+        // Input values feeding the derived fee ([derivedFeeDuffs]): a foreign
+        // input is not this wallet's coin, so it must not fund Σin — treated
+        // the same as an UNRESOLVED input (null), which fails
+        // derivedFeeDuffs's all-non-null precondition and leaves the fee null
+        // rather than built from the contact's own money.
+        val inputFeeValues: List<Long?> = inputTxos.mapIndexed { i, txo ->
+            if (inputIsForeign[i]) null else txo?.amount
         }
 
         // The fee the history list used: the store's, or — while the store still has it
@@ -577,6 +595,7 @@ class SdkTxDetailProvider internal constructor(
             myOutputAddresses = myOutputAddresses,
             inputTxoAddresses = inputTxos.map { it?.address },
             inputTxoValues = inputFeeValues,
+            inputTxoForeign = inputIsForeign,
             assetLockKind = assetLockKind,
             ownershipUnknown = ownershipUnknown
         )

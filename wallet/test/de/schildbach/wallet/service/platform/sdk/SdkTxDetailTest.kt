@@ -373,6 +373,40 @@ class SdkTxDetailTest {
         assertTrue("unauthenticated hint never shown on receives", incoming.inputAddresses.isEmpty())
     }
 
+    @Test
+    fun `foreign mirrored input is excluded from sender addresses, hint included, unresolved input keeps its hint`() {
+        val myInputAddress = Address.fromKey(params, ECKey()).toBase58()
+        val foreignInputAddress = Address.fromKey(params, ECKey()).toBase58()
+        val hint = Address.fromKey(params, ECKey()).toBase58()
+        val threeInputs = DecodedTransaction(
+            txid = decoded.txid,
+            inputs = listOf(
+                DecodedTransaction.Input(decoded.inputs[0].prevTxid, 3, address = null),
+                // Foreign mirrored TXO: resolved, with its own real address — must
+                // still be excluded, not just left to fall through the elvis below.
+                DecodedTransaction.Input(decoded.inputs[0].prevTxid, 4, address = foreignInputAddress),
+                // Genuinely unresolved — no TXO row at all — keeps its decoded hint.
+                DecodedTransaction.Input(decoded.inputs[0].prevTxid, 5, address = hint)
+            ),
+            outputs = decoded.outputs
+        )
+
+        val detail = buildSdkTxDetail(
+            record = record(netAmountDuffs = -70_247, directionCode = 1),
+            decoded = threeInputs,
+            myOutputAddresses = setOf(changeAddress),
+            inputTxoAddresses = listOf(myInputAddress, foreignInputAddress, null),
+            inputTxoValues = listOf(95_000L, null, null),
+            inputTxoForeign = listOf(false, true, false)
+        )
+
+        assertEquals(
+            "own input listed, foreign input dropped even though resolved, unresolved input's hint kept",
+            listOf(myInputAddress, hint),
+            detail.inputAddresses
+        )
+    }
+
     // ── Wire-format helpers ───────────────────────────────────────────
 
     @Test
