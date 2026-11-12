@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.service.platform.sdk
 
+import de.schildbach.wallet.payments.FundingSelectionLock
 import de.schildbach.wallet.service.platform.sdk.SendBalance.CORE
 import de.schildbach.wallet.service.platform.sdk.SendBalance.IDENTITY
 import de.schildbach.wallet.service.platform.sdk.SendBalance.PLATFORM
@@ -31,6 +32,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.yield
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.payments.parsers.AddressNetwork
 import org.dash.wallet.common.payments.parsers.Base58
@@ -108,12 +110,19 @@ class InternalTransferServiceImplTest {
         var creditsResult: SdkWriteResult<Unit> = SdkWriteResult.Broadcast(Unit)
         val unshieldResults = ArrayDeque<SdkWriteResult<Unit>>()
         val writes = mutableListOf<String>()
+        var boundReads = 0
+
+        /** Runs inside every self-route write, after it is recorded (e.g. a wipe mid-call). */
+        var duringWrite: suspend () -> Unit = {}
         var flag: Flow<Boolean?> = flowOf(true)
 
         override suspend fun cutoverCommittedOrThrow(): Boolean = committed ?: throw IOException("unreadable")
         override suspend fun shieldedEnabledOrThrow(): Boolean = shielded ?: throw IOException("unreadable")
         override fun observeShieldedFlag(): Flow<Boolean?> = flag
-        override suspend fun boundWalletIdOrNull(): String? = boundWallets.removeFirstOrNull() ?: defaultBound
+        override suspend fun boundWalletIdOrNull(): String? {
+            boundReads++
+            return boundWallets.removeFirstOrNull() ?: defaultBound
+        }
         override suspend fun ownIdentityIdOrThrow(): String? = identity.getOrThrow()
         override fun unadvertisedCoreAddress(): String = coreAddress()
         val platformAddressReads = mutableListOf<String>()
@@ -126,23 +135,33 @@ class InternalTransferServiceImplTest {
         override suspend fun shieldFromWallet(amount: Dash, walletIdHex: String): SdkWriteResult<ShieldFromWalletOutcome> {
             shieldFromWalletThrows?.let { throw it }
             writes += "shieldFromWallet(${amount.duffs}, $walletIdHex)"
+            duringWrite()
             return shieldFromWalletResult
         }
 
         override suspend fun shieldFromCredits(amount: Dash, walletIdHex: String): SdkWriteResult<Unit> {
             writes += "shieldFromCredits(${amount.duffs}, $walletIdHex)"
+            duringWrite()
             return creditsResult
         }
 
         override suspend fun unshieldToCredits(amount: Dash, walletIdHex: String): SdkWriteResult<Unit> {
             writes += "unshieldToCredits(${amount.duffs}, $walletIdHex)"
+            duringWrite()
             return unshieldResults.removeFirstOrNull() ?: creditsResult
         }
     }
 
     private val external = FakeExternal()
     private val source = FakeSource()
-    private val service = InternalTransferServiceImpl(external, source, Dispatchers.Unconfined, retryDelayMs = { 0L })
+    private val fundingSelection = FundingSelectionLock()
+    private val service = InternalTransferServiceImpl(
+        external,
+        source,
+        Dispatchers.Unconfined,
+        retryDelayMs = { 0L },
+        fundingSelection = fundingSelection
+    )
 
     private fun transfer(from: SendBalance, to: SendBalance, isMax: Boolean = false, wallet: String? = WALLET_A) =
         runBlocking { service.transfer(from, to, amount, isMax, wallet) }
@@ -350,6 +369,71 @@ class InternalTransferServiceImplTest {
     fun `an unclassified failure in a write may have gone through`() {
         source.shieldFromWalletThrows = IllegalStateException("boom")
         assertEquals(ExternalSendResult.MayHaveGoneThrough, transfer(CORE, SHIELDED))
+    }
+
+    // ── Reset Wallet: the wipe barrier ───────────────────────────────────────
+
+    /** The self routes this service submits itself (the rest hold the barrier in the External Send). */
+    private val selfRoutes = listOf(CORE to SHIELDED, SHIELDED to PLATFORM, PLATFORM to SHIELDED)
+
+    @Test
+    fun `a wipe under way refuses every self route with nothing called`() {
+        for ((from, to) in selfRoutes) {
+            fundingSelection.raiseWipeBarrier()
+            assertEquals("$from → $to", ExternalSendResult.NotSent(NotSentReason.GENERIC), transfer(from, to))
+            assertNothingSubmitted()
+
+            // The next wallet's transfers go through once the wipe is done.
+            fundingSelection.lowerWipeBarrier()
+            assertEquals("$from → $to", ExternalSendResult.Sent(null), transfer(from, to))
+            source.writes.clear()
+        }
+    }
+
+    @Test
+    fun `the final wallet check runs inside the hold, so a refusal comes before it`() {
+        for ((from, to) in selfRoutes) {
+            // One bound read before the hold (transferInner) and none inside it: the wipe refuses first.
+            fundingSelection.raiseWipeBarrier()
+            source.boundReads = 0
+            assertEquals("$from → $to", ExternalSendResult.NotSent(NotSentReason.GENERIC), transfer(from, to))
+            assertEquals("$from → $to", 1, source.boundReads)
+
+            fundingSelection.lowerWipeBarrier()
+            source.boundReads = 0
+            assertEquals("$from → $to", ExternalSendResult.Sent(null), transfer(from, to))
+            assertEquals("$from → $to", 2, source.boundReads)
+        }
+    }
+
+    @Test
+    fun `delegated routes do not take the barrier here`() {
+        // The External Send holds it around its own write; a raised barrier is its to refuse.
+        fundingSelection.raiseWipeBarrier()
+        assertEquals(ExternalSendResult.Sent("txid"), transfer(SHIELDED, CORE))
+        assertEquals(1, external.sends.size)
+        fundingSelection.lowerWipeBarrier()
+    }
+
+    @Test
+    fun `a wipe that cancels a credits write after its submission may have gone through, never a cancellation`() {
+        for ((from, to) in listOf(SHIELDED to PLATFORM, PLATFORM to SHIELDED)) {
+            val lock = FundingSelectionLock()
+            val gated = InternalTransferServiceImpl(
+                external,
+                source,
+                Dispatchers.Unconfined,
+                retryDelayMs = { 0L },
+                fundingSelection = lock
+            )
+            source.duringWrite = {
+                // Reset Wallet starts while the SDK call runs; the call then notices the cancel.
+                lock.raiseWipeBarrier()
+                yield()
+            }
+            val result = runBlocking { gated.transfer(from, to, amount, false, WALLET_A) }
+            assertEquals("$from → $to", ExternalSendResult.MayHaveGoneThrough, result)
+        }
     }
 
     // ── fee, max and reads ───────────────────────────────────────────────────
