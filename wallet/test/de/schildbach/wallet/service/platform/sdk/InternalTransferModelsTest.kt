@@ -29,7 +29,7 @@ import org.junit.Test
 class InternalTransferModelsTest {
 
     private val supported = setOf(
-        CORE to SHIELDED, CORE to IDENTITY,
+        CORE to SHIELDED, CORE to PLATFORM, CORE to IDENTITY,
         SHIELDED to CORE, SHIELDED to PLATFORM, SHIELDED to IDENTITY,
         PLATFORM to CORE, PLATFORM to SHIELDED, PLATFORM to IDENTITY,
         IDENTITY to CORE, IDENTITY to PLATFORM
@@ -48,11 +48,11 @@ class InternalTransferModelsTest {
                 assertEquals("$from → $to", (from to to) in supported, internalTransferPairSupported(from, to))
             }
         }
-        // Exactly the two pairs the SDK cannot do yet are disabled.
+        // Exactly the one pair the SDK cannot do yet is disabled.
         val notYet = SendBalance.entries.flatMap { f -> SendBalance.entries.map { f to it } }
             .filter { internalTransferSupport(it.first, it.second, true, true) == InternalTransferSupport.NOT_SUPPORTED_YET }
             .toSet()
-        assertEquals(setOf(CORE to PLATFORM, IDENTITY to SHIELDED), notYet)
+        assertEquals(setOf(IDENTITY to SHIELDED), notYet)
     }
 
     @Test
@@ -63,8 +63,9 @@ class InternalTransferModelsTest {
         assertEquals(InternalTransferSupport.NO_IDENTITY, internalTransferSupport(IDENTITY, PLATFORM, true, false))
         assertEquals(InternalTransferSupport.SUPPORTED, internalTransferSupport(IDENTITY, CORE, false, true))
         // The matrix wins over the flags: an unsupported pair is "not yet", whatever they say.
-        assertEquals(InternalTransferSupport.NOT_SUPPORTED_YET, internalTransferSupport(CORE, PLATFORM, false, false))
-        // Platform → Core needs neither the shielded feature nor an identity.
+        assertEquals(InternalTransferSupport.NOT_SUPPORTED_YET, internalTransferSupport(IDENTITY, SHIELDED, true, true))
+        // Platform → Core and Core → Platform need neither the shielded feature nor an identity.
+        assertEquals(InternalTransferSupport.SUPPORTED, internalTransferSupport(CORE, PLATFORM, false, false))
         assertEquals(InternalTransferSupport.SUPPORTED, internalTransferSupport(PLATFORM, CORE, false, false))
     }
 
