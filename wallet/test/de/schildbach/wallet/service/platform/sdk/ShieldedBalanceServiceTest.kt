@@ -1185,11 +1185,10 @@ class ShieldedBalanceServiceTest {
         bound = newWalletIdHex // the replacement wallet is bound; nobody called stop()
         source.syncRunning = true // the old wallet's loop is still running
 
-        assertFalse("the old runtime ends like a stop()", service.ensureShieldedReady())
-        assertEquals("the old loop was stopped", 1, source.stopCalls)
-        assertEquals(ShieldedSyncStatus.NOT_READY, service.shieldedSyncStatus.value)
-
+        // One call does the whole switch: a screen that asks once (the
+        // shielded transfer/send view models) must get the new runtime.
         assertTrue(service.ensureShieldedReady())
+        assertEquals("the old loop was stopped", 1, source.stopCalls)
         assertEquals("re-bound on the new wallet", 2, source.bindCalls)
         assertArrayEquals(ByteArray(32) { 0xcd.toByte() }, source.lastBoundWallet)
 
@@ -1216,13 +1215,29 @@ class ShieldedBalanceServiceTest {
         source.syncRunning = true
         source.stopTimeoutsRemaining = 1
 
-        assertFalse("not ready while the old loop could not be stopped", service.ensureShieldedReady())
-        assertEquals(1, source.stopCalls)
-
+        // The same pass retries the failed stop before it starts a loop.
         assertTrue(service.ensureShieldedReady())
         assertEquals("the failed stop was retried", 2, source.stopCalls)
         assertEquals("no loop started over the latched gate", 0, source.startsWhileLatched)
         assertArrayEquals(ByteArray(32) { 0xcd.toByte() }, source.lastBoundWallet)
+    }
+
+    /** The old wallet's loop cannot be stopped at all: no loop starts over the latched gate, and nothing reports ready. */
+    @Test
+    fun bringUp_afterTheBoundWalletChanged_whileTheStopKeepsFailing_startsNothing() = runBlocking {
+        var bound = walletIdHex
+        val source = FakeSource(hasSupport = true, boundWalletId = { bound })
+        val service = service(source)
+        assertTrue(service.ensureShieldedReady())
+
+        bound = "cd".repeat(32)
+        source.syncRunning = true
+        source.stopTimeoutsRemaining = 2
+
+        assertFalse(service.ensureShieldedReady())
+        assertEquals("the switch's stop and the in-pass retry", 2, source.stopCalls)
+        assertEquals(0, source.startsWhileLatched)
+        assertEquals(ShieldedSyncStatus.NOT_READY, service.shieldedSyncStatus.value)
     }
 
     /**
