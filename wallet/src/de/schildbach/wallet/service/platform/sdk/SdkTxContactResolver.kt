@@ -21,7 +21,6 @@ import de.schildbach.wallet.data.WalletData
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.service.platform.IdentityRepository
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.flow.first
 import org.bitcoinj.core.Transaction
 import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentHashMap
@@ -266,12 +265,12 @@ class SdkTxContactResolver @Inject constructor(
                             val accountId = if (cursor.isNull(4)) null else cursor.getLong(4)
                             val coreAddressId = if (cursor.isNull(5)) null else cursor.getString(5)
                             val address = if (cursor.isNull(6)) null else cursor.getString(6)
-                            // Same exclusion rules as before (see KDoc): external
-                            // (watch-only, contact's) accounts by accountId, or —
-                            // when accountId is NULL — by the address joining to an
-                            // external account's core_addresses set.
-                            if (accountId != null && accountId in externalAccountIds) continue
-                            if (accountId == null && (coreAddressId ?: address) in externalAddresses) continue
+                            // Same exclusion rule as before (see KDoc): [isForeignTxo],
+                            // the single owner of the DIP-15 foreign-output rule.
+                            val isForeign = isForeignTxo(
+                                accountId, coreAddressId, address, externalAccountIds, externalAddresses
+                            )
+                            if (isForeign) continue
                             txid?.let { received.merge(displayHexOf(it), amount, Long::plus) }
                             spendingTxid?.let { spent.merge(displayHexOf(it), amount, Long::plus) }
                         }
@@ -321,22 +320,11 @@ class SdkTxContactResolver @Inject constructor(
         val walletId = walletIdFromHex(walletIdHex) ?: return null.also {
             log.warn("TXO read skipped: malformed SDK wallet id")
         }
-        // Watch-only external friendship accounts — their TXOs are the contact's
-        // funds, never this wallet's (see KDoc).
-        val externalAccountIds = db.accountDao().observeByWallet(walletId).first()
-            .filter { it.accountType == ACCOUNT_TYPE_DASHPAY_EXTERNAL }
-            .map { it.id }
-            .toSet()
-        // Addresses OWNED by the external (watch-only, contact's) accounts —
-        // the classification fallback for TXOs persisted with a NULL accountId
-        // (see KDoc). `core_addresses` is keyed by address and its accountId is
-        // populated even when the TXO's is not. One small read per external
-        // account (one per friendship).
-        val externalAddresses = HashSet<String>()
-        for (accountId in externalAccountIds) {
-            db.coreAddressDao().observeByAccount(accountId).first()
-                .mapTo(externalAddresses) { it.address }
-        }
+        // Watch-only external friendship accounts and the addresses they own —
+        // the contact's funds, never this wallet's (see KDoc and [isForeignTxo]'s,
+        // the single rule this, [SdkTxDetailProvider.foreignContactTxoExclusion]
+        // and [SdkTxStoreWalker.txoIsForeignSql] all apply).
+        val (externalAccountIds, externalAddresses) = foreignTxoExclusionSets(db, walletId)
         return ForeignExclusionContext(db, walletId, externalAccountIds, externalAddresses)
     }
 
@@ -371,9 +359,11 @@ class SdkTxContactResolver @Inject constructor(
                         val accountId = if (cursor.isNull(1)) null else cursor.getLong(1)
                         val coreAddressId = if (cursor.isNull(2)) null else cursor.getString(2)
                         val address = if (cursor.isNull(3)) null else cursor.getString(3)
-                        // Same exclusion rules as signedNetsFor (see KDoc).
-                        if (accountId != null && accountId in ctx.externalAccountIds) continue
-                        if (accountId == null && (coreAddressId ?: address) in ctx.externalAddresses) continue
+                        // Same exclusion rule as signedNetsFor (see KDoc): [isForeignTxo].
+                        val isForeign = isForeignTxo(
+                            accountId, coreAddressId, address, ctx.externalAccountIds, ctx.externalAddresses
+                        )
+                        if (isForeign) continue
                         sawOwnedRow = true
                         break
                     }
