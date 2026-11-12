@@ -154,7 +154,40 @@ internal const val REASON_PRE_BROADCAST_ASSET_LOCK_SIGNING =
 internal const val REASON_SHIELDED_IDENTITY_DEBIT_PENDING =
     "pre-broadcast: an earlier identity shield is still unresolved"
 
+/**
+ * Whether [t], or an SDK error in its cause chain, is a TYPED "the submission may have
+ * executed, its result is unproven" outcome: rs-sdk `StateTransitionResultUnconfirmed`
+ * (dashpay/platform#5556) as [DashSdkError.StateTransitionResultUnconfirmed] (rs-sdk-ffi
+ * code 11) or, through platform-wallet, [DashSdkError.PlatformWallet.TransactionBroadcastUnconfirmed]
+ * (code 20), and the shielded / masternode-withdrawal siblings. Their message carries the
+ * SDK's diagnostic (a node's refusal, a timeout, a consensus error) and no proof, so no
+ * message match may read one as pre-broadcast or as a terminal answer.
+ *
+ * Not [DashSdkError.PlatformWallet.PublicContactRequestUnconfirmed]: that one refuses a NEW
+ * request before signing anything, while an EARLIER one is unresolved.
+ */
+internal fun isSubmissionOutcomeUnconfirmed(t: Throwable): Boolean {
+    var cause: Throwable? = t
+    var hops = 0
+    while (cause != null && hops++ < 8) {
+        when (cause) {
+            is DashSdkError.StateTransitionResultUnconfirmed,
+            is DashSdkError.PlatformWallet.TransactionBroadcastUnconfirmed,
+            is DashSdkError.PlatformWallet.ShieldedSpendUnconfirmed,
+            is DashSdkError.PlatformWallet.ShieldedCreateUnconfirmed,
+            is DashSdkError.PlatformWallet.ShieldedClaimUnconfirmed,
+            is DashSdkError.PlatformWallet.MasternodeWithdrawalUnconfirmed -> return true
+        }
+        cause = cause.cause
+    }
+    return false
+}
+
 internal fun classifyBroadcastFailure(t: Throwable): SdkWriteResult<Nothing> = when {
+    // FIRST, before any message arm: the SDK says the submission may have executed. Its
+    // message embeds an arbitrary diagnostic ("Insufficient funds", "no private key stored",
+    // …) that must never turn it into NotBroadcast.
+    isSubmissionOutcomeUnconfirmed(t) -> SdkWriteResult.Ambiguous(t)
     t is DashSdkError.InvalidParameter ||
         t is DashSdkError.InvalidState ||
         t is DashSdkError.NotFound ||

@@ -583,6 +583,39 @@ class SdkDashPayWritesTest {
         }
     }
 
+    @Test
+    fun classify_typedUnconfirmed_isAmbiguous_whateverItsDiagnosticSays() {
+        // dashpay/platform#5556: the typed unconfirmed outcome embeds the SDK's unproven
+        // diagnostic, which may read exactly like a pre-broadcast refusal.
+        val preBroadcastLooking = listOf(
+            "no private key stored for key 1",
+            "Invalid identity data: no encryption key",
+            "Insufficient funds: available 1, required 2",
+            "asset lock coin selection is short",
+            "SPV client not started",
+            "invalid platform address",
+            "User not authenticated"
+        )
+        for (diagnostic in preBroadcastLooking) {
+            val errors = listOf<Throwable>(
+                DashSdkError.StateTransitionResultUnconfirmed(diagnostic),
+                DashSdkError.PlatformWallet.TransactionBroadcastUnconfirmed(diagnostic),
+                DashSdkError.PlatformWallet.ShieldedSpendUnconfirmed(diagnostic),
+                DashSdkError.PlatformWallet.MasternodeWithdrawalUnconfirmed(diagnostic),
+                RuntimeException(diagnostic, DashSdkError.StateTransitionResultUnconfirmed(diagnostic))
+            )
+            for (error in errors) {
+                assertTrue("$diagnostic must stay unconfirmed", isSubmissionOutcomeUnconfirmed(error))
+                val result = classifyBroadcastFailure(error)
+                assertTrue("${error.javaClass.simpleName}($diagnostic) must be Ambiguous", result is SdkWriteResult.Ambiguous)
+                assertSame(error, (result as SdkWriteResult.Ambiguous).cause)
+            }
+        }
+        assertFalse(isSubmissionOutcomeUnconfirmed(DashSdkError.Timeout("dapi timeout")))
+        assertFalse(isSubmissionOutcomeUnconfirmed(DashSdkError.PlatformWallet.PublicContactRequestUnconfirmed("held")))
+        assertFalse(isSubmissionOutcomeUnconfirmed(RuntimeException("state transition outcome is unconfirmed")))
+    }
+
     // ── Preflight: everything before the broadcast is NotBroadcast ───────
 
     @Test

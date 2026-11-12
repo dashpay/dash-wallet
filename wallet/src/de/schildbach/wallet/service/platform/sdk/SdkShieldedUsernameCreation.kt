@@ -1718,6 +1718,9 @@ class SdkShieldedUsernameCreation internal constructor(
          */
         internal fun isInviteAlreadyUsedFailure(t: Throwable): Boolean {
             if (t is DashSdkError.PlatformWallet.ShieldedInviteAlreadyClaimed) return true
+            // A typed unconfirmed outcome is never terminal: its message carries an
+            // unproven diagnostic that the substrings below could match.
+            if (isSubmissionOutcomeUnconfirmed(t)) return false
             val m = t.message ?: return false
             return m.contains(ALREADY_CLAIMED_DISPLAY_MARKER, ignoreCase = true) ||
                 m.contains("nullifier", ignoreCase = true) ||
