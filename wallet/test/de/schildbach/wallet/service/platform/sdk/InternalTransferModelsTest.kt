@@ -28,31 +28,15 @@ import org.junit.Test
 
 class InternalTransferModelsTest {
 
-    private val supported = setOf(
-        CORE to SHIELDED, CORE to PLATFORM, CORE to IDENTITY,
-        SHIELDED to CORE, SHIELDED to PLATFORM, SHIELDED to IDENTITY,
-        PLATFORM to CORE, PLATFORM to SHIELDED, PLATFORM to IDENTITY,
-        IDENTITY to CORE, IDENTITY to PLATFORM
-    )
-
     @Test
-    fun `the full 4x4 matrix`() {
+    fun `the full 4x4 matrix - every pair of two different balances is supported`() {
         for (from in SendBalance.entries) {
             for (to in SendBalance.entries) {
-                val expected = when {
-                    from == to -> InternalTransferSupport.SAME_BALANCE
-                    (from to to) in supported -> InternalTransferSupport.SUPPORTED
-                    else -> InternalTransferSupport.NOT_SUPPORTED_YET
-                }
+                val expected = if (from == to) InternalTransferSupport.SAME_BALANCE else InternalTransferSupport.SUPPORTED
                 assertEquals("$from → $to", expected, internalTransferSupport(from, to, true, true))
-                assertEquals("$from → $to", (from to to) in supported, internalTransferPairSupported(from, to))
             }
         }
-        // Exactly the one pair the SDK cannot do yet is disabled.
-        val notYet = SendBalance.entries.flatMap { f -> SendBalance.entries.map { f to it } }
-            .filter { internalTransferSupport(it.first, it.second, true, true) == InternalTransferSupport.NOT_SUPPORTED_YET }
-            .toSet()
-        assertEquals(setOf(IDENTITY to SHIELDED), notYet)
+        assertEquals(InternalTransferSupport.SUPPORTED, internalTransferSupport(IDENTITY, SHIELDED, true, true))
     }
 
     @Test
@@ -62,8 +46,9 @@ class InternalTransferModelsTest {
         assertEquals(InternalTransferSupport.NO_IDENTITY, internalTransferSupport(CORE, IDENTITY, true, false))
         assertEquals(InternalTransferSupport.NO_IDENTITY, internalTransferSupport(IDENTITY, PLATFORM, true, false))
         assertEquals(InternalTransferSupport.SUPPORTED, internalTransferSupport(IDENTITY, CORE, false, true))
-        // The matrix wins over the flags: an unsupported pair is "not yet", whatever they say.
-        assertEquals(InternalTransferSupport.NOT_SUPPORTED_YET, internalTransferSupport(IDENTITY, SHIELDED, true, true))
+        // Identity → Shielded needs both.
+        assertEquals(InternalTransferSupport.SHIELDED_OFF, internalTransferSupport(IDENTITY, SHIELDED, false, true))
+        assertEquals(InternalTransferSupport.NO_IDENTITY, internalTransferSupport(IDENTITY, SHIELDED, true, false))
         // Platform → Core and Core → Platform need neither the shielded feature nor an identity.
         assertEquals(InternalTransferSupport.SUPPORTED, internalTransferSupport(CORE, PLATFORM, false, false))
         assertEquals(InternalTransferSupport.SUPPORTED, internalTransferSupport(PLATFORM, CORE, false, false))

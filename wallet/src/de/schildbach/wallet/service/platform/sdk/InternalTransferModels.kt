@@ -27,9 +27,6 @@ enum class InternalTransferSupport {
     /** From and To are the same balance: never allowed. */
     SAME_BALANCE,
 
-    /** The SDK (or the wallet) cannot do this pair yet: shown disabled, "not available yet". */
-    NOT_SUPPORTED_YET,
-
     /** One side is the Shielded balance and the shielded feature is off (or unreadable). */
     SHIELDED_OFF,
 
@@ -39,14 +36,15 @@ enum class InternalTransferSupport {
 
 /**
  * The one pair matrix of the internal transfer, enforced by the UI AND by
- * [InternalTransferService.transfer]:
+ * [InternalTransferService.transfer]: every pair of two different own balances is supported,
+ * gated only by the shielded feature and the user's identity.
  *
  * | From \ To | Core | Shielded | Platform | Identity |
  * |---|---|---|---|---|
  * | Core | — | yes | yes (1) | yes |
  * | Shielded | yes | — | yes | yes |
  * | Platform | yes (2) | yes | — | yes |
- * | Identity | yes | no (3) | yes | — |
+ * | Identity | yes | yes (3) | yes | — |
  *
  * 1. The External Send's Core → Platform (`fundFromAssetLockExternal`) to the wallet's own
  *    Platform address: the fee (L1 lock reserve plus the Platform-fee margin, whose unused
@@ -54,7 +52,8 @@ enum class InternalTransferSupport {
  *    resumed by the External Send's pending-funding sweep.
  * 2. The External Send's partial Platform → Core withdrawal (`withdrawCredits` with the
  *    inputs the wallet selects) to the wallet's own unadvertised Core address.
- * 3. `shieldedShieldFromIdentity` (Type 21) is not bound in the wallet yet.
+ * 3. The External Send's Identity → Shielded (`shieldFromIdentityToAddress`, Type 21) to the
+ *    wallet's own default shielded address; the fee is metered by Rust at execution.
  *
  * [shieldedEnabled] and [hasIdentity] are the error-preserving reads: unknown is false.
  */
@@ -65,7 +64,6 @@ fun internalTransferSupport(
     hasIdentity: Boolean
 ): InternalTransferSupport {
     if (from == to) return InternalTransferSupport.SAME_BALANCE
-    if (!internalTransferPairSupported(from, to)) return InternalTransferSupport.NOT_SUPPORTED_YET
     if ((from == SendBalance.SHIELDED || to == SendBalance.SHIELDED) && !shieldedEnabled) {
         return InternalTransferSupport.SHIELDED_OFF
     }
@@ -73,14 +71,6 @@ fun internalTransferSupport(
         return InternalTransferSupport.NO_IDENTITY
     }
     return InternalTransferSupport.SUPPORTED
-}
-
-/** The bare matrix of [internalTransferSupport]: whether the wallet can move [from] → [to] at all. */
-fun internalTransferPairSupported(from: SendBalance, to: SendBalance): Boolean = when (from) {
-    SendBalance.CORE -> to != SendBalance.CORE
-    SendBalance.SHIELDED -> to != SendBalance.SHIELDED
-    SendBalance.PLATFORM -> to != SendBalance.PLATFORM
-    SendBalance.IDENTITY -> to == SendBalance.CORE || to == SendBalance.PLATFORM
 }
 
 /** An ordered pair of own balances; [from] != [to] always. [toString] carries no amounts or ids. */
