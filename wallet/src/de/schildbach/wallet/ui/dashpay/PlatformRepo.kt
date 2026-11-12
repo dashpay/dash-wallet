@@ -41,6 +41,7 @@ import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.security.SecurityGuardException
 import de.schildbach.wallet.service.platform.IdentityKeyChainBackfill
+import de.schildbach.wallet.service.platform.IdentityKeyChainBackfillException
 import de.schildbach.wallet.service.platform.PlatformService
 import de.schildbach.wallet.service.platform.sdk.SdkProfileQueries
 import de.schildbach.wallet.service.platform.sdk.SdkUsernameQueries
@@ -121,6 +122,15 @@ class PlatformRepo @Inject constructor(
     }
 
     private val onSeriousErrorListeneners = arrayListOf<SeriousErrorListener>()
+
+    /**
+     * Serializes [issueIdentityChainKeys]' select-then-import across threads. dashj's
+     * `AuthenticationKeyChain.addNewKey` re-counts a key that is already on the chain (it bumps the
+     * issued-key counter again while that counter is <= the key's index), so two backfills that both
+     * selected the same unresolved index would advance the counter twice and a later fresh
+     * authentication key could reuse that index.
+     */
+    private val identityChainBackfillLock = Any()
 
     val authenticationGroupExtension: AuthenticationGroupExtension?
         get() = walletApplication.authenticationGroupExtension
@@ -570,57 +580,103 @@ class PlatformRepo @Inject constructor(
      * `AuthenticationGroupExtension.addNewKey` (which imports it into the chain's basic key
      * chain and persists the wallet).
      *
-     * Never throws; failures are logged and the number of keys issued so far is returned.
+     * Never throws except [CancellationException]: failures are logged and the number of keys
+     * issued so far is returned. Callers that act on the result must use [requireIdentityChainKeys].
      *
      * @return the number of keys that were newly issued (0 if nothing was missing)
      */
-    fun ensureIdentityChainKeys(identity: Identity?, keyParameter: KeyParameter?): Int {
-        identity ?: return 0
+    fun ensureIdentityChainKeys(identity: Identity?, keyParameter: KeyParameter?): Int =
+        issueIdentityChainKeys(identity, keyParameter, strict = false)
+
+    /**
+     * Fail-closed [ensureIdentityChainKeys]: returns only once every identity key derived from
+     * this wallet's identity chain is issued on it. A key whose derived public key does not match
+     * is still skipped as "not this wallet's key", but a missing identity, authentication
+     * extension, identity chain or wallet, an encrypted wallet without [keyParameter] (only when
+     * some key is still unresolved on the chain), and any decryption, derivation or import failure
+     * throw. Failures are not logged here; the caller logs them. A [CancellationException] is
+     * rethrown as is, never wrapped.
+     *
+     * @return the number of keys that were newly issued (0 if nothing was missing)
+     * @throws IdentityKeyChainBackfillException if the backfill did not complete
+     */
+    fun requireIdentityChainKeys(identity: Identity?, keyParameter: KeyParameter?): Int =
+        issueIdentityChainKeys(identity, keyParameter, strict = true)
+
+    private fun issueIdentityChainKeys(identity: Identity?, keyParameter: KeyParameter?, strict: Boolean): Int {
+        // lenient callers get the historical silent 0; strict callers get the reason and log it
+        fun unavailable(reason: String): Int =
+            if (strict) throw IdentityKeyChainBackfillException(reason) else 0
+
+        identity ?: return unavailable("identity unavailable")
         var issued = 0
         try {
-            val authExtension = authenticationGroupExtension ?: return 0
+            val authExtension = authenticationGroupExtension ?: return unavailable("no authentication extension")
             val identityChain = authExtension.getKeyChain(
                 AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY
-            ) ?: return 0
-            val wallet = walletApplication.wallet ?: return 0
-
+            ) ?: return unavailable("no identity key chain")
+            val wallet = walletApplication.wallet ?: return unavailable("wallet unavailable")
             val watchingKey = identityChain.watchingKey
-            val decryptedParent = if (wallet.isEncrypted) {
-                val keyCrypter = wallet.keyCrypter ?: return 0
-                if (keyParameter == null) {
-                    log.warn("ensureIdentityChainKeys: wallet is encrypted but no key was provided")
-                    return 0
+
+            // Decrypted only once some key is still unresolved on the chain, so a fully issued
+            // chain needs no keyParameter even on an encrypted wallet. Failing to decrypt aborts
+            // the backfill in both modes rather than skipping keys one by one.
+            var parent: IDeterministicKey? = null
+            fun decryptedParent(): IDeterministicKey = parent ?: run {
+                if (!wallet.isEncrypted) return@run watchingKey
+                val keyCrypter = wallet.keyCrypter
+                    ?: throw IdentityKeyChainBackfillException("encrypted wallet has no key crypter")
+                keyParameter ?: throw IdentityKeyChainBackfillException("wallet is encrypted but no key was provided")
+                try {
+                    watchingKey.decrypt(keyCrypter, keyParameter) as IDeterministicKey
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    throw IdentityKeyChainBackfillException("cannot decrypt the identity chain", e)
                 }
-                watchingKey.decrypt(keyCrypter, keyParameter) as IDeterministicKey
-            } else {
-                watchingKey
-            }
+            }.also { parent = it }
 
             val derivedKeys = hashMapOf<Int, IDeterministicKey>()
             fun derive(index: Int): IDeterministicKey = derivedKeys.getOrPut(index) {
-                decryptedParent.deriveChildKey(ChildNumber(index, true))
+                decryptedParent().deriveChildKey(ChildNumber(index, true))
             }
 
-            val indexes = IdentityKeyChainBackfill.indexesToIssue(
-                identity.publicKeys.map { IdentityKeyChainBackfill.IdentityKeyRef(it.id, it.data) },
-                derivePublicKey = { index ->
-                    try {
-                        derive(index).pubKey
-                    } catch (e: Exception) {
-                        log.warn("ensureIdentityChainKeys: cannot derive identity key at index $index", e)
-                        null
+            // Selection and import are one atomic step with respect to other backfills (see
+            // identityChainBackfillLock); nothing in here suspends.
+            val indexes = synchronized(identityChainBackfillLock) {
+                val selected = IdentityKeyChainBackfill.indexesToIssue(
+                    identity.publicKeys.map { IdentityKeyChainBackfill.IdentityKeyRef(it.id, it.data) },
+                    isIssued = { keyData ->
+                        when (keyData.size) {
+                            IdentityKeyChainBackfill.PUBLIC_KEY_SIZE -> identityChain.findKeyFromPubKey(keyData) != null
+                            IdentityKeyChainBackfill.HASH160_SIZE -> identityChain.findKeyFromPubHash(keyData) != null
+                            else -> false
+                        }
+                    },
+                    derivePublicKey = { index ->
+                        decryptedParent() // outside the per-key catch: an unusable parent aborts
+                        try {
+                            derive(index).pubKey
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            // a failed derivation is not "not ours": a strict caller fails closed
+                            if (strict) throw e
+                            log.warn("ensureIdentityChainKeys: cannot derive identity key at index $index", e)
+                            null
+                        }
                     }
-                },
-                isIssued = { pubKey -> identityChain.findKeyFromPubKey(pubKey) != null }
-            )
+                )
 
-            indexes.forEach { index ->
-                var key = derive(index)
-                if (wallet.isEncrypted) {
-                    key = key.encrypt(wallet.keyCrypter, keyParameter, watchingKey)
+                selected.forEach { index ->
+                    var key = derive(index)
+                    if (wallet.isEncrypted) {
+                        key = key.encrypt(wallet.keyCrypter, keyParameter, watchingKey)
+                    }
+                    authExtension.addNewKey(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY, key)
+                    issued++
                 }
-                authExtension.addNewKey(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY, key)
-                issued++
+                selected
             }
             if (issued > 0) {
                 log.info(
@@ -631,7 +687,19 @@ class PlatformRepo @Inject constructor(
                     identity.id
                 )
             }
+        } catch (e: CancellationException) {
+            // cancellation is neither a backfill failure nor something to swallow, in either mode
+            throw e
+        } catch (e: IdentityKeyChainBackfillException) {
+            if (strict) throw e
+            log.warn("ensureIdentityChainKeys: {}", e.message, e.cause)
         } catch (e: Exception) {
+            if (strict) {
+                throw IdentityKeyChainBackfillException(
+                    "failed after issuing $issued key(s)",
+                    e
+                )
+            }
             log.error("ensureIdentityChainKeys: failed after issuing $issued key(s)", e)
         }
         return issued

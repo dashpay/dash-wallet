@@ -11,7 +11,7 @@
     <string name="dash_st_purchase_title">Buy tokens?</string>
     <string name="dash_st_key_setup">Set up signing key</string>
     <string name="dash_st_key_setup_title">Set up purchase signing?</string>
-    <string name="dash_st_key_setup_warning">This wallet needs a purchase signing key. Setting it up registers a wallet-controlled key on your identity and charges a network fee in Platform credits. This does not buy tokens. You will review and approve the purchase separately afterward.</string>
+    <string name="dash_st_key_setup_warning">Purchase signing needs to be set up on this wallet. Setup restores access to an existing wallet-controlled key or, if necessary, registers a new key on your identity. A network fee in Platform credits applies only if a new key is registered. This does not buy tokens. You will review and approve the purchase separately afterward.</string>
     <string name="dash_connect_records_unavailable">Connection records unavailable</string>
     <string name="dash_connect_records_unavailable_message">Your saved connection records could not be read. Existing app access may still be active. No access has been revoked.</string>
     <string name="dash_connect_records_retry">Retry</string>

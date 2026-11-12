@@ -2,29 +2,46 @@ package de.schildbach.wallet.service.platform
 
 import android.app.Application
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.verify
+import de.schildbach.wallet.ui.dashpay.testPlatformRepo
+import de.schildbach.wallet.ui.more.connections.AppConnectKeyStateTest
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
+import io.mockk.mockk
 import io.mockk.spyk
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.CompletableDeferred
+import io.mockk.verify
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import org.bitcoinj.core.Sha256Hash
+import org.bitcoinj.crypto.ChildNumber
+import org.bitcoinj.crypto.IDeterministicKey
+import org.bitcoinj.params.TestNet3Params
+import org.bitcoinj.wallet.AuthenticationKeyChain
+import org.bitcoinj.wallet.DeterministicSeed
+import org.bitcoinj.wallet.WalletEx
+import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.dash.wallet.common.WalletDataProvider
 import org.dashj.platform.dashpay.BlockchainIdentity
 import org.dashj.platform.dpp.identifier.Identifier
+import org.dashj.platform.dpp.identity.Identity
+import org.dashj.platform.dpp.identity.IdentityPublicKey
+import org.dashj.platform.sdk.KeyType
+import org.dashj.platform.sdk.Purpose
+import org.dashj.platform.sdk.SecurityLevel
+import org.dashj.platform.sdk.platform.Platform
 import org.junit.Assert.assertThrows
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.util.EnumSet
 
 @RunWith(RobolectricTestRunner::class)
 @Config(application = Application::class, sdk = [29], manifest = Config.NONE)
@@ -225,6 +242,202 @@ class IdentityRepositoryConnectKeyTest {
     @Test fun purchaseSetupChecksAuthorizationBeforeAccessingKeys() {
         assertThrows(kotlinx.coroutines.CancellationException::class.java) {
             runBlocking { repository.ensureCriticalAuthenticationKey(id, null) { throw kotlinx.coroutines.CancellationException("Locked") } }
+        }
+        verify(exactly = 0) { identity.addMissingKeys(any(), any()) }
+        verify(exactly = 0) { platform.requireIdentityChainKeys(any(), any()) }
+    }
+
+    /**
+     * A real dashj [BlockchainIdentity] on a real identity key chain, the way an identity the
+     * Kotlin SDK created reaches dashj: its keys are registered on Platform but the wallet's
+     * identity chain has issued none of them beyond what a new chain holds (indexes 0 and 1). The
+     * CRITICAL authentication key sits at keyId/index 4, so dashj's own key check
+     * (`hasCriticalAuthenticationKey`, which resolves the key on the chain) cannot see it until
+     * the real [PlatformRepo.requireIdentityChainKeys] issues it.
+     */
+    private class RealIdentityFixture(
+        val repository: IdentityRepositoryImpl,
+        val platformRepo: PlatformRepo,
+        val identity: BlockchainIdentity,
+        val auth: AuthenticationGroupExtension,
+        val criticalKey: IdentityPublicKey
+    )
+
+    private val params = TestNet3Params.get()
+
+    private fun identityChainAuth() = AuthenticationGroupExtension(params).apply {
+        addKeyChains(
+            params,
+            DeterministicSeed(ByteArray(16) { 1 }, "", 0L),
+            EnumSet.of(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY)
+        )
+    }
+
+    private fun chainPublicKey(auth: AuthenticationGroupExtension, index: Int): ByteArray =
+        auth.identityKeyChain.watchingKey.deriveChildKey(ChildNumber(index, true)).pubKey
+
+    /** @param backfillAuth the extension the backfill (PlatformRepo) sees; the identity always uses the real one */
+    private fun realIdentityFixture(
+        backfillAuth: (AuthenticationGroupExtension) -> AuthenticationGroupExtension = { it }
+    ): RealIdentityFixture {
+        val auth = identityChainAuth()
+        val wallet = mockk<WalletEx>(relaxed = true)
+        every { wallet.isEncrypted } returns false
+        val realPlatformRepo = testPlatformRepo()
+        every { realPlatformRepo.walletApplication.wallet } returns wallet
+        every { realPlatformRepo.walletApplication.authenticationGroupExtension } returns backfillAuth(auth)
+        every { realPlatformRepo.platform.client.getIdentityBalance(any()) } returns 1_000_000_000L
+        val sdkPlatform = mockk<Platform>(relaxed = true)
+        every { sdkPlatform.params } returns params
+        fun key(id: Int, purpose: Purpose, level: SecurityLevel) =
+            IdentityPublicKey(id, KeyType.ECDSA_SECP256K1, purpose, level, null, chainPublicKey(auth, id), false)
+        val criticalKey = key(4, Purpose.AUTHENTICATION, SecurityLevel.CRITICAL)
+        val blockchainIdentity = BlockchainIdentity(sdkPlatform, 0, wallet, auth).apply {
+            uniqueId = Sha256Hash.wrap(ByteArray(32) { 7 })
+            identity = Identity(
+                uniqueIdentifier,
+                listOf(
+                    key(0, Purpose.AUTHENTICATION, SecurityLevel.MASTER),
+                    key(1, Purpose.AUTHENTICATION, SecurityLevel.HIGH),
+                    key(2, Purpose.ENCRYPTION, SecurityLevel.MEDIUM),
+                    key(3, Purpose.TRANSFER, SecurityLevel.CRITICAL),
+                    criticalKey
+                ),
+                1_000_000L, 1, 1
+            )
+        }
+        // a spy only to verify the paid registration is never called; every check runs the real code
+        val spiedIdentity = spyk(blockchainIdentity)
+        val walletProvider = mockk<de.schildbach.wallet.data.WalletData>(relaxed = true)
+        every { walletProvider.wallet } returns wallet
+        val realRepository = IdentityRepositoryImpl(mockk(relaxed = true), mockk(relaxed = true),
+            identityStorage, walletProvider, realPlatformRepo, config, mockk(relaxed = true), mockk(relaxed = true),
+            mockk(relaxed = true))
+        val field = IdentityRepositoryImpl::class.java.getDeclaredField("_blockchainIdentityFlow").also { it.isAccessible = true }
+        @Suppress("UNCHECKED_CAST")
+        (field.get(realRepository) as MutableStateFlow<BlockchainIdentity?>).value = spiedIdentity
+        return RealIdentityFixture(realRepository, realPlatformRepo, spiedIdentity, auth, criticalKey)
+    }
+
+    @Test
+    @Config(shadows = [AppConnectKeyStateTest.ShadowSdkEnums::class])
+    fun sdkIdentityCriticalKeyIsFoundAfterBackfillAndNoSecondKeyIsRegistered() = runBlocking {
+        val fixture = realIdentityFixture()
+        val chain = fixture.auth.identityKeyChain
+        // before: the registered CRITICAL key is unissued, so dashj's real check reports it missing
+        org.junit.Assert.assertNull(chain.findKeyFromPubKey(fixture.criticalKey.data))
+        org.junit.Assert.assertFalse(fixture.identity.hasCriticalAuthenticationKey())
+        org.junit.Assert.assertTrue(fixture.identity.hasTransferKey() && fixture.identity.hasEncryptionKey())
+
+        fixture.repository.ensureCriticalAuthenticationKey(fixture.identity.uniqueIdentifier, null) {}
+
+        // after: the real backfill issued it and the same real check finds it
+        org.junit.Assert.assertNotNull(chain.findKeyFromPubKey(fixture.criticalKey.data))
+        org.junit.Assert.assertTrue(fixture.identity.hasCriticalAuthenticationKey())
+        // so no second CRITICAL key is registered: no paid identity update, not even a balance read
+        verify(exactly = 0) { fixture.identity.addMissingKeys(any(), any()) }
+        val client = fixture.platformRepo.platform.client
+        verify(exactly = 0) { client.getIdentityBalance(any()) }
+        coVerify { config.set(de.schildbach.wallet.ui.dashpay.utils.DashPayConfig.UPGRADE_IDENTITY_REQUIRED, false) }
+    }
+
+    @Test
+    @Config(shadows = [AppConnectKeyStateTest.ShadowSdkEnums::class])
+    fun cancellationInsideTheRealBackfillPropagatesUnwrappedAndRegistersNothing() {
+        val cancellation = CancellationException("cancelled while deriving")
+        val fixture = realIdentityFixture { realAuth ->
+            // the real backfill, with the identity chain's parent key cancelled mid-derivation
+            val realParent = realAuth.identityKeyChain.watchingKey
+            val parent = mockk<IDeterministicKey>()
+            every { parent.deriveChildKey(any<ChildNumber>()) } answers {
+                val child = firstArg<ChildNumber>()
+                if (child.num() == 4) throw cancellation else realParent.deriveChildKey(child)
+            }
+            val chain = mockk<AuthenticationKeyChain>(relaxed = true)
+            every { chain.watchingKey } returns parent
+            every { chain.findKeyFromPubKey(any()) } returns null
+            mockk<AuthenticationGroupExtension>(relaxed = true).also {
+                every { it.getKeyChain(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY) } returns chain
+            }
+        }
+
+        val thrown = assertThrows(CancellationException::class.java) {
+            runBlocking { fixture.repository.ensureCriticalAuthenticationKey(fixture.identity.uniqueIdentifier, null) {} }
+        }
+
+        org.junit.Assert.assertEquals(cancellation.message, thrown.message)
+        org.junit.Assert.assertTrue(
+            generateSequence<Throwable>(thrown) { it.cause }.none { it is IdentityKeyChainBackfillException }
+        )
+        val backfillAuth = checkNotNull(fixture.platformRepo.authenticationGroupExtension)
+        verify(exactly = 0) { backfillAuth.addNewKey(any(), any()) }
+        verify(exactly = 0) { fixture.identity.addMissingKeys(any(), any()) }
+        val client = fixture.platformRepo.platform.client
+        verify(exactly = 0) { client.getIdentityBalance(any()) }
+    }
+
+    @Test fun backfillRunsOnlyWhenAKeyLooksMissingAndBeforeTheMasterSignature() {
+        fundedWallet()
+        val passedThrough = mutableListOf<String>()
+        every { platform.requireIdentityChainKeys(any(), any()) } answers { passedThrough += "backfill"; 0 }
+        every { identity.hasCriticalAuthenticationKey() } answers { passedThrough += "critical check"; false }
+        every { identity.addMissingKeys(any(), true) } answers { passedThrough += "register" }
+        assertThrows(IllegalStateException::class.java) {
+            runBlocking { repository.ensureCriticalAuthenticationKey(id, null) {} }
+        }
+        org.junit.Assert.assertEquals(
+            listOf("critical check", "backfill", "critical check", "register"),
+            passedThrough.take(4)
+        )
+    }
+
+    @Test fun noBackfillWhenNoKeyLooksMissing() = runBlocking {
+        fundedWallet()
+        every { identity.hasCriticalAuthenticationKey() } returns true
+        repository.ensureCriticalAuthenticationKey(id, null) {}
+        verify(exactly = 0) { platform.requireIdentityChainKeys(any(), any()) }
+        verify(exactly = 0) { identity.addMissingKeys(any(), any()) }
+        coVerify { config.set(de.schildbach.wallet.ui.dashpay.utils.DashPayConfig.UPGRADE_IDENTITY_REQUIRED, false) }
+    }
+
+    @Test fun failedBackfillOnPurchaseSetupRegistersNoKeyAndReportsTheFailure() {
+        fundedWallet()
+        // the SDK identity's existing CRITICAL key stays invisible to dashj, so it looks missing
+        every { platform.requireIdentityChainKeys(any(), any()) } throws
+            IdentityKeyChainBackfillException("no identity key chain")
+        val error = assertThrows(IllegalStateException::class.java) {
+            runBlocking { repository.ensureCriticalAuthenticationKey(id, null) {} }
+        }
+        org.junit.Assert.assertTrue(error.message!!.contains("no purchase signing key was registered"))
+        org.junit.Assert.assertTrue(error.cause is IdentityKeyChainBackfillException)
+        verify(exactly = 0) { identity.addMissingKeys(any(), any()) }
+        val client = platform.platform.client
+        verify(exactly = 0) { client.getIdentityBalance(any()) }
+        coVerify { config.set(de.schildbach.wallet.ui.dashpay.utils.DashPayConfig.UPGRADE_IDENTITY_REQUIRED, true) }
+    }
+
+    @Test fun failedBackfillOnSyncUpgradeRegistersNothingAndReportsNoUpgrade() = runBlocking {
+        fundedWallet()
+        // transfer and encryption keys look missing too, but re-registering them costs fees as well
+        every { identity.hasTransferKey() } returns false
+        every { identity.hasEncryptionKey() } returns false
+        every { platform.requireIdentityChainKeys(any(), any()) } throws
+            IdentityKeyChainBackfillException("wallet is encrypted but no key was provided")
+        org.junit.Assert.assertFalse(repository.upgradeIdentity(null))
+        verify(exactly = 0) { identity.addMissingKeys(any(), any()) }
+        val client = platform.platform.client
+        verify(exactly = 0) { client.getIdentityBalance(any()) }
+        coVerify { config.set(de.schildbach.wallet.ui.dashpay.utils.DashPayConfig.UPGRADE_IDENTITY_REQUIRED, true) }
+        coVerify(exactly = 0) {
+            config.set(de.schildbach.wallet.ui.dashpay.utils.DashPayConfig.UPGRADE_IDENTITY_REQUIRED, false)
+        }
+    }
+
+    @Test fun cancellationDuringBackfillPropagates() {
+        fundedWallet()
+        every { platform.requireIdentityChainKeys(any(), any()) } throws CancellationException("Locked")
+        assertThrows(CancellationException::class.java) {
+            runBlocking { repository.ensureCriticalAuthenticationKey(id, null) {} }
         }
         verify(exactly = 0) { identity.addMissingKeys(any(), any()) }
     }
