@@ -91,9 +91,9 @@ data class InternalTransferConfirm(
  * @property confirmRefused Confirm was refused because the captured request no longer fits the
  *   balance or pair (see [InternalTransferViewModel.confirmedRequest]); the sheet was closed and
  *   the form says so until the user edits it or continues again.
- * @property lockScreenShown the app's lock screen covers the activity: the outcome dialog (its own
- *   window, which would sit above the lock screen) is not shown, nor acknowledged, until the wallet
- *   is unlocked, and Back does not close the covered sheets (see [InternalTransferViewModel.onLockScreen]).
+ * @property lockScreenShown the app's lock screen covers the activity: the outcome is not shown,
+ *   nor acknowledged, until the wallet is unlocked, and Back does not close the covered sheets or
+ *   outcome (see [InternalTransferViewModel.onLockScreen]).
  */
 data class InternalTransferUIState(
     val from: SendBalance = SendBalance.CORE,
@@ -543,8 +543,8 @@ class InternalTransferViewModel @Inject constructor(
      * The lock screen came up. The picker, the confirm sheet and the sending overlay are drawn in
      * the page, which the lock screen covers: they stay as they are and show again after the
      * unlock (an authentication in progress is cancelled by the lock itself and transfers
-     * nothing). The outcome dialog is its own window and would sit above the lock screen: it is
-     * withheld, not acknowledged, until [onLockScreenDismissed].
+     * nothing). The outcome overlay is drawn in the page too, and is also withheld, not
+     * acknowledged, until [onLockScreenDismissed].
      */
     fun onLockScreen() {
         _uiState.update { it.copy(lockScreenShown = true) }

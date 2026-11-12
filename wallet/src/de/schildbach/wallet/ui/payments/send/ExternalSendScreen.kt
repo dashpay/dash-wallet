@@ -541,7 +541,8 @@ private fun ConfirmSheet(uiState: ExternalSendUIState, confirm: ExternalSendConf
         else -> ExternalSendViewModel.shorten(destination.display)
     }
     SendConfirmSheet(
-        // What the recipient receives (a Core Max drain: the amount minus the fee).
+        // What the recipient receives (a Core Max drain: the amount minus the fee; a
+        // Shielded → Core Max: the amount minus the Core fee).
         amount = confirm.recipientAmount,
         rate = uiState.rate,
         fiatCode = uiState.fiatCode,

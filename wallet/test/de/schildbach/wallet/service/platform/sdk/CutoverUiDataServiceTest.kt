@@ -271,7 +271,8 @@ class CutoverUiDataServiceTest {
             AssetLockKind.UPGRADE to R.string.dashpay_upgrade_fee,
             AssetLockKind.TOPUP to R.string.dashpay_topup_fee,
             AssetLockKind.INVITE to R.string.transaction_row_invitation,
-            AssetLockKind.PLATFORM to R.string.transaction_row_platform
+            AssetLockKind.PLATFORM to R.string.transaction_row_platform,
+            AssetLockKind.SHIELD_EXTERNAL to R.string.transaction_row_shielded
         )
         for ((kind, title) in expected) {
             val plan = planL1TxRow(outgoingAssetLock(), kind)
@@ -337,6 +338,48 @@ class CutoverUiDataServiceTest {
         assertTrue(AssetLockKind.PLATFORM.appliesToOutgoing)
         assertFalse(AssetLockKind.PLATFORM.isPoolTransfer)
         assertEquals(R.string.transaction_row_platform, assetLockTitleRes(AssetLockKind.PLATFORM))
+    }
+
+    @Test
+    fun externalShieldSend_isASendNotAPoolTransfer() {
+        // A Core → third-party Shielded External Send: a payment, so the sent arrow,
+        // titled "Shielded" like the own shield; the own shield keeps the transfer look.
+        assertTrue(AssetLockKind.SHIELD_EXTERNAL.appliesToOutgoing)
+        assertFalse(AssetLockKind.SHIELD_EXTERNAL.isPoolTransfer)
+        assertTrue(AssetLockKind.SHIELD.isPoolTransfer)
+        assertEquals(R.string.transaction_row_shielded, assetLockTitleRes(AssetLockKind.SHIELD_EXTERNAL))
+    }
+
+    @Test
+    fun rowPlan_internalExternalShieldLock_isASendTitledShielded() {
+        val plan = planL1TxRow(record(net = -300_000, context = 1, direction = 2), AssetLockKind.SHIELD_EXTERNAL)
+        assertEquals(R.string.transaction_row_shielded, plan.titleRes)
+        assertEquals(TxDisplayCacheEntry.ICON_SENT, plan.iconType)
+        assertEquals(TxDisplayCacheEntry.BG_SENT, plan.iconBgType)
+        assertEquals(TxDisplayCacheEntry.FLAG_SENT, plan.filterFlags)
+        assertFalse(plan.isIncoming)
+        // The own-pool shield in the same shape keeps the double-arrows transfer icon.
+        val own = planL1TxRow(record(net = -300_000, context = 1, direction = 2), AssetLockKind.SHIELD)
+        assertEquals(TxDisplayCacheEntry.ICON_INTERNAL, own.iconType)
+    }
+
+    @Test
+    fun syncPlan_externalShieldCachedAsInternal_isRelabelledAsAShieldedSend() {
+        val r = outgoingAssetLock(firstByte = 0x54)
+        val existing = cacheEntry(
+            rowId = r.txidHex,
+            title = resolve(R.string.transaction_row_status_sent_internally)
+        )
+        val plan = planL1DisplaySync(
+            listOf(r), mapOf(existing.rowId to existing), emptySet(), resolve, now,
+            kindByTxid = mapOf(r.txidHex to AssetLockKind.SHIELD_EXTERNAL)
+        )
+        val row = plan.updates.single()
+        assertEquals(resolve(R.string.transaction_row_shielded), row.title)
+        assertEquals(-3_000_000L, row.valueSatoshis)
+        assertEquals(TxDisplayCacheEntry.ICON_SENT, row.iconType)
+        assertEquals(TxDisplayCacheEntry.FLAG_SENT, row.filterFlags)
+        assertTrue(plan.notifyIncoming.isEmpty())
     }
 
     @Test

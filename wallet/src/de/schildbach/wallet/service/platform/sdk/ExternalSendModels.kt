@@ -372,7 +372,8 @@ enum class SendSupport {
  *    risk). [destinationIsOwnIdentity] null (could not tell) fails closed.
  * 3. The partial-amount `ManagedPlatformWallet.withdrawCredits(coreAddress, inputs, …)`
  *    with inputs the wallet selects ([selectPlatformWithdrawalInputs]); amounts below the
- *    withdrawal minimum ([PLATFORM_MIN_WITHDRAWAL_CREDITS]) are refused before signing.
+ *    withdrawal minimum ([PLATFORM_MIN_WITHDRAWAL_CREDITS], over the amount plus the Core
+ *    fee withdrawn on top, [coreWithdrawalCreditsOrNull]) are refused before signing.
  * 4. `shieldedShieldToRecipient` (Type 15 to a third party's Orchard address; the SDK
  *    selects the Platform-address inputs).
  * 5. `shieldedShieldFromIdentityToRecipient` (Type 21 to a third party's Orchard address).

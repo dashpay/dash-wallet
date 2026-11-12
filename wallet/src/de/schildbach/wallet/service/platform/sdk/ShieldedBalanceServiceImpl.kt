@@ -1182,7 +1182,8 @@ class ShieldedBalanceServiceImpl internal constructor(
      */
     private val sweepScope: CoroutineScope? = null,
     /**
-     * Seed the asset-lock kind ([AssetLockKind.SHIELD]) in-memory the instant a
+     * Seed the asset-lock kind ([AssetLockKind.SHIELD], or [AssetLockKind.SHIELD_EXTERNAL]
+     * for a shield to another wallet's address) in-memory the instant a
      * wallet-shield's funding lock is known, so the first engine-feed
      * classification of this L1 lock already reads "Shielded" instead of
      * momentarily "Internal" — mirroring the transparent/invite paths. No-op
@@ -2498,9 +2499,13 @@ class ShieldedBalanceServiceImpl internal constructor(
                                 endSpend()
                             }
                             kickImmediateShieldedSync()
-                            // Seed the funding lock's kind as SHIELD (best-effort, post-
-                            // success) so the L1 asset lock renders "Shielded" on first
-                            // classification instead of "Internal". The new lock is the
+                            // Seed the funding lock's kind (best-effort, post-success) so
+                            // the L1 asset lock renders "Shielded" on first classification
+                            // instead of "Internal": SHIELD (a self-transfer) for the
+                            // wallet's own pool, SHIELD_EXTERNAL (a send) when the Orchard
+                            // recipient is another wallet's. Only this path knows which, so
+                            // after a restart the funding-type fallback reads SHIELD for
+                            // both (see [AssetLockKind.SHIELD_EXTERNAL]). The new lock is the
                             // outPointHex absent from lockedBefore; its txid part (before
                             // ':') is ALREADY display hex (AssetLockEntity keys on display),
                             // so it is the resolver's seed key directly. The same txid is
@@ -2513,7 +2518,14 @@ class ShieldedBalanceServiceImpl internal constructor(
                                     ?.takeIf { it.length == 64 }
                                     ?.let {
                                         onLockTxId(it)
-                                        seedAssetLockKind(it, AssetLockKind.SHIELD)
+                                        seedAssetLockKind(
+                                            it,
+                                            if (externalRecipientRaw43 != null) {
+                                                AssetLockKind.SHIELD_EXTERNAL
+                                            } else {
+                                                AssetLockKind.SHIELD
+                                            }
+                                        )
                                     }
                             } catch (t: Throwable) {
                                 if (t is CancellationException) throw t

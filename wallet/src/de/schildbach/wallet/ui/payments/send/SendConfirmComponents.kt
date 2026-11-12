@@ -60,7 +60,6 @@ import de.schildbach.wallet.ui.shielded.toFiatAt
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.money.Fiat
-import org.dash.wallet.common.ui.components.ButtonData
 import org.dash.wallet.common.ui.components.DASH_CURRENCY_CODE
 import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.EnterAmount
@@ -69,7 +68,6 @@ import org.dash.wallet.common.ui.components.ListItem
 import org.dash.wallet.common.ui.components.ListItem1
 import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.Menu
-import org.dash.wallet.common.ui.components.ModalDialog
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.Size
 import org.dash.wallet.common.ui.components.Style
@@ -80,7 +78,7 @@ import org.dash.wallet.common.ui.enter_amount.localizeAmountForDisplay
 import java.util.Locale
 
 // The confirm, progress and outcome UI shared by the Advanced-mode External Send (MO-1121) and
-// Internal Transfers (MO-1125): one fee + confirm sheet, one sending overlay, one result dialog.
+// Internal Transfers (MO-1125): one fee + confirm sheet, one sending overlay, one result overlay.
 
 // ── Sheets ──────────────────────────────────────────────────────────────────
 
@@ -142,9 +140,12 @@ internal fun SendConfirmSheet(
             trailingPart = false,
             title = stringResource(R.string.external_send_confirm_title)
         )
+        // Weighted (not filling) so the scrolling details shrink on a short screen or with large
+        // text and the Cancel/Confirm row below always keeps its height.
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .weight(1f, fill = false)
                 .verticalScroll(rememberScrollState())
         ) {
             ConfirmAmount(amount, rate, fiatCode)
@@ -312,35 +313,15 @@ internal fun SendingOverlay(shieldedLeg: Boolean, onLeave: () -> Unit) {
     }
 }
 
-/** The terminal outcome. Only Not sent offers to go back and edit; nothing offers a retry. */
-@Composable
-internal fun ResultDialog(result: ExternalSendResult, afterRestart: Boolean, onClose: () -> Unit) {
-    val content = resultContentFor(result, afterRestart)
-    ModalDialog(
-        showDialog = true,
-        onDismissRequest = onClose,
-        icon = ImageVector.vectorResource(content.icon),
-        heading = stringResource(content.title),
-        textBlocks = listOf(stringResource(content.message)),
-        buttons = listOf(
-            ButtonData(
-                label = stringResource(content.button),
-                onClick = onClose,
-                isPrimary = true,
-                style = Style.TintedGray
-            )
-        )
-    )
-}
-
 /**
  * The terminal outcome. Only Not sent offers to go back and edit; nothing offers a retry.
  *
  * Drawn inside the screen, like [SheetOverlay] and [SendingOverlay], rather than as a
- * [ModalDialog]: a dialog is its own window, which stays above the lock screen and could be
- * closed without the PIN. In the screen it is covered by the lock screen and shows again after
- * unlock. The card copies that dialog's layout so it looks the same. Back is handled by the
- * fragment, which acknowledges the outcome as the dialog's dismiss-on-back did.
+ * [org.dash.wallet.common.ui.components.ModalDialog]: a dialog is its own window, which stays
+ * above the lock screen and could be closed without the PIN. In the screen it is covered by the
+ * lock screen and shows again after unlock. The card copies that dialog's layout so it looks the
+ * same. Back is handled by the fragment, which acknowledges the outcome as the dialog's
+ * dismiss-on-back did.
  */
 @Composable
 internal fun ResultOverlay(result: ExternalSendResult, afterRestart: Boolean, onClose: () -> Unit) {
@@ -413,7 +394,7 @@ internal fun ResultOverlay(result: ExternalSendResult, afterRestart: Boolean, on
     }
 }
 
-/** What the outcome dialog shows for [result]. */
+/** What the outcome overlay shows for [result]. */
 internal data class ResultContent(
     @DrawableRes val icon: Int,
     @StringRes val title: Int,
@@ -463,5 +444,6 @@ internal fun notSentMessageFor(reason: NotSentReason): Int = when (reason) {
     NotSentReason.PAYMENT_STILL_CONFIRMING -> R.string.external_send_not_sent_still_confirming
     NotSentReason.IN_PROGRESS -> R.string.external_send_not_sent_in_progress
     NotSentReason.BALANCE_CHANGED -> R.string.external_send_not_sent_balance_changed
+    NotSentReason.EARLIER_TOP_UP_COMPLETED -> R.string.external_send_not_sent_earlier_top_up_completed
     NotSentReason.GENERIC -> R.string.external_send_not_sent_generic
 }

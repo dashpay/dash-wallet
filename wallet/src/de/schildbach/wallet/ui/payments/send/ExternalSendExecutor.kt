@@ -18,6 +18,7 @@
 package de.schildbach.wallet.ui.payments.send
 
 import androidx.datastore.preferences.core.Preferences
+import de.schildbach.wallet.data.WalletData
 import de.schildbach.wallet.service.platform.sdk.ExternalSendResult
 import de.schildbach.wallet.service.platform.sdk.ExternalSendService
 import de.schildbach.wallet.service.platform.sdk.NotSentReason
@@ -37,6 +38,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.dash.wallet.common.money.Dash
 import org.slf4j.LoggerFactory
+import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -122,6 +124,11 @@ internal class DashPayConfigInFlightMarker(
  * A fresh process that finds it set (or cannot read it) starts in
  * [ExternalSendExecution.InterruptedByRestart].
  *
+ * Reset Wallet: this singleton outlives the wallet, so a wipe listener ([forgetWalletState])
+ * returns it to Idle and moves it to a new wallet generation. A send of the wiped wallet that
+ * completes afterwards publishes nothing and touches no marker: the next wallet never shows,
+ * or opens the transaction of, the old one's outcome.
+ *
  * Deliberately simpler than the shielded [de.schildbach.wallet.ui.shielded.ShieldedTransferExecutor]:
  * no system notification and no stall watchdog. The service is itself single-flight.
  */
@@ -135,8 +142,11 @@ class ExternalSendExecutor internal constructor(
     constructor(
         service: ExternalSendService,
         dashPayConfig: DashPayConfig,
+        walletData: WalletData,
         applicationScope: CoroutineScope
-    ) : this(service, DashPayConfigInFlightMarker(dashPayConfig), applicationScope)
+    ) : this(service, DashPayConfigInFlightMarker(dashPayConfig), applicationScope) {
+        walletData.attachOnWalletWipedListener { forgetWalletState() }
+    }
 
     companion object {
         private val log = LoggerFactory.getLogger(ExternalSendExecutor::class.java)
@@ -144,6 +154,13 @@ class ExternalSendExecutor internal constructor(
 
     private val _state = MutableStateFlow<ExternalSendExecution>(ExternalSendExecution.Restoring)
     val state: StateFlow<ExternalSendExecution> = _state.asStateFlow()
+
+    /**
+     * The wallet generation: bumped by every wipe ([forgetWalletState]). A send captures it when
+     * submitted and, once the wallet it was for is gone, neither publishes its outcome nor
+     * touches the in-flight marker (which may by then be the next wallet's).
+     */
+    private val generation = AtomicLong(0)
 
     /** The running [resumePendingPlatformFunding] sweep (declared before `init`, which starts one). */
     private val platformFundingSweep = AtomicReference<Job?>(null)
@@ -203,6 +220,11 @@ class ExternalSendExecutor internal constructor(
      * attempt per confirmation, and a terminal result is never silently replaced.
      */
     fun submit(request: ExternalSendRequest): Boolean {
+        // Read BEFORE the state claim: a wipe that resets the state from here on is seen by
+        // [isCurrent], so this send can never publish into the next wallet's state.
+        val submittedIn = generation.get()
+
+        fun isCurrent() = generation.get() == submittedIn
         var accepted = false
         _state.update { current ->
             if (current is ExternalSendExecution.Idle) {
@@ -221,6 +243,11 @@ class ExternalSendExecutor internal constructor(
             var result: ExternalSendResult = ExternalSendResult.MayHaveGoneThrough
             var marked = false
             try {
+                if (!isCurrent()) {
+                    // The wallet was wiped before anything was handed to the service.
+                    result = ExternalSendResult.NotSent(NotSentReason.GENERIC)
+                    return@launch
+                }
                 try {
                     marker.set()
                     marked = true
@@ -229,6 +256,13 @@ class ExternalSendExecutor internal constructor(
                 } catch (e: Exception) {
                     // Nothing handed to the service: provably nothing spent.
                     log.warn("external send: could not record the in-flight marker; not sent", e)
+                    result = ExternalSendResult.NotSent(NotSentReason.GENERIC)
+                }
+                if (marked && !isCurrent()) {
+                    // A wipe ran while the marker was written, possibly after it cleared the
+                    // marker: this one belongs to the wiped wallet. Nothing is sent.
+                    withContext(NonCancellable) { clearMarker() }
+                    marked = false
                     result = ExternalSendResult.NotSent(NotSentReason.GENERIC)
                 }
                 if (marked) {
@@ -248,14 +282,23 @@ class ExternalSendExecutor internal constructor(
                 log.error("external send threw; outcome unknown", e)
             } finally {
                 log.info("external send {} → {} finished: {}", request.source, kindOf(request.destination), kindOf(result))
-                // Only Not sent (nothing spent) clears here; Sent keeps the restart
-                // protection until acknowledged. Cleared BEFORE the outcome is published: a
-                // later submit (only after this one is acknowledged) can never have its own
-                // marker cleared by this one.
-                if (marked && result is ExternalSendResult.NotSent) {
-                    withContext(NonCancellable) { clearMarker() }
+                if (!isCurrent()) {
+                    // The wallet it was for was wiped: its outcome is not the next wallet's to
+                    // see, and the marker (cleared by the wipe) may already be the next one's.
+                    log.warn("external send: finished after a wallet wipe; outcome dropped")
+                } else {
+                    // Only Not sent (nothing spent) clears here; Sent keeps the restart
+                    // protection until acknowledged. Cleared BEFORE the outcome is published: a
+                    // later submit (only after this one is acknowledged) can never have its own
+                    // marker cleared by this one.
+                    if (marked && result is ExternalSendResult.NotSent) {
+                        withContext(NonCancellable) { clearMarker() }
+                    }
+                    // Checked again in the update (after the clear's suspension): a wipe that
+                    // bumped the generation, or already reset the state, wins.
+                    val outcome = result
+                    _state.update { if (isCurrent()) ExternalSendExecution.Finished(request, outcome) else it }
                 }
-                _state.value = ExternalSendExecution.Finished(request, result)
             }
         }
         return true
@@ -279,11 +322,28 @@ class ExternalSendExecutor internal constructor(
             _state.compareAndSet(current, ExternalSendExecution.Idle)
             return
         }
+        val acknowledgedIn = generation.get()
         if (!_state.compareAndSet(current, ExternalSendExecution.Acknowledging)) return
         applicationScope.launch {
-            clearMarker()
+            // After a wipe the marker is the wipe's (cleared) or the next wallet's: left alone.
+            if (generation.get() == acknowledgedIn) clearMarker()
             _state.compareAndSet(ExternalSendExecution.Acknowledging, ExternalSendExecution.Idle)
         }
+    }
+
+    /**
+     * Reset Wallet (a wallet-wipe listener, run after the wipe drained every payment hold and
+     * cleared the configs): forgets every outcome of the wiped wallet. Bumps [generation] first,
+     * so a send of that wallet still finishing publishes nothing, then clears the in-flight
+     * marker (again: [DashPayConfig] is cleared by the wipe too, but a send may have written it
+     * after that) and returns to Idle.
+     */
+    internal suspend fun forgetWalletState() {
+        generation.incrementAndGet()
+        // Cleared before Idle, so no send of the next wallet can have set it yet.
+        clearMarker()
+        _state.value = ExternalSendExecution.Idle
+        log.info("external send: state reset for a wallet wipe")
     }
 
     private suspend fun clearMarker() {

@@ -449,21 +449,23 @@ internal fun planL1TxRow(
  * The shield/unshield pair moves value between the wallet and its own
  * shielded pool — a self-transfer, not a payment — so both list rows render
  * the INTERNAL (double-arrows) transfer icon instead of the sent/received
- * arrows (product spec; the fee-like kinds keep the sent arrow).
+ * arrows (product spec; the fee-like kinds keep the sent arrow). A shield to
+ * ANOTHER wallet ([AssetLockKind.SHIELD_EXTERNAL]) is a payment, not a pool
+ * transfer, so it keeps the sent arrow.
  */
 internal val AssetLockKind.isPoolTransfer: Boolean
     get() = this == AssetLockKind.SHIELD || this == AssetLockKind.UNSHIELD
 
 /**
  * The kinds an OUTGOING asset lock can carry: the Platform-funding ones (the
- * Platform-address send included) and the shield (a lock into the wallet's own
- * pool, kept on its transfer treatment). The unshield pair are AssetUnlocks,
- * recorded INCOMING, never an outgoing lock.
+ * Platform-address send included), the shield (a lock into the wallet's own
+ * pool, kept on its transfer treatment) and the third-party shielded send. The
+ * unshield pair are AssetUnlocks, recorded INCOMING, never an outgoing lock.
  */
 internal val AssetLockKind.appliesToOutgoing: Boolean
     get() = this == AssetLockKind.UPGRADE || this == AssetLockKind.TOPUP ||
         this == AssetLockKind.INVITE || this == AssetLockKind.SHIELD ||
-        this == AssetLockKind.PLATFORM
+        this == AssetLockKind.PLATFORM || this == AssetLockKind.SHIELD_EXTERNAL
 
 /**
  * Whether the display pass asks the asset-lock resolver about an OUTGOING
@@ -484,6 +486,9 @@ internal fun assetLockTitleRes(kind: AssetLockKind): Int = when (kind) {
     AssetLockKind.SHIELD -> R.string.transaction_row_shielded
     // Core → Platform-address send: a payment, so the sent arrow, titled "Platform".
     AssetLockKind.PLATFORM -> R.string.transaction_row_platform
+    // Core → third-party shielded-address send: a payment like PLATFORM (sent
+    // arrow — not a pool transfer), titled by its destination like PLATFORM.
+    AssetLockKind.SHIELD_EXTERNAL -> R.string.transaction_row_shielded
     AssetLockKind.UNSHIELD -> R.string.transaction_row_unshielded
     // Every AssetUnlock without evidence that THIS wallet's pool authored it.
     // A received AssetUnlock carries no source, so it may be a Platform address

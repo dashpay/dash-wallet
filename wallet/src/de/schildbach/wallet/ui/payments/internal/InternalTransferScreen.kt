@@ -57,7 +57,7 @@ import androidx.compose.ui.unit.dp
 import de.schildbach.wallet.service.platform.sdk.InternalTransferSupport
 import de.schildbach.wallet.service.platform.sdk.SendBalance
 import de.schildbach.wallet.ui.payments.send.ExternalSendStatus
-import de.schildbach.wallet.ui.payments.send.ResultDialog
+import de.schildbach.wallet.ui.payments.send.ResultOverlay
 import de.schildbach.wallet.ui.payments.send.SendConfirmSheet
 import de.schildbach.wallet.ui.payments.send.SendingOverlay
 import de.schildbach.wallet.ui.payments.send.SheetOverlay
@@ -102,13 +102,14 @@ private const val DISABLED_ROW_ALPHA = 0.4f
  * The Internal tab of the Advanced payments screen (MO-1125, Figma 3342:12176) under the
  * Receive / Internal / Send picker the host draws: the amount, the From / To cards with the swap
  * button, the keypad and Continue; the "Transfer from / to" picker (3342:12177); and the shared
- * confirm sheet, sending overlay and outcome dialog of the External Send, drawn as
+ * confirm sheet, sending overlay and outcome overlay of the External Send, drawn as
  * [de.schildbach.wallet.ui.payments.send.ExternalSendScreen] draws them. The host hides the
  * bottom navigation on this tab, so the page reaches the bottom of MainActivity's content.
  *
- * The outcome dialog is its own window and would sit above the lock screen: it is withheld while
- * the lock screen is up ([InternalTransferUIState.lockScreenShown]). The sheets and the sending
- * overlay are drawn in the page, which the lock screen covers.
+ * The sheets, the sending overlay and the outcome overlay are drawn in the page, which the lock
+ * screen covers; the outcome is also withheld while the lock screen is up
+ * ([InternalTransferUIState.lockScreenShown]). Back while it shows is the fragment's: it
+ * acknowledges the outcome.
  */
 @Composable
 fun InternalTransferScreen(uiState: InternalTransferUIState, actions: InternalTransferActions) {
@@ -136,9 +137,10 @@ fun InternalTransferScreen(uiState: InternalTransferUIState, actions: InternalTr
             is ExternalSendStatus.Sending -> if (!uiState.sendingHidden) {
                 SendingOverlay(status.shieldedLeg, actions.onHideSending)
             }
-            // Withheld (not acknowledged) while the lock screen is up.
+            // Drawn in the page, so the lock screen covers it; also withheld (not acknowledged)
+            // while the lock screen is up.
             is ExternalSendStatus.Done -> if (!uiState.lockScreenShown) {
-                ResultDialog(status.result, status.afterRestart, actions.onResultClosed)
+                ResultOverlay(status.result, status.afterRestart, actions.onResultClosed)
             }
             ExternalSendStatus.Idle, ExternalSendStatus.Restoring -> {}
         }

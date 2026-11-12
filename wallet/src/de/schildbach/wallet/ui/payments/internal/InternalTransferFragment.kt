@@ -53,13 +53,14 @@ import javax.inject.Inject
  *
  * Confirm captures the exact request, then asks for PIN/biometric (the External Send's auth
  * path), then hands it to the app-scoped [InternalTransferExecutor]: leaving the screen does not
- * cancel the transfer. Back closes an open sheet; otherwise it belongs to the host (as in the
- * External Send, Back while a transfer runs leaves it running). Closing a finished transfer's
- * outcome returns Home, as the External Send does; Not sent stays here.
+ * cancel the transfer. Back closes an open sheet, or acknowledges a shown outcome (as the
+ * External Send does); otherwise it belongs to the host (as in the External Send, Back while a
+ * transfer runs leaves it running). Closing a finished transfer's outcome returns Home, as the
+ * External Send does; Not sent stays here.
  *
- * The lock screen is drawn in MainActivity's content, over this page and its in-place sheets but
- * under the outcome dialog's window: on lock ([onLockScreenActivated]) the outcome is withheld
- * until the wallet is unlocked ([LockScreenActivity.walletLocked] turns false).
+ * The lock screen is drawn in MainActivity's content, over this page and its in-place sheets and
+ * outcome overlay: on lock ([onLockScreenActivated]) the outcome is withheld, and Back is left to
+ * the lock screen, until the wallet is unlocked ([LockScreenActivity.walletLocked] turns false).
  */
 @AndroidEntryPoint
 class InternalTransferFragment : Fragment(), LockScreenAware {
@@ -80,12 +81,19 @@ class InternalTransferFragment : Fragment(), LockScreenAware {
                 DashWalletTheme {
                     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
                     // ViewPager2 lifts only the selected page to RESUMED: an offscreen Internal page
-                    // must not take Back from the page on show. Nor does a sheet the lock screen covers.
+                    // must not take Back from the page on show. Nor does a sheet or an outcome the
+                    // lock screen covers.
                     val lifecycleState by LocalLifecycleOwner.current.lifecycle.currentStateAsState()
                     val selectedPage = lifecycleState.isAtLeast(Lifecycle.State.RESUMED)
                     val sheetOpen = uiState.picker != null || uiState.confirm != null
-                    BackHandler(enabled = selectedPage && !uiState.lockScreenShown && sheetOpen) {
-                        viewModel.onBack()
+                    // The outcome overlay replaced a dialog whose dismiss-on-back acknowledged it.
+                    val resultShown = uiState.status is ExternalSendStatus.Done
+                    BackHandler(enabled = selectedPage && !uiState.lockScreenShown && (sheetOpen || resultShown)) {
+                        if (viewModel.uiState.value.status is ExternalSendStatus.Done) {
+                            onResultClosed()
+                        } else {
+                            viewModel.onBack()
+                        }
                     }
                     // Built once: a new instance per uiState emission (every key press) would
                     // make every child taking it recompose.

@@ -311,6 +311,16 @@ open class DashPayConfig @Inject constructor(
         val EXTERNAL_PLATFORM_FUNDING_PENDING = stringPreferencesKey("external_platform_funding_pending")
 
         /**
+         * Core → Platform fundings whose automatic resume got Platform's (unauthenticated)
+         * `AssetLockAlreadyConsumed`, each an encoded
+         * [de.schildbach.wallet.service.platform.sdk.PendingPlatformFunding] marked
+         * `completionUnconfirmed`, moved here from [EXTERNAL_PLATFORM_FUNDING_PENDING] in one
+         * transaction. Not resumed automatically and not blocking a new send; kept (never
+         * inferred complete) for an explicit retry. Never logged.
+         */
+        val EXTERNAL_PLATFORM_FUNDING_UNCONFIRMED = stringSetPreferencesKey("external_platform_funding_unconfirmed")
+
+        /**
          * [EXTERNAL_SEND_IN_FLIGHT] for the Advanced-mode internal transfer between the user's own
          * balances ([de.schildbach.wallet.ui.payments.internal.InternalTransferExecutor]). A bare
          * flag: no amount, address or id.

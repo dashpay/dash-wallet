@@ -28,6 +28,7 @@ import org.bitcoinj.core.Sha256Hash
 import org.dashfoundation.dashsdk.wallet.TrackedAssetLock
 import org.dashj.platform.dpp.identifier.Identifier
 import org.slf4j.LoggerFactory
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -235,10 +236,15 @@ internal class DashSdkTransparentTopUpSource(
  * [SdkTransparentTopUp.topUpReportingLockTxId]'s [SdkWriteResult.Broadcast] payload: the
  * identity's new [creditBalance] (or [SdkTransparentTopUp.BALANCE_ALREADY_CREDITED]) and,
  * best-effort, the top-up asset lock's DISPLAY-order txid hex.
+ *
+ * [resumedEarlier]: the resume gate found an EARLIER unresolved top-up lock for this identity and
+ * completed THAT one (its amount, not the requested one); no new asset lock was built, so the
+ * requested top-up was NOT executed.
  */
 data class TopUpOutcome(
     val creditBalance: Long,
-    val lockTxIdDisplayHexOrNull: String?
+    val lockTxIdDisplayHexOrNull: String?,
+    val resumedEarlier: Boolean = false
 )
 
 /**
@@ -406,7 +412,9 @@ class SdkTransparentTopUp internal constructor(
      * [topUp], and on [SdkWriteResult.Broadcast] also the DISPLAY-order txid of the top-up's
      * asset lock ([TopUpOutcome.lockTxIdDisplayHexOrNull]) — the same post-success capture that
      * labels the lock "Topup". Best-effort: an unrecoverable txid is null and never changes the
-     * outcome.
+     * outcome. [TopUpOutcome.resumedEarlier] says the Broadcast completed an EARLIER unresolved
+     * top-up lock the resume gate found, not a new one of [amountDuffs]: the caller must not
+     * report it as this request.
      */
     suspend fun topUpReportingLockTxId(
         identityIdBase58: String,
@@ -414,10 +422,18 @@ class SdkTransparentTopUp internal constructor(
         newUserIntent: Boolean
     ): SdkWriteResult<TopUpOutcome> {
         val lockTxId = AtomicReference<String?>(null)
+        val resumedEarlier = AtomicBoolean(false)
         return when (
-            val result = topUpGuarded(identityIdBase58, amountDuffs, newUserIntent, onLockTxId = { lockTxId.set(it) })
+            val result = topUpGuarded(
+                identityIdBase58,
+                amountDuffs,
+                newUserIntent,
+                onLockTxId = { lockTxId.set(it) },
+                onResumedEarlier = { resumedEarlier.set(true) }
+            )
         ) {
-            is SdkWriteResult.Broadcast -> SdkWriteResult.Broadcast(TopUpOutcome(result.value, lockTxId.get()))
+            is SdkWriteResult.Broadcast ->
+                SdkWriteResult.Broadcast(TopUpOutcome(result.value, lockTxId.get(), resumedEarlier.get()))
             is SdkWriteResult.NotBroadcast -> result
             is SdkWriteResult.Ambiguous -> result
         }
@@ -427,7 +443,8 @@ class SdkTransparentTopUp internal constructor(
         identityIdBase58: String,
         amountDuffs: Long,
         newUserIntent: Boolean,
-        onLockTxId: (String) -> Unit
+        onLockTxId: (String) -> Unit,
+        onResumedEarlier: () -> Unit = {}
     ): SdkWriteResult<Long> {
         synchronized(this) {
             when (guard) {
@@ -447,7 +464,13 @@ class SdkTransparentTopUp internal constructor(
         }
         val result = try {
             withContext(ioDispatcher) {
-                topUpTransparent(identityIdBase58, amountDuffs, newUserIntent, onLockTxId = onLockTxId)
+                topUpTransparent(
+                    identityIdBase58,
+                    amountDuffs,
+                    newUserIntent,
+                    onLockTxId = onLockTxId,
+                    onResumedEarlier = onResumedEarlier
+                )
             }
         } catch (t: Throwable) {
             // A thrown (non-cancellation) failure escaping the pipeline is, by
@@ -496,7 +519,14 @@ class SdkTransparentTopUp internal constructor(
          * Receives the DISPLAY-order txid of the top-up's asset lock once it is known on a
          * successful top-up (best-effort; see [topUpReportingLockTxId]). Must not throw.
          */
-        onLockTxId: (String) -> Unit = {}
+        onLockTxId: (String) -> Unit = {},
+        /**
+         * Called, on a [newUserIntent], before a [SdkWriteResult.Broadcast] that consumed an
+         * EARLIER request's unresolved top-up lock the resume gate found (its amount, not
+         * [amountDuffs]) instead of building a new one ([TopUpOutcome.resumedEarlier]). Must not
+         * throw.
+         */
+        onResumedEarlier: () -> Unit = {}
     ): SdkWriteResult<Long> {
         // Fail closed unless the cutover is committed — pre-cutover this path
         // must submit nothing (the dashj path owns funding then).
@@ -642,7 +672,8 @@ class SdkTransparentTopUp internal constructor(
                     amountDuffs,
                     newUserIntent,
                     skipLockOutpoint = existingLock.outpointTxid to existingLock.outpointVout,
-                    onLockTxId = onLockTxId
+                    onLockTxId = onLockTxId,
+                    onResumedEarlier = onResumedEarlier
                 )
             }
             return when (val classified = classifyBroadcastFailure(t)) {
@@ -719,6 +750,9 @@ class SdkTransparentTopUp internal constructor(
             log.warn("failed to capture/record top-up asset-lock txid", t)
         }
 
+        // On a new intent the resume branch completed an EARLIER request's lock (whatever amount
+        // it locked), not a top-up of amountDuffs. (On a rerun the lock is this request's own.)
+        if (existingLock != null && newUserIntent) onResumedEarlier()
         return SdkWriteResult.Broadcast(newBalance)
     }
 

@@ -21,7 +21,6 @@ import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.shielded.assetLockMaxFeeReserve
 import kotlinx.coroutines.runBlocking
 import org.bitcoinj.core.Utils
-import org.dashfoundation.dashsdk.errors.DashSdkError
 
 // Advanced-mode External Send, Core → third-party Platform address (MO-1121):
 // the persisted recipient record the SDK's resume contract requires, and the
@@ -66,36 +65,6 @@ internal const val EXTERNAL_FUNDING_PLATFORM_ACCOUNT_INDEX = 0
  */
 internal const val ASSET_LOCK_FUNDING_TYPE_ADDRESS_TOPUP = 4
 
-/**
- * Whether an SDK funding call was refused because Platform already knows this exact state
- * transition: rs-sdk `Error::AlreadyExists`, which the JNI surfaces as a Generic error
- * reading "Object already exists: …" — Tenderdash's "tx already exists in cache", or
- * DAPI's "state transition already in mempool" / "already in chain".
- *
- * On a resume this is terminal for the record: the transition is signed over the lock and
- * exactly the persisted recipients and nothing else varies (no fee bump on resume), so every
- * resume rebuilds the same bytes and Tenderdash refuses them again for as long as its cache
- * holds the first submission. The SDK does not wait for that submission's result after this
- * error (rs-sdk `broadcast_and_wait_for_affected_state_with_metadata` returns on the
- * broadcast error), so the wallet never learns the outcome from the call.
- *
- * Message-matched, down the cause chain because the JNI wraps it, until the SDK types it;
- * only errors raised by the SDK ([DashSdkError]) qualify.
- */
-internal fun isTransitionAlreadyKnownToPlatform(t: Throwable): Boolean {
-    if (t !is DashSdkError) return false
-    var cause: Throwable? = t
-    var hops = 0
-    while (cause != null && hops++ < 8) {
-        if (cause.message?.contains(SDK_ALREADY_EXISTS_PREFIX) == true) return true
-        cause = cause.cause
-    }
-    return false
-}
-
-/** rs-sdk `Error::AlreadyExists`'s display prefix. */
-private const val SDK_ALREADY_EXISTS_PREFIX = "Object already exists:"
-
 /** The Core → Platform lock in duffs: [amountDuffs] plus [PLATFORM_FUNDING_FEE_MARGIN_DUFFS]. */
 internal fun platformFundingLockDuffs(amountDuffs: Long): Long =
     Math.addExact(amountDuffs, PLATFORM_FUNDING_FEE_MARGIN_DUFFS)
@@ -121,6 +90,13 @@ internal fun coreToPlatformMaxDuffs(eligibleDuffs: Long, spendableUtxoCount: Int
  * only thing that binds the lock ([outPointHex], recorded from `onAssetLockBuilt`) to
  * its payee. A resume must use exactly [recipients].
  *
+ * [completionUnconfirmed]: an automatic resume got Platform's `AssetLockAlreadyConsumed` for
+ * this lock (iOS `AssetLockRecoveryService`'s `completionUnconfirmed`). That answer is
+ * unauthenticated, so the record is never deleted for it: the store moves it out of the
+ * pending slot into its completion-unconfirmed set ([PlatformFundingStore.markCompletionUnconfirmed]),
+ * where it no longer blocks a new Core → Platform send and is no longer resumed automatically,
+ * but is kept for an explicit retry. Its lock stays non-terminal in the SDK.
+ *
  * [toString] is redacted: no address, amount or wallet id is ever logged.
  */
 internal class PendingPlatformFunding(
@@ -131,7 +107,8 @@ internal class PendingPlatformFunding(
     val explicitCredits: Long,
     val remainder: PlatformAddressBytes,
     /** `<display txid hex>:<vout>`, the SDK `asset_locks` key; null until the lock is built. */
-    val outPointHex: String?
+    val outPointHex: String?,
+    val completionUnconfirmed: Boolean = false
 ) {
     init {
         require(id.isNotEmpty() && FIELD_SEPARATOR !in id) { "malformed id" }
@@ -142,6 +119,7 @@ internal class PendingPlatformFunding(
         require(remainder.addressType == 0 && remainder.hash.size == 20) { "remainder must be P2PKH" }
         require(!destination.hash.contentEquals(remainder.hash)) { "destination and remainder must differ" }
         require(outPointHex == null || parseOutPointHex(outPointHex) != null) { "malformed outpoint" }
+        require(!completionUnconfirmed || outPointHex != null) { "only a built lock can be completion-unconfirmed" }
     }
 
     /** The recipients, in the SDK's shape: the payee's explicit amount and the remainder. */
@@ -158,6 +136,11 @@ internal class PendingPlatformFunding(
     fun withOutPoint(outPointHex: String): PendingPlatformFunding =
         PendingPlatformFunding(id, walletIdHex, lockDuffs, destination, explicitCredits, remainder, outPointHex)
 
+    /** This record, marked [completionUnconfirmed] (its lock must have been built). */
+    fun asCompletionUnconfirmed(): PendingPlatformFunding = PendingPlatformFunding(
+        id, walletIdHex, lockDuffs, destination, explicitCredits, remainder, outPointHex, completionUnconfirmed = true
+    )
+
     /** Same content, field by field (the hashes by value). */
     fun sameAs(other: PendingPlatformFunding): Boolean =
         id == other.id &&
@@ -168,9 +151,14 @@ internal class PendingPlatformFunding(
             explicitCredits == other.explicitCredits &&
             remainder.addressType == other.remainder.addressType &&
             remainder.hash.contentEquals(other.remainder.hash) &&
-            outPointHex == other.outPointHex
+            outPointHex == other.outPointHex &&
+            completionUnconfirmed == other.completionUnconfirmed
 
-    fun encode(): String = listOf(
+    /**
+     * The stored form. An unmarked record keeps the original ten fields (what every earlier
+     * build wrote and reads); [completionUnconfirmed] adds an eleventh, [COMPLETION_UNCONFIRMED].
+     */
+    fun encode(): String = listOfNotNull(
         FORMAT_VERSION,
         id,
         walletIdHex.lowercase(),
@@ -180,24 +168,31 @@ internal class PendingPlatformFunding(
         explicitCredits.toString(),
         remainder.addressType.toString(),
         Utils.HEX.encode(remainder.hash),
-        outPointHex.orEmpty()
+        outPointHex.orEmpty(),
+        COMPLETION_UNCONFIRMED.takeIf { completionUnconfirmed }
     ).joinToString(FIELD_SEPARATOR)
 
     override fun toString(): String =
-        "PendingPlatformFunding(id=$id, outPoint=${if (outPointHex == null) "none" else "recorded"}, <redacted>)"
+        "PendingPlatformFunding(id=$id, outPoint=${if (outPointHex == null) "none" else "recorded"}, " +
+            "completionUnconfirmed=$completionUnconfirmed, <redacted>)"
 
     companion object {
         private const val FORMAT_VERSION = "1"
         private const val FIELD_SEPARATOR = "|"
         private const val FIELD_COUNT = 10
+        private const val COMPLETION_UNCONFIRMED = "u"
 
         /**
          * Decode a stored record. Malformed is NOT absent: this throws
-         * [IllegalStateException], and every caller fails closed on it.
+         * [IllegalStateException], and every caller fails closed on it. A record written
+         * before [completionUnconfirmed] existed (ten fields) decodes as not marked.
          */
         fun decode(encoded: String): PendingPlatformFunding {
             val fields = encoded.split(FIELD_SEPARATOR)
-            check(fields.size == FIELD_COUNT && fields[0] == FORMAT_VERSION) { "malformed pending platform funding" }
+            val marked = fields.size == FIELD_COUNT + 1 && fields[FIELD_COUNT] == COMPLETION_UNCONFIRMED
+            check((fields.size == FIELD_COUNT || marked) && fields[0] == FORMAT_VERSION) {
+                "malformed pending platform funding"
+            }
             return try {
                 PendingPlatformFunding(
                     id = fields[1],
@@ -206,7 +201,8 @@ internal class PendingPlatformFunding(
                     destination = PlatformAddressBytes(fields[4].toInt(), hash20(fields[5])),
                     explicitCredits = fields[6].toLong(),
                     remainder = PlatformAddressBytes(fields[7].toInt(), hash20(fields[8])),
-                    outPointHex = fields[9].ifEmpty { null }
+                    outPointHex = fields[9].ifEmpty { null },
+                    completionUnconfirmed = marked
                 )
             } catch (e: IllegalArgumentException) {
                 // NumberFormatException included; the message carries no field value.
@@ -240,9 +236,26 @@ internal interface PlatformFundingStore {
 
     /** Remove the record if it is still [id]'s (a malformed or different record is kept). */
     suspend fun clear(id: String)
+
+    /**
+     * In one durable transaction, move the pending record out of the pending slot into the
+     * completion-unconfirmed set, marked ([PendingPlatformFunding.completionUnconfirmed]),
+     * if it is still [id]'s and its lock was built; otherwise change nothing. Never deletes it.
+     */
+    suspend fun markCompletionUnconfirmed(id: String)
+
+    /**
+     * The completion-unconfirmed records (all wallets), never resumed automatically and never
+     * blocking a new send; kept for an explicit retry. Throws when unreadable or malformed.
+     */
+    suspend fun readCompletionUnconfirmed(): List<PendingPlatformFunding>
 }
 
-/** [PlatformFundingStore] over [DashPayConfig.EXTERNAL_PLATFORM_FUNDING_PENDING]. */
+/**
+ * [PlatformFundingStore] over [DashPayConfig.EXTERNAL_PLATFORM_FUNDING_PENDING] and
+ * [DashPayConfig.EXTERNAL_PLATFORM_FUNDING_UNCONFIRMED]; a wallet wipe clears both
+ * (DashPayConfig's default `clearAll`).
+ */
 internal class DashPayConfigPlatformFundingStore(private val config: DashPayConfig) : PlatformFundingStore {
     override suspend fun read(): PendingPlatformFunding? =
         config.getPreservingErrors(DashPayConfig.EXTERNAL_PLATFORM_FUNDING_PENDING)
@@ -268,4 +281,24 @@ internal class DashPayConfigPlatformFundingStore(private val config: DashPayConf
         }
         if (storedId == id) prefs.remove(DashPayConfig.EXTERNAL_PLATFORM_FUNDING_PENDING)
     }
+
+    override suspend fun markCompletionUnconfirmed(id: String) = config.editPreferences { prefs ->
+        val stored = prefs[DashPayConfig.EXTERNAL_PLATFORM_FUNDING_PENDING]
+        val record = try {
+            stored?.takeIf { it.isNotEmpty() }?.let(PendingPlatformFunding::decode)
+        } catch (e: IllegalStateException) {
+            null
+        }
+        if (record != null && record.id == id && record.outPointHex != null) {
+            val unconfirmed = prefs[DashPayConfig.EXTERNAL_PLATFORM_FUNDING_UNCONFIRMED].orEmpty()
+            prefs[DashPayConfig.EXTERNAL_PLATFORM_FUNDING_UNCONFIRMED] =
+                unconfirmed + record.asCompletionUnconfirmed().encode()
+            prefs.remove(DashPayConfig.EXTERNAL_PLATFORM_FUNDING_PENDING)
+        }
+    }
+
+    override suspend fun readCompletionUnconfirmed(): List<PendingPlatformFunding> =
+        config.getPreservingErrors(DashPayConfig.EXTERNAL_PLATFORM_FUNDING_UNCONFIRMED)
+            .orEmpty()
+            .map(PendingPlatformFunding::decode)
 }

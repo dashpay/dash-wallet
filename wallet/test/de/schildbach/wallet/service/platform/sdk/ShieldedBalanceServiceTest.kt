@@ -483,7 +483,8 @@ class ShieldedBalanceServiceTest {
         stopLockTimeoutMs: Long = ShieldedBalanceServiceImpl.STOP_LOCK_TIMEOUT_MS,
         afterReadyCommitted: suspend () -> Unit = {},
         afterStopFallbackBump: suspend () -> Unit = {},
-        freshFundingBlocked: suspend () -> Boolean = { false }
+        freshFundingBlocked: suspend () -> Boolean = { false },
+        seedAssetLockKind: (String, AssetLockKind) -> Unit = { _, _ -> }
     ) = ShieldedBalanceServiceImpl(
         source = source,
         dashPayConfig = config(enabled, l1ShadowEnabled, lastBalanceDuffs, consumed),
@@ -499,6 +500,7 @@ class ShieldedBalanceServiceTest {
         afterReadyCommitted = afterReadyCommitted,
         afterStopFallbackBump = afterStopFallbackBump,
         freshFundingBlocked = freshFundingBlocked,
+        seedAssetLockKind = seedAssetLockKind,
         fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
     )
 
@@ -3715,6 +3717,44 @@ class ShieldedBalanceServiceTest {
             SdkWriteResult.Broadcast(ShieldToAddressOutcome(ShieldFromWalletOutcome.COMPLETED, "bb".repeat(32))),
             result
         )
+    }
+
+    /**
+     * Pre-review finding 6: a shield to ANOTHER wallet's Orchard address is a payment,
+     * so its funding lock is seeded [AssetLockKind.SHIELD_EXTERNAL] (sent arrow), not
+     * SHIELD (the own-pool self-transfer look).
+     */
+    @Test
+    fun shieldFromWalletToAddress_completed_seedsTheLockAsAnExternalShield() = runBlocking {
+        val source = readySource()
+        val seeds = mutableListOf<Pair<String, AssetLockKind>>()
+        val service = service(source, progress = { caughtUpProgress() }, seedAssetLockKind = { h, k -> seeds += h to k })
+        var funded = false
+        source.shieldLocks = {
+            if (funded) listOf(PendingWalletShieldLock("bb".repeat(32) + ":1", 1, 100_000)) else emptyList()
+        }
+        source.onFund = { funded = true }
+
+        service.shieldFromWalletToAddress(recipientAddress, Dash.COIN, walletIdHex)
+
+        assertEquals(listOf("bb".repeat(32) to AssetLockKind.SHIELD_EXTERNAL), seeds)
+    }
+
+    /** The own-pool shield keeps SHIELD and its self-transfer look. */
+    @Test
+    fun shieldFromWallet_completed_seedsTheLockAsAnOwnShield() = runBlocking {
+        val source = readySource()
+        val seeds = mutableListOf<Pair<String, AssetLockKind>>()
+        val service = service(source, progress = { caughtUpProgress() }, seedAssetLockKind = { h, k -> seeds += h to k })
+        var funded = false
+        source.shieldLocks = {
+            if (funded) listOf(PendingWalletShieldLock("cc".repeat(32) + ":0", 1, 100_000)) else emptyList()
+        }
+        source.onFund = { funded = true }
+
+        service.shieldFromWallet(Dash.COIN)
+
+        assertEquals(listOf("cc".repeat(32) to AssetLockKind.SHIELD), seeds)
     }
 
     @Test

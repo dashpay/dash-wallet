@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.service.platform.sdk
 
+import de.schildbach.wallet.payments.FundingSelectionLock
 import de.schildbach.wallet.payments.SendEngineNotSyncedException
 import de.schildbach.wallet.ui.shielded.assetLockMaxFeeReserve
 import kotlinx.coroutines.CompletableDeferred
@@ -34,6 +35,7 @@ import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.yield
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.payments.parsers.AddressNetwork
 import org.dash.wallet.common.payments.parsers.Base58
@@ -94,7 +96,7 @@ class ExternalSendServiceImplTest {
         var coreTopUpResult: () -> SdkWriteResult<TopUpOutcome> =
             { SdkWriteResult.Broadcast(TopUpOutcome(1L, TOP_UP_LOCK_TXID)) }
         var coreSend: () -> String = { "txid" }
-        var nativeWrite: () -> Unit = {}
+        var nativeWrite: suspend () -> Unit = {}
         val shieldedAmounts = mutableListOf<Dash>()
         var lastCoreEmptyWallet: Boolean? = null
         var lastSession: WalletSession? = null
@@ -258,6 +260,7 @@ class ExternalSendServiceImplTest {
         var resume: (PendingPlatformFunding) -> Unit = {}
         var lockStatus: () -> Int? = { 2 }
         var unconsumedLocks: () -> Boolean = { false }
+        var lastExcludedOutPoints: Set<String>? = null
         val funded = mutableListOf<PendingPlatformFunding>()
         val resumed = mutableListOf<PendingPlatformFunding>()
 
@@ -283,7 +286,10 @@ class ExternalSendServiceImplTest {
         }
 
         override suspend fun trackedAssetLockStatus(walletIdHex: String, outPointHex: String): Int? = lockStatus()
-        override suspend fun hasUnconsumedAddressFundingLocks(walletIdHex: String): Boolean = unconsumedLocks()
+        override suspend fun hasUnconsumedAddressFundingLocks(walletIdHex: String, excludingOutPoints: Set<String>): Boolean {
+            lastExcludedOutPoints = excludingOutPoints
+            return unconsumedLocks()
+        }
     }
 
     private class FakeStore : PlatformFundingStore {
@@ -313,6 +319,25 @@ class ExternalSendServiceImplTest {
         override suspend fun clear(id: String) {
             if (record?.id == id) record = null
         }
+
+        // Stored encoded, like DashPayConfig, so a "restart" reads them back through decode.
+        val unconfirmed = mutableSetOf<String>()
+        var failMark = false
+        var failReadUnconfirmed = false
+
+        override suspend fun markCompletionUnconfirmed(id: String) {
+            if (failMark) throw java.io.IOException("datastore")
+            val current = record
+            if (current != null && current.id == id && current.outPointHex != null) {
+                unconfirmed += current.asCompletionUnconfirmed().encode()
+                record = null
+            }
+        }
+
+        override suspend fun readCompletionUnconfirmed(): List<PendingPlatformFunding> {
+            if (failReadUnconfirmed) throw java.io.IOException("datastore")
+            return unconfirmed.map(PendingPlatformFunding::decode)
+        }
     }
 
     private fun source(
@@ -321,8 +346,17 @@ class ExternalSendServiceImplTest {
         managed: List<ByteArray> = listOf(ownId)
     ) = FakeSource(bound.toMutableList(), ownIdentity, managed)
 
-    private fun service(source: FakeSource, store: PlatformFundingStore = FakeStore()) =
-        ExternalSendServiceImpl(source, AddressNetwork.DASH_TESTNET, store, ioDispatcher = Dispatchers.Unconfined)
+    private fun service(
+        source: FakeSource,
+        store: PlatformFundingStore = FakeStore(),
+        fundingSelection: FundingSelectionLock = FundingSelectionLock()
+    ) = ExternalSendServiceImpl(
+        source,
+        AddressNetwork.DASH_TESTNET,
+        store,
+        ioDispatcher = Dispatchers.Unconfined,
+        fundingSelection = fundingSelection
+    )
 
     /** A send confirmed while [walletA] was bound (the ViewModel's capture). */
     private suspend fun ExternalSendServiceImpl.send(
@@ -406,6 +440,20 @@ class ExternalSendServiceImplTest {
     }
 
     @Test
+    fun coreToOwnIdentity_anEarlierTopUpCompletedInstead_isNotSent_neverReportedAsThisSend() = runBlocking {
+        val source = source().apply {
+            coreTopUpResult = {
+                SdkWriteResult.Broadcast(TopUpOutcome(1L, TOP_UP_LOCK_TXID, resumedEarlier = true))
+            }
+        }
+        assertEquals(
+            ExternalSendResult.NotSent(NotSentReason.EARLIER_TOP_UP_COMPLETED),
+            service(source).send(SendBalance.CORE, ownIdentity, amount, false)
+        )
+        assertEquals(listOf("coreTopUpIdentity"), source.calls)
+    }
+
+    @Test
     fun shieldedToEachDestination_callsItsShieldedWrite() = runBlocking {
         val expected = mapOf(
             core to "shieldedWithdrawToCore",
@@ -417,8 +465,25 @@ class ExternalSendServiceImplTest {
             val source = source()
             assertEquals(ExternalSendResult.Sent(null), service(source).send(SendBalance.SHIELDED, dest, amount, false))
             assertEquals(listOf(call), source.calls)
-            assertEquals(listOf(amount), source.shieldedAmounts)
+            // To Core the asset unlock's Core fee is withdrawn on top: the recipient gets `amount`.
+            val expectedValue = if (dest == core) Dash(amount.duffs + WITHDRAWAL_CORE_FEE_DUFFS) else amount
+            assertEquals(listOf(expectedValue), source.shieldedAmounts)
         }
+    }
+
+    @Test
+    fun shieldedToCoreMax_withdrawsTheMaxItself_andIsAvailableOnlyAboveTheWithdrawalMinimum() = runBlocking {
+        val source = source()
+        assertEquals(ExternalSendResult.Sent(null), service(source).send(SendBalance.SHIELDED, core, amount, isMax = true))
+        assertEquals(listOf(amount), source.shieldedAmounts)
+
+        // Pool fee 2 001 duffs: 3 191 − 2 001 = 1 190 duffs, exactly DPP's gross minimum.
+        source.shieldedBalance = Dash(3_191L)
+        assertEquals(Dash(1_190L), service(source).maxSendable(SendBalance.SHIELDED, balanceKindOf(core)))
+        source.shieldedBalance = Dash(3_190L)
+        assertNull(service(source).maxSendable(SendBalance.SHIELDED, balanceKindOf(core)))
+        // Other destinations keep the plain positive bound.
+        assertEquals(Dash(1_189L), service(source).maxSendable(SendBalance.SHIELDED, balanceKindOf(shielded)))
     }
 
     @Test
@@ -467,8 +532,41 @@ class ExternalSendServiceImplTest {
             assertEquals(ExternalSendResult.Sent(null), service(source).send(SendBalance.IDENTITY, dest, amount, false))
             assertEquals(listOf(call), source.calls)
             assertArrayEquals(ownId, source.lastFromId)
-            assertEquals(amountCredits, source.lastCredits)
+            // A withdrawal to Core withdraws the Core fee on top: the recipient gets `amount`.
+            val expectedCredits = if (dest == core) amountCredits + WITHDRAWAL_CORE_FEE_CREDITS else amountCredits
+            assertEquals(expectedCredits, source.lastCredits)
         }
+    }
+
+    @Test
+    fun identityToCore_outsideTheWithdrawalBounds_isNotSent_withNoCall() = runBlocking {
+        // 999 duffs + the 190-duff Core fee is below 1 000 000 + 190 000 credits.
+        for (outside in listOf(Dash(999L), Dash(PLATFORM_MAX_WITHDRAWAL_CREDITS / 1_000L))) {
+            val source = source()
+            assertEquals(
+                ExternalSendResult.NotSent(NotSentReason.GENERIC),
+                service(source).send(SendBalance.IDENTITY, core, outside, false)
+            )
+            assertTrue(source.calls.isEmpty())
+        }
+        val source = source()
+        assertEquals(ExternalSendResult.Sent(null), service(source).send(SendBalance.IDENTITY, core, Dash(1_000L), false))
+        assertEquals(PLATFORM_MIN_WITHDRAWAL_CREDITS, source.lastCredits)
+    }
+
+    @Test
+    fun coreWithdrawalCredits_addsTheCoreFee_andBoundsTheGrossAmount() {
+        assertEquals(190L, WITHDRAWAL_CORE_FEE_DUFFS)
+        assertEquals(190_000L, WITHDRAWAL_CORE_FEE_CREDITS)
+        assertEquals(amountCredits + 190_000L, coreWithdrawalCreditsOrNull(amountCredits))
+        assertEquals(PLATFORM_MIN_WITHDRAWAL_CREDITS, coreWithdrawalCreditsOrNull(1_000_000L))
+        assertNull(coreWithdrawalCreditsOrNull(999_999L))
+        assertEquals(
+            PLATFORM_MAX_WITHDRAWAL_CREDITS,
+            coreWithdrawalCreditsOrNull(PLATFORM_MAX_WITHDRAWAL_CREDITS - WITHDRAWAL_CORE_FEE_CREDITS)
+        )
+        assertNull(coreWithdrawalCreditsOrNull(PLATFORM_MAX_WITHDRAWAL_CREDITS - WITHDRAWAL_CORE_FEE_CREDITS + 1))
+        assertNull(coreWithdrawalCreditsOrNull(Long.MAX_VALUE))
     }
 
     // ── int37 pairs: Platform → Core, Platform / Identity → Shielded ──
@@ -487,7 +585,8 @@ class ExternalSendServiceImplTest {
         assertEquals(listOf("platformWithdraw"), source.calls)
         assertEquals(core.address, source.lastCoreAddress)
         val inputs = requireNotNull(source.lastInputs)
-        assertEquals(amountCredits, inputs.sumOf { it.credits })
+        // The amount plus the Core fee DPP takes out of the withdrawal: the recipient gets `amount`.
+        assertEquals(amountCredits + WITHDRAWAL_CORE_FEE_CREDITS, inputs.sumOf { it.credits })
         val payer = inputs.first { it.hash[0] == 1.toByte() }
         assertTrue(450_000_000L - payer.credits >= reserve)
         assertTrue(inputs.all { input -> input.credits <= (if (input.hash[0] == 1.toByte()) 450_000_000L else 80_000_000L) })
@@ -536,15 +635,20 @@ class ExternalSendServiceImplTest {
                 listOf(address(1, 900_000_000L))
             }
         }
-        // 1 189 duffs = 1 189 000 credits < 1 000 000 + 190 × 1 000.
+        // 999 duffs + the 190-duff Core fee withdrawn on top = 1 189 000 credits < 1 000 000 + 190 × 1 000.
         assertEquals(
             ExternalSendResult.NotSent(NotSentReason.GENERIC),
-            service(source).send(SendBalance.PLATFORM, core, Dash(1_189L), false)
+            service(source).send(SendBalance.PLATFORM, core, Dash(999L), false)
+        )
+        // Above 500 DASH gross (500 DASH + the Core fee).
+        assertEquals(
+            ExternalSendResult.NotSent(NotSentReason.GENERIC),
+            service(source).send(SendBalance.PLATFORM, core, Dash(PLATFORM_MAX_WITHDRAWAL_CREDITS / 1_000L), false)
         )
         assertTrue(source.calls.isEmpty())
         assertTrue(!read)
-        // Exactly at the minimum is sent.
-        assertEquals(ExternalSendResult.Sent(null), service(source).send(SendBalance.PLATFORM, core, Dash(1_190L), false))
+        // Exactly at the minimum (gross) is sent.
+        assertEquals(ExternalSendResult.Sent(null), service(source).send(SendBalance.PLATFORM, core, Dash(1_000L), false))
         assertEquals(PLATFORM_MIN_WITHDRAWAL_CREDITS, source.lastInputs?.sumOf { it.credits })
     }
 
@@ -886,7 +990,13 @@ class ExternalSendServiceImplTest {
                 return SdkWriteResult.Broadcast(Unit)
             }
         }
-        val gated = ExternalSendServiceImpl(slow, AddressNetwork.DASH_TESTNET, FakeStore(), ioDispatcher = Dispatchers.Unconfined)
+        val gated = ExternalSendServiceImpl(
+            slow,
+            AddressNetwork.DASH_TESTNET,
+            FakeStore(),
+            ioDispatcher = Dispatchers.Unconfined,
+            fundingSelection = FundingSelectionLock()
+        )
         try {
             val first = async(start = CoroutineStart.UNDISPATCHED) {
                 gated.send(SendBalance.SHIELDED, shielded, amount, false)
@@ -940,7 +1050,9 @@ class ExternalSendServiceImplTest {
         val service = service(source())
         // The size-based reserve over the spendable UTXO count (2).
         assertEquals(FeeEstimate(Dash(sendAllFeeReserveDuffs(2)), exact = false), service.estimateFee(SendBalance.CORE, balanceKindOf(core)))
-        assertEquals(FeeEstimate(Dash(2_001L), exact = false), service.estimateFee(SendBalance.SHIELDED, balanceKindOf(core)))
+        // Shielded → Core: the pool fee plus the asset unlock's Core fee withdrawn on top.
+        assertEquals(FeeEstimate(Dash(2_191L), exact = false), service.estimateFee(SendBalance.SHIELDED, balanceKindOf(core)))
+        assertEquals(FeeEstimate(Dash(2_001L), exact = false), service.estimateFee(SendBalance.SHIELDED, balanceKindOf(platform)))
         assertNull(service.estimateFee(SendBalance.PLATFORM, balanceKindOf(platform)))
         assertNull(service.estimateFee(SendBalance.IDENTITY, balanceKindOf(core)))
         assertNull(service.estimateFee(SendBalance.CORE, balanceKindOf(ownIdentity)))
@@ -1046,7 +1158,13 @@ class ExternalSendServiceImplTest {
         val source = object : ExternalSendSource by source() {
             override suspend fun shieldedFeeCredits(kind: ShieldedFeeKind): Long? = null
         }
-        val result = ExternalSendServiceImpl(source, AddressNetwork.DASH_TESTNET, FakeStore(), ioDispatcher = Dispatchers.Unconfined)
+        val result = ExternalSendServiceImpl(
+            source,
+            AddressNetwork.DASH_TESTNET,
+            FakeStore(),
+            ioDispatcher = Dispatchers.Unconfined,
+            fundingSelection = FundingSelectionLock()
+        )
             .send(SendBalance.CORE, shielded, amount, false, walletA)
         assertEquals(ExternalSendResult.NotSent(NotSentReason.GENERIC), result)
     }
@@ -1126,7 +1244,8 @@ class ExternalSendServiceImplTest {
             AddressNetwork.DASH_TESTNET,
             FakeStore(),
             ioDispatcher = Dispatchers.Unconfined,
-            retryDelayMs = { 0L }
+            retryDelayMs = { 0L },
+            fundingSelection = FundingSelectionLock()
         )
         assertEquals(listOf(null, true), service.observeHasIdentity().take(2).toList())
         assertEquals(listOf(null, Dash(7L)), service.observeBalance(SendBalance.SHIELDED).take(2).toList())
@@ -1151,7 +1270,8 @@ class ExternalSendServiceImplTest {
             AddressNetwork.DASH_TESTNET,
             FakeStore(),
             ioDispatcher = Dispatchers.Unconfined,
-            balancePollMs = 60_000L
+            balancePollMs = 60_000L,
+            fundingSelection = FundingSelectionLock()
         )
         val values = mutableListOf<Dash?>()
         val job = launch { service.observeBalance(SendBalance.IDENTITY).collect { values += it } }
@@ -1243,7 +1363,8 @@ class ExternalSendServiceImplTest {
             AddressNetwork.DASH_TESTNET,
             FakeStore(),
             ioDispatcher = Dispatchers.Unconfined,
-            seedAssetLockKind = { hex, kind -> seeds += hex to kind }
+            seedAssetLockKind = { hex, kind -> seeds += hex to kind },
+            fundingSelection = FundingSelectionLock()
         )
         assertEquals(ExternalSendResult.Sent(LOCK_TXID), service.send(SendBalance.CORE, platform, amount, false))
         // Keyed by the lock's display txid (the outpoint without its vout), before broadcast.
@@ -1260,7 +1381,8 @@ class ExternalSendServiceImplTest {
             AddressNetwork.DASH_TESTNET,
             store,
             ioDispatcher = Dispatchers.Unconfined,
-            seedAssetLockKind = { _, _ -> throw IllegalStateException("seed") }
+            seedAssetLockKind = { _, _ -> throw IllegalStateException("seed") },
+            fundingSelection = FundingSelectionLock()
         )
         assertEquals(ExternalSendResult.Sent(LOCK_TXID), service.send(SendBalance.CORE, platform, amount, false))
         assertNull(store.record)
@@ -1444,57 +1566,153 @@ class ExternalSendServiceImplTest {
     }
 
     @Test
-    fun resume_consumedLock_orAlreadyConsumedAnswer_clearsTheRecord() = runBlocking {
-        var source = source().apply { lockStatus = { ASSET_LOCK_STATUS_CONSUMED } }
-        var store = FakeStore().apply { record = pendingRecord() }
+    fun resume_consumedLock_clearsTheRecord() = runBlocking {
+        val source = source().apply { lockStatus = { ASSET_LOCK_STATUS_CONSUMED } }
+        val store = FakeStore().apply { record = pendingRecord() }
         assertEquals(0, service(source, store).resumePendingPlatformFunding())
         assertTrue(source.calls.isEmpty())
         assertNull(store.record)
-
-        source = source().apply {
-            resume = { throw DashSdkError.PlatformWallet.AssetLockAlreadyConsumed("already consumed") }
-        }
-        store = FakeStore().apply { record = pendingRecord() }
-        assertEquals(0, service(source, store).resumePendingPlatformFunding())
-        assertEquals(1, source.resumed.size)
-        assertNull(store.record)
     }
 
     @Test
-    fun resume_transitionAlreadyKnownToPlatform_clearsTheRecord_andUnblocksTheNextSend() = runBlocking {
-        // Observed on-device after a process death mid-send: every resume rebuilt the same
-        // transition and Tenderdash refused it, so the record blocked all later sends.
-        val alreadyKnown = DashSdkError.PlatformWallet.Generic(
-            1,
-            "SDK error: Object already exists: tx already exists in cache",
-            RuntimeException("SDK error: Object already exists: tx already exists in cache")
-        )
-        val source = source().apply { resume = { throw alreadyKnown } }
+    fun resume_alreadyConsumedAnswer_keepsTheRecordAsCompletionUnconfirmed_neverResumedAgain_andStopsBlocking() = runBlocking {
+        val source = source().apply {
+            resume = { throw DashSdkError.PlatformWallet.AssetLockAlreadyConsumed("already consumed") }
+        }
         val store = FakeStore().apply { record = pendingRecord() }
         val service = service(source, store)
         assertEquals(0, service.resumePendingPlatformFunding())
+        assertEquals(0, service.resumePendingPlatformFunding())
         assertEquals(1, source.resumed.size)
+        // Kept, marked, out of the pending slot: never deleted for an unauthenticated answer.
         assertNull(store.record)
+        val kept = store.readCompletionUnconfirmed().single()
+        assertTrue(kept.completionUnconfirmed)
+        assertTrue(kept.sameAs(pendingRecord().asCompletionUnconfirmed()))
 
-        // The next Core → Platform send is no longer refused as "still confirming".
-        source.resume = { throw AssertionError("nothing left to resume") }
-        assertEquals(ExternalSendResult.Sent(LOCK_TXID), service.send(SendBalance.CORE, platform, amount, false))
+        // A later process (new service instance, same store) does not resume it either.
+        val restarted = service(source, store)
+        assertEquals(0, restarted.resumePendingPlatformFunding())
+        assertEquals(1, source.resumed.size)
+
+        // The next Core → Platform send is not refused; its own record is the pending one.
+        assertEquals(ExternalSendResult.Sent(LOCK_TXID), restarted.send(SendBalance.CORE, platform, amount, false))
         assertEquals(1, source.funded.size)
+        assertEquals(1, store.readCompletionUnconfirmed().size)
     }
 
     @Test
-    fun transitionAlreadyKnown_matchesOnlyTheSdkAlreadyExistsShape() {
-        val wrapped = DashSdkError.PlatformWallet.Generic(
-            1,
-            "resume failed",
-            RuntimeException("SDK error: Object already exists: state transition already in chain")
+    fun resume_alreadyConsumedAnswer_thatCannotBeMarked_staysPendingAndBlocking() = runBlocking {
+        val source = source().apply {
+            resume = { throw DashSdkError.PlatformWallet.AssetLockAlreadyConsumed("already consumed") }
+        }
+        val store = FakeStore().apply {
+            record = pendingRecord()
+            failMark = true
+        }
+        val service = service(source, store)
+        assertEquals(0, service.resumePendingPlatformFunding())
+        assertEquals(0, service.resumePendingPlatformFunding())
+        assertEquals(1, source.resumed.size)
+        assertEquals("earlier", store.record?.id)
+        assertEquals(
+            ExternalSendResult.NotSent(NotSentReason.PAYMENT_STILL_CONFIRMING),
+            service.send(SendBalance.CORE, platform, amount, false)
         )
-        assertTrue(isTransitionAlreadyKnownToPlatform(wrapped))
-        assertTrue(
-            !isTransitionAlreadyKnownToPlatform(RuntimeException("SDK error: Object already exists: tx already exists in cache"))
+        assertTrue(source.funded.isEmpty())
+    }
+
+    @Test
+    fun resume_withoutAnOutPoint_ignoresOnlyTheCompletionUnconfirmedLocks_ofThisWallet() = runBlocking {
+        val otherOutPoint = "fe".repeat(32) + ":0"
+        val store = FakeStore().apply {
+            record = pendingRecord(outPointHex = null)
+            unconfirmed += pendingRecord().asCompletionUnconfirmed().encode()
+            unconfirmed += PendingPlatformFunding(
+                "other-wallet", walletB, 162_000L, PlatformAddressBytes(0, hash20), amountCredits,
+                PlatformAddressBytes(0, remainderHash), otherOutPoint, completionUnconfirmed = true
+            ).encode()
+        }
+        // Another (genuinely open) funding lock still keeps the record.
+        var source = source().apply { unconsumedLocks = { true } }
+        assertEquals(0, service(source, store).resumePendingPlatformFunding())
+        assertEquals(setOf(OUT_POINT), source.lastExcludedOutPoints)
+        assertEquals("earlier", store.record?.id)
+
+        source = source().apply { unconsumedLocks = { false } }
+        assertEquals(0, service(source, store).resumePendingPlatformFunding())
+        assertNull(store.record)
+
+        // Their set unreadable: fail closed, the record is kept and the SDK is not asked.
+        store.record = pendingRecord(outPointHex = null)
+        store.failReadUnconfirmed = true
+        source = source().apply { unconsumedLocks = { false } }
+        assertEquals(0, service(source, store).resumePendingPlatformFunding())
+        assertNull(source.lastExcludedOutPoints)
+        assertEquals("earlier", store.record?.id)
+    }
+
+    @Test
+    fun resume_unconfirmedOutcome_keepsTheRecord_untilALaterResumeProvesIt() = runBlocking {
+        // dashpay/platform#5556: Tenderdash's "tx already exists in cache" for the identical
+        // transition no longer surfaces as "Object already exists"; the SDK waits for the
+        // proved result and, when that fails, reports the outcome as unconfirmed.
+        val unconfirmed = listOf<Throwable>(
+            DashSdkError.PlatformWallet.TransactionBroadcastUnconfirmed(
+                "state transition outcome is unconfirmed; reconcile the original operation " +
+                    "before submitting a replacement: Object already exists: tx already exists in cache"
+            ),
+            DashSdkError.StateTransitionResultUnconfirmed("wait timeout"),
+            RuntimeException("wrapped", DashSdkError.StateTransitionResultUnconfirmed("wait timeout"))
         )
-        assertTrue(!isTransitionAlreadyKnownToPlatform(DashSdkError.PlatformWallet.Generic(1, "Wallet already exists: x")))
-        assertTrue(!isTransitionAlreadyKnownToPlatform(DashSdkError.PlatformWallet.Generic(1, "platform timeout")))
+        for (error in unconfirmed) {
+            var fail = true
+            val source = source().apply {
+                resume = { if (fail) throw error }
+            }
+            val store = FakeStore().apply { record = pendingRecord() }
+            val service = service(source, store)
+            assertEquals(0, service.resumePendingPlatformFunding())
+            assertEquals("earlier", store.record?.id)
+            // Kept, so a new Core → Platform send is still refused, with nothing built.
+            assertEquals(
+                ExternalSendResult.NotSent(NotSentReason.PAYMENT_STILL_CONFIRMING),
+                service.send(SendBalance.CORE, platform, amount, false)
+            )
+            assertTrue(source.funded.isEmpty())
+
+            // The next sweep resubmits the same transition; its proved success clears it.
+            fail = false
+            assertEquals(1, service.resumePendingPlatformFunding())
+            assertEquals(2, source.resumed.size)
+            assertTrue(source.resumed.all { it.sameAs(pendingRecord()) })
+            assertNull(store.record)
+            assertEquals(ExternalSendResult.Sent(LOCK_TXID), service.send(SendBalance.CORE, platform, amount, false))
+        }
+    }
+
+    @Test
+    fun coreToPlatform_unconfirmedOutcome_isMayHaveGoneThrough_neverNotSent_andKeepsTheRecord() = runBlocking {
+        // The typed error carries an arbitrary SDK diagnostic; a pre-broadcast-looking one must
+        // not turn it into NotSent, whether or not the lock callback has fired.
+        val diagnostics = listOf("no private key stored", "Insufficient funds", "Invalid identity data")
+        for (built in listOf(false, true)) {
+            for (diagnostic in diagnostics) {
+                val source = source().apply {
+                    fund = { _, onBuilt ->
+                        if (built) onBuilt(OUT_POINT)
+                        throw DashSdkError.StateTransitionResultUnconfirmed(diagnostic)
+                    }
+                }
+                val store = FakeStore()
+                assertEquals(
+                    ExternalSendResult.MayHaveGoneThrough,
+                    service(source, store).send(SendBalance.CORE, platform, amount, false)
+                )
+                val kept = requireNotNull(store.record)
+                assertEquals(if (built) OUT_POINT else null, kept.outPointHex)
+            }
+        }
     }
 
     @Test
@@ -1565,6 +1783,139 @@ class ExternalSendServiceImplTest {
         } finally {
             release.complete(Unit)
         }
+        assertNull(store.record)
+    }
+
+    // ── Reset Wallet: the wipe barrier ───────────────────────────────
+
+    /** Every SDK write route except Core → Core (its funnel holds the barrier itself). */
+    private val barrierRoutes: List<Pair<SendBalance, SendDestination>>
+        get() = listOf(
+            SendBalance.CORE to shielded,
+            SendBalance.CORE to ownIdentity,
+            SendBalance.CORE to platform,
+            SendBalance.SHIELDED to core,
+            SendBalance.SHIELDED to shielded,
+            SendBalance.SHIELDED to platform,
+            SendBalance.SHIELDED to otherIdentity,
+            SendBalance.PLATFORM to platform,
+            SendBalance.PLATFORM to otherIdentity,
+            SendBalance.PLATFORM to core,
+            SendBalance.PLATFORM to shielded,
+            SendBalance.IDENTITY to core,
+            SendBalance.IDENTITY to platform,
+            SendBalance.IDENTITY to otherIdentity,
+            SendBalance.IDENTITY to shielded
+        )
+
+    private fun barrierSource() = source().apply {
+        platformBalances = { listOf(address(1, 900_000_000L), address(2, 900_000_000L)) }
+    }
+
+    @Test
+    fun aWipeUnderWay_refusesEveryWrite_withNothingCalled_andNothingRecorded() = runBlocking {
+        for ((from, to) in barrierRoutes) {
+            val lock = FundingSelectionLock().apply { raiseWipeBarrier() }
+            val source = barrierSource()
+            val store = FakeStore()
+            val result = service(source, store, lock).send(from, to, amount, false)
+            assertEquals("$from → $to", ExternalSendResult.NotSent(NotSentReason.GENERIC), result)
+            assertTrue("$from → $to: ${source.calls}", source.calls.isEmpty())
+            assertNull("$from → $to", store.record)
+
+            // The next wallet's sends go through once the wipe is done.
+            lock.lowerWipeBarrier()
+            val next = service(barrierSource(), FakeStore(), lock).send(from, to, amount, false)
+            assertTrue("$from → $to", next is ExternalSendResult.Sent)
+        }
+    }
+
+    @Test
+    fun theFinalWalletCheck_runsInsideTheHold_soARefusalComesBeforeIt() = runBlocking {
+        // One bound read before the hold (sendInner) and none inside it: the wipe refuses first.
+        val lock = FundingSelectionLock().apply { raiseWipeBarrier() }
+        var reads = 0
+        val source = object : ExternalSendSource by barrierSource() {
+            override suspend fun boundWalletIdOrNull(): String? {
+                reads++
+                return walletA
+            }
+        }
+        val service = ExternalSendServiceImpl(
+            source,
+            AddressNetwork.DASH_TESTNET,
+            FakeStore(),
+            ioDispatcher = Dispatchers.Unconfined,
+            fundingSelection = lock
+        )
+        assertEquals(
+            ExternalSendResult.NotSent(NotSentReason.GENERIC),
+            service.send(SendBalance.PLATFORM, platform, amount, false)
+        )
+        assertEquals(1, reads)
+        lock.lowerWipeBarrier()
+        assertEquals(ExternalSendResult.Sent(null), service.send(SendBalance.PLATFORM, platform, amount, false))
+        assertEquals(3, reads)
+    }
+
+    @Test
+    fun aWipeThatCancelsACreditsWrite_afterItsSubmission_isMayHaveGoneThrough_neverACancellation() = runBlocking {
+        val lock = FundingSelectionLock()
+        val source = source().apply {
+            nativeWrite = {
+                // Reset Wallet starts while the SDK call runs; the call then notices the cancel.
+                lock.raiseWipeBarrier()
+                yield()
+            }
+        }
+        assertEquals(
+            ExternalSendResult.MayHaveGoneThrough,
+            service(source, fundingSelection = lock).send(SendBalance.PLATFORM, platform, amount, false)
+        )
+        assertEquals(listOf("platformTransfer"), source.calls)
+    }
+
+    @Test
+    fun aWipeThatCancelsACoreToPlatformFunding_keepsItsBuiltLock_andIsMayHaveGoneThrough() = runBlocking {
+        val lock = FundingSelectionLock()
+        val store = FakeStore()
+        val source = source().apply {
+            fund = { _, built -> built(OUT_POINT) }
+        }
+        val gated = object : ExternalSendSource by source {
+            override suspend fun fundPlatformExternal(
+                record: PendingPlatformFunding,
+                onAssetLockBuilt: (String) -> Unit
+            ) {
+                source.fundPlatformExternal(record, onAssetLockBuilt)
+                lock.raiseWipeBarrier()
+                yield()
+            }
+        }
+        val service = ExternalSendServiceImpl(
+            gated,
+            AddressNetwork.DASH_TESTNET,
+            store,
+            ioDispatcher = Dispatchers.Unconfined,
+            fundingSelection = lock
+        )
+        assertEquals(ExternalSendResult.MayHaveGoneThrough, service.send(SendBalance.CORE, platform, amount, false))
+        // The lock was built: its record (with the outpoint) stays for the wipe to clear.
+        assertEquals(OUT_POINT, store.record?.outPointHex)
+    }
+
+    @Test
+    fun resume_refusedByAWipeUnderWay_callsNothing_andKeepsTheRecord() = runBlocking {
+        val lock = FundingSelectionLock().apply { raiseWipeBarrier() }
+        val source = source()
+        val pending = pendingRecord()
+        val store = FakeStore().apply { record = pending }
+        assertEquals(0, service(source, store, lock).resumePendingPlatformFunding())
+        assertTrue(source.resumed.isEmpty())
+        assertTrue(requireNotNull(store.record).sameAs(pending))
+
+        lock.lowerWipeBarrier()
+        assertEquals(1, service(source, store, lock).resumePendingPlatformFunding())
         assertNull(store.record)
     }
 

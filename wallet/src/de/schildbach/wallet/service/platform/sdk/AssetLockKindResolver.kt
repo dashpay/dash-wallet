@@ -51,6 +51,17 @@ enum class AssetLockKind {
      */
     PLATFORM,
 
+    /**
+     * A shield lock (`AssetLockFundingType::AssetLockShieldedAddressTopUp`) whose Orchard
+     * recipient is ANOTHER wallet: the Core → Shielded External Send to a third-party
+     * payee. Same product decision as [PLATFORM]: a send — sent arrow and amount, titled
+     * "Shielded". Only the authoring path knows the recipient was external, so this kind
+     * exists only as the in-memory seed from that send; the funding type (5) cannot tell
+     * own from third-party, so the durable fallback (a restart, a restore) reads
+     * [SHIELD] and the row returns to the self-transfer look.
+     */
+    SHIELD_EXTERNAL,
+
     /** An AssetUnlock THIS wallet's shielded pool paid out — a self-move. */
     UNSHIELD,
 
