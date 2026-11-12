@@ -2160,6 +2160,21 @@ class ShieldedBalanceServiceImpl internal constructor(
         }
     }
 
+    override suspend fun ownShieldedAddressOf(walletIdHex: String): String? {
+        val walletId = walletIdFromHex(walletIdHex) ?: return null
+        if (!ensureShieldedReady()) return null
+        // Pinned: the runtime must be bound to the wallet the caller confirmed with.
+        if (!walletIdHex.equals(readyWalletIdHex.value, ignoreCase = true)) return null
+        return try {
+            source.shieldedDefaultAddress(walletId)
+                ?.let { raw -> encodeOrchardAddress(raw, displayHrp()) }
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("failed to derive the wallet's own shielded address", t)
+            null
+        }
+    }
+
     override suspend fun ownPlatformAddressOf(walletIdHex: String): String? {
         val walletId = walletIdFromHex(walletIdHex) ?: return null
         return try {

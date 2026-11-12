@@ -54,6 +54,7 @@ class InternalTransferServiceImplTest {
     private val network = AddressNetwork.DASH_TESTNET
     private val unadvertised = Base58.encodeChecked(network.addressHeader, ByteArray(20) { (it + 1).toByte() })
     private val ownPlatform = "tdash1k-own-platform"
+    private val ownShielded = "tdash1z-own-shielded"
     private val ownIdentity = Base58.encode(ByteArray(32) { (255 - it).toByte() })
     private val amount = Dash.COIN
 
@@ -131,6 +132,14 @@ class InternalTransferServiceImplTest {
             platformAddressReads += walletIdHex
             platformAddressThrows?.let { throw it }
             return platformAddress
+        }
+        var shieldedAddress: String? = ownShielded
+        var shieldedAddressThrows: Throwable? = null
+        val shieldedAddressReads = mutableListOf<String>()
+        override suspend fun ownShieldedAddress(walletIdHex: String): String? {
+            shieldedAddressReads += walletIdHex
+            shieldedAddressThrows?.let { throw it }
+            return shieldedAddress
         }
         override suspend fun shieldedFeeCredits(kind: ShieldedFeeKind): Long? = feeCredits
 
@@ -291,6 +300,48 @@ class InternalTransferServiceImplTest {
         assertEquals(emptyList<String>(), source.writes)
     }
 
+    @Test
+    fun `identity to Shielded pays the own shielded address through the External Send, pinned`() {
+        assertEquals(ExternalSendResult.Sent("txid"), transfer(IDENTITY, SHIELDED))
+        assertEquals(listOf(WALLET_A), source.shieldedAddressReads)
+        assertEquals(listOf(Send(IDENTITY, SendDestination.Shielded(ownShielded), amount, false, WALLET_A)), external.sends)
+        // Never the Platform-credits self-shield.
+        assertEquals(emptyList<String>(), source.writes)
+    }
+
+    @Test
+    fun `identity to Shielded with no own shielded address, or an unreadable one, fails closed`() {
+        source.shieldedAddress = null
+        assertEquals(ExternalSendResult.NotSent(NotSentReason.GENERIC), transfer(IDENTITY, SHIELDED))
+        source.shieldedAddress = ownShielded
+        source.shieldedAddressThrows = IOException("runtime not ready")
+        assertEquals(ExternalSendResult.NotSent(NotSentReason.GENERIC), transfer(IDENTITY, SHIELDED))
+        assertNothingSubmitted()
+    }
+
+    @Test
+    fun `identity to Shielded passes the External Send's outcomes through unchanged`() {
+        for (outcome in listOf(
+            ExternalSendResult.NotSent(NotSentReason.NOT_SYNCED),
+            ExternalSendResult.NotSent(NotSentReason.INSUFFICIENT_FUNDS),
+            ExternalSendResult.MayHaveGoneThrough
+        )) {
+            external.result = outcome
+            assertEquals(outcome, transfer(IDENTITY, SHIELDED))
+        }
+    }
+
+    @Test
+    fun `identity to Shielded needs the shielded flag and an identity`() {
+        source.shielded = false
+        assertEquals(ExternalSendResult.NotSent(NotSentReason.NOT_SUPPORTED), transfer(IDENTITY, SHIELDED))
+        source.shielded = true
+        source.identity = Result.success(null)
+        assertEquals(ExternalSendResult.NotSent(NotSentReason.NOT_SUPPORTED), transfer(IDENTITY, SHIELDED))
+        assertEquals(emptyList<String>(), source.shieldedAddressReads)
+        assertNothingSubmitted()
+    }
+
     // ── self routes ──────────────────────────────────────────────────────────
 
     @Test
@@ -328,6 +379,8 @@ class InternalTransferServiceImplTest {
             source.writes
         )
         assertEquals(emptyList<Send>(), external.sends)
+        // The shielded address is the External Send's concern only; the self route never reads it.
+        assertEquals(emptyList<String>(), source.shieldedAddressReads)
     }
 
     @Test
@@ -344,7 +397,7 @@ class InternalTransferServiceImplTest {
 
     @Test
     fun `the matrix is enforced by the service`() {
-        for ((from, to) in listOf(IDENTITY to SHIELDED, CORE to CORE)) {
+        for ((from, to) in SendBalance.entries.map { it to it }) {
             assertEquals("$from → $to", ExternalSendResult.NotSent(NotSentReason.NOT_SUPPORTED), transfer(from, to))
         }
         assertNothingSubmitted()
@@ -482,7 +535,7 @@ class InternalTransferServiceImplTest {
     // ── fee, max and reads ───────────────────────────────────────────────────
 
     @Test
-    fun `fee and max come from the per-pair estimate, null for unsupported pairs`() = runBlocking {
+    fun `fee and max come from the per-pair estimate, null for the same balance`() = runBlocking {
         val fee = FeeEstimate(Dash(1000), exact = false)
         external.pairFees[SHIELDED to CORE] = fee
         external.pairMax[SHIELDED to CORE] = Dash(5000)
@@ -493,11 +546,18 @@ class InternalTransferServiceImplTest {
         // Core → Platform: the External Send's lock reserve + margin fee and its Max.
         assertEquals(fee, service.estimateFee(CORE, PLATFORM))
         assertEquals(Dash(5000), service.maxSendable(CORE, PLATFORM))
-        // An unsupported pair never asks the External Send.
-        external.pairFees[IDENTITY to SHIELDED] = fee
-        external.pairMax[IDENTITY to SHIELDED] = Dash(5000)
+        // Identity → Shielded: the External Send's figures (null today: metered by Rust).
         assertNull(service.estimateFee(IDENTITY, SHIELDED))
         assertNull(service.maxSendable(IDENTITY, SHIELDED))
+        external.pairFees[IDENTITY to SHIELDED] = fee
+        external.pairMax[IDENTITY to SHIELDED] = Dash(5000)
+        assertEquals(fee, service.estimateFee(IDENTITY, SHIELDED))
+        assertEquals(Dash(5000), service.maxSendable(IDENTITY, SHIELDED))
+        // The same balance never asks the External Send.
+        external.pairFees[CORE to CORE] = fee
+        external.pairMax[CORE to CORE] = Dash(5000)
+        assertNull(service.estimateFee(CORE, CORE))
+        assertNull(service.maxSendable(CORE, CORE))
         assertNull(service.estimateFee(PLATFORM, SHIELDED))
         // Platform → Core asks the External Send's own figures (null today: metered by Rust).
         assertNull(service.estimateFee(PLATFORM, CORE))

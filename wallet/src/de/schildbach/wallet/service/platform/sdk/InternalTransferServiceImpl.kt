@@ -73,6 +73,13 @@ internal interface InternalTransferSource {
      */
     suspend fun ownPlatformAddress(walletIdHex: String): String?
 
+    /**
+     * [ShieldedBalanceService.ownShieldedAddressOf]: the default shielded (Orchard) address of
+     * [walletIdHex], pinned to that wallet, or null (not ready, another wallet bound, no
+     * shielded sub-wallet, or the derivation failed).
+     */
+    suspend fun ownShieldedAddress(walletIdHex: String): String?
+
     suspend fun shieldedFeeCredits(kind: ShieldedFeeKind): Long?
 
     suspend fun shieldFromWallet(amount: Dash, walletIdHex: String): SdkWriteResult<ShieldFromWalletOutcome>
@@ -106,6 +113,9 @@ internal class DashSdkInternalTransferSource(
     override suspend fun ownPlatformAddress(walletIdHex: String): String? =
         shieldedBalanceService.ownPlatformAddressOf(walletIdHex)
 
+    override suspend fun ownShieldedAddress(walletIdHex: String): String? =
+        shieldedBalanceService.ownShieldedAddressOf(walletIdHex)
+
     override suspend fun shieldedFeeCredits(kind: ShieldedFeeKind): Long? =
         shieldedBalanceService.estimateShieldedFeeCredits(kind)
 
@@ -124,7 +134,7 @@ internal class DashSdkInternalTransferSource(
  * [ExternalSendService.send] to the resolved OWN destination (that route's gating, pinning and
  * classification apply unchanged) or one of [ShieldedBalanceService]'s pinned self routes.
  *
- * Routes (the 11 supported pairs of [internalTransferSupport]):
+ * Routes (all 12 pairs of [internalTransferSupport]):
  * - Core → Shielded: [ShieldedBalanceService.shieldFromWallet] (pinned) of `amount + pool fee`
  *   ([shieldPoolFeeDuffs]), so the own shielded balance receives the confirmed amount (the
  *   External Send's Core → Shielded convention). A lock that went out with the shield still
@@ -139,6 +149,9 @@ internal class DashSdkInternalTransferSource(
  * - Shielded → Platform: [ShieldedBalanceService.unshieldToCredits] (pinned; own Platform address),
  *   with the shielded Max fee retry.
  * - Platform → Shielded: [ShieldedBalanceService.shieldFromCredits] (pinned).
+ * - Identity → Shielded: [ExternalSendService.send] to the confirmed wallet's own default
+ *   shielded address ([ShieldedBalanceService.ownShieldedAddressOf], pinned to the wallet);
+ *   unavailable = Not sent. The External Send's Type 21 (`shieldFromIdentityToAddress`).
  * - Core → Platform, Identity → Platform: [ExternalSendService.send] to the confirmed wallet's own
  *   Platform address ([ShieldedBalanceService.ownPlatformAddressOf], no shielded flag needed);
  *   unavailable = Not sent. Core → Platform is the External Send's `fundFromAssetLockExternal`:
@@ -210,14 +223,14 @@ class InternalTransferServiceImpl internal constructor(
      * estimate applies ([ExternalSendService.estimateFee]): Core → Shielded the shield
      * pool fee (on top), Core → Platform the L1 lock reserve plus the Platform-fee margin (on
      * top), Shielded → * the flat single-note pool fee; Core → Identity, Platform → * and
-     * Identity → * are metered by Rust at execution, so null.
+     * Identity → * (Identity → Shielded included) are metered by Rust at execution, so null.
      */
     override suspend fun estimateFee(from: SendBalance, to: SendBalance): FeeEstimate? =
-        if (internalTransferPairSupported(from, to)) externalSendService.estimateFee(from, to) else null
+        if (from != to) externalSendService.estimateFee(from, to) else null
 
-    /** [ExternalSendService.maxSendable] for a supported pair (null for metered pairs). */
+    /** [ExternalSendService.maxSendable] for two different balances (null for metered pairs). */
     override suspend fun maxSendable(from: SendBalance, to: SendBalance): Dash? =
-        if (internalTransferPairSupported(from, to)) externalSendService.maxSendable(from, to) else null
+        if (from != to) externalSendService.maxSendable(from, to) else null
 
     // ── Transfer ──────────────────────────────────────────────────────
 
@@ -255,9 +268,7 @@ class InternalTransferServiceImpl internal constructor(
     ): ExternalSendResult {
         val pair = "$from → $to"
         if (!amount.isPositive) return notSent(pair, NotSentReason.GENERIC, "non-positive amount")
-        if (from == to || !internalTransferPairSupported(from, to)) {
-            return notSent(pair, NotSentReason.NOT_SUPPORTED, "pair not supported")
-        }
+        if (from == to) return notSent(pair, NotSentReason.NOT_SUPPORTED, "same balance")
 
         // Engine ownership / flags, error-preserving.
         val committed = readOrNull("cutover state") { source.cutoverCommittedOrThrow() }
@@ -313,13 +324,21 @@ class InternalTransferServiceImpl internal constructor(
             }
             SendBalance.SHIELDED -> when (from) {
                 SendBalance.CORE -> shieldFromOwnCore(pair, walletIdHex, amount)
-                else -> mapWrite(
+                SendBalance.PLATFORM -> mapWrite(
                     pair,
                     submitUnderWipeBarrier(pair, walletIdHex) { mark ->
                         mark.submitting()
                         source.shieldFromCredits(amount, walletIdHex)
                     }
                 )
+                SendBalance.IDENTITY -> {
+                    // Type 21 has no self-shield form: the External Send's to-address route, to
+                    // the confirmed wallet's own default shielded address.
+                    val address = readOrNull("own shielded address") { source.ownShieldedAddress(walletIdHex) }
+                        ?: return notSent(pair, NotSentReason.GENERIC, "own shielded address unavailable")
+                    delegate(pair, walletIdHex, from, SendDestination.Shielded(address), amount, isMax)
+                }
+                SendBalance.SHIELDED -> notSent(pair, NotSentReason.NOT_SUPPORTED, "same balance")
             }
         }
     }

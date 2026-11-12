@@ -1494,6 +1494,26 @@ class ShieldedBalanceServiceTest {
     }
 
     @Test
+    fun ownShieldedAddressOf_isTheReceiveAddress_pinnedToTheBoundWallet() = runBlocking {
+        val source = readySource().apply { defaultAddress = recipientRaw43 }
+        val service = service(source)
+        val address = service.ownShieldedAddressOf(walletIdHex)
+        assertEquals(service.shieldedReceiveAddress(), address)
+        assertArrayEquals(recipientRaw43, decodeOrchardAddress(checkNotNull(address), hrp))
+        assertEquals(address, service.ownShieldedAddressOf(walletIdHex.uppercase()))
+        // Another wallet, or a malformed id: null, never this wallet's address.
+        assertNull(service.ownShieldedAddressOf("cd".repeat(32)))
+        assertNull(service.ownShieldedAddressOf("not-hex"))
+    }
+
+    @Test
+    fun ownShieldedAddressOf_nullWhenNotReadyOrFlagOff() = runBlocking {
+        assertNull(service(FakeSource(hasSupport = true, boundWalletId = { null })).ownShieldedAddressOf(walletIdHex))
+        val source = readySource().apply { defaultAddress = recipientRaw43 }
+        assertNull(service(source, enabled = false).ownShieldedAddressOf(walletIdHex))
+    }
+
+    @Test
     fun platformReceiveAddress_isTheSourcesUnusedPlatformAddress() = runBlocking {
         val source = readySource().apply {
             platformAddress = { "tdash1qownused" }

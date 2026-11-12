@@ -185,12 +185,35 @@ class InternalTransferViewModelTest {
 
     @Test
     fun `a pick that leads to an unsupported pair is refused`() {
+        service.shielded.value = false
         val viewModel = buildViewModel()
-        // Identity → Shielded is not available yet.
-        viewModel.onShowPicker(InternalTransferPicker.FROM)
-        assertFalse(viewModel.state.pickable(InternalTransferPicker.FROM, IDENTITY))
-        viewModel.onBalancePicked(IDENTITY)
+        assertEquals(CORE to IDENTITY, viewModel.state.from to viewModel.state.to)
+        // The shielded feature is off: Shielded is shown but cannot be picked.
+        viewModel.onShowPicker(InternalTransferPicker.TO)
+        assertFalse(viewModel.state.pickable(InternalTransferPicker.TO, SHIELDED))
+        viewModel.onBalancePicked(SHIELDED)
+        assertEquals(CORE to IDENTITY, viewModel.state.from to viewModel.state.to)
+    }
+
+    @Test
+    fun `Identity is pickable as From with To Shielded, with no Max and a metered fee`() {
+        service.balances.getValue(IDENTITY).value = twoDash
+        val viewModel = buildViewModel()
         assertEquals(CORE to SHIELDED, viewModel.state.from to viewModel.state.to)
+        viewModel.onShowPicker(InternalTransferPicker.FROM)
+        assertTrue(viewModel.state.pickable(InternalTransferPicker.FROM, IDENTITY))
+        viewModel.onBalancePicked(IDENTITY)
+        assertEquals(IDENTITY to SHIELDED, viewModel.state.from to viewModel.state.to)
+        assertEquals(InternalTransferSupport.SUPPORTED, viewModel.state.support)
+        // As in the External Send: no pre-send Max or fee for an identity source.
+        assertNull(viewModel.state.maxSendable)
+        viewModel.type("1")
+        assertTrue(viewModel.state.canContinue)
+        viewModel.onContinue()
+        val confirm = requireNotNull(viewModel.state.confirm)
+        assertEquals(InternalTransferRequest(IDENTITY, SHIELDED, oneDash, false, WALLET_A), confirm.request)
+        assertFalse(confirm.feeLoading)
+        assertNull(confirm.fee)
     }
 
     @Test
@@ -338,16 +361,13 @@ class InternalTransferViewModelTest {
     }
 
     @Test
-    fun `an unsupported pair (reached by a swap) blocks Continue`() {
-        service.balances.getValue(IDENTITY).value = twoDash
+    fun `an unsupported pair (a chosen Shielded pair with the flag unknown) blocks Continue`() {
+        service.balances.getValue(SHIELDED).value = twoDash
         val viewModel = buildViewModel()
-        viewModel.onShowPicker(InternalTransferPicker.FROM)
-        viewModel.onBalancePicked(SHIELDED) // Shielded → Core
-        viewModel.onShowPicker(InternalTransferPicker.TO)
-        viewModel.onBalancePicked(IDENTITY) // Shielded → Identity
-        viewModel.onSwap()
-        assertEquals(IDENTITY to SHIELDED, viewModel.state.from to viewModel.state.to)
-        assertEquals(InternalTransferSupport.NOT_SUPPORTED_YET, viewModel.state.support)
+        viewModel.onSwap() // Shielded → Core, chosen
+        service.shielded.value = null
+        assertEquals(SHIELDED to CORE, viewModel.state.from to viewModel.state.to)
+        assertEquals(InternalTransferSupport.SHIELDED_OFF, viewModel.state.support)
         viewModel.type("1")
         assertFalse(viewModel.state.canContinue)
         viewModel.onContinue()

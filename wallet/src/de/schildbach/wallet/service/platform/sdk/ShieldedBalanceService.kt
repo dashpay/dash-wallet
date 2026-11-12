@@ -385,6 +385,15 @@ interface ShieldedBalanceService {
     suspend fun ownPlatformAddressOf(walletIdHex: String): String?
 
     /**
+     * The default shielded (Orchard) receive address of the SDK wallet [walletIdHex] — the same
+     * address [shieldedReceiveAddress] shows — pinned to that wallet: null unless the shielded
+     * runtime is ready AND bound to [walletIdHex], and null when [walletIdHex] is malformed, the
+     * wallet has no shielded sub-wallet or the derivation fails (fail closed). Never throws
+     * (except cancellation); the address is never logged.
+     */
+    suspend fun ownShieldedAddressOf(walletIdHex: String): String?
+
+    /**
      * Shield [amount] from the wallet's own Platform credit balance into
      * its own shielded pool (Type 15). Self-shield only — Rust always
      * targets this wallet's default Orchard address. Blocks for the ~30s
