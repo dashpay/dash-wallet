@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Advanced mode payments (Figma 6860:47472). The header — close button and
+    tab picker — is Compose; the pages are the existing child fragments,
+    hosted by ViewPager2 exactly as in fragment_payments.xml.
+-->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background_primary"
+    android:orientation="vertical"
+    tools:context="de.schildbach.wallet.ui.payments.AdvancedPaymentsFragment">
+
+    <androidx.compose.ui.platform.ComposeView
+        android:id="@+id/header"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <androidx.viewpager2.widget.ViewPager2
+        android:id="@+id/pager"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+</LinearLayout>

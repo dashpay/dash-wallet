@@ -162,6 +162,52 @@
             app:popExitAnim="@anim/slide_out_left" />
     </fragment>
 
+    <!--
+        Advanced mode payments (MO-1123, Figma 6860:47472 / 7062:49303, with the
+        bottom navigation). Opened instead of
+        paymentsFragment when WalletUIConfig.ADVANCED_MODE is on (see
+        PaymentsRoute.kt). Its tabs host the same child fragments as
+        paymentsFragment, which navigate with PaymentsFragmentDirections, so
+        the actions below keep paymentsFragment's action ids.
+    -->
+    <fragment
+        android:id="@+id/advancedPaymentsFragment"
+        android:name="de.schildbach.wallet.ui.payments.AdvancedPaymentsFragment"
+        android:label="Advanced payments">
+
+        <argument
+            android:name="active_tab"
+            app:argType="integer" />
+
+        <argument
+            android:name="ShowNavBar"
+            android:defaultValue="true" />
+
+        <action
+            android:id="@+id/payments_to_contacts"
+            app:destination="@id/contactsFragment" />
+
+        <action
+            android:id="@+id/payments_to_receive"
+            app:destination="@id/receiveFragment"
+            app:enterAnim="@anim/slide_in_bottom"
+            app:popExitAnim="@anim/fade_out" />
+
+        <action
+            android:id="@+id/payments_to_addressInput"
+            app:destination="@id/addressInputFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+
+        <action
+            android:id="@+id/payments_to_connections"
+            app:destination="@id/connectionsFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+    </fragment>
+
     <fragment
         android:id="@+id/contactsFragment"
         android:name="de.schildbach.wallet.ui.dashpay.ContactsFragment"
@@ -248,7 +294,21 @@
         android:id="@+id/receiveFragment"
         android:name="de.schildbach.wallet.ui.payments.ReceiveFragment"
         android:label="Receive"
-        tools:layout="@layout/fragment_receive"/>
+        tools:layout="@layout/fragment_receive">
+
+        <!--
+            Advanced Receive's Specify amount on a tab other than Core: the balance's
+            ReceiveBalanceTab name (SHIELD, PLATFORM, IDENTITY). Never an address: this
+            destination is reachable from other apps, so ReceiveFragment reads the address from
+            the wallet itself and shows no request for an unknown value. Null (every other
+            caller) keeps the Core flow, which reads a fresh address.
+        -->
+        <argument
+            android:name="request_balance"
+            android:defaultValue="@null"
+            app:argType="string"
+            app:nullable="true" />
+    </fragment>
 
     <fragment
         android:id="@+id/exploreFragment"
