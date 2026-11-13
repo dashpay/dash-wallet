@@ -281,6 +281,17 @@ class ExternalSendModelsTest {
     }
 
     @Test
+    fun maxBoundsAmount_onlyForThePlatformPairsWithAFeeReserve() {
+        for (source in SendBalance.entries) {
+            for (destination in SendBalance.entries) {
+                val expected = source == SendBalance.PLATFORM &&
+                    (destination == SendBalance.CORE || destination == SendBalance.IDENTITY)
+                assertEquals("$source → $destination", expected, maxBoundsAmount(source, destination))
+            }
+        }
+    }
+
+    @Test
     fun matrix_identity() {
         assertEquals(SendSupport.SUPPORTED, support(SendBalance.IDENTITY, core))
         // int37: the Type 21 shield to a recipient.

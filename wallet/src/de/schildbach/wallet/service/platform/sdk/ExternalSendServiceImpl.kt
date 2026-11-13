@@ -154,15 +154,28 @@ internal fun classifyCoreSendThrowable(e: Exception): ExternalSendResult = when 
 }
 
 /**
- * Pick Platform-address inputs that spend EXACTLY [targetCredits] (largest balances
- * first), or null when the addresses cannot cover it — never a partial spend.
+ * The balance, in credits, a Platform → Identity top-up ([ExternalSendSource.platformTopUpIdentity],
+ * [ExternalSendSource.platformTopUpExternalIdentity]) leaves unspent on its fee payer.
+ *
+ * The top-up (`IdentityTopUpFromAddressesTransition`) always carries the fee strategy
+ * `DeductFromInput(0)`: the input whose address sorts FIRST pays the fee out of what that address
+ * KEEPS, and Platform rejects the transition when that remainder cannot cover the fee actually
+ * charged. The consensus minimum (`identity_topup_base_cost` 500 000 + 500 000 per input) is no
+ * bound on that charge: execution meters the real processing and storage cost, which the wallet
+ * cannot compute, and the SDK exposes no top-up fee estimate or preflight. So the reserve is the
+ * SDK's own reserve for the address withdrawal at the most inputs a transition may carry:
+ * `address_credit_withdrawal` 400 000 000 + 500 000 × [PLATFORM_MAX_ADDRESS_INPUTS] (0.00408 DASH).
+ * A withdrawal performs the same per-input address writes as a top-up and queues a withdrawal
+ * document on top, and its measured charge (about 0.00104 DASH, platform#5830) is a quarter of
+ * its reserve, so this errs high: it only lowers the Max.
  */
-internal fun selectPlatformInputs(candidates: List<FundingInput>, targetCredits: Long): List<FundingInput>? {
-    if (targetCredits <= 0) return null
-    val picked = packOverageInputs(candidates, targetCredits)
-    val covered = picked.fold(0L) { acc, input -> Math.addExact(acc, input.credits) }
-    return picked.takeIf { covered == targetCredits }
-}
+internal const val PLATFORM_TOP_UP_FEE_RESERVE_CREDITS = 400_000_000L + 500_000L * 16
+
+/**
+ * DPP's `min_identity_funding_amount` (dpp state-transition versions v1–v2): a top-up from
+ * addresses must spend at least this many credits in total, or DPP rejects it.
+ */
+internal const val PLATFORM_MIN_IDENTITY_FUNDING_CREDITS = 200_000L
 
 /**
  * The Core fee rate of a Platform → Core withdrawal, duffs/byte: the minimum Fibonacci rate
@@ -235,8 +248,10 @@ private val ADDRESS_HASH_ORDER = Comparator<FundingInput> { a, b ->
 }
 
 /**
- * Inputs for a partial Platform → Core withdrawal (`withdrawCredits` with explicit inputs)
- * that take EXACTLY [targetCredits] in total, or null when the addresses cannot cover it.
+ * Inputs for a partial Platform → Core withdrawal (`withdrawCredits` with explicit inputs) or
+ * a Platform → Identity top-up (the same `DeductFromInput(0)` fee rule, the same per-input
+ * minimum and input cap) that take EXACTLY [targetCredits] in total, or null when the addresses
+ * cannot cover it.
  *
  * The SDK charges the Platform transition fee to the input whose address sorts FIRST
  * (`DeductFromInput(0)` over the inputs ordered by address), out of what that address KEEPS.
@@ -322,6 +337,23 @@ internal fun maxPlatformWithdrawalCredits(
         if (best == null || total > best) best = total
     }
     return best
+}
+
+/**
+ * The Platform → Identity Max, in duffs: the largest top-up [maxPlatformWithdrawalCredits]
+ * allows with the fee payer keeping [PLATFORM_TOP_UP_FEE_RESERVE_CREDITS], rounded down to whole
+ * duffs. Null when it is below [PLATFORM_MIN_IDENTITY_FUNDING_CREDITS] or
+ * [selectPlatformWithdrawalInputs] would not take it (so the send accepts exactly this).
+ */
+internal fun platformToIdentityMaxDuffs(candidates: List<FundingInput>, minInputCredits: Long): Long? {
+    val gross = maxPlatformWithdrawalCredits(candidates, PLATFORM_TOP_UP_FEE_RESERVE_CREDITS, minInputCredits)
+        ?: return null
+    val duffs = gross / CREDITS_PER_DUFF
+    val credits = duffs * CREDITS_PER_DUFF
+    if (credits < PLATFORM_MIN_IDENTITY_FUNDING_CREDITS) return null
+    return duffs.takeIf {
+        selectPlatformWithdrawalInputs(candidates, credits, PLATFORM_TOP_UP_FEE_RESERVE_CREDITS, minInputCredits) != null
+    }
 }
 
 /**
@@ -1134,6 +1166,8 @@ class ExternalSendServiceImpl internal constructor(
      *   largest withdrawal the send's input selection accepts (the first-sorting input keeps
      *   the SDK preflight's fee reserve; DPP carves the Core fee out of the withdrawal). The
      *   amount page treats it as the bound itself: unknown blocks Continue, never the balance.
+     * - Platform → Identity: [platformToIdentityMaxDuffsOrNull] — the largest top-up whose
+     *   first-sorting input keeps [PLATFORM_TOP_UP_FEE_RESERVE_CREDITS]; a bound like Core's.
      * - Everything else: null (no pre-send fee figure).
      */
     override suspend fun maxSendable(source: SendBalance, destinationKind: SendBalance): Dash? = try {
@@ -1162,7 +1196,8 @@ class ExternalSendServiceImpl internal constructor(
             }
             SendBalance.PLATFORM -> when (destinationKind) {
                 SendBalance.CORE -> withContext(ioDispatcher) { platformToCoreMaxDuffsOrNull() }?.let(::Dash)
-                SendBalance.SHIELDED, SendBalance.PLATFORM, SendBalance.IDENTITY -> null
+                SendBalance.IDENTITY -> withContext(ioDispatcher) { platformToIdentityMaxDuffsOrNull() }?.let(::Dash)
+                SendBalance.SHIELDED, SendBalance.PLATFORM -> null
             }
             SendBalance.IDENTITY -> null
         }
@@ -1187,6 +1222,19 @@ class ExternalSendServiceImpl internal constructor(
         if (!preflight.canWithdraw) return null
         val feeReserve = preflight.estimatedFeeCredits.takeIf { it > 0 } ?: return null
         return platformToCoreMaxDuffs(candidates, feeReserve, minInput)
+    }
+
+    /**
+     * The Platform → Identity Max from the same reads the top-up makes (the bound wallet's
+     * address balances and the SDK's minimum input), see [platformToIdentityMaxDuffs]. The
+     * same for a managed and an external identity: both build the same transition. Null when
+     * a figure is unknown; throws when a read fails.
+     */
+    private suspend fun platformToIdentityMaxDuffsOrNull(): Long? {
+        val walletIdHex = source.boundWalletIdOrNull() ?: return null
+        val candidates = source.platformAddressBalances(walletIdHex)
+        val minInput = source.platformMinInputCredits(walletIdHex).takeIf { it > 0 } ?: return null
+        return platformToIdentityMaxDuffs(candidates, minInput)
     }
 
     /** The Core send fee reserve: size-based, the flat reserve when the UTXO count is unknown. */
@@ -1931,8 +1979,15 @@ class ExternalSendServiceImpl internal constructor(
                 val candidates = readOrNull("platform address balances") {
                     this.source.platformAddressBalances(walletIdHex)
                 } ?: return notSent(pair, NotSentReason.GENERIC, "platform address balances unreadable")
-                val inputs = selectPlatformInputs(candidates, amountCredits)
-                    ?: return notSent(pair, NotSentReason.INSUFFICIENT_FUNDS, "platform addresses cannot cover the amount")
+                if (amountCredits < PLATFORM_MIN_IDENTITY_FUNDING_CREDITS) {
+                    return notSent(pair, NotSentReason.GENERIC, "below the identity funding minimum")
+                }
+                val minInput = readOrNull("platform minimum input") { this.source.platformMinInputCredits(walletIdHex) }
+                    ?.takeIf { it > 0 }
+                    ?: return notSent(pair, NotSentReason.GENERIC, "platform minimum input unknown")
+                // The first-sorting input pays the fee from what it keeps (DeductFromInput(0)).
+                val inputs = selectPlatformWithdrawalInputs(candidates, amountCredits, PLATFORM_TOP_UP_FEE_RESERVE_CREDITS, minInput)
+                    ?: return notSent(pair, NotSentReason.INSUFFICIENT_FUNDS, "platform addresses cannot cover the amount and fee")
                 val managed = destinationIsManagedIdentity
                     ?: return notSent(pair, NotSentReason.GENERIC, "managed identities unreadable")
                 // A NotFound from the external top-up (Platform has no such identity) is raised
