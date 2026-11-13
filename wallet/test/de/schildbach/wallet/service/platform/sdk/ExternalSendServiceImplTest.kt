@@ -520,12 +520,111 @@ class ExternalSendServiceImplTest {
     fun platformToIdentity_spendsExactlyTheAmount_fromTheAddresses() = runBlocking {
         val source = source().apply {
             platformBalances = {
-                listOf(FundingInput(0, ByteArray(20) { 1 }, 60_000_000L), FundingInput(0, ByteArray(20) { 2 }, 70_000_000L))
+                listOf(FundingInput(0, ByteArray(20) { 1 }, 460_000_000L), FundingInput(0, ByteArray(20) { 2 }, 70_000_000L))
             }
         }
         assertEquals(ExternalSendResult.Sent(null), service(source).send(SendBalance.PLATFORM, ownIdentity, amount, false))
         assertEquals(amountCredits, source.lastInputs?.sumOf { it.credits })
         assertArrayEquals(ownId, source.lastToId)
+    }
+
+    // ── Platform → Identity fee reserve and Max ───────────────────────
+
+    @Test
+    fun platformToIdentity_feePayerKeepsTheReserve_forBothTopUpCalls() = runBlocking {
+        for ((to, call) in listOf(ownIdentity to "platformTopUpIdentity", otherIdentity to "platformTopUpExternalIdentity")) {
+            // 0x01 sorts first: it pays the fee from what it keeps, so it keeps the reserve.
+            val source = source().apply { platformBalances = { listOf(address(1, 450_000_000L), address(2, 80_000_000L)) } }
+            assertEquals("$to", ExternalSendResult.Sent(null), service(source).send(SendBalance.PLATFORM, to, amount, false))
+            assertEquals("$to", listOf(call), source.calls)
+            val inputs = requireNotNull(source.lastInputs)
+            assertEquals(amountCredits, inputs.sumOf { it.credits })
+            val payer = inputs.first { it.hash[0] == 1.toByte() }
+            assertTrue("$to", 450_000_000L - payer.credits >= PLATFORM_TOP_UP_FEE_RESERVE_CREDITS)
+        }
+    }
+
+    @Test
+    fun platformToIdentity_anAmountThatWouldEmptyTheFeePayer_isRefusedBeforeTheCall() = runBlocking {
+        // One address: everything it holds would leave nothing for the fee.
+        for (to in listOf(ownIdentity, otherIdentity)) {
+            val source = source().apply { platformBalances = { listOf(address(1, 500_000_000L)) } }
+            assertEquals(
+                "$to",
+                ExternalSendResult.NotSent(NotSentReason.INSUFFICIENT_FUNDS),
+                service(source).send(SendBalance.PLATFORM, to, Dash(500_000L), false)
+            )
+            assertTrue("$to", source.calls.isEmpty())
+        }
+    }
+
+    @Test
+    fun platformToIdentityMax_isWhatTheSendAccepts_forBothTopUpCalls() = runBlocking {
+        val balances = listOf(address(1, 2_039_398_000L), address(2, 300_000_000L))
+        val expected = (2_039_398_000L - PLATFORM_TOP_UP_FEE_RESERVE_CREDITS + 300_000_000L) / 1_000L
+        for ((to, call) in listOf(ownIdentity to "platformTopUpIdentity", otherIdentity to "platformTopUpExternalIdentity")) {
+            val source = source().apply { platformBalances = { balances } }
+            val max = requireNotNull(service(source).maxSendable(SendBalance.PLATFORM, balanceKindOf(to)))
+            assertEquals("$to", expected, max.duffs)
+            assertEquals("$to", ExternalSendResult.Sent(null), service(source).send(SendBalance.PLATFORM, to, max, true))
+            assertEquals("$to", listOf(call), source.calls)
+            assertEquals("$to", max.duffs * 1_000L, source.lastInputs?.sumOf { it.credits })
+
+            val over = source().apply { platformBalances = { balances } }
+            assertEquals(
+                "$to",
+                ExternalSendResult.NotSent(NotSentReason.INSUFFICIENT_FUNDS),
+                service(over).send(SendBalance.PLATFORM, to, Dash(max.duffs + 1), false)
+            )
+            assertTrue("$to", over.calls.isEmpty())
+        }
+    }
+
+    @Test
+    fun platformToIdentityMax_unknownOrTooSmall_isNull() = runBlocking {
+        val cases = listOf<(FakeSource) -> Unit>(
+            { s -> s.platformBalances = { throw IllegalStateException("SDK wallet not loaded") } },
+            { s ->
+                s.platformBalances = { listOf(address(1, 900_000_000L)) }
+                s.minInput = { throw IllegalStateException("SDK wallet not loaded") }
+            },
+            { s ->
+                s.platformBalances = { listOf(address(1, 900_000_000L)) }
+                s.minInput = { 0L }
+            },
+            // No address can keep the reserve, or what is left is below the funding minimum.
+            { s -> s.platformBalances = { listOf(address(1, PLATFORM_TOP_UP_FEE_RESERVE_CREDITS + 50_000L)) } },
+            { s -> s.platformBalances = { listOf(address(1, PLATFORM_TOP_UP_FEE_RESERVE_CREDITS + 199_999L)) } },
+            { s -> s.platformBalances = { emptyList() } }
+        )
+        for ((index, setUp) in cases.withIndex()) {
+            val source = source().apply(setUp)
+            assertNull("case $index", service(source).maxSendable(SendBalance.PLATFORM, balanceKindOf(otherIdentity)))
+            assertTrue(source.calls.isEmpty())
+        }
+        assertNull(service(source(bound = listOf(null))).maxSendable(SendBalance.PLATFORM, balanceKindOf(ownIdentity)))
+        // The smallest top-up DPP accepts: exactly the funding minimum.
+        val atMin = source().apply { platformBalances = { listOf(address(1, PLATFORM_TOP_UP_FEE_RESERVE_CREDITS + 200_000L)) } }
+        assertEquals(Dash(200L), service(atMin).maxSendable(SendBalance.PLATFORM, balanceKindOf(otherIdentity)))
+    }
+
+    @Test
+    fun platformToIdentity_unreadableMinimumInput_orBelowTheFundingMinimum_isNotSent() = runBlocking {
+        val unreadable = source().apply {
+            platformBalances = { listOf(address(1, 900_000_000L)) }
+            minInput = { throw IllegalStateException("SDK wallet not loaded") }
+        }
+        assertEquals(
+            ExternalSendResult.NotSent(NotSentReason.GENERIC),
+            service(unreadable).send(SendBalance.PLATFORM, otherIdentity, amount, false)
+        )
+        assertTrue(unreadable.calls.isEmpty())
+        val tiny = source().apply { platformBalances = { listOf(address(1, 900_000_000L)) } }
+        assertEquals(
+            ExternalSendResult.NotSent(NotSentReason.GENERIC),
+            service(tiny).send(SendBalance.PLATFORM, otherIdentity, Dash(199L), false)
+        )
+        assertTrue(tiny.calls.isEmpty())
     }
 
     @Test
