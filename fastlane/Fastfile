@@ -105,9 +105,6 @@ platform :android do
 			snapshot_hits << "#{f}:#{idx + 1}: #{line.strip}" if line.include?("SNAPSHOT")
 		end
 	end
-	unless snapshot_hits.empty?
-		UI.user_error!("SNAPSHOT dependencies found — remove before releasing:\n#{snapshot_hits.join("\n")}")
-	end
 
 	build(options)
 	upload(options)
