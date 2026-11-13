@@ -566,7 +566,6 @@
     <string name="external_send_shielded_public_to_core">When sending from Shielded balance to Core the amount and destination becomes public</string>
     <string name="external_send_shielded_public_to_platform">When sending from Shielded balance to Platform the amount and destination becomes public</string>
     <string name="external_send_shielded_public_to_identity">When sending from Shielded balance to an identity the amount and destination becomes public</string>
-    <string name="external_send_identity_balance_note">The funds go to this identity\'s balance on Dash Platform, not to its owner\'s Dash wallet.</string>
     <string name="external_send_sending_title">Sending…</string>
     <string name="external_send_sending_shielded_message">This could take about 30 seconds. You can leave this screen; the payment will continue.</string>
     <string name="external_send_sending_message">This will only take a moment.</string>

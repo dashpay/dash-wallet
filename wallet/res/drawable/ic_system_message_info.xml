@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ Copyright 2026 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<!-- Figma icon "info-rect-small" (4030:49111): 30x30, the glyph 20x20 in the middle. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="30dp"
+    android:height="30dp"
+    android:viewportWidth="30"
+    android:viewportHeight="30">
+    <path
+        android:fillColor="#008DE4"
+        android:pathData="M15,5C7.71,5 5,7.71 5,15C5,22.29 7.71,25 15,25C22.29,25 25,22.29 25,15C25,7.71 22.29,5 15,5ZM14,14.8C14,14.25 14.45,13.8 15,13.8C15.55,13.8 16,14.25 16,14.8V18.71C16,19.27 15.55,19.71 15,19.71C14.45,19.71 14,19.27 14,18.71V14.8ZM15.92,11.66C15.87,11.78 15.8,11.89 15.71,11.99C15.52,12.17 15.27,12.28 15,12.28C14.87,12.28 14.74,12.25 14.62,12.2C14.5,12.15 14.39,12.08 14.29,11.99C14.2,11.89 14.13,11.78 14.08,11.66C14.03,11.54 14,11.41 14,11.28C14,11.01 14.11,10.76 14.29,10.57C14.39,10.48 14.5,10.4 14.62,10.35C14.98,10.2 15.42,10.29 15.71,10.57C15.9,10.76 16,11.01 16,11.28C16,11.41 15.97,11.54 15.92,11.66Z" />
+</vector>
