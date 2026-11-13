@@ -153,8 +153,8 @@
     <string name="transaction_row_status_sending">Enviando</string>
     <string name="transaction_row_status_sent_internally">Interno</string>
     <string name="transaction_row_shielded">Blindado</string>
-    <string name="transaction_row_unshielded">Desblindado</string>
-    <string name="transaction_row_unshielded_withdrawal">Retiro desblindado</string>
+    <string name="transaction_row_unshielded">Sin blindar</string>
+    <string name="transaction_row_unshielded_withdrawal">Retiro sin blindar</string>
     <string name="transaction_row_invitation">Invitación</string>
     <string name="transaction_row_status_processing">Procesando</string>
     <string name="transaction_row_status_confirming">Confirmando</string>

@@ -153,8 +153,8 @@
     <string name="transaction_row_status_sending">Wysyłam</string>
     <string name="transaction_row_status_sent_internally">Wewnętrzny</string>
     <string name="transaction_row_shielded">Osłonięte</string>
-    <string name="transaction_row_unshielded">Odsłonięte</string>
-    <string name="transaction_row_unshielded_withdrawal">Odsłonięta wypłata</string>
+    <string name="transaction_row_unshielded">Nieosłonięte</string>
+    <string name="transaction_row_unshielded_withdrawal">Nieosłonięta wypłata</string>
     <string name="transaction_row_invitation">Zaproszenie</string>
     <string name="transaction_row_status_processing">Przetwarzam</string>
     <string name="transaction_row_status_confirming">Potwierdzam</string>

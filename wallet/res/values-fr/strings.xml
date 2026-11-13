@@ -152,9 +152,9 @@
     <string name="transaction_row_status_sent">Envoyé</string>
     <string name="transaction_row_status_sending">Envoi en cours</string>
     <string name="transaction_row_status_sent_internally">Interne</string>
-    <string name="transaction_row_shielded">Protégé</string>
-    <string name="transaction_row_unshielded">Déprotégé</string>
-    <string name="transaction_row_unshielded_withdrawal">Retrait déprotégé</string>
+    <string name="transaction_row_shielded">Blindé</string>
+    <string name="transaction_row_unshielded">Non blindé</string>
+    <string name="transaction_row_unshielded_withdrawal">Retrait non blindé</string>
     <string name="transaction_row_invitation">Invitation</string>
     <string name="transaction_row_status_processing">En cours</string>
     <string name="transaction_row_status_confirming">Confirmation…</string>
