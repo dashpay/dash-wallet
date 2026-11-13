@@ -324,6 +324,16 @@ private fun detectCoreDashUri(input: String, network: AddressNetwork): Destinati
     }
 }
 
+/**
+ * Whether [ExternalSendService.maxSendable] of the pair is the largest amount its send
+ * accepts, so the amount page must be bounded by it and never by the raw balance (unknown
+ * blocks Continue). Platform → Core: the fee payer keeps the SDK's withdrawal fee reserve
+ * (about 0.004 DASH), far more than the fee finally charged, so the balance overstates what
+ * can be withdrawn.
+ */
+fun maxBoundsAmount(source: SendBalance, destinationKind: SendBalance): Boolean =
+    source == SendBalance.PLATFORM && destinationKind == SendBalance.CORE
+
 /** Whether a pair can be sent, and if not, why (the UI maps each to its own copy). */
 enum class SendSupport {
     SUPPORTED,

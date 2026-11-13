@@ -378,6 +378,49 @@ class ExternalSendViewModelTest {
     }
 
     @Test
+    fun platformToCore_isBoundedByItsMaxOnly_neverByTheBalance() {
+        // MO-1121 QA: 0.02039398 on Platform; the withdrawal fee reserve leaves 0.01638708.
+        val cap = Dash(1_638_708L)
+        service.balances.getValue(SendBalance.PLATFORM).value = Dash(2_039_398L)
+        val viewModel = buildViewModel()
+        viewModel.goToAmount(coreAddress)
+        viewModel.onSourceSelected(SendBalance.PLATFORM)
+        assertEquals(SendBalance.PLATFORM, viewModel.uiState.value.source)
+
+        // Max unknown (unreadable or none): Continue is blocked, not bounded by the balance.
+        assertNull(viewModel.uiState.value.maxSendable)
+        viewModel.type("0.01")
+        assertNull(viewModel.uiState.value.limit)
+        assertFalse("unknown max", viewModel.uiState.value.canContinueAmount)
+
+        // Known: the cap bounds the amount, and Max fills exactly the cap.
+        service.max[SendBalance.PLATFORM] = cap
+        service.balances.getValue(SendBalance.PLATFORM).value = Dash(2_039_399L)
+        assertEquals(cap, viewModel.uiState.value.limit)
+        assertTrue(viewModel.uiState.value.canContinueAmount)
+        viewModel.onMaxClick()
+        assertTrue(viewModel.uiState.value.isMax)
+        assertEquals(cap, viewModel.uiState.value.amount)
+        assertTrue(viewModel.uiState.value.canContinueAmount)
+
+        // The QA amount: under the balance, over the cap.
+        val over = ExternalSendUIState(
+            step = ExternalSendStep.AMOUNT,
+            destination = SendDestination.Core(coreAddress),
+            source = SendBalance.PLATFORM,
+            amountText = "0.01739398",
+            balance = Dash(2_039_398L),
+            maxSendable = cap
+        )
+        assertTrue(over.exceedsBalance)
+        assertFalse(over.canContinueAmount)
+        assertTrue(over.copy(amountText = "0.01638708").canContinueAmount)
+        assertFalse(over.copy(amountText = "0.01638709").canContinueAmount)
+        // Other pairs keep the balance as the bound while their Max is unknown.
+        assertTrue(over.copy(source = SendBalance.SHIELDED, maxSendable = null).canContinueAmount)
+    }
+
+    @Test
     fun continue_isBlockedForAnUnsupportedPair() {
         val state = ExternalSendUIState(
             step = ExternalSendStep.AMOUNT,
@@ -400,10 +443,13 @@ class ExternalSendViewModelTest {
             source = SendBalance.PLATFORM,
             amountText = "1",
             balance = twoDash,
+            maxSendable = twoDash,
             hasIdentity = true
         )
-        // Platform → Core (partial withdrawal), Platform / Identity → Shielded (third-party shields).
+        // Platform → Core (partial withdrawal, bounded by its known Max), Platform / Identity →
+        // Shielded (third-party shields).
         assertTrue(state.canContinueAmount)
+        assertFalse(state.copy(maxSendable = null).canContinueAmount)
         assertTrue(state.copy(destination = SendDestination.Shielded(shieldedAddress)).canContinueAmount)
         assertTrue(
             state.copy(source = SendBalance.IDENTITY, destination = SendDestination.Shielded(shieldedAddress))
