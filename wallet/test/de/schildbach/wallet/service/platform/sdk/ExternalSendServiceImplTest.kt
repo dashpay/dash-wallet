@@ -46,6 +46,7 @@ import org.dashfoundation.dashsdk.errors.DashSdkError
 import org.dashfoundation.dashsdk.credits.FundingInput
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -509,9 +510,9 @@ class ExternalSendServiceImplTest {
                 listOf(FundingInput(0, ByteArray(20) { 1 }, 60_000_000L), FundingInput(0, ByteArray(20) { 2 }, 70_000_000L))
             }
         }
-        assertEquals(ExternalSendResult.Sent(null), service(source).send(SendBalance.PLATFORM, otherIdentity, amount, false))
+        assertEquals(ExternalSendResult.Sent(null), service(source).send(SendBalance.PLATFORM, ownIdentity, amount, false))
         assertEquals(amountCredits, source.lastInputs?.sumOf { it.credits })
-        assertArrayEquals(otherId, source.lastToId)
+        assertArrayEquals(ownId, source.lastToId)
     }
 
     @Test
@@ -519,7 +520,7 @@ class ExternalSendServiceImplTest {
         val source = source().apply { platformBalances = { listOf(FundingInput(0, ByteArray(20) { 1 }, 1_000L)) } }
         assertEquals(
             ExternalSendResult.NotSent(NotSentReason.INSUFFICIENT_FUNDS),
-            service(source).send(SendBalance.PLATFORM, otherIdentity, amount, false)
+            service(source).send(SendBalance.PLATFORM, ownIdentity, amount, false)
         )
         assertTrue(source.calls.isEmpty())
     }
@@ -891,6 +892,19 @@ class ExternalSendServiceImplTest {
         assertEquals(1, source.shieldedAmounts.size)
     }
 
+    // ── safeErrorSummary ──────────────────────────────────────────────
+
+    @Test
+    fun safeErrorSummary_namesTheClassesAndNativeCode_neverAMessage() {
+        val secret = "Identity not found: $otherIdBase58"
+        val summary = safeErrorSummary(
+            IllegalStateException(secret, DashSdkError.PlatformWallet.Generic(7, secret, DashSdkError.NotFound(secret, null)))
+        )
+        assertEquals("IllegalStateException <- Generic(code 7) <- NotFound", summary)
+        assertFalse(summary.contains(otherIdBase58))
+        assertEquals("none", safeErrorSummary(null))
+    }
+
     // ── Gates: nothing is called ──────────────────────────────────────
 
     @Test
@@ -900,7 +914,10 @@ class ExternalSendServiceImplTest {
             SendBalance.CORE to platformP2sh,
             SendBalance.IDENTITY to ownIdentity,
             // Someone else's identity from Core: the resume gate cannot protect it.
-            SendBalance.CORE to otherIdentity
+            SendBalance.CORE to otherIdentity,
+            // Someone else's identity from Platform: topUpFromAddresses only finds a managed
+            // identity (needs a Kotlin binding of platform#5860).
+            SendBalance.PLATFORM to otherIdentity
         )
         for ((from, to) in pairs) {
             val source = source()
@@ -911,6 +928,30 @@ class ExternalSendServiceImplTest {
             )
             assertTrue("$from → $to", source.calls.isEmpty())
         }
+    }
+
+    @Test
+    fun platformToIdentity_needsAManagedIdentity_withNoSeamCall() = runBlocking {
+        // A wallet with no identity manages none: any identity destination is refused.
+        val noIdentity = source(ownIdentity = null, managed = emptyList()).apply {
+            platformBalances = { listOf(address(1, 900_000_000L)) }
+        }
+        for (to in listOf(ownIdentity, otherIdentity)) {
+            assertEquals(
+                "$to",
+                ExternalSendResult.NotSent(NotSentReason.NOT_SUPPORTED),
+                service(noIdentity).send(SendBalance.PLATFORM, to, amount, false)
+            )
+        }
+        assertTrue(noIdentity.calls.isEmpty())
+
+        // The user's identity record, but not one the SDK wallet manages.
+        val unmanaged = source(managed = emptyList()).apply { platformBalances = { listOf(address(1, 900_000_000L)) } }
+        assertEquals(
+            ExternalSendResult.NotSent(NotSentReason.NOT_SUPPORTED),
+            service(unmanaged).send(SendBalance.PLATFORM, ownIdentity, amount, false)
+        )
+        assertTrue(unmanaged.calls.isEmpty())
     }
 
     @Test
@@ -1201,7 +1242,7 @@ class ExternalSendServiceImplTest {
             SendBalance.CORE to platform,
             SendBalance.SHIELDED to core,
             SendBalance.PLATFORM to platform,
-            SendBalance.PLATFORM to otherIdentity,
+            SendBalance.PLATFORM to ownIdentity,
             SendBalance.IDENTITY to core
         )
         for ((from, to) in pairs) {
@@ -1799,7 +1840,7 @@ class ExternalSendServiceImplTest {
             SendBalance.SHIELDED to platform,
             SendBalance.SHIELDED to otherIdentity,
             SendBalance.PLATFORM to platform,
-            SendBalance.PLATFORM to otherIdentity,
+            SendBalance.PLATFORM to ownIdentity,
             SendBalance.PLATFORM to core,
             SendBalance.PLATFORM to shielded,
             SendBalance.IDENTITY to core,
