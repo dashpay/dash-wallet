@@ -34,6 +34,7 @@ import de.schildbach.wallet.service.platform.sdk.WITHDRAWAL_CORE_FEE_DUFFS
 import de.schildbach.wallet.service.platform.sdk.balanceKindOf
 import de.schildbach.wallet.service.platform.sdk.detectSendDestination
 import de.schildbach.wallet.service.platform.sdk.externalSendSupport
+import de.schildbach.wallet.service.platform.sdk.maxBoundsAmount
 import de.schildbach.wallet.ui.shielded.parseDashOrNull
 import de.schildbach.wallet.ui.shielded.parseDecimalOrNull
 import de.schildbach.wallet.ui.shielded.toDashAt
@@ -229,9 +230,15 @@ data class ExternalSendUIState(
             amount.toKeypadString()
         }
 
-    /** What the amount may not exceed: the max sendable when known, else the balance. */
+    /**
+     * What the amount may not exceed: the max sendable when known, else the balance; for a
+     * pair whose Max is its bound ([maxBoundsAmount]) the max sendable only (null blocks).
+     */
     val limit: Dash?
-        get() = maxSendable ?: balance
+        get() = if (maxIsTheBound) maxSendable else maxSendable ?: balance
+
+    private val maxIsTheBound: Boolean
+        get() = destination?.let { maxBoundsAmount(source, balanceKindOf(it)) } == true
 
     val exceedsBalance: Boolean
         get() = limit?.let { amount.isGreaterThan(it) } == true
@@ -247,6 +254,7 @@ data class ExternalSendUIState(
             amount.isPositive &&
             !maxPending &&
             balance != null &&
+            limit != null &&
             !exceedsBalance &&
             (dashMode || rate != null || pinnedAmount != null || maxAmount != null) &&
             !identityBlocks &&

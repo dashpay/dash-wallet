@@ -47,6 +47,7 @@ import org.dashfoundation.dashsdk.credits.FundingInput
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -813,12 +814,112 @@ class ExternalSendServiceImplTest {
     }
 
     @Test
-    fun int37Pairs_haveNoPreSendFee_andNoMax() = runBlocking {
+    fun int37Pairs_haveNoPreSendFee_andNoMax_butPlatformToCore() = runBlocking {
         val service = service(source().apply { platformBalances = { listOf(address(1, 900_000_000L)) } })
-        for ((from, to) in listOf(SendBalance.PLATFORM to core, SendBalance.PLATFORM to shielded, SendBalance.IDENTITY to shielded)) {
+        for ((from, to) in listOf(SendBalance.PLATFORM to shielded, SendBalance.IDENTITY to shielded)) {
             assertNull("$from → $to", service.estimateFee(from, balanceKindOf(to)))
             assertNull("$from → $to", service.maxSendable(from, balanceKindOf(to)))
         }
+        assertNull(service.estimateFee(SendBalance.PLATFORM, balanceKindOf(core)))
+        assertNotNull(service.maxSendable(SendBalance.PLATFORM, balanceKindOf(core)))
+    }
+
+    // ── Platform → Core Max ───────────────────────────────────────────
+
+    @Test
+    fun platformToCoreMax_isWhatTheSendAccepts_qaCase() = runBlocking {
+        // MO-1121 QA: one address with 0.02039398 DASH. The fee payer keeps the preflight's
+        // 400 500 000-credit reserve and DPP takes the 190-duff Core fee out of the withdrawal:
+        // (2 039 398 000 − 400 500 000 − 190 000) / 1000 = 1 638 708 duffs.
+        val source = source().apply { platformBalances = { listOf(address(1, 2_039_398_000L)) } }
+        val max = service(source).maxSendable(SendBalance.PLATFORM, balanceKindOf(core))
+        assertEquals(Dash(1_638_708L), max)
+
+        assertEquals(ExternalSendResult.Sent(null), service(source).send(SendBalance.PLATFORM, core, Dash(1_638_708L), true))
+        assertEquals(2_039_398_000L - 400_500_000L, source.lastInputs?.sumOf { it.credits })
+
+        // One duff over, and QA's 0.01739398, are refused before anything is signed.
+        for (over in listOf(Dash(1_638_709L), Dash(1_739_398L))) {
+            val refused = source().apply { platformBalances = { listOf(address(1, 2_039_398_000L)) } }
+            assertEquals(
+                "$over",
+                ExternalSendResult.NotSent(NotSentReason.INSUFFICIENT_FUNDS),
+                service(refused).send(SendBalance.PLATFORM, core, over, false)
+            )
+            assertTrue(refused.calls.isEmpty())
+        }
+    }
+
+    @Test
+    fun platformToCoreMax_followsTheFeePayerRule() = runBlocking {
+        // 0x01 sorts first and can pay the reserve: it and every later address join.
+        val both = source().apply { platformBalances = { listOf(address(1, 450_000_000L), address(2, 80_000_000L)) } }
+        val bothMax = requireNotNull(service(both).maxSendable(SendBalance.PLATFORM, balanceKindOf(core)))
+        assertEquals((450_000_000L - 400_500_000L + 80_000_000L - WITHDRAWAL_CORE_FEE_CREDITS) / 1_000L, bothMax.duffs)
+        assertEquals(ExternalSendResult.Sent(null), service(both).send(SendBalance.PLATFORM, core, bothMax, true))
+
+        // 0x01 sorts first but cannot pay the reserve: only 0x02 alone can withdraw.
+        val payerLast = source().apply { platformBalances = { listOf(address(1, 100_000_000L), address(2, 900_000_000L)) } }
+        val lastMax = requireNotNull(service(payerLast).maxSendable(SendBalance.PLATFORM, balanceKindOf(core)))
+        assertEquals((900_000_000L - 400_500_000L - WITHDRAWAL_CORE_FEE_CREDITS) / 1_000L, lastMax.duffs)
+        assertEquals(ExternalSendResult.Sent(null), service(payerLast).send(SendBalance.PLATFORM, core, lastMax, true))
+        val overLast = source().apply { platformBalances = { listOf(address(1, 100_000_000L), address(2, 900_000_000L)) } }
+        assertEquals(
+            ExternalSendResult.NotSent(NotSentReason.INSUFFICIENT_FUNDS),
+            service(overLast).send(SendBalance.PLATFORM, core, Dash(lastMax.duffs + 1), false)
+        )
+    }
+
+    @Test
+    fun platformToCoreMax_unknownOrTooSmall_isNull() = runBlocking {
+        val funded = listOf(address(1, 900_000_000L))
+        val cases = listOf<(FakeSource) -> Unit>(
+            { s -> s.platformBalances = { throw IllegalStateException("SDK wallet not loaded") } },
+            { s ->
+                s.platformBalances = { funded }
+                s.withdrawalPreflight = { throw java.io.IOException("dapi") }
+            },
+            { s ->
+                s.platformBalances = { funded }
+                s.minInput = { throw IllegalStateException("SDK wallet not loaded") }
+            },
+            { s ->
+                s.platformBalances = { funded }
+                s.withdrawalPreflight = { PlatformWithdrawalPreflight(false, 0L) }
+            },
+            // A zero fee estimate is unknown, never free.
+            { s ->
+                s.platformBalances = { funded }
+                s.withdrawalPreflight = { PlatformWithdrawalPreflight(true, 0L) }
+            },
+            // Below DPP's minimum withdrawal once the reserve and the Core fee are off.
+            { s -> s.platformBalances = { listOf(address(1, 401_600_000L)) } },
+            { s -> s.platformBalances = { emptyList() } }
+        )
+        for ((index, setUp) in cases.withIndex()) {
+            val source = source().apply(setUp)
+            assertNull("case $index", service(source).maxSendable(SendBalance.PLATFORM, balanceKindOf(core)))
+            assertTrue(source.calls.isEmpty())
+        }
+        // No bound wallet: unknown.
+        assertNull(service(source(bound = listOf(null))).maxSendable(SendBalance.PLATFORM, balanceKindOf(core)))
+    }
+
+    @Test
+    fun maxPlatformWithdrawalCredits_matchesTheSelectorsLimits() {
+        val reserve = 1_000L
+        // At most 16 inputs: the payer and the 15 largest after it.
+        val many = (1..20).map { address(it, 10_000L + it) }
+        val max = requireNotNull(maxPlatformWithdrawalCredits(many, reserve, minInputCredits = 100L))
+        // The best payer is 0x05: a later payer has fewer than 15 addresses after it.
+        assertEquals(10_005L - reserve + (6..20).sumOf { 10_000L + it }, max)
+        assertNotNull(selectPlatformWithdrawalInputs(many, max, reserve, 100L))
+        assertNull(selectPlatformWithdrawalInputs(many, max + 1, reserve, 100L))
+        // Inputs below the minimum and P2SH addresses never count.
+        val mixed = listOf(address(1, 5_000L), address(2, 50L), FundingInput(1, ByteArray(20) { 3 }, 9_000L))
+        assertEquals(4_000L, maxPlatformWithdrawalCredits(mixed, reserve, minInputCredits = 100L))
+        // No address can pay the reserve.
+        assertNull(maxPlatformWithdrawalCredits(listOf(address(1, 1_050L)), reserve, minInputCredits = 100L))
     }
 
     // ── selectPlatformWithdrawalInputs ────────────────────────────────

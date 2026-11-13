@@ -292,6 +292,60 @@ internal fun selectPlatformWithdrawalInputs(
     return best
 }
 
+/**
+ * The largest total, in credits, [selectPlatformWithdrawalInputs] can select from [candidates]
+ * under the same rules (P2PKH, every input at least [minInputCredits], at most [maxInputs]
+ * inputs, the first-sorting input keeping [feeReserveCredits]); null when no input can pay
+ * the fee. For each possible fee payer it is the payer's balance less the reserve plus the
+ * [maxInputs] − 1 largest balances sorting after it, drawn in full.
+ */
+internal fun maxPlatformWithdrawalCredits(
+    candidates: List<FundingInput>,
+    feeReserveCredits: Long,
+    minInputCredits: Long,
+    maxInputs: Int = PLATFORM_MAX_ADDRESS_INPUTS
+): Long? {
+    if (feeReserveCredits < 0 || maxInputs < 1) return null
+    val min = maxOf(minInputCredits, 1L)
+    val usable = candidates
+        .filter { it.addressType == 0 && it.hash.size == 20 && it.credits >= min }
+        .sortedWith(ADDRESS_HASH_ORDER)
+    var best: Long? = null
+    for ((index, payer) in usable.withIndex()) {
+        val payerCap = payer.credits - feeReserveCredits
+        if (payerCap < min) continue
+        val total = usable.subList(index + 1, usable.size)
+            .map { it.credits }
+            .sortedDescending()
+            .take(maxInputs - 1)
+            .fold(payerCap, ::saturatingAdd)
+        if (best == null || total > best) best = total
+    }
+    return best
+}
+
+/**
+ * The Platform → Core Max, in duffs the RECIPIENT receives: the largest gross withdrawal
+ * [maxPlatformWithdrawalCredits] allows (capped at [PLATFORM_MAX_WITHDRAWAL_CREDITS]) less
+ * the Core fee DPP carves out of it ([WITHDRAWAL_CORE_FEE_CREDITS]), rounded down to whole
+ * duffs. Null when it is below DPP's minimum withdrawal or [selectPlatformWithdrawalInputs]
+ * would not take it (so the send path accepts exactly what this allows).
+ */
+internal fun platformToCoreMaxDuffs(
+    candidates: List<FundingInput>,
+    feeReserveCredits: Long,
+    minInputCredits: Long
+): Long? {
+    val gross = maxPlatformWithdrawalCredits(candidates, feeReserveCredits, minInputCredits)
+        ?.coerceAtMost(PLATFORM_MAX_WITHDRAWAL_CREDITS)
+        ?: return null
+    val recipientDuffs = (gross - WITHDRAWAL_CORE_FEE_CREDITS).takeIf { it > 0 }?.div(CREDITS_PER_DUFF) ?: return null
+    val sendGross = coreWithdrawalCreditsOrNull(recipientDuffs * CREDITS_PER_DUFF) ?: return null
+    return recipientDuffs.takeIf {
+        selectPlatformWithdrawalInputs(candidates, sendGross, feeReserveCredits, minInputCredits) != null
+    }
+}
+
 private fun saturatingAdd(a: Long, b: Long): Long = try {
     Math.addExact(a, b)
 } catch (e: ArithmeticException) {
@@ -1076,6 +1130,10 @@ class ExternalSendServiceImpl internal constructor(
      *   withdraws the Max itself (the recipient receives it minus [WITHDRAWAL_CORE_FEE_DUFFS]),
      *   so it is null unless it reaches DPP's [PLATFORM_MIN_WITHDRAWAL_CREDITS] (the recipient
      *   amount is then always positive).
+     * - Platform → Core: [platformToCoreMaxDuffsOrNull] — what the recipient receives from the
+     *   largest withdrawal the send's input selection accepts (the first-sorting input keeps
+     *   the SDK preflight's fee reserve; DPP carves the Core fee out of the withdrawal). The
+     *   amount page treats it as the bound itself: unknown blocks Continue, never the balance.
      * - Everything else: null (no pre-send fee figure).
      */
     override suspend fun maxSendable(source: SendBalance, destinationKind: SendBalance): Dash? = try {
@@ -1102,13 +1160,33 @@ class ExternalSendServiceImpl internal constructor(
                     }
                 }
             }
-            SendBalance.PLATFORM, SendBalance.IDENTITY -> null
+            SendBalance.PLATFORM -> when (destinationKind) {
+                SendBalance.CORE -> withContext(ioDispatcher) { platformToCoreMaxDuffsOrNull() }?.let(::Dash)
+                SendBalance.SHIELDED, SendBalance.PLATFORM, SendBalance.IDENTITY -> null
+            }
+            SendBalance.IDENTITY -> null
         }
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
         log.warn("external send: max sendable unreadable ({})", safeErrorSummary(e))
         null
+    }
+
+    /**
+     * The Platform → Core Max from the same reads [sendPlatformToCore] makes (the bound wallet's
+     * address balances, the SDK's minimum input and its withdrawal preflight fee), so the
+     * Amount page allows exactly what the send selects inputs for ([platformToCoreMaxDuffs]).
+     * Null when any of them is unknown or the account cannot withdraw; throws when a read fails.
+     */
+    private suspend fun platformToCoreMaxDuffsOrNull(): Long? {
+        val walletIdHex = source.boundWalletIdOrNull() ?: return null
+        val candidates = source.platformAddressBalances(walletIdHex)
+        val minInput = source.platformMinInputCredits(walletIdHex).takeIf { it > 0 } ?: return null
+        val preflight = source.platformWithdrawalPreflight(walletIdHex)
+        if (!preflight.canWithdraw) return null
+        val feeReserve = preflight.estimatedFeeCredits.takeIf { it > 0 } ?: return null
+        return platformToCoreMaxDuffs(candidates, feeReserve, minInput)
     }
 
     /** The Core send fee reserve: size-based, the flat reserve when the UTXO count is unknown. */
