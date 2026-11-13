@@ -8,9 +8,14 @@ buildscript {
         // truth for both the dependency coordinate (wallet/build.gradle) and the
         // DASH_SDK_VERSION BuildConfig field shown on the About screen once the
         // cutover hands L1 ownership to the SDK.
-        // Recipe: HashEngineering/dash-wallet-qa
-        // recipes/platform/5.1.0-int42.yaml.
-        dashSdkVersion = '5.1.0-int42-20261123.182722-1'
+        // Kept at 5.1.0-int39 over the base's int42 (recipes/platform/5.1.0-int42.yaml):
+        // int42 lacks bindings External Send uses (platform#5860
+        // topUpExternalIdentityFromAddresses, #5873 shieldedShieldToRecipient, #5896
+        // shieldedShieldFromIdentityToRecipient, SendEngineNotSyncedException). Move to the
+        // first int4x build that includes them. int39 = int38 plus the #5860 binding; int38:
+        // HashEngineering/platform integration/5.1.0-int38 @ c45221249f (int37's bindings:
+        // #5830 partial Platform-address withdrawal, the third-party shields) on v5.1-dev.
+        dashSdkVersion = '5.1.0-int39-20261113.161202-1'
         // Legacy dashj-platform SDK (org.dashj.platform). Moved from the 5.0.1 Maven
         // Central release to the 5.1.0-dev.3 snapshot, pinned to an exact timestamped
         // build rather than the floating -SNAPSHOT so the artifact is reproducible.
