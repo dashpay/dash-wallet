@@ -1295,6 +1295,37 @@ class RecoveredWalletPersistenceTest {
         assertSame(first, setupApp.wallet)
     }
 
+    /**
+     * Pre-review: an ordinary save (the shutdown save) can make an unsaved
+     * install the saved wallet too, so it holds the same lock as the setup
+     * save: an install arriving meanwhile waits, then sees the saved wallet.
+     */
+    @Test
+    fun `an onboarding install waits for an ordinary save in progress and then refuses`() {
+        ReflectionHelpers.setField(app, "wallet", null)
+        ReflectionHelpers.setField(app, "committedWallet", null)
+        val setupApp = setupCapableApp()
+        val first = spyk(replacementWallet())
+        val second = replacementWallet()
+        assertEquals(WalletApplication.WalletInstallResult.INSTALLED, setupApp.installWallet(first, false))
+
+        var racing: Thread? = null
+        var racingResult: WalletApplication.WalletInstallResult? = null
+        every { first.saveToFile(primary) } answers {
+            racing = Thread { racingResult = setupApp.installWallet(second, false) }.apply { start() }
+            racing!!.join(300)
+            assertTrue("the install must wait for the save", racing!!.isAlive)
+            callOriginal()
+        }
+
+        setupApp.saveWallet()
+        racing!!.join(5_000)
+
+        assertFalse(racing!!.isAlive)
+        assertEquals(WalletApplication.WalletInstallResult.ALREADY_INSTALLED, racingResult)
+        assertSame(first, setupApp.wallet)
+    }
+
     @Test
     fun `backupWallet writes the committed wallet's backup`() {
         recovered.saveToFile(primary)

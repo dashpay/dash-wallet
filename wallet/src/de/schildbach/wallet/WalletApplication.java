@@ -1113,11 +1113,12 @@ public class WalletApplication extends MultiDexApplication
     }
 
     /**
-     * Serializes every wallet install with the save that commits one: the
-     * check-then-install in {@link #installWallet} and the first primary
-     * save in {@link #saveWalletAndFinalizeInitialization} hold it, so no
-     * install can pass the "no saved wallet" check while another flow's
-     * wallet becomes the saved one.
+     * Serializes every wallet install with every primary save: the
+     * check-then-install in {@link #installWallet}, {@link #saveWallet} and
+     * the setup save in {@link #saveWalletAndFinalizeInitialization} hold it,
+     * so no install can pass the "no saved wallet" check while another
+     * flow's wallet becomes the saved one. Never held while waiting for the
+     * deferred wallet load.
      */
     private final Object walletInstallLock = new Object();
 
@@ -1142,6 +1143,8 @@ public class WalletApplication extends MultiDexApplication
     @NonNull
     public WalletInstallResult installWallet(Wallet newWallet, boolean replaceInstalled)
             throws GeneralSecurityException, IOException {
+        // Outside the lock: the deferred load must never wait on it.
+        awaitDeferredWalletLoadForMutation();
         synchronized (walletInstallLock) {
             if (!replaceInstalled && hasInstalledWallet()) {
                 log.warn("refusing to install a created or restored wallet: a saved wallet is already installed");
@@ -1152,6 +1155,8 @@ public class WalletApplication extends MultiDexApplication
     }
 
     public boolean setWallet(Wallet newWallet) throws GeneralSecurityException, IOException {
+        // Outside the lock: the deferred load must never wait on it.
+        awaitDeferredWalletLoadForMutation();
         synchronized (walletInstallLock) {
             return setWalletLocked(newWallet);
         }
@@ -2148,10 +2153,15 @@ public class WalletApplication extends MultiDexApplication
     @VisibleForTesting
     void saveWallet(final boolean backupAccountedFor) {
         awaitDeferredWalletLoadForMutation();
-        try {
-            protobufSerializeWallet(wallet, backupAccountedFor);
-        } catch (final IOException x) {
-            throw new RuntimeException(x);
+        // Every primary save can make an installed wallet the saved one
+        // (hasInstalledWallet), so none may land between installWallet's
+        // check and its install.
+        synchronized (walletInstallLock) {
+            try {
+                protobufSerializeWallet(wallet, backupAccountedFor);
+            } catch (final IOException x) {
+                throw new RuntimeException(x);
+            }
         }
     }
 
