@@ -106,7 +106,8 @@ platform :android do
 		end
 	end
 
-	build(options)
+	# 'upload' sends the app bundle, so publish builds the bundle only.
+	build_aab(options)
 	upload(options)
   end
 
@@ -124,8 +125,8 @@ platform :android do
 		UI.user_error!("Missing mapping.txt. Run 'publish' lane to build and upload")
 	end
 
-	# The build also leaves an apk in the lane context, which supply would pick
-	# up next to the aab and then refuse; upload only the bundle.
+	# Upload only the bundle: an apk built in the same run is left in the lane
+	# context, and supply refuses to send both.
 	supply(aab: filename, mapping: mapping, track: 'internal', skip_upload_apk: true)
   end
 
@@ -328,6 +329,9 @@ platform :android do
 
   desc "Build apk"
   lane :build do |options|
+    # bundle: true builds the app bundle (.aab) instead of the apk (see build_aab).
+    verb = options[:bundle] ? "bundle" : "assemble"
+
     # Strip PiggyCards test merchants from production release builds.
     ENV['BUILD_PROD'] = '1'
 
@@ -354,7 +358,7 @@ platform :android do
 		storepass=options[:storepass]
 		versioncode=options[:versioncode]
 		gradle(
-			task: "clean assemble#{flavor}#{type}",
+			task: "clean #{verb}#{flavor}#{type}",
 			properties: {
 				"android.injected.signing.store.file" => "#{ENV['PWD']}/.deploy/keystore.jks",
 				"android.injected.signing.store.password" => storepass,
@@ -373,8 +377,7 @@ platform :android do
 		end
 
 		gradle(
-			# The bundle is what 'upload' sends to Play; the apk is still built for checks.
-			task: "clean assembleProdRelease bundleProdRelease",
+			task: "clean #{verb}ProdRelease",
 			properties: {
 				"android.injected.signing.store.file" => "#{ENV['PWD']}/.deploy/dash-wallet.keystore",
 				"android.injected.signing.store.password" => storepass,
@@ -384,6 +387,11 @@ platform :android do
 			print_command: false
 		)
 	end
+  end
+
+  desc "Build aab"
+  lane :build_aab do |options|
+    build(options.merge(bundle: true))
   end
 
   desc "Download explore.db"
