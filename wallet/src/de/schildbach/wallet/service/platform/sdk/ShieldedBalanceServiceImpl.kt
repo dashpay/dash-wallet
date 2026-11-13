@@ -2558,7 +2558,7 @@ class ShieldedBalanceServiceImpl internal constructor(
             trackedShieldLocks(walletId).filter { it.outPointHex !in lockedBefore && it.resumable }
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
-            log.error("shielded {} failed and the tracked-lock evidence is unreadable", operation, failure)
+            log.error("shielded {} failed and the tracked-lock evidence is unreadable ({})", operation, safeErrorSummary(failure))
             return SdkWriteResult.Ambiguous(failure)
         }
         if (newLocks.isNotEmpty() && externalRecipient &&
@@ -2567,29 +2567,33 @@ class ShieldedBalanceServiceImpl internal constructor(
             log.error(
                 "shielded {}: the L1 asset lock is out and the shield transition to the external " +
                     "recipient may have been submitted — outcome unconfirmed; if it was not, the " +
-                    "pending-shield sweep returns the lock to this wallet's own shielded balance",
-                operation, failure
+                    "pending-shield sweep returns the lock to this wallet's own shielded balance ({})",
+                operation,
+                safeErrorSummary(failure)
             )
             return SdkWriteResult.Ambiguous(failure)
         }
         if (newLocks.isNotEmpty()) {
             log.error(
                 "shielded {}: the L1 asset lock is out ({} tracked outpoint(s)) but the shield " +
-                    "transition did not complete — it will be resumed automatically",
-                operation, newLocks.size, failure
+                    "transition did not complete — it will be resumed automatically ({})",
+                operation,
+                newLocks.size,
+                safeErrorSummary(failure)
             )
             return SdkWriteResult.Broadcast(ShieldFromWalletOutcome.SHIELD_PENDING_RETRY)
         }
         return when (val classified = classifyBroadcastFailure(failure)) {
             is SdkWriteResult.NotBroadcast -> {
-                log.warn("shielded {} rejected pre-broadcast (no lock tracked)", operation, failure)
+                log.warn("shielded {} rejected pre-broadcast (no lock tracked) ({})", operation, safeErrorSummary(failure))
                 classified
             }
             else -> {
                 log.error(
                     "shielded {} outcome unconfirmed and no lock tracked (yet) — the pending-shield " +
-                        "sweep recovers any lock once the SDK persists it",
-                    operation, failure
+                        "sweep recovers any lock once the SDK persists it ({})",
+                    operation,
+                    safeErrorSummary(failure)
                 )
                 SdkWriteResult.Ambiguous(failure)
             }
@@ -2843,7 +2847,7 @@ class ShieldedBalanceServiceImpl internal constructor(
             source.estimateSpendFeeCredits(kind).takeIf { it >= 0 }
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
-            log.warn("shielded fee estimate failed; the fee is unknown", t)
+            log.warn("shielded fee estimate failed; the fee is unknown ({})", safeErrorSummary(t))
             null
         }
     }
@@ -2978,13 +2982,13 @@ class ShieldedBalanceServiceImpl internal constructor(
             val classified = classifyBroadcastFailure(t)
             when (classified) {
                 is SdkWriteResult.NotBroadcast ->
-                    log.warn("shielded {} rejected pre-broadcast (notes released)", operation, t)
+                    log.warn("shielded {} rejected pre-broadcast (notes released) ({})", operation, safeErrorSummary(t))
                 is SdkWriteResult.Ambiguous -> {
                     log.error(
                         "shielded {} outcome unconfirmed — it MAY be on chain and the spent " +
-                            "notes stay reserved; do NOT retry (the next shielded sync reconciles)",
+                            "notes stay reserved; do NOT retry (the next shielded sync reconciles) ({})",
                         operation,
-                        t
+                        safeErrorSummary(t)
                     )
                     // The spend MAY have landed while the reserved notes still
                     // count as unspent: the reconciliation (stale + durable
@@ -3270,7 +3274,7 @@ class ShieldedBalanceServiceImpl internal constructor(
     }
 
     private fun notBroadcast(operation: String, reason: String, cause: Throwable?): SdkWriteResult.NotBroadcast {
-        log.info("shielded {} not attempted ({})", operation, reason, cause)
+        log.info("shielded {} not attempted ({}; cause: {})", operation, reason, safeErrorSummary(cause))
         return SdkWriteResult.NotBroadcast(reason, cause)
     }
 

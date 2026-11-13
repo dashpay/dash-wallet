@@ -609,9 +609,10 @@ private fun ConfirmSheet(uiState: ExternalSendUIState, confirm: ExternalSendConf
                 .weight(1f, fill = false)
                 .verticalScroll(rememberScrollState())
         ) {
-            // What the recipient receives (a Core Max drain: the amount minus the fee; a
-            // Shielded → Core Max: the amount minus the Core fee).
-            ConfirmAmount(confirm.recipientAmount, uiState.rate, uiState.fiatCode)
+            // What the recipient receives (a Core Max drain: the amount minus the fee, unknown
+            // while the fee is; a Shielded → Core Max: the amount minus the Core fee).
+            val recipientAmount = confirm.recipientAmount?.takeIf { !confirm.feeIncluded || !confirm.feeLoading }
+            ConfirmAmount(recipientAmount, uiState.rate, uiState.fiatCode, unknown)
             Spacer(modifier = Modifier.height(20.dp))
             Menu {
                 ListItem1(
@@ -693,13 +694,16 @@ private fun DashValueRow(label: String, value: String?, unknown: String) {
 private fun approximate(value: String, estimate: Boolean): String =
     if (estimate) stringResource(R.string.external_send_approximately, value) else value
 
-/** The confirm sheet's amount block (Figma "amount" 380x97): the same bar as the amount page, read-only. */
+/**
+ * The confirm sheet's amount block (Figma "amount" 380x97): the same bar as the amount page,
+ * read-only. A null [amount] (not known yet) shows [unknown], as the fee and total rows do.
+ */
 @Composable
-private fun ConfirmAmount(amount: Dash, rate: Fiat?, fiatCode: String?) {
+private fun ConfirmAmount(amount: Dash?, rate: Fiat?, fiatCode: String?, unknown: String) {
     val separator = remember { decimalSeparatorFor(Locale.getDefault()) }
-    val fiat = amount.toFiatAt(rate)
+    val fiat = amount?.toFiatAt(rate)
     EnterAmount(
-        primaryAmount = localizeAmountForDisplay(amount.toDisplayString(), separator),
+        primaryAmount = amount?.let { localizeAmountForDisplay(it.toDisplayString(), separator) } ?: unknown,
         secondaryAmount = fiat?.let { localizeAmountForDisplay(it.toPlainString(), separator) } ?: "0",
         currencyCodes = remember(fiatCode) { currencyCodesFor(fiatCode) },
         selectedCurrencyIndex = 0,

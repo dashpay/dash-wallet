@@ -146,8 +146,9 @@ class AdvancedSendFragment : Fragment() {
         val action = AdvancedSendViewModel.scanActionFor(
             input,
             AddressNetwork.fromId(Constants.NETWORK_PARAMETERS.id),
-            Constants.SUPPORTS_CONNECT
-        ) { DashConnectUri.isKeyUri(it) || DashConnectUri.isStUri(it) }
+            Constants.SUPPORTS_CONNECT,
+            DashConnectUri::isConnectUri
+        )
         when (action) {
             is AdvancedScanAction.DashConnect -> {
                 val navController = findNavController()
