@@ -75,6 +75,10 @@
     <string name="send_coins_sent_msg">Envoyé  !</string>
     <string name="send_coins_failed_msg">Échec  !</string>
     <string name="send_coins_error_msg">Problème durant l\'envoi  des fonds !</string>
+    <string name="send_coins_error_not_supported">Ce type de paiement n\'est pas encore pris en charge. Aucun fonds n\'a quitté votre portefeuille.</string>
+    <string name="send_coins_error_generic">Le paiement n\'a pas pu être envoyé.</string>
+    <string name="send_coins_error_signer_locked">Votre portefeuille n\'a pas pu signer ce paiement car il est verrouillé. Aucun fonds n\'a quitté votre portefeuille — déverrouillez votre portefeuille et réessayez.</string>
+    <string name="send_coins_error_contact_payment_not_recorded">Ce paiement à votre contact n\'a pas pu être envoyé car votre portefeuille n\'a pas pu en enregistrer une trace sur cet appareil. Aucun fonds n\'a quitté votre portefeuille. Libérez de l\'espace de stockage ou redémarrez l\'application, puis réessayez.</string>
     <string name="send_coins_options_fee_category">Frais</string>
     <string name="send_coins_options_fee_category_economic">Économique</string>
     <string name="send_coins_options_fee_category_priority">Prioritaire</string>
@@ -148,6 +152,10 @@
     <string name="transaction_row_status_sent">Envoyé</string>
     <string name="transaction_row_status_sending">Envoi en cours</string>
     <string name="transaction_row_status_sent_internally">Interne</string>
+    <string name="transaction_row_shielded">Blindé</string>
+    <string name="transaction_row_unshielded">Non blindé</string>
+    <string name="transaction_row_unshielded_withdrawal">Retrait non blindé</string>
+    <string name="transaction_row_invitation">Invitation</string>
     <string name="transaction_row_status_processing">En cours</string>
     <string name="transaction_row_status_confirming">Confirmation…</string>
     <string name="transaction_row_status_locked">Verrouillé</string>
@@ -182,6 +190,29 @@
     <string name="network_monitor_activity_title">Surveillance du réseau</string>
     <string name="network_monitor_peer_list_title">Pairs</string>
     <string name="network_monitor_block_list_title">Blocs</string>
+    <string name="network_monitor_stage_idle">Non démarré</string>
+    <string name="network_monitor_stage_connecting">Connexion au réseau Dash…</string>
+    <string name="network_monitor_stage_headers">Téléchargement des en-têtes de blocs</string>
+    <string name="network_monitor_stage_filter_headers">Téléchargement des en-têtes de filtres</string>
+    <string name="network_monitor_stage_masternodes">Synchronisation de la liste des masternodes</string>
+    <string name="network_monitor_stage_filters">Analyse des filtres de blocs</string>
+    <string name="network_monitor_stage_synced">Synchronisé</string>
+    <string name="network_monitor_stage_error">Erreur de synchronisation</string>
+    <string name="network_monitor_stage_setup_retrying">Configuration du portefeuille incomplète — nouvelle tentative</string>
+    <string name="network_monitor_progress">%1$d%%</string>
+    <string name="network_monitor_headers_label">En-têtes de blocs</string>
+    <string name="network_monitor_filters_label">Filtres de blocs</string>
+    <string name="network_monitor_mnlist_label">Hauteur de la liste des masternodes</string>
+    <string name="network_monitor_chainlock_label">Hauteur ChainLock</string>
+    <string name="network_monitor_height_of_target">%1$s / %2$s</string>
+    <string name="network_monitor_value_unknown">—</string>
+    <string name="network_monitor_connection_connected">Connecté au réseau Dash</string>
+    <string name="network_monitor_connection_searching">Recherche de pairs…</string>
+    <string name="network_monitor_connection_idle">Moteur réseau non démarré</string>
+    <string name="network_monitor_connection_error">Erreur de connexion</string>
+    <string name="network_monitor_connection_setup_retrying">Déverrouillez votre appareil pour terminer la configuration du portefeuille</string>
+    <string name="network_monitor_peer_details_note">Le moteur du portefeuille n\'indique pas les connexions individuelles aux pairs.</string>
+    <string name="network_monitor_dashj_hint">Les listes de pairs et de blocs proviennent du moteur de diagnostic dashj. Activez la synchronisation dashj dans Outils pour les afficher.</string>
     <string name="block_row_mining_difficulty_adjustment">Ajustement de la difficulté de minage</string>
     <string name="block_row_mining_reward_adjustment">Réduction de moitié de la récompense de minage</string>
     <string name="block_row_now">à l\'instant</string>
@@ -294,6 +325,9 @@
     <string name="report_issue_dialog_message_crash">Souhaitez-vous envoyer un rapport de plantage pour aider à corriger ce problème à l\'avenir ?</string>
     <string name="report_issue_dialog_description">description du problème</string>
     <string name="report_issue_dialog_report">Signaler</string>
+    <string name="wallet_recovery_from_seed_message">Le fichier de votre portefeuille n\'a pas pu être lu et aucune sauvegarde automatique n\'était utilisable. Vos fonds sont en sécurité sur le réseau — restaurez votre portefeuille avec votre phrase de récupération pour continuer.</string>
+    <string name="safe_mode_startup_message">L\'application n\'a pas fini de démarrer les dernières fois, ce démarrage n\'a donc pas chargé votre portefeuille. Rien n\'a été modifié ni supprimé. Envoyez-nous un rapport ou essayez à nouveau d\'ouvrir votre portefeuille.</string>
+    <string name="wallet_wipe_recovery_required">Une réinitialisation précédente du portefeuille n\'est peut-être pas allée à son terme. L\'accès au portefeuille est suspendu pour protéger les données restantes. Contactez le service d\'aide pour récupérer votre portefeuille.</string>
     <string name="report_issue_dialog_collect_device_info">Inclure les informations techniques sur l\'appareil</string>
     <string name="report_issue_dialog_collect_installed_packages">Inclure la liste des paquetages installés</string>
     <string name="report_issue_dialog_collect_application_log">Inclure le journal de l\'application</string>
@@ -309,6 +343,7 @@
     <string name="report_issue_dialog_status_background_traces">traces d\'arrière-plan</string>
     <string name="report_issue_dialog_status_stack_trace">traces de pile</string>
     <string name="report_issue_dialog_status_finishing">achèvement</string>
+    <string name="report_issue_dialog_status_parity_breakdown">vérification des transactions du portefeuille (jusqu\'à 30 secondes)</string>
     <string name="report_transaction_history_export">Exporter les transactions</string>
     <string name="report_transaction_history_title">Exportation CSV</string>
     <string name="report_transaction_history_dialog_title">L\'historique complet des transactions sera exporté sous forme de fichier CSV</string>
@@ -320,6 +355,7 @@
     <string name="report_transaction_history_mail_intent_chooser">Envoyer l\'historique de transactions avec…</string>
     <string name="report_transaction_history_dialog_mail_intent_failed">L\'envoi de l\'historique de transactions a échoué.</string>
     <string name="report_transaction_history_dialog_export_csv_failed">L\'exportation de l\'historique des transactions a échoué.</string>
+    <string name="report_transaction_history_dialog_export_csv_empty">Il n\'y a encore aucune transaction à exporter.</string>
 
     <!-- ZenLedger -->
     <string name="zenledger_export_title">ZenLedger</string>
@@ -426,6 +462,11 @@
     <string name="battery_optimization_title">Optimisation de la batterie</string>
     <string name="battery_optimization_subtitle_optimized">Optimisée</string>
     <string name="battery_optimization_subtitle_unrestricted">Sans restriction</string>
+    <string name="settings_analytics_title">Partager les données d\'utilisation</string>
+    <string name="settings_analytics_info_title">À propos des données d\'utilisation</string>
+    <string name="settings_analytics_save_failed_off">Désactivation impossible, réessayez</string>
+    <string name="settings_analytics_save_failed_on">Activation impossible, réessayez</string>
+    <string name="settings_analytics_info_message">Lorsque cette option est activée, Dash Wallet partage des événements d\'utilisation de l\'application avec Firebase pour nous aider à l\'améliorer.\n\nAucun montant, solde ni adresse n\'est jamais partagé.\n\nVous pouvez désactiver cette option à tout moment.</string>
 
     <string name="battery_optimization_dialog_optimized_title">Autoriser Dash Wallet à fonctionner en arrière-plan ?</string>
     <string name="battery_optimization_dialog_message_optimized">Cette application est configurée pour arrêter de fonctionner si elle n\'est pas visible et consultée pendant un certain temps.\n\nCela empêchera de recevoir des notifications de paiement avant que l\'application ne soit à nouveau consultée.\n\nNous conseillons d\'autoriser cette application à fonctionner en arrière-plan, en réglant l\'optimisation de batterie sur \"Non optimisée\" ou \"Sans restriction\".\n\nNe vous inquiétez pas, nous prendrons soin de l\'utilisation de la batterie.</string>
@@ -445,6 +486,9 @@
     <string name="upgrade_pin_title">Vous devez mettre à jour votre PIN</string>
     <string name="upgrade_pin_description">Choisir un nouveau code PIN</string>
     <string name="upgrade_pin_continue">Continuer</string>
+    <string name="buy_credits_current_identity_balance">Solde actuel de l\'identité : %1$s</string>
+    <string name="buy_credits_current_identity_balance_unavailable">indisponible</string>
+    <string name="payment_request_resending_earlier_payment">Cette demande a déjà été payée, mais ce paiement n\'a jamais été confirmé. Confirmer renvoie le même paiement, vous ne pouvez donc pas être débité deux fois.</string>
 
     <!-- CrowdNode withdrawal reminder -->
     <string name="crowdnode_withdrawal_reminder_title">Vous avez un solde sur CrowdNode</string>
