@@ -269,20 +269,25 @@ class ExternalSendViewModelTest {
         service.ownIdentity = false
         val other = buildViewModel().apply { goToAmount(identityId) }
         assertEquals(SendBalance.SHIELDED, other.uiState.value.source)
-        // Platform tops up only a managed identity (someone else's needs platform#5860).
-        assertEquals(SendSupport.NEEDS_OWN_IDENTITY, other.uiState.value.supportOf(SendBalance.PLATFORM))
-        other.onSourceSelected(SendBalance.PLATFORM)
+        // Core tops up only a managed identity; Platform tops up anyone's (platform#5860).
+        assertEquals(SendSupport.NEEDS_OWN_IDENTITY, other.uiState.value.supportOf(SendBalance.CORE))
+        assertEquals(SendSupport.SUPPORTED, other.uiState.value.supportOf(SendBalance.PLATFORM))
+        other.onSourceSelected(SendBalance.CORE)
         assertEquals(SendBalance.SHIELDED, other.uiState.value.source)
+        other.onSourceSelected(SendBalance.PLATFORM)
+        assertEquals(SendBalance.PLATFORM, other.uiState.value.source)
 
         service.ownIdentity = true
         val own = buildViewModel().apply { goToAmount(identityId) }
         assertEquals(SendBalance.CORE, own.uiState.value.source)
         assertEquals(SendSupport.SUPPORTED, own.uiState.value.supportOf(SendBalance.PLATFORM))
 
-        // Could not tell: fails closed.
+        // Could not tell: Core fails closed; Platform does not depend on it (the send
+        // refuses when the managed set is unreadable).
         service.ownIdentity = null
         val unknown = buildViewModel().apply { goToAmount(identityId) }
-        assertEquals(SendSupport.NEEDS_OWN_IDENTITY, unknown.uiState.value.supportOf(SendBalance.PLATFORM))
+        assertEquals(SendSupport.NEEDS_OWN_IDENTITY, unknown.uiState.value.supportOf(SendBalance.CORE))
+        assertEquals(SendSupport.SUPPORTED, unknown.uiState.value.supportOf(SendBalance.PLATFORM))
     }
 
     @Test
