@@ -1,5 +1,7 @@
 package org.dash.wallet.features.exploredash.data.dashspend.model
 
+import com.google.zxing.BarcodeFormat
+
 enum class GiftCardStatus {
     UNPAID,
     PAID,
@@ -12,7 +14,8 @@ data class GiftCardInfo(
     val merchantName: String? = "",
     val status: GiftCardStatus = GiftCardStatus.UNPAID, // unpaid, paid, fulfilled, rejected
     val barcodeUrl: String? = "",
-    // val barcodeFormat: String? = "",
+    val barcodeFormat: BarcodeFormat? = null,
+    val barcodeContent: String? = "",
     val cardNumber: String? = "",
     val cardPin: String? = "",
 

@@ -569,7 +569,7 @@ private fun BarcodeSection(
     val colors = LocalDashColors.current
     var barcodeBitmap by remember(barcode) { mutableStateOf<Bitmap?>(null) }
     var barcodeError by remember(barcode) { mutableStateOf(false) }
-    var isQrCode by remember(barcode) { mutableStateOf(false) }
+    var isSquareBarcode by remember(barcode) { mutableStateOf(false) }
     var containerWidthPx by remember { mutableIntStateOf(0) }
     val barcodeHeightPx = with(density) { 108.dp.toPx().toInt() }
 
@@ -584,7 +584,8 @@ private fun BarcodeSection(
             } catch (_: Exception) {
                 null
             }
-            isQrCode = barcode.barcodeFormat == BarcodeFormat.QR_CODE
+            isSquareBarcode = barcode.barcodeFormat == BarcodeFormat.QR_CODE ||
+                barcode.barcodeFormat == BarcodeFormat.AZTEC
             if (bitmap != null) {
                 barcodeBitmap = bitmap
                 onMaxBrightness(true)
@@ -614,7 +615,7 @@ private fun BarcodeSection(
             }
 
             barcodeBitmap != null -> {
-                val barcodeHeight = if (isQrCode) 160.dp else 78.dp
+                val barcodeHeight = if (isSquareBarcode) 160.dp else 78.dp
                 Image(
                     bitmap = barcodeBitmap!!.asImageBitmap(),
                     contentDescription = null,
