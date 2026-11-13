@@ -154,7 +154,7 @@
     <string name="transaction_row_status_sent_internally">Внутренний</string>
     <string name="transaction_row_shielded">Защищено</string>
     <string name="transaction_row_unshielded">Защита снята</string>
-    <string name="transaction_row_unshielded_withdrawal">Вывод из защищённого баланса</string>
+    <string name="transaction_row_unshielded_withdrawal">Незащищённый вывод</string>
     <string name="transaction_row_invitation">Приглашение</string>
     <string name="transaction_row_status_processing">Обрабатывается</string>
     <string name="transaction_row_status_confirming">Подтверждается</string>
