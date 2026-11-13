@@ -464,8 +464,9 @@ internal interface ExternalSendSource {
 
     /**
      * The Core balance an asset lock can spend — the SDK's CONFIRMED balance (in a block or
-     * InstantSend-locked), the figure the internal shield-from-wallet Max uses — in duffs;
-     * null when unknown or the cutover is not committed (fail closed).
+     * InstantSend-locked), the figure the internal shield-from-wallet Max uses, capped at the
+     * SDK's max-sendable — in duffs; null when either is unknown or the cutover is not
+     * committed (fail closed).
      */
     suspend fun coreAssetLockEligibleDuffs(): Long?
 
@@ -674,11 +675,19 @@ internal class DashSdkExternalSendSource(
     override suspend fun coreAssetLockEligibleDuffs(): Long? =
         combine(
             sdkL1SendService.cutoverCommittedFlow(),
-            cutoverUiDataService.sdkConfirmedBalance
-        ) { committed, confirmed ->
-            // Only the SDK's own confirmed figure (ShieldedTransferViewModel's post-cutover
-            // source); never the frozen dashj ChainLocked fallback.
-            if (committed == true) confirmed?.value else null
+            cutoverUiDataService.sdkConfirmedBalance,
+            cutoverUiDataService.sdkMaxSendable
+        ) { committed, confirmed, maxSendable ->
+            // Only the SDK's own figures (ShieldedTransferViewModel's post-cutover source);
+            // never the frozen dashj ChainLocked fallback. The confirmed balance is wallet-wide,
+            // so it is capped by the SDK's max-sendable (the spendable sum, CoinJoin excluded).
+            // No per-funding-account figure is published, so this is the closest cheap bound;
+            // either figure unknown → unknown (no fallback to the other).
+            if (committed == true && confirmed != null && maxSendable != null) {
+                minOf(confirmed.value, maxSendable.value)
+            } else {
+                null
+            }
         }.first()
 
     override fun observeShieldedBalance(): Flow<Dash?> =
@@ -1539,6 +1548,10 @@ class ExternalSendServiceImpl internal constructor(
                         try {
                             platformFundingStore.writeBlocking(record.withOutPoint(outPointHex))
                         } catch (e: Exception) {
+                            // Accepted risk: if the process also dies before
+                            // ensureOutPointRecorded, a no-outpoint record remains. The sweep
+                            // keeps it (unknown ≠ unbuilt), and it blocks new Core → Platform
+                            // sends until resolved. Two failures in a row; rare.
                             log.error("external send {}: could not record the lock outpoint, retried after the call ({})", pair, safeErrorSummary(e))
                         }
                         seedPlatformLockKind(pair, outPointHex)
@@ -1701,6 +1714,9 @@ class ExternalSendServiceImpl internal constructor(
             }
             val outPointHex = record.outPointHex
             if (outPointHex == null) {
+                // A failed outpoint write plus process death before ensureOutPointRecorded
+                // lands here with the lock open: kept below, and it blocks new Core → Platform
+                // sends until resolved. Rare (two failures in a row); accepted.
                 val unconfirmedOutPoints = try {
                     platformFundingStore.readCompletionUnconfirmed()
                         .filter { it.walletIdHex.equals(record.walletIdHex, ignoreCase = true) }
@@ -1831,9 +1847,12 @@ class ExternalSendServiceImpl internal constructor(
 
     /**
      * A Max is the SDK drain (`emptyWallet`), whose amount is display-only: it spends
-     * whatever is spendable when it runs. So the drain is only started while the SDK's
-     * max-sendable figure is still exactly the [amount] the user confirmed; anything else
-     * (funds arrived or left in between, or unreadable) is NotSent with nothing spent.
+     * whatever is spendable when the SDK builds it, the same as Basic Send's send-all. The
+     * check below is a best-effort guard, not a hard bound: the drain is only started while
+     * the SDK's max-sendable figure still equals the [amount] the user confirmed (anything
+     * else, or unreadable, is NotSent with nothing spent), but funds that arrive or leave
+     * between that check and the SDK's build are still drained. A hard cap would need an SDK
+     * capped-drain API.
      */
     private suspend fun sendCoreToCore(
         pair: String,
