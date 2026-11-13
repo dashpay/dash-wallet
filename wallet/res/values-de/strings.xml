@@ -76,6 +76,10 @@
     <string name="send_coins_sent_msg">Versendet!</string>
     <string name="send_coins_failed_msg">Fehlgeschlagen!</string>
     <string name="send_coins_error_msg">Problem beim Versenden der Dash!</string>
+    <string name="send_coins_error_not_supported">Diese Zahlungsart wird noch nicht unterstützt. Es wurde kein Guthaben aus deiner Wallet abgebucht.</string>
+    <string name="send_coins_error_generic">Die Zahlung konnte nicht gesendet werden.</string>
+    <string name="send_coins_error_signer_locked">Deine Wallet konnte diese Zahlung nicht signieren, weil sie gesperrt ist. Es wurde kein Guthaben aus deiner Wallet abgebucht – entsperre deine Wallet und versuche es erneut.</string>
+    <string name="send_coins_error_contact_payment_not_recorded">Diese Zahlung an deinen Kontakt konnte nicht gesendet werden, weil deine Wallet sie auf diesem Gerät nicht speichern konnte. Es wurde kein Guthaben aus deiner Wallet abgebucht. Gib Speicherplatz frei oder starte die App neu und versuche es dann erneut.</string>
     <string name="send_coins_options_fee_category">Netzwerk-Gebühr</string>
     <string name="send_coins_options_fee_category_economic">Kostengünstig</string>
     <string name="send_coins_options_fee_category_priority">Express</string>
@@ -149,6 +153,10 @@
     <string name="transaction_row_status_sent">Gesendet</string>
     <string name="transaction_row_status_sending">Versenden</string>
     <string name="transaction_row_status_sent_internally">Intern</string>
+    <string name="transaction_row_shielded">Abgeschirmt</string>
+    <string name="transaction_row_unshielded">Nicht abgeschirmt</string>
+    <string name="transaction_row_unshielded_withdrawal">Nicht abgeschirmte Auszahlung</string>
+    <string name="transaction_row_invitation">Einladung</string>
     <string name="transaction_row_status_processing">Verarbeite</string>
     <string name="transaction_row_status_confirming">Bestätige</string>
     <string name="transaction_row_status_locked">Gesichert</string>
@@ -183,6 +191,29 @@
     <string name="network_monitor_activity_title">Netzwerk-Monitor</string>
     <string name="network_monitor_peer_list_title">Peers</string>
     <string name="network_monitor_block_list_title">Blöcke</string>
+    <string name="network_monitor_stage_idle">Nicht gestartet</string>
+    <string name="network_monitor_stage_connecting">Verbinde mit dem Dash-Netzwerk…</string>
+    <string name="network_monitor_stage_headers">Block-Header werden heruntergeladen</string>
+    <string name="network_monitor_stage_filter_headers">Filter-Header werden heruntergeladen</string>
+    <string name="network_monitor_stage_masternodes">Masternode-Liste wird synchronisiert</string>
+    <string name="network_monitor_stage_filters">Blockfilter werden gescannt</string>
+    <string name="network_monitor_stage_synced">Synchronisiert</string>
+    <string name="network_monitor_stage_error">Synchronisierungsfehler</string>
+    <string name="network_monitor_stage_setup_retrying">Wallet-Einrichtung unvollständig – neuer Versuch</string>
+    <string name="network_monitor_progress">%1$d%%</string>
+    <string name="network_monitor_headers_label">Block-Header</string>
+    <string name="network_monitor_filters_label">Blockfilter</string>
+    <string name="network_monitor_mnlist_label">Höhe der Masternode-Liste</string>
+    <string name="network_monitor_chainlock_label">ChainLock-Höhe</string>
+    <string name="network_monitor_height_of_target">%1$s / %2$s</string>
+    <string name="network_monitor_value_unknown">—</string>
+    <string name="network_monitor_connection_connected">Mit dem Dash-Netzwerk verbunden</string>
+    <string name="network_monitor_connection_searching">Suche nach Peers…</string>
+    <string name="network_monitor_connection_idle">Netzwerk-Engine nicht gestartet</string>
+    <string name="network_monitor_connection_error">Verbindungsfehler</string>
+    <string name="network_monitor_connection_setup_retrying">Entsperre dein Gerät, um die Wallet-Einrichtung abzuschließen</string>
+    <string name="network_monitor_peer_details_note">Die Wallet-Engine meldet keine einzelnen Peer-Verbindungen.</string>
+    <string name="network_monitor_dashj_hint">Peer- und Blocklisten stammen von der dashj-Diagnose-Engine. Aktiviere die dashj-Synchronisierung unter Werkzeuge, um sie anzuzeigen.</string>
     <string name="block_row_mining_difficulty_adjustment">Anpassung der Mining-Schwierigkeit</string>
     <string name="block_row_mining_reward_adjustment">Mining-Reward wurde halbiert</string>
     <string name="block_row_now">gerade eben</string>
@@ -295,6 +326,9 @@
     <string name="report_issue_dialog_message_crash">Möchtest Du einen Fehlerbericht senden, um bei der Fehlerbehebung zu helfen?</string>
     <string name="report_issue_dialog_description">Problembeschreibung</string>
     <string name="report_issue_dialog_report">Senden</string>
+    <string name="wallet_recovery_from_seed_message">Deine Wallet-Datei konnte nicht gelesen werden und kein automatisches Backup war verwendbar. Dein Guthaben ist im Netzwerk sicher – stelle deine Wallet mit deiner Wiederherstellungsphrase wieder her, um fortzufahren.</string>
+    <string name="safe_mode_startup_message">Die App konnte die letzten Male nicht vollständig starten, daher wurde deine Wallet bei diesem Start nicht geladen. Es wurde nichts geändert oder gelöscht. Sende uns einen Bericht oder versuche erneut, deine Wallet zu öffnen.</string>
+    <string name="wallet_wipe_recovery_required">Ein vorheriges Zurücksetzen der Wallet wurde möglicherweise nicht abgeschlossen. Der Zugriff auf die Wallet ist pausiert, um verbleibende Daten zu schützen. Kontaktiere den Support, um Hilfe bei der Wiederherstellung deiner Wallet zu erhalten.</string>
     <string name="report_issue_dialog_collect_device_info">Geräte-Informationen anhängen</string>
     <string name="report_issue_dialog_collect_installed_packages">Liste von installierten Paketen anhängen</string>
     <string name="report_issue_dialog_collect_application_log">Logdatei der Anwendung anhängen</string>
@@ -310,6 +344,7 @@
     <string name="report_issue_dialog_status_background_traces">Background Traces</string>
     <string name="report_issue_dialog_status_stack_trace">Stack Traces</string>
     <string name="report_issue_dialog_status_finishing">abschließen</string>
+    <string name="report_issue_dialog_status_parity_breakdown">Prüfung der Wallet-Transaktionen (bis zu 30 Sekunden)</string>
     <string name="report_transaction_history_export">Transaktionen exportieren</string>
     <string name="report_transaction_history_title">CSV-Export</string>
     <string name="report_transaction_history_dialog_title">Die gesamte Transaktionshistorie wird als CSV-Datei exportiert</string>
@@ -321,6 +356,7 @@
     <string name="report_transaction_history_mail_intent_chooser">Transaktionsverlauf senden mit...</string>
     <string name="report_transaction_history_dialog_mail_intent_failed">Das Senden der Transaktionshistorie ist fehlgeschlagen.</string>
     <string name="report_transaction_history_dialog_export_csv_failed">Der Export der Transaktionshistorie ist fehlgeschlagen.</string>
+    <string name="report_transaction_history_dialog_export_csv_empty">Es gibt noch keine Transaktionen zum Exportieren.</string>
 
     <!-- ZenLedger -->
     <string name="zenledger_export_title">ZenLedger</string>
@@ -427,6 +463,11 @@
     <string name="battery_optimization_title">Akku-Optimierung</string>
     <string name="battery_optimization_subtitle_optimized">Optimiert</string>
     <string name="battery_optimization_subtitle_unrestricted">Unbeschränkt</string>
+    <string name="settings_analytics_title">Nutzungsdaten teilen</string>
+    <string name="settings_analytics_info_title">Über Nutzungsdaten</string>
+    <string name="settings_analytics_save_failed_off">Deaktivieren fehlgeschlagen, versuche es erneut</string>
+    <string name="settings_analytics_save_failed_on">Aktivieren fehlgeschlagen, versuche es erneut</string>
+    <string name="settings_analytics_info_message">Wenn diese Option aktiviert ist, teilt Dash Wallet App-Nutzungsereignisse mit Firebase, damit wir die App verbessern können.\n\nBeträge, Guthaben oder Adressen werden niemals geteilt.\n\nDu kannst dies jederzeit deaktivieren.</string>
 
     <string name="battery_optimization_dialog_optimized_title">Dash Wallet im Hintergrund laufen lassen?</string>
     <string name="battery_optimization_dialog_message_optimized">Diese App wurde so eingestellt, dass sie endet, wenn sie seit langem nicht mehr angeschaut wurde.\n\nDies führt dazu, dass Zahlungsbenachrichtigungen nicht erhalten werden bis die App wieder im Vordergrund erscheint.\n\nWir empfehlen diese App im Hintergrund laufen zu lassen und die Akkuoptimierung zu \"Nicht optimiert\" oder \"Unbeschränkt\" zu ändern.\n\nMach dir keine Sorgen. Wir achten immer auf ausgewogene Akkunutzung.</string>
@@ -446,6 +487,9 @@
     <string name="upgrade_pin_title">Du musst deinen PIN aktualisieren</string>
     <string name="upgrade_pin_description">Neue PIN einrichten</string>
     <string name="upgrade_pin_continue">Fortfahren</string>
+    <string name="buy_credits_current_identity_balance">Aktuelles Guthaben der Identität: %1$s</string>
+    <string name="buy_credits_current_identity_balance_unavailable">nicht verfügbar</string>
+    <string name="payment_request_resending_earlier_payment">Diese Anfrage wurde bereits bezahlt, aber die Zahlung wurde nie bestätigt. Beim Bestätigen wird dieselbe Zahlung erneut gesendet, sodass dir nicht doppelt etwas berechnet werden kann.</string>
 
     <!-- CrowdNode withdrawal reminder -->
     <string name="crowdnode_withdrawal_reminder_title">Du besitzt noch Guthaben auf CrowdNode</string>

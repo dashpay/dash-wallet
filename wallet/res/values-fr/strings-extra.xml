@@ -202,6 +202,8 @@
     <string name="notification_explainer_message">Les notifications peuvent inclure des alertes, des sons et des icônes. Cela peut être configuré dans les réglages du smartphone.</string>
     <string name="notification_dashpay_channel_name">DashPay</string>
     <string name="notification_dashpay_channel_description">État des opérations DashPay en cours.</string>
+    <string name="notification_contacts_channel_name">Demandes de contact</string>
+    <string name="notification_contacts_channel_description">Vous avertit lorsque quelqu\'un vous envoie une demande de contact.</string>
 
     <string name="net_type_indicator" />
 
@@ -421,6 +423,7 @@
     <string name="all_transactions">Tous</string>
     <string name="received_transactions">Reçu</string>
     <string name="sent_transactions">Envoyé</string>
+    <string name="filter_button_label">Filtre : %1$s</string>
     <string name="serious_error_title">Erreur sévère</string>
     <string name="serious_error_unknown">Veuillez contacter le support.</string>
     <string name="set_pin_error_missing_wallet_title">Erreur de portefeuille manquant</string>
