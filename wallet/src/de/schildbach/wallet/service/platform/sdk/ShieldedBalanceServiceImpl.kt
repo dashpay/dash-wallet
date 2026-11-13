@@ -1281,16 +1281,7 @@ class ShieldedBalanceServiceImpl internal constructor(
         // either runs first (the generations differ and nothing starts) or
         // after (and cancels what started here).
         return synchronized(readyMonitor) {
-            if (readyWalletIdHex.value == null || readyGeneration.get() != readyGen) {
-                return@synchronized false
-            }
-            // Begin (or keep) polling the SDK's pass-in-flight signal so the
-            // UI can distinguish "still syncing" from a real zero balance.
-            startSyncStatusPolling()
-            // Persist the balance whenever it is trustworthy (READY) so the
-            // last-known amount survives process death and the More card can
-            // render it instantly on the next open (see [startBalancePersistence]).
-            startBalancePersistence()
+            if (!startObserversLocked(readyGen)) return@synchronized false
             // Staged-retry hook: finish any interrupted shieldFromWallet
             // (stage (b) after the L1 lock broadcast) in the background.
             // Cheap when nothing is pending (one Room query); serialized
@@ -1309,7 +1300,34 @@ class ShieldedBalanceServiceImpl internal constructor(
         }
     }
 
-    private suspend fun ensureShieldedReadyInner(): Boolean = bringUpCommittedGeneration() != null
+    /**
+     * The internal callers' readiness (shieldFromWallet, the pending-shield
+     * resumes): no sweep, but the same observers as [ensureShieldedReady]. A
+     * runtime these bring up — after a stop, or after a wallet switch they
+     * detected first — would otherwise publish ready with no status poller or
+     * balance persistence until a screen asked.
+     */
+    private suspend fun ensureShieldedReadyInner(): Boolean {
+        val readyGen = bringUpCommittedGeneration() ?: return false
+        return synchronized(readyMonitor) { startObserversLocked(readyGen) }
+    }
+
+    /**
+     * Starts (or keeps) the observers of the runtime committed at [readyGen],
+     * only while it is still the published one; the caller holds
+     * [readyMonitor], which teardown takes too. Returns false when it is not.
+     */
+    private fun startObserversLocked(readyGen: Int): Boolean {
+        if (readyWalletIdHex.value == null || readyGeneration.get() != readyGen) return false
+        // Begin (or keep) polling the SDK's pass-in-flight signal so the
+        // UI can distinguish "still syncing" from a real zero balance.
+        startSyncStatusPolling()
+        // Persist the balance whenever it is trustworthy (READY) so the
+        // last-known amount survives process death and the More card can
+        // render it instantly on the next open (see [startBalancePersistence]).
+        startBalancePersistence()
+        return true
+    }
 
     /**
      * The bring-up under [lock]. Returns the generation of the runtime it
@@ -1338,13 +1356,19 @@ class ShieldedBalanceServiceImpl internal constructor(
         // It is re-checked after EVERY native step, so no path can publish
         // ready, start the collectors or the pending-shield sweep over a
         // teardown.
-        val generation = stopGeneration.get()
+        var generation = stopGeneration.get()
         val committed = try {
             // A stop() that timed out while someone else held the lock may
             // have left an older runtime's native stop owed; pay it before
             // anything new starts.
             drainOwedNativeStopLocked()
-            if (bringUpLocked(generation)) readyGeneration.get() else null
+            val current = endRuntimeOnAnotherWalletLocked(generation)
+            if (current != null) {
+                generation = current
+                if (bringUpLocked(generation)) readyGeneration.get() else null
+            } else {
+                null
+            }
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             log.warn("shielded bring-up failed; will retry on the next trigger", t)
@@ -1357,6 +1381,52 @@ class ShieldedBalanceServiceImpl internal constructor(
         // next); either way this pass is not the runtime any more, so the
         // caller must not start the collectors or the sweep.
         return committed?.takeIf { stopGeneration.get() == generation }
+    }
+
+    /**
+     * Ready means ready on the wallet the app is bound to NOW. A wallet that
+     * replaced the previous one without a reset (MO-975: a stale onboarding
+     * screen's Create) is bound by SdkWalletBinder, which removes the old SDK
+     * wallet but never stops this runtime: it stayed latched on the removed
+     * wallet, so every shielded call, the invite claim included, asked the new
+     * wallet for a sub-wallet it never got.
+     *
+     * Any other binding — a different wallet, or none known (mid-replacement
+     * both SDK wallets exist until the orphan is pruned, and pruning is
+     * best-effort) — ends the runtime as a stop() does, inside this bring-up so
+     * the same pass brings it up again on the bound wallet: a new generation
+     * first, so the old session's collectors and poller (fenced on the
+     * published generation) can never publish into the next one; then the
+     * published state is withdrawn and the native loop stopped. A stop that
+     * fails keeps its ownership at the now-older generation, which
+     * [retryFailedNativeStopLocked] retries before any loop starts.
+     *
+     * The caller holds [lock] and sampled [generation] under it. Returns the
+     * generation the bring-up continues under ([generation] when nothing
+     * changed), or null when a stop() landed since the sample: the generation
+     * moves by compare-and-set, so that stop is never absorbed.
+     */
+    private suspend fun endRuntimeOnAnotherWalletLocked(generation: Int): Int? {
+        val readyHex = readyWalletIdHex.value ?: return generation
+        // A binding that cannot be read is unknown, not unchanged: the old
+        // runtime must not go on publishing READY and its balance.
+        val boundHex = try {
+            source.boundWalletIdOrNull()
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("could not read the SDK wallet binding; treating it as unknown", t)
+            null
+        }
+        if (boundHex != null && boundHex.equals(readyHex, ignoreCase = true)) return generation
+        if (!stopGeneration.compareAndSet(generation, generation + 1)) return null
+        log.warn(
+            "shielded runtime is on SDK wallet {}… but the app wallet is bound to {} — restarting it",
+            readyHex.take(8),
+            boundHex?.let { "${it.take(8)}…" } ?: "no single SDK wallet"
+        )
+        tearDownReadyState()
+        stopNativeLoop()
+        return generation + 1
     }
 
     /** The bring-up proper; the caller holds [lock] and sampled [generation] under it. */

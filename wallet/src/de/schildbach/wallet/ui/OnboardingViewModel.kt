@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.ui
 
+import de.schildbach.wallet.WalletApplication.WalletInstallResult
 import androidx.lifecycle.ViewModel
 import android.content.Intent
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -57,6 +58,9 @@ class OnboardingViewModel @Inject constructor(
     /** The app refused the new wallet (see WalletApplication.isWalletReplacementRefused). */
     internal val walletReplacementRefusedAction = SingleLiveEvent<Unit>()
 
+    /** Another onboarding screen installed a wallet first; this create was dropped. */
+    internal val walletAlreadyInstalledAction = SingleLiveEvent<Unit>()
+
     fun createNewWallet(seedWordCount: Int) {
         analytics.logEvent(AnalyticsConstants.Onboarding.NEW_WALLET, mapOf())
         viewModelScope.launch {
@@ -64,11 +68,16 @@ class OnboardingViewModel @Inject constructor(
                 walletApplication.initEnvironmentIfNeeded()
                 val wallet = walletFactory.create(Constants.NETWORK_PARAMETERS, seedWordCount)
                 log.info("successfully created new wallet")
-                walletApplication.setWallet(wallet).also { installed ->
-                    if (installed) configuration.armBackupSeedReminder()
+                walletApplication.installWallet(wallet, false).also { result ->
+                    if (result == WalletInstallResult.INSTALLED) configuration.armBackupSeedReminder()
                 }
             }
-            if (!installed) {
+            if (installed == WalletInstallResult.ALREADY_INSTALLED) {
+                log.warn("new wallet dropped: another onboarding screen installed a wallet first")
+                walletAlreadyInstalledAction.call(Unit)
+                return@launch
+            }
+            if (installed == WalletInstallResult.REFUSED) {
                 log.warn("new wallet refused: a wallet reset is unfinished or unverified")
                 walletReplacementRefusedAction.call(Unit)
                 return@launch

@@ -19,6 +19,7 @@ package de.schildbach.wallet.ui
 import android.app.Application
 import android.net.Uri
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.WalletApplication.WalletInstallResult
 import de.schildbach.wallet.service.WalletFactory
 import io.mockk.every
 import io.mockk.mockk
@@ -40,7 +41,7 @@ class RestoreWalletFromFileViewModelTest {
 
     @Test
     fun `a refused keys-file wallet arms no backup reminders for the existing wallet`() {
-        val app = mockk<WalletApplication>(relaxed = true) { every { setWallet(any()) } returns false }
+        val app = mockk<WalletApplication>(relaxed = true) { every { installWallet(any(), false) } returns WalletInstallResult.REFUSED }
         val viewModel = RestoreWalletFromFileViewModel(app, factory, configuration, mockk(relaxed = true))
 
         viewModel.restoreWallet(viewModel.restoreWalletFromUri(uri, ""), null)
@@ -51,7 +52,7 @@ class RestoreWalletFromFileViewModelTest {
 
     @Test
     fun `an accepted keys-file wallet arms its backup reminders`() {
-        val app = mockk<WalletApplication>(relaxed = true) { every { setWallet(any()) } returns true }
+        val app = mockk<WalletApplication>(relaxed = true) { every { installWallet(any(), false) } returns WalletInstallResult.INSTALLED }
         val viewModel = RestoreWalletFromFileViewModel(app, factory, configuration, mockk(relaxed = true))
 
         viewModel.restoreWallet(viewModel.restoreWalletFromUri(uri, ""), null)
