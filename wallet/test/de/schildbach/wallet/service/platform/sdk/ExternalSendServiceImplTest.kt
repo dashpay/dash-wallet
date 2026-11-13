@@ -119,7 +119,8 @@ class ExternalSendServiceImplTest {
         override suspend fun ownIdentityIdOrThrow(): String? = ownIdentity
         var identityFlow: Flow<Result<String?>>? = null
         override fun observeOwnIdentityId(): Flow<Result<String?>> = identityFlow ?: flowOf(Result.success(ownIdentity))
-        override suspend fun managedIdentityIds(walletIdHex: String): List<ByteArray> = managed
+        var managedRead: () -> List<ByteArray> = { managed }
+        override suspend fun managedIdentityIds(walletIdHex: String): List<ByteArray> = managedRead()
         override fun observeCoreMaxSendableDuffs(): Flow<Long?> = flowOf(coreMax)
         override suspend fun coreAssetLockEligibleDuffs(): Long? = coreEligible
         var shieldedFlow: Flow<Dash?>? = null
@@ -187,6 +188,17 @@ class ExternalSendServiceImplTest {
 
         override suspend fun platformTopUpIdentity(walletIdHex: String, identityId: ByteArray, inputs: List<FundingInput>) {
             calls += "platformTopUpIdentity"
+            lastToId = identityId
+            lastInputs = inputs
+            nativeWrite()
+        }
+
+        override suspend fun platformTopUpExternalIdentity(
+            walletIdHex: String,
+            identityId: ByteArray,
+            inputs: List<FundingInput>
+        ) {
+            calls += "platformTopUpExternalIdentity"
             lastToId = identityId
             lastInputs = inputs
             nativeWrite()
@@ -513,6 +525,68 @@ class ExternalSendServiceImplTest {
         assertEquals(ExternalSendResult.Sent(null), service(source).send(SendBalance.PLATFORM, ownIdentity, amount, false))
         assertEquals(amountCredits, source.lastInputs?.sumOf { it.credits })
         assertArrayEquals(ownId, source.lastToId)
+    }
+
+    @Test
+    fun platformToManagedIdentity_usesTopUpFromAddresses() = runBlocking {
+        val source = source().apply { platformBalances = { listOf(address(1, 900_000_000L)) } }
+        assertEquals(ExternalSendResult.Sent(null), service(source).send(SendBalance.PLATFORM, ownIdentity, amount, false))
+        assertEquals(listOf("platformTopUpIdentity"), source.calls)
+        assertArrayEquals(ownId, source.lastToId)
+        assertEquals(amountCredits, source.lastInputs?.sumOf { it.credits })
+    }
+
+    @Test
+    fun platformToSomeoneElsesIdentity_usesTheExternalTopUp() = runBlocking {
+        val source = source().apply { platformBalances = { listOf(address(1, 900_000_000L)) } }
+        assertEquals(ExternalSendResult.Sent(null), service(source).send(SendBalance.PLATFORM, otherIdentity, amount, false))
+        assertEquals(listOf("platformTopUpExternalIdentity"), source.calls)
+        assertArrayEquals(otherId, source.lastToId)
+        assertEquals(amountCredits, source.lastInputs?.sumOf { it.credits })
+    }
+
+    @Test
+    fun platformToIdentity_theSdkWalletDoesNotManage_usesTheExternalTopUp() = runBlocking {
+        // No identity at all, or the user's identity record without the SDK wallet managing
+        // it: either way the managed top-up would not find it; the external one fetches it.
+        for ((src, to) in listOf(
+            source(ownIdentity = null, managed = emptyList()) to otherIdentity,
+            source(ownIdentity = null, managed = emptyList()) to ownIdentity,
+            source(managed = emptyList()) to ownIdentity
+        )) {
+            src.platformBalances = { listOf(address(1, 900_000_000L)) }
+            assertEquals("$to", ExternalSendResult.Sent(null), service(src).send(SendBalance.PLATFORM, to, amount, false))
+            assertEquals("$to", listOf("platformTopUpExternalIdentity"), src.calls)
+        }
+    }
+
+    @Test
+    fun platformToIdentity_managedSetUnreadable_isNotSent_withNoCall() = runBlocking {
+        val source = source().apply {
+            platformBalances = { listOf(address(1, 900_000_000L)) }
+            managedRead = { throw IllegalStateException("wallet not loaded") }
+        }
+        for (to in listOf(ownIdentity, otherIdentity)) {
+            assertEquals(
+                "$to",
+                ExternalSendResult.NotSent(NotSentReason.GENERIC),
+                service(source).send(SendBalance.PLATFORM, to, amount, false)
+            )
+        }
+        assertTrue(source.calls.isEmpty())
+    }
+
+    @Test
+    fun platformToSomeoneElsesIdentity_platformHasNoSuchIdentity_isNotSent() = runBlocking {
+        val source = source().apply {
+            platformBalances = { listOf(address(1, 900_000_000L)) }
+            nativeWrite = { throw DashSdkError.NotFound("Identity not found: $otherIdBase58", null) }
+        }
+        assertEquals(
+            ExternalSendResult.NotSent(NotSentReason.GENERIC),
+            service(source).send(SendBalance.PLATFORM, otherIdentity, amount, false)
+        )
+        assertEquals(listOf("platformTopUpExternalIdentity"), source.calls)
     }
 
     @Test
@@ -914,10 +988,7 @@ class ExternalSendServiceImplTest {
             SendBalance.CORE to platformP2sh,
             SendBalance.IDENTITY to ownIdentity,
             // Someone else's identity from Core: the resume gate cannot protect it.
-            SendBalance.CORE to otherIdentity,
-            // Someone else's identity from Platform: topUpFromAddresses only finds a managed
-            // identity (needs a Kotlin binding of platform#5860).
-            SendBalance.PLATFORM to otherIdentity
+            SendBalance.CORE to otherIdentity
         )
         for ((from, to) in pairs) {
             val source = source()
@@ -928,30 +999,6 @@ class ExternalSendServiceImplTest {
             )
             assertTrue("$from → $to", source.calls.isEmpty())
         }
-    }
-
-    @Test
-    fun platformToIdentity_needsAManagedIdentity_withNoSeamCall() = runBlocking {
-        // A wallet with no identity manages none: any identity destination is refused.
-        val noIdentity = source(ownIdentity = null, managed = emptyList()).apply {
-            platformBalances = { listOf(address(1, 900_000_000L)) }
-        }
-        for (to in listOf(ownIdentity, otherIdentity)) {
-            assertEquals(
-                "$to",
-                ExternalSendResult.NotSent(NotSentReason.NOT_SUPPORTED),
-                service(noIdentity).send(SendBalance.PLATFORM, to, amount, false)
-            )
-        }
-        assertTrue(noIdentity.calls.isEmpty())
-
-        // The user's identity record, but not one the SDK wallet manages.
-        val unmanaged = source(managed = emptyList()).apply { platformBalances = { listOf(address(1, 900_000_000L)) } }
-        assertEquals(
-            ExternalSendResult.NotSent(NotSentReason.NOT_SUPPORTED),
-            service(unmanaged).send(SendBalance.PLATFORM, ownIdentity, amount, false)
-        )
-        assertTrue(unmanaged.calls.isEmpty())
     }
 
     @Test

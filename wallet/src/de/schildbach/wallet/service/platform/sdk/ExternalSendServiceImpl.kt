@@ -410,7 +410,15 @@ internal interface ExternalSendSource {
     ): SdkWriteResult<ShieldToAddressOutcome>
     suspend fun coreTopUpIdentity(identityIdBase58: String, amountDuffs: Long): SdkWriteResult<TopUpOutcome>
     suspend fun platformTransfer(walletIdHex: String, to: PlatformAddressBytes, amountCredits: Long)
+    /** Platform addresses → an identity [walletIdHex] MANAGES (`topUpFromAddresses`). */
     suspend fun platformTopUpIdentity(walletIdHex: String, identityId: ByteArray, inputs: List<FundingInput>)
+
+    /**
+     * Platform addresses → an identity [walletIdHex] does NOT manage
+     * (`topUpExternalIdentityFromAddresses`, platform#5860); an identity Platform does not
+     * have fails `DashSdkError.NotFound` before anything is signed.
+     */
+    suspend fun platformTopUpExternalIdentity(walletIdHex: String, identityId: ByteArray, inputs: List<FundingInput>)
     suspend fun identityWithdraw(walletIdHex: String, fromId: ByteArray, amountCredits: Long, coreAddress: String)
     suspend fun identityTransferToAddress(
         walletIdHex: String,
@@ -667,6 +675,20 @@ internal class DashSdkExternalSendSource(
     override suspend fun platformTopUpIdentity(walletIdHex: String, identityId: ByteArray, inputs: List<FundingInput>) {
         val manager = manager()
         manager.identityCredits.topUpFromAddresses(
+            walletHandle = wallet(walletIdHex).handle,
+            identityId = identityId,
+            inputs = inputs,
+            signerHandle = manager.signerHandle
+        )
+    }
+
+    override suspend fun platformTopUpExternalIdentity(
+        walletIdHex: String,
+        identityId: ByteArray,
+        inputs: List<FundingInput>
+    ) {
+        val manager = manager()
+        manager.identityCredits.topUpExternalIdentityFromAddresses(
             walletHandle = wallet(walletIdHex).handle,
             identityId = identityId,
             inputs = inputs,
@@ -1197,8 +1219,9 @@ class ExternalSendServiceImpl internal constructor(
             ?: return notSent(pair, NotSentReason.GENERIC, "identity record unreadable")
         val ownIdentityId = ownIdentity.getOrNull()
         val destinationIsOwnIdentity: Boolean? = when (destination) {
-            // A Core or Platform top-up needs an identity the SDK wallet manages; an identity
-            // transfer only needs to tell the user's own identity (no self-transfer).
+            // A Core top-up needs an identity the SDK wallet manages; a Platform top-up picks
+            // its SDK call by it; an identity transfer only needs to tell the user's own
+            // identity (no self-transfer).
             is SendDestination.Identity -> if (source == SendBalance.CORE || source == SendBalance.PLATFORM) {
                 decodeIdentityId(destination.identityIdBase58)?.let { target ->
                     readOrNull("managed identities") {
@@ -1216,6 +1239,15 @@ class ExternalSendServiceImpl internal constructor(
         if (support != SendSupport.SUPPORTED) {
             return notSent(pair, NotSentReason.NOT_SUPPORTED, "pair not supported ($support)")
         }
+        // Platform → Identity picks topUpFromAddresses (managed) or the external top-up by the
+        // managed set: unreadable is unknown, never "someone else's".
+        val platformTopUpOfManaged: Boolean? =
+            if (source == SendBalance.PLATFORM && destination is SendDestination.Identity) {
+                destinationIsOwnIdentity
+                    ?: return notSent(pair, NotSentReason.GENERIC, "managed identities unreadable")
+            } else {
+                null
+            }
 
         // The identity source must be one this wallet manages (it signs with its keys).
         val ownIdentityBytes: ByteArray? = if (source == SendBalance.IDENTITY) {
@@ -1241,7 +1273,8 @@ class ExternalSendServiceImpl internal constructor(
         return when (source) {
             SendBalance.CORE -> sendFromCore(pair, walletIdHex, destination, amount, amountCredits, isMax, coreSession)
             SendBalance.SHIELDED -> sendFromShielded(pair, walletIdHex, destination, amount, isMax)
-            SendBalance.PLATFORM -> sendFromPlatform(pair, walletIdHex, destination, amount, amountCredits)
+            SendBalance.PLATFORM ->
+                sendFromPlatform(pair, walletIdHex, destination, amount, amountCredits, platformTopUpOfManaged)
             SendBalance.IDENTITY -> sendFromIdentity(
                 pair,
                 walletIdHex,
@@ -1801,7 +1834,8 @@ class ExternalSendServiceImpl internal constructor(
         walletIdHex: String,
         destination: SendDestination,
         amount: Dash,
-        amountCredits: Long
+        amountCredits: Long,
+        destinationIsManagedIdentity: Boolean?
     ): ExternalSendResult {
         return when (destination) {
             is SendDestination.Core -> sendPlatformToCore(pair, walletIdHex, destination, amountCredits)
@@ -1821,7 +1855,17 @@ class ExternalSendServiceImpl internal constructor(
                 } ?: return notSent(pair, NotSentReason.GENERIC, "platform address balances unreadable")
                 val inputs = selectPlatformInputs(candidates, amountCredits)
                     ?: return notSent(pair, NotSentReason.INSUFFICIENT_FUNDS, "platform addresses cannot cover the amount")
-                nativeWrite(pair, walletIdHex) { this.source.platformTopUpIdentity(walletIdHex, identityId, inputs) }
+                val managed = destinationIsManagedIdentity
+                    ?: return notSent(pair, NotSentReason.GENERIC, "managed identities unreadable")
+                // A NotFound from the external top-up (Platform has no such identity) is raised
+                // before signing: classifyBroadcastFailure reads it as NotBroadcast.
+                nativeWrite(pair, walletIdHex) {
+                    if (managed) {
+                        this.source.platformTopUpIdentity(walletIdHex, identityId, inputs)
+                    } else {
+                        this.source.platformTopUpExternalIdentity(walletIdHex, identityId, inputs)
+                    }
+                }
             }
         }
     }

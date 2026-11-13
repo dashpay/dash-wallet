@@ -271,14 +271,13 @@ class ExternalSendModelsTest {
         // The Platform source needs no identity.
         assertEquals(SendSupport.SUPPORTED, support(SendBalance.PLATFORM, core, hasIdentity = false))
         assertEquals(SendSupport.SUPPORTED, support(SendBalance.PLATFORM, platform))
-        // topUpFromAddresses only finds a managed identity: someone else's needs a Kotlin
-        // binding of platform#5860.
+        // Any identity: topUpFromAddresses for a managed one, the external top-up
+        // (platform#5860) for anyone else's; the send picks the call (and refuses when it
+        // cannot tell), so the matrix does not depend on ownership.
         assertEquals(SendSupport.SUPPORTED, support(SendBalance.PLATFORM, identity, own = true))
-        assertEquals(SendSupport.NEEDS_OWN_IDENTITY, support(SendBalance.PLATFORM, identity, own = false))
-        // Could not tell: fail closed.
-        assertEquals(SendSupport.NEEDS_OWN_IDENTITY, support(SendBalance.PLATFORM, identity, own = null))
-        // No identity at all: nothing is managed.
-        assertEquals(SendSupport.NEEDS_OWN_IDENTITY, support(SendBalance.PLATFORM, identity, hasIdentity = false))
+        assertEquals(SendSupport.SUPPORTED, support(SendBalance.PLATFORM, identity, own = false))
+        assertEquals(SendSupport.SUPPORTED, support(SendBalance.PLATFORM, identity, own = null))
+        assertEquals(SendSupport.SUPPORTED, support(SendBalance.PLATFORM, identity, hasIdentity = false))
     }
 
     @Test
