@@ -115,9 +115,11 @@ platform :android do
 
   desc "Upload for pre-launch report"
   lane :upload do |options|
-	filename = "#{ENV['PWD']}/wallet/build/outputs/apk/prod/release/wallet-prod-release.apk"
+	# An app bundle, not the apk: Play rejects an apk this size (both ABIs'
+	# native libraries), while from a bundle each device downloads only its own ABI.
+	filename = "#{ENV['PWD']}/wallet/build/outputs/bundle/prodRelease/wallet-prod-release.aab"
 	if !File.exist? "#{filename}"
-		UI.user_error!("Missing apk. Run 'publish' lane to build and upload")
+		UI.user_error!("Missing aab. Run 'publish' lane to build and upload")
 	end
 
 	mapping = "#{ENV['PWD']}/wallet/build/outputs/mapping/prodRelease/mapping.txt"
@@ -125,7 +127,7 @@ platform :android do
 		UI.user_error!("Missing mapping.txt. Run 'publish' lane to build and upload")
 	end
 
-	supply(apk: filename, mapping: mapping, track: 'internal')
+	supply(aab: filename, mapping: mapping, track: 'internal')
   end
 
   desc "Promote to production track with 0.2 rollout by default"
@@ -372,7 +374,8 @@ platform :android do
 		end
 
 		gradle(
-			task: "clean assembleProdRelease",
+			# The bundle is what 'upload' sends to Play; the apk is still built for checks.
+			task: "clean assembleProdRelease bundleProdRelease",
 			properties: {
 				"android.injected.signing.store.file" => "#{ENV['PWD']}/.deploy/dash-wallet.keystore",
 				"android.injected.signing.store.password" => storepass,
