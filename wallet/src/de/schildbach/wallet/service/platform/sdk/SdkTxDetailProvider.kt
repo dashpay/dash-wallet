@@ -22,7 +22,12 @@ import de.schildbach.wallet.database.dao.TxDisplayCacheDao
 import de.schildbach.wallet.database.entity.TxDisplayCacheEntry
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import org.dash.wallet.common.data.TxId
 import org.dash.wallet.common.data.entity.TransactionMetadata
@@ -87,7 +92,19 @@ data class SdkTxDetail(
      * the detail sheet renders "sent to" + the "…Fee" title instead of the
      * "moved internally to" internal-move presentation. Null for a plain move.
      */
-    val assetLockKind: AssetLockKind? = null
+    val assetLockKind: AssetLockKind? = null,
+    /**
+     * True when [outputAddresses] came back empty specifically because
+     * ownership of an OUTGOING output could not be resolved — a known
+     * output's TXO mirror row hasn't landed yet, or the bound-wallet count
+     * is ambiguous ([ownershipUnknown], both DW-1659's own guard and the
+     * pre-existing #1655 case it reuses the flag from). Both are transient:
+     * a reload can resolve them once the mirror write lands or the wallet
+     * binding settles, unlike the permanent withholding for an undecodable
+     * payment output. False (not withheld, or withheld for a reason a
+     * reload cannot fix) by default.
+     */
+    val recipientsPendingMirror: Boolean = false
 ) {
     /** True when the wallet's balance decreased (sent / internal move). */
     val isSent: Boolean get() = netAmountDuffs < 0 || direction == L1TxUiDirection.OUTGOING ||
@@ -181,6 +198,13 @@ internal fun buildSdkTxDetail(
     val fee = record.feeDuffs ?: derivedFeeDuffs(decoded, inputTxoValues)
 
     val allOutputAddresses = outputs.mapNotNull { it.address }.distinct()
+    // Checked for OUTGOING only, but hoisted above the `when` so
+    // `recipientsPendingMirror` below can tell "withheld because a mirror
+    // write is still in flight" (reload-able) apart from "withheld because
+    // an output's address could never be resolved" (permanent).
+    val hasUnresolvedPaymentOutput = outputs.any {
+        it.address == null && it.scriptPubkey.firstOrNull() != OP_RETURN
+    }
     val outputAddresses = when (record.direction) {
         L1TxUiDirection.OUTGOING -> {
             // External recipients; when every output pays the wallet back
@@ -198,9 +222,6 @@ internal fun buildSdkTxDetail(
             // excluded from that check — they are known data-only outputs,
             // not unresolved recipients.
             val external = allOutputAddresses.filter { it !in myOutputAddresses }
-            val hasUnresolvedPaymentOutput = outputs.any {
-                it.address == null && it.scriptPubkey.firstOrNull() != OP_RETURN
-            }
             when {
                 hasUnresolvedPaymentOutput || ownershipUnknown -> emptyList()
                 external.isNotEmpty() -> external
@@ -212,6 +233,8 @@ internal fun buildSdkTxDetail(
         // showing the sender's change address as "received at" would lie.
         L1TxUiDirection.INCOMING -> allOutputAddresses.filter { it in myOutputAddresses }
     }
+    val recipientsPendingMirror = record.direction == L1TxUiDirection.OUTGOING &&
+        ownershipUnknown && !hasUnresolvedPaymentOutput
 
     // Sender addresses: shown for wallet-authored spends only (dashj detail
     // parity — a received tx shows no "from"). Wallet TXO rows are the
@@ -238,7 +261,8 @@ internal fun buildSdkTxDetail(
         outputAddresses = outputAddresses,
         hasOpReturn = outputs.any { it.scriptPubkey.firstOrNull() == OP_RETURN },
         decodeFailed = decoded == null,
-        assetLockKind = assetLockKind
+        assetLockKind = assetLockKind,
+        recipientsPendingMirror = recipientsPendingMirror
     )
 }
 
@@ -411,6 +435,39 @@ internal suspend fun foreignContactTxoExclusion(
     null
 }
 
+/**
+ * Which of [candidates] are this wallet's own tracked addresses —
+ * [SdkTxStoreWalker]'s own wallet-scoped, external-account-excluded
+ * `core_addresses` query ([knownWalletAddressesAmong]), resolved to this
+ * bound SDK wallet. [load]'s output walk uses this to tell a not-yet-
+ * persisted TXO row for an output THIS WALLET actually tracks (an in-flight
+ * mirror write for, e.g., a change output — DW-1659) apart from an output
+ * that genuinely pays an external party, whose absence from `txos` is
+ * expected and permanent. [candidates] is this transaction's own output
+ * addresses, never the whole wallet — an ordinary external payee's output
+ * also has no TXO row, so the lookup runs on most outgoing detail views and
+ * must stay bounded to this one transaction's candidates.
+ *
+ * Null — not empty — when the wallet isn't resolvable or the read fails:
+ * an empty result would read as "nothing is ours", which is exactly the
+ * wrong default for a guard whose job is to catch outputs that ARE ours.
+ */
+internal suspend fun knownWalletAddressesOrNull(
+    sdkService: DashSdkService,
+    db: DashDatabase,
+    candidates: Collection<String>
+): Set<String>? = try {
+    val loadedWalletIds = sdkService.walletManagerOrNull()?.wallets?.value?.keys ?: emptySet()
+    val walletId = loadedWalletIds.singleOrNull()?.let(::walletIdFromHex) ?: return null
+    withContext(Dispatchers.IO) { knownWalletAddressesAmong(db, walletId, candidates) }
+} catch (e: CancellationException) {
+    throw e
+} catch (t: Throwable) {
+    LoggerFactory.getLogger(SdkTxDetailProvider::class.java)
+        .warn("known-wallet-address lookup failed; the TXO mirror-completeness guard is left unknown", t)
+    null
+}
+
 // ── The provider ──────────────────────────────────────────────────────
 
 /**
@@ -520,8 +577,34 @@ class SdkTxDetailProvider internal constructor(
                 ownershipUnknown = true
             }
             val (externalAccountIds, externalAddresses) = exclusion ?: (emptySet<Long>() to emptySet<String>())
-            decoded?.outputs?.forEachIndexed { index, _ ->
-                val txo = txoDao.getByOutpoint(txoOutpoint(wireTxid, index)) ?: return@forEachIndexed
+            val outputAddressCandidates = decoded?.outputs.orEmpty().mapNotNull { it.address }.distinct()
+            var knownWalletAddresses: Set<String>? = null
+            var knownWalletAddressesAttempted = false
+            decoded?.outputs?.forEachIndexed { index, output ->
+                val txo = txoDao.getByOutpoint(txoOutpoint(wireTxid, index))
+                if (txo == null) {
+                    // A missing TXO row is ordinarily just an external payee (never
+                    // mirrored at all), but when the output pays an address THIS
+                    // WALLET tracks, the row is still in flight (the SDK's async
+                    // mirror write for a just-broadcast change output, DW-1659) —
+                    // not a real external recipient. Same completeness guard as
+                    // SdkTxStoreWalker.firstUnmirroredKnownOutput, applied per-output
+                    // since this walk already visits one output at a time; resolved
+                    // lazily since the common case (mirror fully landed) never needs it.
+                    // Skipped once ownershipUnknown is already true (e.g. the exclusion
+                    // read above failed): OUTGOING withholds either way, so the lookup
+                    // would just spend a DB read for no change in outcome.
+                    if (output.address != null && !ownershipUnknown) {
+                        if (!knownWalletAddressesAttempted) {
+                            knownWalletAddresses =
+                                knownWalletAddressesOrNull(sdkService, db, outputAddressCandidates)
+                            knownWalletAddressesAttempted = true
+                        }
+                        val known = knownWalletAddresses
+                        if (known == null || output.address in known) ownershipUnknown = true
+                    }
+                    return@forEachIndexed
+                }
                 // Mirrors SdkTxContactResolver.signedNetsFor's NULL-accountId classification:
                 // a friendship-send TXO persists with accountId NULL, so coreAddressId (the
                 // core_addresses PK, always populated) is the authoritative fallback — address
@@ -559,6 +642,46 @@ class SdkTxDetailProvider internal constructor(
             assetLockKind = assetLockKind,
             ownershipUnknown = ownershipUnknown
         )
+    }
+
+    /**
+     * Fires on every change to the bound wallet's `txos` row count — what
+     * [TransactionResultViewModel] watches instead of polling [load] on a
+     * timer to notice a withheld OUTGOING recipient resolve: a known
+     * output's TXO mirror row landing, or an ambiguous wallet binding
+     * settling to one wallet (both set [SdkTxDetail.recipientsPendingMirror]).
+     * The same Room count flow [CutoverUiDataService.observeTotalDuffs]
+     * already re-triggers on — it re-emits per table invalidation whether or
+     * not the count itself changed, so the change output's insert fires it
+     * even though the row count ends up the same as before the send.
+     *
+     * Tracks [PlatformWalletManager.wallets] rather than snapshotting it
+     * once: while the wallet set isn't exactly one wallet (the ambiguous
+     * binding case) this stays silent, with no count flow to invalidate,
+     * and switches to the newly-resolved single wallet's count flow the
+     * moment the set narrows to one — so that resolution is observed too,
+     * not just a pre-existing single wallet's TXO mirror landing.
+     *
+     * Null — not an empty flow — when the SDK/db isn't resolvable right
+     * now, the same fail-soft contract as [foreignContactTxoExclusion] and
+     * [knownWalletAddressesOrNull]; the caller then has nothing to observe
+     * and leaves the withheld recipient list as-is.
+     */
+    suspend fun observeTxoCountChanges(): Flow<Long>? {
+        val db = try {
+            sdkService.ensureStarted()
+            sdkService.databaseOrNull()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (t: Throwable) {
+            log.warn("SDK unavailable while starting the txo-count observation", t)
+            null
+        } ?: return null
+        val walletManager = sdkService.walletManagerOrNull() ?: return null
+        return walletManager.wallets
+            .map { it.keys.singleOrNull()?.let(::walletIdFromHex) }
+            .distinctUntilChanged()
+            .flatMapLatest { walletId -> walletId?.let { db.txoDao().countByWallet(it) } ?: emptyFlow() }
     }
 
     /**

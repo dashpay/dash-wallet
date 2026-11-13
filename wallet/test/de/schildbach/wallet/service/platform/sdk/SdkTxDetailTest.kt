@@ -17,6 +17,8 @@
 
 package de.schildbach.wallet.service.platform.sdk
 
+import androidx.sqlite.db.SupportSQLiteProgram
+import androidx.sqlite.db.SupportSQLiteQuery
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -24,9 +26,14 @@ import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
 import java.util.Date
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Context
@@ -146,6 +153,35 @@ class SdkTxDetailTest {
         firstSeenSec = firstSeenSec,
         blockTimestampSec = 0
     )
+
+    /**
+     * Stubs [knownWalletAddressesAmong]'s scoped `core_addresses` JOIN `accounts`
+     * raw query on [db] as if [ownAddresses] were this wallet's own tracked
+     * addresses: whichever of the query's bound IN-list candidates are in
+     * [ownAddresses] come back as rows, same as the real join would filter them.
+     */
+    private fun stubKnownWalletAddresses(db: DashDatabase, ownAddresses: Set<String>) {
+        every { db.openHelper.readableDatabase.query(any<SupportSQLiteQuery>()) } answers {
+            val boundAddresses = mutableListOf<String>()
+            firstArg<SupportSQLiteQuery>().bindTo(
+                object : SupportSQLiteProgram {
+                    override fun bindNull(index: Int) = Unit
+                    override fun bindLong(index: Int, value: Long) = Unit
+                    override fun bindDouble(index: Int, value: Double) = Unit
+                    override fun bindString(index: Int, value: String) { boundAddresses += value }
+                    override fun bindBlob(index: Int, value: ByteArray) = Unit
+                    override fun clearBindings() = Unit
+                    override fun close() = Unit
+                }
+            )
+            val matched = boundAddresses.filter { it in ownAddresses }
+            var cursorIndex = -1
+            mockk<android.database.Cursor>(relaxed = true) {
+                every { moveToNext() } answers { cursorIndex++; cursorIndex < matched.size }
+                every { getString(0) } answers { matched[cursorIndex] }
+            }
+        }
+    }
 
     // ── Outgoing send ─────────────────────────────────────────────────
 
@@ -528,6 +564,10 @@ class SdkTxDetailTest {
                 "ownership unknown must withhold the recipient list, not fall back to all addresses",
                 detail.outputAddresses.isEmpty()
             )
+            assertTrue(
+                "withholding for an ambiguous wallet count is reload-able, same as the mirror-lag case",
+                detail.recipientsPendingMirror
+            )
         } finally {
             unmockkObject(TransactionDecoder)
         }
@@ -609,6 +649,10 @@ class SdkTxDetailTest {
             assertTrue(
                 "OUTGOING must stay fail-closed on ownershipUnknown regardless of what the walk found",
                 outgoing.outputAddresses.isEmpty()
+            )
+            assertTrue(
+                "fail-closed OUTGOING withholding is reload-able once the wallet binding settles",
+                outgoing.recipientsPendingMirror
             )
         } finally {
             unmockkObject(TransactionDecoder)
@@ -711,6 +755,245 @@ class SdkTxDetailTest {
             assertEquals(listOf(recipientAddress), detail.outputAddresses)
         } finally {
             unmockkObject(TransactionDecoder)
+        }
+    }
+
+    // ── Mirror-completeness guard for a not-yet-mirrored own output (DW-1659) ─
+
+    @Test
+    fun `load withholds the recipient list when the change TXO row has not landed yet`() {
+        // The timing race DW-1659 fixes: txoDao.getByOutpoint returns null for
+        // the change output because its async mirror write has not landed —
+        // exactly what a genuine external payee's output also looks like —
+        // but this address IS the wallet's own, so the walk must withhold the
+        // recipient list instead of reporting the change as a second recipient
+        // alongside the real payee (MO-1108's symptom, reached via this race).
+        val walletIdHex = "01".repeat(32)
+
+        val manager = mockk<org.dashfoundation.dashsdk.wallet.PlatformWalletManager> {
+            every { wallets } returns MutableStateFlow(mapOf(walletIdHex to mockk(relaxed = true)))
+        }
+        val entity = mockk<TransactionEntity> {
+            every { txid } returns decoded.txid
+            every { transactionData } returns rawTxBytes
+            every { netAmount } returns -70_247L
+            every { fee } returns 247L
+            every { context } returns 1
+            every { direction } returns 1 // outgoing
+            every { firstSeen } returns 1_770_000_000L
+            every { blockTimestamp } returns 0
+        }
+        // Output 0 (recipientAddress): settled, external — already has its row.
+        val recipientTxo = mockk<org.dashfoundation.dashsdk.persistence.entities.TxoEntity> {
+            every { accountId } returns null
+            every { coreAddressId } returns null
+            every { address } returns recipientAddress
+        }
+        // Output 1 (changeAddress): ours, but its mirror row has not landed yet —
+        // no entry below, so the lookup falls through to null.
+        val outpointToTxo = mapOf(
+            org.bitcoinj.core.Utils.HEX.encode(txoOutpoint(decoded.txid, 0)) to recipientTxo
+        )
+        val db = mockk<DashDatabase>(relaxed = true)
+        every { db.transactionDao() } returns mockk { coEvery { getByTxid(any()) } returns entity }
+        coEvery { db.txoDao().getByOutpoint(any()) } answers {
+            outpointToTxo[org.bitcoinj.core.Utils.HEX.encode(firstArg<ByteArray>())]
+        }
+        val externalAccountType = SdkTxContactResolver.ACCOUNT_TYPE_DASHPAY_EXTERNAL
+        every { db.accountDao().observeByWalletAndType(any(), externalAccountType) } returns flowOf(emptyList())
+        stubKnownWalletAddresses(db, ownAddresses = setOf(changeAddress))
+        val sdkService = mockk<DashSdkService> {
+            coEvery { ensureStarted() } returns Unit
+            every { databaseOrNull() } returns db
+            every { walletManagerOrNull() } returns manager
+        }
+        val displayCacheDao = mockk<de.schildbach.wallet.database.dao.TxDisplayCacheDao> {
+            coEvery { getEntriesByIds(any()) } returns emptyList()
+        }
+
+        mockkObject(TransactionDecoder)
+        try {
+            every { TransactionDecoder.decode(any(), any()) } returns decoded
+            val detail = requireNotNull(
+                runBlocking {
+                    SdkTxDetailProvider(sdkService, displayCacheDao, mockk(relaxed = true)) { _, _ -> null }
+                        .load(decoded.txidDisplayHex)
+                }
+            )
+            assertTrue(
+                "a not-yet-mirrored OWN output must withhold the recipient list, not show the " +
+                    "change address as a second recipient",
+                detail.outputAddresses.isEmpty()
+            )
+            assertTrue(
+                "withholding for a not-yet-mirrored own output is reload-able once the write lands",
+                detail.recipientsPendingMirror
+            )
+        } finally {
+            unmockkObject(TransactionDecoder)
+        }
+    }
+
+    @Test
+    fun `load still shows the real recipient when only a genuinely external output has no TXO row`() {
+        // The common, permanent case the guard must not regress: an external
+        // payee's output never gets a txos row at all. Here the change row IS
+        // mirrored, so the walk has no reason to doubt the recipient's absence
+        // — the guard must not blank the recipient list on every ordinary send.
+        val walletIdHex = "01".repeat(32)
+
+        val manager = mockk<org.dashfoundation.dashsdk.wallet.PlatformWalletManager> {
+            every { wallets } returns MutableStateFlow(mapOf(walletIdHex to mockk(relaxed = true)))
+        }
+        val entity = mockk<TransactionEntity> {
+            every { txid } returns decoded.txid
+            every { transactionData } returns rawTxBytes
+            every { netAmount } returns -70_247L
+            every { fee } returns 247L
+            every { context } returns 1
+            every { direction } returns 1 // outgoing
+            every { firstSeen } returns 1_770_000_000L
+            every { blockTimestamp } returns 0
+        }
+        val changeTxo = mockk<org.dashfoundation.dashsdk.persistence.entities.TxoEntity> {
+            every { accountId } returns null
+            every { coreAddressId } returns null
+            every { address } returns changeAddress
+        }
+        val outpointToTxo = mapOf(
+            org.bitcoinj.core.Utils.HEX.encode(txoOutpoint(decoded.txid, 1)) to changeTxo
+        )
+        val db = mockk<DashDatabase>(relaxed = true)
+        every { db.transactionDao() } returns mockk { coEvery { getByTxid(any()) } returns entity }
+        coEvery { db.txoDao().getByOutpoint(any()) } answers {
+            outpointToTxo[org.bitcoinj.core.Utils.HEX.encode(firstArg<ByteArray>())]
+        }
+        val externalAccountType = SdkTxContactResolver.ACCOUNT_TYPE_DASHPAY_EXTERNAL
+        every { db.accountDao().observeByWalletAndType(any(), externalAccountType) } returns flowOf(emptyList())
+        stubKnownWalletAddresses(db, ownAddresses = setOf(changeAddress))
+        val sdkService = mockk<DashSdkService> {
+            coEvery { ensureStarted() } returns Unit
+            every { databaseOrNull() } returns db
+            every { walletManagerOrNull() } returns manager
+        }
+        val displayCacheDao = mockk<de.schildbach.wallet.database.dao.TxDisplayCacheDao> {
+            coEvery { getEntriesByIds(any()) } returns emptyList()
+        }
+
+        mockkObject(TransactionDecoder)
+        try {
+            every { TransactionDecoder.decode(any(), any()) } returns decoded
+            val detail = requireNotNull(
+                runBlocking {
+                    SdkTxDetailProvider(sdkService, displayCacheDao, mockk(relaxed = true)) { _, _ -> null }
+                        .load(decoded.txidDisplayHex)
+                }
+            )
+            assertEquals(listOf(recipientAddress), detail.outputAddresses)
+            assertFalse(
+                "an ordinary send with its recipient resolved has nothing pending a reload",
+                detail.recipientsPendingMirror
+            )
+        } finally {
+            unmockkObject(TransactionDecoder)
+        }
+    }
+
+    // ── observeTxoCountChanges: the signal the ViewModel watches instead of
+    // ── polling load() on a timer (DW-1659 review round) ──────────────
+
+    @Test
+    fun `observeTxoCountChanges returns the bound wallet's txos count flow`() {
+        val walletIdHex = "01".repeat(32)
+        val manager = mockk<org.dashfoundation.dashsdk.wallet.PlatformWalletManager> {
+            every { wallets } returns MutableStateFlow(mapOf(walletIdHex to mockk(relaxed = true)))
+        }
+        val db = mockk<DashDatabase>(relaxed = true)
+        val counts = flowOf(3L)
+        every { db.txoDao().countByWallet(any()) } returns counts
+        val sdkService = mockk<DashSdkService> {
+            coEvery { ensureStarted() } returns Unit
+            every { databaseOrNull() } returns db
+            every { walletManagerOrNull() } returns manager
+        }
+        val displayCacheDao = mockk<de.schildbach.wallet.database.dao.TxDisplayCacheDao>(relaxed = true)
+
+        val changes = runBlocking {
+            SdkTxDetailProvider(sdkService, displayCacheDao, mockk(relaxed = true)) { _, _ -> null }
+                .observeTxoCountChanges()
+        }
+
+        assertNotNull("a single bound wallet must resolve to its DAO's count flow", changes)
+        // take(1), not toList(): the flow now tracks PlatformWalletManager.wallets
+        // (finding 3), a StateFlow that never completes on its own, so collecting
+        // to completion would hang forever instead of asserting the one emission.
+        assertEquals(listOf(3L), runBlocking { requireNotNull(changes).take(1).toList() })
+    }
+
+    @Test
+    fun `observeTxoCountChanges returns null when the SDK db itself is not resolvable`() {
+        // The true fail-soft case — not the ambiguous-wallet case below,
+        // which must stay observable (review round finding 3).
+        val sdkService = mockk<DashSdkService> {
+            coEvery { ensureStarted() } returns Unit
+            every { databaseOrNull() } returns null
+        }
+        val displayCacheDao = mockk<de.schildbach.wallet.database.dao.TxDisplayCacheDao>(relaxed = true)
+
+        val changes = runBlocking {
+            SdkTxDetailProvider(sdkService, displayCacheDao, mockk(relaxed = true)) { _, _ -> null }
+                .observeTxoCountChanges()
+        }
+
+        assertNull(changes)
+    }
+
+    @Test
+    fun `observeTxoCountChanges keeps watching an ambiguous wallet set until it resolves to one`() {
+        // DW-1659 review round (06b-prereview.md finding 3): the ambiguous-
+        // wallet-binding case is one of the two documented triggers for
+        // recipientsPendingMirror, so a one-shot wallets.value.keys.singleOrNull()
+        // snapshot that gives up with null here leaves the withheld recipient
+        // hidden forever once the ambiguity resolves. The flow must keep
+        // tracking the wallet manager's own wallets set and attach to the
+        // single wallet's TXO flow once it becomes resolvable.
+        val walletIdHex = "01".repeat(32)
+        val walletsFlow =
+            MutableStateFlow<Map<String, org.dashfoundation.dashsdk.wallet.ManagedPlatformWallet>>(emptyMap())
+        val manager = mockk<org.dashfoundation.dashsdk.wallet.PlatformWalletManager> {
+            every { wallets } returns walletsFlow
+        }
+        val db = mockk<DashDatabase>(relaxed = true)
+        every { db.txoDao().countByWallet(any()) } returns flowOf(5L)
+        val sdkService = mockk<DashSdkService> {
+            coEvery { ensureStarted() } returns Unit
+            every { databaseOrNull() } returns db
+            every { walletManagerOrNull() } returns manager
+        }
+        val displayCacheDao = mockk<de.schildbach.wallet.database.dao.TxDisplayCacheDao>(relaxed = true)
+
+        val changes = runBlocking {
+            SdkTxDetailProvider(sdkService, displayCacheDao, mockk(relaxed = true)) { _, _ -> null }
+                .observeTxoCountChanges()
+        }
+        assertNotNull("an ambiguous wallet set must still return an observable flow, not null", changes)
+
+        runBlocking {
+            val collected = mutableListOf<Long>()
+            val job = launch { requireNotNull(changes).collect { collected.add(it) } }
+            delay(20)
+            assertEquals(
+                "nothing to emit while the wallet set is still ambiguous",
+                emptyList<Long>(),
+                collected
+            )
+
+            // Orphan pruning resolves the ambiguity to exactly one wallet.
+            walletsFlow.value = mapOf(walletIdHex to mockk(relaxed = true))
+            withTimeout(5_000) { while (collected.isEmpty()) delay(5) }
+
+            assertEquals(listOf(5L), collected)
+            job.cancel()
         }
     }
 
