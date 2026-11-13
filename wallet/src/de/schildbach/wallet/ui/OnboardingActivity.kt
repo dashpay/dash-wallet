@@ -294,7 +294,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
         lifecycleScope.launch {
             invite?.let {
                 log.info("saving invite for later: ${invite?.link}")
-                inviteHandlerViewModel.setInvitationLink(it, true)
+                inviteHandlerViewModel.receiveInvite(it, true)
             }
         }
 
@@ -352,7 +352,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
         } else if (invite != null) {
             log.info("saving invite for later: ${invite.link}")
             lifecycleScope.launch {
-                inviteHandlerViewModel.setInvitationLink(invite, true)
+                inviteHandlerViewModel.receiveInvite(invite, true)
             }
         }
     }
@@ -757,13 +757,3 @@ internal fun onboardingScreenIsStale(
     walletInstalled: Boolean,
     wipeInProgress: Boolean
 ): Boolean = !wipeInProgress && walletFileExists && walletInstalled
-
-/**
- * [onboardingScreenIsStale] for this app: an onboarding create or restore must
- * not install over the wallet. Checked right before each onboarding install, as
- * a create or restore started before another screen installed a wallet can
- * finish after it. Forgot-PIN recovery replaces the wallet on purpose and does
- * not ask.
- */
-internal fun WalletApplication.hasInstalledWallet(): Boolean =
-    onboardingScreenIsStale(walletFileExists(), hasWallet(), isWipeInProgress)

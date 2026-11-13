@@ -168,6 +168,26 @@ class InviteHandlerViewModel @Inject constructor(
     }
 
     /**
+     * The one way a newly opened invite is taken in, from every route (the
+     * home screen, onboarding, the invite link handler): a dead claim
+     * ([clearFailedInviteClaim]) is cleared first, so it can block neither
+     * this invite nor a later check. Outside onboarding an invite-based
+     * identity still being created turns the invite away ([isInviteClaimInProgress]);
+     * onboarding stores it for later, as it always has.
+     *
+     * @return false if the invite was turned away and not stored
+     */
+    suspend fun receiveInvite(invitation: InvitationLinkData, fromOnboarding: Boolean): Boolean {
+        clearFailedInviteClaim()
+        if (!fromOnboarding && isInviteClaimInProgress()) {
+            log.info("invite opened while an invite-based identity is being created; ignoring it")
+            return false
+        }
+        setInvitationLink(invitation, fromOnboarding)
+        return true
+    }
+
+    /**
      * True while an identity is being created FROM AN INVITE (in progress or
      * stopped on an error the user can retry). Only then is a newly opened
      * invite answered with "DashPay is currently processing an invite"; in
@@ -189,8 +209,7 @@ class InviteHandlerViewModel @Inject constructor(
      * retry ([de.schildbach.wallet.ui.invite.InviteHandler.handleError])
      * cleared it. Every other retry left it in place, and
      * [isInviteClaimInProgress] then turned away every invite opened
-     * afterwards (MO-975). Call it before [isInviteClaimInProgress] when a new
-     * invite arrives.
+     * afterwards (MO-975). [receiveInvite] calls it for every new invite.
      *
      * The clear is conditional on the record being unchanged since the read:
      * a retry that reset the error in between keeps its record.
@@ -390,9 +409,18 @@ internal fun inviteClaimInProgress(identity: BlockchainIdentityBaseData?): Boole
  */
 internal const val INVITE_ALREADY_USED_MESSAGE = "Invite has already been used"
 
-/** Whether [creationStateErrorMessage] is the terminal "invite already used" failure. */
+/**
+ * Whether [creationStateErrorMessage] is the terminal "invite already used"
+ * failure: exactly the message CreateIdentityService throws, as
+ * IdentityRepository.updateIdentityCreationState stores it
+ * ("<exception class>: <message>"), or bare. Never a substring: the stored
+ * text also carries SDK and DAPI error text, and a message that merely
+ * mentions the phrase (e.g. "cannot determine whether Invite has already
+ * been used") must not authorize clearing the identity record.
+ */
 internal fun isInviteAlreadyUsedError(creationStateErrorMessage: String?): Boolean =
-    creationStateErrorMessage?.contains(INVITE_ALREADY_USED_MESSAGE, ignoreCase = true) == true
+    creationStateErrorMessage == INVITE_ALREADY_USED_MESSAGE ||
+        creationStateErrorMessage == "IllegalStateException: $INVITE_ALREADY_USED_MESSAGE"
 
 /**
  * Pure rule behind [InviteHandlerViewModel.clearFailedInviteClaim]: an invite

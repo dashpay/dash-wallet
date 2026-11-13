@@ -18,11 +18,13 @@
 package de.schildbach.wallet.ui
 
 import android.app.Application
+import android.net.Uri
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.database.entity.IdentityRecordKey
 import de.schildbach.wallet.service.platform.IdentityRepository
+import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -75,8 +77,11 @@ class ClearFailedInviteClaimTest {
         usingInvite = true
     )
 
+    private val dashPayConfig = mockk<DashPayConfig>(relaxed = true)
+
+    private val invite = InvitationLinkData(Uri.parse("https://invitations.dashpay.io/applink?user=alice"))
+
     private fun viewModel(): InviteHandlerViewModel {
-        val dashPayConfig = mockk<DashPayConfig>(relaxed = true)
         every { dashPayConfig.observe(DashPayConfig.INVITATION_LINK) } returns MutableStateFlow(null)
         every { dashPayConfig.observe(DashPayConfig.INVITATION_FROM_ONBOARDING) } returns flowOf(false)
 
@@ -146,6 +151,44 @@ class ClearFailedInviteClaimTest {
 
         coVerify(exactly = 0) { identityRepository.clearBlockchainIdentityDataIfUnchanged(any()) }
         assertTrue(viewModel.isInviteClaimInProgress())
+    }
+
+    /**
+     * PR #1700 review: every route a new invite arrives by clears the dead
+     * claim, onboarding included, which stores the invite without the
+     * in-progress check.
+     */
+    @Test
+    fun `an invite received during onboarding clears a dead claim and is stored`() = runBlocking {
+        stored = record("IllegalStateException: Invite has already been used")
+        val viewModel = viewModel()
+
+        assertTrue(viewModel.receiveInvite(invite, true))
+
+        assertFalse(viewModel.isInviteClaimInProgress())
+        coVerify(exactly = 1) { dashPayConfig.set(DashPayConfig.INVITATION_LINK, invite.link.toString()) }
+    }
+
+    @Test
+    fun `an invite received outside onboarding clears a dead claim and is stored`() = runBlocking {
+        stored = record("IllegalStateException: Invite has already been used")
+        val viewModel = viewModel()
+
+        assertTrue(viewModel.receiveInvite(invite, false))
+
+        assertFalse(viewModel.isInviteClaimInProgress())
+        coVerify(exactly = 1) { dashPayConfig.set(DashPayConfig.INVITATION_LINK, invite.link.toString()) }
+    }
+
+    @Test
+    fun `an invite received outside onboarding while a claim runs is turned away`() = runBlocking {
+        stored = record(null)
+        val viewModel = viewModel()
+
+        assertFalse(viewModel.receiveInvite(invite, false))
+
+        assertTrue(viewModel.isInviteClaimInProgress())
+        coVerify(exactly = 0) { dashPayConfig.set(DashPayConfig.INVITATION_LINK, any()) }
     }
 
     @Test

@@ -16,6 +16,7 @@
 
 package de.schildbach.wallet.ui
 
+import de.schildbach.wallet.WalletApplication.WalletInstallResult
 import android.content.Intent
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -214,14 +215,17 @@ class RestoreWalletFromSeedViewModel @Inject constructor(
             val creationTime = selectedCreationDate.value
             val wallet = walletFactory.restoreFromSeed(Constants.NETWORK_PARAMETERS, normalize(words))
             // Forgot-PIN recovery replaces the installed wallet on purpose; an
-            // onboarding restore must not (see hasInstalledWallet).
-            if (!forgotPinRecovery && walletApplication.hasInstalledWallet()) {
-                log.warn("restored wallet dropped: another onboarding screen installed a wallet first")
-                return@withContext SeedRestoreResult.WALLET_ALREADY_INSTALLED
-            }
-            if (!walletApplication.setWallet(wallet)) {
-                log.warn("restored wallet refused: a wallet reset is unfinished or unverified")
-                return@withContext SeedRestoreResult.REFUSED
+            // onboarding restore must not (see WalletApplication.installWallet).
+            when (walletApplication.installWallet(wallet, forgotPinRecovery)) {
+                WalletInstallResult.ALREADY_INSTALLED -> {
+                    log.warn("restored wallet dropped: another onboarding screen installed a wallet first")
+                    return@withContext SeedRestoreResult.WALLET_ALREADY_INSTALLED
+                }
+                WalletInstallResult.REFUSED -> {
+                    log.warn("restored wallet refused: a wallet reset is unfinished or unverified")
+                    return@withContext SeedRestoreResult.REFUSED
+                }
+                WalletInstallResult.INSTALLED -> Unit
             }
             // Only once the replacement is accepted: a refused wallet must not
             // overwrite the existing wallet's persisted scan-start date.

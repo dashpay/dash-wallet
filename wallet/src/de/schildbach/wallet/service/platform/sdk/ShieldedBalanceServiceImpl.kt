@@ -1408,7 +1408,15 @@ class ShieldedBalanceServiceImpl internal constructor(
      */
     private suspend fun endRuntimeOnAnotherWalletLocked(generation: Int): Int? {
         val readyHex = readyWalletIdHex.value ?: return generation
-        val boundHex = source.boundWalletIdOrNull()
+        // A binding that cannot be read is unknown, not unchanged: the old
+        // runtime must not go on publishing READY and its balance.
+        val boundHex = try {
+            source.boundWalletIdOrNull()
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("could not read the SDK wallet binding; treating it as unknown", t)
+            null
+        }
         if (boundHex != null && boundHex.equals(readyHex, ignoreCase = true)) return generation
         if (!stopGeneration.compareAndSet(generation, generation + 1)) return null
         log.warn(

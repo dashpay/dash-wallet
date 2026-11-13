@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.ui
 
+import de.schildbach.wallet.WalletApplication.WalletInstallResult
 import androidx.lifecycle.ViewModel
 import android.content.Intent
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -67,20 +68,16 @@ class OnboardingViewModel @Inject constructor(
                 walletApplication.initEnvironmentIfNeeded()
                 val wallet = walletFactory.create(Constants.NETWORK_PARAMETERS, seedWordCount)
                 log.info("successfully created new wallet")
-                if (walletApplication.hasInstalledWallet()) {
-                    null
-                } else {
-                    walletApplication.setWallet(wallet).also { installed ->
-                        if (installed) configuration.armBackupSeedReminder()
-                    }
+                walletApplication.installWallet(wallet, false).also { result ->
+                    if (result == WalletInstallResult.INSTALLED) configuration.armBackupSeedReminder()
                 }
             }
-            if (installed == null) {
+            if (installed == WalletInstallResult.ALREADY_INSTALLED) {
                 log.warn("new wallet dropped: another onboarding screen installed a wallet first")
                 walletAlreadyInstalledAction.call(Unit)
                 return@launch
             }
-            if (!installed) {
+            if (installed == WalletInstallResult.REFUSED) {
                 log.warn("new wallet refused: a wallet reset is unfinished or unverified")
                 walletReplacementRefusedAction.call(Unit)
                 return@launch

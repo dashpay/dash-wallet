@@ -212,6 +212,7 @@ class ShieldedBalanceServiceTest {
             }
             quiesceLatched = false
             nativeLoopRunning = false
+            syncRunning = false
         }
 
         var syncNowCalls = 0
@@ -1191,6 +1192,7 @@ class ShieldedBalanceServiceTest {
         assertEquals("the old loop was stopped", 1, source.stopCalls)
         assertEquals("re-bound on the new wallet", 2, source.bindCalls)
         assertArrayEquals(ByteArray(32) { 0xcd.toByte() }, source.lastBoundWallet)
+        assertEquals("a replacement loop was started, not the stopped one adopted", 2, source.startCalls)
 
         assertTrue("now ready on the new wallet: no further rebind", service.ensureShieldedReady())
         assertEquals(2, source.bindCalls)
@@ -1260,6 +1262,31 @@ class ShieldedBalanceServiceTest {
         assertEquals(ShieldedSyncStatus.NOT_READY, service.shieldedSyncStatus.value)
 
         bound = walletIdHex
+        assertTrue(service.ensureShieldedReady())
+        assertEquals("brought up afresh", 2, source.bindCalls)
+    }
+
+    /**
+     * PR #1700 review: when reading the binding throws (SDK startup or the
+     * wallet-manager lookup failing), the old runtime is withdrawn as for an
+     * unknown binding, not left publishing READY.
+     */
+    @Test
+    fun ensureReady_whenTheBindingReadThrows_withdrawsTheOldRuntime() = runBlocking {
+        var failRead = false
+        val source = FakeSource(
+            hasSupport = true,
+            boundWalletId = { if (failRead) throw IllegalStateException("wallet manager unavailable") else walletIdHex }
+        )
+        val service = service(source)
+        assertTrue(service.ensureShieldedReady())
+
+        failRead = true
+        assertFalse(service.ensureShieldedReady())
+        assertEquals(1, source.stopCalls)
+        assertEquals(ShieldedSyncStatus.NOT_READY, service.shieldedSyncStatus.value)
+
+        failRead = false
         assertTrue(service.ensureShieldedReady())
         assertEquals("brought up afresh", 2, source.bindCalls)
     }
@@ -2159,10 +2186,15 @@ class ShieldedBalanceServiceTest {
             service.resumePendingWalletShields()
             assertEquals("re-bound on the new wallet", 2, source.bindCalls)
 
-            withTimeout(5_000) { while (source.passResults.subscriptionCount.value == 0) delay(10) }
-            source.passResults.emit(passOk(walletId = ByteArray(32) { 0xcd.toByte() }))
+            // passResults does not replay, and subscriptionCount may still
+            // count the old session's cancelled collector: re-emit the pass
+            // until the replacement collector has seen it.
+            val pass = passOk(walletId = ByteArray(32) { 0xcd.toByte() })
             withTimeout(10_000) {
-                while (service.shieldedSyncStatus.value != ShieldedSyncStatus.READY) delay(20)
+                while (service.shieldedSyncStatus.value != ShieldedSyncStatus.READY) {
+                    source.passResults.emit(pass)
+                    delay(20)
+                }
             }
         } finally {
             sweepScope.cancel()

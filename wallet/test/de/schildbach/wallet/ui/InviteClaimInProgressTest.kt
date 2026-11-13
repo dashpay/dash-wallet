@@ -127,5 +127,12 @@ class InviteClaimInProgressTest {
         assertTrue(isInviteAlreadyUsedError("IllegalStateException: $INVITE_ALREADY_USED_MESSAGE"))
         assertFalse(isInviteAlreadyUsedError(null))
         assertFalse(isInviteAlreadyUsedError("IllegalStateException: L1 invite claim failed"))
+        // An uncertain outcome that merely mentions the phrase is not terminal.
+        assertFalse(
+            isInviteAlreadyUsedError(
+                "IllegalStateException: shielded invite claim failed: cannot determine whether Invite has already been used"
+            )
+        )
+        assertFalse(isInviteAlreadyUsedError("invite has already been used"))
     }
 }

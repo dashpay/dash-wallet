@@ -122,6 +122,7 @@ import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService;
 import de.schildbach.wallet.service.platform.sdk.PaidContactAddressStore;
 import de.schildbach.wallet.transactions.MasternodeObserver;
 import de.schildbach.wallet.transactions.WalletBalanceObserver;
+import de.schildbach.wallet.ui.OnboardingActivityKt;
 import de.schildbach.wallet.ui.buy_sell.LiquidClient;
 import org.dash.wallet.integrations.uphold.api.UpholdClient;
 import org.dash.wallet.integrations.uphold.data.UpholdConstants;
@@ -1102,7 +1103,61 @@ public class WalletApplication extends MultiDexApplication
      *   says a wipe marker forbids a replacement. Callers must stop their flow
      *   and send the user back to the degraded screen.
      */
+    /** Outcome of {@link #installWallet}. */
+    public enum WalletInstallResult {
+        INSTALLED,
+        /** {@link #isWalletReplacementRefused}: a wipe marker forbids a replacement. */
+        REFUSED,
+        /** A saved wallet is installed and the caller may not replace it. */
+        ALREADY_INSTALLED
+    }
+
+    /**
+     * Serializes every wallet install with the save that commits one: the
+     * check-then-install in {@link #installWallet} and the first primary
+     * save in {@link #saveWalletAndFinalizeInitialization} hold it, so no
+     * install can pass the "no saved wallet" check while another flow's
+     * wallet becomes the saved one.
+     */
+    private final Object walletInstallLock = new Object();
+
+    /**
+     * Whether a wallet is installed and saved, with no reset tearing it down
+     * (see {@code OnboardingActivityKt.onboardingScreenIsStale}). An
+     * onboarding create or restore must not install over it.
+     */
+    public boolean hasInstalledWallet() {
+        return OnboardingActivityKt.onboardingScreenIsStale(walletFileExists(), hasWallet(), isWipeInProgress());
+    }
+
+    /**
+     * Installs a created or restored wallet. The check and the install are
+     * one step under {@link #walletInstallLock}: two onboarding screens that
+     * finish at once cannot both pass the check, and neither can install
+     * over a wallet another screen has just saved.
+     *
+     * @param replaceInstalled true only for forgot-PIN recovery, which
+     *   replaces the installed wallet on purpose. Onboarding passes false.
+     */
+    @NonNull
+    public WalletInstallResult installWallet(Wallet newWallet, boolean replaceInstalled)
+            throws GeneralSecurityException, IOException {
+        synchronized (walletInstallLock) {
+            if (!replaceInstalled && hasInstalledWallet()) {
+                log.warn("refusing to install a created or restored wallet: a saved wallet is already installed");
+                return WalletInstallResult.ALREADY_INSTALLED;
+            }
+            return setWallet(newWallet) ? WalletInstallResult.INSTALLED : WalletInstallResult.REFUSED;
+        }
+    }
+
     public boolean setWallet(Wallet newWallet) throws GeneralSecurityException, IOException {
+        synchronized (walletInstallLock) {
+            return setWalletLocked(newWallet);
+        }
+    }
+
+    private boolean setWalletLocked(Wallet newWallet) throws GeneralSecurityException, IOException {
         if (isWalletReplacementRefused()) {
             log.warn("refusing to install a created or restored wallet: a wipe marker is on disk");
             return false;
@@ -1204,18 +1259,23 @@ public class WalletApplication extends MultiDexApplication
         // the previous wallet's backup concurrently, and its completion must
         // not discharge this replacement's obligation.
         final BackupReplacementState.Generation replacement;
-        try {
-            replacement = BackupReplacementState.INSTANCE.arm(walletFile.getParentFile());
-        } catch (final IOException x) {
-            throw new RuntimeException(x);
+        // Under walletInstallLock: this save is what makes the installed
+        // wallet the saved one (hasInstalledWallet), so no install may pass
+        // its check in between (see installWallet).
+        synchronized (walletInstallLock) {
+            try {
+                replacement = BackupReplacementState.INSTANCE.arm(walletFile.getParentFile());
+            } catch (final IOException x) {
+                throw new RuntimeException(x);
+            }
+            // Commits the replacement (committedWallet): from here on its backup
+            // may be published, and the previous wallet's may not. The obligation
+            // is already armed above, so this save arms nothing of its own: a
+            // second arm would replace this generation and leave the completion
+            // below unable to clear the marker. A generation an earlier ordinary
+            // save armed for this wallet was just overwritten by ours.
+            saveWallet(true);
         }
-        // Commits the replacement (committedWallet): from here on its backup
-        // may be published, and the previous wallet's may not. The obligation
-        // is already armed above, so this save arms nothing of its own: a
-        // second arm would replace this generation and leave the completion
-        // below unable to clear the marker. A generation an earlier ordinary
-        // save armed for this wallet was just overwritten by ours.
-        saveWallet(true);
         // Unlike backupWallet(), a failure here propagates: the flags below
         // must not be cleared while the replacement has no key backup.
         try {

@@ -16,6 +16,7 @@
 
 package de.schildbach.wallet.ui
 
+import de.schildbach.wallet.WalletApplication.WalletInstallResult
 import android.content.Intent
 import android.net.Uri
 import androidx.lifecycle.MutableLiveData
@@ -77,35 +78,43 @@ class RestoreWalletFromFileViewModel @Inject constructor(
     fun restoreWallet(wallet: Wallet, password: String?) {
         if (!wallet.hasKeyChain(Constants.BIP44_PATH) && wallet.isEncrypted) {
             showUpgradeWalletAction.call(wallet)
-        } else if (walletApplication.hasInstalledWallet()) {
-            log.warn("restored wallet dropped: another onboarding screen installed a wallet first")
-            keysFileWallet = null
-            walletAlreadyInstalled.call(Unit)
-        } else if (!walletApplication.setWallet(wallet)) {
-            log.warn("restored wallet refused: a wallet reset is unfinished or unverified")
-            walletReplacementRefused.call(Unit)
-        } else {
-            if (wallet === keysFileWallet) {
-                // when loading a keys file, a new recovery phrase is created and is different each time
-                // The user will need to backup their passphrase. Only once the wallet is
-                // accepted: a refused one must not arm reminders for the existing wallet.
-                configuration.armBackupReminder()
-                configuration.armBackupSeedReminder()
-            }
-            keysFileWallet = null
-            viewModelScope.launch { dashPayConfig.disableNotifications() }
-            log.info("successfully restored wallet from file")
-            walletApplication.resetBlockchainState()
-            startActivityAction.call(
-                SetPinActivity.createIntent(
-                    walletApplication,
-                    R.string.set_pin_restore_wallet,
-                    false,
-                    password,
-                    onboarding = true,
-                    onboardingPath = OnboardingPath.RestoreFile
-                )
-            )
+            return
         }
+        when (walletApplication.installWallet(wallet, false)) {
+            WalletInstallResult.ALREADY_INSTALLED -> {
+                log.warn("restored wallet dropped: another onboarding screen installed a wallet first")
+                keysFileWallet = null
+                walletAlreadyInstalled.call(Unit)
+            }
+            WalletInstallResult.REFUSED -> {
+                log.warn("restored wallet refused: a wallet reset is unfinished or unverified")
+                walletReplacementRefused.call(Unit)
+            }
+            WalletInstallResult.INSTALLED -> onRestoredWalletInstalled(wallet, password)
+        }
+    }
+
+    private fun onRestoredWalletInstalled(wallet: Wallet, password: String?) {
+        if (wallet === keysFileWallet) {
+            // when loading a keys file, a new recovery phrase is created and is different each time
+            // The user will need to backup their passphrase. Only once the wallet is
+            // accepted: a refused one must not arm reminders for the existing wallet.
+            configuration.armBackupReminder()
+            configuration.armBackupSeedReminder()
+        }
+        keysFileWallet = null
+        viewModelScope.launch { dashPayConfig.disableNotifications() }
+        log.info("successfully restored wallet from file")
+        walletApplication.resetBlockchainState()
+        startActivityAction.call(
+            SetPinActivity.createIntent(
+                walletApplication,
+                R.string.set_pin_restore_wallet,
+                false,
+                password,
+                onboarding = true,
+                onboardingPath = OnboardingPath.RestoreFile
+            )
+        )
     }
 }

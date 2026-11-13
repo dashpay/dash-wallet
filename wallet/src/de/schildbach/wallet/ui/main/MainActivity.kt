@@ -508,12 +508,8 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
      */
     private fun handleInvite(invite: InvitationLinkData) {
         lifecycleScope.launch {
-            inviteHandlerViewModel.clearFailedInviteClaim()
-            if (inviteHandlerViewModel.isInviteClaimInProgress()) {
-                log.info("invite opened while an invite-based identity is being created; ignoring it")
+            if (!inviteHandlerViewModel.receiveInvite(invite, false)) {
                 InviteHandler(this@MainActivity, viewModel.analytics).showInviteWhileProcessingInviteInProgressDialog()
-            } else {
-                inviteHandlerViewModel.setInvitationLink(invite, false)
             }
         }
     }
