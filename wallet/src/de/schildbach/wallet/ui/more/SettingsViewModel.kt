@@ -22,6 +22,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -36,6 +38,8 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.dash.wallet.common.Configuration
 import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.BlockchainServiceConfig
@@ -51,7 +55,8 @@ data class SettingsUIState(
     val transactionMetadataVisible: Boolean = false,
     val transactionMetadataSubtitle: String? = null,
     val analyticsEnabled: Boolean = true,
-    val analyticsAvailable: Boolean = true
+    val analyticsAvailable: Boolean = true,
+    val advancedModeEnabled: Boolean = false
 )
 
 /** A Settings analytics choice that could not be saved (one-shot; the fragment shows a Toast). */
@@ -93,6 +98,10 @@ class SettingsViewModel @Inject constructor(
     private val _analyticsSaveFailures = Channel<AnalyticsSaveFailure>(Channel.BUFFERED)
     val analyticsSaveFailures: Flow<AnalyticsSaveFailure> = _analyticsSaveFailures.receiveAsFlow()
 
+    /** One-shot: the "Advanced mode" value that could not be saved (the fragment shows a Toast). */
+    private val _advancedModeSaveFailures = Channel<Boolean>(Channel.BUFFERED)
+    val advancedModeSaveFailures: Flow<Boolean> = _advancedModeSaveFailures.receiveAsFlow()
+
     init {
         // Initialize with current battery optimization status
         updateIgnoringBatteryOptimizations()
@@ -117,6 +126,13 @@ class SettingsViewModel @Inject constructor(
             .distinctUntilChanged()
             .onEach { isVisible ->
                 _uiState.update { it.copy(transactionMetadataVisible = isVisible) }
+            }.launchIn(viewModelScope)
+
+        // The saved setting drives the switch, so it shows what is actually stored
+        walletUIConfig.observeAdvancedMode()
+            .distinctUntilChanged()
+            .onEach { enabled ->
+                _uiState.update { it.copy(advancedModeEnabled = enabled) }
             }.launchIn(viewModelScope)
     }
 
@@ -156,6 +172,28 @@ class SettingsViewModel @Inject constructor(
             _analyticsSaveFailures.trySend(
                 if (enabled) AnalyticsSaveFailure.TURNING_ON else AnalyticsSaveFailure.TURNING_OFF
             )
+        }
+    }
+
+    /**
+     * Saves the "Advanced mode" choice; the switch follows the saved value, so after a
+     * failure toggling it again retries. A failed save is reported through
+     * [advancedModeSaveFailures] with the value that was not saved.
+     *
+     * The save runs under [NonCancellable]: leaving Settings right after a tap clears this
+     * ViewModel, and a DataStore update still queued when [viewModelScope] is cancelled
+     * would otherwise be skipped, silently losing the toggle.
+     */
+    fun setAdvancedModeEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            try {
+                withContext(NonCancellable) { walletUIConfig.setAdvancedMode(enabled) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                log.error("Error saving the advanced mode setting", e)
+                _advancedModeSaveFailures.trySend(enabled)
+            }
         }
     }
 
