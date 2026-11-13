@@ -1238,6 +1238,94 @@ class RecoveredWalletPersistenceTest {
         assertArrayEquals(written, keyBackup.readBytes())
     }
 
+    /**
+     * PR #1700 review: an onboarding install may not replace a saved wallet,
+     * while forgot-PIN recovery still may. Before the first save the
+     * installed wallet is not yet the user's (they can back out of PIN setup
+     * and restore instead), so a second install is accepted.
+     */
+    @Test
+    fun `an onboarding install over a saved wallet is refused, a forgot-PIN install is not`() {
+        ReflectionHelpers.setField(app, "wallet", null)
+        ReflectionHelpers.setField(app, "committedWallet", null)
+        assertFalse(primary.exists())
+        val setupApp = setupCapableApp()
+        val abandoned = replacementWallet()
+        val first = replacementWallet()
+        val second = replacementWallet()
+
+        assertEquals(WalletApplication.WalletInstallResult.INSTALLED, setupApp.installWallet(abandoned, false))
+        assertEquals(WalletApplication.WalletInstallResult.INSTALLED, setupApp.installWallet(first, false))
+        setupApp.saveWalletAndFinalizeInitialization()
+
+        assertEquals(WalletApplication.WalletInstallResult.ALREADY_INSTALLED, setupApp.installWallet(second, false))
+        assertSame(first, setupApp.wallet)
+        assertEquals(WalletApplication.WalletInstallResult.INSTALLED, setupApp.installWallet(second, true))
+        assertSame(second, setupApp.wallet)
+    }
+
+    /**
+     * PR #1700 review: the check and the install are one step against the
+     * save that commits a wallet. An install that arrives while another
+     * screen's wallet is being saved waits for it, then sees it saved.
+     */
+    @Test
+    fun `an onboarding install waits for a save in progress and then refuses`() {
+        ReflectionHelpers.setField(app, "wallet", null)
+        ReflectionHelpers.setField(app, "committedWallet", null)
+        val setupApp = setupCapableApp()
+        val first = replacementWallet()
+        val second = replacementWallet()
+        assertEquals(WalletApplication.WalletInstallResult.INSTALLED, setupApp.installWallet(first, false))
+
+        var racing: Thread? = null
+        var racingResult: WalletApplication.WalletInstallResult? = null
+        every { setupApp.saveWallet(true) } answers {
+            racing = Thread { racingResult = setupApp.installWallet(second, false) }.apply { start() }
+            racing!!.join(300)
+            assertTrue("the install must wait for the save", racing!!.isAlive)
+            callOriginal()
+        }
+
+        setupApp.saveWalletAndFinalizeInitialization()
+        racing!!.join(5_000)
+
+        assertFalse(racing!!.isAlive)
+        assertEquals(WalletApplication.WalletInstallResult.ALREADY_INSTALLED, racingResult)
+        assertSame(first, setupApp.wallet)
+    }
+
+    /**
+     * Pre-review: an ordinary save (the shutdown save) can make an unsaved
+     * install the saved wallet too, so it holds the same lock as the setup
+     * save: an install arriving meanwhile waits, then sees the saved wallet.
+     */
+    @Test
+    fun `an onboarding install waits for an ordinary save in progress and then refuses`() {
+        ReflectionHelpers.setField(app, "wallet", null)
+        ReflectionHelpers.setField(app, "committedWallet", null)
+        val setupApp = setupCapableApp()
+        val first = spyk(replacementWallet())
+        val second = replacementWallet()
+        assertEquals(WalletApplication.WalletInstallResult.INSTALLED, setupApp.installWallet(first, false))
+
+        var racing: Thread? = null
+        var racingResult: WalletApplication.WalletInstallResult? = null
+        every { first.saveToFile(primary) } answers {
+            racing = Thread { racingResult = setupApp.installWallet(second, false) }.apply { start() }
+            racing!!.join(300)
+            assertTrue("the install must wait for the save", racing!!.isAlive)
+            callOriginal()
+        }
+
+        setupApp.saveWallet()
+        racing!!.join(5_000)
+
+        assertFalse(racing!!.isAlive)
+        assertEquals(WalletApplication.WalletInstallResult.ALREADY_INSTALLED, racingResult)
+        assertSame(first, setupApp.wallet)
+    }
+
     @Test
     fun `backupWallet writes the committed wallet's backup`() {
         recovered.saveToFile(primary)

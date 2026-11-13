@@ -118,7 +118,8 @@ class InviteReplacedDuringValidationTest {
             mockk(relaxed = true),
             stateProvider,
             topUpRepository,
-            dashPayConfig
+            dashPayConfig,
+            mockk(relaxed = true)
         )
     }
 

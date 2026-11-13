@@ -19,6 +19,7 @@ package de.schildbach.wallet.ui
 import android.app.Application
 import androidx.test.core.app.ApplicationProvider
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.WalletApplication.WalletInstallResult
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.WalletFactory
 import de.schildbach.wallet.util.MnemonicCodeExt
@@ -84,7 +85,7 @@ class RestoreWalletFromSeedViewModelTest {
     fun `a refused replacement reports REFUSED and runs none of the restore follow-ups`() = runBlocking {
         val app = mockk<WalletApplication>(relaxed = true)
         every { app.isWalletReplacementRefused } returns false
-        every { app.setWallet(any()) } returns false
+        every { app.installWallet(any(), false) } returns WalletInstallResult.REFUSED
         val factory = mockk<WalletFactory>()
         coEvery { factory.restoreFromSeed(any(), any()) } returns mockk<Wallet>()
         val configuration = mockk<Configuration>(relaxed = true)
@@ -107,7 +108,7 @@ class RestoreWalletFromSeedViewModelTest {
 
         assertEquals(SeedRestoreResult.REFUSED, viewModel(app, factory).restoreWalletFromSeed(words))
         coVerify(exactly = 0) { factory.restoreFromSeed(any(), any()) }
-        verify(exactly = 0) { app.setWallet(any()) }
+        verify(exactly = 0) { app.installWallet(any(), any()) }
         assertEquals(existingDateSecs, blockchainServiceConfig.getWalletCreationDate())
     }
 
@@ -115,15 +116,42 @@ class RestoreWalletFromSeedViewModelTest {
     fun `an accepted replacement persists the selected creation date`() = runBlocking {
         val app = mockk<WalletApplication>(relaxed = true)
         every { app.isWalletReplacementRefused } returns false
-        every { app.setWallet(any()) } answers {
+        every { app.installWallet(any(), false) } answers {
             // Not yet: the date follows the acceptance.
             assertEquals(existingDateSecs, runBlocking { blockchainServiceConfig.getWalletCreationDate() })
-            true
+            WalletInstallResult.INSTALLED
         }
         val factory = mockk<WalletFactory>()
         coEvery { factory.restoreFromSeed(any(), any()) } returns mockk<Wallet>()
 
         assertEquals(SeedRestoreResult.RESTORED, viewModel(app, factory).restoreWalletFromSeed(words))
         assertEquals(selectedDateSecs, blockchainServiceConfig.getWalletCreationDate())
+    }
+
+    /**
+     * MO-975 pre-review: a restore started before another onboarding screen
+     * installed a wallet must not install over it — but forgot-PIN recovery,
+     * which replaces the installed wallet on purpose, still does.
+     */
+    @Test
+    fun `an onboarding restore over an installed wallet is dropped, a forgot-PIN recovery is not`() = runBlocking {
+        val app = mockk<WalletApplication>(relaxed = true)
+        every { app.isWalletReplacementRefused } returns false
+        // The app's atomic install refuses an onboarding restore over the
+        // saved wallet and lets forgot-PIN recovery replace it.
+        every { app.installWallet(any(), false) } returns WalletInstallResult.ALREADY_INSTALLED
+        every { app.installWallet(any(), true) } returns WalletInstallResult.INSTALLED
+        val factory = mockk<WalletFactory>()
+        coEvery { factory.restoreFromSeed(any(), any()) } returns mockk<Wallet>()
+
+        assertEquals(SeedRestoreResult.WALLET_ALREADY_INSTALLED, viewModel(app, factory).restoreWalletFromSeed(words))
+        verify(exactly = 0) { app.installWallet(any(), true) }
+        assertEquals(existingDateSecs, blockchainServiceConfig.getWalletCreationDate())
+
+        assertEquals(
+            SeedRestoreResult.RESTORED,
+            viewModel(app, factory).restoreWalletFromSeed(words, forgotPinRecovery = true)
+        )
+        verify(exactly = 1) { app.installWallet(any(), true) }
     }
 }

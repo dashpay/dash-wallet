@@ -503,15 +503,13 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
      * so a wallet that already has a username gets "you already have a
      * username" (and the invite is discarded) rather than "DashPay is currently
      * processing an invite" — which a stale stored invite used to trigger on
-     * every link opened afterwards.
+     * every link opened afterwards. A claim that stopped on "invite already
+     * used" is dead, so it is cleared first and does not block [invite].
      */
     private fun handleInvite(invite: InvitationLinkData) {
         lifecycleScope.launch {
-            if (inviteHandlerViewModel.isInviteClaimInProgress()) {
-                log.info("invite opened while an invite-based identity is being created; ignoring it")
+            if (!inviteHandlerViewModel.receiveInvite(invite, false)) {
                 InviteHandler(this@MainActivity, viewModel.analytics).showInviteWhileProcessingInviteInProgressDialog()
-            } else {
-                inviteHandlerViewModel.setInvitationLink(invite, false)
             }
         }
     }
