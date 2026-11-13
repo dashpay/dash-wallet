@@ -27,6 +27,7 @@ import de.schildbach.wallet.service.platform.sdk.IdentityResolution
 import de.schildbach.wallet.service.platform.sdk.NotSentReason
 import de.schildbach.wallet.service.platform.sdk.SendBalance
 import de.schildbach.wallet.service.platform.sdk.SendDestination
+import de.schildbach.wallet.service.platform.sdk.SendSupport
 import de.schildbach.wallet.service.platform.sdk.WITHDRAWAL_CORE_FEE_DUFFS
 import de.schildbach.wallet.ui.shielded.toKeypadString
 import de.schildbach.wallet_test.R
@@ -268,10 +269,20 @@ class ExternalSendViewModelTest {
         service.ownIdentity = false
         val other = buildViewModel().apply { goToAmount(identityId) }
         assertEquals(SendBalance.SHIELDED, other.uiState.value.source)
+        // Platform tops up only a managed identity (someone else's needs platform#5860).
+        assertEquals(SendSupport.NEEDS_OWN_IDENTITY, other.uiState.value.supportOf(SendBalance.PLATFORM))
+        other.onSourceSelected(SendBalance.PLATFORM)
+        assertEquals(SendBalance.SHIELDED, other.uiState.value.source)
 
         service.ownIdentity = true
         val own = buildViewModel().apply { goToAmount(identityId) }
         assertEquals(SendBalance.CORE, own.uiState.value.source)
+        assertEquals(SendSupport.SUPPORTED, own.uiState.value.supportOf(SendBalance.PLATFORM))
+
+        // Could not tell: fails closed.
+        service.ownIdentity = null
+        val unknown = buildViewModel().apply { goToAmount(identityId) }
+        assertEquals(SendSupport.NEEDS_OWN_IDENTITY, unknown.uiState.value.supportOf(SendBalance.PLATFORM))
     }
 
     @Test
