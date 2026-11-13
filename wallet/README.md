@@ -197,11 +197,17 @@ The APK is placed here: `wallet/build/outputs/apk/wallet-prod-release.apk`
 ```sh
     fastlane build storepass:[keystore password] keypass:[key password]
 ```
-## Upload existing wallet-prod-release.apk file to the internal test track.
+## Build the app bundle for Google Play
+Google Play takes the app bundle, not the APK. The bundle is placed here:
+`wallet/build/outputs/bundle/prodRelease/wallet-prod-release.aab`
+```sh
+    fastlane build_aab storepass:[keystore password] keypass:[key password]
+```
+## Upload existing wallet-prod-release.aab file to the internal test track.
 ```shell
     fastlane upload
 ```
-## Build, followed by Upload
+## Build the app bundle, followed by Upload
 ```shell
     fastlane publish storepass:[keystore password] keypass:[key password]
 ```

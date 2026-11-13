@@ -109,15 +109,18 @@ platform :android do
 		UI.user_error!("SNAPSHOT dependencies found — remove before releasing:\n#{snapshot_hits.join("\n")}")
 	end
 
-	build(options)
+	# 'upload' sends the app bundle, so publish builds the bundle only.
+	build_aab(options)
 	upload(options)
   end
 
   desc "Upload for pre-launch report"
   lane :upload do |options|
-	filename = "#{ENV['PWD']}/wallet/build/outputs/apk/prod/release/wallet-prod-release.apk"
+	# An app bundle, not the apk: Play rejects an apk this size (both ABIs'
+	# native libraries), while from a bundle each device downloads only its own ABI.
+	filename = "#{ENV['PWD']}/wallet/build/outputs/bundle/prodRelease/wallet-prod-release.aab"
 	if !File.exist? "#{filename}"
-		UI.user_error!("Missing apk. Run 'publish' lane to build and upload")
+		UI.user_error!("Missing aab. Run 'publish' lane to build and upload")
 	end
 
 	mapping = "#{ENV['PWD']}/wallet/build/outputs/mapping/prodRelease/mapping.txt"
@@ -125,7 +128,9 @@ platform :android do
 		UI.user_error!("Missing mapping.txt. Run 'publish' lane to build and upload")
 	end
 
-	supply(apk: filename, mapping: mapping, track: 'internal')
+	# Upload only the bundle: an apk built in the same run is left in the lane
+	# context, and supply refuses to send both.
+	supply(aab: filename, mapping: mapping, track: 'internal', skip_upload_apk: true)
   end
 
   desc "Promote to production track with 0.2 rollout by default"
@@ -327,6 +332,9 @@ platform :android do
 
   desc "Build apk"
   lane :build do |options|
+    # bundle: true builds the app bundle (.aab) instead of the apk (see build_aab).
+    verb = options[:bundle] ? "bundle" : "assemble"
+
     # Strip PiggyCards test merchants from production release builds.
     ENV['BUILD_PROD'] = '1'
 
@@ -353,7 +361,7 @@ platform :android do
 		storepass=options[:storepass]
 		versioncode=options[:versioncode]
 		gradle(
-			task: "clean assemble#{flavor}#{type}",
+			task: "clean #{verb}#{flavor}#{type}",
 			properties: {
 				"android.injected.signing.store.file" => "#{ENV['PWD']}/.deploy/keystore.jks",
 				"android.injected.signing.store.password" => storepass,
@@ -372,7 +380,7 @@ platform :android do
 		end
 
 		gradle(
-			task: "clean assembleProdRelease",
+			task: "clean #{verb}ProdRelease",
 			properties: {
 				"android.injected.signing.store.file" => "#{ENV['PWD']}/.deploy/dash-wallet.keystore",
 				"android.injected.signing.store.password" => storepass,
@@ -382,6 +390,11 @@ platform :android do
 			print_command: false
 		)
 	end
+  end
+
+  desc "Build aab"
+  lane :build_aab do |options|
+    build(options.merge(bundle: true))
   end
 
   desc "Download explore.db"
