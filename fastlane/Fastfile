@@ -109,7 +109,8 @@ platform :android do
 		UI.user_error!("SNAPSHOT dependencies found — remove before releasing:\n#{snapshot_hits.join("\n")}")
 	end
 
-	build(options)
+	# 'upload' sends the app bundle, so the build must produce it on either path.
+	build(options.merge(bundle: true))
 	upload(options)
   end
 
@@ -354,8 +355,11 @@ platform :android do
 		type=options[:type].capitalize
 		storepass=options[:storepass]
 		versioncode=options[:versioncode]
+		task = "clean assemble#{flavor}#{type}"
+		# Only Play publishing needs the bundle; Firebase distribution uses the apk.
+		task += " bundle#{flavor}#{type}" if options[:bundle]
 		gradle(
-			task: "clean assemble#{flavor}#{type}",
+			task: task,
 			properties: {
 				"android.injected.signing.store.file" => "#{ENV['PWD']}/.deploy/keystore.jks",
 				"android.injected.signing.store.password" => storepass,
