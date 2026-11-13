@@ -1281,16 +1281,7 @@ class ShieldedBalanceServiceImpl internal constructor(
         // either runs first (the generations differ and nothing starts) or
         // after (and cancels what started here).
         return synchronized(readyMonitor) {
-            if (readyWalletIdHex.value == null || readyGeneration.get() != readyGen) {
-                return@synchronized false
-            }
-            // Begin (or keep) polling the SDK's pass-in-flight signal so the
-            // UI can distinguish "still syncing" from a real zero balance.
-            startSyncStatusPolling()
-            // Persist the balance whenever it is trustworthy (READY) so the
-            // last-known amount survives process death and the More card can
-            // render it instantly on the next open (see [startBalancePersistence]).
-            startBalancePersistence()
+            if (!startObserversLocked(readyGen)) return@synchronized false
             // Staged-retry hook: finish any interrupted shieldFromWallet
             // (stage (b) after the L1 lock broadcast) in the background.
             // Cheap when nothing is pending (one Room query); serialized
@@ -1309,7 +1300,34 @@ class ShieldedBalanceServiceImpl internal constructor(
         }
     }
 
-    private suspend fun ensureShieldedReadyInner(): Boolean = bringUpCommittedGeneration() != null
+    /**
+     * The internal callers' readiness (shieldFromWallet, the pending-shield
+     * resumes): no sweep, but the same observers as [ensureShieldedReady]. A
+     * runtime these bring up — after a stop, or after a wallet switch they
+     * detected first — would otherwise publish ready with no status poller or
+     * balance persistence until a screen asked.
+     */
+    private suspend fun ensureShieldedReadyInner(): Boolean {
+        val readyGen = bringUpCommittedGeneration() ?: return false
+        return synchronized(readyMonitor) { startObserversLocked(readyGen) }
+    }
+
+    /**
+     * Starts (or keeps) the observers of the runtime committed at [readyGen],
+     * only while it is still the published one; the caller holds
+     * [readyMonitor], which teardown takes too. Returns false when it is not.
+     */
+    private fun startObserversLocked(readyGen: Int): Boolean {
+        if (readyWalletIdHex.value == null || readyGeneration.get() != readyGen) return false
+        // Begin (or keep) polling the SDK's pass-in-flight signal so the
+        // UI can distinguish "still syncing" from a real zero balance.
+        startSyncStatusPolling()
+        // Persist the balance whenever it is trustworthy (READY) so the
+        // last-known amount survives process death and the More card can
+        // render it instantly on the next open (see [startBalancePersistence]).
+        startBalancePersistence()
+        return true
+    }
 
     /**
      * The bring-up under [lock]. Returns the generation of the runtime it

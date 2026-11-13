@@ -2140,6 +2140,35 @@ class ShieldedBalanceServiceTest {
 
     private fun boundWalletId(): ByteArray = checkNotNull(walletIdFromHex(walletIdHex))
 
+    /**
+     * Pre-review round 4: an internal readiness caller (here the pending-shield
+     * resume) that detects the wallet switch first brings up the new runtime;
+     * it must get the status poller too, or the status stays NOT_READY after
+     * successful passes until a screen asks for readiness.
+     */
+    @Test
+    fun internalReadiness_afterAWalletSwitch_startsTheStatusPoller() = runBlocking {
+        var bound = walletIdHex
+        val source = FakeSource(hasSupport = true, boundWalletId = { bound })
+        val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            val service = scopedService(source, config(true), sweepScope)
+            assertTrue(service.ensureShieldedReady())
+
+            bound = "cd".repeat(32)
+            service.resumePendingWalletShields()
+            assertEquals("re-bound on the new wallet", 2, source.bindCalls)
+
+            withTimeout(5_000) { while (source.passResults.subscriptionCount.value == 0) delay(10) }
+            source.passResults.emit(passOk(walletId = ByteArray(32) { 0xcd.toByte() }))
+            withTimeout(10_000) {
+                while (service.shieldedSyncStatus.value != ShieldedSyncStatus.READY) delay(20)
+            }
+        } finally {
+            sweepScope.cancel()
+        }
+    }
+
     private fun passOk(credits: Long = 0L, walletId: ByteArray = boundWalletId()) =
         ShieldedPassResult(walletId, ShieldedPassResult.Outcome.SUCCEEDED, credits)
 
