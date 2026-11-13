@@ -128,7 +128,9 @@ platform :android do
 		UI.user_error!("Missing mapping.txt. Run 'publish' lane to build and upload")
 	end
 
-	supply(aab: filename, mapping: mapping, track: 'internal')
+	# The build also leaves an apk in the lane context, which supply would pick
+	# up next to the aab and then refuse; upload only the bundle.
+	supply(aab: filename, mapping: mapping, track: 'internal', skip_upload_apk: true)
   end
 
   desc "Promote to production track with 0.2 rollout by default"
