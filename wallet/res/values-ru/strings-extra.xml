@@ -205,6 +205,8 @@
     <string name="notification_explainer_message">В уведомлениях могут быть оповещения, звуки или иконки. Их можно настроить в Настройках телефона.</string>
     <string name="notification_dashpay_channel_name">DashPay</string>
     <string name="notification_dashpay_channel_description">Статус текущих операций DashPay.</string>
+    <string name="notification_contacts_channel_name">Запросы на добавление в контакты</string>
+    <string name="notification_contacts_channel_description">Уведомляет, когда кто-то отправляет вам запрос на добавление в контакты.</string>
 
     <string name="net_type_indicator" />
 
@@ -424,6 +426,7 @@
     <string name="all_transactions">Все</string>
     <string name="received_transactions">Получено</string>
     <string name="sent_transactions">Отправлено</string>
+    <string name="filter_button_label">Фильтр: %1$s</string>
     <string name="serious_error_title">Серьёзная ошибка</string>
     <string name="serious_error_unknown">Пожалуйста, свяжитесь с поддержкой.</string>
     <string name="set_pin_error_missing_wallet_title">Ошибка: отсутствует кошелёк</string>

@@ -205,6 +205,8 @@
     <string name="notification_explainer_message">Powiadomienia mogą obejmować alerty, dźwięki i znaki na ikonach. Można je skonfigurować w ustawieniach telefonu.</string>
     <string name="notification_dashpay_channel_name">DashPay</string>
     <string name="notification_dashpay_channel_description">Status operacji DashPay, które są w toku.</string>
+    <string name="notification_contacts_channel_name">Prośby o kontakt</string>
+    <string name="notification_contacts_channel_description">Powiadamia, gdy ktoś wyśle Ci prośbę o kontakt.</string>
 
     <string name="net_type_indicator" />
 
@@ -424,6 +426,7 @@
     <string name="all_transactions">Całość</string>
     <string name="received_transactions">Otrzymano</string>
     <string name="sent_transactions">Wysłano</string>
+    <string name="filter_button_label">Filtr: %1$s</string>
     <string name="serious_error_title">Poważny błąd</string>
     <string name="serious_error_unknown">Skontaktuj się z pomocą techniczną</string>
     <string name="set_pin_error_missing_wallet_title">Błąd Braku Portfela</string>

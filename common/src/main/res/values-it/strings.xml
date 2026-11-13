@@ -94,6 +94,8 @@
     <string name="send_coins_error_dusty_send">L\'importo è troppo piccolo per l\'invio</string>
     <string name="send_coins_error_insufficient_money">Fondi insufficenti</string>
     <string name="syncing">Sincronizzazione</string>
+    <string name="sync_synced_from">Sincronizzato da %1$s</string>
+    <string name="sync_partial_scan_warning">Questo portafoglio è stato ripristinato con data di creazione %1$s. Le transazioni precedenti a quella data potrebbero mancare dal saldo e dalla cronologia mostrati.</string>
     <string name="no_connection">Nessuna connessione internet</string>
     <string name="rate_not_available">Non disponibile</string>
 
@@ -106,6 +108,8 @@
     <string name="payment_protocol_default_error_title">Errore di pagamento</string>
     <string name="payment_request_problem_message">Non è stato possibile processare il tuo pagamento dal server, per favore informati col commerciante</string>
     <string name="payment_submission_pending_title">Stato del pagamento sconosciuto</string>
+    <string name="payment_outcome_unknown_message">Questo pagamento potrebbe essere stato inviato. Non inviarlo di nuovo — controlla la cronologia delle transazioni per verificarne lo stato.</string>
+    <string name="payment_still_confirming">Un pagamento precedente è ancora in attesa di conferma. Potrai inviare di nuovo una volta confermato.</string>
     <string name="payment_submission_pending_message">Il pagamento è stato inviato, ma non abbiamo ricevuto una conferma dal commerciante. Il tuo portafoglio continuerà a controllare la rete e mostrerà la transazione come inviata appena verrà trovata. Attendi prima di inviare di nuovo questo pagamento.</string>
     <string name="exchange_rate_not_found">Impossibile trovare il tasso di cambio.</string>
     <string name="send_coins_fragment_hint_replaying">Attualmente i pagamenti non sono possibili perché il portafoglio non è completamente sincronizzato con la rete</string>
