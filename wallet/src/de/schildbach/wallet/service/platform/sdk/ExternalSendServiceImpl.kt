@@ -56,6 +56,7 @@ import org.dash.wallet.common.services.WalletSession
 import org.dash.wallet.common.util.readRetryDelayMs
 import org.dash.wallet.common.util.retryReadErrors
 import org.dashfoundation.dashsdk.credits.FundingInput
+import org.dashfoundation.dashsdk.errors.DashSdkError
 import org.slf4j.LoggerFactory
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -65,6 +66,25 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 // ── Pure helpers ──────────────────────────────────────────────────────
+
+/**
+ * What the external send logs for a failure: the class names of [t] and its causes (and a
+ * [DashSdkError.PlatformWallet.Generic]'s native code), never a message or a stack trace —
+ * SDK messages embed recipient addresses, identity ids and amounts.
+ */
+internal fun safeErrorSummary(t: Throwable?): String {
+    if (t == null) return "none"
+    val names = buildList {
+        var current: Throwable? = t
+        while (current != null && size < 4) {
+            val name = current.javaClass.simpleName.ifEmpty { current.javaClass.name }
+            val code = (current as? DashSdkError.PlatformWallet.Generic)?.nativeCode
+            add(if (code != null) "$name(code $code)" else name)
+            current = current.cause?.takeIf { it !== current }
+        }
+    }
+    return names.joinToString(" <- ")
+}
 
 /**
  * The [NotSentReason] for a [SdkWriteResult.NotBroadcast] — the reason text and the
@@ -299,7 +319,7 @@ internal fun logReadRetry(
     what: String,
     retryDelayMs: (Long) -> Long = ::readRetryDelayMs
 ): (Exception, Long) -> Unit = { cause, attempt ->
-    retryLog.warn("external send: {} unreadable; unknown, retrying in {} ms", what, retryDelayMs(attempt), cause)
+    retryLog.warn("external send: {} unreadable; unknown, retrying in {} ms ({})", what, retryDelayMs(attempt), safeErrorSummary(cause))
 }
 
 /**
@@ -924,7 +944,7 @@ class ExternalSendServiceImpl internal constructor(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                log.warn("external send: balance read failed; unknown", e)
+                log.warn("external send: balance read failed; unknown ({})", safeErrorSummary(e))
                 null
             }
             emit(value)
@@ -941,7 +961,7 @@ class ExternalSendServiceImpl internal constructor(
     override fun currentWalletIdOrNull(): String? = try {
         source.currentBoundWalletIdOrNull()
     } catch (e: Exception) {
-        log.warn("external send: bound wallet unreadable", e)
+        log.warn("external send: bound wallet unreadable ({})", safeErrorSummary(e))
         null
     }
 
@@ -955,7 +975,7 @@ class ExternalSendServiceImpl internal constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            log.warn("external send: managed-identity lookup failed; unknown", e)
+            log.warn("external send: managed-identity lookup failed; unknown ({})", safeErrorSummary(e))
             null
         }
     }
@@ -968,7 +988,7 @@ class ExternalSendServiceImpl internal constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            log.warn("external send: identity lookup failed; unknown", e)
+            log.warn("external send: identity lookup failed; unknown ({})", safeErrorSummary(e))
             return IdentityResolution.Unknown
         }
         if (!exists) return IdentityResolution.NotFound
@@ -978,7 +998,7 @@ class ExternalSendServiceImpl internal constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            log.warn("external send: username lookup failed; showing the identity without a name", e)
+            log.warn("external send: username lookup failed; showing the identity without a name ({})", safeErrorSummary(e))
             null
         }
         return IdentityResolution.Found(username)
@@ -990,7 +1010,7 @@ class ExternalSendServiceImpl internal constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            log.warn("external send: fee estimate failed; unknown", e)
+            log.warn("external send: fee estimate failed; unknown ({})", safeErrorSummary(e))
             null
         }
 
@@ -1085,7 +1105,7 @@ class ExternalSendServiceImpl internal constructor(
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
-        log.warn("external send: max sendable unreadable", e)
+        log.warn("external send: max sendable unreadable ({})", safeErrorSummary(e))
         null
     }
 
@@ -1157,7 +1177,7 @@ class ExternalSendServiceImpl internal constructor(
         } catch (e: Exception) {
             // Every pre-submission step returns its own NotSent; an exception escaping here
             // came from a write path and may have submitted.
-            log.error("external send {} → {} failed unclassified; outcome unknown", source, kindOf(destination), e)
+            log.error("external send {} → {} failed unclassified; outcome unknown ({})", source, kindOf(destination), safeErrorSummary(e))
             ExternalSendResult.MayHaveGoneThrough
         } finally {
             inFlight.set(false)
@@ -1197,7 +1217,9 @@ class ExternalSendServiceImpl internal constructor(
             ?: return notSent(pair, NotSentReason.GENERIC, "identity record unreadable")
         val ownIdentityId = ownIdentity.getOrNull()
         val destinationIsOwnIdentity: Boolean? = when (destination) {
-            is SendDestination.Identity -> if (source == SendBalance.CORE) {
+            // A Core or Platform top-up needs an identity the SDK wallet manages; an identity
+            // transfer only needs to tell the user's own identity (no self-transfer).
+            is SendDestination.Identity -> if (source == SendBalance.CORE || source == SendBalance.PLATFORM) {
                 decodeIdentityId(destination.identityIdBase58)?.let { target ->
                     readOrNull("managed identities") {
                         this.source.managedIdentityIds(walletIdHex).any { it.contentEquals(target) }
@@ -1320,7 +1342,7 @@ class ExternalSendServiceImpl internal constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            log.warn("external send {}: pending platform funding unreadable; not sent", pair, e)
+            log.warn("external send {}: pending platform funding unreadable; not sent ({})", pair, safeErrorSummary(e))
             return ExternalSendResult.NotSent(NotSentReason.GENERIC)
         }
         if (pending != null) {
@@ -1359,7 +1381,7 @@ class ExternalSendServiceImpl internal constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            log.warn("external send {}: could not persist the recipients; not sent", pair, e)
+            log.warn("external send {}: could not persist the recipients; not sent ({})", pair, safeErrorSummary(e))
             return ExternalSendResult.NotSent(NotSentReason.GENERIC)
         }
 
@@ -1378,7 +1400,7 @@ class ExternalSendServiceImpl internal constructor(
                         try {
                             platformFundingStore.writeBlocking(record.withOutPoint(outPointHex))
                         } catch (e: Exception) {
-                            log.error("external send {}: could not record the lock outpoint (retried after the call)", pair, e)
+                            log.error("external send {}: could not record the lock outpoint, retried after the call ({})", pair, safeErrorSummary(e))
                         }
                         seedPlatformLockKind(pair, outPointHex)
                     }
@@ -1424,10 +1446,10 @@ class ExternalSendServiceImpl internal constructor(
         // outpoint is durable even if the callback's write failed; the sweep pays the payee.
         ensureOutPointRecorded(pair, record, outPointHex)
         log.warn(
-            "external send {}: lock built, funding not confirmed ({}) — may have gone through; resumed automatically",
+            "external send {}: lock built, funding not confirmed ({}: {}) — may have gone through; resumed automatically",
             pair,
             outcome.javaClass.simpleName,
-            (outcome as? SdkWriteResult.NotBroadcast)?.cause ?: (outcome as? SdkWriteResult.Ambiguous)?.cause
+            safeErrorSummary((outcome as? SdkWriteResult.NotBroadcast)?.cause ?: (outcome as? SdkWriteResult.Ambiguous)?.cause)
         )
         return ExternalSendResult.MayHaveGoneThrough
     }
@@ -1444,7 +1466,7 @@ class ExternalSendServiceImpl internal constructor(
                 .takeIf { it.length == 64 }
                 ?.let { seedAssetLockKind(it, AssetLockKind.PLATFORM) }
         } catch (e: Exception) {
-            log.warn("external send {}: lock kind seed failed; the row may momentarily read Internal", pair, e)
+            log.warn("external send {}: lock kind seed failed; the row may momentarily read Internal ({})", pair, safeErrorSummary(e))
         }
     }
 
@@ -1458,7 +1480,7 @@ class ExternalSendServiceImpl internal constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            log.error("external send {}: could not record the lock outpoint; the lock cannot be resumed automatically", pair, e)
+            log.error("external send {}: could not record the lock outpoint; the lock cannot be resumed automatically ({})", pair, safeErrorSummary(e))
         }
     }
 
@@ -1469,7 +1491,7 @@ class ExternalSendServiceImpl internal constructor(
             throw e
         } catch (e: Exception) {
             // Left behind: the sweep clears it (no lock, or a consumed one).
-            log.warn("external send {}: could not clear the pending platform funding", pair, e)
+            log.warn("external send {}: could not clear the pending platform funding ({})", pair, safeErrorSummary(e))
         }
     }
 
@@ -1480,7 +1502,7 @@ class ExternalSendServiceImpl internal constructor(
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
-        log.warn("pending platform funding sweep failed; retried on the next trigger", e)
+        log.warn("pending platform funding sweep failed; retried on the next trigger ({})", safeErrorSummary(e))
         0
     }
 
@@ -1516,7 +1538,7 @@ class ExternalSendServiceImpl internal constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            log.warn("pending platform funding unreadable or malformed; kept, not resumed", e)
+            log.warn("pending platform funding unreadable or malformed; kept, not resumed ({})", safeErrorSummary(e))
             return 0
         } ?: return 0
         if (!inFlight.compareAndSet(false, true)) {
@@ -1547,7 +1569,7 @@ class ExternalSendServiceImpl internal constructor(
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    log.warn("pending platform funding {}: completion-unconfirmed records unreadable; kept", record.id, e)
+                    log.warn("pending platform funding {}: completion-unconfirmed records unreadable; kept ({})", record.id, safeErrorSummary(e))
                     return 0
                 }
                 val unconsumed = readOrNull("address funding locks") {
@@ -1566,7 +1588,7 @@ class ExternalSendServiceImpl internal constructor(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                log.warn("pending platform funding {}: lock status unreadable; kept", record.id, e)
+                log.warn("pending platform funding {}: lock status unreadable; kept ({})", record.id, safeErrorSummary(e))
                 return 0
             }
             if (status == null) {
@@ -1650,17 +1672,17 @@ class ExternalSendServiceImpl internal constructor(
                 } catch (e: Exception) {
                     log.warn(
                         "pending platform funding {}: Platform reports the lock already consumed, unproven; " +
-                            "could not mark it, kept pending",
+                            "could not mark it, kept pending ({})",
                         record.id,
-                        e
+                        safeErrorSummary(e)
                     )
                 }
             } else {
-                log.warn("pending platform funding {}: resume failed (attempt {}); kept", record.id, attempt, e)
+                log.warn("pending platform funding {}: resume failed (attempt {}); kept ({})", record.id, attempt, safeErrorSummary(e))
             }
             return 0
         } catch (e: LinkageError) {
-            log.warn("pending platform funding {}: native library unavailable; kept", record.id, e)
+            log.warn("pending platform funding {}: native library unavailable; kept ({})", record.id, safeErrorSummary(e))
             return 0
         }
         platformFundingStore.clear(record.id)
@@ -1688,7 +1710,7 @@ class ExternalSendServiceImpl internal constructor(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                log.warn("external send {}: max sendable unreadable before the drain; not sent", pair, e)
+                log.warn("external send {}: max sendable unreadable before the drain; not sent ({})", pair, safeErrorSummary(e))
                 return ExternalSendResult.NotSent(NotSentReason.GENERIC)
             }
             if (maxNow != amount.duffs) {
@@ -1705,7 +1727,7 @@ class ExternalSendServiceImpl internal constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            classifyCoreSendThrowable(e).also { log.warn("external send {}: {}", pair, it, e) }
+            classifyCoreSendThrowable(e).also { log.warn("external send {}: {} ({})", pair, it, safeErrorSummary(e)) }
         }
     }
 
@@ -1976,11 +1998,11 @@ class ExternalSendServiceImpl internal constructor(
         is SdkWriteResult.Broadcast -> ExternalSendResult.Sent(null)
         is SdkWriteResult.NotBroadcast -> {
             val reason = notSentReasonFor(result)
-            log.warn("external send {}: not sent ({})", pair, reason, result.cause)
+            log.warn("external send {}: not sent ({}; {})", pair, reason, safeErrorSummary(result.cause))
             ExternalSendResult.NotSent(reason)
         }
         is SdkWriteResult.Ambiguous -> {
-            log.error("external send {}: outcome unconfirmed — may have gone through; do NOT retry", pair, result.cause)
+            log.error("external send {}: outcome unconfirmed — may have gone through; do NOT retry ({})", pair, safeErrorSummary(result.cause))
             ExternalSendResult.MayHaveGoneThrough
         }
     }
@@ -2005,7 +2027,7 @@ class ExternalSendServiceImpl internal constructor(
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
-        log.warn("external send: {} unreadable", what, e)
+        log.warn("external send: {} unreadable ({})", what, safeErrorSummary(e))
         null
     }
 

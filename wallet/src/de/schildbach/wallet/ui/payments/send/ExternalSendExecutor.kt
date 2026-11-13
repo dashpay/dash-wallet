@@ -24,6 +24,7 @@ import de.schildbach.wallet.service.platform.sdk.ExternalSendService
 import de.schildbach.wallet.service.platform.sdk.NotSentReason
 import de.schildbach.wallet.service.platform.sdk.SendBalance
 import de.schildbach.wallet.service.platform.sdk.SendDestination
+import de.schildbach.wallet.service.platform.sdk.safeErrorSummary
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -172,7 +173,7 @@ class ExternalSendExecutor internal constructor(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                log.warn("external send in-flight marker unreadable; assuming a send may have gone through", e)
+                log.warn("external send in-flight marker unreadable; assuming a send may have gone through ({})", safeErrorSummary(e))
                 true
             }
             if (interrupted) log.warn("external send: a previous process may have left a send in flight")
@@ -206,7 +207,7 @@ class ExternalSendExecutor internal constructor(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                log.warn("external send: pending Core → Platform sweep failed", e)
+                log.warn("external send: pending Core → Platform sweep failed ({})", safeErrorSummary(e))
                 0
             }
             if (completed > 0) log.info("external send: an interrupted Core → Platform send was completed")
@@ -255,7 +256,7 @@ class ExternalSendExecutor internal constructor(
                     throw e
                 } catch (e: Exception) {
                     // Nothing handed to the service: provably nothing spent.
-                    log.warn("external send: could not record the in-flight marker; not sent", e)
+                    log.warn("external send: could not record the in-flight marker; not sent ({})", safeErrorSummary(e))
                     result = ExternalSendResult.NotSent(NotSentReason.GENERIC)
                 }
                 if (marked && !isCurrent()) {
@@ -279,7 +280,7 @@ class ExternalSendExecutor internal constructor(
                 // is unknown and stays "may have gone through".
                 throw e
             } catch (e: Exception) {
-                log.error("external send threw; outcome unknown", e)
+                log.error("external send threw; outcome unknown ({})", safeErrorSummary(e))
             } finally {
                 log.info("external send {} → {} finished: {}", request.source, kindOf(request.destination), kindOf(result))
                 if (!isCurrent()) {
@@ -353,7 +354,7 @@ class ExternalSendExecutor internal constructor(
             throw e
         } catch (e: Exception) {
             // Left set: the next process warns once more (conservative).
-            log.warn("external send: could not clear the in-flight marker", e)
+            log.warn("external send: could not clear the in-flight marker ({})", safeErrorSummary(e))
         }
     }
 
