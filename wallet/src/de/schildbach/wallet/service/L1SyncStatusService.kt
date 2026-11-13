@@ -75,8 +75,9 @@ import javax.inject.Singleton
  *   wallet's keys could have received BEFORE it was never looked at, so the
  *   balance and history on screen are a lower bound, not the truth. Null on
  *   every wallet whose scan started at its own earliest key time (the normal
- *   case). Surfaces that would otherwise say "done" must say what they
- *   actually mean instead: "Synced from <date>". SR-22.
+ *   case). The Network Monitor's SYNCED stage says what it actually means
+ *   instead: "Synced from <date>" (SR-22). The home header does not show the
+ *   date; it hides once synced, as on an unbounded scan.
  */
 data class L1SyncUiStatus(
     val isSynced: Boolean = false,
