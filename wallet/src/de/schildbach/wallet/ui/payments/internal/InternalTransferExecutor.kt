@@ -22,6 +22,7 @@ import de.schildbach.wallet.service.platform.sdk.ExternalSendResult
 import de.schildbach.wallet.service.platform.sdk.InternalTransferService
 import de.schildbach.wallet.service.platform.sdk.NotSentReason
 import de.schildbach.wallet.service.platform.sdk.SendBalance
+import de.schildbach.wallet.service.platform.sdk.safeErrorSummary
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.payments.send.DashPayConfigInFlightMarker
 import de.schildbach.wallet.ui.payments.send.ExternalSendInFlightMarker
@@ -134,7 +135,7 @@ class InternalTransferExecutor internal constructor(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                log.warn("internal transfer in-flight marker unreadable; assuming a transfer may have gone through", e)
+                log.warn("internal transfer in-flight marker unreadable; assuming a transfer may have gone through ({})", safeErrorSummary(e))
                 true
             }
             if (interrupted) log.warn("internal transfer: a previous process may have left a transfer in flight")
@@ -187,7 +188,7 @@ class InternalTransferExecutor internal constructor(
                     throw e
                 } catch (e: Exception) {
                     // Nothing handed to the service: provably nothing spent.
-                    log.warn("internal transfer: could not record the in-flight marker; not sent", e)
+                    log.warn("internal transfer: could not record the in-flight marker; not sent ({})", safeErrorSummary(e))
                     result = ExternalSendResult.NotSent(NotSentReason.GENERIC)
                 }
                 if (marked && !isCurrent()) {
@@ -209,7 +210,7 @@ class InternalTransferExecutor internal constructor(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                log.error("internal transfer threw; outcome unknown", e)
+                log.error("internal transfer threw; outcome unknown ({})", safeErrorSummary(e))
             } finally {
                 log.info("internal transfer {} → {} finished: {}", request.from, request.to, kindOf(result))
                 if (!isCurrent()) {
@@ -275,7 +276,7 @@ class InternalTransferExecutor internal constructor(
             throw e
         } catch (e: Exception) {
             // Left set: the next process warns once more (conservative).
-            log.warn("internal transfer: could not clear the in-flight marker", e)
+            log.warn("internal transfer: could not clear the in-flight marker ({})", safeErrorSummary(e))
         }
     }
 

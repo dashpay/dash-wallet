@@ -268,7 +268,7 @@ class InternalTransferServiceImpl internal constructor(
         } catch (e: Exception) {
             // Every pre-submission step returns its own NotSent; an exception escaping here came
             // from a write path and may have submitted.
-            log.error("internal transfer {} → {} failed unclassified; outcome unknown", from, to, e)
+            log.error("internal transfer {} → {} failed unclassified; outcome unknown ({})", from, to, safeErrorSummary(e))
             ExternalSendResult.MayHaveGoneThrough
         } finally {
             inFlight.set(false)
@@ -321,7 +321,7 @@ class InternalTransferServiceImpl internal constructor(
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    log.warn("internal transfer {}: no unadvertised Core address; not sent", pair, e)
+                    log.warn("internal transfer {}: no unadvertised Core address; not sent ({})", pair, safeErrorSummary(e))
                     return ExternalSendResult.NotSent(NotSentReason.GENERIC)
                 }
                 delegate(pair, walletIdHex, from, SendDestination.Core(address), amount, isMax)
@@ -449,11 +449,11 @@ class InternalTransferServiceImpl internal constructor(
         }
         is SdkWriteResult.NotBroadcast -> {
             val reason = notSentReasonFor(result)
-            log.warn("internal transfer {}: not sent ({})", pair, reason, result.cause)
+            log.warn("internal transfer {}: not sent ({}; {})", pair, reason, safeErrorSummary(result.cause))
             ExternalSendResult.NotSent(reason)
         }
         is SdkWriteResult.Ambiguous -> {
-            log.error("internal transfer {}: outcome unconfirmed — may have gone through; do NOT retry", pair, result.cause)
+            log.error("internal transfer {}: outcome unconfirmed — may have gone through; do NOT retry ({})", pair, safeErrorSummary(result.cause))
             ExternalSendResult.MayHaveGoneThrough
         }
     }
@@ -499,7 +499,7 @@ class InternalTransferServiceImpl internal constructor(
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
-        log.warn("internal transfer: {} unreadable", what, e)
+        log.warn("internal transfer: {} unreadable ({})", what, safeErrorSummary(e))
         null
     }
 
