@@ -74,16 +74,18 @@ internal interface InternalTransferSource {
     suspend fun ownPlatformAddress(walletIdHex: String): String?
 
     /**
-     * [ShieldedBalanceService.ownShieldedAddressOf]: the default shielded (Orchard) address of
-     * [walletIdHex], pinned to that wallet, or null (not ready, another wallet bound, no
-     * shielded sub-wallet, or the derivation failed).
+     * The identity ids (32 bytes each) the SDK wallet [walletIdHex] manages (not watched-only):
+     * the ones it can sign for. Throws when unreadable (the wallet not loaded included).
      */
-    suspend fun ownShieldedAddress(walletIdHex: String): String?
+    suspend fun managedIdentityIds(walletIdHex: String): List<ByteArray>
 
     suspend fun shieldedFeeCredits(kind: ShieldedFeeKind): Long?
 
     suspend fun shieldFromWallet(amount: Dash, walletIdHex: String): SdkWriteResult<ShieldFromWalletOutcome>
     suspend fun shieldFromCredits(amount: Dash, walletIdHex: String): SdkWriteResult<Unit>
+
+    /** [ShieldedBalanceService.shieldFromIdentity]: the Type 21 self-shield from [identityId]. */
+    suspend fun shieldFromIdentity(identityId: ByteArray, amount: Dash, walletIdHex: String): SdkWriteResult<Unit>
     suspend fun unshieldToCredits(amount: Dash, walletIdHex: String): SdkWriteResult<Unit>
 }
 
@@ -113,8 +115,13 @@ internal class DashSdkInternalTransferSource(
     override suspend fun ownPlatformAddress(walletIdHex: String): String? =
         shieldedBalanceService.ownPlatformAddressOf(walletIdHex)
 
-    override suspend fun ownShieldedAddress(walletIdHex: String): String? =
-        shieldedBalanceService.ownShieldedAddressOf(walletIdHex)
+    override suspend fun managedIdentityIds(walletIdHex: String): List<ByteArray> {
+        // The PINNED wallet, never "whichever is current" (as the External Send's source).
+        val wallet = checkNotNull(sdkService.startedWalletManager().wallets.value[walletIdHex]) {
+            "SDK wallet not loaded"
+        }
+        return wallet.inMemoryIdentityStates().filter { !it.watched }.map { it.identityId }
+    }
 
     override suspend fun shieldedFeeCredits(kind: ShieldedFeeKind): Long? =
         shieldedBalanceService.estimateShieldedFeeCredits(kind)
@@ -124,6 +131,9 @@ internal class DashSdkInternalTransferSource(
 
     override suspend fun shieldFromCredits(amount: Dash, walletIdHex: String) =
         shieldedBalanceService.shieldFromCredits(amount, walletIdHex)
+
+    override suspend fun shieldFromIdentity(identityId: ByteArray, amount: Dash, walletIdHex: String) =
+        shieldedBalanceService.shieldFromIdentity(identityId, amount, walletIdHex)
 
     override suspend fun unshieldToCredits(amount: Dash, walletIdHex: String) =
         shieldedBalanceService.unshieldToCredits(amount, walletIdHex)
@@ -149,9 +159,11 @@ internal class DashSdkInternalTransferSource(
  * - Shielded → Platform: [ShieldedBalanceService.unshieldToCredits] (pinned; own Platform address),
  *   with the shielded Max fee retry.
  * - Platform → Shielded: [ShieldedBalanceService.shieldFromCredits] (pinned).
- * - Identity → Shielded: [ExternalSendService.send] to the confirmed wallet's own default
- *   shielded address ([ShieldedBalanceService.ownShieldedAddressOf], pinned to the wallet);
- *   unavailable = Not sent. The External Send's Type 21 (`shieldFromIdentityToAddress`).
+ * - Identity → Shielded: [ShieldedBalanceService.shieldFromIdentity] (pinned), the Type 21
+ *   self-shield (`shieldedShieldFromIdentity`) from the user's own identity, which must be one
+ *   the confirmed wallet manages; the SDK refuses the wallet's own shielded address on the
+ *   External Send's to-recipient Type 21. The fee is metered by Rust at execution (no estimate,
+ *   no Max).
  * - Core → Platform, Identity → Platform: [ExternalSendService.send] to the confirmed wallet's own
  *   Platform address ([ShieldedBalanceService.ownPlatformAddressOf], no shielded flag needed);
  *   unavailable = Not sent. Core → Platform is the External Send's `fundFromAssetLockExternal`:
@@ -167,7 +179,7 @@ internal class DashSdkInternalTransferSource(
  *
  * Reset Wallet: the delegated routes hold the wallet-wipe barrier inside
  * [ExternalSendService.send]; the self routes this class submits itself (Core → Shielded,
- * Shielded → Platform, Platform → Shielded) hold it here ([submitUnderWipeBarrier]), with the
+ * Shielded → Platform, Platform → Shielded, Identity → Shielded) hold it here ([submitUnderWipeBarrier]), with the
  * final wallet re-check inside the hold.
  */
 @Singleton
@@ -223,14 +235,18 @@ class InternalTransferServiceImpl internal constructor(
      * estimate applies ([ExternalSendService.estimateFee]): Core → Shielded the shield
      * pool fee (on top), Core → Platform the L1 lock reserve plus the Platform-fee margin (on
      * top), Shielded → * the flat single-note pool fee; Core → Identity, Platform → * and
-     * Identity → * (Identity → Shielded included) are metered by Rust at execution, so null.
+     * Identity → * are metered by Rust at execution, so null. Identity → Shielded is this
+     * class's own self route (no External Send pair), so null here, like every identity source.
      */
     override suspend fun estimateFee(from: SendBalance, to: SendBalance): FeeEstimate? =
-        if (from != to) externalSendService.estimateFee(from, to) else null
+        if (from != to && !isIdentitySelfShield(from, to)) externalSendService.estimateFee(from, to) else null
 
     /** [ExternalSendService.maxSendable] for two different balances (null for metered pairs). */
     override suspend fun maxSendable(from: SendBalance, to: SendBalance): Dash? =
-        if (from != to) externalSendService.maxSendable(from, to) else null
+        if (from != to && !isIdentitySelfShield(from, to)) externalSendService.maxSendable(from, to) else null
+
+    private fun isIdentitySelfShield(from: SendBalance, to: SendBalance): Boolean =
+        from == SendBalance.IDENTITY && to == SendBalance.SHIELDED
 
     // ── Transfer ──────────────────────────────────────────────────────
 
@@ -331,13 +347,7 @@ class InternalTransferServiceImpl internal constructor(
                         source.shieldFromCredits(amount, walletIdHex)
                     }
                 )
-                SendBalance.IDENTITY -> {
-                    // Type 21 has no self-shield form: the External Send's to-address route, to
-                    // the confirmed wallet's own default shielded address.
-                    val address = readOrNull("own shielded address") { source.ownShieldedAddress(walletIdHex) }
-                        ?: return notSent(pair, NotSentReason.GENERIC, "own shielded address unavailable")
-                    delegate(pair, walletIdHex, from, SendDestination.Shielded(address), amount, isMax)
-                }
+                SendBalance.IDENTITY -> shieldFromOwnIdentity(pair, walletIdHex, ownIdentityId, amount)
                 SendBalance.SHIELDED -> notSent(pair, NotSentReason.NOT_SUPPORTED, "same balance")
             }
         }
@@ -381,6 +391,32 @@ class InternalTransferServiceImpl internal constructor(
             }
             else -> mapWrite(pair, result)
         }
+    }
+
+    /**
+     * The Type 21 self-shield from the user's own identity: the SDK refuses the wallet's own
+     * shielded address on the to-recipient Type 21, so this is not the External Send's route. As
+     * that route, the identity must be one the confirmed wallet manages (it signs with its keys).
+     */
+    private suspend fun shieldFromOwnIdentity(
+        pair: String,
+        walletIdHex: String,
+        ownIdentityId: String?,
+        amount: Dash
+    ): ExternalSendResult {
+        val identityId = ownIdentityId?.let(::decodeIdentityId)
+            ?: return notSent(pair, NotSentReason.GENERIC, "no own identity")
+        val managed = readOrNull("managed identities") {
+            source.managedIdentityIds(walletIdHex).any { it.contentEquals(identityId) }
+        } ?: return notSent(pair, NotSentReason.GENERIC, "managed identities unreadable")
+        if (!managed) return notSent(pair, NotSentReason.NOT_SUPPORTED, "own identity not managed by the SDK wallet")
+        return mapWrite(
+            pair,
+            submitUnderWipeBarrier(pair, walletIdHex) { mark ->
+                mark.submitting()
+                source.shieldFromIdentity(identityId, amount, walletIdHex)
+            }
+        )
     }
 
     /** Unshield to the own Platform address; a Max retries once with the reported fee deficit. */

@@ -99,6 +99,7 @@ class ShieldedBalanceServiceTest {
         var lastBoundAccounts: List<Int>? = null
         var lastAmountCredits: Long? = null
         var lastRecipientRaw43: ByteArray? = null
+        var lastWalletId: ByteArray? = null
         var lastMemo: String? = null
         var lastPlatformTarget: String? = null
         var lastCoreAddress: String? = null
@@ -303,6 +304,15 @@ class ShieldedBalanceServiceTest {
             shieldToCalls += "identity"
             lastIdentityId = identityId
             lastRecipientRaw43 = recipientRaw43
+            lastAmountCredits = amountCredits
+            onShield()
+        }
+
+        override suspend fun shieldFromIdentity(walletId: ByteArray, identityId: ByteArray, amountCredits: Long) {
+            broadcastCalls++
+            shieldToCalls += "identity-self"
+            lastWalletId = walletId
+            lastIdentityId = identityId
             lastAmountCredits = amountCredits
             onShield()
         }
@@ -1494,26 +1504,6 @@ class ShieldedBalanceServiceTest {
     }
 
     @Test
-    fun ownShieldedAddressOf_isTheReceiveAddress_pinnedToTheBoundWallet() = runBlocking {
-        val source = readySource().apply { defaultAddress = recipientRaw43 }
-        val service = service(source)
-        val address = service.ownShieldedAddressOf(walletIdHex)
-        assertEquals(service.shieldedReceiveAddress(), address)
-        assertArrayEquals(recipientRaw43, decodeOrchardAddress(checkNotNull(address), hrp))
-        assertEquals(address, service.ownShieldedAddressOf(walletIdHex.uppercase()))
-        // Another wallet, or a malformed id: null, never this wallet's address.
-        assertNull(service.ownShieldedAddressOf("cd".repeat(32)))
-        assertNull(service.ownShieldedAddressOf("not-hex"))
-    }
-
-    @Test
-    fun ownShieldedAddressOf_nullWhenNotReadyOrFlagOff() = runBlocking {
-        assertNull(service(FakeSource(hasSupport = true, boundWalletId = { null })).ownShieldedAddressOf(walletIdHex))
-        val source = readySource().apply { defaultAddress = recipientRaw43 }
-        assertNull(service(source, enabled = false).ownShieldedAddressOf(walletIdHex))
-    }
-
-    @Test
     fun platformReceiveAddress_isTheSourcesUnusedPlatformAddress() = runBlocking {
         val source = readySource().apply {
             platformAddress = { "tdash1qownused" }
@@ -1890,6 +1880,70 @@ class ShieldedBalanceServiceTest {
                 assertEquals(1, source.broadcastCalls)
             }
         }
+    }
+
+    // ── Identity (Type 21) self-shield: no recipient ──
+
+    @Test
+    fun shieldFromIdentity_selfShieldsFromTheIdentity_pinned_noRecipient() = runBlocking {
+        val source = readySource()
+        val result = service(source).shieldFromIdentity(identity32, Dash(250), walletIdHex.uppercase())
+
+        assertTrue(result is SdkWriteResult.Broadcast)
+        assertEquals(listOf("identity-self"), source.shieldToCalls)
+        assertArrayEquals(identity32, source.lastIdentityId)
+        assertArrayEquals(walletIdFromHex(walletIdHex), source.lastWalletId)
+        assertEquals(250_000L, source.lastAmountCredits)
+        // Never the to-recipient entry point: no recipient was passed anywhere.
+        assertNull(source.lastRecipientRaw43)
+    }
+
+    @Test
+    fun shieldFromIdentity_preflightRefusals_areNotBroadcast_withNoBroadcastAttempt() = runBlocking {
+        val source = readySource()
+        val service = service(source)
+        assertTrue(service.shieldFromIdentity(identity32, Dash.ZERO, walletIdHex) is SdkWriteResult.NotBroadcast)
+        assertTrue(service.shieldFromIdentity(ByteArray(31), Dash(250), walletIdHex) is SdkWriteResult.NotBroadcast)
+        // The runtime is bound to another wallet than the one the user confirmed with.
+        assertTrue(service.shieldFromIdentity(identity32, Dash(250), "cd".repeat(32)) is SdkWriteResult.NotBroadcast)
+        assertTrue(
+            service(FakeSource(hasSupport = true, boundWalletId = { null }))
+                .shieldFromIdentity(identity32, Dash(250), walletIdHex) is SdkWriteResult.NotBroadcast
+        )
+        assertTrue(
+            service(source, enabled = false).shieldFromIdentity(identity32, Dash(250), walletIdHex)
+                is SdkWriteResult.NotBroadcast
+        )
+        assertEquals(0, source.broadcastCalls)
+    }
+
+    @Test
+    fun shieldFromIdentity_sdkOutcomes_debitPendingIsNotBroadcast_unconfirmedIsAmbiguous() = runBlocking {
+        val cases = listOf<Pair<() -> Unit, Boolean>>(
+            { throw DashSdkError.PlatformWallet.ShieldedIdentityDebitPending("earlier debit unresolved") } to true,
+            { throw DashSdkError.PlatformWallet.ShieldedBroadcastFailed("relay rejected") } to true,
+            { throw DashSdkError.InvalidParameter("bad amount") } to true,
+            { throw DashSdkError.PlatformWallet.ShieldedSpendUnconfirmed("broadcast accepted") } to false,
+            { throw DashSdkError.NetworkError("conn dropped mid-submit") } to false,
+            { throw RuntimeException("JNI blew up") } to false
+        )
+        for ((outcome, notBroadcast) in cases) {
+            val source = readySource().apply { onShield = outcome }
+            val result = service(source).shieldFromIdentity(identity32, Dash(250), walletIdHex)
+            if (notBroadcast) {
+                assertTrue(result is SdkWriteResult.NotBroadcast)
+            } else {
+                assertTrue(result is SdkWriteResult.Ambiguous)
+            }
+            // One attempt, never retried.
+            assertEquals(1, source.broadcastCalls)
+        }
+        // The debit-pending refusal keeps the reason the send screens map to "still confirming".
+        val pending = readySource().apply {
+            onShield = { throw DashSdkError.PlatformWallet.ShieldedIdentityDebitPending("earlier debit unresolved") }
+        }
+        val result = service(pending).shieldFromIdentity(identity32, Dash(250), walletIdHex)
+        assertEquals(REASON_SHIELDED_IDENTITY_DEBIT_PENDING, (result as SdkWriteResult.NotBroadcast).reason)
     }
 
     // ── Pure mapping: sync status ─────────────────────────────────────────

@@ -385,15 +385,6 @@ interface ShieldedBalanceService {
     suspend fun ownPlatformAddressOf(walletIdHex: String): String?
 
     /**
-     * The default shielded (Orchard) receive address of the SDK wallet [walletIdHex] — the same
-     * address [shieldedReceiveAddress] shows — pinned to that wallet: null unless the shielded
-     * runtime is ready AND bound to [walletIdHex], and null when [walletIdHex] is malformed, the
-     * wallet has no shielded sub-wallet or the derivation fails (fail closed). Never throws
-     * (except cancellation); the address is never logged.
-     */
-    suspend fun ownShieldedAddressOf(walletIdHex: String): String?
-
-    /**
      * Shield [amount] from the wallet's own Platform credit balance into
      * its own shielded pool (Type 15). Self-shield only — Rust always
      * targets this wallet's default Orchard address. Blocks for the ~30s
@@ -650,6 +641,24 @@ interface ShieldedBalanceService {
     suspend fun shieldFromIdentityToAddress(
         identityId: ByteArray,
         toShieldedAddress: String,
+        amount: Dash,
+        expectedWalletIdHex: String
+    ): SdkWriteResult<Unit>
+
+    /**
+     * Shield [amount] credits from the wallet's managed identity [identityId] (32 bytes) into
+     * the wallet's OWN shielded pool (Type 21 self-shield, `shieldedShieldFromIdentity`: Rust
+     * always targets the default Orchard address of account 0, so there is no recipient — the
+     * SDK refuses this wallet's own address on [shieldFromIdentityToAddress]). Otherwise as
+     * [shieldFromIdentityToAddress]: the identity pays [amount] plus the metered transition fee
+     * and the shielded compute fee, signed with the identity's transfer key by the SDK's
+     * Keystore signer; the ready runtime must be bound to [expectedWalletIdHex]; an earlier
+     * identity shield that is still unresolved is a [SdkWriteResult.NotBroadcast] (the SDK built
+     * nothing); a spend that may have been submitted is [SdkWriteResult.Ambiguous] (never
+     * retried). Blocks for the ~30s proof; the note arrives on the next shielded sync pass.
+     */
+    suspend fun shieldFromIdentity(
+        identityId: ByteArray,
         amount: Dash,
         expectedWalletIdHex: String
     ): SdkWriteResult<Unit>

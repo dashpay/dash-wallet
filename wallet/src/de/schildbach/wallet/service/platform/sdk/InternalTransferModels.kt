@@ -52,8 +52,10 @@ enum class InternalTransferSupport {
  *    resumed by the External Send's pending-funding sweep.
  * 2. The External Send's partial Platform → Core withdrawal (`withdrawCredits` with the
  *    inputs the wallet selects) to the wallet's own unadvertised Core address.
- * 3. The External Send's Identity → Shielded (`shieldFromIdentityToAddress`, Type 21) to the
- *    wallet's own default shielded address; the fee is metered by Rust at execution.
+ * 3. The Type 21 self-shield (`shieldedShieldFromIdentity`, no recipient: Rust targets the
+ *    wallet's own default shielded address) from the user's own identity, not the External
+ *    Send's to-recipient Type 21, which refuses an own address; the fee is metered by Rust at
+ *    execution.
  *
  * [shieldedEnabled] and [hasIdentity] are the error-preserving reads: unknown is false.
  */

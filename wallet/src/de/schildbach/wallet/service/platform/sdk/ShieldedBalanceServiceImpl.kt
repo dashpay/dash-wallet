@@ -726,6 +726,16 @@ interface ShieldedSource {
     ): Unit = throw UnsupportedOperationException("identity shield to a recipient not supported by this source")
 
     /**
+     * Type 21 self-shield: shield credits from the managed identity [identityId] (32 bytes)
+     * into this wallet's OWN shielded pool (account 0's default Orchard address; the SDK has no
+     * recipient parameter here and refuses an own address on the to-recipient entry point).
+     * Blocks for the proof. Default throws: only the production source (and fakes that
+     * exercise it) need it.
+     */
+    suspend fun shieldFromIdentity(walletId: ByteArray, identityId: ByteArray, amountCredits: Long): Unit =
+        throw UnsupportedOperationException("identity self-shield not supported by this source")
+
+    /**
      * Type 18: build an L1 asset lock of [amountDuffs] from the SDK
      * wallet's OWN Core UTXOs, broadcast it over the SDK's SPV peers,
      * then shield the lock (minus the pool fee) to [recipientRaw43].
@@ -920,6 +930,17 @@ internal class DashSdkShieldedSource(
             walletId = walletId,
             identityId = identityId,
             recipientRaw43 = recipientRaw43,
+            amount = amountCredits
+        )
+    }
+
+    override suspend fun shieldFromIdentity(walletId: ByteArray, identityId: ByteArray, amountCredits: Long) {
+        // As [shieldFromIdentityToRecipient]: the proven post-debit identity balance is not
+        // needed, the identity balance reads re-fetch it. Account 0 (the SDK default), the
+        // account [shieldedDefaultAddress] and every other shielded write here use.
+        manager().shieldedShieldFromIdentity(
+            walletId = walletId,
+            identityId = identityId,
             amount = amountCredits
         )
     }
@@ -2160,21 +2181,6 @@ class ShieldedBalanceServiceImpl internal constructor(
         }
     }
 
-    override suspend fun ownShieldedAddressOf(walletIdHex: String): String? {
-        val walletId = walletIdFromHex(walletIdHex) ?: return null
-        if (!ensureShieldedReady()) return null
-        // Pinned: the runtime must be bound to the wallet the caller confirmed with.
-        if (!walletIdHex.equals(readyWalletIdHex.value, ignoreCase = true)) return null
-        return try {
-            source.shieldedDefaultAddress(walletId)
-                ?.let { raw -> encodeOrchardAddress(raw, displayHrp()) }
-        } catch (t: Throwable) {
-            if (t is CancellationException) throw t
-            log.warn("failed to derive the wallet's own shielded address", t)
-            null
-        }
-    }
-
     override suspend fun ownPlatformAddressOf(walletIdHex: String): String? {
         val walletId = walletIdFromHex(walletIdHex) ?: return null
         return try {
@@ -2838,6 +2844,20 @@ class ShieldedBalanceServiceImpl internal constructor(
         val fromId = identityId.copyOf()
         return runShieldedWrite("shieldFromIdentityToAddress", amount, expectedWalletIdHex) { walletId, credits ->
             source.shieldFromIdentityToRecipient(walletId, fromId, recipientRaw43, credits)
+        }
+    }
+
+    override suspend fun shieldFromIdentity(
+        identityId: ByteArray,
+        amount: Dash,
+        expectedWalletIdHex: String
+    ): SdkWriteResult<Unit> {
+        if (identityId.size != IDENTITY_ID_LENGTH) {
+            return notBroadcast("shieldFromIdentity", "identity id is not 32 bytes", null)
+        }
+        val fromId = identityId.copyOf()
+        return runShieldedWrite("shieldFromIdentity", amount, expectedWalletIdHex) { walletId, credits ->
+            source.shieldFromIdentity(walletId, fromId, credits)
         }
     }
 
