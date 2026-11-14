@@ -154,15 +154,28 @@ internal fun classifyCoreSendThrowable(e: Exception): ExternalSendResult = when 
 }
 
 /**
- * Pick Platform-address inputs that spend EXACTLY [targetCredits] (largest balances
- * first), or null when the addresses cannot cover it — never a partial spend.
+ * The balance, in credits, a Platform → Identity top-up ([ExternalSendSource.platformTopUpIdentity],
+ * [ExternalSendSource.platformTopUpExternalIdentity]) leaves unspent on its fee payer.
+ *
+ * The top-up (`IdentityTopUpFromAddressesTransition`) always carries the fee strategy
+ * `DeductFromInput(0)`: the input whose address sorts FIRST pays the fee out of what that address
+ * KEEPS, and Platform rejects the transition when that remainder cannot cover the fee actually
+ * charged. The consensus minimum (`identity_topup_base_cost` 500 000 + 500 000 per input) is no
+ * bound on that charge: execution meters the real processing and storage cost, which the wallet
+ * cannot compute, and the SDK exposes no top-up fee estimate or preflight. So the reserve is the
+ * SDK's own reserve for the address withdrawal at the most inputs a transition may carry:
+ * `address_credit_withdrawal` 400 000 000 + 500 000 × [PLATFORM_MAX_ADDRESS_INPUTS] (0.00408 DASH).
+ * A withdrawal performs the same per-input address writes as a top-up and queues a withdrawal
+ * document on top, and its measured charge (about 0.00104 DASH, platform#5830) is a quarter of
+ * its reserve, so this errs high: it only lowers the Max.
  */
-internal fun selectPlatformInputs(candidates: List<FundingInput>, targetCredits: Long): List<FundingInput>? {
-    if (targetCredits <= 0) return null
-    val picked = packOverageInputs(candidates, targetCredits)
-    val covered = picked.fold(0L) { acc, input -> Math.addExact(acc, input.credits) }
-    return picked.takeIf { covered == targetCredits }
-}
+internal const val PLATFORM_TOP_UP_FEE_RESERVE_CREDITS = 400_000_000L + 500_000L * 16
+
+/**
+ * DPP's `min_identity_funding_amount` (dpp state-transition versions v1–v2): a top-up from
+ * addresses must spend at least this many credits in total, or DPP rejects it.
+ */
+internal const val PLATFORM_MIN_IDENTITY_FUNDING_CREDITS = 200_000L
 
 /**
  * The Core fee rate of a Platform → Core withdrawal, duffs/byte: the minimum Fibonacci rate
@@ -235,8 +248,10 @@ private val ADDRESS_HASH_ORDER = Comparator<FundingInput> { a, b ->
 }
 
 /**
- * Inputs for a partial Platform → Core withdrawal (`withdrawCredits` with explicit inputs)
- * that take EXACTLY [targetCredits] in total, or null when the addresses cannot cover it.
+ * Inputs for a partial Platform → Core withdrawal (`withdrawCredits` with explicit inputs) or
+ * a Platform → Identity top-up (the same `DeductFromInput(0)` fee rule, the same per-input
+ * minimum and input cap) that take EXACTLY [targetCredits] in total, or null when the addresses
+ * cannot cover it.
  *
  * The SDK charges the Platform transition fee to the input whose address sorts FIRST
  * (`DeductFromInput(0)` over the inputs ordered by address), out of what that address KEEPS.
@@ -290,6 +305,77 @@ internal fun selectPlatformWithdrawalInputs(
         }
     }
     return best
+}
+
+/**
+ * The largest total, in credits, [selectPlatformWithdrawalInputs] can select from [candidates]
+ * under the same rules (P2PKH, every input at least [minInputCredits], at most [maxInputs]
+ * inputs, the first-sorting input keeping [feeReserveCredits]); null when no input can pay
+ * the fee. For each possible fee payer it is the payer's balance less the reserve plus the
+ * [maxInputs] − 1 largest balances sorting after it, drawn in full.
+ */
+internal fun maxPlatformWithdrawalCredits(
+    candidates: List<FundingInput>,
+    feeReserveCredits: Long,
+    minInputCredits: Long,
+    maxInputs: Int = PLATFORM_MAX_ADDRESS_INPUTS
+): Long? {
+    if (feeReserveCredits < 0 || maxInputs < 1) return null
+    val min = maxOf(minInputCredits, 1L)
+    val usable = candidates
+        .filter { it.addressType == 0 && it.hash.size == 20 && it.credits >= min }
+        .sortedWith(ADDRESS_HASH_ORDER)
+    var best: Long? = null
+    for ((index, payer) in usable.withIndex()) {
+        val payerCap = payer.credits - feeReserveCredits
+        if (payerCap < min) continue
+        val total = usable.subList(index + 1, usable.size)
+            .map { it.credits }
+            .sortedDescending()
+            .take(maxInputs - 1)
+            .fold(payerCap, ::saturatingAdd)
+        if (best == null || total > best) best = total
+    }
+    return best
+}
+
+/**
+ * The Platform → Identity Max, in duffs: the largest top-up [maxPlatformWithdrawalCredits]
+ * allows with the fee payer keeping [PLATFORM_TOP_UP_FEE_RESERVE_CREDITS], rounded down to whole
+ * duffs. Null when it is below [PLATFORM_MIN_IDENTITY_FUNDING_CREDITS] or
+ * [selectPlatformWithdrawalInputs] would not take it (so the send accepts exactly this).
+ */
+internal fun platformToIdentityMaxDuffs(candidates: List<FundingInput>, minInputCredits: Long): Long? {
+    val gross = maxPlatformWithdrawalCredits(candidates, PLATFORM_TOP_UP_FEE_RESERVE_CREDITS, minInputCredits)
+        ?: return null
+    val duffs = gross / CREDITS_PER_DUFF
+    val credits = duffs * CREDITS_PER_DUFF
+    if (credits < PLATFORM_MIN_IDENTITY_FUNDING_CREDITS) return null
+    return duffs.takeIf {
+        selectPlatformWithdrawalInputs(candidates, credits, PLATFORM_TOP_UP_FEE_RESERVE_CREDITS, minInputCredits) != null
+    }
+}
+
+/**
+ * The Platform → Core Max, in duffs the RECIPIENT receives: the largest gross withdrawal
+ * [maxPlatformWithdrawalCredits] allows (capped at [PLATFORM_MAX_WITHDRAWAL_CREDITS]) less
+ * the Core fee DPP carves out of it ([WITHDRAWAL_CORE_FEE_CREDITS]), rounded down to whole
+ * duffs. Null when it is below DPP's minimum withdrawal or [selectPlatformWithdrawalInputs]
+ * would not take it (so the send path accepts exactly what this allows).
+ */
+internal fun platformToCoreMaxDuffs(
+    candidates: List<FundingInput>,
+    feeReserveCredits: Long,
+    minInputCredits: Long
+): Long? {
+    val gross = maxPlatformWithdrawalCredits(candidates, feeReserveCredits, minInputCredits)
+        ?.coerceAtMost(PLATFORM_MAX_WITHDRAWAL_CREDITS)
+        ?: return null
+    val recipientDuffs = (gross - WITHDRAWAL_CORE_FEE_CREDITS).takeIf { it > 0 }?.div(CREDITS_PER_DUFF) ?: return null
+    val sendGross = coreWithdrawalCreditsOrNull(recipientDuffs * CREDITS_PER_DUFF) ?: return null
+    return recipientDuffs.takeIf {
+        selectPlatformWithdrawalInputs(candidates, sendGross, feeReserveCredits, minInputCredits) != null
+    }
 }
 
 private fun saturatingAdd(a: Long, b: Long): Long = try {
@@ -410,8 +496,9 @@ internal interface ExternalSendSource {
 
     /**
      * The Core balance an asset lock can spend — the SDK's CONFIRMED balance (in a block or
-     * InstantSend-locked), the figure the internal shield-from-wallet Max uses — in duffs;
-     * null when unknown or the cutover is not committed (fail closed).
+     * InstantSend-locked), the figure the internal shield-from-wallet Max uses, capped at the
+     * SDK's max-sendable — in duffs; null when either is unknown or the cutover is not
+     * committed (fail closed).
      */
     suspend fun coreAssetLockEligibleDuffs(): Long?
 
@@ -442,7 +529,15 @@ internal interface ExternalSendSource {
     ): SdkWriteResult<ShieldToAddressOutcome>
     suspend fun coreTopUpIdentity(identityIdBase58: String, amountDuffs: Long): SdkWriteResult<TopUpOutcome>
     suspend fun platformTransfer(walletIdHex: String, to: PlatformAddressBytes, amountCredits: Long)
+    /** Platform addresses → an identity [walletIdHex] MANAGES (`topUpFromAddresses`). */
     suspend fun platformTopUpIdentity(walletIdHex: String, identityId: ByteArray, inputs: List<FundingInput>)
+
+    /**
+     * Platform addresses → an identity [walletIdHex] does NOT manage
+     * (`topUpExternalIdentityFromAddresses`, platform#5860); an identity Platform does not
+     * have fails `DashSdkError.NotFound` before anything is signed.
+     */
+    suspend fun platformTopUpExternalIdentity(walletIdHex: String, identityId: ByteArray, inputs: List<FundingInput>)
     suspend fun identityWithdraw(walletIdHex: String, fromId: ByteArray, amountCredits: Long, coreAddress: String)
     suspend fun identityTransferToAddress(
         walletIdHex: String,
@@ -600,11 +695,19 @@ internal class DashSdkExternalSendSource(
     override suspend fun coreAssetLockEligibleDuffs(): Long? =
         combine(
             sdkL1SendService.cutoverCommittedFlow(),
-            cutoverUiDataService.sdkConfirmedBalance
-        ) { committed, confirmed ->
-            // Only the SDK's own confirmed figure (ShieldedTransferViewModel's post-cutover
-            // source); never the frozen dashj ChainLocked fallback.
-            if (committed == true) confirmed?.value else null
+            cutoverUiDataService.sdkConfirmedBalance,
+            cutoverUiDataService.sdkMaxSendable
+        ) { committed, confirmed, maxSendable ->
+            // Only the SDK's own figures (ShieldedTransferViewModel's post-cutover source);
+            // never the frozen dashj ChainLocked fallback. The confirmed balance is wallet-wide,
+            // so it is capped by the SDK's max-sendable (the spendable sum, CoinJoin excluded).
+            // No per-funding-account figure is published, so this is the closest cheap bound;
+            // either figure unknown → unknown (no fallback to the other).
+            if (committed == true && confirmed != null && maxSendable != null) {
+                minOf(confirmed.value, maxSendable.value)
+            } else {
+                null
+            }
         }.first()
 
     override fun observeShieldedBalance(): Flow<Dash?> =
@@ -687,6 +790,20 @@ internal class DashSdkExternalSendSource(
     override suspend fun platformTopUpIdentity(walletIdHex: String, identityId: ByteArray, inputs: List<FundingInput>) {
         val manager = manager()
         manager.identityCredits.topUpFromAddresses(
+            walletHandle = wallet(walletIdHex).handle,
+            identityId = identityId,
+            inputs = inputs,
+            signerHandle = manager.signerHandle
+        )
+    }
+
+    override suspend fun platformTopUpExternalIdentity(
+        walletIdHex: String,
+        identityId: ByteArray,
+        inputs: List<FundingInput>
+    ) {
+        val manager = manager()
+        manager.identityCredits.topUpExternalIdentityFromAddresses(
             walletHandle = wallet(walletIdHex).handle,
             identityId = identityId,
             inputs = inputs,
@@ -1074,6 +1191,12 @@ class ExternalSendServiceImpl internal constructor(
      *   withdraws the Max itself (the recipient receives it minus [WITHDRAWAL_CORE_FEE_DUFFS]),
      *   so it is null unless it reaches DPP's [PLATFORM_MIN_WITHDRAWAL_CREDITS] (the recipient
      *   amount is then always positive).
+     * - Platform → Core: [platformToCoreMaxDuffsOrNull] — what the recipient receives from the
+     *   largest withdrawal the send's input selection accepts (the first-sorting input keeps
+     *   the SDK preflight's fee reserve; DPP carves the Core fee out of the withdrawal). The
+     *   amount page treats it as the bound itself: unknown blocks Continue, never the balance.
+     * - Platform → Identity: [platformToIdentityMaxDuffsOrNull] — the largest top-up whose
+     *   first-sorting input keeps [PLATFORM_TOP_UP_FEE_RESERVE_CREDITS]; a bound like Core's.
      * - Everything else: null (no pre-send fee figure).
      */
     override suspend fun maxSendable(source: SendBalance, destinationKind: SendBalance): Dash? = try {
@@ -1100,13 +1223,47 @@ class ExternalSendServiceImpl internal constructor(
                     }
                 }
             }
-            SendBalance.PLATFORM, SendBalance.IDENTITY -> null
+            SendBalance.PLATFORM -> when (destinationKind) {
+                SendBalance.CORE -> withContext(ioDispatcher) { platformToCoreMaxDuffsOrNull() }?.let(::Dash)
+                SendBalance.IDENTITY -> withContext(ioDispatcher) { platformToIdentityMaxDuffsOrNull() }?.let(::Dash)
+                SendBalance.SHIELDED, SendBalance.PLATFORM -> null
+            }
+            SendBalance.IDENTITY -> null
         }
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
         log.warn("external send: max sendable unreadable ({})", safeErrorSummary(e))
         null
+    }
+
+    /**
+     * The Platform → Core Max from the same reads [sendPlatformToCore] makes (the bound wallet's
+     * address balances, the SDK's minimum input and its withdrawal preflight fee), so the
+     * Amount page allows exactly what the send selects inputs for ([platformToCoreMaxDuffs]).
+     * Null when any of them is unknown or the account cannot withdraw; throws when a read fails.
+     */
+    private suspend fun platformToCoreMaxDuffsOrNull(): Long? {
+        val walletIdHex = source.boundWalletIdOrNull() ?: return null
+        val candidates = source.platformAddressBalances(walletIdHex)
+        val minInput = source.platformMinInputCredits(walletIdHex).takeIf { it > 0 } ?: return null
+        val preflight = source.platformWithdrawalPreflight(walletIdHex)
+        if (!preflight.canWithdraw) return null
+        val feeReserve = preflight.estimatedFeeCredits.takeIf { it > 0 } ?: return null
+        return platformToCoreMaxDuffs(candidates, feeReserve, minInput)
+    }
+
+    /**
+     * The Platform → Identity Max from the same reads the top-up makes (the bound wallet's
+     * address balances and the SDK's minimum input), see [platformToIdentityMaxDuffs]. The
+     * same for a managed and an external identity: both build the same transition. Null when
+     * a figure is unknown; throws when a read fails.
+     */
+    private suspend fun platformToIdentityMaxDuffsOrNull(): Long? {
+        val walletIdHex = source.boundWalletIdOrNull() ?: return null
+        val candidates = source.platformAddressBalances(walletIdHex)
+        val minInput = source.platformMinInputCredits(walletIdHex).takeIf { it > 0 } ?: return null
+        return platformToIdentityMaxDuffs(candidates, minInput)
     }
 
     /** The Core send fee reserve: size-based, the flat reserve when the UTXO count is unknown. */
@@ -1217,8 +1374,9 @@ class ExternalSendServiceImpl internal constructor(
             ?: return notSent(pair, NotSentReason.GENERIC, "identity record unreadable")
         val ownIdentityId = ownIdentity.getOrNull()
         val destinationIsOwnIdentity: Boolean? = when (destination) {
-            // A Core or Platform top-up needs an identity the SDK wallet manages; an identity
-            // transfer only needs to tell the user's own identity (no self-transfer).
+            // A Core top-up needs an identity the SDK wallet manages; a Platform top-up picks
+            // its SDK call by it; an identity transfer only needs to tell the user's own
+            // identity (no self-transfer).
             is SendDestination.Identity -> if (source == SendBalance.CORE || source == SendBalance.PLATFORM) {
                 decodeIdentityId(destination.identityIdBase58)?.let { target ->
                     readOrNull("managed identities") {
@@ -1236,6 +1394,15 @@ class ExternalSendServiceImpl internal constructor(
         if (support != SendSupport.SUPPORTED) {
             return notSent(pair, NotSentReason.NOT_SUPPORTED, "pair not supported ($support)")
         }
+        // Platform → Identity picks topUpFromAddresses (managed) or the external top-up by the
+        // managed set: unreadable is unknown, never "someone else's".
+        val platformTopUpOfManaged: Boolean? =
+            if (source == SendBalance.PLATFORM && destination is SendDestination.Identity) {
+                destinationIsOwnIdentity
+                    ?: return notSent(pair, NotSentReason.GENERIC, "managed identities unreadable")
+            } else {
+                null
+            }
 
         // The identity source must be one this wallet manages (it signs with its keys).
         val ownIdentityBytes: ByteArray? = if (source == SendBalance.IDENTITY) {
@@ -1261,7 +1428,8 @@ class ExternalSendServiceImpl internal constructor(
         return when (source) {
             SendBalance.CORE -> sendFromCore(pair, walletIdHex, destination, amount, amountCredits, isMax, coreSession)
             SendBalance.SHIELDED -> sendFromShielded(pair, walletIdHex, destination, amount, isMax)
-            SendBalance.PLATFORM -> sendFromPlatform(pair, walletIdHex, destination, amount, amountCredits)
+            SendBalance.PLATFORM ->
+                sendFromPlatform(pair, walletIdHex, destination, amount, amountCredits, platformTopUpOfManaged)
             SendBalance.IDENTITY -> sendFromIdentity(
                 pair,
                 walletIdHex,
@@ -1400,6 +1568,10 @@ class ExternalSendServiceImpl internal constructor(
                         try {
                             platformFundingStore.writeBlocking(record.withOutPoint(outPointHex))
                         } catch (e: Exception) {
+                            // Accepted risk: if the process also dies before
+                            // ensureOutPointRecorded, a no-outpoint record remains. The sweep
+                            // keeps it (unknown ≠ unbuilt), and it blocks new Core → Platform
+                            // sends until resolved. Two failures in a row; rare.
                             log.error("external send {}: could not record the lock outpoint, retried after the call ({})", pair, safeErrorSummary(e))
                         }
                         seedPlatformLockKind(pair, outPointHex)
@@ -1562,6 +1734,9 @@ class ExternalSendServiceImpl internal constructor(
             }
             val outPointHex = record.outPointHex
             if (outPointHex == null) {
+                // A failed outpoint write plus process death before ensureOutPointRecorded
+                // lands here with the lock open: kept below, and it blocks new Core → Platform
+                // sends until resolved. Rare (two failures in a row); accepted.
                 val unconfirmedOutPoints = try {
                     platformFundingStore.readCompletionUnconfirmed()
                         .filter { it.walletIdHex.equals(record.walletIdHex, ignoreCase = true) }
@@ -1692,9 +1867,12 @@ class ExternalSendServiceImpl internal constructor(
 
     /**
      * A Max is the SDK drain (`emptyWallet`), whose amount is display-only: it spends
-     * whatever is spendable when it runs. So the drain is only started while the SDK's
-     * max-sendable figure is still exactly the [amount] the user confirmed; anything else
-     * (funds arrived or left in between, or unreadable) is NotSent with nothing spent.
+     * whatever is spendable when the SDK builds it, the same as Basic Send's send-all. The
+     * check below is a best-effort guard, not a hard bound: the drain is only started while
+     * the SDK's max-sendable figure still equals the [amount] the user confirmed (anything
+     * else, or unreadable, is NotSent with nothing spent), but funds that arrive or leave
+     * between that check and the SDK's build are still drained. A hard cap would need an SDK
+     * capped-drain API.
      */
     private suspend fun sendCoreToCore(
         pair: String,
@@ -1821,7 +1999,8 @@ class ExternalSendServiceImpl internal constructor(
         walletIdHex: String,
         destination: SendDestination,
         amount: Dash,
-        amountCredits: Long
+        amountCredits: Long,
+        destinationIsManagedIdentity: Boolean?
     ): ExternalSendResult {
         return when (destination) {
             is SendDestination.Core -> sendPlatformToCore(pair, walletIdHex, destination, amountCredits)
@@ -1839,9 +2018,26 @@ class ExternalSendServiceImpl internal constructor(
                 val candidates = readOrNull("platform address balances") {
                     this.source.platformAddressBalances(walletIdHex)
                 } ?: return notSent(pair, NotSentReason.GENERIC, "platform address balances unreadable")
-                val inputs = selectPlatformInputs(candidates, amountCredits)
-                    ?: return notSent(pair, NotSentReason.INSUFFICIENT_FUNDS, "platform addresses cannot cover the amount")
-                nativeWrite(pair, walletIdHex) { this.source.platformTopUpIdentity(walletIdHex, identityId, inputs) }
+                if (amountCredits < PLATFORM_MIN_IDENTITY_FUNDING_CREDITS) {
+                    return notSent(pair, NotSentReason.GENERIC, "below the identity funding minimum")
+                }
+                val minInput = readOrNull("platform minimum input") { this.source.platformMinInputCredits(walletIdHex) }
+                    ?.takeIf { it > 0 }
+                    ?: return notSent(pair, NotSentReason.GENERIC, "platform minimum input unknown")
+                // The first-sorting input pays the fee from what it keeps (DeductFromInput(0)).
+                val inputs = selectPlatformWithdrawalInputs(candidates, amountCredits, PLATFORM_TOP_UP_FEE_RESERVE_CREDITS, minInput)
+                    ?: return notSent(pair, NotSentReason.INSUFFICIENT_FUNDS, "platform addresses cannot cover the amount and fee")
+                val managed = destinationIsManagedIdentity
+                    ?: return notSent(pair, NotSentReason.GENERIC, "managed identities unreadable")
+                // A NotFound from the external top-up (Platform has no such identity) is raised
+                // before signing: classifyBroadcastFailure reads it as NotBroadcast.
+                nativeWrite(pair, walletIdHex) {
+                    if (managed) {
+                        this.source.platformTopUpIdentity(walletIdHex, identityId, inputs)
+                    } else {
+                        this.source.platformTopUpExternalIdentity(walletIdHex, identityId, inputs)
+                    }
+                }
             }
         }
     }

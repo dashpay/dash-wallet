@@ -19,6 +19,7 @@ package de.schildbach.wallet.ui.payments.send
 
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -31,8 +32,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -82,13 +85,22 @@ import java.util.Locale
 
 // ── Sheets ──────────────────────────────────────────────────────────────────
 
-/** Dimmed backdrop and a bottom sheet with a grabber, as in the shielded flows. */
+/**
+ * Dimmed backdrop and a bottom sheet with a grabber, as in the shielded flows.
+ *
+ * The sheet keeps clear of the system bars like the app's other Compose sheets
+ * ([org.dash.wallet.common.ui.dialogs.ComposeBottomSheet]): its background runs under the
+ * navigation bar (Figma's home indicator), its content stops above it. Under MainActivity's
+ * fitsSystemWindows root these insets arrive already consumed (zero), so nothing is doubled;
+ * the padding only matters if the screen is ever hosted edge-to-edge (targetSdk 35+).
+ */
 @Composable
 internal fun SheetOverlay(onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0x800A0B0D))
+            .statusBarsPadding()
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
                 onDismiss()
             }
@@ -102,6 +114,7 @@ internal fun SheetOverlay(onDismiss: () -> Unit, content: @Composable ColumnScop
                     RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
                 )
                 .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
+                .navigationBarsPadding()
         ) {
             Grabber()
             content()
@@ -112,15 +125,16 @@ internal fun SheetOverlay(onDismiss: () -> Unit, content: @Composable ColumnScop
 /**
  * Figma 7076:47968 / 7107:48421: amount, From / To / Network fee / Total, info notes, buttons.
  *
- * @param amount what the recipient (or the own To balance) receives.
+ * @param amount what the recipient (or the own To balance) receives; null while not known yet
+ *   (a drain's fee is loading), shown as unknown like the fee and total rows.
  * @param fee null with [feeLoading] false = cannot be known before the send (never fabricated).
  * @param total what leaves the balance; null while unknown.
  * @param feeIncluded the fee comes OUT of the amount (a Core → Core drain): [total] is exact.
- * @param notes the info notes under the rows, in order.
+ * @param notes the System messages under the rows, in order.
  */
 @Composable
 internal fun SendConfirmSheet(
-    amount: Dash,
+    amount: Dash?,
     rate: Fiat?,
     fiatCode: String?,
     fromValue: String,
@@ -129,7 +143,7 @@ internal fun SendConfirmSheet(
     feeLoading: Boolean,
     total: Dash?,
     feeIncluded: Boolean,
-    notes: List<Int>,
+    notes: List<ConfirmNote>,
     onDismiss: () -> Unit,
     onConfirm: () -> Unit
 ) {
@@ -148,7 +162,7 @@ internal fun SendConfirmSheet(
                 .weight(1f, fill = false)
                 .verticalScroll(rememberScrollState())
         ) {
-            ConfirmAmount(amount, rate, fiatCode)
+            ConfirmAmount(amount, rate, fiatCode, unknown)
             Spacer(modifier = Modifier.height(20.dp))
             Menu {
                 ListItem1(label = stringResource(R.string.external_send_from), value = fromValue)
@@ -224,13 +238,16 @@ internal fun currencyCodesFor(fiatCode: String?): List<String> =
 private fun approximate(value: String, estimate: Boolean): String =
     if (estimate) stringResource(R.string.external_send_approximately, value) else value
 
-/** The confirm sheet's amount block (Figma "amount" 380x97): the same bar as the amount page, read-only. */
+/**
+ * The confirm sheet's amount block (Figma "amount" 380x97): the same bar as the amount page,
+ * read-only. A null [amount] (not known yet) shows [unknown], as the fee and total rows do.
+ */
 @Composable
-private fun ConfirmAmount(amount: Dash, rate: Fiat?, fiatCode: String?) {
+private fun ConfirmAmount(amount: Dash?, rate: Fiat?, fiatCode: String?, unknown: String) {
     val separator = remember { decimalSeparatorFor(Locale.getDefault()) }
-    val fiat = amount.toFiatAt(rate)
+    val fiat = amount?.toFiatAt(rate)
     EnterAmount(
-        primaryAmount = localizeAmountForDisplay(amount.toDisplayString(), separator),
+        primaryAmount = amount?.let { localizeAmountForDisplay(it.toDisplayString(), separator) } ?: unknown,
         secondaryAmount = fiat?.let { localizeAmountForDisplay(it.toPlainString(), separator) } ?: "0",
         currencyCodes = remember(fiatCode) { currencyCodesFor(fiatCode) },
         selectedCurrencyIndex = 0,
@@ -243,9 +260,23 @@ private fun ConfirmAmount(amount: Dash, rate: Fiat?, fiatCode: String?) {
     )
 }
 
-/** The confirm sheet's info notes (Figma 7107:48425), in order; nothing when [notes] is empty. */
+/**
+ * A confirm-sheet System message (Figma 7107:48594): its text and its leading icon, drawn at the
+ * icon's own Figma size.
+ */
+internal data class ConfirmNote(@StringRes val text: Int, @DrawableRes val icon: Int) {
+    companion object {
+        /** Something takes time (icon `info-rect-small`). */
+        fun notInstant(@StringRes text: Int) = ConfirmNote(text, R.drawable.ic_system_message_info)
+
+        /** The amount and destination become public (icon `system_message-public`). */
+        fun becomesPublic(@StringRes text: Int) = ConfirmNote(text, R.drawable.ic_system_message_public)
+    }
+}
+
+/** The confirm sheet's System messages (Figma 7107:48594), in order; nothing when [notes] is empty. */
 @Composable
-private fun ConfirmNotes(notes: List<Int>) {
+private fun ConfirmNotes(notes: List<ConfirmNote>) {
     if (notes.isEmpty()) return
     Column(
         modifier = Modifier
@@ -255,8 +286,10 @@ private fun ConfirmNotes(notes: List<Int>) {
     ) {
         notes.forEach { note ->
             SystemMessage(
-                description = stringResource(note),
-                iconRes = org.dash.wallet.common.R.drawable.ic_info_blue
+                description = stringResource(note.text),
+                // At the icon's own Figma size, centred in the 30dp leading slot: `iconRes`
+                // would draw every icon at 18dp.
+                icon = { Image(painter = painterResource(note.icon), contentDescription = null) }
             )
         }
     }

@@ -147,7 +147,8 @@ interface ExternalSendService {
      * GROSS of the drain fee (the drain delivers it minus the fee); for Shielded → Core the
      * amount withdrawn (the recipient receives it minus the asset unlock's Core fee); for every
      * other pair the amount the recipient receives (balance minus the fee paid on top).
-     * [destinationKind] is [balanceKindOf] of the destination.
+     * [destinationKind] is [balanceKindOf] of the destination. For the pairs where
+     * [maxBoundsAmount] holds it is also the largest amount the send accepts.
      */
     suspend fun maxSendable(source: SendBalance, destinationKind: SendBalance): Dash?
 

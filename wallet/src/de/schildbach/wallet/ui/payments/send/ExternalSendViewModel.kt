@@ -25,6 +25,7 @@ import de.schildbach.wallet.Constants
 import de.schildbach.wallet.service.platform.sdk.DestinationParse
 import de.schildbach.wallet.service.platform.sdk.ExternalSendResult
 import de.schildbach.wallet.service.platform.sdk.ExternalSendService
+import de.schildbach.wallet.service.platform.sdk.ExternalSendServiceImpl
 import de.schildbach.wallet.service.platform.sdk.FeeEstimate
 import de.schildbach.wallet.service.platform.sdk.IdentityResolution
 import de.schildbach.wallet.service.platform.sdk.SendBalance
@@ -35,6 +36,7 @@ import de.schildbach.wallet.service.platform.sdk.balanceKindOf
 import de.schildbach.wallet.service.platform.sdk.detectSendDestination
 import de.schildbach.wallet.service.platform.sdk.externalSendSupport
 import de.schildbach.wallet.service.platform.sdk.hasShieldedLeg
+import de.schildbach.wallet.service.platform.sdk.maxBoundsAmount
 import de.schildbach.wallet.service.platform.sdk.pickerBalances
 import de.schildbach.wallet.ui.shielded.parseDashOrNull
 import de.schildbach.wallet.ui.shielded.parseDecimalOrNull
@@ -44,6 +46,7 @@ import de.schildbach.wallet.ui.shielded.toKeypadString
 import de.schildbach.wallet.ui.shielded.toKeypadStringTwoDecimals
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -53,9 +56,9 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.data.WalletUIConfig
@@ -114,12 +117,13 @@ data class ExternalSendConfirm(
         get() = request.isMax && request.source == SendBalance.SHIELDED && request.destination is SendDestination.Core
 
     /**
-     * What the recipient receives: the amount; for a drain the amount minus the fee (when known);
-     * for a Shielded → Core Max the amount minus the Core fee.
+     * What the recipient receives: the amount; for a drain the amount minus the fee (null while
+     * the fee is loading or unknown: the gross amount would overstate it); for a Shielded → Core
+     * Max the amount minus the Core fee.
      */
-    val recipientAmount: Dash
+    val recipientAmount: Dash?
         get() = when {
-            feeIncluded -> fee?.let { request.amount - it.fee } ?: request.amount
+            feeIncluded -> fee?.let { request.amount - it.fee }
             coreFeeIncluded -> request.amount - Dash(WITHDRAWAL_CORE_FEE_DUFFS)
             else -> request.amount
         }
@@ -128,7 +132,8 @@ data class ExternalSendConfirm(
      * What leaves the balance: what the recipient receives plus the fee (null while the fee is
      * unknown), or for a drain the amount.
      */
-    val total: Dash? get() = if (feeIncluded) request.amount else fee?.let { recipientAmount + it.fee }
+    val total: Dash?
+        get() = if (feeIncluded) request.amount else recipientAmount?.let { amount -> fee?.let { amount + it.fee } }
 }
 
 /**
@@ -231,9 +236,15 @@ data class ExternalSendUIState(
             amount.toKeypadString()
         }
 
-    /** What the amount may not exceed: the max sendable when known, else the balance. */
+    /**
+     * What the amount may not exceed: the max sendable when known, else the balance; for a
+     * pair whose Max is its bound ([maxBoundsAmount]) the max sendable only (null blocks).
+     */
     val limit: Dash?
-        get() = maxSendable ?: balance
+        get() = if (maxIsTheBound) maxSendable else maxSendable ?: balance
+
+    private val maxIsTheBound: Boolean
+        get() = destination?.let { maxBoundsAmount(source, balanceKindOf(it)) } == true
 
     val exceedsBalance: Boolean
         get() = limit?.let { amount.isGreaterThan(it) } == true
@@ -249,6 +260,7 @@ data class ExternalSendUIState(
             amount.isPositive &&
             !maxPending &&
             balance != null &&
+            limit != null &&
             !exceedsBalance &&
             (dashMode || rate != null || pinnedAmount != null || maxAmount != null) &&
             !identityBlocks &&
@@ -268,7 +280,8 @@ class ExternalSendViewModel internal constructor(
     walletUIConfig: WalletUIConfig,
     exchangeRates: ExchangeRatesProvider,
     private val savedState: SavedStateHandle,
-    private val network: AddressNetwork
+    private val network: AddressNetwork,
+    private val maxRetryDelayMs: Long = ExternalSendServiceImpl.BALANCE_POLL_MS
 ) : ViewModel() {
 
     @Inject
@@ -620,7 +633,22 @@ class ExternalSendViewModel internal constructor(
             .onEach { balance ->
                 if (generation == balanceGeneration) _uiState.update { it.copy(balance = balance) }
             }
-            .mapLatest { balance -> balance to if (balance == null) null else service.maxSendable(source, destinationKind) }
+            .transformLatest { balance ->
+                if (balance == null) {
+                    emit(balance to null)
+                    return@transformLatest
+                }
+                var max = service.maxSendable(source, destinationKind)
+                emit(balance to max)
+                // For a pair whose Max is its bound, an unknown Max blocks Continue, and the
+                // balance feed is distinct: an unchanged balance never re-reads it. So a failed
+                // read is retried on the balance poll cadence until it is known.
+                while (max == null && maxBoundsAmount(source, destinationKind)) {
+                    delay(maxRetryDelayMs)
+                    max = service.maxSendable(source, destinationKind)
+                    if (max != null) emit(balance to max)
+                }
+            }
             .onEach { (balance, max) ->
                 if (generation == balanceGeneration) onMaxSendable(balance, max)
             }

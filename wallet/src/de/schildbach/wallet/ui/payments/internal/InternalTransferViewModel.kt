@@ -22,6 +22,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.service.platform.sdk.ExternalSendResult
+import de.schildbach.wallet.service.platform.sdk.ExternalSendServiceImpl
 import de.schildbach.wallet.service.platform.sdk.FeeEstimate
 import de.schildbach.wallet.service.platform.sdk.InternalTransferPair
 import de.schildbach.wallet.service.platform.sdk.InternalTransferService
@@ -30,6 +31,7 @@ import de.schildbach.wallet.service.platform.sdk.SendBalance
 import de.schildbach.wallet.service.platform.sdk.defaultInternalTransferPair
 import de.schildbach.wallet.service.platform.sdk.hasShieldedLeg
 import de.schildbach.wallet.service.platform.sdk.internalTransferSupport
+import de.schildbach.wallet.service.platform.sdk.maxBoundsAmount
 import de.schildbach.wallet.service.platform.sdk.pickerBalances
 import de.schildbach.wallet.ui.payments.send.ExternalSendStatus
 import de.schildbach.wallet.ui.shielded.parseDashOrNull
@@ -40,14 +42,15 @@ import de.schildbach.wallet.ui.shielded.toKeypadString
 import de.schildbach.wallet.ui.shielded.toKeypadStringTwoDecimals
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.data.WalletUIConfig
@@ -83,7 +86,9 @@ data class InternalTransferConfirm(
  * @property pairChosenByUser the user changed From/To; until then the default pair
  *   ([defaultInternalTransferPair]) follows the inputs as they arrive.
  * @property balance the From balance; null = unknown (never 0), and it blocks Continue.
- * @property maxSendable null = unknown: Max is unavailable and [balance] bounds the amount.
+ * @property maxSendable null = unknown: Max is unavailable and [balance] bounds the amount, except
+ *   for a pair whose Max is its bound ([maxBoundsAmount]: Platform → Core / Identity), where
+ *   unknown blocks Continue.
  * @property sendingHidden the user closed the sending overlay of a shielded leg; the transfer
  *   continues and the form stays disabled until its outcome. Reset when the status changes.
  * @property pinnedAmount the exact amount while [amountText] is only its rendering (see the
@@ -163,8 +168,12 @@ data class InternalTransferUIState(
             amount.toKeypadString()
         }
 
-    /** What the amount may not exceed: Max (balance minus fee) when known, else the balance. */
-    val limit: Dash? get() = maxSendable ?: balance
+    /**
+     * What the amount may not exceed: Max (balance minus fee) when known, else the balance; for a
+     * pair whose Max is its bound ([maxBoundsAmount]) Max only (null blocks): the balance would
+     * overstate what the send accepts.
+     */
+    val limit: Dash? get() = if (maxBoundsAmount(from, to)) maxSendable else maxSendable ?: balance
 
     /** AC7: the amount is above Max; shown as "Insufficient balance" and blocks Continue. */
     val insufficientBalance: Boolean get() = limit?.let { amount.isGreaterThan(it) } == true
@@ -173,6 +182,7 @@ data class InternalTransferUIState(
         get() = support == InternalTransferSupport.SUPPORTED &&
             amount.isPositive &&
             balance != null &&
+            limit != null &&
             !insufficientBalance &&
             (dashMode || rate != null || pinnedAmount != null || maxAmount != null) &&
             formEditable
@@ -383,8 +393,23 @@ class InternalTransferViewModel @Inject constructor(
             .onEach { balance ->
                 if (generation == balanceGeneration) _uiState.update { it.copy(balance = balance) }
             }
-            .mapLatest { balance -> if (balance == null) null else service.maxSendable(from, to) }
-            .onEach { max ->
+            .transformLatest { balance ->
+                if (balance == null) {
+                    emit(null)
+                    return@transformLatest
+                }
+                var max = service.maxSendable(from, to)
+                emit(max)
+                // For a pair whose Max is its bound, an unknown Max blocks Continue, and an
+                // unchanged balance never re-reads it (as in the External Send). So a failed
+                // read is retried on the balance poll cadence until it is known.
+                while (max == null && maxBoundsAmount(from, to)) {
+                    delay(ExternalSendServiceImpl.BALANCE_POLL_MS)
+                    max = service.maxSendable(from, to)
+                    if (max != null) emit(max)
+                }
+            }
+            .onEach { max: Dash? ->
                 if (generation == balanceGeneration) _uiState.update { it.copy(maxSendable = max) }
             }
             .launchIn(viewModelScope)

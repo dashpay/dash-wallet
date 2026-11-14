@@ -11,7 +11,9 @@ buildscript {
         // Pre-release SDK snapshot published to the Sonatype snapshots repository
         // (declared below as 'Central Portal Snapshots'; anonymous read). Pinned to
         // the exact timestamped build, not the -SNAPSHOT name, so a later upload
-        // can't change what this commit builds. 5.1.0-int38: HashEngineering/platform
+        // can't change what this commit builds. 5.1.0-int39 = int38 plus a Kotlin binding of
+        // #5860 (IdentityCredits.topUpExternalIdentityFromAddresses: top up an identity the
+        // wallet does not manage from its Platform addresses). int38: HashEngineering/platform
         // integration/5.1.0-int38 @ c45221249f = int37's bindings (the partial-amount
         // Platform-address withdrawal #5830, the third-party shields shieldedShieldToRecipient
         // and shieldedShieldFromIdentityToRecipient) on v5.1-dev up to 185d0e6924, which adds
@@ -20,7 +22,7 @@ buildscript {
         // outcome; getRecentStateTransitionStatus), #5762 (persist the Orchard recipient of a
         // shielded asset-lock funding), the Rust-owned TXO reconcile engine and DashPay private
         // contact requests (#5809/#5810/#5813).
-        dashSdkVersion = '5.1.0-int38-20261111.213211-1'
+        dashSdkVersion = '5.1.0-int39-20261113.161202-1'
         // Legacy dashj-platform SDK (org.dashj.platform), master's pin. It replaces the
         // 5.0.0-20261016.200955-3 snapshot this branch pinned for document serialization
         // format 3 (Platform protocol 14) and the IdentityPublicKey.toObject() CBOR fix;

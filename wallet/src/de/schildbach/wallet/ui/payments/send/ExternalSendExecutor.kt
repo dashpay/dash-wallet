@@ -260,9 +260,10 @@ class ExternalSendExecutor internal constructor(
                     result = ExternalSendResult.NotSent(NotSentReason.GENERIC)
                 }
                 if (marked && !isCurrent()) {
-                    // A wipe ran while the marker was written, possibly after it cleared the
-                    // marker: this one belongs to the wiped wallet. Nothing is sent.
-                    withContext(NonCancellable) { clearMarker() }
+                    // A wipe ran while the marker was written: nothing is sent. The marker is
+                    // left alone, as in the finally path: by now it may be the replacement
+                    // wallet's own send's, and clearing it would drop that send's restart
+                    // protection. Worst case one spurious "interrupted" warning, the safe side.
                     marked = false
                     result = ExternalSendResult.NotSent(NotSentReason.GENERIC)
                 }

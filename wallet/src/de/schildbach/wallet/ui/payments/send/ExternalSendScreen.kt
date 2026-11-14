@@ -56,6 +56,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.schildbach.wallet.service.platform.sdk.ExternalSendResult
+import de.schildbach.wallet.service.platform.sdk.FeeEstimate
 import de.schildbach.wallet.service.platform.sdk.IdentityResolution
 import de.schildbach.wallet.service.platform.sdk.SendBalance
 import de.schildbach.wallet.service.platform.sdk.SendDestination
@@ -541,9 +542,9 @@ private fun ConfirmSheet(uiState: ExternalSendUIState, confirm: ExternalSendConf
         else -> ExternalSendViewModel.shorten(destination.display)
     }
     SendConfirmSheet(
-        // What the recipient receives (a Core Max drain: the amount minus the fee; a
-        // Shielded → Core Max: the amount minus the Core fee).
-        amount = confirm.recipientAmount,
+        // What the recipient receives (a Core Max drain: the amount minus the fee, unknown
+        // while the fee is; a Shielded → Core Max: the amount minus the Core fee).
+        amount = confirm.recipientAmount?.takeIf { !confirm.feeIncluded || !confirm.feeLoading },
         rate = uiState.rate,
         fiatCode = uiState.fiatCode,
         fromValue = stringResource(balanceNameFor(request.source)),
@@ -559,25 +560,22 @@ private fun ConfirmSheet(uiState: ExternalSendUIState, confirm: ExternalSendConf
 }
 
 /**
- * Figma 7107:48425: from the Shielded balance to anywhere but Shielded, the send is not instant
- * and becomes public. An identity destination is paid into its Platform balance (AC8).
+ * Figma 7107:48594 (in 7107:48421): from the Shielded balance to anywhere but Shielded, two
+ * System messages: the send is not instant (icon `info-rect-small`), and the amount and
+ * destination become public (icon `system_message-public`). No other route shows a note.
  */
-internal fun externalConfirmNotes(source: SendBalance, destination: SendDestination): List<Int> = buildList {
-    if (source == SendBalance.SHIELDED && destination !is SendDestination.Shielded) {
-        add(R.string.external_send_shielded_not_instant)
-        add(
-            when (destination) {
-                is SendDestination.Core -> R.string.external_send_shielded_public_to_core
-                is SendDestination.Platform -> R.string.external_send_shielded_public_to_platform
-                else -> R.string.external_send_shielded_public_to_identity
-            }
-        )
+internal fun externalConfirmNotes(source: SendBalance, destination: SendDestination): List<ConfirmNote> {
+    if (source != SendBalance.SHIELDED || destination is SendDestination.Shielded) return emptyList()
+    val publicNote = when (destination) {
+        is SendDestination.Core -> R.string.external_send_shielded_public_to_core
+        is SendDestination.Platform -> R.string.external_send_shielded_public_to_platform
+        else -> R.string.external_send_shielded_public_to_identity
     }
-    if (destination is SendDestination.Identity) {
-        add(R.string.external_send_identity_balance_note)
-    }
+    return listOf(
+        ConfirmNote.notInstant(R.string.external_send_shielded_not_instant),
+        ConfirmNote.becomesPublic(publicNote)
+    )
 }
-
 
 // ── Icons and names ─────────────────────────────────────────────────────────
 
@@ -624,6 +622,55 @@ private fun ExternalSendAmountPreview() {
                 amountText = "1",
                 balance = Dash.COIN * 2L,
                 maxSendable = Dash.COIN * 2L
+            ),
+            actions = previewActions()
+        )
+    }
+}
+
+/** QA's case (MO-1121): a small phone; Cancel/Confirm must stay on screen, the details scroll. */
+@Preview(showBackground = true, widthDp = 320, heightDp = 640)
+@Composable
+private fun ExternalSendConfirmShieldedToIdentitySmallPreview() {
+    ConfirmPreview(SendDestination.Identity("3rTvtFT7juaJkxdY3Fh6oQBbeBeXsp9gY8HgKLUPowM5"))
+}
+
+/** Figma 7107:48421 (Shielded → Core) on a small phone. */
+@Preview(showBackground = true, widthDp = 320, heightDp = 640)
+@Composable
+private fun ExternalSendConfirmShieldedToCoreSmallPreview() {
+    ConfirmPreview(SendDestination.Core("yjSvwyLB5X4dqQqVMPMu6UdrFpYZ3u9v5U"))
+}
+
+/** Figma 7107:48421 at its own size (420 x 840). */
+@Preview(showBackground = true, widthDp = 420, heightDp = 840)
+@Composable
+private fun ExternalSendConfirmShieldedToCorePreview() {
+    ConfirmPreview(SendDestination.Core("yjSvwyLB5X4dqQqVMPMu6UdrFpYZ3u9v5U"))
+}
+
+@Composable
+private fun ConfirmPreview(destination: SendDestination) {
+    val amount = Dash(50_000_000L)
+    DashWalletTheme {
+        ExternalSendScreen(
+            uiState = ExternalSendUIState(
+                step = ExternalSendStep.AMOUNT,
+                destination = destination,
+                source = SendBalance.SHIELDED,
+                amountText = "0.5",
+                balance = Dash.COIN * 2L,
+                confirm = ExternalSendConfirm(
+                    request = ExternalSendRequest(
+                        source = SendBalance.SHIELDED,
+                        destination = destination,
+                        amount = amount,
+                        isMax = false,
+                        expectedWalletIdHex = null
+                    ),
+                    fee = FeeEstimate(Dash(10_000L), exact = false),
+                    feeLoading = false
+                )
             ),
             actions = previewActions()
         )

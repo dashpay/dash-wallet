@@ -19,6 +19,7 @@ package de.schildbach.wallet.ui.payments.internal
 
 import androidx.lifecycle.SavedStateHandle
 import de.schildbach.wallet.service.platform.sdk.ExternalSendResult
+import de.schildbach.wallet.service.platform.sdk.ExternalSendServiceImpl
 import de.schildbach.wallet.service.platform.sdk.FeeEstimate
 import de.schildbach.wallet.service.platform.sdk.InternalTransferService
 import de.schildbach.wallet.service.platform.sdk.InternalTransferSupport
@@ -28,6 +29,7 @@ import de.schildbach.wallet.service.platform.sdk.SendBalance.CORE
 import de.schildbach.wallet.service.platform.sdk.SendBalance.IDENTITY
 import de.schildbach.wallet.service.platform.sdk.SendBalance.PLATFORM
 import de.schildbach.wallet.service.platform.sdk.SendBalance.SHIELDED
+import de.schildbach.wallet.ui.payments.send.ConfirmNote
 import de.schildbach.wallet.ui.payments.send.ExternalSendInFlightMarker
 import de.schildbach.wallet.ui.payments.send.ExternalSendStatus
 import de.schildbach.wallet_test.R
@@ -110,10 +112,11 @@ class InternalTransferViewModelTest {
     private val rate = MutableStateFlow<ExchangeRate?>(null)
     private val marker = FakeMarker()
     private lateinit var executor: InternalTransferExecutor
+    private val mainDispatcher = UnconfinedTestDispatcher()
 
     @Before
     fun setUp() {
-        Dispatchers.setMain(UnconfinedTestDispatcher())
+        Dispatchers.setMain(mainDispatcher)
         executor = InternalTransferExecutor(service, marker, CoroutineScope(UnconfinedTestDispatcher()))
     }
 
@@ -238,6 +241,32 @@ class InternalTransferViewModelTest {
         // The own Platform address receives the amount; the lock fee is paid on top (not exact).
         assertEquals(oneDash + Dash(1000), confirm.total)
         assertFalse(requireNotNull(confirm.fee).exact)
+    }
+
+    @Test
+    fun `Platform to Core is bounded by Max only, and a failed Max read is retried`() {
+        service.balances.getValue(PLATFORM).value = twoDash
+        val viewModel = buildViewModel()
+        viewModel.onShowPicker(InternalTransferPicker.FROM)
+        viewModel.onBalancePicked(PLATFORM)
+        viewModel.onShowPicker(InternalTransferPicker.TO)
+        viewModel.onBalancePicked(CORE)
+        assertEquals(PLATFORM to CORE, viewModel.state.from to viewModel.state.to)
+        viewModel.type("1")
+        assertNull(viewModel.state.maxSendable)
+        // The balance would overstate what the withdrawal takes: an unknown Max blocks Continue.
+        assertNull(viewModel.state.limit)
+        assertFalse(viewModel.state.canContinue)
+
+        // The balance does not change; only the retry can recover.
+        service.max[PLATFORM to CORE] = oneDash
+        mainDispatcher.scheduler.advanceTimeBy(ExternalSendServiceImpl.BALANCE_POLL_MS + 1)
+        mainDispatcher.scheduler.runCurrent()
+
+        assertEquals(oneDash, viewModel.state.maxSendable)
+        assertTrue(viewModel.state.canContinue)
+        viewModel.type("5")
+        assertTrue(viewModel.state.insufficientBalance)
     }
 
     @Test
@@ -569,11 +598,17 @@ class InternalTransferViewModelTest {
     @Test
     fun `confirm notes reuse the External Send notes`() {
         assertEquals(
-            listOf(R.string.external_send_shielded_not_instant, R.string.external_send_shielded_public_to_core),
+            listOf(
+                ConfirmNote(R.string.external_send_shielded_not_instant, R.drawable.ic_system_message_info),
+                ConfirmNote(R.string.external_send_shielded_public_to_core, R.drawable.ic_system_message_public)
+            ),
             internalConfirmNotes(SHIELDED, CORE)
         )
-        assertEquals(listOf(R.string.internal_transfer_withdrawal_not_instant), internalConfirmNotes(IDENTITY, CORE))
-        assertEquals(emptyList<Int>(), internalConfirmNotes(CORE, SHIELDED))
+        assertEquals(
+            listOf(ConfirmNote(R.string.internal_transfer_withdrawal_not_instant, R.drawable.ic_system_message_info)),
+            internalConfirmNotes(IDENTITY, CORE)
+        )
+        assertEquals(emptyList<ConfirmNote>(), internalConfirmNotes(CORE, SHIELDED))
     }
 
     // ── rate changes ─────────────────────────────────────────────────────────

@@ -56,6 +56,7 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import de.schildbach.wallet.service.platform.sdk.InternalTransferSupport
 import de.schildbach.wallet.service.platform.sdk.SendBalance
+import de.schildbach.wallet.ui.payments.send.ConfirmNote
 import de.schildbach.wallet.ui.payments.send.ExternalSendStatus
 import de.schildbach.wallet.ui.payments.send.ResultOverlay
 import de.schildbach.wallet.ui.payments.send.SendConfirmSheet
@@ -171,19 +172,21 @@ private fun ConfirmSheet(uiState: InternalTransferUIState, confirm: InternalTran
  * The confirm notes (AC11/AC13, reusing the External Send's): out of Shielded the transfer is not
  * instant and its amount becomes public; Identity → Core is a withdrawal that takes some time.
  */
-internal fun internalConfirmNotes(from: SendBalance, to: SendBalance): List<Int> = buildList {
+internal fun internalConfirmNotes(from: SendBalance, to: SendBalance): List<ConfirmNote> = buildList {
     if (from == SendBalance.SHIELDED && to != SendBalance.SHIELDED) {
-        add(R.string.external_send_shielded_not_instant)
+        add(ConfirmNote.notInstant(R.string.external_send_shielded_not_instant))
         add(
-            when (to) {
-                SendBalance.CORE -> R.string.external_send_shielded_public_to_core
-                SendBalance.PLATFORM -> R.string.external_send_shielded_public_to_platform
-                else -> R.string.external_send_shielded_public_to_identity
-            }
+            ConfirmNote.becomesPublic(
+                when (to) {
+                    SendBalance.CORE -> R.string.external_send_shielded_public_to_core
+                    SendBalance.PLATFORM -> R.string.external_send_shielded_public_to_platform
+                    else -> R.string.external_send_shielded_public_to_identity
+                }
+            )
         )
     }
     if (from == SendBalance.IDENTITY && to == SendBalance.CORE) {
-        add(R.string.internal_transfer_withdrawal_not_instant)
+        add(ConfirmNote.notInstant(R.string.internal_transfer_withdrawal_not_instant))
     }
 }
 

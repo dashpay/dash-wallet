@@ -22,6 +22,7 @@ import de.schildbach.wallet.service.platform.sdk.Bech32m
 import de.schildbach.wallet.service.platform.sdk.DestinationParse
 import de.schildbach.wallet.service.platform.sdk.ExternalSendResult
 import de.schildbach.wallet.service.platform.sdk.ExternalSendService
+import de.schildbach.wallet.service.platform.sdk.ExternalSendServiceImpl
 import de.schildbach.wallet.service.platform.sdk.FeeEstimate
 import de.schildbach.wallet.service.platform.sdk.IdentityResolution
 import de.schildbach.wallet.service.platform.sdk.NotSentReason
@@ -29,6 +30,7 @@ import de.schildbach.wallet.service.platform.sdk.SendBalance
 import de.schildbach.wallet.service.platform.sdk.SendDestination
 import de.schildbach.wallet.service.platform.sdk.SendSupport
 import de.schildbach.wallet.service.platform.sdk.WITHDRAWAL_CORE_FEE_DUFFS
+import de.schildbach.wallet.ui.more.connections.protocol.DashConnectUri
 import de.schildbach.wallet.ui.shielded.toKeypadString
 import de.schildbach.wallet_test.R
 import io.mockk.every
@@ -137,7 +139,11 @@ class ExternalSendViewModelTest {
             return value
         }
 
+        /** When set, [set] suspends on it before writing (a slow marker write). */
+        var setGate: CompletableDeferred<Unit>? = null
+
         override suspend fun set() {
+            setGate?.await()
             if (failWrites) throw java.io.IOException("datastore")
             log += "set"
             value = true
@@ -160,9 +166,11 @@ class ExternalSendViewModelTest {
     private val marker = FakeMarker()
     private lateinit var executor: ExternalSendExecutor
 
+    private val mainDispatcher = UnconfinedTestDispatcher()
+
     @Before
     fun setUp() {
-        Dispatchers.setMain(UnconfinedTestDispatcher())
+        Dispatchers.setMain(mainDispatcher)
         executor = newExecutor()
     }
 
@@ -269,20 +277,25 @@ class ExternalSendViewModelTest {
         service.ownIdentity = false
         val other = buildViewModel().apply { goToAmount(identityId) }
         assertEquals(SendBalance.SHIELDED, other.uiState.value.source)
-        // Platform tops up only a managed identity (someone else's needs platform#5860).
-        assertEquals(SendSupport.NEEDS_OWN_IDENTITY, other.uiState.value.supportOf(SendBalance.PLATFORM))
-        other.onSourceSelected(SendBalance.PLATFORM)
+        // Core tops up only a managed identity; Platform tops up anyone's (platform#5860).
+        assertEquals(SendSupport.NEEDS_OWN_IDENTITY, other.uiState.value.supportOf(SendBalance.CORE))
+        assertEquals(SendSupport.SUPPORTED, other.uiState.value.supportOf(SendBalance.PLATFORM))
+        other.onSourceSelected(SendBalance.CORE)
         assertEquals(SendBalance.SHIELDED, other.uiState.value.source)
+        other.onSourceSelected(SendBalance.PLATFORM)
+        assertEquals(SendBalance.PLATFORM, other.uiState.value.source)
 
         service.ownIdentity = true
         val own = buildViewModel().apply { goToAmount(identityId) }
         assertEquals(SendBalance.CORE, own.uiState.value.source)
         assertEquals(SendSupport.SUPPORTED, own.uiState.value.supportOf(SendBalance.PLATFORM))
 
-        // Could not tell: fails closed.
+        // Could not tell: Core fails closed; Platform does not depend on it (the send
+        // refuses when the managed set is unreadable).
         service.ownIdentity = null
         val unknown = buildViewModel().apply { goToAmount(identityId) }
-        assertEquals(SendSupport.NEEDS_OWN_IDENTITY, unknown.uiState.value.supportOf(SendBalance.PLATFORM))
+        assertEquals(SendSupport.NEEDS_OWN_IDENTITY, unknown.uiState.value.supportOf(SendBalance.CORE))
+        assertEquals(SendSupport.SUPPORTED, unknown.uiState.value.supportOf(SendBalance.PLATFORM))
     }
 
     @Test
@@ -373,6 +386,49 @@ class ExternalSendViewModelTest {
     }
 
     @Test
+    fun platformToCore_isBoundedByItsMaxOnly_neverByTheBalance() {
+        // MO-1121 QA: 0.02039398 on Platform; the withdrawal fee reserve leaves 0.01638708.
+        val cap = Dash(1_638_708L)
+        service.balances.getValue(SendBalance.PLATFORM).value = Dash(2_039_398L)
+        val viewModel = buildViewModel()
+        viewModel.goToAmount(coreAddress)
+        viewModel.onSourceSelected(SendBalance.PLATFORM)
+        assertEquals(SendBalance.PLATFORM, viewModel.uiState.value.source)
+
+        // Max unknown (unreadable or none): Continue is blocked, not bounded by the balance.
+        assertNull(viewModel.uiState.value.maxSendable)
+        viewModel.type("0.01")
+        assertNull(viewModel.uiState.value.limit)
+        assertFalse("unknown max", viewModel.uiState.value.canContinueAmount)
+
+        // Known: the cap bounds the amount, and Max fills exactly the cap.
+        service.max[SendBalance.PLATFORM] = cap
+        service.balances.getValue(SendBalance.PLATFORM).value = Dash(2_039_399L)
+        assertEquals(cap, viewModel.uiState.value.limit)
+        assertTrue(viewModel.uiState.value.canContinueAmount)
+        viewModel.onMaxClick()
+        assertTrue(viewModel.uiState.value.isMax)
+        assertEquals(cap, viewModel.uiState.value.amount)
+        assertTrue(viewModel.uiState.value.canContinueAmount)
+
+        // The QA amount: under the balance, over the cap.
+        val over = ExternalSendUIState(
+            step = ExternalSendStep.AMOUNT,
+            destination = SendDestination.Core(coreAddress),
+            source = SendBalance.PLATFORM,
+            amountText = "0.01739398",
+            balance = Dash(2_039_398L),
+            maxSendable = cap
+        )
+        assertTrue(over.exceedsBalance)
+        assertFalse(over.canContinueAmount)
+        assertTrue(over.copy(amountText = "0.01638708").canContinueAmount)
+        assertFalse(over.copy(amountText = "0.01638709").canContinueAmount)
+        // Other pairs keep the balance as the bound while their Max is unknown.
+        assertTrue(over.copy(source = SendBalance.SHIELDED, maxSendable = null).canContinueAmount)
+    }
+
+    @Test
     fun continue_isBlockedForAnUnsupportedPair() {
         val state = ExternalSendUIState(
             step = ExternalSendStep.AMOUNT,
@@ -395,10 +451,13 @@ class ExternalSendViewModelTest {
             source = SendBalance.PLATFORM,
             amountText = "1",
             balance = twoDash,
+            maxSendable = twoDash,
             hasIdentity = true
         )
-        // Platform → Core (partial withdrawal), Platform / Identity → Shielded (third-party shields).
+        // Platform → Core (partial withdrawal, bounded by its known Max), Platform / Identity →
+        // Shielded (third-party shields).
         assertTrue(state.canContinueAmount)
+        assertFalse(state.copy(maxSendable = null).canContinueAmount)
         assertTrue(state.copy(destination = SendDestination.Shielded(shieldedAddress)).canContinueAmount)
         assertTrue(
             state.copy(source = SendBalance.IDENTITY, destination = SendDestination.Shielded(shieldedAddress))
@@ -450,6 +509,43 @@ class ExternalSendViewModelTest {
         assertEquals(twoDash - Dash(1_000), confirm.recipientAmount)
         assertEquals(twoDash, confirm.total)
         assertEquals(confirm.request, viewModel.confirmedRequest())
+    }
+
+    @Test
+    fun aCoreMaxDrain_withTheFeeUnknown_hasNoRecipientAmount() {
+        val drain = ExternalSendConfirm(
+            ExternalSendRequest(SendBalance.CORE, SendDestination.Core(coreAddress), twoDash, isMax = true, WALLET_A),
+            fee = null,
+            feeLoading = true
+        )
+        assertTrue(drain.feeIncluded)
+        // Not the gross amount: that would overstate what the recipient receives.
+        assertNull(drain.recipientAmount)
+        assertNull(drain.copy(feeLoading = false).recipientAmount)
+        // The total of a drain is the confirmed amount itself, fee or not.
+        assertEquals(twoDash, drain.total)
+        assertEquals(twoDash - Dash(1_000), drain.copy(fee = FeeEstimate(Dash(1_000), exact = true), feeLoading = false).recipientAmount)
+    }
+
+    @Test
+    fun platformToCore_aFailedMaxRead_isRetried_whileTheBalanceIsUnchanged() {
+        service.balances.getValue(SendBalance.PLATFORM).value = twoDash
+        service.max[SendBalance.PLATFORM] = null
+        val viewModel = buildViewModel()
+        viewModel.goToAmount(coreAddress)
+        viewModel.onSourceSelected(SendBalance.PLATFORM)
+        viewModel.type("1")
+        assertNull(viewModel.uiState.value.maxSendable)
+        // Max is the bound for Platform → Core: unknown blocks Continue.
+        assertFalse(viewModel.uiState.value.canContinueAmount)
+
+        // The balance does not change (the feed is distinct); only the retry can recover.
+        service.max[SendBalance.PLATFORM] = oneDash
+        mainDispatcher.scheduler.advanceTimeBy(ExternalSendServiceImpl.BALANCE_POLL_MS + 1)
+        mainDispatcher.scheduler.runCurrent()
+
+        assertEquals(oneDash, viewModel.uiState.value.maxSendable)
+        assertTrue(viewModel.uiState.value.canContinueAmount)
     }
 
     @Test
@@ -725,6 +821,21 @@ class ExternalSendViewModelTest {
         )
     }
 
+    @Test
+    fun scanAction_withTheSharedPredicate_routesEveryDashConnectCarrier() {
+        // The fragment passes DashConnectUri::isConnectUri, as the Basic Send tab does.
+        for (input in listOf("dash-key:abc", "dash-st:abc", "dashpay://connect?x=1")) {
+            assertEquals(
+                AdvancedScanAction.DashConnect(input),
+                AdvancedSendViewModel.scanActionFor(input, network, true, DashConnectUri::isConnectUri)
+            )
+        }
+        assertEquals(
+            AdvancedScanAction.ExternalSend(identityId),
+            AdvancedSendViewModel.scanActionFor(identityId, network, true, DashConnectUri::isConnectUri)
+        )
+    }
+
     // ── review round 1 regressions ───────────────────────────────────────────
 
     @Test
@@ -901,6 +1012,25 @@ class ExternalSendViewModelTest {
         // The executor is free for the next wallet.
         service.sendResult = ExternalSendResult.NotSent(NotSentReason.NOT_SYNCED)
         assertTrue(executor.submit(service.sends.single()))
+    }
+
+    @Test
+    fun aMarkerWrite_resumingAfterAWipe_sendsNothing_andLeavesTheMarkerAlone() {
+        val setGate = CompletableDeferred<Unit>()
+        marker.setGate = setGate
+        sendOnce()
+        assertTrue(executor.state.value is ExternalSendExecution.Sending)
+
+        runBlocking { executor.forgetWalletState() }
+        val clearsAfterWipe = marker.clearCalls
+        // The marker write lands after the wipe; it may now be the next wallet's send's.
+        setGate.complete(Unit)
+        marker.setGate = null
+
+        assertTrue(service.sends.isEmpty())
+        assertTrue(marker.value)
+        assertEquals(clearsAfterWipe, marker.clearCalls)
+        assertEquals(ExternalSendExecution.Idle, executor.state.value)
     }
 
     @Test
