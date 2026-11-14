@@ -25,7 +25,7 @@ import android.security.keystore.KeyPermanentlyInvalidatedException
 import android.view.View
 import android.view.animation.AnimationUtils
 import android.view.inputmethod.InputMethodManager
-import androidx.activity.addCallback
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.core.view.isVisible
@@ -148,6 +148,36 @@ open class LockScreenActivity : SecureActivity(), LockScreenHost {
         _walletLocked.value = true
     }
 
+    /**
+     * Back for the activity itself, at the LOWEST priority for its whole life: added once in
+     * [onCreate] without a LifecycleOwner, so every fragment, NavController and Compose
+     * `BackHandler` callback is above it, and removed in [onDestroy].
+     *
+     * It used to be added with the activity as LifecycleOwner. Such a callback is removed at
+     * ON_STOP and re-added at ON_START, and the activity's ON_START comes after its fragments
+     * have started, so after any screen-off it was re-added above every fragment's callback and
+     * took Back from them (a Compose sheet or outcome on Advanced Payments: Back left the screen
+     * instead of closing it).
+     */
+    private val backNavigationCallback = object : OnBackPressedCallback(true) {
+        override fun handleOnBackPressed() = handleBackNavigation()
+    }
+
+    /**
+     * Swallows Back while the lock screen covers the content, which the fragments under it must
+     * not get. Enabled only then ([syncLockScreenBackCallback]), and kept at the TOP: it has the
+     * activity as LifecycleOwner, so each ON_START (after the fragments') re-adds it above them,
+     * and [setLockState] re-adds it when the lock screen comes up over callbacks added since.
+     * It calls [handleBackNavigation], which ignores Back while [lockScreenDisplayed].
+     */
+    private val lockScreenBackCallback = object : OnBackPressedCallback(true) {
+        override fun handleOnBackPressed() = handleBackNavigation()
+    }
+
+    private fun syncLockScreenBackCallback() {
+        lockScreenBackCallback.isEnabled = lockScreenDisplayed
+    }
+
     private val temporaryLockCheckHandler = Handler()
     private val temporaryLockCheckInterval = TimeUnit.SECONDS.toMillis(10)
     private val temporaryLockCheckRunnable = Runnable {
@@ -231,9 +261,9 @@ open class LockScreenActivity : SecureActivity(), LockScreenHost {
         binding = ActivityLockScreenRootBinding.inflate(layoutInflater)
         super.setContentView(binding.root)
         isLocked = autoLogout.shouldLogout()
-        onBackPressedDispatcher.addCallback(this) {
-            handleBackNavigation()
-        }
+        onBackPressedDispatcher.addCallback(backNavigationCallback)
+        syncLockScreenBackCallback()
+        onBackPressedDispatcher.addCallback(this, lockScreenBackCallback)
 
         initView()
         initViewModel()
@@ -369,6 +399,7 @@ open class LockScreenActivity : SecureActivity(), LockScreenHost {
             handleLockScreenActivated()
         } else {
             binding.rootViewSwitcher.displayedChild = 1
+            syncLockScreenBackCallback()
             _walletLocked.value = false
             if (!keepUnlocked) {
                 autoLogout.maybeStartAutoLogoutTimer()
@@ -558,6 +589,7 @@ open class LockScreenActivity : SecureActivity(), LockScreenHost {
             overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
         } else {
             binding.rootViewSwitcher.displayedChild = 1
+            syncLockScreenBackCallback()
             _walletLocked.value = false
             // After the content is shown again: a listener may now re-show what the lock dismissed.
             lockScreenBroadcaster.notifyUnlocked()
@@ -662,6 +694,12 @@ open class LockScreenActivity : SecureActivity(), LockScreenHost {
 
         if (!lockScreenDisplayed) {
             binding.rootViewSwitcher.displayedChild = 0
+            syncLockScreenBackCallback()
+            // Back to the top, above any callback a screen added while the content showed. A
+            // callback with a LifecycleOwner is added at once while STARTED, at the next
+            // ON_START while stopped, and not at all once destroyed.
+            lockScreenBackCallback.remove()
+            onBackPressedDispatcher.addCallback(this, lockScreenBackCallback)
         }
     }
 
@@ -691,6 +729,9 @@ open class LockScreenActivity : SecureActivity(), LockScreenHost {
 
     override fun onDestroy() {
         super.onDestroy()
+        // Never added after an early-finished onCreate; remove() is a no-op then. The lock
+        // screen's callback goes with the lifecycle (ON_DESTROY).
+        backNavigationCallback.remove()
         temporaryLockCheckHandler.removeCallbacks(temporaryLockCheckRunnable)
         lockScreenDeactivatedListeners.clear()
     }

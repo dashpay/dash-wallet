@@ -35,7 +35,9 @@ import de.schildbach.wallet.service.platform.sdk.WITHDRAWAL_CORE_FEE_DUFFS
 import de.schildbach.wallet.service.platform.sdk.balanceKindOf
 import de.schildbach.wallet.service.platform.sdk.detectSendDestination
 import de.schildbach.wallet.service.platform.sdk.externalSendSupport
+import de.schildbach.wallet.service.platform.sdk.hasShieldedLeg
 import de.schildbach.wallet.service.platform.sdk.maxBoundsAmount
+import de.schildbach.wallet.service.platform.sdk.pickerBalances
 import de.schildbach.wallet.ui.shielded.parseDashOrNull
 import de.schildbach.wallet.ui.shielded.parseDecimalOrNull
 import de.schildbach.wallet.ui.shielded.toDashAt
@@ -91,6 +93,19 @@ sealed class ExternalSendStatus {
 }
 
 /**
+ * Whether a send from [source] to a Core address withdraws [amount][ExternalSendRequest.amount]
+ * itself, with DPP taking the asset unlock's Core fee ([WITHDRAWAL_CORE_FEE_DUFFS]) out of it:
+ * a Shielded → Core Max. Every other withdrawal to Core withdraws the fee on top of the amount
+ * (`ExternalSendServiceImpl.sendFromShielded`). Shared by the External Send and Internal
+ * Transfer confirm sheets.
+ */
+internal fun withdrawalCoreFeeIncluded(source: SendBalance, toCore: Boolean, isMax: Boolean): Boolean =
+    isMax && toCore && source == SendBalance.SHIELDED
+
+/** What the recipient of a [withdrawalCoreFeeIncluded] withdrawal of [amount] receives. */
+internal fun amountAfterWithdrawalCoreFee(amount: Dash): Dash = amount - Dash(WITHDRAWAL_CORE_FEE_DUFFS)
+
+/**
  * The confirm sheet: [request] is exactly what Confirm sends. [fee] null with [feeLoading] false
  * means the fee cannot be known before the send (never fabricated).
  */
@@ -112,7 +127,7 @@ data class ExternalSendConfirm(
      * minus that fee. Every other withdrawal to Core withdraws the fee on top of the amount.
      */
     val coreFeeIncluded: Boolean
-        get() = request.isMax && request.source == SendBalance.SHIELDED && request.destination is SendDestination.Core
+        get() = withdrawalCoreFeeIncluded(request.source, request.destination is SendDestination.Core, request.isMax)
 
     /**
      * What the recipient receives: the amount; for a drain the amount minus the fee (null while
@@ -122,7 +137,7 @@ data class ExternalSendConfirm(
     val recipientAmount: Dash?
         get() = when {
             feeIncluded -> fee?.let { request.amount - it.fee }
-            coreFeeIncluded -> request.amount - Dash(WITHDRAWAL_CORE_FEE_DUFFS)
+            coreFeeIncluded -> amountAfterWithdrawalCoreFee(request.amount)
             else -> request.amount
         }
 
@@ -206,7 +221,7 @@ data class ExternalSendUIState(
 
     /** The sources the sheet lists, in order; Identity only for a user who has one. */
     val sources: List<SendBalance>
-        get() = SendBalance.entries.filter { it != SendBalance.IDENTITY || hasIdentity == true }
+        get() = pickerBalances(hasIdentity)
 
     /** Whether [source] can pay [destination]; null before a destination is set. */
     fun supportOf(source: SendBalance): SendSupport? = destination?.let {
@@ -321,10 +336,6 @@ class ExternalSendViewModel internal constructor(
         /** "tdash1z...lrs27eg4" — the first 7 and last 8 characters of a long address or id. */
         fun shorten(value: String, head: Int = 7, tail: Int = 8): String =
             if (value.length <= head + tail + 3) value else "${value.take(head)}...${value.takeLast(tail)}"
-
-        /** Whether a send from [source] to [destination] involves a ~30 s shielded proof. */
-        fun hasShieldedLeg(source: SendBalance, destination: SendDestination): Boolean =
-            source == SendBalance.SHIELDED || destination is SendDestination.Shielded
     }
 
     private val _uiState = MutableStateFlow(ExternalSendUIState())
@@ -379,7 +390,7 @@ class ExternalSendViewModel internal constructor(
                     // An outcome being dismissed: no dialog, nothing can be sent yet.
                     ExternalSendExecution.Acknowledging -> ExternalSendStatus.Restoring
                     is ExternalSendExecution.Sending -> ExternalSendStatus.Sending(
-                        hasShieldedLeg(execution.request.source, execution.request.destination)
+                        hasShieldedLeg(execution.request.source, balanceKindOf(execution.request.destination))
                     )
                     is ExternalSendExecution.Finished -> ExternalSendStatus.Done(execution.result)
                 }

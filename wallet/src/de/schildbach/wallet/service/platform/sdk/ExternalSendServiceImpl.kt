@@ -408,6 +408,38 @@ internal fun logReadRetry(
     retryLog.warn("external send: {} unreadable; unknown, retrying in {} ms ({})", what, retryDelayMs(attempt), safeErrorSummary(cause))
 }
 
+/**
+ * The user's registered identity id from the identity record ([id] and its creation [state]),
+ * null when there is none yet; an unknown creation state throws (unknown, not "none").
+ */
+internal fun ownRegisteredIdentity(id: String?, state: String?): String? {
+    val creation = IdentityCreationState.valueOf(state ?: IdentityCreationState.NONE.name)
+    return id?.takeIf { it.isNotBlank() && creation >= IdentityCreationState.IDENTITY_REGISTERED }
+}
+
+/**
+ * [ownRegisteredIdentity] of the stored identity record, error-preserving: throws when it is
+ * unreadable. Shared by the External Send and the internal transfer sources.
+ */
+internal suspend fun BlockchainIdentityConfig.ownIdentityIdOrThrow(): String? = ownRegisteredIdentity(
+    getPreservingErrors(BlockchainIdentityConfig.IDENTITY_ID),
+    getPreservingErrors(BlockchainIdentityConfig.CREATION_STATE)
+)
+
+/** `USE_KOTLIN_SDK_SHIELDED`, error-preserving (absent = off): throws when unreadable. */
+internal suspend fun DashPayConfig.shieldedEnabledOrThrow(): Boolean =
+    getPreservingErrors(DashPayConfig.USE_KOTLIN_SDK_SHIELDED) == true
+
+/** The started SDK's wallet manager (starts the SDK first); throws when it is missing. */
+internal suspend fun DashSdkService.startedWalletManager(): org.dashfoundation.dashsdk.wallet.PlatformWalletManager {
+    ensureStarted()
+    return checkNotNull(walletManagerOrNull()) { "SDK wallet manager missing after ensureStarted()" }
+}
+
+/** The SDK wallet bound now: the single loaded one, null when none (or not exactly one) is. */
+internal suspend fun DashSdkService.boundWalletIdOrNull(): String? =
+    startedWalletManager().wallets.value.keys.singleOrNull()
+
 private val retryLog = LoggerFactory.getLogger("de.schildbach.wallet.service.platform.sdk.ExternalSendRetry")
 
 /**
@@ -618,10 +650,8 @@ internal class DashSdkExternalSendSource(
     private val fundingGate: PendingPaymentFundingGate
 ) : ExternalSendSource {
 
-    private suspend fun manager(): org.dashfoundation.dashsdk.wallet.PlatformWalletManager {
-        sdkService.ensureStarted()
-        return checkNotNull(sdkService.walletManagerOrNull()) { "SDK wallet manager missing after ensureStarted()" }
-    }
+    private suspend fun manager(): org.dashfoundation.dashsdk.wallet.PlatformWalletManager =
+        sdkService.startedWalletManager()
 
     /** The PINNED wallet — never "whichever is current". */
     private suspend fun wallet(walletIdHex: String): org.dashfoundation.dashsdk.wallet.ManagedPlatformWallet =
@@ -629,35 +659,25 @@ internal class DashSdkExternalSendSource(
 
     override fun currentCoreSession(): WalletSession? = sendPaymentService.currentWalletSession()
 
-    override suspend fun boundWalletIdOrNull(): String? = manager().wallets.value.keys.singleOrNull()
+    override suspend fun boundWalletIdOrNull(): String? = sdkService.boundWalletIdOrNull()
 
     override fun currentBoundWalletIdOrNull(): String? = sdkService.loadedWalletIds().singleOrNull()
 
     override suspend fun cutoverCommittedOrThrow(): Boolean = sdkL1SendService.cutoverCommittedOrThrow()
 
-    override suspend fun shieldedEnabledOrThrow(): Boolean =
-        dashPayConfig.getPreservingErrors(DashPayConfig.USE_KOTLIN_SDK_SHIELDED) == true
+    override suspend fun shieldedEnabledOrThrow(): Boolean = dashPayConfig.shieldedEnabledOrThrow()
 
-    override suspend fun ownIdentityIdOrThrow(): String? = ownIdentity(
-        identityConfig.getPreservingErrors(BlockchainIdentityConfig.IDENTITY_ID),
-        identityConfig.getPreservingErrors(BlockchainIdentityConfig.CREATION_STATE)
-    )
+    override suspend fun ownIdentityIdOrThrow(): String? = identityConfig.ownIdentityIdOrThrow()
 
     override fun observeOwnIdentityId(): Flow<Result<String?>> =
         combine(
             identityConfig.observePreservingErrors(BlockchainIdentityConfig.IDENTITY_ID),
             identityConfig.observePreservingErrors(BlockchainIdentityConfig.CREATION_STATE)
-        ) { id, state -> Result.success(ownIdentity(id, state)) }
+        ) { id, state -> Result.success(ownRegisteredIdentity(id, state)) }
             .retryReadErrors(
                 Result.failure(IllegalStateException("identity record unreadable")),
                 onError = logReadRetry("identity record")
             )
-
-    /** A registered identity; an unknown creation state throws (unknown, not "none"). */
-    private fun ownIdentity(id: String?, state: String?): String? {
-        val creation = IdentityCreationState.valueOf(state ?: IdentityCreationState.NONE.name)
-        return id?.takeIf { it.isNotBlank() && creation >= IdentityCreationState.IDENTITY_REGISTERED }
-    }
 
     override suspend fun managedIdentityIds(walletIdHex: String): List<ByteArray> =
         wallet(walletIdHex).inMemoryIdentityStates().filter { !it.watched }.map { it.identityId }

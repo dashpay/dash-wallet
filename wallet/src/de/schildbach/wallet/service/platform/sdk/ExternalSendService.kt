@@ -90,6 +90,14 @@ sealed class ExternalSendResult {
      * user's OWN shielded balance instead; the recipient is not paid. Terminal; no retry.
      */
     object InterruptedFundsReturnToShielded : ExternalSendResult()
+
+    /**
+     * Internal transfer Core → own Shielded only ([InternalTransferService]): the L1 asset lock
+     * went out and the wallet's pending-shield sweep finishes the shield to the user's own
+     * shielded balance ([ShieldFromWalletOutcome.SHIELD_PENDING_RETRY]). Funds are not lost
+     * and nothing must be sent again. Terminal; no retry.
+     */
+    object CompletesAutomatically : ExternalSendResult()
 }
 
 /**
