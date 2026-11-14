@@ -18,6 +18,7 @@ package de.schildbach.wallet.ui
 
 import android.app.Application
 import android.net.Uri
+import android.os.Looper
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.WalletApplication.WalletInstallResult
 import de.schildbach.wallet.service.WalletFactory
@@ -26,9 +27,11 @@ import io.mockk.mockk
 import io.mockk.verify
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.Configuration
+import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
@@ -44,7 +47,7 @@ class RestoreWalletFromFileViewModelTest {
         val app = mockk<WalletApplication>(relaxed = true) { every { installWallet(any(), false) } returns WalletInstallResult.REFUSED }
         val viewModel = RestoreWalletFromFileViewModel(app, factory, configuration, mockk(relaxed = true))
 
-        viewModel.restoreWallet(viewModel.restoreWalletFromUri(uri, ""), null)
+        viewModel.restoreAndSettle(viewModel.restoreWalletFromUri(uri, ""))
 
         verify(exactly = 0) { configuration.armBackupReminder() }
         verify(exactly = 0) { configuration.armBackupSeedReminder() }
@@ -52,12 +55,35 @@ class RestoreWalletFromFileViewModelTest {
 
     @Test
     fun `an accepted keys-file wallet arms its backup reminders`() {
-        val app = mockk<WalletApplication>(relaxed = true) { every { installWallet(any(), false) } returns WalletInstallResult.INSTALLED }
+        var installedOnMain: Boolean? = null
+        val app = mockk<WalletApplication>(relaxed = true) {
+            every { installWallet(any(), false) } answers {
+                installedOnMain = Looper.myLooper() == Looper.getMainLooper()
+                WalletInstallResult.INSTALLED
+            }
+        }
         val viewModel = RestoreWalletFromFileViewModel(app, factory, configuration, mockk(relaxed = true))
 
-        viewModel.restoreWallet(viewModel.restoreWalletFromUri(uri, ""), null)
+        viewModel.restoreAndSettle(viewModel.restoreWalletFromUri(uri, ""))
 
         verify(exactly = 1) { configuration.armBackupReminder() }
         verify(exactly = 1) { configuration.armBackupSeedReminder() }
+        // PR #1700 review: the install can wait on the install lock, so it must not run on the main thread.
+        assertEquals(false, installedOnMain)
+    }
+
+    /** Restores, then pumps the main looper until the restore reports an outcome. */
+    private fun RestoreWalletFromFileViewModel.restoreAndSettle(restored: Wallet) {
+        var settled = false
+        walletReplacementRefused.observeForever { settled = true }
+        walletAlreadyInstalled.observeForever { settled = true }
+        startActivityAction.observeForever { settled = true }
+        restoreWallet(restored, null)
+        val deadline = System.currentTimeMillis() + 5_000
+        while (!settled) {
+            check(System.currentTimeMillis() < deadline) { "the restore never reported an outcome" }
+            shadowOf(Looper.getMainLooper()).idle()
+            Thread.sleep(10)
+        }
     }
 }

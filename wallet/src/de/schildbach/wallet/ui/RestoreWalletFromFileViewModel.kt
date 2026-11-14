@@ -29,7 +29,9 @@ import de.schildbach.wallet.service.WalletFactory
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.util.SingleLiveEvent
 import de.schildbach.wallet_test.R
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.Configuration
 import org.slf4j.LoggerFactory
@@ -80,17 +82,22 @@ class RestoreWalletFromFileViewModel @Inject constructor(
             showUpgradeWalletAction.call(wallet)
             return
         }
-        when (walletApplication.installWallet(wallet, false)) {
-            WalletInstallResult.ALREADY_INSTALLED -> {
-                log.warn("restored wallet dropped: another onboarding screen installed a wallet first")
-                keysFileWallet = null
-                walletAlreadyInstalled.call(Unit)
+        viewModelScope.launch {
+            // Off the main thread: the install can wait for the deferred load
+            // and for a primary save holding the install lock.
+            val result = withContext(Dispatchers.IO) { walletApplication.installWallet(wallet, false) }
+            when (result) {
+                WalletInstallResult.ALREADY_INSTALLED -> {
+                    log.warn("restored wallet dropped: another onboarding screen installed a wallet first")
+                    keysFileWallet = null
+                    walletAlreadyInstalled.call(Unit)
+                }
+                WalletInstallResult.REFUSED -> {
+                    log.warn("restored wallet refused: a wallet reset is unfinished or unverified")
+                    walletReplacementRefused.call(Unit)
+                }
+                WalletInstallResult.INSTALLED -> onRestoredWalletInstalled(wallet, password)
             }
-            WalletInstallResult.REFUSED -> {
-                log.warn("restored wallet refused: a wallet reset is unfinished or unverified")
-                walletReplacementRefused.call(Unit)
-            }
-            WalletInstallResult.INSTALLED -> onRestoredWalletInstalled(wallet, password)
         }
     }
 

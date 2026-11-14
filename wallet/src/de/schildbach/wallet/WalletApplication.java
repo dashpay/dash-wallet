@@ -1167,7 +1167,8 @@ public class WalletApplication extends MultiDexApplication
             log.warn("refusing to install a created or restored wallet: a wipe marker is on disk");
             return false;
         }
-        awaitDeferredWalletLoadForMutation();
+        // The deferred-load wait is the callers' (installWallet, setWallet),
+        // before they take walletInstallLock: never while holding it.
         EnumSet<AuthenticationKeyChain.KeyChainType> authKeyTypes = EnumSet.of(
                 AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER,
                 AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING,
