@@ -356,8 +356,8 @@ platform :android do
 	end
 
 	if is_ci
-		flavor=options[:flavor].capitalize
-		type=options[:type].capitalize
+		flavor = gradle_flavor(options[:flavor].to_s)
+		type = gradle_type(options[:type].to_s)
 		storepass=options[:storepass]
 		versioncode=options[:versioncode]
 		gradle(
