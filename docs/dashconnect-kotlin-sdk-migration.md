@@ -3,8 +3,11 @@
 Status: plan, 2026-10-28. Branch: `docs/dashconnect-sdk-migration` (based on `feat/kotlin-sdk-phase-1`).
 
 Updated 2026-11-12 for SDK 5.1.0-int36. `feat/kotlin-sdk-phase-1`, and so this branch, pins
-`dashSdkVersion = '5.1.0-int36-20261106.165805-1'`. The `dash-st:` decoder (PR-1) ships in int36, so PR-1 is done and
-the int32 backport question is settled. PR-2 and PR-3 still block. Key registration through
+`dashSdkVersion = '5.1.0-int36-20261106.165805-1'`. The `dash-st:` decoder (PR-1,
+`StateTransitionParser` from v5.1-dev `97f51a2bb`, Rust #4273/#4584) is in the int36 AAR, so the int32 backport is
+no longer needed. PR-1 is available but unverified: nobody has run it on a real `dash-st:` link or on the test
+vectors, and it closes only once phase 0 shows it exposes the agreed price as a typed field and parses the vectors
+correctly. PR-2 and PR-3 still block. Key registration through
 `BlockchainIdentity.addMissingKeys` and the identity-key backfill are now covered too.
 
 DashConnect v2 (merged from #1604) sends every Platform read and write through the legacy
@@ -61,20 +64,23 @@ inferred from names and parameter names and has not been run.
 | `client.getContractGroup` (:266) | — | **PR-2**. int36's `queries.Groups` has only `info` / `actions` / `actionSigners`, which are for token multisig groups, not contract-group members. |
 | `client.getContractGroupOwner` (:709) | — | **PR-2** |
 | `client.getPlatformTime` (13 calls) | — | **PR-3**. int36's `SystemQueries` has `epochsInfo` and `refreshProtocolVersion` but no block time. |
-| `dashsdk.prepareTokenPurchaseSdk` (:121, :152) | `identity.StateTransitionParser.parse(ByteArray): ParsedStateTransition` | Done in int36 (PR-1). See below. |
+| `dashsdk.prepareTokenPurchaseSdk` (:121, :152) | `identity.StateTransitionParser.parse(ByteArray): ParsedStateTransition` | Available in int36, unverified (PR-1). No typed field for the agreed price yet. See below. |
 
 `StateTransitionParser.parse` returns a `ParsedStateTransition` with `isSigned`, `complete`,
 `ownerId` and `kind`. The kinds are `Batch`, `CreditTransfer`, `DataContractCreate`,
 `DataContractUpdate`, `IdentityUpdate` and `Other`. `Batch.getTransitions()` returns
 `ParsedBatchedTransition.Document` / `.Token`, and `Token` exposes `tokenId`,
 `tokenContractPosition`, `action`, `amount`, `tokenCount`, `recipientId`, `dataContractId`,
-`complete` and `details`.
+`complete` and `details`. All of this comes from the class signatures; the parser has not
+been run on a real `dash-st:` link or on the vectors in `wallet/test/app-connect-vectors.json`.
 
 It is a parser only. The wallet still enforces the rules `prepare_token_purchase_sdk`
 enforces today: unsigned, a single direct purchase, no trailing bytes (`complete`), and a
-token ID that matches the request. The agreed total price has no typed field on `Token`; it
-may only be in the `details` string. Check that before relying on it, and add a typed field
-upstream if it is missing.
+token ID that matches the request. That is wallet work in phase 4. The agreed total price,
+which `prepareTokenPurchaseSdk` returns today, has no typed field on `Token`; it may only be
+in the `details` string. PR-1 closes only when the parser exposes the agreed price as a
+typed field and parses the test vectors correctly. If the price is missing, PR-1 becomes a
+small Platform PR that adds it.
 
 ### Signing
 
@@ -136,13 +142,14 @@ needs to land on the line the next int build is cut from.
 
 | PR | What | Where to start | Status upstream |
 |---|---|---|---|
-| **PR-1** | The `dash-st:` state-transition decoder for Kotlin. | — | **Done.** Ships in int36 as `identity.StateTransitionParser`. The wallet still adds its own checks (see [Reads](#reads)). Open item: whether the agreed total price is exposed other than in `details`. |
+| **PR-1** | The `dash-st:` state-transition decoder for Kotlin. | `identity.StateTransitionParser` (v5.1-dev `97f51a2bb`, Rust #4273/#4584). If the price is missing, add a typed agreed-price field to `ParsedBatchedTransition.Token`. | **Available in int36, unverified.** Not yet run on a real `dash-st:` link or the test vectors. **Closes only when the parser exposes the agreed total price as a typed field and parses `wallet/test/app-connect-vectors.json` correctly** (phase 0). If the price is missing, this becomes a small Platform PR that adds it. The wallet's own checks are wallet work in phase 4 (see [Reads](#reads)). |
 | **PR-2** | Contract-group queries for Kotlin: the owner, and a proof-verified snapshot of members and administration at one block. | Port #5421 (`rs-sdk-ffi/src/group/queries/contract_group_info.rs`, Swift-only today) to `rs-unified-sdk-jni` and `queries.*`. Snapshot logic: kotlin-platform `platform-mobile/src/app_connect.rs` `fetch_contract_group_snapshot_with_sdk`, `fetch_group_members`, `fetch_contract_group_owner_with_sdk`. Server queries from #4792. | New work. No open PR. Still missing in int36. |
 | **PR-3** | Platform block time. | kotlin-platform `app_connect.rs` `fetch_platform_time_with_sdk`: `Identity::fetch_with_metadata(...)` returning `metadata.time_ms`. Either expose it as `Identities.fetchWithTime` (or similar), or return response metadata from existing queries. | New work. No open PR. Still missing in int36. |
 | **PR-4** (only if needed) | The current proved contract-key ID for an identity, contract and purpose. | kotlin-platform `app_connect.rs` `fetch_current_contract_key_id_with_sdk`. | Only if `Identities.fetchContractKeys` doesn't return the same thing. |
 | **PR-5** (only if needed) | Let the caller choose the signing key on `IdentityUpdates.update` and `DocumentTransactions.create`. | `DocumentTransactions.delete` already takes `signingKeyId`; follow that. | Only if the SDK's own key choice is wrong for DashConnect (MASTER for identity updates, HIGH for the response document). Neither takes a key in int36. |
 
-PR-2 and PR-3 block the migration. PR-4 and PR-5 depend on what the checks in phase 0 find.
+PR-2 and PR-3 block the migration. PR-1 is conditional on the phase 0 price and vector
+check. PR-4 and PR-5 depend on what the other checks in phase 0 find.
 
 ## Phases
 
@@ -150,12 +157,12 @@ PR-2 and PR-3 block the migration. PR-4 and PR-5 depend on what the checks in ph
 
 - Check `Identities.fetchContractKeys` against `getCurrentContractKeyId` on testnet (decides PR-4).
 - Check which key `IdentityUpdates.update` and `DocumentTransactions.create` sign with (decides PR-5).
-- Check whether `StateTransitionParser` exposes the agreed total price other than in `details`.
+- Run `StateTransitionParser` on a real `dash-st:` link and on the vectors in `wallet/test/app-connect-vectors.json`, and check that it exposes the agreed total price as a typed field, not only in `details` (decides PR-1). PR-1 closes only if both hold; if the price is missing, PR-1 becomes a small Platform PR that adds it.
 - Check whether the SDK already has DIP-13 sub-feature (app key) derivation. If it does, a later step can move app-key derivation out of dashj.
 
 ### Phase 1: Platform PRs and SDK bump
 
-Open PR-2 and PR-3 (and PR-4 and PR-5 if phase 0 calls for them) in `dashpay/platform` and
+Open PR-2 and PR-3 (and PR-1, PR-4 and PR-5 if phase 0 calls for them) in `dashpay/platform` and
 publish a new `dash-sdk-android` build from the 5.1 line, then bump `dashSdkVersion` and
 `gradle/verification-metadata.xml`.
 
