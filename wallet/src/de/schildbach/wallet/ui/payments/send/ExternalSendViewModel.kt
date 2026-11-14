@@ -93,6 +93,19 @@ sealed class ExternalSendStatus {
 }
 
 /**
+ * Whether a send from [source] to a Core address withdraws [amount][ExternalSendRequest.amount]
+ * itself, with DPP taking the asset unlock's Core fee ([WITHDRAWAL_CORE_FEE_DUFFS]) out of it:
+ * a Shielded → Core Max. Every other withdrawal to Core withdraws the fee on top of the amount
+ * (`ExternalSendServiceImpl.sendFromShielded`). Shared by the External Send and Internal
+ * Transfer confirm sheets.
+ */
+internal fun withdrawalCoreFeeIncluded(source: SendBalance, toCore: Boolean, isMax: Boolean): Boolean =
+    isMax && toCore && source == SendBalance.SHIELDED
+
+/** What the recipient of a [withdrawalCoreFeeIncluded] withdrawal of [amount] receives. */
+internal fun amountAfterWithdrawalCoreFee(amount: Dash): Dash = amount - Dash(WITHDRAWAL_CORE_FEE_DUFFS)
+
+/**
  * The confirm sheet: [request] is exactly what Confirm sends. [fee] null with [feeLoading] false
  * means the fee cannot be known before the send (never fabricated).
  */
@@ -114,7 +127,7 @@ data class ExternalSendConfirm(
      * minus that fee. Every other withdrawal to Core withdraws the fee on top of the amount.
      */
     val coreFeeIncluded: Boolean
-        get() = request.isMax && request.source == SendBalance.SHIELDED && request.destination is SendDestination.Core
+        get() = withdrawalCoreFeeIncluded(request.source, request.destination is SendDestination.Core, request.isMax)
 
     /**
      * What the recipient receives: the amount; for a drain the amount minus the fee (null while
@@ -124,7 +137,7 @@ data class ExternalSendConfirm(
     val recipientAmount: Dash?
         get() = when {
             feeIncluded -> fee?.let { request.amount - it.fee }
-            coreFeeIncluded -> request.amount - Dash(WITHDRAWAL_CORE_FEE_DUFFS)
+            coreFeeIncluded -> amountAfterWithdrawalCoreFee(request.amount)
             else -> request.amount
         }
 

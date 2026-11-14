@@ -29,6 +29,7 @@ import de.schildbach.wallet.service.platform.sdk.SendBalance.CORE
 import de.schildbach.wallet.service.platform.sdk.SendBalance.IDENTITY
 import de.schildbach.wallet.service.platform.sdk.SendBalance.PLATFORM
 import de.schildbach.wallet.service.platform.sdk.SendBalance.SHIELDED
+import de.schildbach.wallet.service.platform.sdk.WITHDRAWAL_CORE_FEE_DUFFS
 import de.schildbach.wallet.ui.payments.send.ConfirmNote
 import de.schildbach.wallet.ui.payments.send.ExternalSendInFlightMarker
 import de.schildbach.wallet.ui.payments.send.ExternalSendStatus
@@ -429,6 +430,60 @@ class InternalTransferViewModelTest {
         assertFalse(confirm.feeLoading)
         assertEquals(oneDash + Dash(1000), confirm.total)
         assertEquals(confirm.request, viewModel.confirmedRequest())
+    }
+
+    @Test
+    fun `a Shielded to Core Max confirms the amount minus the Core fee, and sends the Max itself`() {
+        service.balances.getValue(SHIELDED).value = twoDash
+        service.max[SHIELDED to CORE] = oneDash
+        val fee = Dash(1000 + WITHDRAWAL_CORE_FEE_DUFFS)
+        service.fee = FeeEstimate(fee, exact = false)
+        service.gate = CompletableDeferred()
+        val viewModel = buildViewModel()
+        viewModel.onSwap() // Shielded → Core
+        viewModel.onMaxClick()
+        viewModel.onContinue()
+        val confirm = requireNotNull(viewModel.state.confirm)
+        assertEquals(InternalTransferRequest(SHIELDED, CORE, oneDash, true, WALLET_A), confirm.request)
+        assertTrue(confirm.coreFeeIncluded)
+        val recipient = oneDash - Dash(WITHDRAWAL_CORE_FEE_DUFFS)
+        assertEquals(recipient, confirm.recipientAmount)
+        assertEquals(recipient + fee, confirm.total)
+        // Unknown while the fee is loading or unknown, as in the External Send.
+        assertNull(confirm.copy(fee = null, feeLoading = true).total)
+        assertNull(confirm.copy(fee = null, feeLoading = false).total)
+
+        assertTrue(viewModel.submit(confirm.request))
+        assertEquals(listOf(InternalTransferRequest(SHIELDED, CORE, oneDash, true, WALLET_A)), service.transfers)
+    }
+
+    @Test
+    fun `a typed Shielded to Core amount is received in full, with the fee on top`() {
+        service.balances.getValue(SHIELDED).value = twoDash
+        service.max[SHIELDED to CORE] = twoDash - Dash(2000)
+        val fee = Dash(1000 + WITHDRAWAL_CORE_FEE_DUFFS)
+        service.fee = FeeEstimate(fee, exact = false)
+        val viewModel = buildViewModel()
+        viewModel.onSwap() // Shielded → Core
+        viewModel.type("1")
+        viewModel.onContinue()
+        val confirm = requireNotNull(viewModel.state.confirm)
+        assertEquals(InternalTransferRequest(SHIELDED, CORE, oneDash, false, WALLET_A), confirm.request)
+        assertFalse(confirm.coreFeeIncluded)
+        assertEquals(oneDash, confirm.recipientAmount)
+        assertEquals(oneDash + fee, confirm.total)
+    }
+
+    @Test
+    fun `only a Shielded to Core Max has the Core fee included`() {
+        for (from in SendBalance.entries) {
+            for (to in SendBalance.entries) {
+                if (from == to) continue
+                val confirm = InternalTransferConfirm(InternalTransferRequest(from, to, oneDash, true, WALLET_A))
+                assertEquals("$from → $to", from == SHIELDED && to == CORE, confirm.coreFeeIncluded)
+                if (!confirm.coreFeeIncluded) assertEquals(oneDash, confirm.recipientAmount)
+            }
+        }
     }
 
     @Test

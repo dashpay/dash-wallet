@@ -33,7 +33,10 @@ import de.schildbach.wallet.service.platform.sdk.hasShieldedLeg
 import de.schildbach.wallet.service.platform.sdk.internalTransferSupport
 import de.schildbach.wallet.service.platform.sdk.maxBoundsAmount
 import de.schildbach.wallet.service.platform.sdk.pickerBalances
+import de.schildbach.wallet.ui.payments.send.ExternalSendConfirm
 import de.schildbach.wallet.ui.payments.send.ExternalSendStatus
+import de.schildbach.wallet.ui.payments.send.amountAfterWithdrawalCoreFee
+import de.schildbach.wallet.ui.payments.send.withdrawalCoreFeeIncluded
 import de.schildbach.wallet.ui.shielded.parseDashOrNull
 import de.schildbach.wallet.ui.shielded.parseDecimalOrNull
 import de.schildbach.wallet.ui.shielded.toDashAt
@@ -73,8 +76,23 @@ data class InternalTransferConfirm(
     val fee: FeeEstimate? = null,
     val feeLoading: Boolean = true
 ) {
-    /** What leaves the From balance: amount plus fee, null while the fee is unknown. */
-    val total: Dash? get() = fee?.let { request.amount + it.fee }
+    /**
+     * A Shielded → Core Max withdraws [InternalTransferRequest.amount] itself and DPP takes the
+     * asset unlock's Core fee out of it (as the External Send's [ExternalSendConfirm.coreFeeIncluded]):
+     * the own Core balance receives the amount minus that fee.
+     */
+    val coreFeeIncluded: Boolean
+        get() = withdrawalCoreFeeIncluded(request.from, request.to == SendBalance.CORE, request.isMax)
+
+    /** What the To balance receives: the amount, or for [coreFeeIncluded] the amount minus the Core fee. */
+    val recipientAmount: Dash
+        get() = if (coreFeeIncluded) amountAfterWithdrawalCoreFee(request.amount) else request.amount
+
+    /**
+     * What leaves the From balance: what the To balance receives plus the fee (for Shielded → Core
+     * the estimate includes the Core fee), null while the fee is unknown.
+     */
+    val total: Dash? get() = fee?.let { recipientAmount + it.fee }
 }
 
 /**

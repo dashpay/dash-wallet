@@ -153,7 +153,8 @@ fun InternalTransferScreen(uiState: InternalTransferUIState, actions: InternalTr
 private fun ConfirmSheet(uiState: InternalTransferUIState, confirm: InternalTransferConfirm, actions: InternalTransferActions) {
     val request = confirm.request
     SendConfirmSheet(
-        amount = request.amount,
+        // What the To balance receives (a Shielded → Core Max: the amount minus the Core fee).
+        amount = confirm.recipientAmount,
         rate = uiState.rate,
         fiatCode = uiState.fiatCode,
         fromValue = stringResource(balanceNameFor(request.from)),
