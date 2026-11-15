@@ -783,7 +783,7 @@ class RecoveredWalletPersistenceTest {
         setField("config", mockk<org.dash.wallet.common.Configuration>(relaxed = true))
         val setupApp = spyk(app)
         var failBackup = true
-        every { setupApp.saveWallet(true) } answers {
+        every { setupApp.saveWalletLocked(true) } answers {
             assertTrue("owed before the primary is saved", replacementMarker.exists())
             callOriginal()
         }
@@ -804,6 +804,9 @@ class RecoveredWalletPersistenceTest {
         failBackup = false
         setupApp.saveWalletAndFinalizeInitialization()
         assertFalse(replacementMarker.exists())
+        // PR #1700 review: setup waits for the deferred load before taking the
+        // install lock, so it never saves through saveWallet(), which waits again.
+        verify(exactly = 0) { setupApp.saveWallet(any()) }
     }
 
     @Test
@@ -818,7 +821,7 @@ class RecoveredWalletPersistenceTest {
         } catch (expected: RuntimeException) {
             assertTrue(expected.cause is IOException)
         }
-        verify(exactly = 0) { setupApp.saveWallet(any()) }
+        verify(exactly = 0) { setupApp.saveWalletLocked(any()) }
         verify(exactly = 0) { setupApp.writeWalletBackup() }
     }
 
@@ -1280,7 +1283,7 @@ class RecoveredWalletPersistenceTest {
 
         var racing: Thread? = null
         var racingResult: WalletApplication.WalletInstallResult? = null
-        every { setupApp.saveWallet(true) } answers {
+        every { setupApp.saveWalletLocked(true) } answers {
             racing = Thread { racingResult = setupApp.installWallet(second, false) }.apply { start() }
             racing!!.join(300)
             assertTrue("the install must wait for the save", racing!!.isAlive)

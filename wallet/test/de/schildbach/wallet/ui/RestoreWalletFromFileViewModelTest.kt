@@ -24,10 +24,16 @@ import de.schildbach.wallet.WalletApplication.WalletInstallResult
 import de.schildbach.wallet.service.WalletFactory
 import io.mockk.every
 import io.mockk.mockk
+import androidx.lifecycle.viewModelScope
 import io.mockk.verify
+import kotlinx.coroutines.cancel
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.Configuration
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -70,6 +76,31 @@ class RestoreWalletFromFileViewModelTest {
         verify(exactly = 1) { configuration.armBackupSeedReminder() }
         // PR #1700 review: the install can wait on the install lock, so it must not run on the main thread.
         assertEquals(false, installedOnMain)
+    }
+
+    @Test
+    fun `a restore installed after its screen is gone still completes its bookkeeping`() {
+        val done = CountDownLatch(1)
+        lateinit var viewModel: RestoreWalletFromFileViewModel
+        val app = mockk<WalletApplication>(relaxed = true) {
+            every { installWallet(any(), false) } answers {
+                // The activity finishes while the blocking install runs.
+                viewModel.viewModelScope.cancel()
+                WalletInstallResult.INSTALLED
+            }
+            every { resetBlockchainState() } answers { done.countDown() }
+        }
+        viewModel = RestoreWalletFromFileViewModel(app, factory, configuration, mockk(relaxed = true))
+        var navigated = false
+        viewModel.startActivityAction.observeForever { navigated = true }
+
+        viewModel.restoreWallet(viewModel.restoreWalletFromUri(uri, ""), null)
+        assertTrue("the bookkeeping never ran", done.await(5, TimeUnit.SECONDS))
+        shadowOf(Looper.getMainLooper()).idle()
+
+        verify(exactly = 1) { configuration.armBackupReminder() }
+        verify(exactly = 1) { configuration.armBackupSeedReminder() }
+        assertFalse("no navigation once the screen is gone", navigated)
     }
 
     /** Restores, then pumps the main looper until the restore reports an outcome. */

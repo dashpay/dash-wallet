@@ -1265,6 +1265,8 @@ public class WalletApplication extends MultiDexApplication
         // the previous wallet's backup concurrently, and its completion must
         // not discharge this replacement's obligation.
         final BackupReplacementState.Generation replacement;
+        // Before the lock, never under it (see installWallet).
+        awaitDeferredWalletLoadForMutation();
         // Under walletInstallLock: this save is what makes the installed
         // wallet the saved one (hasInstalledWallet), so no install may pass
         // its check in between (see installWallet).
@@ -1280,7 +1282,7 @@ public class WalletApplication extends MultiDexApplication
             // second arm would replace this generation and leave the completion
             // below unable to clear the marker. A generation an earlier ordinary
             // save armed for this wallet was just overwritten by ours.
-            saveWallet(true);
+            saveWalletLocked(true);
         }
         // Unlike backupWallet(), a failure here propagates: the flags below
         // must not be cleared while the replacement has no key backup.
@@ -2158,11 +2160,20 @@ public class WalletApplication extends MultiDexApplication
         // (hasInstalledWallet), so none may land between installWallet's
         // check and its install.
         synchronized (walletInstallLock) {
-            try {
-                protobufSerializeWallet(wallet, backupAccountedFor);
-            } catch (final IOException x) {
-                throw new RuntimeException(x);
-            }
+            saveWalletLocked(backupAccountedFor);
+        }
+    }
+
+    /**
+     * The primary save itself. The caller holds {@link #walletInstallLock} and
+     * has already waited for the deferred load, outside the lock.
+     */
+    @VisibleForTesting
+    void saveWalletLocked(final boolean backupAccountedFor) {
+        try {
+            protobufSerializeWallet(wallet, backupAccountedFor);
+        } catch (final IOException x) {
+            throw new RuntimeException(x);
         }
     }
 
