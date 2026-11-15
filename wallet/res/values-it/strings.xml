@@ -75,6 +75,10 @@
     <string name="send_coins_sent_msg">Inviato!</string>
     <string name="send_coins_failed_msg">Fallito!</string>
     <string name="send_coins_error_msg">Problemi durante l\'invio dei Dash!</string>
+    <string name="send_coins_error_not_supported">Questo tipo di pagamento non è ancora supportato. Nessun fondo ha lasciato il tuo portafoglio.</string>
+    <string name="send_coins_error_generic">Impossibile inviare il pagamento.</string>
+    <string name="send_coins_error_signer_locked">Il tuo portafoglio non ha potuto firmare questo pagamento perché è bloccato. Nessun fondo ha lasciato il tuo portafoglio — sbloccalo e riprova.</string>
+    <string name="send_coins_error_contact_payment_not_recorded">Impossibile inviare questo pagamento al tuo contatto perché il portafoglio non è riuscito a salvarne una registrazione su questo dispositivo. Nessun fondo ha lasciato il tuo portafoglio. Libera spazio di archiviazione o riavvia l\'app, poi riprova.</string>
     <string name="send_coins_options_fee_category">Commissione</string>
     <string name="send_coins_options_fee_category_economic">Economica</string>
     <string name="send_coins_options_fee_category_priority">Prioritaria</string>
@@ -148,6 +152,10 @@
     <string name="transaction_row_status_sent">Inviato</string>
     <string name="transaction_row_status_sending">Invio in corso</string>
     <string name="transaction_row_status_sent_internally">Interno</string>
+    <string name="transaction_row_shielded">Schermato</string>
+    <string name="transaction_row_unshielded">Non schermato</string>
+    <string name="transaction_row_unshielded_withdrawal">Prelievo non schermato</string>
+    <string name="transaction_row_invitation">Invito</string>
     <string name="transaction_row_status_processing">In lavorazione</string>
     <string name="transaction_row_status_confirming">In Conferma</string>
     <string name="transaction_row_status_locked">Bloccato</string>
@@ -182,6 +190,29 @@
     <string name="network_monitor_activity_title">Controllo della rete</string>
     <string name="network_monitor_peer_list_title">Peers</string>
     <string name="network_monitor_block_list_title">Blocchi</string>
+    <string name="network_monitor_stage_idle">Non avviato</string>
+    <string name="network_monitor_stage_connecting">Connessione alla rete Dash…</string>
+    <string name="network_monitor_stage_headers">Download delle intestazioni dei blocchi</string>
+    <string name="network_monitor_stage_filter_headers">Download delle intestazioni dei filtri</string>
+    <string name="network_monitor_stage_masternodes">Sincronizzazione dell\'elenco dei masternode</string>
+    <string name="network_monitor_stage_filters">Scansione dei filtri dei blocchi</string>
+    <string name="network_monitor_stage_synced">Sincronizzato</string>
+    <string name="network_monitor_stage_error">Errore di sincronizzazione</string>
+    <string name="network_monitor_stage_setup_retrying">Configurazione del portafoglio incompleta — nuovo tentativo</string>
+    <string name="network_monitor_progress">%1$d%%</string>
+    <string name="network_monitor_headers_label">Intestazioni dei blocchi</string>
+    <string name="network_monitor_filters_label">Filtri dei blocchi</string>
+    <string name="network_monitor_mnlist_label">Altezza elenco masternode</string>
+    <string name="network_monitor_chainlock_label">Altezza ChainLock</string>
+    <string name="network_monitor_height_of_target">%1$s / %2$s</string>
+    <string name="network_monitor_value_unknown">—</string>
+    <string name="network_monitor_connection_connected">Connesso alla rete Dash</string>
+    <string name="network_monitor_connection_searching">Ricerca di peer…</string>
+    <string name="network_monitor_connection_idle">Motore di rete non avviato</string>
+    <string name="network_monitor_connection_error">Errore di connessione</string>
+    <string name="network_monitor_connection_setup_retrying">Sblocca il dispositivo per completare la configurazione del portafoglio</string>
+    <string name="network_monitor_peer_details_note">Il motore del portafoglio non riporta le singole connessioni ai peer.</string>
+    <string name="network_monitor_dashj_hint">Gli elenchi di peer e blocchi provengono dal motore diagnostico dashj. Attiva la sincronizzazione dashj in Strumenti per visualizzarli.</string>
     <string name="block_row_mining_difficulty_adjustment">Aggiustamento difficoltà di "Mining"</string>
     <string name="block_row_mining_reward_adjustment">La ricompensa per il "Mining" si dimezza</string>
     <string name="block_row_now">esattamete ora</string>
@@ -294,6 +325,9 @@
     <string name="report_issue_dialog_message_crash">Vorresti inviare una segnalazione di crash, aiutando a correggere questo problema nel futuro?</string>
     <string name="report_issue_dialog_description">descrizione del problema</string>
     <string name="report_issue_dialog_report">Segnala</string>
+    <string name="wallet_recovery_from_seed_message">Impossibile leggere il file del portafoglio e nessun backup automatico era utilizzabile. I tuoi fondi sono al sicuro sulla rete — ripristina il portafoglio con la tua frase di recupero per continuare.</string>
+    <string name="safe_mode_startup_message">Nelle ultime volte l\'app non ha completato l\'avvio, quindi in questo avvio il caricamento del portafoglio è stato saltato. Nulla è stato modificato o eliminato. Inviaci una segnalazione oppure prova ad aprire di nuovo il portafoglio.</string>
+    <string name="wallet_wipe_recovery_required">Un precedente ripristino del portafoglio potrebbe non essere stato completato. L\'accesso al portafoglio è sospeso per proteggere i dati rimanenti. Contatta il supporto per ricevere aiuto nel recupero del portafoglio.</string>
     <string name="report_issue_dialog_collect_device_info">Allega informazioni sul dispositivo</string>
     <string name="report_issue_dialog_collect_installed_packages">Appendi lista dei pacchetti installati</string>
     <string name="report_issue_dialog_collect_application_log">Allega il registro dell\'applicazione</string>
@@ -309,6 +343,7 @@
     <string name="report_issue_dialog_status_background_traces">tracce in background</string>
     <string name="report_issue_dialog_status_stack_trace">tracce dello stack</string>
     <string name="report_issue_dialog_status_finishing">sta terminando</string>
+    <string name="report_issue_dialog_status_parity_breakdown">controllo delle transazioni del portafoglio (fino a 30 secondi)</string>
     <string name="report_transaction_history_export">Esporta le transazioni</string>
     <string name="report_transaction_history_title">Esporta CSV</string>
     <string name="report_transaction_history_dialog_title">L\'intera cronologia delle transazioni verrà esportata come file CSV</string>
@@ -320,6 +355,7 @@
     <string name="report_transaction_history_mail_intent_chooser">Invia la cronologia delle transazioni utilizzando...</string>
     <string name="report_transaction_history_dialog_mail_intent_failed">Invio della cronologia delle transazioni non riuscito.</string>
     <string name="report_transaction_history_dialog_export_csv_failed">Esportazione della cronologia delle transazioni non riuscita.</string>
+    <string name="report_transaction_history_dialog_export_csv_empty">Non ci sono ancora transazioni da esportare.</string>
 
     <!-- ZenLedger -->
     <string name="zenledger_export_title">ZenLedger</string>
@@ -426,6 +462,11 @@
     <string name="battery_optimization_title">Ottimizzazione della batteria</string>
     <string name="battery_optimization_subtitle_optimized">Ottimizzata</string>
     <string name="battery_optimization_subtitle_unrestricted">Senza restrizioni</string>
+    <string name="settings_analytics_title">Condividi dati di utilizzo</string>
+    <string name="settings_analytics_info_title">Informazioni sui dati di utilizzo</string>
+    <string name="settings_analytics_save_failed_off">Impossibile disattivare, riprova</string>
+    <string name="settings_analytics_save_failed_on">Impossibile attivare, riprova</string>
+    <string name="settings_analytics_info_message">Quando questa opzione è attiva, Portafoglio Dash condivide con Firebase gli eventi di utilizzo dell\'app per aiutarci a migliorarla.\n\nImporti, saldi e indirizzi non vengono mai condivisi.\n\nPuoi disattivarla in qualsiasi momento.</string>
 
     <string name="battery_optimization_dialog_optimized_title">Lasciare che il Portafoglio Dash funzioni in background?</string>
     <string name="battery_optimization_dialog_message_optimized">Questa app è configurata per interrompere l\'esecuzione dopo non essere stata visibile per un po\' di tempo.\n\nCiò comporterà la mancata ricezione delle notifiche di pagamento finché l\'app non torna in primo piano.\n\nSi consiglia di consentire l\'esecuzione di questa app in background spuntando ottimizzazione batteria su \"Non ottimizzato\" o \"Illimitato\".\n\nMa non preoccuparti, ci occuperemo sempre di monitorare il consumo della batteria.</string>
@@ -445,6 +486,9 @@
     <string name="upgrade_pin_title">Devi aggiornare il tuo PIN</string>
     <string name="upgrade_pin_description">Imposta un nuovo PIN</string>
     <string name="upgrade_pin_continue">Continua</string>
+    <string name="buy_credits_current_identity_balance">Saldo attuale dell\'identità: %1$s</string>
+    <string name="buy_credits_current_identity_balance_unavailable">non disponibile</string>
+    <string name="payment_request_resending_earlier_payment">Questa richiesta era già stata pagata, ma quel pagamento non è mai stato confermato. Confermando verrà inviato di nuovo lo stesso pagamento, quindi non ti verrà addebitato due volte.</string>
 
     <!-- CrowdNode withdrawal reminder -->
     <string name="crowdnode_withdrawal_reminder_title">Hai un saldo su CrowdNode</string>

@@ -202,6 +202,8 @@
     <string name="notification_explainer_message">Las notificaciones pueden incluir alertas, sonidos e íconos distintivos. Estos se pueden configurar en la configuración del teléfono.</string>
     <string name="notification_dashpay_channel_name">DashPay</string>
     <string name="notification_dashpay_channel_description">Estado de las operaciones en curso de DashPay.</string>
+    <string name="notification_contacts_channel_name">Solicitudes de contacto</string>
+    <string name="notification_contacts_channel_description">Te avisa cuando alguien te envía una solicitud de contacto.</string>
 
     <string name="net_type_indicator" />
 
@@ -421,6 +423,7 @@
     <string name="all_transactions">Todos</string>
     <string name="received_transactions">Recibido</string>
     <string name="sent_transactions">Enviado</string>
+    <string name="filter_button_label">Filtro: %1$s</string>
     <string name="serious_error_title">Error grave</string>
     <string name="serious_error_unknown">Por favor, ponte en contacto con el soporte.</string>
     <string name="set_pin_error_missing_wallet_title"> Error de billetera inexistente</string>

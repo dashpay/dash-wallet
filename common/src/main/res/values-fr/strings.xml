@@ -94,6 +94,8 @@
     <string name="send_coins_error_dusty_send">Le montant est trop faible pour être envoyé</string>
     <string name="send_coins_error_insufficient_money">Fonds insuffisants</string>
     <string name="syncing">En synchronisation</string>
+    <string name="sync_synced_from">Synchronisé depuis %1$s</string>
+    <string name="sync_partial_scan_warning">Ce portefeuille a été restauré avec une date de création au %1$s. Les transactions antérieures à cette date peuvent être absentes du solde et de l\'historique affichés.</string>
     <string name="no_connection">Pas de connexion Internet</string>
     <string name="rate_not_available">Non disponible</string>
 
@@ -106,6 +108,8 @@
     <string name="payment_protocol_default_error_title">Erreur de paiement</string>
     <string name="payment_request_problem_message">Votre paiement n\'a pas pu être traité par le serveur, veuillez vous adresser au vendeur</string>
     <string name="payment_submission_pending_title">Statut du paiement inconnu</string>
+    <string name="payment_outcome_unknown_message">Ce paiement a peut-être été envoyé. Ne l\'envoyez pas à nouveau — consultez votre historique des transactions pour vérifier son statut.</string>
+    <string name="payment_still_confirming">Un paiement précédent est toujours en cours de confirmation. Vous pourrez envoyer à nouveau une fois qu\'il aura été confirmé.</string>
     <string name="payment_submission_pending_message">Le paiement a été envoyé, mais nous n\'avons pas reçu de confirmation du commerçant. Votre portefeuille continuera à vérifier le réseau et affichera la transaction comme envoyée dès qu\'elle sera trouvée. Veuillez patienter avant de renvoyer ce paiement.</string>
     <string name="exchange_rate_not_found">Taux de change introuvables.</string>
     <string name="send_coins_fragment_hint_replaying">Les paiements ne sont pas encore possibles car le portefeuille n\'est pas entièrement synchronisé avec le réseau</string>

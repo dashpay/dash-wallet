@@ -94,6 +94,8 @@
     <string name="send_coins_error_dusty_send">La cantidad es demasiado pequeña para ser enviada</string>
     <string name="send_coins_error_insufficient_money">Fondos insuficientes</string>
     <string name="syncing">Sincronizando</string>
+    <string name="sync_synced_from">Sincronizado desde %1$s</string>
+    <string name="sync_partial_scan_warning">Esta billetera se restauró con una fecha de creación del %1$s. Es posible que falten transacciones anteriores a esa fecha en el saldo y el historial que se muestran.</string>
     <string name="no_connection">No hay conexión a internet</string>
     <string name="rate_not_available">No disponible</string>
 
@@ -106,6 +108,8 @@
     <string name="payment_protocol_default_error_title">Error en el pago</string>
     <string name="payment_request_problem_message">El servidor no pudo procesar su pago, por favor consulte con el comerciante</string>
     <string name="payment_submission_pending_title">Estado del pago desconocido</string>
+    <string name="payment_outcome_unknown_message">Es posible que este pago se haya enviado. No lo vuelvas a enviar: revisa tu historial de transacciones para confirmar su estado.</string>
+    <string name="payment_still_confirming">Un pago anterior aún se está confirmando. Podrás volver a enviar cuando se haya confirmado.</string>
     <string name="payment_submission_pending_message">El pago se envió, pero no recibimos una confirmación del comerciante. Tu billetera seguirá comprobando la red y mostrará la transacción como enviada en cuanto la encuentre. Espera antes de volver a enviar este pago.</string>
     <string name="exchange_rate_not_found">No se encuentra la tasa de cambio.</string>
     <string name="send_coins_fragment_hint_replaying">Actualmente, pagos no son posibles porque la billetera no está completamente sincronizada con la red</string>
