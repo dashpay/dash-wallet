@@ -35,6 +35,7 @@ import org.bitcoinj.core.Utils
 import org.bitcoinj.script.ScriptBuilder
 import org.bitcoinj.wallet.FriendChainAccess
 import org.dashfoundation.dashsdk.persistence.DashDatabase
+import org.dashfoundation.dashsdk.persistence.entities.DashpayContactRequestEntity
 import org.dashj.platform.dpp.identifier.Identifier
 import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentHashMap
@@ -327,16 +328,24 @@ internal fun decodeDashPayBackfillCoverSet(blob: ByteArray?, ownerId: ByteArray)
  * - every contact in [sentRequestContacts] (we sent a request to them, so
  *   they may have paid us) has a receiving account in [receivalAccounts];
  * - every receiving account is in [coverSet] (null: unreadable), covered
- *   from no later than its earliest contact request ([requestFloors]) or the
- *   wallet's birth checkpoint ([birthHeight] - 1), the SDK's own checkpoint
- *   rule; nothing it receives can be older.
+ *   from no later than the earliest request WE sent the contact
+ *   ([sentRequestFloors]) or the wallet's birth checkpoint ([birthHeight] - 1),
+ *   whichever is later — the SDK's own checkpoint rule
+ *   (`receiving_scan_checkpoint`). Nothing the account receives can be older:
+ *   the contact pays to the xpub inside our request, so their request to us
+ *   bounds nothing. Flooring on it too (MO-1131) demanded coverage from below
+ *   the height the SDK covers from whenever the contact's request came first,
+ *   and that never resolved — every contact payment of the wallet stayed
+ *   refused.
  * Ids are contact identity ids in hex; receiving accounts are
- * (contact, account index).
+ * (contact, account index). The reason names each uncovered account (id
+ * prefix, the height it is covered from and the height it must be covered
+ * from), so a field log can tell a missing entry from a floor mismatch.
  */
 internal fun contactHistoryUncoveredBecause(
     discoveryCompleted: Boolean,
     sentRequestContacts: Set<String>,
-    requestFloors: Map<String, Long>,
+    sentRequestFloors: Map<String, Long>,
     birthHeight: Long,
     receivalAccounts: List<Pair<String, Int>>,
     coverSet: Map<Pair<String, Int>, Long>?
@@ -348,16 +357,41 @@ internal fun contactHistoryUncoveredBecause(
     }
     coverSet ?: return "the SDK's backfill record cannot be read"
     val birthCheckpoint = (birthHeight - 1).coerceAtLeast(0L)
-    val uncovered = receivalAccounts.count { account ->
-        val coveredFrom = coverSet[account] ?: return@count true
-        coveredFrom > maxOf(birthCheckpoint, requestFloors[account.first] ?: birthCheckpoint)
+    val uncovered = receivalAccounts.mapNotNull { account ->
+        val required = maxOf(birthCheckpoint, sentRequestFloors[account.first] ?: birthCheckpoint)
+        val coveredFrom = coverSet[account]
+        when {
+            coveredFrom == null -> "${account.first.take(8)}…/${account.second} not in the record (needs $required)"
+            coveredFrom > required ->
+                "${account.first.take(8)}…/${account.second} covered from $coveredFrom, needs $required"
+            else -> null
+        }
     }
-    return if (uncovered > 0) {
-        "$uncovered receiving account(s) not yet covered by the SDK's backfill record"
+    return if (uncovered.isNotEmpty()) {
+        "${uncovered.size} receiving account(s) not yet covered by the SDK's backfill record: " +
+            uncovered.take(MAX_UNCOVERED_ACCOUNTS_NAMED).joinToString("; ") +
+            if (uncovered.size > MAX_UNCOVERED_ACCOUNTS_NAMED) "; …" else ""
     } else {
         null
     }
 }
+
+/** How many uncovered accounts [contactHistoryUncoveredBecause] names in its reason. */
+private const val MAX_UNCOVERED_ACCOUNTS_NAMED = 5
+
+/**
+ * Contact identity id (hex) → the core height of the earliest request WE sent
+ * that contact, from the SDK's stored contact requests: the floor a contact's
+ * receiving account has to be covered from ([contactHistoryUncoveredBecause]),
+ * and its keys are the contacts we sent a request to. Requests the contact
+ * sent us are ignored — they bound nothing, since the contact pays to the
+ * xpub inside our request (MO-1131: counting them demanded coverage from
+ * below the SDK's checkpoint whenever the contact's request came first).
+ */
+internal fun sentRequestFloors(requests: List<DashpayContactRequestEntity>): Map<String, Long> =
+    requests.filter { it.isOutgoing }
+        .groupBy { Utils.HEX.encode(it.contactIdentityId) }
+        .mapValues { (_, ours) -> ours.minOf { it.coreHeightCreatedAt.toLong() } }
 
 /** [ContactPaymentChainView] over the app's SDK and its L1 sync progress. */
 internal class SdkContactPaymentChainView(
@@ -399,12 +433,11 @@ internal class SdkContactPaymentChainView(
                 .observeByWalletAndType(id, ACCOUNT_TYPE_TAG_DASHPAY_RECEIVING_FUNDS)
                 .first()
                 .filter { it.userIdentityId.contentEquals(owner) }
+            val floors = sentRequestFloors(requests)
             contactHistoryUncoveredBecause(
                 discoveryCompleted = discovered,
-                sentRequestContacts = requests.filter { it.isOutgoing }
-                    .mapTo(HashSet()) { Utils.HEX.encode(it.contactIdentityId) },
-                requestFloors = requests.groupBy { Utils.HEX.encode(it.contactIdentityId) }
-                    .mapValues { (_, pair) -> pair.minOf { it.coreHeightCreatedAt.toLong() } },
+                sentRequestContacts = floors.keys,
+                sentRequestFloors = floors,
                 birthHeight = wallet.birthHeight.toLong(),
                 receivalAccounts = receival.mapNotNull { account ->
                     account.friendIdentityId?.let { Utils.HEX.encode(it) to account.accountIndex }

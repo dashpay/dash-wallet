@@ -1682,7 +1682,7 @@ class SdkWalletBinderTest {
         fun uncovered(walletId: String) = de.schildbach.wallet.service.platform.sdk.contactHistoryUncoveredBecause(
             discoveryCompleted = binder.contactDiscoveryCompleted(walletId),
             sentRequestContacts = setOf(contactHex),
-            requestFloors = mapOf(contactHex to 1_500L),
+            sentRequestFloors = mapOf(contactHex to 1_500L),
             birthHeight = 1_000L,
             receivalAccounts = listOf(contactHex to 0),
             coverSet = mapOf((contactHex to 0) to 999L)
@@ -1903,7 +1903,7 @@ class SdkWalletBinderTest {
         fun uncovered(walletId: String) = de.schildbach.wallet.service.platform.sdk.contactHistoryUncoveredBecause(
             discoveryCompleted = binder.contactDiscoveryCompleted(walletId),
             sentRequestContacts = sdk.storedContactRequests?.outgoing.orEmpty(),
-            requestFloors = mapOf(contactA to 1_500L, contactB to 1_500L),
+            sentRequestFloors = mapOf(contactA to 1_500L, contactB to 1_500L),
             birthHeight = 1_000L,
             receivalAccounts = receivalAccounts,
             coverSet = coverSet
