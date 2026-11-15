@@ -102,6 +102,8 @@ platform :android do
 	Dir.glob("#{ENV['PWD']}/**/*.{gradle,gradle.kts,toml}").each do |f|
 		next if f.include?("/build/") || f.include?("/.gradle/")
 		File.readlines(f).each_with_index do |line, idx|
+			# Comments can name a SNAPSHOT version; only a declaration is a hit.
+			next if line.lstrip.start_with?("//", "/*", "*", "#")
 			snapshot_hits << "#{f}:#{idx + 1}: #{line.strip}" if line.include?("SNAPSHOT")
 		end
 	end
