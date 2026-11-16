@@ -1123,10 +1123,15 @@ class ExternalSendServiceImpl internal constructor(
      *   asset-lock fee reserve (an upper bound) plus the Platform-fee margin, whose unused
      *   part lands on the wallet's own Platform address. Not exact; null when the UTXO
      *   count is unknown.
+     * - Core → Identity: only the L1 asset-lock fee reserve ([assetLockMaxFeeReserve], an
+     *   upper bound), paid ON TOP of the amount — the top-up locks exactly the amount
+     *   ([ExternalSendSource.coreTopUpIdentity]). Platform's top-up fee is metered by Rust
+     *   and taken out of the locked amount, so it is not included. Not exact; null when the
+     *   UTXO count is unknown.
      * - Shielded → *: the flat single-note pool fee of the transition; more notes cost more.
      *   Shielded → Core adds the asset unlock's [WITHDRAWAL_CORE_FEE_DUFFS], withdrawn on top
      *   of the amount.
-     * - Core → Identity, Platform → *, Identity → *: Rust meters these at execution; no
+     * - Platform → *, Identity → *: Rust meters these at execution; no
      *   pre-send figure exists, so null. (Platform → Core's withdrawal preflight estimate is
      *   only the fee payer's reserve, not the fee of this exact set of inputs; the Core fee of
      *   the asset unlock, [WITHDRAWAL_CORE_FEE_DUFFS], is withdrawn on top of the amount, so
@@ -1143,7 +1148,9 @@ class ExternalSendServiceImpl internal constructor(
                 SendBalance.PLATFORM -> this.source.spendableUtxoCount()?.let {
                     FeeEstimate(Dash(coreToPlatformFeeDuffs(it)), exact = false)
                 }
-                SendBalance.IDENTITY -> null
+                SendBalance.IDENTITY -> this.source.spendableUtxoCount()?.let {
+                    FeeEstimate(assetLockMaxFeeReserve(it), exact = false)
+                }
             }
             SendBalance.SHIELDED -> this.source.shieldedFeeCredits(shieldedKindFor(destinationKind))?.let {
                 val poolFee = ceilCreditsToDuffs(it)
