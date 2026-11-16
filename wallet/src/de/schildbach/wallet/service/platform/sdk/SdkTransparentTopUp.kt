@@ -72,6 +72,18 @@ internal data class ManagedIdentityRef(
 }
 
 /**
+ * The own-identity top-up resume gate's match: a top-up lock ({IDENTITY_TOP_UP,
+ * IDENTITY_TOP_UP_NOT_BOUND}) at [registrationIndex], unless its row records a recipient other
+ * than [identityId] — an External Send Core top-up of someone else's identity (platform#5931),
+ * which resuming into this identity would pay to the wrong one.
+ */
+internal fun TrackedAssetLock.isOwnTopUpResumeCandidate(registrationIndex: Int, identityId: ByteArray): Boolean =
+    (fundingType == TrackedAssetLock.FundingType.IDENTITY_TOP_UP ||
+        fundingType == TrackedAssetLock.FundingType.IDENTITY_TOP_UP_NOT_BOUND) &&
+        this.registrationIndex == registrationIndex &&
+        identityRecipient.let { it == null || it.contentEquals(identityId) }
+
+/**
  * Seam over the Kotlin SDK's identity-CREDITS (top-up) surface
  * ([org.dashfoundation.dashsdk.credits.IdentityCredits]), so the
  * resume-gate / no-double-broadcast orchestration in [SdkTransparentTopUp] is
@@ -108,9 +120,16 @@ internal interface TransparentTopUpSource {
      * completed, so any returned lock of top-up [TrackedAssetLock.FundingType]
      * ({IDENTITY_TOP_UP, IDENTITY_TOP_UP_NOT_BOUND}) at
      * [TrackedAssetLock.getRegistrationIndex] == [registrationIndex] must be
-     * RESUMED, never rebuilt (rebuilding selects fresh UTXOs = DOUBLE-PAY).
+     * RESUMED, never rebuilt (rebuilding selects fresh UTXOs = DOUBLE-PAY) — except a lock
+     * whose row records a recipient other than [identityId] ([isOwnTopUpResumeCandidate]): an
+     * External Send top-up of someone else's identity, which only its recorded-recipient resume
+     * may pay.
      */
-    suspend fun unresolvedTopUpAssetLock(walletIdHex: String, registrationIndex: Int): TrackedAssetLock?
+    suspend fun unresolvedTopUpAssetLock(
+        walletIdHex: String,
+        registrationIndex: Int,
+        identityId: ByteArray
+    ): TrackedAssetLock?
 
     /**
      * RELIABLE post-success txid capture: the DISPLAY-order txid hex of the
@@ -192,14 +211,11 @@ internal class DashSdkTransparentTopUpSource(
 
     override suspend fun unresolvedTopUpAssetLock(
         walletIdHex: String,
-        registrationIndex: Int
+        registrationIndex: Int,
+        identityId: ByteArray
     ): TrackedAssetLock? =
         manager().trackedIdentityRecoveryAssetLocks(walletId(walletIdHex))
-            .firstOrNull {
-                (it.fundingType == TrackedAssetLock.FundingType.IDENTITY_TOP_UP ||
-                    it.fundingType == TrackedAssetLock.FundingType.IDENTITY_TOP_UP_NOT_BOUND) &&
-                    it.registrationIndex == registrationIndex
-            }
+            .firstOrNull { it.isOwnTopUpResumeCandidate(registrationIndex, identityId) }
 
     override suspend fun topUpAssetLockTxidDisplayHex(
         walletIdHex: String,
@@ -586,7 +602,7 @@ class SdkTransparentTopUp internal constructor(
         // SAME UTXOs); otherwise build fresh. Calling the plain path while an
         // unresolved lock exists would select DIFFERENT UTXOs = DOUBLE-PAY.
         val existingLock = try {
-            source.unresolvedTopUpAssetLock(walletId, ref.registrationIndex)
+            source.unresolvedTopUpAssetLock(walletId, ref.registrationIndex, ref.identityId)
                 // Drop a lock Platform already rejected as consumed on this
                 // call's first pass: it is stale bookkeeping, not a resumable
                 // candidate, and re-picking it would fail forever (the SDK
