@@ -419,11 +419,36 @@ class SdkTransparentTopUpTest {
         // An External Send top-up of someone else's identity at the same index (platform#5931).
         assertFalse(lock(unbound, other).isOwnTopUpResumeCandidate(registrationIndex, identityId))
         assertTrue(lock(unbound, identityId).isOwnTopUpResumeCandidate(registrationIndex, identityId))
-        assertTrue(lock(unbound, null).isOwnTopUpResumeCandidate(registrationIndex, identityId))
         assertTrue(lock(TrackedAssetLock.FundingType.IDENTITY_TOP_UP, null).isOwnTopUpResumeCandidate(registrationIndex, identityId))
-        assertFalse(lock(unbound, null, index = registrationIndex + 1).isOwnTopUpResumeCandidate(registrationIndex, identityId))
+        assertFalse(lock(unbound, identityId, index = registrationIndex + 1).isOwnTopUpResumeCandidate(registrationIndex, identityId))
         assertFalse(
             lock(TrackedAssetLock.FundingType.IDENTITY_REGISTRATION, null).isOwnTopUpResumeCandidate(registrationIndex, identityId)
+        )
+    }
+
+    @Test
+    fun ownResumeGate_neverMatchesAnUnboundLockRecordingNoRecipient() {
+        // A restore rebuilds an unbound lock with no recipient: it may be someone else's top-up.
+        fun lock(type: TrackedAssetLock.FundingType, unassigned: Boolean) =
+            TrackedAssetLock(
+                outpointTxid = ByteArray(32) { 1 },
+                outpointVout = 0,
+                fundingType = type,
+                status = TrackedAssetLock.Status.RECOVERED_FROM_CHAIN,
+                registrationIndex = registrationIndex,
+                instantLockPresent = false,
+                chainLockHeight = 0,
+                identityRecipient = null,
+                identityRecipientUnassigned = unassigned
+            )
+        val unbound = TrackedAssetLock.FundingType.IDENTITY_TOP_UP_NOT_BOUND
+        assertFalse(lock(unbound, unassigned = true).isOwnTopUpResumeCandidate(registrationIndex, identityId))
+        // Fail closed when the SDK flag is missing: no recipient is enough.
+        assertFalse(lock(unbound, unassigned = false).isOwnTopUpResumeCandidate(registrationIndex, identityId))
+        // A bound own lock rebuilt by the restore still resumes into the own identity.
+        assertTrue(
+            lock(TrackedAssetLock.FundingType.IDENTITY_TOP_UP, unassigned = false)
+                .isOwnTopUpResumeCandidate(registrationIndex, identityId)
         )
     }
 }

@@ -81,7 +81,8 @@ class SdkTopUpRecoveryServiceTest {
         fundingType: TrackedAssetLock.FundingType,
         firstByte: Byte = 1,
         status: TrackedAssetLock.Status = TrackedAssetLock.Status.BROADCAST,
-        recipient: ByteArray? = null
+        recipient: ByteArray? = null,
+        unassigned: Boolean = false
     ) = TrackedAssetLock(
         outpointTxid = ByteArray(32) { if (it == 0) firstByte else 0 },
         outpointVout = 0,
@@ -90,7 +91,8 @@ class SdkTopUpRecoveryServiceTest {
         registrationIndex = 0,
         instantLockPresent = false,
         chainLockHeight = 0,
-        identityRecipient = recipient
+        identityRecipient = recipient,
+        identityRecipientUnassigned = unassigned
     )
 
     private val externalId = ByteArray(32) { 9 }
@@ -147,7 +149,7 @@ class SdkTopUpRecoveryServiceTest {
     fun drain_skipsRegistrationLocks_resumesBothTopUpTypes() {
         val registration = lock(TrackedAssetLock.FundingType.IDENTITY_REGISTRATION, firstByte = 1)
         val bound = lock(TrackedAssetLock.FundingType.IDENTITY_TOP_UP, firstByte = 2)
-        val unbound = lock(TrackedAssetLock.FundingType.IDENTITY_TOP_UP_NOT_BOUND, firstByte = 3)
+        val unbound = lock(TrackedAssetLock.FundingType.IDENTITY_TOP_UP_NOT_BOUND, firstByte = 3, recipient = externalId)
         val source = FakeSource(
             boundWalletId = { walletId },
             recoveryLocks = { listOf(registration, bound, unbound) },
@@ -156,8 +158,9 @@ class SdkTopUpRecoveryServiceTest {
         val report = runBlocking { service(source).drainPendingTopUps() }
         assertEquals(TopUpDrainReport(pending = 2, resumed = 2, alreadyConsumed = 0, failed = 0), report)
         assertFalse(report.retryNeeded)
-        assertEquals(listOf(bound, unbound), source.resumedLocks)
-        assertTrue(identityId.contentEquals(source.lastIdentityId!!))
+        assertEquals(listOf(bound), source.resumedLocks)
+        assertEquals(listOf(unbound), source.recordedLocks)
+        assertTrue(identityId.contentEquals(checkNotNull(source.lastIdentityId)))
     }
 
     @Test
@@ -216,7 +219,7 @@ class SdkTopUpRecoveryServiceTest {
     @Test
     fun drain_oneFailure_doesNotStopTheRest_andRequestsRetry() {
         val failing = lock(TrackedAssetLock.FundingType.IDENTITY_TOP_UP, firstByte = 2)
-        val fine = lock(TrackedAssetLock.FundingType.IDENTITY_TOP_UP_NOT_BOUND, firstByte = 3)
+        val fine = lock(TrackedAssetLock.FundingType.IDENTITY_TOP_UP, firstByte = 3)
         val source = FakeSource(
             boundWalletId = { walletId },
             recoveryLocks = { listOf(failing, fine) },
@@ -313,6 +316,66 @@ class SdkTopUpRecoveryServiceTest {
     }
 
     @Test
+    fun drain_unboundLockRecordingNoRecipient_isSkipped_neverResumedToTheOwnIdentity_notRetried() {
+        // Rebuilt by a restore's scan: it may be an External Send top-up of someone else's identity.
+        val unassigned = lock(
+            TrackedAssetLock.FundingType.IDENTITY_TOP_UP_NOT_BOUND,
+            firstByte = 2,
+            status = TrackedAssetLock.Status.RECOVERED_FROM_CHAIN,
+            unassigned = true
+        )
+        val noFlag = lock(TrackedAssetLock.FundingType.IDENTITY_TOP_UP_NOT_BOUND, firstByte = 3)
+        val bound = lock(TrackedAssetLock.FundingType.IDENTITY_TOP_UP, firstByte = 4)
+        val external = lock(TrackedAssetLock.FundingType.IDENTITY_TOP_UP_NOT_BOUND, firstByte = 5, recipient = externalId)
+        val source = FakeSource(
+            boundWalletId = { walletId },
+            recoveryLocks = { listOf(unassigned, noFlag, bound, external) },
+            onResume = { newBalance }
+        )
+        val report = runBlocking { service(source).drainPendingTopUps() }
+        assertEquals(
+            TopUpDrainReport(pending = 4, resumed = 2, alreadyConsumed = 0, failed = 0, awaitingRecipient = 2),
+            report
+        )
+        assertFalse(report.retryNeeded)
+        // The bound lock still resumes into the own identity, the recorded one to its recipient.
+        assertEquals(listOf(bound), source.resumedLocks)
+        assertEquals(listOf(external), source.recordedLocks)
+    }
+
+    @Test
+    fun drain_onlyLocksAwaitingARecipient_readNoIdentity_andNeedNoRetry() {
+        val source = FakeSource(
+            boundWalletId = { walletId },
+            recoveryLocks = { listOf(lock(TrackedAssetLock.FundingType.IDENTITY_TOP_UP_NOT_BOUND, unassigned = true)) }
+        )
+        var identityReads = 0
+        val report = runBlocking { service(source, identity = { identityReads++; null }).drainPendingTopUps() }
+        assertEquals(
+            TopUpDrainReport(pending = 1, resumed = 0, alreadyConsumed = 0, failed = 0, awaitingRecipient = 1),
+            report
+        )
+        assertFalse(report.retryNeeded)
+        assertEquals(0, identityReads)
+        assertEquals(0, source.resumeCalls + source.recordedResumeCalls)
+    }
+
+    @Test
+    fun drain_recipientUnknownFromTheSdk_waitsForARecipient_notRetried() {
+        val source = FakeSource(
+            boundWalletId = { walletId },
+            recoveryLocks = { listOf(lock(TrackedAssetLock.FundingType.IDENTITY_TOP_UP)) },
+            onResume = { throw DashSdkError.PlatformWallet.AssetLockRecipientUnknown("records no identity") }
+        )
+        val report = runBlocking { service(source).drainPendingTopUps() }
+        assertEquals(
+            TopUpDrainReport(pending = 1, resumed = 0, alreadyConsumed = 0, failed = 0, awaitingRecipient = 1),
+            report
+        )
+        assertFalse(report.retryNeeded)
+    }
+
+    @Test
     fun lockPredicates_matchOnlyAnUnboundLockRecordingTheIdentity() {
         val external = lock(TrackedAssetLock.FundingType.IDENTITY_TOP_UP_NOT_BOUND, recipient = externalId)
         assertTrue(external.recordsExternalTopUpTo(externalId))
@@ -323,6 +386,10 @@ class SdkTopUpRecoveryServiceTest {
         assertFalse(unrecorded.hasRecordedTopUpRecipient())
         val bound = lock(TrackedAssetLock.FundingType.IDENTITY_TOP_UP)
         assertFalse(bound.hasRecordedTopUpRecipient())
+        assertTrue(unrecorded.awaitsTopUpRecipient())
+        assertTrue(lock(TrackedAssetLock.FundingType.IDENTITY_TOP_UP_NOT_BOUND, unassigned = true).awaitsTopUpRecipient())
+        assertFalse(external.awaitsTopUpRecipient())
+        assertFalse(bound.awaitsTopUpRecipient())
     }
 
     // ── hasPendingTopUpLocks ─────────────────────────────────────────────
@@ -334,8 +401,25 @@ class SdkTopUpRecoveryServiceTest {
             recoveryLocks = { listOf(lock(TrackedAssetLock.FundingType.IDENTITY_REGISTRATION)) }
         )
         assertFalse(runBlocking { service(source).hasPendingTopUpLocks() })
-        source.recoveryLocks = { listOf(lock(TrackedAssetLock.FundingType.IDENTITY_TOP_UP_NOT_BOUND)) }
+        source.recoveryLocks = { listOf(lock(TrackedAssetLock.FundingType.IDENTITY_TOP_UP_NOT_BOUND, recipient = externalId)) }
         assertTrue(runBlocking { service(source).hasPendingTopUpLocks() })
+        source.recoveryLocks = { listOf(lock(TrackedAssetLock.FundingType.IDENTITY_TOP_UP)) }
+        assertTrue(runBlocking { service(source).hasPendingTopUpLocks() })
+    }
+
+    @Test
+    fun hasPending_falseWhenOnlyLocksAwaitingARecipient() {
+        // Otherwise every sync sweep would enqueue a drain that cannot advance them.
+        val source = FakeSource(
+            boundWalletId = { walletId },
+            recoveryLocks = {
+                listOf(
+                    lock(TrackedAssetLock.FundingType.IDENTITY_TOP_UP_NOT_BOUND, firstByte = 2, unassigned = true),
+                    lock(TrackedAssetLock.FundingType.IDENTITY_TOP_UP_NOT_BOUND, firstByte = 3)
+                )
+            }
+        )
+        assertFalse(runBlocking { service(source).hasPendingTopUpLocks() })
     }
 
     @Test

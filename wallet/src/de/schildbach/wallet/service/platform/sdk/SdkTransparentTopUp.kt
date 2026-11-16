@@ -60,12 +60,16 @@ internal data class ManagedIdentityRef(
  * The own-identity top-up resume gate's match: a top-up lock ({IDENTITY_TOP_UP,
  * IDENTITY_TOP_UP_NOT_BOUND}) at [registrationIndex], unless its row records a recipient other
  * than [identityId] — an External Send Core top-up of someone else's identity (platform#5931),
- * which resuming into this identity would pay to the wrong one.
+ * which resuming into this identity would pay to the wrong one — or records none
+ * ([awaitsTopUpRecipient]): an unbound lock a restore rebuilt may be someone else's too, and waits
+ * for the user to assign its recipient (no UI yet). An unbound lock thus matches only when it
+ * records [identityId].
  */
 internal fun TrackedAssetLock.isOwnTopUpResumeCandidate(registrationIndex: Int, identityId: ByteArray): Boolean =
     (fundingType == TrackedAssetLock.FundingType.IDENTITY_TOP_UP ||
         fundingType == TrackedAssetLock.FundingType.IDENTITY_TOP_UP_NOT_BOUND) &&
         this.registrationIndex == registrationIndex &&
+        !awaitsTopUpRecipient() &&
         identityRecipient.let { it == null || it.contentEquals(identityId) }
 
 /**

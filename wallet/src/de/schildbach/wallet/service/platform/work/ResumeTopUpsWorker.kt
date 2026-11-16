@@ -73,8 +73,8 @@ class ResumeTopUpsWorker @AssistedInject constructor(
             return Result.retry()
         }
         log.info(
-            "drain pass: {} pending, {} resumed, {} already consumed, {} failed{}",
-            report.pending, report.resumed, report.alreadyConsumed, report.failed,
+            "drain pass: {} pending, {} resumed, {} already consumed, {} failed, {} awaiting a recipient{}",
+            report.pending, report.resumed, report.alreadyConsumed, report.failed, report.awaitingRecipient,
             if (report.surfaceUnavailable) " (surface unavailable)" else ""
         )
         return if (report.retryNeeded) {
