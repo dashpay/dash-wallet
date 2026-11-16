@@ -57,6 +57,7 @@ import org.dash.wallet.common.util.readRetryDelayMs
 import org.dash.wallet.common.util.retryReadErrors
 import org.dashfoundation.dashsdk.credits.FundingInput
 import org.dashfoundation.dashsdk.errors.DashSdkError
+import org.dashfoundation.dashsdk.wallet.TrackedAssetLock
 import org.slf4j.LoggerFactory
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -496,6 +497,29 @@ internal interface ExternalSendSource {
         amount: Dash
     ): SdkWriteResult<ShieldToAddressOutcome>
     suspend fun coreTopUpIdentity(identityIdBase58: String, amountDuffs: Long): SdkWriteResult<TopUpOutcome>
+
+    /**
+     * The unresolved Core top-up locks (unbound, from the SDK's recovery surface) whose row
+     * records [identityId] as the identity they pay: an earlier Core → Identity send to that
+     * identity that was interrupted after its lock was built. Throws when unreadable.
+     */
+    suspend fun unresolvedExternalTopUpLocks(walletIdHex: String, identityId: ByteArray): List<TrackedAssetLock>
+
+    /**
+     * Core → an identity [walletIdHex] does NOT manage, from a NEW asset lock
+     * (`topUpExternalIdentityFromCore`, platform#5931): Rust fetches the identity first (an
+     * unknown one fails `DashSdkError.NotFound` before anything is built) and records it on
+     * the lock's row before the broadcast. Once the lock is built a failure may leave it
+     * tracked: it is resumed ([resumeTopUpToRecordedRecipient]), never rebuilt. Returns the
+     * identity's new balance, also when the call completed after a cancellation.
+     */
+    suspend fun coreTopUpExternalIdentity(walletIdHex: String, identityId: ByteArray, amountDuffs: Long): Long
+
+    /**
+     * Resume [lock] to the identity its row records (`resumeTopUpToRecordedRecipient`): never
+     * a new lock, never another identity.
+     */
+    suspend fun resumeTopUpToRecordedRecipient(walletIdHex: String, lock: TrackedAssetLock)
     suspend fun platformTransfer(walletIdHex: String, to: PlatformAddressBytes, amountCredits: Long)
     /** Platform addresses → an identity [walletIdHex] MANAGES (`topUpFromAddresses`). */
     suspend fun platformTopUpIdentity(walletIdHex: String, identityId: ByteArray, inputs: List<FundingInput>)
@@ -757,6 +781,33 @@ internal class DashSdkExternalSendSource(
     override suspend fun coreTopUpIdentity(identityIdBase58: String, amountDuffs: Long): SdkWriteResult<TopUpOutcome> =
         transparentTopUp.topUpReportingLockTxId(identityIdBase58, amountDuffs, newUserIntent = true)
 
+    override suspend fun unresolvedExternalTopUpLocks(
+        walletIdHex: String,
+        identityId: ByteArray
+    ): List<TrackedAssetLock> =
+        manager().trackedIdentityRecoveryAssetLocks(walletIdBytes(walletIdHex))
+            .filter { it.recordsExternalTopUpTo(identityId) }
+
+    override suspend fun coreTopUpExternalIdentity(walletIdHex: String, identityId: ByteArray, amountDuffs: Long): Long {
+        val manager = manager()
+        return manager.identityCredits.topUpExternalIdentityFromCore(
+            walletHandle = wallet(walletIdHex).handle,
+            identityId = identityId,
+            amountDuffs = amountDuffs,
+            accountIndex = EXTERNAL_FUNDING_ACCOUNT_INDEX,
+            coreSignerHandle = manager.mnemonicResolverHandle
+        )
+    }
+
+    override suspend fun resumeTopUpToRecordedRecipient(walletIdHex: String, lock: TrackedAssetLock) {
+        val manager = manager()
+        manager.identityCredits.resumeTopUpToRecordedRecipient(
+            walletHandle = wallet(walletIdHex).handle,
+            lock = lock,
+            coreSignerHandle = manager.mnemonicResolverHandle
+        )
+    }
+
     override suspend fun platformTransfer(walletIdHex: String, to: PlatformAddressBytes, amountCredits: Long) {
         val manager = manager()
         wallet(walletIdHex).transferCredits(
@@ -952,7 +1003,10 @@ internal class DashSdkExternalSendSource(
  * 6. the outcome: Broadcast → Sent, NotBroadcast → NotSent, Ambiguous / anything
  *    unclassified → [ExternalSendResult.MayHaveGoneThrough] (terminal). Core → Platform
  *    additionally persists its recipients before the call and is never NotSent once its
- *    asset lock was built ([sendCoreToPlatform], [resumePendingPlatformFunding]).
+ *    asset lock was built ([sendCoreToPlatform], [resumePendingPlatformFunding]); Core → an
+ *    identity this wallet does not manage resumes an unresolved lock recording that identity
+ *    instead of building a second one, and is never NotSent once its lock may exist
+ *    ([sendCoreToExternalIdentity]).
  */
 @Singleton
 class ExternalSendServiceImpl internal constructor(
@@ -1354,9 +1408,9 @@ class ExternalSendServiceImpl internal constructor(
             ?: return notSent(pair, NotSentReason.GENERIC, "identity record unreadable")
         val ownIdentityId = ownIdentity.getOrNull()
         val destinationIsOwnIdentity: Boolean? = when (destination) {
-            // A Core top-up needs an identity the SDK wallet manages; a Platform top-up picks
-            // its SDK call by it; an identity transfer only needs to tell the user's own
-            // identity (no self-transfer).
+            // A Core or Platform top-up picks its SDK call by whether the SDK wallet manages
+            // the identity; an identity transfer only needs to tell the user's own identity
+            // (no self-transfer).
             is SendDestination.Identity -> if (source == SendBalance.CORE || source == SendBalance.PLATFORM) {
                 decodeIdentityId(destination.identityIdBase58)?.let { target ->
                     readOrNull("managed identities") {
@@ -1374,10 +1428,10 @@ class ExternalSendServiceImpl internal constructor(
         if (support != SendSupport.SUPPORTED) {
             return notSent(pair, NotSentReason.NOT_SUPPORTED, "pair not supported ($support)")
         }
-        // Platform → Identity picks topUpFromAddresses (managed) or the external top-up by the
-        // managed set: unreadable is unknown, never "someone else's".
-        val platformTopUpOfManaged: Boolean? =
-            if (source == SendBalance.PLATFORM && destination is SendDestination.Identity) {
+        // Core / Platform → Identity pick the managed top-up or the external one by the managed
+        // set: unreadable is unknown, never "someone else's".
+        val topUpOfManaged: Boolean? =
+            if ((source == SendBalance.CORE || source == SendBalance.PLATFORM) && destination is SendDestination.Identity) {
                 destinationIsOwnIdentity
                     ?: return notSent(pair, NotSentReason.GENERIC, "managed identities unreadable")
             } else {
@@ -1406,10 +1460,11 @@ class ExternalSendServiceImpl internal constructor(
 
         // (5)+(6) The one write.
         return when (source) {
-            SendBalance.CORE -> sendFromCore(pair, walletIdHex, destination, amount, amountCredits, isMax, coreSession)
+            SendBalance.CORE ->
+                sendFromCore(pair, walletIdHex, destination, amount, amountCredits, isMax, coreSession, topUpOfManaged)
             SendBalance.SHIELDED -> sendFromShielded(pair, walletIdHex, destination, amount, isMax)
             SendBalance.PLATFORM ->
-                sendFromPlatform(pair, walletIdHex, destination, amount, amountCredits, platformTopUpOfManaged)
+                sendFromPlatform(pair, walletIdHex, destination, amount, amountCredits, topUpOfManaged)
             SendBalance.IDENTITY -> sendFromIdentity(
                 pair,
                 walletIdHex,
@@ -1428,12 +1483,16 @@ class ExternalSendServiceImpl internal constructor(
         amount: Dash,
         amountCredits: Long,
         isMax: Boolean,
-        coreSession: WalletSession?
+        coreSession: WalletSession?,
+        destinationIsManagedIdentity: Boolean?
     ): ExternalSendResult {
         return when (destination) {
             is SendDestination.Core -> sendCoreToCore(pair, walletIdHex, destination, amount, isMax, coreSession)
             is SendDestination.Shielded -> sendCoreToShielded(pair, walletIdHex, destination, amount)
             is SendDestination.Identity -> {
+                val managed = destinationIsManagedIdentity
+                    ?: return notSent(pair, NotSentReason.GENERIC, "managed identities unreadable")
+                if (!managed) return sendCoreToExternalIdentity(pair, walletIdHex, destination, amount)
                 // The top-up marks no submission point of its own: from its start a wipe that
                 // cancels it leaves the outcome unknown.
                 val result = submitUnderWipeBarrier(pair, walletIdHex) { mark ->
@@ -1453,6 +1512,108 @@ class ExternalSendServiceImpl internal constructor(
             }
             is SendDestination.Platform -> sendCoreToPlatform(pair, walletIdHex, destination, amount, amountCredits)
         }
+    }
+
+    /**
+     * Core → an identity this wallet does not manage
+     * ([ExternalSendSource.coreTopUpExternalIdentity], platform#5931). Rust records the
+     * recipient on the lock's row before broadcasting it, so the SDK's tracked locks are the
+     * resume record; nothing is persisted here.
+     * 1. Resume gate: an unresolved lock recording this identity (an earlier send interrupted
+     *    after its lock was built) is resumed ([ExternalSendSource.resumeTopUpToRecordedRecipient])
+     *    instead of building a second one, and this request is not executed
+     *    ([NotSentReason.EARLIER_TOP_UP_COMPLETED]). A lock Platform rejects as already consumed
+     *    is stale (its credits landed) and skipped. A lock list that cannot be read refuses the
+     *    send: it cannot prove no lock exists.
+     * 2. Otherwise one fresh build under the fresh-funding hold. A failure classified as
+     *    pre-broadcast ([classifyBroadcastFailure]; `NotFound` for an identity Platform does not
+     *    have) is Not sent only when the lock list, read again, holds no new lock for this
+     *    identity. A new lock, or a list that cannot be read, may have gone through: that lock
+     *    is resumed by the next send here or by the recovery drain ([SdkTopUpRecoveryService]),
+     *    never rebuilt.
+     */
+    private suspend fun sendCoreToExternalIdentity(
+        pair: String,
+        walletIdHex: String,
+        destination: SendDestination.Identity,
+        amount: Dash
+    ): ExternalSendResult {
+        val identityId = decodeIdentityId(destination.identityIdBase58)
+            ?: return notSent(pair, NotSentReason.GENERIC, "invalid identity id")
+        // Broadcast(true): an earlier lock was resumed instead; Broadcast(false): this top-up.
+        val result: SdkWriteResult<Boolean> = submitUnderWipeBarrier(pair, walletIdHex) { mark ->
+            val earlier = try {
+                this.source.unresolvedExternalTopUpLocks(walletIdHex, identityId)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                return@submitUnderWipeBarrier SdkWriteResult.NotBroadcast("resume-gate lookup failed", e)
+            }
+            for (lock in earlier) {
+                mark.submitting()
+                try {
+                    this.source.resumeTopUpToRecordedRecipient(walletIdHex, lock)
+                    return@submitUnderWipeBarrier SdkWriteResult.Broadcast(true)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    if (!isAlreadyConsumed(e)) return@submitUnderWipeBarrier classifyBroadcastFailure(e)
+                    log.info("external send {}: an earlier top-up lock was already consumed; skipped", pair)
+                }
+            }
+            if (readOrNull("L1 funding gate") { this.source.coreFundingGateOpen() } != true) {
+                return@submitUnderWipeBarrier SdkWriteResult.NotBroadcast(L1_FUNDING_GATE_CLOSED_REASON)
+            }
+            val knownLocks = earlier.mapTo(HashSet()) { it.outPointKey() }
+            try {
+                this.source.withFreshCoreFunding {
+                    mark.submitting()
+                    this.source.coreTopUpExternalIdentity(walletIdHex, identityId, amount.duffs)
+                }?.let { SdkWriteResult.Broadcast(false) }
+                    ?: SdkWriteResult.NotBroadcast(L1_PENDING_PAYMENT_UNPROTECTED_REASON)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                when (val classified = classifyBroadcastFailure(e)) {
+                    is SdkWriteResult.NotBroadcast ->
+                        if (noNewExternalTopUpLock(pair, walletIdHex, identityId, knownLocks)) {
+                            classified
+                        } else {
+                            SdkWriteResult.Ambiguous(e)
+                        }
+                    else -> classified
+                }
+            } catch (e: LinkageError) {
+                SdkWriteResult.NotBroadcast("native library unavailable", e)
+            }
+        }
+        return when (result) {
+            is SdkWriteResult.Broadcast -> if (result.value) {
+                notSent(pair, NotSentReason.EARLIER_TOP_UP_COMPLETED, "an earlier top-up was completed instead")
+            } else {
+                log.info("external send {}: sent", pair)
+                ExternalSendResult.Sent(null)
+            }
+            else -> mapWrite(pair, result)
+        }
+    }
+
+    /**
+     * After a failed external Core top-up: true only when the SDK's tracked locks, read again,
+     * hold no lock for [identityId] beyond [knownLocks] — no lock was built. False when one
+     * was (it may be on the network) or the list cannot be read (unknown).
+     */
+    private suspend fun noNewExternalTopUpLock(
+        pair: String,
+        walletIdHex: String,
+        identityId: ByteArray,
+        knownLocks: Set<String>
+    ): Boolean {
+        val now = readOrNull("tracked top-up locks") { this.source.unresolvedExternalTopUpLocks(walletIdHex, identityId) }
+            ?: return false
+        val built = now.any { it.outPointKey() !in knownLocks }
+        if (built) log.warn("external send {}: the top-up failed after its lock was built", pair)
+        return !built
     }
 
     /**

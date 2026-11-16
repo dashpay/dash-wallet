@@ -245,10 +245,12 @@ class ExternalSendModelsTest {
         assertEquals(SendSupport.NOT_SUPPORTED_YET, support(SendBalance.CORE, SendDestination.Platform(platformMainP2sh)))
         assertEquals(SendSupport.NOT_SUPPORTED_YET, support(SendBalance.CORE, SendDestination.Platform(platformTestP2sh)))
         assertEquals(SendSupport.SUPPORTED, support(SendBalance.CORE, platform, hasIdentity = false))
+        // Any identity (platform#5931): the send picks the managed or the external top-up, and
+        // refuses when it cannot tell.
         assertEquals(SendSupport.SUPPORTED, support(SendBalance.CORE, identity, own = true))
-        assertEquals(SendSupport.NEEDS_OWN_IDENTITY, support(SendBalance.CORE, identity, own = false))
-        // Could not tell: fail closed.
-        assertEquals(SendSupport.NEEDS_OWN_IDENTITY, support(SendBalance.CORE, identity, own = null))
+        assertEquals(SendSupport.SUPPORTED, support(SendBalance.CORE, identity, own = false))
+        assertEquals(SendSupport.SUPPORTED, support(SendBalance.CORE, identity, own = null))
+        assertEquals(SendSupport.SUPPORTED, support(SendBalance.CORE, identity, own = false, hasIdentity = false))
         // The Core source does not need an identity.
         assertEquals(SendSupport.SUPPORTED, support(SendBalance.CORE, core, hasIdentity = false))
     }

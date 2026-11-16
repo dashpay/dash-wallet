@@ -20,6 +20,7 @@ package de.schildbach.wallet.service.platform.sdk
 import kotlinx.coroutines.runBlocking
 import org.dashfoundation.dashsdk.wallet.TrackedAssetLock
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -67,7 +68,8 @@ class SdkTransparentTopUpTest {
 
         override suspend fun unresolvedTopUpAssetLock(
             walletIdHex: String,
-            registrationIndex: Int
+            registrationIndex: Int,
+            identityId: ByteArray
         ): TrackedAssetLock? {
             lockQueryCalls++
             return unresolvedLock()
@@ -396,6 +398,32 @@ class SdkTransparentTopUpTest {
         assertEquals(
             SdkWriteResult.Broadcast(55_000L),
             runBlocking { topUpOf(plain).topUp(identityBase58, amountDuffs, newUserIntent = true) }
+        )
+    }
+
+    @Test
+    fun ownResumeGate_neverMatchesALockRecordingAnotherIdentity() {
+        val other = ByteArray(32) { 9 }
+        fun lock(type: TrackedAssetLock.FundingType, recipient: ByteArray?, index: Int = registrationIndex) =
+            TrackedAssetLock(
+                outpointTxid = ByteArray(32) { 1 },
+                outpointVout = 0,
+                fundingType = type,
+                status = TrackedAssetLock.Status.BROADCAST,
+                registrationIndex = index,
+                instantLockPresent = false,
+                chainLockHeight = 0,
+                identityRecipient = recipient
+            )
+        val unbound = TrackedAssetLock.FundingType.IDENTITY_TOP_UP_NOT_BOUND
+        // An External Send top-up of someone else's identity at the same index (platform#5931).
+        assertFalse(lock(unbound, other).isOwnTopUpResumeCandidate(registrationIndex, identityId))
+        assertTrue(lock(unbound, identityId).isOwnTopUpResumeCandidate(registrationIndex, identityId))
+        assertTrue(lock(unbound, null).isOwnTopUpResumeCandidate(registrationIndex, identityId))
+        assertTrue(lock(TrackedAssetLock.FundingType.IDENTITY_TOP_UP, null).isOwnTopUpResumeCandidate(registrationIndex, identityId))
+        assertFalse(lock(unbound, null, index = registrationIndex + 1).isOwnTopUpResumeCandidate(registrationIndex, identityId))
+        assertFalse(
+            lock(TrackedAssetLock.FundingType.IDENTITY_REGISTRATION, null).isOwnTopUpResumeCandidate(registrationIndex, identityId)
         )
     }
 }
