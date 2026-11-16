@@ -1343,7 +1343,29 @@ class ExternalSendServiceImplTest {
         assertEquals(FeeEstimate(Dash(2_001L), exact = false), service.estimateFee(SendBalance.SHIELDED, balanceKindOf(platform)))
         assertNull(service.estimateFee(SendBalance.PLATFORM, balanceKindOf(platform)))
         assertNull(service.estimateFee(SendBalance.IDENTITY, balanceKindOf(core)))
+    }
+
+    @Test
+    fun coreToIdentity_fee_isOnlyTheL1AssetLockReserve_nullWhenTheUtxoCountIsUnknown() = runBlocking {
+        val source = source()
+        val service = service(source)
+        // The top-up locks exactly the amount: the L1 reserve is on top, with no Platform margin
+        // (Platform's top-up fee comes out of the locked amount).
+        assertEquals(
+            FeeEstimate(assetLockMaxFeeReserve(2), exact = false),
+            service.estimateFee(SendBalance.CORE, balanceKindOf(ownIdentity))
+        )
+        source.utxoCount = 10
+        assertEquals(
+            FeeEstimate(assetLockMaxFeeReserve(10), exact = false),
+            service.estimateFee(SendBalance.CORE, balanceKindOf(ownIdentity))
+        )
+        // Fail closed: an unknown UTXO count is no fee figure, never zero.
+        source.utxoCount = null
         assertNull(service.estimateFee(SendBalance.CORE, balanceKindOf(ownIdentity)))
+        // Max stays unavailable for Core → Identity.
+        source.utxoCount = 2
+        assertNull(service.maxSendable(SendBalance.CORE, balanceKindOf(ownIdentity)))
     }
 
     @Test
