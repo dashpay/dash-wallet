@@ -1387,6 +1387,16 @@ removes a doomed device wake-up and a log line that implied the opposite of what
 `DelayedServiceStartReceiver`'s guard-bypass fix stays: it is still the fallback when
 `startBlockchainServiceAfterUpgrade()` is refused on the package-replaced path.
 
+**2026-11-17, after 12.0.2 shipped: the receiver is split.** Play Console still reported
+"Restricted foreground service types" against `BlockchainServiceImpl.startForeground`, reached from
+a `BOOT_COMPLETED` receiver. Play's check is per receiver class: `BootstrapReceiver` also handled
+`MY_PACKAGE_REPLACED`, whose `startBlockchainServiceAfterUpgrade()` starts the `dataSync` service,
+and the API < 35 boot branch still called `startBlockchainService(false)`. `MY_PACKAGE_REPLACED` now
+has its own `PackageReplacedReceiver` (upgrade, direct start, alarm fallback), and
+`BootstrapReceiver` handles only `BOOT_COMPLETED` and the inactivity-notification dismiss actions. It
+starts no service on any API level; below 35 the removed call could not start one either, because
+of the same process-importance guard.
+
 **Still open, product-side:** surfacing staleness in the UI (a "last synced" indicator), so a user
 whose phone rebooted can tell the wallet is behind rather than assuming it is current. Not
 implemented — it is a design change, not a patch.

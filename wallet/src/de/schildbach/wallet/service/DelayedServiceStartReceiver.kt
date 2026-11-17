@@ -26,8 +26,10 @@ import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
 /**
- * Receiver to handle delayed blockchain service startup for Android 15+ to avoid
- * BOOT_COMPLETED restrictions on dataSync foreground services.
+ * Fallback start of the blockchain service, fired by an alarm that
+ * [PackageReplacedReceiver] schedules when its direct foreground-service start after an
+ * app update is refused. Nothing schedules it from `BOOT_COMPLETED` any more: a boot
+ * does not start syncing (see [BootstrapReceiver]).
  */
 @AndroidEntryPoint
 class DelayedServiceStartReceiver : BroadcastReceiver() {
@@ -41,17 +43,14 @@ class DelayedServiceStartReceiver : BroadcastReceiver() {
         // sits well below it. The call then returns having done nothing, with
         // no log and no exception.
         //
-        // Measured on the 2026-09-17 cold-boot test: after a reboot this
-        // receiver fired and logged "starting delayed blockchain service",
-        // and no service was created — the wallet did no block sync at all
-        // until the app was opened by hand. See §25 of the upgrade memory and
-        // sync plan.
+        // Measured on the 2026-09-17 cold-boot test, when the boot path still
+        // scheduled this alarm: the receiver fired and logged "starting delayed
+        // blockchain service", and no service was created. See §25 of the
+        // upgrade memory and sync plan.
         //
-        // Use the guard-bypassing start instead. On Android 15+ the platform
-        // may still refuse it (BlockchainServiceImpl is a `dataSync` foreground
-        // service and BOOT_COMPLETED cannot launch that type), but a refusal is
-        // caught and logged there, which is a diagnosable failure rather than a
-        // silent one, and pre-15 devices now actually start syncing.
+        // Use the guard-bypassing start instead. The platform may still refuse
+        // it, but a refusal is caught and logged there, which is a diagnosable
+        // failure rather than a silent one.
         log.info("starting delayed blockchain service")
         if (!application.startBlockchainServiceAfterUpgrade()) {
             log.warn(

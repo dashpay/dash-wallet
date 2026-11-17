@@ -18,12 +18,9 @@
 package de.schildbach.wallet.service;
 
 import org.bitcoinj.core.Coin;
-import org.bitcoinj.script.Script;
 import org.bitcoinj.utils.ContextPropagatingThreadFactory;
 import org.dash.wallet.common.money.MonetaryFormat;
 import org.bitcoinj.wallet.Wallet;
-import org.bitcoinj.wallet.WalletExtension;
-import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension;
 import de.schildbach.wallet.data.WalletData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,25 +34,30 @@ import de.schildbach.wallet.ui.OnboardingActivity;
 import de.schildbach.wallet_test.R;
 
 import android.annotation.SuppressLint;
-import android.app.AlarmManager;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.os.Build;
 import android.text.format.DateUtils;
 
 import androidx.annotation.WorkerThread;
 import androidx.core.app.NotificationCompat;
 
-import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
 import javax.inject.Inject;
 
 /**
+ * Handles {@code BOOT_COMPLETED} and the inactivity notification's dismiss actions.
+ *
+ * <p>This receiver must never start {@link BlockchainServiceImpl}, directly or through a
+ * helper. Apps targeting Android 15+ cannot start a {@code dataSync} foreground service from
+ * a {@code BOOT_COMPLETED} receiver, and Play reports any path from this class to
+ * {@code startForeground}. App updates ({@code MY_PACKAGE_REPLACED}), which must start
+ * syncing, are handled by {@link PackageReplacedReceiver}.
+ *
  * @author Andreas Schildbach
  */
 @SuppressLint("WrongConstant")
@@ -75,8 +77,6 @@ public class BootstrapReceiver extends BroadcastReceiver {
     protected WalletData walletDataProvider;
     @Inject
     protected WalletApplication application;
-    @Inject
-    protected Configuration configuration;
 
     @Override
     public void onReceive(final Context context, final Intent intent) {
@@ -92,68 +92,26 @@ public class BootstrapReceiver extends BroadcastReceiver {
     @WorkerThread
     private void onAsyncReceive(final Context context, final Intent intent) {
         final String action = intent.getAction();
-        final boolean bootCompleted = Intent.ACTION_BOOT_COMPLETED.equals(action);
-        final boolean packageReplaced = Intent.ACTION_MY_PACKAGE_REPLACED.equals(action);
 
-        if (packageReplaced || bootCompleted) {
-            // make sure wallet is upgraded to HD
-            if (packageReplaced) {
-                // An app update cold-starts the process in the background, so
-                // the wallet may still be loading off the main thread; the
-                // upgrade mutates it, so wait for the load to finish outright.
-                application.awaitWalletReadyForMutation();
-                maybeUpgradeWallet(walletDataProvider.getWallet());
-            }
-
-            // make sure there is always a blockchain sync scheduled
-            if (application.getWallet() != null) {
-                if (bootCompleted && Build.VERSION.SDK_INT >= 35) { // Android 15+ (VANILLA_ICE_CREAM)
-                    // DELIBERATELY DOES NOTHING. Android 15 blocks a BOOT_COMPLETED receiver
-                    // from starting a foreground service of type `dataSync` (the type
-                    // BlockchainServiceImpl declares), throwing
-                    // ForegroundServiceStartNotAllowedException with no exemption, for any app
-                    // targeting API 35+. We target 35.
-                    //
-                    // This used to call scheduleDelayedBlockchainServiceStart(), whose 5s
-                    // AlarmManager hop was intended to dodge that restriction. It cannot: an
-                    // alarm broadcast is not one of the exempt start reasons, and deferring
-                    // through it also discards the BOOT_COMPLETED exemption the receiver
-                    // itself holds. Measured on the 2026-09-17 cold-boot test — the alarm
-                    // fired, the start silently no-opped on the process-importance guard, and
-                    // the wallet did no block sync at all until the app was opened by hand
-                    // (§25 of the upgrade memory and sync plan).
-                    //
-                    // Product decision 2026-09-17: background catch-up after a reboot is NOT a
-                    // requirement. So do not schedule a wake-up that provably cannot succeed —
-                    // say so plainly instead. Syncing resumes when the user opens the app,
-                    // which starts the service from the foreground where it is always allowed.
-                    log.info("post-boot sync not attempted on Android 15+: a dataSync foreground "
-                            + "service cannot be started from BOOT_COMPLETED. Syncing resumes when "
-                            + "the app is opened.");
-                } else if (packageReplaced) {
-                    // An UPGRADE must actually start syncing. startBlockchainService()
-                    // silently no-ops here — this process runs at receiver importance,
-                    // below the IMPORTANCE_FOREGROUND its guard demands — so the
-                    // 2026-09-16 emulator upgrade test committed the cutover, bound the
-                    // wallet and then scanned nothing at all, with no foreground service
-                    // to start the SDK L1 engine from. MY_PACKAGE_REPLACED is exempt from
-                    // the background FGS-start restrictions, so start one directly, and
-                    // fall back to the alarm if the platform still refuses.
-                    if (!application.startBlockchainServiceAfterUpgrade()) {
-                        scheduleDelayedBlockchainServiceStart(context);
-                    }
-                } else {
-                    application.startBlockchainService(false);
-                }
-            }
+        if (Intent.ACTION_BOOT_COMPLETED.equals(action)) {
+            // DELIBERATELY DOES NOT START SYNCING, on any Android version.
+            //
+            // Android 15+ forbids a BOOT_COMPLETED receiver from starting a `dataSync`
+            // foreground service (the type BlockchainServiceImpl declares) for apps targeting
+            // API 35+, and Play flags any such path in this class. On Android 10-14 the old
+            // startBlockchainService(false) call here could not start it either: its
+            // process-importance guard requires IMPORTANCE_FOREGROUND, and a process woken for
+            // a broadcast sits below that (the same guard made the alarm-driven start a no-op
+            // on the 2026-09-17 cold-boot test, §25 of the upgrade memory and sync plan).
+            //
+            // Product decision 2026-09-17: background catch-up after a reboot is NOT a
+            // requirement. Syncing resumes when the user opens the app, which starts the
+            // service from the foreground where it is always allowed.
+            log.info("post-boot sync not attempted: the blockchain service is not started from "
+                    + "BOOT_COMPLETED. Syncing resumes when the app is opened.");
 
             // if the app hasn't been used for a while and contains coins, maybe show reminder
-            maybeShowInactivityNotification();
-            application.myPackageReplaced = true;
-
-            // reset the notification explainer flag
-            if (packageReplaced)
-                configuration.setShowNotificationsExplainer(true);
+            maybeShowInactivityNotification(application, config, walletDataProvider);
         } else if (ACTION_DISMISS.equals(action)) {
             dismissNotification(context);
         } else if (ACTION_DISMISS_FOREVER.equals(action)) {
@@ -163,41 +121,13 @@ public class BootstrapReceiver extends BroadcastReceiver {
         }
     }
 
+    /**
+     * Shared with {@link PackageReplacedReceiver}. Its dismiss actions are delivered to this
+     * receiver.
+     */
     @WorkerThread
-    private void maybeUpgradeWallet(final Wallet wallet) {
-        log.info("maybe upgrading wallet");
-
-        if (wallet == null) {
-            // with version 7.0 and above it is possible to have the app installed without a wallet
-            log.info("wallet does not exist, not upgrading the wallet file");
-            return;
-        }
-
-        // Maybe upgrade wallet from basic to deterministic, and maybe upgrade to the latest script type
-        if (wallet.isDeterministicUpgradeRequired(Script.ScriptType.P2PKH) && !wallet.isEncrypted()) {
-            // upgrade from v1 wallet to v4 wallet
-            wallet.upgradeToDeterministic(Script.ScriptType.P2PKH, null);
-        }
-
-        // for upgrades from version 9.0.0 to 9.0.3, there is a bug that requires rescanning
-        // the transactions for protx related items
-        Map<String, WalletExtension> extensions = wallet.getExtensions();
-        WalletExtension extension = extensions.get(AuthenticationGroupExtension.EXTENSION_ID);
-        if (extension != null) {
-            // reset will rescan existing transactions and rebuild the authentication usage info
-            ((AuthenticationGroupExtension) extension).rescanWallet();
-        }
-
-        // Maybe upgrade wallet to secure chain
-        try {
-            wallet.doMaintenance(null, false);
-        } catch (final Exception x) {
-            log.error("failed doing wallet maintenance", x);
-        }
-    }
-
-    @WorkerThread
-    private void maybeShowInactivityNotification() {
+    static void maybeShowInactivityNotification(final WalletApplication application,
+            final Configuration config, final WalletData walletDataProvider) {
         if (!config.isTimeToRemindBalance())
             return;
 
@@ -262,15 +192,4 @@ public class BootstrapReceiver extends BroadcastReceiver {
         nm.cancel(Constants.NOTIFICATION_ID_INACTIVITY);
     }
 
-    @WorkerThread
-    private void scheduleDelayedBlockchainServiceStart(final Context context) {
-        log.info("scheduling delayed blockchain service start for Android 15+");
-        final AlarmManager alarmManager = context.getSystemService(AlarmManager.class);
-        final Intent serviceIntent = new Intent(context, DelayedServiceStartReceiver.class);
-        final PendingIntent pendingIntent = PendingIntent.getBroadcast(context, 0, serviceIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-        
-        // Schedule service start with a 5-second delay to avoid BOOT_COMPLETED restrictions
-        final long delayMs = 5000;
-        alarmManager.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + delayMs, pendingIntent);
-    }
 }

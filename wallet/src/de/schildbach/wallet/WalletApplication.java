@@ -775,7 +775,7 @@ public class WalletApplication extends MultiDexApplication
 
     /**
      * For a background component that changes the wallet it got from
-     * {@link #getWallet()} (BootstrapReceiver's upgrade and maintenance on
+     * {@link #getWallet()} (PackageReplacedReceiver's upgrade and maintenance on
      * MY_PACKAGE_REPLACED): wait until a background start's load has finished
      * completely, main-thread initialisation included, as it would have before
      * any receiver ran in a synchronous start. A no-op otherwise.
@@ -2643,9 +2643,9 @@ public class WalletApplication extends MultiDexApplication
      * Android 12+ background foreground-service-start restrictions, so a
      * {@code startForegroundService} from here is allowed; the service
      * promotes itself immediately via the {@code START_AS_FOREGROUND_EXTRA}
-     * promise it already honors. If the platform refuses anyway, fall back to
-     * the same delayed AlarmManager start that the boot path uses on
-     * Android 15+, where an alarm-driven start is exempt.
+     * promise it already honors. If the platform refuses anyway, the caller
+     * ({@code PackageReplacedReceiver}) falls back to a delayed AlarmManager
+     * start through {@code DelayedServiceStartReceiver}.
      *
      * @return true when the start was issued directly, false when it was
      *         deferred to the alarm.
