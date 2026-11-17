@@ -27,7 +27,6 @@ import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.Constants;
 
 import android.annotation.SuppressLint;
-import android.app.NotificationManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -115,8 +114,8 @@ public class BootstrapReceiver extends BroadcastReceiver {
     private void dismissNotification(final Context context) {
         log.info("dismissing inactivity notification");
         config.setRemindBalanceTimeIn(DateUtils.DAY_IN_MILLIS);
-        final NotificationManager nm = context.getSystemService(NotificationManager.class);
-        nm.cancel(Constants.NOTIFICATION_ID_INACTIVITY);
+        // through the reminder's lock, so a reminder being prepared cannot post after this
+        InactivityReminder.cancel(context);
     }
 
     @WorkerThread
@@ -124,8 +123,8 @@ public class BootstrapReceiver extends BroadcastReceiver {
         log.info("dismissing inactivity notification forever");
         config.setRemindBalanceTimeIn(DateUtils.WEEK_IN_MILLIS * 52);
         config.setRemindBalance(false);
-        final NotificationManager nm = context.getSystemService(NotificationManager.class);
-        nm.cancel(Constants.NOTIFICATION_ID_INACTIVITY);
+        // through the reminder's lock, so a reminder being prepared cannot post after this
+        InactivityReminder.cancel(context);
     }
 
 }

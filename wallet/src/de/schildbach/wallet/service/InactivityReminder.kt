@@ -185,9 +185,10 @@ class InactivityReminder @Inject constructor(
         private val postLock = Any()
 
         /**
-         * Removes the reminder. Called by Reset Wallet, after the wipe flag is raised: a
-         * reminder already posted for the old wallet goes, and one being prepared sees the
-         * flag and is not posted.
+         * Removes the reminder, under the same lock as posting. Called by Reset Wallet after
+         * the wipe flag is raised, and by the dismiss actions after they update the reminder
+         * settings: a reminder already posted goes, and one being prepared either posts first
+         * (and is removed here) or reads the new state and is not posted.
          */
         @JvmStatic
         fun cancel(context: Context) {
