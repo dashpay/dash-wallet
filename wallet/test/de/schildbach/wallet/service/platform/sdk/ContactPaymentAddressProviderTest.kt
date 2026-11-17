@@ -26,6 +26,7 @@ import org.bitcoinj.core.Address
 import org.bitcoinj.core.ECKey
 import org.bitcoinj.params.TestNet3Params
 import org.bitcoinj.wallet.FriendChainAccess
+import org.dashfoundation.dashsdk.persistence.entities.DashpayContactRequestEntity
 import org.dashj.platform.dpp.identifier.Identifier
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -1882,7 +1883,7 @@ class ContactPaymentAddressProviderTest {
         ) = contactHistoryUncoveredBecause(
             discoveryCompleted = discovered,
             sentRequestContacts = sent,
-            requestFloors = mapOf(a to 500L, b to 700L),
+            sentRequestFloors = mapOf(a to 500L, b to 700L),
             birthHeight = 100,
             receivalAccounts = accounts,
             coverSet = coverSet
@@ -1919,11 +1920,74 @@ class ContactPaymentAddressProviderTest {
             contactHistoryUncoveredBecause(
                 discoveryCompleted = true,
                 sentRequestContacts = setOf(a),
-                requestFloors = mapOf(a to 50L),
+                sentRequestFloors = mapOf(a to 50L),
                 birthHeight = 100,
                 receivalAccounts = listOf(a to 0),
                 coverSet = mapOf((a to 0) to 99L)
             )
+        )
+    }
+
+    /**
+     * MO-1131, with the heights read from a testnet device's SDK store. Contact
+     * A sent us a request (1591826) before we sent ours (1591833); the SDK
+     * covers A's receiving account from OUR request, 1591833. Contact B: we
+     * sent first, both requests in block 1591837, covered from 1591837. The
+     * gate floored A on the incoming request too, so A never read covered —
+     * and since the gate is wallet-wide, payments to B were refused as well.
+     */
+    @Test
+    fun contactHistoryCovered_whenTheContactsRequestCameFirst() {
+        val ourId = ByteArray(32) { 1 }
+        val a = hex(contactA)
+        val b = hex(contactB)
+        fun request(contact: ByteArray, outgoing: Boolean, height: Int) = DashpayContactRequestEntity(
+            networkRaw = 1,
+            ownerIdentityId = ourId,
+            contactIdentityId = contact,
+            isOutgoing = outgoing,
+            senderKeyIndex = 0,
+            recipientKeyIndex = 0,
+            accountReference = 0,
+            encryptedPublicKey = ByteArray(96),
+            coreHeightCreatedAt = height,
+            createdAtMillis = 1
+        )
+        val floors = sentRequestFloors(
+            listOf(
+                request(contactA, outgoing = false, height = 1_591_826),
+                request(contactA, outgoing = true, height = 1_591_833),
+                request(contactB, outgoing = true, height = 1_591_837),
+                request(contactB, outgoing = false, height = 1_591_837)
+            )
+        )
+        assertEquals(
+            "floored on our own requests only",
+            mapOf(a to 1_591_833L, b to 1_591_837L),
+            floors
+        )
+        fun uncovered(coverSet: Map<Pair<String, Int>, Long>) = contactHistoryUncoveredBecause(
+            discoveryCompleted = true,
+            sentRequestContacts = floors.keys,
+            sentRequestFloors = floors,
+            birthHeight = 1_401_408,
+            receivalAccounts = listOf(a to 0, b to 0),
+            coverSet = coverSet
+        )
+        assertNull(
+            "both accounts covered from the SDK's own checkpoint",
+            uncovered(mapOf((a to 0) to 1_591_833L, (b to 0) to 1_591_837L))
+        )
+        val late = uncovered(mapOf((a to 0) to 1_591_834L, (b to 0) to 1_591_837L))
+        assertTrue(
+            "coverage starting above our request is still refused, and named: $late",
+            late!!.contains("1 receiving account(s) not yet covered") &&
+                late.contains("${a.take(8)}…/0 covered from 1591834, needs 1591833")
+        )
+        val missing = uncovered(mapOf((b to 0) to 1_591_837L))
+        assertTrue(
+            "an account missing from the record is named: $missing",
+            missing!!.contains("${a.take(8)}…/0 not in the record (needs 1591833)")
         )
     }
 
