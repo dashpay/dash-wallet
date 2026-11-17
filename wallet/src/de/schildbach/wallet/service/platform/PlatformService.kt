@@ -130,8 +130,24 @@ fun <T> platformLazy(initializer: () -> T): Lazy<T?> {
 
 private object UNINITIALIZED
 
+/**
+ * [PlatformService.hasApp]'s decision: a name [registry] knows is answered from it when Platform
+ * is supported, without calling [legacyHasApp] (which constructs the legacy client); every other
+ * case calls [legacyHasApp], so an unknown name and an unsupported device behave as before.
+ */
+internal fun resolveHasApp(
+    app: String,
+    platformSupported: Boolean,
+    registry: SystemContractIds,
+    legacyHasApp: (String) -> Boolean
+): Boolean {
+    val registered = if (platformSupported) registry.isRegistered(app) else null
+    return registered ?: legacyHasApp(app)
+}
+
 class PlatformServiceImplementation @Inject constructor(
-    val walletDataProvider: WalletData
+    val walletDataProvider: WalletData,
+    private val systemContractIds: SystemContractIds
 ) : PlatformService {
     // none of the following should be initialized if platform is not supported
     private val _platform by platformLazy { createNetworkPlatform(Constants.NETWORK_PARAMETERS) }
@@ -215,9 +231,16 @@ class PlatformServiceImplementation @Inject constructor(
         _platform?.client?.contextProvider = contextProvider
     }
 
-    override fun hasApp(app: String): Boolean {
-        return platform.hasApp(app)
-    }
+    /**
+     * Whether [app] has a contract registered on this network. A name the wallet-owned
+     * [SystemContractIds] registry knows is answered from it without constructing the legacy
+     * `Platform` client (same answer as the legacy `Platform.hasApp`, whose constructor registers
+     * those names). Any other name (a custom app a legacy caller registered at runtime, such as
+     * DashConnect's) still asks the legacy client. When Platform is unsupported on this device the
+     * legacy getter is used for every name, keeping its existing failure.
+     */
+    override fun hasApp(app: String): Boolean =
+        resolveHasApp(app, Constants.SUPPORTS_PLATFORM, systemContractIds) { platform.hasApp(it) }
 
     /**
      * Calls Platform.check() three times asynchronously

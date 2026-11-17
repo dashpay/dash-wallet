@@ -22,6 +22,7 @@ import com.google.gson.JsonParser
 import com.google.gson.JsonPrimitive
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.service.platform.PlatformService
+import de.schildbach.wallet.service.platform.SystemContractIds
 import kotlinx.coroutines.CancellationException
 import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.wallet.TxMetadata
@@ -139,8 +140,8 @@ enum class DecryptProofVerdict { PROVEN, PARTIAL, FAILED }
  */
 object SdkTxMetadataDecryptMapping {
 
-    /** dashj `Platform.apps` key of the wallet-utils contract. */
-    const val APP_NAME = "wallet-utils"
+    /** App name of the wallet-utils contract (the legacy `Platform.apps` key). */
+    const val APP_NAME = SystemContractIds.WALLET_UTILS
 
     /**
      * The legacy document type (dashj `TxMetadata` queries the
@@ -272,13 +273,12 @@ class SdkTxMetadataDecryptProbe internal constructor(
     constructor(
         sdkService: DashSdkService,
         blockchainIdentityConfig: BlockchainIdentityConfig,
-        platformService: PlatformService
+        platformService: PlatformService,
+        systemContractIds: SystemContractIds
     ) : this(
         source = DashSdkTxMetadataDecryptSource(sdkService),
         ownIdentityId = { blockchainIdentityConfig.get(BlockchainIdentityConfig.IDENTITY_ID) },
-        contractId = {
-            platformService.platform.apps[SdkTxMetadataDecryptMapping.APP_NAME]?.contractId
-        },
+        contractId = { systemContractIds.contractId(SdkTxMetadataDecryptMapping.APP_NAME) },
         legacyDocumentCount = { ownerId ->
             TxMetadata(platformService.platform).get(ownerId, 0).size
         }
