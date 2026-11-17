@@ -18,6 +18,7 @@ package de.schildbach.wallet.service
 
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.content.Context
 import android.content.Intent
 import androidx.annotation.WorkerThread
 import androidx.core.app.NotificationCompat
@@ -69,9 +70,23 @@ class InactivityReminder @Inject constructor(
 
     @WorkerThread
     fun maybeShow() {
+        // Outside the lock: it may wait for a deferred wallet load.
+        val walletExists = walletData.wallet != null
+        // The reads and the post are one critical section with [cancel], so a reminder is
+        // either posted before Reset Wallet cancels it, or sees the reset and is not posted.
+        synchronized(postLock) {
+            if (application.isWipeInProgress || !application.walletFileExists()) {
+                log.info("wallet reset in progress or no wallet file, not showing inactivity reminder")
+                return
+            }
+            show(walletExists)
+        }
+    }
+
+    private fun show(walletExists: Boolean) {
         val content = decide(
             isTimeToRemind = config.isTimeToRemindBalance,
-            walletExists = walletData.wallet != null,
+            walletExists = walletExists,
             transparentBalance = readTransparentBalance(),
             shieldedBalance = readShieldedBalance(),
             hideBalance = readHideBalance()
@@ -167,6 +182,20 @@ class InactivityReminder @Inject constructor(
 
     companion object {
         private val log: Logger = LoggerFactory.getLogger(InactivityReminder::class.java)
+        private val postLock = Any()
+
+        /**
+         * Removes the reminder. Called by Reset Wallet, after the wipe flag is raised: a
+         * reminder already posted for the old wallet goes, and one being prepared sees the
+         * flag and is not posted.
+         */
+        @JvmStatic
+        fun cancel(context: Context) {
+            synchronized(postLock) {
+                context.getSystemService(NotificationManager::class.java)
+                    .cancel(Constants.NOTIFICATION_ID_INACTIVITY)
+            }
+        }
 
         /** Null means no reminder. */
         fun decide(

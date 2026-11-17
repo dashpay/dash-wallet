@@ -20,6 +20,7 @@
 package de.schildbach.wallet
 
 import androidx.work.WorkManager
+import de.schildbach.wallet.service.InactivityReminder
 import de.schildbach.wallet.service.platform.sdk.SdkSecretsWipeOutcome
 import de.schildbach.wallet.service.platform.sdk.SeamOutputLockRegistry
 import de.schildbach.wallet.service.platform.sdk.WalletSecretWriteFence
@@ -155,6 +156,10 @@ object WalletApplicationExt {
                 // unfinished wipe must route to the degraded screen, not to
                 // create/restore.
                 recordWalletWipeStopped()
+                // While the wipe flag is still up, so no reminder is posted in between:
+                // the old wallet's "you've still got Dash" reminder must not outlive it.
+                runCatching { InactivityReminder.cancel(this@finishWalletWipe) }
+                    .onFailure { log.warn("could not cancel the inactivity reminder after the wipe", it) }
                 withContext(Dispatchers.Main) { setWipeInProgress(false) }
             }
         }
