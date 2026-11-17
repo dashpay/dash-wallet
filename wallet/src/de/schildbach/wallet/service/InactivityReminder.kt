@@ -41,7 +41,9 @@ import javax.inject.Inject
  *
  * The amount is what the home header shows, from persisted last-known values, not the dashj
  * wallet's own balance: after the cutover to the SDK the dashj wallet is held and its balance
- * is frozen, and neither SDK pipeline runs in a receiver process.
+ * is frozen. A wallet load in a receiver process may start the SDK pipelines, but the
+ * reminder does not wait for them to publish a balance; the persisted values are the same
+ * ones the home header seeds itself from on a cold start.
  * - Transparent (L1): [WalletUIConfig.LAST_TOTAL_BALANCE], written by the dashj balance
  *   observer before the cutover and by the SDK pipeline after it.
  * - Shielded: [DashPayConfig.LAST_SHIELDED_BALANCE_DUFFS] when shielding is enabled, zero
