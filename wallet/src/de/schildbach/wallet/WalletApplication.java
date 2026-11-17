@@ -83,7 +83,6 @@ import org.bitcoinj.wallet.WalletExtension;
 import org.bitcoinj.wallet.WalletProtobufSerializer;
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension;
 import org.bitcoinj.wallet.authentication.AuthenticationKeyUsage;
-import org.conscrypt.Conscrypt;
 import org.dash.wallet.common.AutoLogoutTimerHandler;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.InteractionAwareActivity;
@@ -142,7 +141,6 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.security.GeneralSecurityException;
-import java.security.Security;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -673,12 +671,6 @@ public class WalletApplication extends MultiDexApplication
 
         // resume status polling for any DEX swaps still in flight
         runStartupStage(-1, "SWAP_TRACKING", swapTrackingService::start);
-
-        // enable TLS 1.3 support on Android 9 and lower
-        // Android 10 and above support TLS 1.3 by default
-        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q) {
-            Security.insertProviderAt(Conscrypt.newProvider(), 1);
-        }
 
         // THE LAUNCH-COMPLETE MILESTONE. Everything that can crash-loop the app
         // is behind us, so this launch counts as a SUCCESS right now and the
