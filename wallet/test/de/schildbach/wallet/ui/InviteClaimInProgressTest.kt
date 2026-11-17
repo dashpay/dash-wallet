@@ -71,4 +71,68 @@ class InviteClaimInProgressTest {
     fun `a paid creation in progress is not an invite claim`() {
         assertFalse(inviteClaimInProgress(record(IdentityCreationState.IDENTITY_REGISTERING, usingInvite = false)))
     }
+
+    @Test
+    fun `an invite claim that stopped on invite already used has failed terminally`() {
+        val failed = record(
+            IdentityCreationState.CREDIT_FUNDING_TX_CREATING,
+            usingInvite = true,
+            creationStateErrorMessage = "IllegalStateException: Invite has already been used"
+        )
+        // MO-975: it still reads as in progress, so without the terminal check
+        // it turned away every invite opened afterwards.
+        assertTrue(inviteClaimInProgress(failed))
+        assertTrue(inviteClaimFailedTerminally(failed))
+    }
+
+    @Test
+    fun `a retryable invite claim failure is not terminal`() {
+        assertFalse(
+            inviteClaimFailedTerminally(
+                record(
+                    IdentityCreationState.CREDIT_FUNDING_TX_CREATING,
+                    usingInvite = true,
+                    creationStateErrorMessage =
+                        "IllegalStateException: shielded invite claim failed: no bound shielded sub-wallet for the claimer yet"
+                )
+            )
+        )
+        assertFalse(
+            inviteClaimFailedTerminally(record(IdentityCreationState.CREDIT_FUNDING_TX_CREATING, usingInvite = true))
+        )
+    }
+
+    @Test
+    fun `only an invite claim can fail terminally`() {
+        assertFalse(inviteClaimFailedTerminally(null))
+        assertFalse(
+            inviteClaimFailedTerminally(
+                record(
+                    IdentityCreationState.CREDIT_FUNDING_TX_CREATING,
+                    usingInvite = false,
+                    creationStateErrorMessage = "Invite has already been used"
+                )
+            )
+        )
+        assertFalse(
+            inviteClaimFailedTerminally(
+                record(IdentityCreationState.DONE, usingInvite = true, creationStateErrorMessage = "Invite has already been used")
+            )
+        )
+    }
+
+    @Test
+    fun `the already-used message is recognised in the stored form`() {
+        assertTrue(isInviteAlreadyUsedError(INVITE_ALREADY_USED_MESSAGE))
+        assertTrue(isInviteAlreadyUsedError("IllegalStateException: $INVITE_ALREADY_USED_MESSAGE"))
+        assertFalse(isInviteAlreadyUsedError(null))
+        assertFalse(isInviteAlreadyUsedError("IllegalStateException: L1 invite claim failed"))
+        // An uncertain outcome that merely mentions the phrase is not terminal.
+        assertFalse(
+            isInviteAlreadyUsedError(
+                "IllegalStateException: shielded invite claim failed: cannot determine whether Invite has already been used"
+            )
+        )
+        assertFalse(isInviteAlreadyUsedError("invite has already been used"))
+    }
 }

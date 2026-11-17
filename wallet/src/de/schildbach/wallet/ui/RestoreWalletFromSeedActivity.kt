@@ -228,7 +228,7 @@ class RestoreWalletFromSeedActivity : RestoreFromFileActivity() {
                     startActivity(SetPinActivity.createIntent(this, R.string.set_pin_set_pin, true, recoveryData.pin))
                 } else {
                     // recovery that requires a blockchain rescan
-                    val result = viewModel.restoreWalletFromSeed(words)
+                    val result = viewModel.restoreWalletFromSeed(words, forgotPinRecovery = true)
                     if (result == SeedRestoreResult.REFUSED) {
                         redirectDegradedWallet(walletApplication)
                     } else if (result == SeedRestoreResult.RESTORED) {
@@ -254,6 +254,10 @@ class RestoreWalletFromSeedActivity : RestoreFromFileActivity() {
             if (result == SeedRestoreResult.REFUSED) {
                 // The wipe guard latched: the degraded screen explains it.
                 redirectDegradedWallet(walletApplication)
+            } else if (result == SeedRestoreResult.WALLET_ALREADY_INSTALLED) {
+                // Back to the onboarding screen, which routes to that wallet on resume.
+                setResult(RESULT_CANCELED)
+                finish()
             } else if (result == SeedRestoreResult.RESTORED) {
                 startActivityForResult(
                     SetPinActivity.createIntent(

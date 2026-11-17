@@ -164,6 +164,12 @@ interface IdentityRepository {
     suspend fun ensureCriticalAuthenticationKey(expectedIdentity: Identifier, keyParameter: KeyParameter?, checkAuthorized: () -> Unit)
     fun getIdentityFromPublicKeyId(): Identity?
     suspend fun clearBlockchainIdentityData()
+
+    /**
+     * [clearBlockchainIdentityData], but only while the stored record is still the one it was
+     * [loaded] as, compared and cleared in one store edit; see [BlockchainIdentityConfig.clearIfUnchanged].
+     */
+    suspend fun clearBlockchainIdentityDataIfUnchanged(loaded: IdentityRecordKey): Boolean
     suspend fun resetIdentityCreationStateError(blockchainIdentityData: BlockchainIdentityData)
     suspend fun searchUsernames(text: String, onlyExactUsername: Boolean = false, limit: Int = -1): List<UsernameSearchResult>
     suspend fun getUser(username: String): List<UsernameSearchResult>
@@ -286,6 +292,13 @@ class IdentityRepositoryImpl @Inject constructor(
         blockchainIdentityDataStorage.clear()
         _blockchainIdentity = null
         hasCheckedIdentityForUpgrade = false
+    }
+
+    override suspend fun clearBlockchainIdentityDataIfUnchanged(loaded: IdentityRecordKey): Boolean {
+        if (!blockchainIdentityDataStorage.clearIfUnchanged(loaded)) return false
+        _blockchainIdentity = null
+        hasCheckedIdentityForUpgrade = false
+        return true
     }
 
     override suspend fun doneAndDismiss() {

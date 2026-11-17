@@ -40,6 +40,7 @@ import de.schildbach.wallet.service.platform.work.contestedNameCandidates
 import de.schildbach.wallet.service.platform.work.contestedNameListsCanMatch
 import de.schildbach.wallet.service.platform.work.isOwnContestedCandidate
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+import de.schildbach.wallet.ui.INVITE_ALREADY_USED_MESSAGE
 import de.schildbach.wallet.ui.dashpay.UserAlert.Companion.INVITATION_NOTIFICATION_ICON
 import de.schildbach.wallet.ui.dashpay.UserAlert.Companion.INVITATION_NOTIFICATION_TEXT
 import de.schildbach.wallet.ui.dashpay.work.GetUsernameVotingResultOperation
@@ -1021,14 +1022,14 @@ class CreateIdentityService : LifecycleService() {
             is SdkWriteResult.NotBroadcast ->
                 if (SdkShieldedUsernameCreation.isInviteAlreadyUsedOutcome(result)) {
                     log.warn("shielded invite has already been used")
-                    throw IllegalStateException("Invite has already been used")
+                    throw IllegalStateException(INVITE_ALREADY_USED_MESSAGE)
                 } else {
                     throw IllegalStateException("shielded invite claim failed: ${result.reason}", result.cause)
                 }
             is SdkWriteResult.Ambiguous ->
                 if (SdkShieldedUsernameCreation.isInviteAlreadyUsedOutcome(result)) {
                     log.warn("shielded invite has already been used")
-                    throw IllegalStateException("Invite has already been used")
+                    throw IllegalStateException(INVITE_ALREADY_USED_MESSAGE)
                 } else {
                     throw IllegalStateException("shielded invite claim outcome unconfirmed", result.cause)
                 }
@@ -1317,7 +1318,7 @@ class CreateIdentityService : LifecycleService() {
                         // activate link or activity with the link (to show that the invite was used)
                         // and then, wipe all blockchain identity data and status (NONE)
                         //
-                        throw IllegalStateException("Invite has already been used", exception)
+                        throw IllegalStateException(INVITE_ALREADY_USED_MESSAGE, exception)
                     }
 
                     log.error(e.toString())

@@ -104,7 +104,7 @@ class InviteHandlerActivity : AppCompatActivity() {
         when {
             onboardingInProgress() -> {
                 lifecycleScope.launch {
-                    viewModel.setInvitationLink(invite, true)
+                    viewModel.receiveInvite(invite, true)
                     finish()
                 }
             }

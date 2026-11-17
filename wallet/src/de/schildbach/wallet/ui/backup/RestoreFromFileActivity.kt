@@ -75,9 +75,15 @@ open class RestoreFromFileActivity : SecureActivity(), AbstractPINDialogFragment
             // The wipe guard latched: the degraded screen explains it.
             redirectDegradedWallet(walletApplication)
         }
+        viewModel.walletAlreadyInstalled.observe(this) { onWalletAlreadyInstalled() }
         viewModel.retryRequest.observe(this) {
             RestoreWalletDialogFragment.showPick(supportFragmentManager)
         }
+    }
+
+    /** A file restore was dropped because another onboarding screen installed a wallet first. */
+    protected open fun onWalletAlreadyInstalled() {
+        finish()
     }
 
     internal fun restoreWalletFromFile() {

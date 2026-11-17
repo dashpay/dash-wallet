@@ -212,6 +212,7 @@ class ShieldedBalanceServiceTest {
             }
             quiesceLatched = false
             nativeLoopRunning = false
+            syncRunning = false
         }
 
         var syncNowCalls = 0
@@ -1164,6 +1165,132 @@ class ShieldedBalanceServiceTest {
         assertEquals(0, source.stopCalls)
     }
 
+    /**
+     * MO-975 (Andrei, 12.0.1-qa03): a wallet created from a stale onboarding
+     * screen replaced the previous one without a reset. SdkWalletBinder
+     * removed the old SDK wallet and bound the new one, but nothing stopped
+     * the shielded runtime, which stayed latched on the removed wallet: the
+     * invite claim's ensureShieldedReady() said ready, and the claim then
+     * found "no bound shielded sub-wallet for the claimer". Ready must mean
+     * ready on the wallet bound now.
+     */
+    @Test
+    fun bringUp_afterTheBoundWalletChanged_restartsOnTheNewWallet() = runBlocking {
+        val newWalletIdHex = "cd".repeat(32)
+        var bound = walletIdHex
+        val source = FakeSource(hasSupport = true, boundWalletId = { bound })
+        val service = service(source)
+        assertTrue(service.ensureShieldedReady())
+        assertEquals(1, source.bindCalls)
+
+        bound = newWalletIdHex // the replacement wallet is bound; nobody called stop()
+        source.syncRunning = true // the old wallet's loop is still running
+
+        // One call does the whole switch: a screen that asks once (the
+        // shielded transfer/send view models) must get the new runtime.
+        assertTrue(service.ensureShieldedReady())
+        assertEquals("the old loop was stopped", 1, source.stopCalls)
+        assertEquals("re-bound on the new wallet", 2, source.bindCalls)
+        assertArrayEquals(ByteArray(32) { 0xcd.toByte() }, source.lastBoundWallet)
+        assertEquals("a replacement loop was started, not the stopped one adopted", 2, source.startCalls)
+
+        assertTrue("now ready on the new wallet: no further rebind", service.ensureShieldedReady())
+        assertEquals(2, source.bindCalls)
+        assertEquals(1, source.stopCalls)
+    }
+
+    /**
+     * Pre-review: the old wallet's stop times out during the wallet change.
+     * The ownership it kept was at the CURRENT generation, so the failed-stop
+     * retry skipped it and the next bring-up started a loop over the SDK's
+     * latched quiescing gate — "ready" but never syncing. The failed stop must
+     * be retried, and no loop started while the gate is latched.
+     */
+    @Test
+    fun bringUp_afterTheBoundWalletChanged_retriesAFailedStopBeforeStarting() = runBlocking {
+        var bound = walletIdHex
+        val source = FakeSource(hasSupport = true, boundWalletId = { bound })
+        val service = service(source)
+        assertTrue(service.ensureShieldedReady())
+
+        bound = "cd".repeat(32)
+        source.syncRunning = true
+        source.stopTimeoutsRemaining = 1
+
+        // The same pass retries the failed stop before it starts a loop.
+        assertTrue(service.ensureShieldedReady())
+        assertEquals("the failed stop was retried", 2, source.stopCalls)
+        assertEquals("no loop started over the latched gate", 0, source.startsWhileLatched)
+        assertArrayEquals(ByteArray(32) { 0xcd.toByte() }, source.lastBoundWallet)
+    }
+
+    /** The old wallet's loop cannot be stopped at all: no loop starts over the latched gate, and nothing reports ready. */
+    @Test
+    fun bringUp_afterTheBoundWalletChanged_whileTheStopKeepsFailing_startsNothing() = runBlocking {
+        var bound = walletIdHex
+        val source = FakeSource(hasSupport = true, boundWalletId = { bound })
+        val service = service(source)
+        assertTrue(service.ensureShieldedReady())
+
+        bound = "cd".repeat(32)
+        source.syncRunning = true
+        source.stopTimeoutsRemaining = 2
+
+        assertFalse(service.ensureShieldedReady())
+        assertEquals("the switch's stop and the in-pass retry", 2, source.stopCalls)
+        assertEquals(0, source.startsWhileLatched)
+        assertEquals(ShieldedSyncStatus.NOT_READY, service.shieldedSyncStatus.value)
+    }
+
+    /**
+     * Pre-review: mid-replacement both SDK wallets exist, so the bound wallet
+     * reads as unknown (and stays so if pruning the orphan fails). The old
+     * wallet's runtime must not stay published to existing subscribers — its
+     * READY status and balance would be shown for the replacement wallet — so
+     * it ends like a stop(), and comes back up once a wallet is bound.
+     */
+    @Test
+    fun ensureReady_whileTheBoundWalletIsUnknown_withdrawsTheOldRuntime() = runBlocking {
+        var bound: String? = walletIdHex
+        val source = FakeSource(hasSupport = true, boundWalletId = { bound })
+        val service = service(source)
+        assertTrue(service.ensureShieldedReady())
+
+        bound = null
+        assertFalse(service.ensureShieldedReady())
+        assertEquals(1, source.stopCalls)
+        assertEquals(ShieldedSyncStatus.NOT_READY, service.shieldedSyncStatus.value)
+
+        bound = walletIdHex
+        assertTrue(service.ensureShieldedReady())
+        assertEquals("brought up afresh", 2, source.bindCalls)
+    }
+
+    /**
+     * PR #1700 review: when reading the binding throws (SDK startup or the
+     * wallet-manager lookup failing), the old runtime is withdrawn as for an
+     * unknown binding, not left publishing READY.
+     */
+    @Test
+    fun ensureReady_whenTheBindingReadThrows_withdrawsTheOldRuntime() = runBlocking {
+        var failRead = false
+        val source = FakeSource(
+            hasSupport = true,
+            boundWalletId = { if (failRead) throw IllegalStateException("wallet manager unavailable") else walletIdHex }
+        )
+        val service = service(source)
+        assertTrue(service.ensureShieldedReady())
+
+        failRead = true
+        assertFalse(service.ensureShieldedReady())
+        assertEquals(1, source.stopCalls)
+        assertEquals(ShieldedSyncStatus.NOT_READY, service.shieldedSyncStatus.value)
+
+        failRead = false
+        assertTrue(service.ensureShieldedReady())
+        assertEquals("brought up afresh", 2, source.bindCalls)
+    }
+
     /** Regression: after a stop that succeeded, the next bring-up issues no extra native stop. */
     @Test
     fun bringUp_afterASuccessfulStop_issuesNoExtraNativeStop() = runBlocking {
@@ -2039,6 +2166,40 @@ class ShieldedBalanceServiceTest {
     }
 
     private fun boundWalletId(): ByteArray = checkNotNull(walletIdFromHex(walletIdHex))
+
+    /**
+     * Pre-review round 4: an internal readiness caller (here the pending-shield
+     * resume) that detects the wallet switch first brings up the new runtime;
+     * it must get the status poller too, or the status stays NOT_READY after
+     * successful passes until a screen asks for readiness.
+     */
+    @Test
+    fun internalReadiness_afterAWalletSwitch_startsTheStatusPoller() = runBlocking {
+        var bound = walletIdHex
+        val source = FakeSource(hasSupport = true, boundWalletId = { bound })
+        val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            val service = scopedService(source, config(true), sweepScope)
+            assertTrue(service.ensureShieldedReady())
+
+            bound = "cd".repeat(32)
+            service.resumePendingWalletShields()
+            assertEquals("re-bound on the new wallet", 2, source.bindCalls)
+
+            // passResults does not replay, and subscriptionCount may still
+            // count the old session's cancelled collector: re-emit the pass
+            // until the replacement collector has seen it.
+            val pass = passOk(walletId = ByteArray(32) { 0xcd.toByte() })
+            withTimeout(10_000) {
+                while (service.shieldedSyncStatus.value != ShieldedSyncStatus.READY) {
+                    source.passResults.emit(pass)
+                    delay(20)
+                }
+            }
+        } finally {
+            sweepScope.cancel()
+        }
+    }
 
     private fun passOk(credits: Long = 0L, walletId: ByteArray = boundWalletId()) =
         ShieldedPassResult(walletId, ShieldedPassResult.Outcome.SUCCEEDED, credits)
