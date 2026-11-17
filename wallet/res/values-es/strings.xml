@@ -75,6 +75,10 @@
     <string name="send_coins_sent_msg">¡Enviado!</string>
     <string name="send_coins_failed_msg">¡Error!</string>
     <string name="send_coins_error_msg">¡Problema enviando monedas!</string>
+    <string name="send_coins_error_not_supported">Este tipo de pago aún no es compatible. No ha salido ningún fondo de tu billetera.</string>
+    <string name="send_coins_error_generic">No se pudo enviar el pago.</string>
+    <string name="send_coins_error_signer_locked">Tu billetera no pudo firmar este pago porque está bloqueada. No ha salido ningún fondo de tu billetera: desbloquéala e inténtalo de nuevo.</string>
+    <string name="send_coins_error_contact_payment_not_recorded">No se pudo enviar este pago a tu contacto porque tu billetera no pudo guardar un registro en este dispositivo. No ha salido ningún fondo de tu billetera. Libera espacio de almacenamiento o reinicia la app y vuelve a intentarlo.</string>
     <string name="send_coins_options_fee_category">Comisión</string>
     <string name="send_coins_options_fee_category_economic">Económica</string>
     <string name="send_coins_options_fee_category_priority">Prioritaria</string>
@@ -148,6 +152,10 @@
     <string name="transaction_row_status_sent">Enviado</string>
     <string name="transaction_row_status_sending">Enviando</string>
     <string name="transaction_row_status_sent_internally">Interno</string>
+    <string name="transaction_row_shielded">Blindado</string>
+    <string name="transaction_row_unshielded">Sin blindar</string>
+    <string name="transaction_row_unshielded_withdrawal">Retiro sin blindar</string>
+    <string name="transaction_row_invitation">Invitación</string>
     <string name="transaction_row_status_processing">Procesando</string>
     <string name="transaction_row_status_confirming">Confirmando</string>
     <string name="transaction_row_status_locked">Bloqueado</string>
@@ -182,6 +190,29 @@
     <string name="network_monitor_activity_title">Monitor de red</string>
     <string name="network_monitor_peer_list_title">Pares</string>
     <string name="network_monitor_block_list_title">Bloques</string>
+    <string name="network_monitor_stage_idle">Sin iniciar</string>
+    <string name="network_monitor_stage_connecting">Conectando a la red de Dash…</string>
+    <string name="network_monitor_stage_headers">Descargando encabezados de bloque</string>
+    <string name="network_monitor_stage_filter_headers">Descargando encabezados de filtro</string>
+    <string name="network_monitor_stage_masternodes">Sincronizando lista de masternodes</string>
+    <string name="network_monitor_stage_filters">Escaneando filtros de bloque</string>
+    <string name="network_monitor_stage_synced">Sincronizado</string>
+    <string name="network_monitor_stage_error">Error de sincronización</string>
+    <string name="network_monitor_stage_setup_retrying">Configuración de la billetera incompleta: reintentando</string>
+    <string name="network_monitor_progress">%1$d%%</string>
+    <string name="network_monitor_headers_label">Encabezados de bloque</string>
+    <string name="network_monitor_filters_label">Filtros de bloque</string>
+    <string name="network_monitor_mnlist_label">Altura de la lista de masternodes</string>
+    <string name="network_monitor_chainlock_label">Altura de ChainLock</string>
+    <string name="network_monitor_height_of_target">%1$s / %2$s</string>
+    <string name="network_monitor_value_unknown">—</string>
+    <string name="network_monitor_connection_connected">Conectado a la red de Dash</string>
+    <string name="network_monitor_connection_searching">Buscando pares…</string>
+    <string name="network_monitor_connection_idle">Motor de red sin iniciar</string>
+    <string name="network_monitor_connection_error">Error de conexión</string>
+    <string name="network_monitor_connection_setup_retrying">Desbloquea tu dispositivo para terminar de configurar la billetera</string>
+    <string name="network_monitor_peer_details_note">El motor de la billetera no informa de las conexiones con pares individuales.</string>
+    <string name="network_monitor_dashj_hint">Las listas de pares y bloques provienen del motor de diagnóstico dashj. Activa la sincronización dashj en Herramientas para verlas.</string>
     <string name="block_row_mining_difficulty_adjustment">Ajustes en la dificultad de la mineria.</string>
     <string name="block_row_mining_reward_adjustment">Recompensa de minación dividida</string>
     <string name="block_row_now">justo ahora</string>
@@ -294,6 +325,9 @@
     <string name="report_issue_dialog_message_crash">¿Deseas enviar un informe de error para ayudar a resolver la incidencia en un futuro?</string>
     <string name="report_issue_dialog_description">Descripción del problema</string>
     <string name="report_issue_dialog_report">Informar</string>
+    <string name="wallet_recovery_from_seed_message">No se pudo leer el archivo de tu billetera y ninguna copia de seguridad automática era utilizable. Tus fondos están seguros en la red: restaura tu billetera con tu frase de recuperación para continuar.</string>
+    <string name="safe_mode_startup_message">La app no terminó de iniciarse las últimas veces, así que en este inicio no se cargó tu billetera. No se ha cambiado ni eliminado nada. Envíanos un informe o intenta abrir tu billetera de nuevo.</string>
+    <string name="wallet_wipe_recovery_required">Es posible que un restablecimiento anterior de la billetera no haya terminado. El acceso a la billetera está en pausa para proteger los datos restantes. Contacta con soporte para obtener ayuda para recuperar tu billetera.</string>
     <string name="report_issue_dialog_collect_device_info">Añadir información del dispositivo</string>
     <string name="report_issue_dialog_collect_installed_packages">Adjuntar la lista de paquetes instalados</string>
     <string name="report_issue_dialog_collect_application_log">Añadir registro de la aplicación</string>
@@ -309,6 +343,7 @@
     <string name="report_issue_dialog_status_background_traces">rastros de fondo</string>
     <string name="report_issue_dialog_status_stack_trace">seguimientos de pila</string>
     <string name="report_issue_dialog_status_finishing">acabado</string>
+    <string name="report_issue_dialog_status_parity_breakdown">comprobación de transacciones de la billetera (hasta 30 segundos)</string>
     <string name="report_transaction_history_export">Exportar transacciones</string>
     <string name="report_transaction_history_title">Exportar CSV</string>
     <string name="report_transaction_history_dialog_title">El historial completo de transacciones se exportará como un archivo CSV.</string>
@@ -320,6 +355,7 @@
     <string name="report_transaction_history_mail_intent_chooser">Enviar historial de transacciones usando…</string>
     <string name="report_transaction_history_dialog_mail_intent_failed">Error al enviar el historial de transacciones.</string>
     <string name="report_transaction_history_dialog_export_csv_failed">No se pudo exportar el historial de transacciones.</string>
+    <string name="report_transaction_history_dialog_export_csv_empty">Aún no hay transacciones para exportar.</string>
 
     <!-- ZenLedger -->
     <string name="zenledger_export_title">ZenLedger</string>
@@ -426,6 +462,11 @@
     <string name="battery_optimization_title">Optimización de la batería</string>
     <string name="battery_optimization_subtitle_optimized">Optimizado</string>
     <string name="battery_optimization_subtitle_unrestricted">Irrestricto</string>
+    <string name="settings_analytics_title">Compartir datos de uso</string>
+    <string name="settings_analytics_info_title">Acerca de los datos de uso</string>
+    <string name="settings_analytics_save_failed_off">No se pudo desactivar, inténtalo de nuevo</string>
+    <string name="settings_analytics_save_failed_on">No se pudo activar, inténtalo de nuevo</string>
+    <string name="settings_analytics_info_message">Cuando esta opción está activada, Dash Wallet comparte eventos de uso de la app con Firebase para ayudarnos a mejorarla.\n\nNunca se comparten montos, saldos ni direcciones.\n\nPuedes desactivarla en cualquier momento.</string>
 
     <string name="battery_optimization_dialog_optimized_title">¿Dejar que la billetera de Dash se ejecute en segundo plano?</string>
     <string name="battery_optimization_dialog_message_optimized">Esta aplicación está configurada para dejar de ejecutarse después de no estar visible durante algún tiempo.\n\nEsto provocará que no recibas notificaciones de pago hasta que la aplicación vuelva al primer plano.\n\nRecomendamos permitir que esta aplicación se ejecute en segundo plano configurando la batería optimización a \"No optimizado\" o \"Sin restricciones\".\n\nNo te preocupes, lo haremos siempre teniendo en cuenta el uso de la batería.</string>
@@ -445,6 +486,9 @@
     <string name="upgrade_pin_title">Debe actualizar su PIN</string>
     <string name="upgrade_pin_description">Configura un nuevo PIN</string>
     <string name="upgrade_pin_continue">Continuar</string>
+    <string name="buy_credits_current_identity_balance">Saldo actual de la identidad: %1$s</string>
+    <string name="buy_credits_current_identity_balance_unavailable">no disponible</string>
+    <string name="payment_request_resending_earlier_payment">Esta solicitud ya se pagó antes, pero ese pago nunca se confirmó. Al confirmar se envía el mismo pago de nuevo, así que no se te puede cobrar dos veces.</string>
 
     <!-- CrowdNode withdrawal reminder -->
     <string name="crowdnode_withdrawal_reminder_title">Tienes saldo en CrowdNode</string>

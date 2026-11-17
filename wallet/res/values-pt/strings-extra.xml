@@ -202,6 +202,8 @@
     <string name="notification_explainer_message">As notificações podem incluir alertas, sons e ícones. Elas podem ser definidas nas configurações do telefone.</string>
     <string name="notification_dashpay_channel_name">DashPay</string>
     <string name="notification_dashpay_channel_description">Status das operações em andamento do DashPay.</string>
+    <string name="notification_contacts_channel_name">Solicitações de contato</string>
+    <string name="notification_contacts_channel_description">Avisa quando alguém lhe envia uma solicitação de contato.</string>
 
     <string name="net_type_indicator" />
 
@@ -421,6 +423,7 @@
     <string name="all_transactions">Todos</string>
     <string name="received_transactions">Recebido</string>
     <string name="sent_transactions">Enviado</string>
+    <string name="filter_button_label">Filtro: %1$s</string>
     <string name="serious_error_title">Erro grave</string>
     <string name="serious_error_unknown">Por favor, entre em contato com o suporte.</string>
     <string name="set_pin_error_missing_wallet_title">Erro de carteira ausente</string>

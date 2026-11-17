@@ -75,6 +75,10 @@
     <string name="send_coins_sent_msg">Отправлено!</string>
     <string name="send_coins_failed_msg">Не удалось!</string>
     <string name="send_coins_error_msg">Проблема с отправкой средств!</string>
+    <string name="send_coins_error_not_supported">Этот тип платежа пока не поддерживается. Средства не покинули ваш кошелёк.</string>
+    <string name="send_coins_error_generic">Не удалось отправить платёж.</string>
+    <string name="send_coins_error_signer_locked">Кошелёк не смог подписать этот платёж, так как он заблокирован. Средства не покинули ваш кошелёк — разблокируйте кошелёк и попробуйте снова.</string>
+    <string name="send_coins_error_contact_payment_not_recorded">Не удалось отправить этот платёж вашему контакту: кошелёк не смог сохранить запись о нём на этом устройстве. Средства не покинули ваш кошелёк. Освободите место в памяти или перезапустите приложение, затем попробуйте снова.</string>
     <string name="send_coins_options_fee_category">Комиссия</string>
     <string name="send_coins_options_fee_category_economic">Экономичная</string>
     <string name="send_coins_options_fee_category_priority">Приоритетная</string>
@@ -148,6 +152,10 @@
     <string name="transaction_row_status_sent">Отправлено</string>
     <string name="transaction_row_status_sending">Отправка</string>
     <string name="transaction_row_status_sent_internally">Внутренний</string>
+    <string name="transaction_row_shielded">Экранировано</string>
+    <string name="transaction_row_unshielded">Не экранировано</string>
+    <string name="transaction_row_unshielded_withdrawal">Неэкранированный вывод</string>
+    <string name="transaction_row_invitation">Приглашение</string>
     <string name="transaction_row_status_processing">Обрабатывается</string>
     <string name="transaction_row_status_confirming">Подтверждается</string>
     <string name="transaction_row_status_locked">Зафиксировано</string>
@@ -182,6 +190,29 @@
     <string name="network_monitor_activity_title">Сетевой монитор</string>
     <string name="network_monitor_peer_list_title">Узлы</string>
     <string name="network_monitor_block_list_title">Блоки</string>
+    <string name="network_monitor_stage_idle">Не запущено</string>
+    <string name="network_monitor_stage_connecting">Подключение к сети Dash…</string>
+    <string name="network_monitor_stage_headers">Загрузка заголовков блоков</string>
+    <string name="network_monitor_stage_filter_headers">Загрузка заголовков фильтров</string>
+    <string name="network_monitor_stage_masternodes">Синхронизация списка мастернод</string>
+    <string name="network_monitor_stage_filters">Сканирование фильтров блоков</string>
+    <string name="network_monitor_stage_synced">Синхронизировано</string>
+    <string name="network_monitor_stage_error">Ошибка синхронизации</string>
+    <string name="network_monitor_stage_setup_retrying">Настройка кошелька не завершена — повторная попытка</string>
+    <string name="network_monitor_progress">%1$d%%</string>
+    <string name="network_monitor_headers_label">Заголовки блоков</string>
+    <string name="network_monitor_filters_label">Фильтры блоков</string>
+    <string name="network_monitor_mnlist_label">Высота списка мастернод</string>
+    <string name="network_monitor_chainlock_label">Высота ChainLock</string>
+    <string name="network_monitor_height_of_target">%1$s / %2$s</string>
+    <string name="network_monitor_value_unknown">—</string>
+    <string name="network_monitor_connection_connected">Подключено к сети Dash</string>
+    <string name="network_monitor_connection_searching">Поиск узлов…</string>
+    <string name="network_monitor_connection_idle">Сетевой движок не запущен</string>
+    <string name="network_monitor_connection_error">Ошибка подключения</string>
+    <string name="network_monitor_connection_setup_retrying">Разблокируйте устройство, чтобы завершить настройку кошелька</string>
+    <string name="network_monitor_peer_details_note">Движок кошелька не сообщает об отдельных подключениях к узлам.</string>
+    <string name="network_monitor_dashj_hint">Списки узлов и блоков предоставляет диагностический движок dashj. Чтобы их увидеть, включите синхронизацию dashj в разделе «Инструменты».</string>
     <string name="block_row_mining_difficulty_adjustment">Подстройка сложности майнинга</string>
     <string name="block_row_mining_reward_adjustment">Уменьшение награды за майнинг в два раза</string>
     <string name="block_row_now">только что</string>
@@ -294,6 +325,9 @@
     <string name="report_issue_dialog_message_crash">Хотите отправить отчёт об ошибке, тем самым помогая исправить эту проблему в будущем?</string>
     <string name="report_issue_dialog_description">описание проблемы</string>
     <string name="report_issue_dialog_report">Отчёт</string>
+    <string name="wallet_recovery_from_seed_message">Не удалось прочитать файл кошелька, а подходящей автоматической резервной копии не нашлось. Ваши средства в безопасности в сети — восстановите кошелёк с помощью фразы восстановления, чтобы продолжить.</string>
+    <string name="safe_mode_startup_message">Последние несколько раз приложение не смогло завершить запуск, поэтому при этом запуске загрузка кошелька была пропущена. Ничего не изменено и не удалено. Отправьте нам отчёт или попробуйте открыть кошелёк снова.</string>
+    <string name="wallet_wipe_recovery_required">Предыдущий сброс кошелька, возможно, не был завершён. Доступ к кошельку приостановлен, чтобы защитить оставшиеся данные. Обратитесь в поддержку, чтобы восстановить кошелёк.</string>
     <string name="report_issue_dialog_collect_device_info">Добавить информацию об устройстве</string>
     <string name="report_issue_dialog_collect_installed_packages">Добавить список установленных пакетов</string>
     <string name="report_issue_dialog_collect_application_log">Добавить лог приложения</string>
@@ -309,6 +343,7 @@
     <string name="report_issue_dialog_status_background_traces">фоновые следы</string>
     <string name="report_issue_dialog_status_stack_trace">трассировка стека</string>
     <string name="report_issue_dialog_status_finishing">завершается</string>
+    <string name="report_issue_dialog_status_parity_breakdown">проверка транзакций кошелька (до 30 секунд)</string>
     <string name="report_transaction_history_export">Экспортировать транзакции</string>
     <string name="report_transaction_history_title">Экспортировать CSV</string>
     <string name="report_transaction_history_dialog_title">Полная история транзакций будет экспортирована в виде CSV-файла</string>
@@ -320,6 +355,7 @@
     <string name="report_transaction_history_mail_intent_chooser">Отправить историю транзакций с помощью...</string>
     <string name="report_transaction_history_dialog_mail_intent_failed">Ошибка при отправке истории транзакций.</string>
     <string name="report_transaction_history_dialog_export_csv_failed">Ошибка при экспортировании истории транзакций.</string>
+    <string name="report_transaction_history_dialog_export_csv_empty">Пока нет транзакций для экспорта.</string>
 
     <!-- ZenLedger -->
     <string name="zenledger_export_title">ZenLedger</string>
@@ -426,6 +462,11 @@
     <string name="battery_optimization_title">Оптимизация расхода батареи</string>
     <string name="battery_optimization_subtitle_optimized">Оптимизировано</string>
     <string name="battery_optimization_subtitle_unrestricted">Не ограничено</string>
+    <string name="settings_analytics_title">Отправлять данные об использовании</string>
+    <string name="settings_analytics_info_title">О данных об использовании</string>
+    <string name="settings_analytics_save_failed_off">Не удалось отключить, попробуйте снова</string>
+    <string name="settings_analytics_save_failed_on">Не удалось включить, попробуйте снова</string>
+    <string name="settings_analytics_info_message">Когда эта функция включена, Dash Wallet передаёт в Firebase события использования приложения, чтобы помочь нам его улучшить.\n\nСуммы, балансы и адреса никогда не передаются.\n\nВы можете отключить это в любое время.</string>
 
     <string name="battery_optimization_dialog_optimized_title">Разрешить Dash Wallet работать в фоновом режиме?</string>
     <string name="battery_optimization_dialog_message_optimized">Это приложение настроено на автоматическое завершение работы спустя некоторое время после сворачивания.\n\nТаким образом, вы не будете получать платёжные уведомления, пока приложение не вернется к работе в активном режиме.\n\nМы рекомендуем разрешить приложению работу в фоновом режиме, переключив настройку режима питания на \"Не оптимизировано\" или \"Не ограничено\".\n\nНе волнуйтесь, мы всегда помним о расходе батареи.  </string>
@@ -445,6 +486,9 @@
     <string name="upgrade_pin_title">Вам необходимо обновить пин-код</string>
     <string name="upgrade_pin_description">Задайте новый PIN-код</string>
     <string name="upgrade_pin_continue">Продолжить</string>
+    <string name="buy_credits_current_identity_balance">Текущий баланс ID: %1$s</string>
+    <string name="buy_credits_current_identity_balance_unavailable">недоступен</string>
+    <string name="payment_request_resending_earlier_payment">Этот запрос уже был оплачен, но тот платёж так и не был подтверждён. При подтверждении будет повторно отправлен тот же платёж, поэтому двойного списания не произойдёт.</string>
 
     <!-- CrowdNode withdrawal reminder -->
     <string name="crowdnode_withdrawal_reminder_title">У вас есть баланс на CrowdNode</string>
