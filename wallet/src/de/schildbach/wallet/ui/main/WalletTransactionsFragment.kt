@@ -78,8 +78,6 @@ import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.features.exploredash.ui.dashspend.dialogs.GiftCardDetailsDialog
 import org.dash.wallet.features.exploredash.ui.dashspend.dialogs.GiftCardOrderDetailsDialog
 import org.dash.wallet.features.exploredash.ui.dashspend.dialogs.GiftCardViewModel
-import java.text.DateFormat
-import java.util.Date
 import javax.inject.Inject
 import de.schildbach.wallet.util.format
 import de.schildbach.wallet.util.setAmount
@@ -706,26 +704,15 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
      * that window reads "Syncing 100%" — still working, nearly done — rather
      * than claiming the wallet is ready.
      *
-     * SR-22: on this screen "finished" is signalled by the label DISAPPEARING,
-     * which on a scan bounded by a user-supplied wallet creation date is the
-     * strongest claim of all — a silent "this history is complete" over a
-     * balance that is only the part after that date (21.7 of 107.08 tDASH in
-     * the report). So a bounded scan keeps the label, permanently, reading
-     * "Synced from <date>" instead of vanishing. It clears itself when the
-     * date does — a full rescan from Settings retires both.
+     * Once synced the header disappears, including on a scan bounded by a
+     * wallet creation date: the home screen does not show "Synced from <date>".
+     * The Network Monitor screen still shows that date (SR-22).
      */
     private fun updateSyncState(status: L1SyncUiStatus) {
         val isSynced = status.isFullySynced
         val percentLabel = syncHeaderPercentLabel(status)
-        val scanStartDateSecs = status.scanStartDateSecs
 
-        if (isSynced && scanStartDateSecs != null) {
-            binding.syncing.isVisible = true
-            binding.syncing.text = getString(
-                R.string.sync_synced_from,
-                DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(scanStartDateSecs * 1000L))
-            )
-        } else if (isSynced) {
+        if (isSynced) {
             binding.syncing.isVisible = false
         } else {
             binding.syncing.isVisible = true
