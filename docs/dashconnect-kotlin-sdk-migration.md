@@ -50,7 +50,13 @@ The maintainer answered the plan's three open questions, and settled how DashCon
    greatly simplified, so this gate is temporary: it is a single check that is easy to delete (see
    [Phase 2](#phase-2-one-sdk-implementation-and-the-cutover-gate)).
 4. **Before the cutover DashConnect is hidden** (decided 2026-11-17). Its entry points are hidden entirely: no
-   disabled row and no explanatory copy. So a pre-cutover state needs no new strings and no design.
+   disabled row and no explanatory copy. So a pre-cutover state needs no design and no new strings, with one
+   exception (decided 2026-11-17): a DashConnect link opened from a browser or another app shows a short toast that
+   the link isn't supported yet ([Phase 2](#phase-2-one-sdk-implementation-and-the-cutover-gate)). No existing
+   string fits: `send_coins_error_not_supported` (`wallet/res/values/strings.xml:79`) is about payments and funds,
+   `dash_connect_unavailable_message` (`wallet/res/values/strings_app_connect.xml:4`) gives the wrong reason, and
+   `invalid_link` (`wallet/res/values/strings-dashpay.xml:430`) says the link is invalid. So the toast needs one new
+   string in every locale, with its wording taken from the designer's Figma copy, not written by us.
 
 ## Scope
 
@@ -302,7 +308,8 @@ The gate hides every entry point, not just the screen:
 Before the cutover a scanned or opened DashConnect URI is treated as unsupported, not routed
 to a screen that says DashConnect is off. A scanned QR falls through to the normal
 unrecognised-QR error, as it already does where the build has DashConnect off. An opened link
-is ignored: the wallet opens to its home screen.
+opens the wallet as usual and shows a short toast that the link isn't supported yet (the one
+new string, see [Decisions](#decisions-2026-11-17)); it is not routed anywhere.
 
 ### Phase 3: signer
 
@@ -356,7 +363,8 @@ DashConnect then no longer needs the identity-key backfill (`requireIdentityChai
 backfill may still be needed for DashPay, which reaches it through `addMissingKeys`
 (`upgradeIdentity`), until that path moves to the SDK too.
 
-The cutover gate from phase 2 is deleted when the cutover itself is removed or simplified.
+The cutover gate from phase 2 is deleted when the cutover itself is removed or simplified,
+and the pre-cutover toast and its string go with it.
 
 ## Testing
 
@@ -371,7 +379,7 @@ The cutover gate from phase 2 is deleted when the cutover itself is removed or s
   same-seed restore. These passed on the legacy path on 2026-10-28 (Pixel 9 emulator,
   identity created by the Kotlin SDK) and must pass again on the new one, after the cutover.
   Before the cutover, check that the Connections row is hidden, that a scanned DashConnect QR
-  gets the unrecognised-QR error, and that an opened DashConnect link lands on the home screen.
+  gets the unrecognised-QR error, and that an opened DashConnect link lands on the home screen and shows the not-supported toast.
 - Token purchase has never run on a live network on either path. It needs a testnet token
   with a direct-purchase price and a `dash-st:` link generator.
 
