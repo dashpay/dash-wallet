@@ -36,7 +36,7 @@ DashConnect code. This plan moves DashConnect onto the new SDK and marks the poi
 
 ## Decisions (2026-11-17)
 
-The maintainer answered the plan's three open questions:
+The maintainer answered the plan's three open questions, and settled how DashConnect looks before the cutover:
 
 1. **Bindings.** HashEngineering writes the Kotlin/JNI bindings: PR-2 (#5421), PR-3 (#5715) and PR-6 (#5419).
    PR-1, PR-4 and PR-5 stay as they are; they depend on the phase 0 checks.
@@ -45,11 +45,12 @@ The maintainer answered the plan's three open questions:
    others can add contracts the key will act in, as iOS does. There is no member query. Android's consent code and
    approve sheet move from listing members to owner/admins plus that warning (see
    [Phase 4](#phase-4-move-reads-then-writes)).
-3. **DashConnect does not run before the cutover.** Before it, DashConnect is unavailable: hidden or disabled, with a
-   reason. There is one SDK implementation and no legacy path, and the kotlin-platform calls in
+3. **DashConnect does not run before the cutover.** There is one SDK implementation and no legacy path, and the kotlin-platform calls in
    `ui/more/connections` go away in the same change that ships it. The cutover itself will eventually be removed or
    greatly simplified, so this gate is temporary: it is a single check that is easy to delete (see
    [Phase 2](#phase-2-one-sdk-implementation-and-the-cutover-gate)).
+4. **Before the cutover DashConnect is hidden** (decided 2026-11-17). Its entry points are hidden entirely: no
+   disabled row and no explanatory copy. So a pre-cutover state needs no new strings and no design.
 
 ## Scope
 
@@ -279,11 +280,29 @@ implementation, `SdkConnectPlatform`, or calls the SDK directly. If `ConnectPlat
 interface, its only reason is testing: unit tests run `AppConnectSession` against a fake.
 
 Every new-SDK write needs the SDK `walletHandle`, and the SDK wallet exists only after the
-cutover. Before the cutover DashConnect is unavailable: hidden or disabled, with a reason. The
-cutover itself will eventually be removed or greatly simplified, so this gate is temporary.
-Make it a single check in one place (`ConnectAvailability`, which already gates DashConnect on
-the build and the Platform protocol version, is the natural home) that is easy to delete with
-the cutover.
+cutover. Before the cutover DashConnect is hidden. The cutover itself will eventually be removed
+or greatly simplified, so this gate is temporary. Make it a single check in one place
+(`ConnectAvailability`, which already gates DashConnect on the build and the Platform protocol
+version, is the natural home) that is easy to delete with the cutover.
+
+The gate hides every entry point, not just the screen:
+
+- The Connections row in Tools (`ToolsScreen.kt:332`). It already shows only when
+  `ConnectAvailability.availability` is true (`ToolsViewModel.kt:189`), so the gate goes into
+  that value.
+- Scanned DashConnect QR codes (`dash-key:`, `dash-st:`, `dashpay://connect`). Three scan paths
+  send them to the Connections screen: home (`WalletFragment.kt:324`), the address input
+  (`DashAddressInputFragment.kt:45`) and Payments' Pay (`PaymentsPayFragment.kt:163`). Each
+  checks `Constants.SUPPORTS_CONNECT` today; each should check the gate instead.
+- Links opened from a browser or another app. The manifest routes `dash-key:`, `dash-st:` and
+  `dashpay://connect` to `MainActivity` (`AndroidManifest.xml:131-152`), and `handleIntent`
+  sends them to the Connections screen (`MainActivity.kt:546-557`). The intent filters stay,
+  since the manifest can't follow a runtime gate, so `handleIntent` checks it.
+
+Before the cutover a scanned or opened DashConnect URI is treated as unsupported, not routed
+to a screen that says DashConnect is off. A scanned QR falls through to the normal
+unrecognised-QR error, as it already does where the build has DashConnect off. An opened link
+is ignored: the wallet opens to its home screen.
 
 ### Phase 3: signer
 
@@ -347,11 +366,12 @@ The cutover gate from phase 2 is deleted when the cutover itself is removed or s
   the wallet's checks; a key-registration test that adds nothing when the refetched
   identity already has the key; consent tests that a group with admins, and a group whose
   admins can't be read, are both treated as administered and carry the warning; a gate test
-  that DashConnect is unavailable, with its reason, before the cutover.
+  that DashConnect is unavailable before the cutover.
 - Device (testnet, PV14): login, the Connections list, revoke, reconnect, Reset Wallet and
   same-seed restore. These passed on the legacy path on 2026-10-28 (Pixel 9 emulator,
   identity created by the Kotlin SDK) and must pass again on the new one, after the cutover.
-  Before the cutover, check that DashConnect is hidden or disabled with its reason.
+  Before the cutover, check that the Connections row is hidden, that a scanned DashConnect QR
+  gets the unrecognised-QR error, and that an opened DashConnect link lands on the home screen.
 - Token purchase has never run on a live network on either path. It needs a testnet token
   with a direct-purchase price and a `dash-st:` link generator.
 
@@ -364,5 +384,3 @@ is left is design, not architecture:
   and the "others can add contracts the key will act in" warning need a decision against the
   Figma. iOS's wording is `DashConnectPermissionText.swift:103-107`; do not port it without
   that decision.
-- How DashConnect looks before the cutover: hidden, or disabled with a reason, and that
-  reason's copy.
