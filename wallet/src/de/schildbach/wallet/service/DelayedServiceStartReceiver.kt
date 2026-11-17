@@ -51,6 +51,15 @@ class DelayedServiceStartReceiver : BroadcastReceiver() {
         // Use the guard-bypassing start instead. The platform may still refuse
         // it, but a refusal is caught and logged there, which is a diagnosable
         // failure rather than a silent one.
+        //
+        // A wallet reset does not cancel this alarm, so it can fire after the
+        // wallet is gone: never start the service without a wallet. A file
+        // check, because the main thread must not wait for a deferred wallet
+        // load, and an in-memory check could read "no wallet" while one loads.
+        if (application.isWipeInProgress || !application.walletFileExists()) {
+            log.info("delayed blockchain service start skipped: no wallet (reset since it was scheduled)")
+            return
+        }
         log.info("starting delayed blockchain service")
         if (!application.startBlockchainServiceAfterUpgrade()) {
             log.warn(

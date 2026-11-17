@@ -22,18 +22,36 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 class InactivityReminderTest {
-    private val balance = Coin.valueOf(150_000_000L)
+    private val transparent = Coin.valueOf(150_000_000L)
+    private val shielded = Coin.valueOf(20_000_000L)
 
     private fun decide(
         isTimeToRemind: Boolean = true,
         walletExists: Boolean = true,
-        lastTotalBalance: Coin? = balance,
+        transparentBalance: Coin? = transparent,
+        shieldedBalance: Coin? = Coin.ZERO,
         hideBalance: Boolean = false
-    ) = InactivityReminder.decide(isTimeToRemind, walletExists, lastTotalBalance, hideBalance)
+    ) = InactivityReminder.decide(isTimeToRemind, walletExists, transparentBalance, shieldedBalance, hideBalance)
 
     @Test
     fun `shows the last known balance when autohide is off`() {
-        assertEquals(InactivityReminder.Content.WithAmount(balance), decide())
+        assertEquals(InactivityReminder.Content.WithAmount(transparent), decide())
+    }
+
+    @Test
+    fun `adds the shielded balance like the home header`() {
+        assertEquals(
+            InactivityReminder.Content.WithAmount(transparent.add(shielded)),
+            decide(shieldedBalance = shielded)
+        )
+    }
+
+    @Test
+    fun `reminds a wallet whose funds are all shielded`() {
+        assertEquals(
+            InactivityReminder.Content.WithAmount(shielded),
+            decide(transparentBalance = Coin.ZERO, shieldedBalance = shielded)
+        )
     }
 
     @Test
@@ -42,15 +60,25 @@ class InactivityReminderTest {
     }
 
     @Test
-    fun `no reminder when the last known balance is unknown`() {
-        assertNull(decide(lastTotalBalance = null))
-        assertNull(decide(lastTotalBalance = null, hideBalance = true))
+    fun `an unknown part never shows a smaller amount`() {
+        assertEquals(InactivityReminder.Content.AmountHidden, decide(shieldedBalance = null))
+        assertEquals(
+            InactivityReminder.Content.AmountHidden,
+            decide(transparentBalance = null, shieldedBalance = shielded)
+        )
+    }
+
+    @Test
+    fun `no reminder when no part is known to be funded`() {
+        assertNull(decide(transparentBalance = null, shieldedBalance = null))
+        assertNull(decide(transparentBalance = Coin.ZERO, shieldedBalance = null))
+        assertNull(decide(transparentBalance = null, shieldedBalance = Coin.ZERO, hideBalance = true))
     }
 
     @Test
     fun `no reminder when the last known balance is zero`() {
-        assertNull(decide(lastTotalBalance = Coin.ZERO))
-        assertNull(decide(lastTotalBalance = Coin.ZERO, hideBalance = true))
+        assertNull(decide(transparentBalance = Coin.ZERO))
+        assertNull(decide(transparentBalance = Coin.ZERO, hideBalance = true))
     }
 
     @Test

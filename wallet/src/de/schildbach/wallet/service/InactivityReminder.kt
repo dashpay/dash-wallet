@@ -25,6 +25,7 @@ import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.WalletData
 import de.schildbach.wallet.ui.OnboardingActivity
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.runBlocking
 import org.bitcoinj.core.Coin
@@ -38,19 +39,25 @@ import javax.inject.Inject
  * The "you've still got Dash on this device" reminder, shown on a reboot ([BootstrapReceiver])
  * or an app update ([PackageReplacedReceiver]) when the user hasn't opened the app for a while.
  *
- * The amount is the persisted last-known total balance ([WalletUIConfig.LAST_TOTAL_BALANCE]),
- * the figure the home screen shows on a cold start, not the dashj wallet's own balance:
- * after the cutover to the SDK the dashj wallet is held and its balance is frozen, and the
- * SDK pipeline does not run in a receiver process. Before the cutover the dashj balance
- * observer writes that key, after it the SDK pipeline does.
+ * The amount is what the home header shows, from persisted last-known values, not the dashj
+ * wallet's own balance: after the cutover to the SDK the dashj wallet is held and its balance
+ * is frozen, and neither SDK pipeline runs in a receiver process.
+ * - Transparent (L1): [WalletUIConfig.LAST_TOTAL_BALANCE], written by the dashj balance
+ *   observer before the cutover and by the SDK pipeline after it.
+ * - Shielded: [DashPayConfig.LAST_SHIELDED_BALANCE_DUFFS] when shielding is enabled, zero
+ *   when it is not.
  *
- * The amount is left out when Autohide Balance is on, or when that setting cannot be read.
+ * A part that cannot be known (never written, unreadable, or a shielded spend still
+ * reconciling) never makes the amount smaller: the reminder is shown without an amount
+ * when the known parts are positive, and not shown at all when they are not. The amount is
+ * also left out when Autohide Balance is on, or when that setting cannot be read.
  */
 class InactivityReminder @Inject constructor(
     private val application: WalletApplication,
     private val config: Configuration,
     private val walletData: WalletData,
-    private val walletUIConfig: WalletUIConfig
+    private val walletUIConfig: WalletUIConfig,
+    private val dashPayConfig: DashPayConfig
 ) {
     /** What the reminder should show. */
     sealed class Content {
@@ -63,7 +70,8 @@ class InactivityReminder @Inject constructor(
         val content = decide(
             isTimeToRemind = config.isTimeToRemindBalance,
             walletExists = walletData.wallet != null,
-            lastTotalBalance = readLastTotalBalance(),
+            transparentBalance = readTransparentBalance(),
+            shieldedBalance = readShieldedBalance(),
             hideBalance = readHideBalance()
         ) ?: return
 
@@ -78,12 +86,32 @@ class InactivityReminder @Inject constructor(
         post(text)
     }
 
-    /** Null when the balance is unknown: never written, or unreadable. */
-    private fun readLastTotalBalance(): Coin? = try {
+    /** Null when unknown: never written, or unreadable. */
+    private fun readTransparentBalance(): Coin? = try {
         runBlocking { walletUIConfig.getPreservingErrors(WalletUIConfig.LAST_TOTAL_BALANCE) }
             ?.let(Coin::valueOf)
     } catch (e: Exception) {
-        log.warn("cannot read the last known balance, not showing the inactivity reminder", e)
+        log.warn("cannot read the last known transparent balance", e)
+        null
+    }
+
+    /**
+     * Zero when shielding is disabled, as on the home header. Null when unknown: the flag or
+     * the balance is unreadable, or no balance is persisted (never synced, or a spend is
+     * still reconciling).
+     */
+    private fun readShieldedBalance(): Coin? = try {
+        runBlocking {
+            val enabled = Constants.SUPPORTS_PLATFORM &&
+                dashPayConfig.getPreservingErrors(DashPayConfig.USE_KOTLIN_SDK_SHIELDED) == true
+            if (enabled) {
+                dashPayConfig.getPreservingErrors(DashPayConfig.LAST_SHIELDED_BALANCE_DUFFS)?.let(Coin::valueOf)
+            } else {
+                Coin.ZERO
+            }
+        }
+    } catch (e: Exception) {
+        log.warn("cannot read the last known shielded balance", e)
         null
     }
 
@@ -142,7 +170,8 @@ class InactivityReminder @Inject constructor(
         fun decide(
             isTimeToRemind: Boolean,
             walletExists: Boolean,
-            lastTotalBalance: Coin?,
+            transparentBalance: Coin?,
+            shieldedBalance: Coin?,
             hideBalance: Boolean
         ): Content? {
             if (!isTimeToRemind) {
@@ -153,10 +182,14 @@ class InactivityReminder @Inject constructor(
                 log.info("wallet does not exist, not showing inactivity warning")
                 return null
             }
-            if (lastTotalBalance == null || !lastTotalBalance.isPositive) {
+            val parts = listOf(transparentBalance, shieldedBalance)
+            val known = parts.filterNotNull().fold(Coin.ZERO, Coin::add)
+            if (!known.isPositive) {
+                // no known funds: nothing to remind about, even if a part is unknown
                 return null
             }
-            return if (hideBalance) Content.AmountHidden else Content.WithAmount(lastTotalBalance)
+            val amountComplete = parts.none { it == null }
+            return if (hideBalance || !amountComplete) Content.AmountHidden else Content.WithAmount(known)
         }
     }
 }
