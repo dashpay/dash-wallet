@@ -10,6 +10,11 @@ vectors, and it closes only once phase 0 shows it exposes the agreed price as a 
 correctly. PR-2 and PR-3 still block. Key registration through
 `BlockchainIdentity.addMissingKeys` and the identity-key backfill are now covered too.
 
+Updated 2026-11-17 for recent `dashpay/platform` PRs (see
+[Upstream status](#upstream-status-2026-11-17)). int36 is built from `v5.1-dev @ 9766bab24a` and already has
+#5491 (`fetchContractKeys` returns the proved keys, so PR-4 is probably not needed) and #5649 (the SDK derives
+DashConnect app keys). PR-2 shrinks to a JNI binding of #5421 plus the member query. PR-3 still has no PR.
+
 DashConnect v2 (merged from #1604) sends every Platform read and write through the legacy
 kotlin-platform SDK (`org.dashj.platform.*`, `libsdklib.so`, dpp `5.0.1`). The new Kotlin SDK
 (`org.dashfoundation.dashsdk`, `dash-sdk-android` 5.1.0-int36) is not called by any
@@ -56,13 +61,13 @@ inferred from names and parameter names and has not been run.
 |---|---|---|
 | `client.getIdentity` (:84) | `queries.Identities.fetch` / `fetchPublicKeys` | None. |
 | `client.getIdentityKeyRemainingBudget` (:797, :833) | `Identities.fetchKeysRemainingBudgets(identityId, keyIds)` | None. |
-| `client.getCurrentContractKeyId` (:344, :539) | `Identities.fetchContractKeys(identityIds, contractId, purposes, documentTypeName)` | Probably equivalent; confirm on testnet that it returns the current proved key ID. **PR-4** if not. |
+| `client.getCurrentContractKeyId` (:344, :539) | `Identities.fetchContractKeys(identityIds, contractId, purposes, documentTypeName)` | Returns the proved contract keys since #5491 (in int36; before it always returned `{}`). Probably equivalent; the phase 0 testnet check still decides it. **PR-4** only if not. |
 | `client.getDataContract` (:261, :271, :705, :722) | `queries.Contracts.fetch` / `fetchWithSerialization` | None. |
 | `client.getProtocolVersion` (`requireProtocolVersion`, :104; called at :120, :219, :315) | `queries.SystemQueries.refreshProtocolVersion` | None. |
 | `platform.documents.get` (:512) | `queries.Documents.search` / `fetch` | None. |
 | `platform.names.getByOwnerId` (repository :188) | `queries.Dpns.usernames(identityId, limit)` | None. |
-| `client.getContractGroup` (:266) | — | **PR-2**. int36's `queries.Groups` has only `info` / `actions` / `actionSigners`, which are for token multisig groups, not contract-group members. |
-| `client.getContractGroupOwner` (:709) | — | **PR-2** |
+| `client.getContractGroup` (:266) | — | **PR-2** (member list). int36's `queries.Groups` has only `info` / `actions` / `actionSigners`, which are for token multisig groups, not contract-group members. Nothing upstream returns the group's contracts and tokens yet. |
+| `client.getContractGroupOwner` (:709) | — | **PR-2** (binding only). #5421's proved `dash_sdk_contract_group_get_info` returns `{ownerId, adminIds, name?, description?}` in rs-sdk-ffi and Swift; it has no Kotlin/JNI binding. |
 | `client.getPlatformTime` (13 calls) | — | **PR-3**. int36's `SystemQueries` has `epochsInfo` and `refreshProtocolVersion` but no block time. |
 | `dashsdk.prepareTokenPurchaseSdk` (:121, :152) | `identity.StateTransitionParser.parse(ByteArray): ParsedStateTransition` | Available in int36, unverified (PR-1). No typed field for the agreed price yet. See below. |
 
@@ -88,7 +93,10 @@ Today every write passes a kotlin-platform `Signer`. Login (:392), revoke (:618)
 shared-profile revoke (:687) wrap dashj's `WalletSignerCallback`; the token purchase (:162)
 signs directly with the key it finds on dashj's identity chain. Between them they sign with
 the identity keys on dashj's BLOCKCHAIN_IDENTITY chain and with the per-app keys DashConnect
-derives (DIP-13 sub-features 6 and 7).
+derives (DIP-13 sub-features 6 and 7). Since #5649 (in int36) the SDK can derive those app
+keys too: `PlatformWalletManager.deriveConnectKey` (`ConnectSubFeature`, over
+`IdentityNative.deriveConnectKeyV2WithResolver`), plus `deriveLegacyAppEncryptionKey` for the
+pre-rotation path.
 
 Because those signers only find keys issued on dashj's identity chain, approve (:313),
 revoke (:604), purchase (:150) and `revokeSharedProfileKeys` (:683) run the identity-key
@@ -134,6 +142,12 @@ register a duplicate paid key. Today's guard is the strict backfill before the c
 `addMissingKeys` calls `requireIdentityChainKeys` only when keys look missing
 (`IdentityRepository.kt:680`), then checks again. The SDK path does not need it.
 
+Upstream, #5683 (open, v5.2-dev) makes the SDK refetch the identity before it builds an
+identity update. It is the same multi-device class of problem as kotlin-platform#43, on the
+SDK side: another device may have added or disabled keys since the wallet last read the
+identity. The wallet's own refetch-then-check above still applies; #5683 would cover the
+SDK's half once it lands.
+
 ## Platform PRs needed (`dashpay/platform`)
 
 The wallet's base branch builds against `dash-sdk-android` 5.1.0-int36 (recipe
@@ -143,22 +157,36 @@ needs to land on the line the next int build is cut from.
 | PR | What | Where to start | Status upstream |
 |---|---|---|---|
 | **PR-1** | The `dash-st:` state-transition decoder for Kotlin. | `identity.StateTransitionParser` (v5.1-dev `97f51a2bb`, Rust #4273/#4584). If the price is missing, add a typed agreed-price field to `ParsedBatchedTransition.Token`. | **Available in int36, unverified.** Not yet run on a real `dash-st:` link or the test vectors. **Closes only when the parser exposes the agreed total price as a typed field and parses `wallet/test/app-connect-vectors.json` correctly** (phase 0). If the price is missing, this becomes a small Platform PR that adds it. The wallet's own checks are wallet work in phase 4 (see [Reads](#reads)). |
-| **PR-2** | Contract-group queries for Kotlin: the owner, and a proof-verified snapshot of members and administration at one block. | Port #5421 (`rs-sdk-ffi/src/group/queries/contract_group_info.rs`, Swift-only today) to `rs-unified-sdk-jni` and `queries.*`. Snapshot logic: kotlin-platform `platform-mobile/src/app_connect.rs` `fetch_contract_group_snapshot_with_sdk`, `fetch_group_members`, `fetch_contract_group_owner_with_sdk`. Server queries from #4792. | New work. No open PR. Still missing in int36. |
+| **PR-2** | Contract-group queries for Kotlin: a binding for the owner read, plus the member query (the group's contracts and tokens, which consent needs), as a proof-verified snapshot at one block. | Bind #5421 (`rs-sdk-ffi/src/group/queries/contract_group_info.rs`, `dash_sdk_contract_group_get_info`, merged 2026-10-15, Swift-only today) in `rs-unified-sdk-jni` and `queries.*`; the owner half needs no new Rust. Snapshot logic: kotlin-platform `platform-mobile/src/app_connect.rs` `fetch_contract_group_snapshot_with_sdk`, `fetch_group_members`, `fetch_contract_group_owner_with_sdk`. Server queries from #4792. | Owner read exists in Rust (#5421) but has no Kotlin binding; the member list has nothing upstream. Now a binding plus the member query. No open PR. |
 | **PR-3** | Platform block time. | kotlin-platform `app_connect.rs` `fetch_platform_time_with_sdk`: `Identity::fetch_with_metadata(...)` returning `metadata.time_ms`. Either expose it as `Identities.fetchWithTime` (or similar), or return response metadata from existing queries. | New work. No open PR. Still missing in int36. |
-| **PR-4** (only if needed) | The current proved contract-key ID for an identity, contract and purpose. | kotlin-platform `app_connect.rs` `fetch_current_contract_key_id_with_sdk`. | Only if `Identities.fetchContractKeys` doesn't return the same thing. |
-| **PR-5** (only if needed) | Let the caller choose the signing key on `IdentityUpdates.update` and `DocumentTransactions.create`. | `DocumentTransactions.delete` already takes `signingKeyId`; follow that. | Only if the SDK's own key choice is wrong for DashConnect (MASTER for identity updates, HIGH for the response document). Neither takes a key in int36. |
+| **PR-4** (only if needed) | The current proved contract-key ID for an identity, contract and purpose. | kotlin-platform `app_connect.rs` `fetch_current_contract_key_id_with_sdk`. | Probably not needed: #5491 (in int36) makes `fetchContractKeys` return the proved keys. Still decided by the phase 0 testnet check. |
+| **PR-5** (only if needed) | Let the caller choose the signing key on `IdentityUpdates.update` and `DocumentTransactions.create`. | `DocumentTransactions.delete` already takes `signingKeyId`; follow that. Likely built on #5588 (open: public, protocol-14-aware signing-key selection) and #5961. | Only if the SDK's own key choice is wrong for DashConnect (MASTER for identity updates, HIGH for the response document). Neither takes a key in int36. |
 
 PR-2 and PR-3 block the migration. PR-1 is conditional on the phase 0 price and vector
 check. PR-4 and PR-5 depend on what the other checks in phase 0 find.
+
+### Upstream status (2026-11-17)
+
+| PR | State | What it means here |
+|---|---|---|
+| #5491 (romchornyi) | Merged 2026-10-23, in int36 | `fetchContractKeys` returns the proved contract keys (before: always `{}`). PR-4 probably not needed; phase 0 decides. |
+| #5649 (PastaPastaPasta) | Merged 2026-10-29, in int36 | `PlatformWalletManager.deriveConnectKey` / `ConnectSubFeature` (`wallet/PlatformWalletManager.kt` :651–:717) derives app keys at `m/9'/coin'/5'/<subFeature>'/0'/identityId'/leaf'[/purpose'/rotation']`: 6 is session authentication, 7 is app encryption with a hardened `rotation'`. `deriveLegacyAppEncryptionKey` covers the old 8-level path. Answers phase 0's derivation question; see phase 0 and phase 3. |
+| #5421 (PastaPastaPasta) | Merged 2026-10-15, rs-sdk-ffi and Swift only | Proved `dash_sdk_contract_group_get_info` returns `{ownerId, adminIds, name?, description?}`. PR-2's owner half needs only a Kotlin/JNI binding. |
+| #5823 (QuantumExplorer) | Merged 2026-11-10, **after** int36 (needs an SDK bump) | Proven `Sdk::state_transition_outcome` and unproven DAPI `getRecentStateTransitionStatus`. Not one of PR-1 to PR-5, but an option for `AppConnectSession`'s "outcome unknown" handling on the SDK path (see phase 4). Kotlin bindings not checked. |
+| #5588 | Open, v5.2-dev | Public, protocol-14-aware signing-key selection. The likely basis for PR-5. |
+| #5961 | Open, stacked on #5588 | Don't pick a budgeted or expiring key for data contract create or update. |
+| #5683 | Open, v5.2-dev | Refetch the identity before building an identity update; see [Key registration](#key-registration). |
+| PR-3 | Nothing | No merged or open PR for Platform block time. |
+| PR-2 member list | Nothing | Nothing beyond #5421. |
 
 ## Phases
 
 ### Phase 0: confirm the gaps (wallet, no Platform PR)
 
-- Check `Identities.fetchContractKeys` against `getCurrentContractKeyId` on testnet (decides PR-4).
+- Check `Identities.fetchContractKeys` against `getCurrentContractKeyId` on testnet (decides PR-4). Since #5491 it returns the proved keys, so PR-4 is probably not needed.
 - Check which key `IdentityUpdates.update` and `DocumentTransactions.create` sign with (decides PR-5).
 - Run `StateTransitionParser` on a real `dash-st:` link and on the vectors in `wallet/test/app-connect-vectors.json`, and check that it exposes the agreed total price as a typed field, not only in `details` (decides PR-1). PR-1 closes only if both hold; if the price is missing, PR-1 becomes a small Platform PR that adds it.
-- Check whether the SDK already has DIP-13 sub-feature (app key) derivation. If it does, a later step can move app-key derivation out of dashj.
+- The SDK does derive app keys (#5649, `PlatformWalletManager.deriveConnectKey`). Check instead that it derives the same keys the wallet derives today for sub-features 6 and 7, at the same rotation level, and that keys registered on the legacy (pre-rotation) path are still found through `deriveLegacyAppEncryptionKey`. If both hold, phase 3 can take app keys from the SDK.
 
 ### Phase 1: Platform PRs and SDK bump
 
@@ -186,7 +214,8 @@ Add `ConnectSigner : NativeSignerBridge` for what `KeystoreSigner` cannot sign: 
 DashConnect app keys (DIP-13 sub-features 6 and 7), including the new key's own signature
 during login. Identity keys the SDK created are signed by `KeystoreSigner`; `ConnectSigner`
 falls back to the dashj identity chain (after `requireIdentityChainKeys`) only for keys the
-SDK does not hold. It keeps today's per-sign `authorize()` and `checkScope()` hooks and is
+SDK does not hold. Once the phase 0 derivation check passes, `ConnectSigner` takes the app
+keys from the SDK (`PlatformWalletManager.deriveConnectKey`, #5649) instead of dashj. It keeps today's per-sign `authorize()` and `checkScope()` hooks and is
 closed after each operation.
 
 ### Phase 4: move reads, then writes
@@ -199,6 +228,9 @@ Each step changes one `SdkConnectPlatform` method and keeps the legacy one for t
 pre-cutover path. The retry, receipt and "outcome unknown" handling in
 `AppConnectSession` stays as it is; only the transport changes. Map the new SDK's errors
 (`DashSdkError` and others) onto the same "submitted / unknown / failed" outcomes.
+An option after an SDK bump past int36: #5823's proven `state_transition_outcome` (or the
+unproven `getRecentStateTransitionStatus`) could back the "unknown" case on the SDK path.
+Its Kotlin bindings have not been checked.
 
 ### Phase 5: remove the legacy path
 
@@ -223,8 +255,8 @@ keys through dashj.
 
 ## Open questions
 
-- Who owns PR-2 and PR-3 in `dashpay/platform`? Roman (romchornyi) has no open PR for
-  them; #5421 (contract-group owner, Swift) is PastaPastaPasta's.
+- Who owns PR-2 and PR-3 in `dashpay/platform`? Nobody has an open PR for them as of
+  2026-11-17; #5421 (contract-group owner, rs-sdk-ffi and Swift) is PastaPastaPasta's.
 - Should DashConnect keep running before the cutover? If not, phase 2 needs no legacy
   implementation and phase 5 is immediate. If it does, its writes stay on kotlin-platform
   until then, because SDK writes need the SDK `walletHandle`.
