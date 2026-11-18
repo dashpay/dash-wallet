@@ -253,6 +253,10 @@ internal fun sendAllFeeReserveDuffs(pooledUtxoCount: Int?): Long {
  */
 internal const val L1_FUNDING_GATE_CLOSED_REASON = "L1 funding gate closed"
 
+/** The longest [SdkL1SendService.awaitSendGate] waits for the funding gate, and how often it asks. */
+internal const val SEND_GATE_WAIT_MS = 30_000L
+internal const val SEND_GATE_POLL_MS = 500L
+
 /**
  * The [SdkWriteResult.NotBroadcast] reason prefix for a signing failure of a
  * fully-assembled Core transaction
@@ -1306,6 +1310,11 @@ class SdkL1SendService internal constructor(
      */
     private val hasUnprotectedPendingPayment: suspend () -> Boolean = { false },
     /**
+     * How long a user-initiated send waits for a closed funding gate to open ([awaitSendGate]).
+     * Default 0, no wait: constructions that don't set it keep the immediate refusal.
+     */
+    private val sendGateWaitMs: Long = 0L,
+    /**
      * The process-wide wipe barrier, shared with the verifier's reactivation; see
      * [de.schildbach.wallet.payments.FundingSelectionLock]. No default: a private instance is one
      * no wipe ever raises.
@@ -1381,6 +1390,7 @@ class SdkL1SendService internal constructor(
             }
         },
         hasUnprotectedPendingPayment = { pendingPaymentVerifier.get().hasUnprotectedPendingPayment() },
+        sendGateWaitMs = SEND_GATE_WAIT_MS,
         fundingSelection = fundingSelection
     )
 
@@ -1459,6 +1469,32 @@ class SdkL1SendService internal constructor(
     internal fun probeSendGate(): WalletFundingGate = evaluateWalletFundingGate(safeProgress())
 
     /**
+     * [probeSendGate], waiting up to [sendGateWaitMs] for a closed gate to open. A payment screen
+     * opened right after a launch or a return from the background asks while the engine is still
+     * scanning the blocks mined meanwhile, which takes seconds: failing at once left a refusal
+     * on a screen whose wallet was synced moments later (Joel, 12.0.1-beta, 2026-11-17: refused
+     * 3 s before the scan reached the tip). Returns the last answer, open or still closed.
+     *
+     * The gate of every send a user is waiting on: [sendToAddress], [buildDeferredPayment] and
+     * [buildDeferredMayaDeposit]. Quotes and background work (the Maya max quote, the CoinJoin
+     * drain and consolidation) ask [probeSendGate] once: nobody is waiting on them, and they are
+     * asked again later.
+     */
+    internal suspend fun awaitSendGate(): WalletFundingGate {
+        var gate = probeSendGate()
+        var waitedMs = 0L
+        while (!gate.allowed && waitedMs < sendGateWaitMs) {
+            delay(SEND_GATE_POLL_MS)
+            waitedMs += SEND_GATE_POLL_MS
+            gate = probeSendGate()
+        }
+        if (waitedMs > 0) {
+            log.info("SDK send gate after waiting {} ms: allowed={} ({})", waitedMs, gate.allowed, gate.reason)
+        }
+        return gate
+    }
+
+    /**
      * Attempt the SDK L1 send. One broadcast attempt, classified by
      * [classifyCoreSendFailure]; every preflight failure is
      * [SdkWriteResult.NotBroadcast] by construction.
@@ -1530,8 +1566,9 @@ class SdkL1SendService internal constructor(
         // Evidence gate — the same rule as shieldFromWallet, via the SAME
         // helper: engine running + filter scan caught up to the chain tip
         // (SDK-only preconditions — see evaluateWalletFundingGate).
-        // Shared with the debug settings status line via probeSendGate.
-        val gate = probeSendGate()
+        // Shared with the debug settings status line via probeSendGate. A user is waiting on
+        // this send, so a gate that is about to open is waited for ([awaitSendGate]).
+        val gate = awaitSendGate()
         if (!gate.allowed) {
             return notBroadcast(operation, "$L1_FUNDING_GATE_CLOSED_REASON: ${gate.reason}", null)
         }
@@ -1973,8 +2010,8 @@ class SdkL1SendService internal constructor(
         val walletIdHex = checkNotNull(source.boundWalletIdOrNull()) {
             "app wallet not bound to the SDK"
         }
-        val gate = probeSendGate()
-        check(gate.allowed) { "L1 funding gate closed: ${gate.reason}" }
+        val gate = awaitSendGate()
+        check(gate.allowed) { "$L1_FUNDING_GATE_CLOSED_REASON: ${gate.reason}" }
         val reservedAtHeight = reservationHeightLowerBound()
         // Re-asked under the shared selection lock, held through selection and the reservation
         // (review 4309551218).
@@ -2114,8 +2151,8 @@ class SdkL1SendService internal constructor(
         val walletIdHex = checkNotNull(source.boundWalletIdOrNull()) {
             "app wallet not bound to the SDK"
         }
-        val gate = probeSendGate()
-        check(gate.allowed) { "L1 funding gate closed: ${gate.reason}" }
+        val gate = awaitSendGate()
+        check(gate.allowed) { "$L1_FUNDING_GATE_CLOSED_REASON: ${gate.reason}" }
         // FAIL-CLOSED GUARD (funds-critical), max deposits only: a max deposit
         // selects (essentially) every spendable UTXO the pooled default reaches
         // — BIP44 + BIP32 + every DashPay contact-receiving account — and the

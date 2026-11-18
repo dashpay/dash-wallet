@@ -324,9 +324,12 @@ class SdkL1SendServiceTest {
         // exercisable. Seam-lock refusal is covered by dedicated tests.
         seamRegistry: SeamOutputLockRegistry = SeamOutputLockRegistry(),
         unprotectedPendingPayment: suspend () -> Boolean = { false },
+        // No wait by default, so a closed-gate test refuses at once; the wait has its own tests.
+        sendGateWaitMs: Long = 0L,
         fundingSelection: de.schildbach.wallet.payments.FundingSelectionLock =
             de.schildbach.wallet.payments.FundingSelectionLock()
     ) = SdkL1SendService(
+        sendGateWaitMs = sendGateWaitMs,
         source = source,
         dashPayConfig = config(enabled, cutoverState),
         isValidAddress = addressValid,
@@ -2158,6 +2161,79 @@ class SdkL1SendServiceTest {
         } finally {
             lock.lowerWipeBarrier()
         }
+    }
+
+    // --- buildDeferredPayment waits for the funding gate (Joel, 12.0.1-beta, 2026-11-17) --------
+
+    /** The scan [blocksShort] of the tip with the aggregate at 100%: the label reads synced, the gate does not. */
+    private fun scanShortOfTip(blocksShort: Long) = caughtUpProgress().let {
+        it.copy(filterHeight = it.filterHeight - blocksShort, walletSyncedHeight = it.walletSyncedHeight - blocksShort)
+    }
+
+    @Test
+    fun buildDeferredPayment_waitsForAScanThatReachesTheTip_thenBuilds() = runBlocking {
+        var probes = 0
+        val source = FakeSource(boundWalletId = { walletId })
+        // short of the tip for the first three probes, as right after a launch
+        val svc = service(
+            source,
+            progress = { if (probes++ < 3) scanShortOfTip(208) else caughtUpProgress() },
+            sendGateWaitMs = SEND_GATE_WAIT_MS
+        )
+
+        val payment = svc.buildDeferredPayment(listOf(validAddress to 10_000L), stillOwned = { true })
+
+        assertTrue("asked again until the gate opened, probes=$probes", probes >= 4)
+        assertTrue("built once the gate opened", payment.txidHex.isNotEmpty())
+    }
+
+    @Test
+    fun sendToAddress_waitsForAScanThatReachesTheTip_thenSends() = runBlocking {
+        var probes = 0
+        val source = readySource()
+        val svc = service(
+            source,
+            progress = { if (probes++ < 2) scanShortOfTip(208) else caughtUpProgress() },
+            sendGateWaitMs = SEND_GATE_WAIT_MS
+        )
+
+        val result = svc.sendToAddress(validAddress, amount, emptyWallet = false)
+
+        assertTrue("sent once the gate opened: $result", result is SdkWriteResult.Broadcast)
+    }
+
+    @Test
+    fun sendToAddress_withNoWaitConfigured_refusesAtOnce() = runBlocking {
+        var probes = 0
+        val source = readySource()
+        val svc = service(source, progress = { probes++; scanShortOfTip(208) })
+
+        val result = svc.sendToAddress(validAddress, amount, emptyWallet = false)
+
+        assertTrue("refused: $result", result is SdkWriteResult.NotBroadcast)
+        assertTrue((result as SdkWriteResult.NotBroadcast).reason.contains(L1_FUNDING_GATE_CLOSED_REASON))
+        assertEquals("asked once, no wait", 1, probes)
+    }
+
+    @Test
+    fun buildDeferredPayment_refusesWithTheGateReason_whenTheScanStaysShort() = runBlocking {
+        var probes = 0
+        val source = FakeSource(boundWalletId = { walletId })
+        val svc = service(
+            source,
+            progress = { probes++; scanShortOfTip(208) },
+            sendGateWaitMs = 2 * SEND_GATE_POLL_MS
+        )
+
+        val failure = runCatching {
+            svc.buildDeferredPayment(listOf(validAddress to 10_000L), stillOwned = { true })
+        }.exceptionOrNull()
+
+        assertTrue("an IllegalStateException, got $failure", failure is IllegalStateException)
+        val reason = failure?.message.orEmpty()
+        assertTrue(reason, reason.contains(L1_FUNDING_GATE_CLOSED_REASON))
+        assertTrue(reason, reason.contains("short of the chain tip"))
+        assertEquals("one probe, then one per poll of the wait", 3, probes)
     }
 
     @Test

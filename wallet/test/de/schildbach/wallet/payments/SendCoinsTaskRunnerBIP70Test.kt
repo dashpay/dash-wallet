@@ -61,6 +61,7 @@ import org.dash.wallet.common.data.PaymentIntent
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.PaymentRecoveryMetadata
 import org.dash.wallet.common.services.PaymentSubmissionPendingException
+import org.dash.wallet.common.services.SendEngineNotSyncedException
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.junit.After
@@ -1242,6 +1243,40 @@ class SendCoinsTaskRunnerBIP70Test {
         sendCoinsTaskRunner.releaseDeferredPayment(built, wallet)
         outpoints.forEach { assertTrue("unlocked after release: $it", !wallet.isLockedOutput(it)) }
         io.mockk.coVerify(exactly = 1) { sdkL1SendService.releaseDeferredPayment(payment) }
+    }
+
+    @Test
+    fun `a build refused by the funding gate is typed as not synced`() = runTest {
+        val paymentIntent = bip70PaymentIntent(
+            Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL"),
+            Coin.parseCoin("1.0"),
+            mockWebServer.url("/payment").toString()
+        )
+        // what SdkL1SendService.buildDeferredPayment throws for a closed gate
+        coEvery { sdkL1SendService.buildDeferredPayment(any(), any()) } throws IllegalStateException(
+            "L1 funding gate closed: SDK L1 filter scan is still short of the chain tip"
+        )
+
+        val failure = runCatching { sendCoinsTaskRunner.buildDeferredBip70Payment(paymentIntent, wallet) }
+            .exceptionOrNull()
+
+        assertTrue("typed as not synced, got $failure", failure is SendEngineNotSyncedException)
+    }
+
+    @Test
+    fun `a build that fails for another reason keeps its own exception`() = runTest {
+        val paymentIntent = bip70PaymentIntent(
+            Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL"),
+            Coin.parseCoin("1.0"),
+            mockWebServer.url("/payment").toString()
+        )
+        val other = IllegalStateException("app wallet not bound to the SDK")
+        coEvery { sdkL1SendService.buildDeferredPayment(any(), any()) } throws other
+
+        val failure = runCatching { sendCoinsTaskRunner.buildDeferredBip70Payment(paymentIntent, wallet) }
+            .exceptionOrNull()
+
+        assertTrue("rethrown unchanged, got $failure", failure === other)
     }
 
     @Test

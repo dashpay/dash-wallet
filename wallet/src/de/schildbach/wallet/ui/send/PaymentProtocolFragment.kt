@@ -29,6 +29,7 @@ import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.data.PaymentIntent
 import de.schildbach.wallet.livedata.Status
+import org.dash.wallet.common.services.SendEngineNotSyncedException
 import de.schildbach.wallet.ui.transactions.TransactionResultActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentPaymentProtocolBinding
@@ -71,6 +72,9 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
     }
 
     private var userAuthorizedDuring = false
+
+    /** Set while a confirm is rebuilding a preview that was refused for syncing; see the observer. */
+    private var retryingPreview = false
     private val viewModel by viewModels<PaymentProtocolViewModel>()
     private val binding by viewBinding(FragmentPaymentProtocolBinding::bind)
     private val args by navArgs<PaymentProtocolFragmentArgs>()
@@ -124,6 +128,12 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
             lifecycleScope.launch {
                 viewModel.sendPayment()
             }
+        } else if (viewModel.canRetryPreview) {
+            // Refused only because the wallet was still syncing when the screen opened: build
+            // again. A success shows the payment with its real fee to confirm; a failure is
+            // reported by the observer.
+            retryingPreview = true
+            viewModel.retryPreview()
         } else {
             handleSendRequestException()
         }
@@ -158,6 +168,7 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
                     binding.viewFlipper.displayedChild = VIEW_LOADING
                 }
                 Status.SUCCESS -> {
+                    retryingPreview = false
                     displayRequest(viewModel.finalPaymentIntent!!)
                     binding.viewFlipper.displayedChild = VIEW_PAYMENT
                 }
@@ -179,7 +190,9 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
                         // preview build error (eg insufficient funds)
                         displayRequest(viewModel.finalPaymentIntent!!)
                         binding.viewFlipper.displayedChild = VIEW_PAYMENT
-                        if (userAuthorizedDuring && !viewModel.canSendPayment) {
+                        val retried = retryingPreview
+                        retryingPreview = false
+                        if ((userAuthorizedDuring || retried) && !viewModel.canSendPayment) {
                             handleSendRequestException()
                         }
                     }
@@ -249,6 +262,11 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
             // this one: nothing was built, and it lifts once that payment is confirmed.
             is PaymentStillConfirmingException -> {
                 showErrorDialog(getString(R.string.payment_still_confirming))
+            }
+            // The wallet has not caught up with the chain: the same copy as the send screen,
+            // never the engine's text.
+            is SendEngineNotSyncedException -> {
+                showErrorDialog(getString(R.string.send_coins_fragment_hint_replaying))
             }
             // The SDK build reports a shortfall as a native error whose
             // message carries key-wallet's "Insufficient funds" text
