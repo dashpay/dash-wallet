@@ -47,11 +47,13 @@ import javax.inject.Inject
  * ones the home header seeds itself from on a cold start.
  * - Transparent (L1): [WalletUIConfig.LAST_TOTAL_BALANCE], written by the dashj balance
  *   observer before the cutover and by the SDK pipeline after it.
- * - Shielded: [DashPayConfig.LAST_SHIELDED_BALANCE_DUFFS] when shielding is enabled, zero
- *   when it is not.
+ * - Shielded: zero when shielding is disabled, otherwise unknown. The persisted
+ *   [DashPayConfig.LAST_SHIELDED_BALANCE_DUFFS] is not used: it carries no wallet identity
+ *   (a wallet restored without Reset Wallet can inherit another wallet's value), and the home
+ *   header likewise takes the shielded part only from the live runtime once it is READY,
+ *   which a receiver process does not wait for.
  *
- * A part that cannot be known (never written, unreadable, or a shielded spend still
- * reconciling) never makes the amount smaller: the reminder is shown without an amount
+ * A part that cannot be known never makes the amount smaller: the reminder is shown without an amount
  * when the known parts are positive, and not shown at all when they are not. The amount is
  * also left out when Autohide Balance is on, or when that setting cannot be read.
  */
@@ -75,12 +77,7 @@ class InactivityReminder @Inject constructor(
         // The reads and the post are one critical section with [cancel], so a reminder is
         // either posted before Reset Wallet cancels it, or sees the reset and is not posted.
         synchronized(postLock) {
-            // A stopped reset clears the wipe flag but leaves the durable recovery-required
-            // state, and may leave the old wallet file behind.
-            if (application.isWipeInProgress ||
-                application.isWalletWipeRecoveryRequired ||
-                !application.walletFileExists()
-            ) {
+            if (!application.mayActOnWalletInBackground()) {
                 log.info("wallet reset in progress, needs recovery or no wallet file: not showing inactivity reminder")
                 return
             }
@@ -118,22 +115,16 @@ class InactivityReminder @Inject constructor(
     }
 
     /**
-     * Zero when shielding is disabled, as on the home header. Null when unknown: the flag or
-     * the balance is unreadable, or no balance is persisted (never synced, or a spend is
-     * still reconciling).
+     * Zero when shielding is disabled or unset, as on the home header. Null (unknown) when
+     * it is enabled, or the flag is unreadable: see the class comment for why the persisted
+     * shielded balance is not used.
      */
     private fun readShieldedBalance(): Coin? = try {
-        runBlocking {
-            val enabled = Constants.SUPPORTS_PLATFORM &&
-                dashPayConfig.getPreservingErrors(DashPayConfig.USE_KOTLIN_SDK_SHIELDED) == true
-            if (enabled) {
-                dashPayConfig.getPreservingErrors(DashPayConfig.LAST_SHIELDED_BALANCE_DUFFS)?.let(Coin::valueOf)
-            } else {
-                Coin.ZERO
-            }
-        }
+        val enabled = Constants.SUPPORTS_PLATFORM &&
+            runBlocking { dashPayConfig.getPreservingErrors(DashPayConfig.USE_KOTLIN_SDK_SHIELDED) } == true
+        if (enabled) null else Coin.ZERO
     } catch (e: Exception) {
-        log.warn("cannot read the last known shielded balance", e)
+        log.warn("cannot read the shielded feature flag, treating the shielded balance as unknown", e)
         null
     }
 

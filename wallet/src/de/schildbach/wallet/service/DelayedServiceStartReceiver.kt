@@ -56,12 +56,7 @@ class DelayedServiceStartReceiver : BroadcastReceiver() {
         // wallet is gone: never start the service without a wallet. A file
         // check, because the main thread must not wait for a deferred wallet
         // load, and an in-memory check could read "no wallet" while one loads.
-        // A stopped reset clears the wipe flag but leaves the durable recovery-required state,
-        // and may leave the old wallet file behind: no start in that state either.
-        if (application.isWipeInProgress ||
-            application.isWalletWipeRecoveryRequired ||
-            !application.walletFileExists()
-        ) {
+        if (!application.mayActOnWalletInBackground()) {
             log.info("delayed blockchain service start skipped: wallet reset in progress, needs recovery or no wallet")
             return
         }
