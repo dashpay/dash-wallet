@@ -18,8 +18,10 @@ import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.service.DashSystemService
+import de.schildbach.wallet.service.platform.sdk.SdkIdentityQueries
 import de.schildbach.wallet.service.platform.sdk.SdkProfileQueries
 import de.schildbach.wallet.service.platform.sdk.SdkUsernameQueries
+import de.schildbach.wallet.service.platform.sdk.isSdkNetworkUnavailable
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.PlatformRepo.Companion.TIMESPAN
 import de.schildbach.wallet.ui.dashpay.PlatformRepo.Companion.TOP_CONTACT_COUNT
@@ -57,8 +59,6 @@ import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.bouncycastle.crypto.params.KeyParameter
 import de.schildbach.wallet.data.WalletData
-import org.dashj.platform.dapiclient.MaxRetriesReachedException
-import org.dashj.platform.dapiclient.NoAvailableAddressesForRetryException
 import org.dashj.platform.dapiclient.model.GrpcExceptionInfo
 import org.dashj.platform.dashpay.BlockchainIdentity
 import org.dashj.platform.dashpay.IdentityStatus
@@ -135,6 +135,12 @@ interface IdentityRepository {
     val blockchainIdentityFlow: StateFlow<BlockchainIdentity?>
     val initializationResult: StateFlow<Result<Unit>?>
     //suspend fun addMissingKeys(keyParameter: KeyParameter?): Boolean
+
+    /**
+     * The current identity's credit balance, read through the Kotlin SDK; null when there is no
+     * identity, when the read fails for any reason (the SDK runtime cannot start, the network,
+     * no balance reported), never a fabricated value. Cancellation propagates.
+     */
     suspend fun getIdentityBalance(): CreditBalanceInfo?
     val hasBlockchainIdentity: Boolean
     suspend fun hasIdentity(): Boolean
@@ -162,7 +168,14 @@ interface IdentityRepository {
                                              exception: Throwable? = null)
     suspend fun upgradeIdentity(keyParameter: KeyParameter?): Boolean
     suspend fun ensureCriticalAuthenticationKey(expectedIdentity: Identifier, keyParameter: KeyParameter?, checkAuthorized: () -> Unit)
-    fun getIdentityFromPublicKeyId(): Identity?
+
+    /**
+     * Discovers this wallet's identity on Platform from its first identity key, through the
+     * Kotlin SDK. Null when no identity owns that key, when the wallet encryption key or the first
+     * identity key is unavailable, and when the network could not be reached (logged as such).
+     * Every other failure propagates, as does cancellation. Runs on [Dispatchers.IO].
+     */
+    suspend fun getIdentityFromPublicKeyId(): Identity?
     suspend fun clearBlockchainIdentityData()
 
     /**
@@ -257,6 +270,7 @@ class IdentityRepositoryImpl @Inject constructor(
     private val dashSystemService: DashSystemService,
     private val sdkUsernameQueries: SdkUsernameQueries,
     private val sdkProfileQueries: SdkProfileQueries,
+    private val sdkIdentityQueries: SdkIdentityQueries,
 ) : IdentityRepository {
     companion object {
         private val log = LoggerFactory.getLogger(IdentityRepository::class.java)
@@ -353,9 +367,13 @@ class IdentityRepositoryImpl @Inject constructor(
             ?: throw IllegalStateException("IdentityId not found")
     }
 
-    override suspend fun getIdentityBalance(): CreditBalanceInfo? = withContext(Dispatchers.IO) {
-        try {
-            CreditBalanceInfo(platformRepo.platform.client.getIdentityBalance(_blockchainIdentity?.uniqueIdentifier ?: return@withContext null))
+    override suspend fun getIdentityBalance(): CreditBalanceInfo? {
+        return try {
+            val identityId = _blockchainIdentity?.uniqueIdentifier ?: return null
+            // Shares PlatformRepo's SDK read, which throws on every failure; here each one is "unknown".
+            platformRepo.getIdentityBalance(identityId)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             log.error("Failed to get identity balance", e)
             null
@@ -1346,48 +1364,41 @@ class IdentityRepositoryImpl @Inject constructor(
     }
 
     /**
-     * Discover this wallet's identity from its first identity key.
+     * See [IdentityRepository.getIdentityFromPublicKeyId].
      *
-     * Tolerates the legacy dashj identity cache the same way the contact-request path
-     * does. `fetchIdentityFromPubKeyHash` FETCHES the identity and only then CBOR-encodes
-     * it into the in-memory cache via `PlatformStateRepository.storeIdentity`; our own
-     * 6-key identities bind keys 4/5 to `SingleContractDocumentType(dashpay,
-     * "contactRequest")`, which that encoder cannot serialize — it throws
-     * `IllegalArgumentException("No converter for ...")` AFTER a successful fetch, so the
-     * caller loses a perfectly good identity.
+     * The lookup is [SdkIdentityQueries.identityByPublicKeyHash]; it never constructs the legacy
+     * `Platform` client. An SDK network failure ([isSdkNetworkUnavailable]) yields null, the result
+     * the legacy client's `MaxRetriesReachedException` / `NoAvailableAddressesForRetryException`
+     * gave, so the five callers see no change; the log tells it apart from a proved absence.
      *
-     * Observed live (emulator, testnet 12000000, 2026-09-10): this escaped to EVERY caller
-     * — RestoreIdentityWorker aborted restoration outright, and
-     * `PlatformSyncService.discoverAndRecoverIdentity` (via BlockchainServiceImpl) failed
-     * identity discovery. The tolerance belongs here, at the single shared read, rather
-     * than at each of the five call sites.
-     *
-     * The cache is a pure optimization: on that specific failure refetch through the
-     * cache-bypassing DAPI path, which never calls `storeIdentity`. Every other failure
-     * propagates unchanged, so real fetch errors are never masked.
+     * Only a found identity is converted to the legacy model, and only after the legacy client
+     * exists: the model's key enums initialise through native getters in `libsdklib`, which only
+     * the `Platform` constructor loads, and a first use without it fails those classes for the
+     * rest of the process. Every caller that finds an identity goes on to the legacy client
+     * anyway (`BlockchainIdentity` and the legacy identity recovery).
      */
-    override fun getIdentityFromPublicKeyId(): Identity? {
-        return try {
-            platformRepo.getWalletEncryptionKey()?.let {
-                val firstIdentityKey = platformRepo.getBlockchainIdentityKey(0, it) ?: return null
-                fetchIdentityToleratingCacheError(
-                    cachedGet = {
-                        platform.stateRepository.fetchIdentityFromPubKeyHash(firstIdentityKey.pubKeyHash)
-                    },
-                    cacheBypassingFetch = {
-                        log.warn(
-                            "identity lookup by public key hash was fetched but the legacy CBOR " +
-                                "cache rejected its contract-bound-key shape; bypassing the cache"
-                        )
-                        platform.client.getIdentityByFirstPublicKey(firstIdentityKey.pubKeyHash)
-                    }
-                )
-            }
-        } catch (e: MaxRetriesReachedException) {
-            null
-        } catch (e: NoAvailableAddressesForRetryException) {
-            null
+    override suspend fun getIdentityFromPublicKeyId(): Identity? = withContext(Dispatchers.IO) {
+        val encryptionKey = platformRepo.getWalletEncryptionKey() ?: return@withContext null
+        val firstIdentityKey = platformRepo.getBlockchainIdentityKey(0, encryptionKey) ?: return@withContext null
+        val found = try {
+            sdkIdentityQueries.identityByPublicKeyHash(firstIdentityKey.pubKeyHash)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            if (!isSdkNetworkUnavailable(e)) throw e
+            log.warn(
+                "identity discovery: Platform could not be reached ({}); reporting no identity, " +
+                    "not a proved absence",
+                e.javaClass.simpleName
+            )
+            return@withContext null
         }
+        if (found == null) {
+            log.info("identity discovery: Platform proved no identity owns the first identity key")
+            return@withContext null
+        }
+        platform.platform // loads libsdklib before the legacy key enums are first touched
+        found.toLegacyIdentity()
     }
 }
 

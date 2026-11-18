@@ -1,6 +1,8 @@
 package de.schildbach.wallet.service.platform
 
 import android.app.Application
+import de.schildbach.wallet.data.CreditBalanceInfo
+import de.schildbach.wallet.service.platform.sdk.SdkIdentityQueries
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.testPlatformRepo
 import de.schildbach.wallet.ui.more.connections.AppConnectKeyStateTest
@@ -52,7 +54,8 @@ class IdentityRepositoryConnectKeyTest {
     private val identityStorage = mockk<de.schildbach.wallet.database.entity.BlockchainIdentityConfig>(relaxed = true)
     private val config = mockk<de.schildbach.wallet.ui.dashpay.utils.DashPayConfig>(relaxed = true)
     private val repository = IdentityRepositoryImpl(mockk(relaxed = true), mockk(relaxed = true),
-        identityStorage, provider, platform, config, mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true))
+        identityStorage, provider, platform, config, mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true),
+        mockk(relaxed = true))
     private val id = Identifier.from(ByteArray(32) { 7 })
 
     init {
@@ -260,7 +263,8 @@ class IdentityRepositoryConnectKeyTest {
         val platformRepo: PlatformRepo,
         val identity: BlockchainIdentity,
         val auth: AuthenticationGroupExtension,
-        val criticalKey: IdentityPublicKey
+        val criticalKey: IdentityPublicKey,
+        val sdkIdentityQueries: SdkIdentityQueries
     )
 
     private val params = TestNet3Params.get()
@@ -283,10 +287,11 @@ class IdentityRepositoryConnectKeyTest {
         val auth = identityChainAuth()
         val wallet = mockk<WalletEx>(relaxed = true)
         every { wallet.isEncrypted } returns false
-        val realPlatformRepo = testPlatformRepo()
+        val sdkIdentityQueries = mockk<SdkIdentityQueries>()
+        coEvery { sdkIdentityQueries.creditBalance(any()) } returns 1_000_000_000L
+        val realPlatformRepo = testPlatformRepo(sdkIdentityQueries = sdkIdentityQueries)
         every { realPlatformRepo.walletApplication.wallet } returns wallet
         every { realPlatformRepo.walletApplication.authenticationGroupExtension } returns backfillAuth(auth)
-        every { realPlatformRepo.platform.client.getIdentityBalance(any()) } returns 1_000_000_000L
         val sdkPlatform = mockk<Platform>(relaxed = true)
         every { sdkPlatform.params } returns params
         fun key(id: Int, purpose: Purpose, level: SecurityLevel) =
@@ -312,11 +317,11 @@ class IdentityRepositoryConnectKeyTest {
         every { walletProvider.wallet } returns wallet
         val realRepository = IdentityRepositoryImpl(mockk(relaxed = true), mockk(relaxed = true),
             identityStorage, walletProvider, realPlatformRepo, config, mockk(relaxed = true), mockk(relaxed = true),
-            mockk(relaxed = true))
+            mockk(relaxed = true), sdkIdentityQueries)
         val field = IdentityRepositoryImpl::class.java.getDeclaredField("_blockchainIdentityFlow").also { it.isAccessible = true }
         @Suppress("UNCHECKED_CAST")
         (field.get(realRepository) as MutableStateFlow<BlockchainIdentity?>).value = spiedIdentity
-        return RealIdentityFixture(realRepository, realPlatformRepo, spiedIdentity, auth, criticalKey)
+        return RealIdentityFixture(realRepository, realPlatformRepo, spiedIdentity, auth, criticalKey, sdkIdentityQueries)
     }
 
     @Test
@@ -336,8 +341,7 @@ class IdentityRepositoryConnectKeyTest {
         org.junit.Assert.assertTrue(fixture.identity.hasCriticalAuthenticationKey())
         // so no second CRITICAL key is registered: no paid identity update, not even a balance read
         verify(exactly = 0) { fixture.identity.addMissingKeys(any(), any()) }
-        val client = fixture.platformRepo.platform.client
-        verify(exactly = 0) { client.getIdentityBalance(any()) }
+        coVerify(exactly = 0) { fixture.sdkIdentityQueries.creditBalance(any()) }
         coVerify { config.set(de.schildbach.wallet.ui.dashpay.utils.DashPayConfig.UPGRADE_IDENTITY_REQUIRED, false) }
     }
 
@@ -372,8 +376,7 @@ class IdentityRepositoryConnectKeyTest {
         val backfillAuth = checkNotNull(fixture.platformRepo.authenticationGroupExtension)
         verify(exactly = 0) { backfillAuth.addNewKey(any(), any()) }
         verify(exactly = 0) { fixture.identity.addMissingKeys(any(), any()) }
-        val client = fixture.platformRepo.platform.client
-        verify(exactly = 0) { client.getIdentityBalance(any()) }
+        coVerify(exactly = 0) { fixture.sdkIdentityQueries.creditBalance(any()) }
     }
 
     @Test fun backfillRunsOnlyWhenAKeyLooksMissingAndBeforeTheMasterSignature() {
@@ -411,8 +414,7 @@ class IdentityRepositoryConnectKeyTest {
         org.junit.Assert.assertTrue(error.message!!.contains("no purchase signing key was registered"))
         org.junit.Assert.assertTrue(error.cause is IdentityKeyChainBackfillException)
         verify(exactly = 0) { identity.addMissingKeys(any(), any()) }
-        val client = platform.platform.client
-        verify(exactly = 0) { client.getIdentityBalance(any()) }
+        coVerify(exactly = 0) { platform.getIdentityBalance(any()) }
         coVerify { config.set(de.schildbach.wallet.ui.dashpay.utils.DashPayConfig.UPGRADE_IDENTITY_REQUIRED, true) }
     }
 
@@ -425,8 +427,7 @@ class IdentityRepositoryConnectKeyTest {
             IdentityKeyChainBackfillException("wallet is encrypted but no key was provided")
         org.junit.Assert.assertFalse(repository.upgradeIdentity(null))
         verify(exactly = 0) { identity.addMissingKeys(any(), any()) }
-        val client = platform.platform.client
-        verify(exactly = 0) { client.getIdentityBalance(any()) }
+        coVerify(exactly = 0) { platform.getIdentityBalance(any()) }
         coVerify { config.set(de.schildbach.wallet.ui.dashpay.utils.DashPayConfig.UPGRADE_IDENTITY_REQUIRED, true) }
         coVerify(exactly = 0) {
             config.set(de.schildbach.wallet.ui.dashpay.utils.DashPayConfig.UPGRADE_IDENTITY_REQUIRED, false)
@@ -451,7 +452,7 @@ class IdentityRepositoryConnectKeyTest {
         every { identity.hasTransferKey() } returns true
         every { identity.hasEncryptionKey() } returns true
         every { identity.hasCriticalAuthenticationKey() } returns false
-        every { platform.platform.client.getIdentityBalance(any()) } returns 1_000_000_000L
+        coEvery { platform.getIdentityBalance(any()) } returns CreditBalanceInfo(1_000_000_000L)
         coEvery { identityStorage.load() } returns null
     }
 
@@ -466,7 +467,7 @@ class IdentityRepositoryConnectKeyTest {
     @Test fun setupRechecksAuthorizationAfterBalanceReadBeforeSubmitting() {
         fundedWallet()
         var authorized = true
-        every { platform.platform.client.getIdentityBalance(any()) } answers { authorized = false; 1_000_000_000L }
+        coEvery { platform.getIdentityBalance(any()) } answers { authorized = false; CreditBalanceInfo(1_000_000_000L) }
         assertThrows(kotlinx.coroutines.CancellationException::class.java) {
             runBlocking { repository.ensureCriticalAuthenticationKey(id, null) {
                 if (!authorized) throw kotlinx.coroutines.CancellationException("Locked")

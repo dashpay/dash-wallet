@@ -148,7 +148,7 @@ class IdentityDiscoveryLatchTest {
             val service = service(
                 identityDataDao = mockk(relaxed = true) { coEvery { load() } returns null },
                 identityRepo = mockk(relaxed = true) {
-                    every { getIdentityFromPublicKeyId() } returns null
+                    coEvery { getIdentityFromPublicKeyId() } returns null
                 }
             )
             var now = 1_000_000L
@@ -190,7 +190,7 @@ class IdentityDiscoveryLatchTest {
             val service = service(
                 identityDataDao = mockk(relaxed = true) { coEvery { load() } returns null },
                 identityRepo = mockk(relaxed = true) {
-                    every { getIdentityFromPublicKeyId() } returns null
+                    coEvery { getIdentityFromPublicKeyId() } returns null
                 }
             )
             var now = 1_000_000L

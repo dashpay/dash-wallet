@@ -288,8 +288,9 @@ interface TransparentUsernameSource {
     suspend fun registrationAssetLockAmountDuffs(walletIdHex: String, identityIndex: Int): Long?
 
     /**
-     * FEE-LEDGER read: [identityIdBase58]'s current Platform credit balance,
-     * or null when the identity is not found. One DAPI round trip that may
+     * FEE-LEDGER read: [identityIdBase58]'s current Platform credit balance
+     * ([fetchIdentityCreditBalance]: an unknown identity throws, null only when
+     * the SDK returns no number). One DAPI round trip that may
      * lag a just-applied transition (see [IdentityFeeLedger]); diagnostics
      * only — callers bound it and ignore failures.
      */
@@ -425,11 +426,8 @@ internal class DashSdkTransparentUsernameSource(
             }
             ?.amountDuffs
 
-    override suspend fun identityCreditBalance(identityIdBase58: String): Long? {
-        service.ensureStarted()
-        val sdk = checkNotNull(service.sdkOrNull()) { "SDK runtime missing after ensureStarted()" }
-        return sdk.identities.fetchBalance(identityIdBase58)
-    }
+    override suspend fun identityCreditBalance(identityIdBase58: String): Long? =
+        fetchIdentityCreditBalance(service, identityIdBase58)
 }
 
 // ── Service ───────────────────────────────────────────────────────────
