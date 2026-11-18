@@ -21,6 +21,7 @@ package de.schildbach.wallet
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.data.WalletUIConfig
+import java.io.IOException
 
 /**
  * Removes the persisted last-known balances ([WalletUIConfig.LAST_TOTAL_BALANCE] and
@@ -30,8 +31,10 @@ import org.dash.wallet.common.data.WalletUIConfig
  * restored from the recovery screen, which installs without a reset, would inherit the
  * previous wallet's values on the home header and in the inactivity reminder.
  *
- * Blocks: the caller is on a background thread (every install path is).
+ * Blocks: the caller is on a background thread (every install path is). Throws when the
+ * store cannot be written; the caller must not install the wallet then.
  */
+@Throws(IOException::class)
 fun clearLastKnownBalances(walletUIConfig: WalletUIConfig, dashPayConfig: DashPayConfig) = runBlocking {
     walletUIConfig.remove(WalletUIConfig.LAST_TOTAL_BALANCE)
     dashPayConfig.remove(DashPayConfig.LAST_SHIELDED_BALANCE_DUFFS)

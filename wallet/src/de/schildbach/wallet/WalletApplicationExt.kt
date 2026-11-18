@@ -87,6 +87,9 @@ object WalletApplicationExt {
                 // in the destroy phase comes after the same teardown.
                 PublishTransactionMetadataOperation.cancelAll(this)
                 setWipeInProgress(true)
+                // Now, not when the wipe finishes: a process death during the destroy
+                // phase must not leave the old wallet's "you've still got Dash" reminder.
+                cancelInactivityReminderForWipe()
                 restartService.performRestart(this, true, false)
             }
         )
@@ -156,13 +159,19 @@ object WalletApplicationExt {
                 // unfinished wipe must route to the degraded screen, not to
                 // create/restore.
                 recordWalletWipeStopped()
-                // While the wipe flag is still up, so no reminder is posted in between:
-                // the old wallet's "you've still got Dash" reminder must not outlive it.
-                runCatching { InactivityReminder.cancel(this@finishWalletWipe) }
-                    .onFailure { log.warn("could not cancel the inactivity reminder after the wipe", it) }
+                // Again while the wipe flag is still up: the begin already cancelled it, and
+                // no reminder is posted while the flag is up, so this only covers a begin
+                // whose cancel failed.
+                cancelInactivityReminderForWipe()
                 withContext(Dispatchers.Main) { setWipeInProgress(false) }
             }
         }
+    }
+
+    /** Removes the wiped wallet's inactivity reminder; a failure is logged, never thrown into the wipe. */
+    private fun WalletApplication.cancelInactivityReminderForWipe() {
+        runCatching { InactivityReminder.cancel(this) }
+            .onFailure { log.warn("could not cancel the inactivity reminder for the wallet wipe", it) }
     }
 
     /**
@@ -173,6 +182,8 @@ object WalletApplicationExt {
     fun WalletApplication.resumeInterruptedWipe() {
         log.warn("a previous Reset Wallet did not finish — completing it now; this launch does not load a wallet")
         setWipeInProgress(true)
+        // The interrupted wipe may have died before its own cancel.
+        cancelInactivityReminderForWipe()
         // Fence before the coroutine is even scheduled: nothing in this
         // process may persist a secret of the half-destroyed wallet.
         walletSecretWriteFence.raise()
