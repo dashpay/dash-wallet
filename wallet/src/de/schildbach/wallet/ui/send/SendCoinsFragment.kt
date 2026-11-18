@@ -255,7 +255,10 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
                 }
 
                 val tx = viewModel.signAndSendPayment(editedAmount, exchangeRate)
-                onSignAndSendPaymentSuccess(tx, autoAcceptContactRequest)
+                // the screen closes after the payment, so with no credits to accept the request it stays pending
+                val autoAccept = autoAcceptContactRequest &&
+                    dashPayViewModel.hasEnoughCredits()?.isBalanceEmpty() == false
+                onSignAndSendPaymentSuccess(tx, autoAccept)
             } catch (ex: Exception) {
                 viewModel.logSendError(args.paymentIntent.source)
                 log.info("send exception: ", ex)
@@ -321,10 +324,7 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         )
 
         if (confirmed == true) {
-            // the screen closes after the payment, so with no credits to accept the request it stays pending
-            val autoAccept = dialog.autoAcceptContactRequest &&
-                dashPayViewModel.hasEnoughCredits()?.isBalanceEmpty() == false
-            handleGo(autoAccept)
+            handleGo(dialog.autoAcceptContactRequest)
         }
     }
 
