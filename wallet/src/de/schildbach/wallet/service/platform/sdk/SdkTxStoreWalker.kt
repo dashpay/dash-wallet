@@ -20,6 +20,7 @@ package de.schildbach.wallet.service.platform.sdk
 import androidx.sqlite.db.SimpleSQLiteQuery
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import org.dashfoundation.dashsdk.persistence.DashDatabase
 
@@ -40,17 +41,77 @@ import org.dashfoundation.dashsdk.persistence.DashDatabase
  * money as ours. Any read that means "this wallet's outputs" must exclude
  * these rows with `AND NOT (${txoIsForeignSql("t")})`.
  *
- * The classification routes through `core_addresses` (PK = address, its
- * `accountId` is populated) rather than `txos.accountId` because the
- * persistence layer writes friendship TXOs with a NULL `accountId` — the same
- * verified fallback [SdkTxContactResolver.signedNetsFor] uses. A row whose
- * address maps to no account (or no `core_addresses` row at all) is treated as
- * owned — the pre-existing behavior for unclassifiable rows.
+ * Expresses [isForeignTxo]'s own precedence BY CONSTRUCTION, not as a
+ * separately-argued rule that happens to agree: `accountId` first (a row
+ * whose own `accountId` names an external account is foreign outright), else
+ * `coreAddressId` falling back to `address` (the persistence layer writes
+ * friendship-send TXOs with `accountId` NULL — the same fallback
+ * [SdkTxContactResolver.signedNetsFor] uses) joined against `core_addresses`
+ * (PK = address) to find the account that address belongs to. A row whose
+ * resolved address maps to no account (or no `core_addresses` row at all) is
+ * treated as owned — the pre-existing behavior for unclassifiable rows.
  */
 internal fun txoIsForeignSql(alias: String): String =
-    "EXISTS (SELECT 1 FROM core_addresses fca JOIN accounts fa ON fa.id = fca.accountId " +
-        "WHERE fca.address = $alias.address " +
-        "AND fa.accountType = ${SdkTxContactResolver.ACCOUNT_TYPE_DASHPAY_EXTERNAL})"
+    "(($alias.accountId IS NOT NULL AND $alias.accountId IN " +
+        "(SELECT id FROM accounts WHERE accountType = ${SdkTxContactResolver.ACCOUNT_TYPE_DASHPAY_EXTERNAL})) " +
+        "OR ($alias.accountId IS NULL AND EXISTS (SELECT 1 FROM core_addresses fca " +
+        "JOIN accounts fa ON fa.id = fca.accountId " +
+        "WHERE fca.address = COALESCE($alias.coreAddressId, $alias.address) " +
+        "AND fa.accountType = ${SdkTxContactResolver.ACCOUNT_TYPE_DASHPAY_EXTERNAL})))"
+
+/**
+ * The single Kotlin-side owner of the DIP-15 foreign-output rule
+ * [txoIsForeignSql] encodes in SQL — consumed by [SdkTxDetailProvider.load]
+ * (via [SdkTxDetailProvider.foreignContactTxoExclusion]) and
+ * [SdkTxContactResolver.signedNetsFor]/[SdkTxContactResolver.ownedInvolvementFor].
+ * `accountId` is the primary signal; a friendship-send TXO persists with
+ * `accountId` NULL (see [txoIsForeignSql]'s KDoc), so `coreAddressId` — the
+ * `core_addresses` PK, always populated — is the authoritative fallback,
+ * with `address` covering a row that predates that column.
+ *
+ * [txoIsForeignSql] expresses this exact precedence in SQL by construction
+ * (`accountId` first, else `coreAddressId ?: address` joined through
+ * `core_addresses`) rather than a separately-argued rule that happens to
+ * agree, so the two can never silently split apart. On every row where
+ * `accountId` is NULL and `coreAddressId` is NULL or equal to `address` —
+ * which is every Android row today — the two inputs to the fallback
+ * coincide, so this fix moves no balance: it only widens correctness to the
+ * case where `coreAddressId` differs from the row's own `address`.
+ * `SdkTxStoreWalkerTest`'s
+ * `isForeignTxo_and_txoIsForeignSql_agreeAcrossAccountIdAndAddressSignals`
+ * pins the agreement across all four signal combinations, including a row
+ * where `coreAddressId` and `address` resolve to different accounts.
+ */
+internal fun isForeignTxo(
+    accountId: Long?,
+    coreAddressId: String?,
+    address: String?,
+    externalAccountIds: Set<Long>,
+    externalAddresses: Set<String>
+): Boolean =
+    (accountId != null && accountId in externalAccountIds) ||
+        (accountId == null && (coreAddressId ?: address) in externalAddresses)
+
+/**
+ * The watch-only DIP-15 external friendship accounts' ids, and the
+ * addresses they own, for [walletId] — the exclusion sets [isForeignTxo]
+ * needs. Shared by [SdkTxDetailProvider.foreignContactTxoExclusion] and
+ * [SdkTxContactResolver.foreignExclusionContext]; this function does no
+ * fail-soft handling itself — a prerequisite failure (DB not started,
+ * wallet not resolved) is the caller's concern, before this is reached.
+ */
+internal suspend fun foreignTxoExclusionSets(db: DashDatabase, walletId: ByteArray): Pair<Set<Long>, Set<String>> {
+    val externalAccountIds = db.accountDao()
+        .observeByWalletAndType(walletId, SdkTxContactResolver.ACCOUNT_TYPE_DASHPAY_EXTERNAL)
+        .first()
+        .map { it.id }
+        .toSet()
+    val externalAddresses = HashSet<String>()
+    for (accountId in externalAccountIds) {
+        db.coreAddressDao().observeByAccount(accountId).first().mapTo(externalAddresses) { it.address }
+    }
+    return externalAccountIds to externalAddresses
+}
 
 /**
  * The real output/input shape of one transaction, parsed from the SDK store's
