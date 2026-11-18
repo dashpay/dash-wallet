@@ -277,7 +277,17 @@ internal fun ceilCreditsToDuffs(credits: Long): Long {
  * [ShieldedBalanceService.shieldFromWallet] and [SdkL1SendService].
  * [allowed] while the SDK engine can broadcast and no replay is in progress.
  */
-internal data class WalletFundingGate(val allowed: Boolean, val reason: String)
+internal data class WalletFundingGate(
+    val allowed: Boolean,
+    val reason: String,
+    /**
+     * A closed gate that can open within seconds: the engine is starting or looking for a
+     * peer, or the replay state has not been read yet. A send a user is waiting on may wait
+     * for it ([SdkL1SendService.awaitSendGate]). False for a replay, which takes far longer,
+     * and for an engine error.
+     */
+    val mayOpenSoon: Boolean = false
+)
 
 /**
  * Evaluate the L1 funding gate from the SDK engine's OWN live sync
@@ -330,17 +340,17 @@ internal fun evaluateWalletFundingGate(
     replaying: Boolean?
 ): WalletFundingGate = when {
     progress.phase == ShadowSyncPhase.IDLE ->
-        WalletFundingGate(false, "SDK L1 engine not running")
+        WalletFundingGate(false, "SDK L1 engine not running", mayOpenSoon = true)
     // Waiting for peers: nothing can be broadcast, and after a route loss or a
     // restart the snapshot can keep the previous session's heights (PastaClaw on
     // #1632). The display already reads this phase as offline
     // (SdkBlockchainStateMapper).
     progress.phase == ShadowSyncPhase.CONNECTING ->
-        WalletFundingGate(false, "SDK L1 engine is waiting for peers")
+        WalletFundingGate(false, "SDK L1 engine is waiting for peers", mayOpenSoon = true)
     progress.phase == ShadowSyncPhase.ERROR ->
         WalletFundingGate(false, "SDK L1 engine reported a sync error")
     replaying == null ->
-        WalletFundingGate(false, "the blockchain replay state is not known yet")
+        WalletFundingGate(false, "the blockchain replay state is not known yet", mayOpenSoon = true)
     replaying ->
         WalletFundingGate(false, "a blockchain replay (restore or rescan) is in progress")
     else -> WalletFundingGate(true, "SDK L1 engine running and no replay in progress")

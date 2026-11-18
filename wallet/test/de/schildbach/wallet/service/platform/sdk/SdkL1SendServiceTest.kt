@@ -2165,6 +2165,23 @@ class SdkL1SendServiceTest {
     }
 
     @Test
+    fun sendToAddress_duringAReplay_refusesAtOnce_evenWithAWaitConfigured() = runBlocking {
+        // A replay takes minutes to hours: waiting 30 s for it would only delay the refusal.
+        var probes = 0
+        val svc = service(
+            readySource(),
+            progress = { probes++; caughtUpProgress() },
+            replaying = { true },
+            sendGateWaitMs = SEND_GATE_WAIT_MS
+        )
+
+        val result = svc.sendToAddress(validAddress, amount, emptyWallet = false)
+
+        assertTrue("refused: $result", result is SdkWriteResult.NotBroadcast)
+        assertEquals("asked once, no wait", 1, probes)
+    }
+
+    @Test
     fun sendToAddress_withNoWaitConfigured_refusesAtOnce() = runBlocking {
         var probes = 0
         val source = readySource()

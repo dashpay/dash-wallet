@@ -1481,7 +1481,8 @@ class SdkL1SendService internal constructor(
      * right after a launch (a scanned invoice, a deep link) asks before the engine has started
      * or found a peer, which takes seconds: on a 12.0.1-beta launch (2026-11-17) the engine was
      * up 20 s after the process started and the invoice arrived one second later. Returns the
-     * last answer, open or still closed.
+     * last answer, open or still closed. Only a gate that can open within seconds is waited
+     * for ([WalletFundingGate.mayOpenSoon]): a replay or an engine error is answered at once.
      *
      * The gate of [sendToAddress] and [buildDeferredPayment]. Everything else (the Maya quote and
      * deposit, the CoinJoin drain and consolidation) asks [probeSendGate] once.
@@ -1489,7 +1490,7 @@ class SdkL1SendService internal constructor(
     internal suspend fun awaitSendGate(): WalletFundingGate {
         var gate = probeSendGate()
         var waitedMs = 0L
-        while (!gate.allowed && waitedMs < sendGateWaitMs) {
+        while (!gate.allowed && gate.mayOpenSoon && waitedMs < sendGateWaitMs) {
             delay(SEND_GATE_POLL_MS)
             waitedMs += SEND_GATE_POLL_MS
             gate = probeSendGate()

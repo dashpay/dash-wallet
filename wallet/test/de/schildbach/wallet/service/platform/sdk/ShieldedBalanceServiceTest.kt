@@ -3217,6 +3217,16 @@ class ShieldedBalanceServiceTest {
         val replay = evaluateWalletFundingGate(caughtUp, replaying = true)
         assertFalse(replay.allowed)
         assertTrue(replay.reason, replay.reason.contains("replay"))
+        // Only what can clear within seconds is worth a send's wait: an engine
+        // starting or finding a peer, a replay state not read yet. Not a replay,
+        // not an error.
+        assertFalse(replay.mayOpenSoon)
+        assertTrue(connecting.mayOpenSoon)
+        assertTrue(evaluateWalletFundingGate(ShadowSyncProgress.IDLE, replaying = false).mayOpenSoon)
+        assertTrue(evaluateWalletFundingGate(caughtUp, replaying = null).mayOpenSoon)
+        assertFalse(
+            evaluateWalletFundingGate(caughtUp.copy(phase = ShadowSyncPhase.ERROR), replaying = false).mayOpenSoon
+        )
         // ...and a replay state nobody could read is not "no replay".
         val unknown = evaluateWalletFundingGate(caughtUp, replaying = null)
         assertFalse(unknown.allowed)
