@@ -20,6 +20,7 @@ package de.schildbach.wallet.service.platform
 import android.app.Application
 import de.schildbach.wallet.data.CreditBalanceInfo
 import de.schildbach.wallet.service.platform.sdk.DashSdkService
+import de.schildbach.wallet.service.platform.sdk.SdkAmbiguousIdentityException
 import de.schildbach.wallet.service.platform.sdk.SdkIdentityJsonException
 import de.schildbach.wallet.service.platform.sdk.SdkIdentityQueryTimeoutException
 import de.schildbach.wallet.service.platform.sdk.SdkNativeLibraryUnavailableException
@@ -215,6 +216,22 @@ class IdentityRepositorySdkReadsTest {
         assertSameFailure(network, assertThrows(DashSdkError.NetworkError::class.java) {
             runBlocking { repository().getIdentityFromPublicKeyId() }
         })
+        verify(exactly = 0) { platformService.platform }
+        verify(exactly = 0) { platformService.client }
+        verify(exactly = 0) { platformService.stateRepository }
+    }
+
+    @Test
+    fun twoIdentitiesHoldingTheKeyHashIsAmbiguousAndPropagatesWithoutTheLegacyClient() {
+        val first = Base58.encode(identityId)
+        coEvery { source.identityJsonByPublicKeyHash(hashHex) } returns null
+        coEvery { source.identitiesJsonByNonUniquePublicKeyHash(hashHex, null) } returns "[${identityJson(key(0, 0, 0))}]"
+        coEvery { source.identitiesJsonByNonUniquePublicKeyHash(hashHex, first) } returns
+            "[${identityJson(key(0, 0, 0)).replace(first, Base58.encode(ByteArray(32) { 8 }))}]"
+
+        assertThrows(SdkAmbiguousIdentityException::class.java) {
+            runBlocking { repository().getIdentityFromPublicKeyId() }
+        }
         verify(exactly = 0) { platformService.platform }
         verify(exactly = 0) { platformService.client }
         verify(exactly = 0) { platformService.stateRepository }

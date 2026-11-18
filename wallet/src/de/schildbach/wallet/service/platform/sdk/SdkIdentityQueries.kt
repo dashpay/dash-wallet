@@ -19,7 +19,6 @@ package de.schildbach.wallet.service.platform.sdk
 
 import org.bitcoinj.core.Utils
 import org.dashj.platform.dpp.identifier.Identifier
-import org.slf4j.LoggerFactory
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -75,6 +74,14 @@ class SdkNativeLibraryUnavailableException(cause: LinkageError) :
  */
 class SdkIdentityQueryTimeoutException(label: String, timeoutMs: Long) :
     IllegalStateException("Platform did not answer $label within $timeoutMs ms")
+
+/**
+ * More than one identity holds the first identity key's hash in the non-unique key-hash index.
+ * The owner is ambiguous, not absent: callers must not read it as "no identity" (and go on to
+ * register one).
+ */
+class SdkAmbiguousIdentityException :
+    IllegalStateException("more than one identity holds the first identity key's hash; the owner is ambiguous")
 
 /**
  * Production [SdkIdentityReadSource]: boots the SDK on demand. A [LinkageError] from booting or
@@ -133,11 +140,13 @@ class SdkIdentityQueries internal constructor(
      * Same lookup as the legacy `fetch_identity_with_keyhash_sdk` (dashj-platform 5.0.1): the
      * unique key-hash index first, and only when that proves no identity, the non-unique index
      * (an `ECDSA_HASH160` key stores its hash there). The non-unique answer counts only when it
-     * is exactly one identity; two or more is reported as none, as the legacy lookup did. Each of
-     * the (up to three) round trips is bounded separately.
+     * is exactly one identity; two or more throws [SdkAmbiguousIdentityException] (the legacy
+     * lookup reported none, which now would read as a proved absence). Each of the (up to three)
+     * round trips is bounded separately.
      *
      * @throws SdkIdentityJsonException when the SDK's identity JSON cannot be read
      * @throws SdkIdentityQueryTimeoutException when a round trip exceeds its budget
+     * @throws SdkAmbiguousIdentityException when more than one identity holds the key hash
      */
     suspend fun identityByPublicKeyHash(pubKeyHash: ByteArray): SdkIdentityRecord? {
         require(pubKeyHash.size == PUBLIC_KEY_HASH_SIZE) { "public key hash must be $PUBLIC_KEY_HASH_SIZE bytes" }
@@ -157,10 +166,7 @@ class SdkIdentityQueries internal constructor(
         val next = bounded("identities.fetchByNonUniquePublicKeyHash[next]") {
             source.identitiesJsonByNonUniquePublicKeyHash(hashHex, found.id.toString())
         }?.let { SdkIdentityJson.parseIdentityArray(it) }.orEmpty()
-        if (next.isNotEmpty()) {
-            log.warn("more than one identity holds the first identity key's hash in the non-unique index; treating it as none")
-            return null
-        }
+        if (next.isNotEmpty()) throw SdkAmbiguousIdentityException()
         return found
     }
 
@@ -185,7 +191,6 @@ class SdkIdentityQueries internal constructor(
     }
 
     companion object {
-        private val log = LoggerFactory.getLogger(SdkIdentityQueries::class.java)
         private const val PUBLIC_KEY_HASH_SIZE = 20
     }
 }

@@ -90,12 +90,12 @@ class SdkIdentityQueriesTest {
     }
 
     @Test
-    fun moreThanOneNonUniqueMatchIsNoneAsWithTheLegacyLookup() = runBlocking {
+    fun moreThanOneNonUniqueMatchIsAmbiguousNotAbsent() {
         coEvery { source.identityJsonByPublicKeyHash(hashHex) } returns null
         coEvery { source.identitiesJsonByNonUniquePublicKeyHash(hashHex, null) } returns "[${identityJson(firstId)}]"
         coEvery { source.identitiesJsonByNonUniquePublicKeyHash(hashHex, firstId) } returns "[${identityJson(secondId)}]"
 
-        assertNull(queries.identityByPublicKeyHash(hash))
+        assertThrows(SdkAmbiguousIdentityException::class.java) { runBlocking { queries.identityByPublicKeyHash(hash) } }
     }
 
     @Test
