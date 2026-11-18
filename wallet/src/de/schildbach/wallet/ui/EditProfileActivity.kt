@@ -438,7 +438,7 @@ class EditProfileActivity : LockScreenActivity() {
                     if (answer == true) {
                         SendCoinsActivity.startBuyCredits(this@EditProfileActivity)
                     } else {
-                        if (!isEmpty)
+                        if (answer == false && !isEmpty)
                             save()
                     }
                 } else {

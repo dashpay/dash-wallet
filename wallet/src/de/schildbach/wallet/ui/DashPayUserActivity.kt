@@ -217,7 +217,7 @@ class DashPayUserActivity : LockScreenActivity() {
                     if (answer == true) {
                         SendCoinsActivity.startBuyCredits(this@DashPayUserActivity)
                     } else {
-                        if (!isEmpty)
+                        if (answer == false && !isEmpty)
                             viewModel.sendContactRequest()
                     }
                 } else {

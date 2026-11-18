@@ -458,7 +458,7 @@ class ContactsFragment : Fragment(),
 
                     if (answer == true) {
                         SendCoinsActivity.startBuyCredits(requireActivity())
-                    } else if (!isEmpty) {
+                    } else if (answer == false && !isEmpty) {
                         dashPayViewModel.sendContactRequest(userId)
                     }
                 } else {

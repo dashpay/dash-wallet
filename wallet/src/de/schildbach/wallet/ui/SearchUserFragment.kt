@@ -315,7 +315,7 @@ class SearchUserFragment : Fragment(R.layout.activity_search_dashpay_profile_roo
                     if (answer == true) {
                     SendCoinsActivity.startBuyCredits(requireActivity())
                     } else {
-                        if (!isEmpty)
+                        if (answer == false && !isEmpty)
                             dashPayViewModel.sendContactRequest(usernameSearchResult.fromContactRequest!!.userId)
                     }
                 } else {

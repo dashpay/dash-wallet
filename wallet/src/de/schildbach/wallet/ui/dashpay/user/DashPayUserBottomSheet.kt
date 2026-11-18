@@ -275,7 +275,7 @@ class DashPayUserBottomSheet : ComposeBottomSheet() {
                 ).showAsync(activity)
                 if (answer == true) {
                     SendCoinsActivity.startBuyCredits(activity)
-                } else if (!isEmpty) {
+                } else if (answer == false && !isEmpty) {
                     // notifyContactChange() fires from the SUCCESS observer once the op completes.
                     viewModel.sendContactRequest()
                 }
