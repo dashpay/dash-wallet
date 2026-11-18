@@ -449,6 +449,7 @@ class ShieldedBalanceServiceTest {
         consumed: ConsumedStore = ConsumedStore(),
         progress: () -> ShadowSyncProgress = { ShadowSyncProgress.IDLE },
         progressFlow: Flow<ShadowSyncProgress> = flowOf(progress()),
+        replaying: () -> Boolean? = { false },
         ensureL1SpvRunning: suspend () -> Boolean = { true },
         noteSelfSpendBroadcast: () -> Unit = {},
         hasAppLockedCoinJoinOutputs: () -> Boolean = { false },
@@ -464,6 +465,7 @@ class ShieldedBalanceServiceTest {
         displayHrp = { hrp },
         l1Progress = progress,
         l1ProgressFlow = { progressFlow },
+        isReplaying = replaying,
         ensureL1SpvRunning = ensureL1SpvRunning,
         noteSelfSpendBroadcast = noteSelfSpendBroadcast,
         hasAppLockedCoinJoinOutputs = hasAppLockedCoinJoinOutputs,
@@ -3184,120 +3186,57 @@ class ShieldedBalanceServiceTest {
 
     @Test
     fun fundingGate_pure_decisionTable() {
-        // The fix: the gate OPENS on caught-up alone — phase is FILTERS,
-        // NOT SYNCED (the never-SYNCED root cause: a live shadow chasing
-        // the tip never latches SYNCED), and NO dashj parity is consulted.
+        // OPEN: the engine is running and no replay is in progress. Phase is
+        // FILTERS, not SYNCED (a live shadow chasing the tip never latches
+        // SYNCED), and no dashj parity is consulted.
         val caughtUp = caughtUpProgress()
         assertFalse(caughtUp.synced) // proves we are not relying on SYNCED
-        assertTrue(evaluateWalletFundingGate(caughtUp).allowed)
-
-        // Backward-compatible: a genuine SYNCED-with-complete-scan also opens.
+        assertTrue(evaluateWalletFundingGate(caughtUp, replaying = false).allowed)
         assertTrue(
-            evaluateWalletFundingGate(caughtUp.copy(phase = ShadowSyncPhase.SYNCED)).allowed
+            evaluateWalletFundingGate(caughtUp.copy(phase = ShadowSyncPhase.SYNCED), replaying = false).allowed
         )
 
+        // CLOSED: nothing to broadcast through.
         // Engine not running (the progress feed resets to IDLE on stop).
-        assertFalse(evaluateWalletFundingGate(ShadowSyncProgress.IDLE).allowed)
-        // Engine errored — closed even with a complete scan snapshot.
-        assertFalse(evaluateWalletFundingGate(caughtUp.copy(phase = ShadowSyncPhase.ERROR)).allowed)
+        assertFalse(evaluateWalletFundingGate(ShadowSyncProgress.IDLE, replaying = false).allowed)
+        // Engine errored.
+        assertFalse(
+            evaluateWalletFundingGate(caughtUp.copy(phase = ShadowSyncPhase.ERROR), replaying = false).allowed
+        )
         // Waiting for peers (PastaClaw on #1632): the previous session's heights
         // still read caught up, but the engine cannot see a new block.
-        val connecting = evaluateWalletFundingGate(caughtUp.copy(phase = ShadowSyncPhase.CONNECTING))
+        val connecting =
+            evaluateWalletFundingGate(caughtUp.copy(phase = ShadowSyncPhase.CONNECTING), replaying = false)
         assertFalse(connecting.allowed)
         assertEquals("SDK L1 engine is waiting for peers", connecting.reason)
 
-        // Genuinely mid-scan: headers at the tip but the filter scan far
-        // behind (the real "still scanning" state) stays closed. The aggregate
-        // must be honest too — (100 + 100 + 93.3) / 3 — or the iOS rule would
-        // call this caught up.
-        assertFalse(
-            evaluateWalletFundingGate(caughtUp.copy(filterHeight = 1_400_000, overallPercent = 0.978)).allowed
-        )
-        // All-zero snapshot (no real sub-progress — the post-reset watermark
-        // signature) cannot prove caught-up: closed even if phase were SYNCED.
-        assertFalse(
-            evaluateWalletFundingGate(
-                caughtUp.copy(
-                    phase = ShadowSyncPhase.SYNCED,
-                    headerHeight = 0, headerTarget = 0, filterHeight = 0, filterTarget = 0
-                )
-            ).allowed
-        )
-        // Headers not yet at the tip → closed even if filters look full.
-        assertFalse(evaluateWalletFundingGate(caughtUp.copy(headerHeight = 1_499_000)).allowed)
+        // CLOSED: a replay (restore, Rescan Blockchain, the post-upgrade scan),
+        // wherever the scan stands.
+        val replay = evaluateWalletFundingGate(caughtUp, replaying = true)
+        assertFalse(replay.allowed)
+        assertTrue(replay.reason, replay.reason.contains("replay"))
+        // ...and a replay state nobody could read is not "no replay".
+        val unknown = evaluateWalletFundingGate(caughtUp, replaying = null)
+        assertFalse(unknown.allowed)
+        assertTrue(unknown.reason, unknown.reason.contains("not known"))
 
-        // Tolerance boundary, HEIGHT rule (aggregate unknown = 0.0): within
-        // SCAN_TIP_TOLERANCE_BLOCKS of the tip is caught up; one block further
-        // is not.
-        val noAggregate = caughtUp.copy(overallPercent = 0.0)
+        // OPEN: an ordinary catch-up, as on dashj and iOS. The 12.0.1-beta
+        // report (2026-11-17): a launch 208 blocks behind refused a payment
+        // 3 s before the scan reached the tip.
+        val behind = caughtUp.copy(filterHeight = 1_500_000 - 208, walletSyncedHeight = 1_500_000 - 208)
+        assertTrue(behind.blockPipelineLagging)
+        assertTrue(evaluateWalletFundingGate(behind, replaying = false).allowed)
+        // Far behind with no replay flagged: still open. Distance from the tip
+        // is not what closes the gate.
         assertTrue(
             evaluateWalletFundingGate(
-                noAggregate.copy(filterHeight = 1_500_000 - ShadowSyncProgress.SCAN_TIP_TOLERANCE_BLOCKS)
+                caughtUp.copy(filterHeight = 1_400_000, overallPercent = 0.978),
+                replaying = false
             ).allowed
         )
-        assertFalse(
-            evaluateWalletFundingGate(
-                noAggregate.copy(filterHeight = 1_500_000 - ShadowSyncProgress.SCAN_TIP_TOLERANCE_BLOCKS - 1)
-            ).allowed
-        )
-        // The same one-block-past-tolerance gap WITH an honest aggregate stays
-        // CLOSED: 3 short of 1.5M is 99.9998%, which the DISPLAY's iOS rule
-        // (>= 0.999) calls caught up, but a spend needs the scan itself within
-        // tolerance. Same for the §34 stall (2,167 short, 99.954%) with the
-        // wallet cursor unknown — the one case the pipeline veto cannot see.
-        val pastTolerance = caughtUp.copy(filterHeight = 1_500_000 - ShadowSyncProgress.SCAN_TIP_TOLERANCE_BLOCKS - 1)
-        assertTrue("the display calls it caught up", pastTolerance.scanCaughtUpToTip)
-        val pastToleranceGate = evaluateWalletFundingGate(pastTolerance)
-        assertFalse(pastToleranceGate.allowed)
-        assertTrue(pastToleranceGate.reason, pastToleranceGate.reason.contains("short of the chain tip"))
-        val section34Stall = caughtUp.copy(
-            headerHeight = 1_558_166, headerTarget = 1_558_166,
-            filterHeight = 1_555_999, filterTarget = 1_558_166, overallPercent = 0.99954,
-            walletSyncedHeight = 0
-        )
-        assertTrue("the display calls it caught up", section34Stall.scanCaughtUpToTip)
-        assertFalse("an unknown cursor is not lag", section34Stall.blockPipelineLagging)
-        assertFalse(evaluateWalletFundingGate(section34Stall).allowed)
-        // A stale header target restored at engine start (below the stored
-        // header tip the filter target already names): the gap is measured
-        // against the highest known tip, so 400 unscanned blocks stay closed.
-        val staleTarget = caughtUp.copy(
-            headerHeight = 1_500_500, headerTarget = 1_500_000,
-            filterHeight = 1_500_100, filterTarget = 1_500_500
-        )
-        assertTrue("the display calls it caught up", staleTarget.scanCaughtUpToTip)
-        val staleGate = evaluateWalletFundingGate(staleTarget)
-        assertFalse(staleGate.allowed)
-        assertTrue(staleGate.reason, staleGate.reason.contains("short of the chain tip"))
-        // …and the pipeline veto measures against the same tip: filters at the
-        // stored tip, the wallet cursor level with the stale target (500 back).
-        val stalePipeline = staleTarget.copy(filterHeight = 1_500_499, walletSyncedHeight = 1_500_000)
-        assertFalse("headerTarget alone reads no lag", stalePipeline.blockPipelineLagging)
-        val stalePipelineGate = evaluateWalletFundingGate(stalePipeline)
-        assertFalse(stalePipelineGate.allowed)
-        assertTrue(stalePipelineGate.reason, stalePipelineGate.reason.contains("processing matched blocks"))
-        assertTrue(
-            "a cursor within tolerance of the highest-known tip opens, stale target or not",
-            evaluateWalletFundingGate(
-                stalePipeline.copy(walletSyncedHeight = 1_500_500 - ShadowSyncProgress.SCAN_TIP_TOLERANCE_BLOCKS)
-            ).allowed
-        )
-
-        // THE VETO THE GATE KEEPS. A caught-up scan with the block pipeline
-        // provably lagging — this wallet's own spends not yet applied to the
-        // ledger — is closed, with a reason that names the pipeline. The
-        // display predicate dropped this veto; a spend must not.
-        val lagging = evaluateWalletFundingGate(caughtUp.copy(walletSyncedHeight = 1_200_000))
-        assertFalse(lagging.allowed)
-        assertTrue(lagging.reason, lagging.reason.contains("processing matched blocks"))
-        // An unknown cursor (0) is no evidence the matched blocks are through
-        // (PastaClaw on #1632): closed, with filters at the tip and no lag the
-        // display could see.
-        val unknownCursor = caughtUp.copy(walletSyncedHeight = 0)
-        assertFalse("no lag the display could see", unknownCursor.blockPipelineLagging)
-        val unknownGate = evaluateWalletFundingGate(unknownCursor)
-        assertFalse(unknownGate.allowed)
-        assertEquals("SDK L1 wallet scan cursor is not known yet", unknownGate.reason)
+        // Headers not yet at the tip, or the wallet cursor unknown: open.
+        assertTrue(evaluateWalletFundingGate(caughtUp.copy(headerHeight = 1_499_000), replaying = false).allowed)
+        assertTrue(evaluateWalletFundingGate(caughtUp.copy(walletSyncedHeight = 0), replaying = false).allowed)
     }
 
     @Test
@@ -3314,18 +3253,26 @@ class ShieldedBalanceServiceTest {
     }
 
     @Test
-    fun shieldFromWallet_scanNotCaughtUp_isNotBroadcast() = runBlocking {
+    fun shieldFromWallet_replayInProgress_isNotBroadcast() = runBlocking {
         val source = readySource()
-        // Headers at the tip but the filter scan far behind (mid-scan), with
-        // an honest aggregate — or the iOS rule would open the gate.
-        val service = service(
-            source,
-            progress = { caughtUpProgress().copy(filterHeight = 1_400_000, overallPercent = 0.978) }
-        )
+        // A restore or rescan: closed wherever the scan stands.
+        val service = service(source, progress = { caughtUpProgress() }, replaying = { true })
 
         assertTrue(service.shieldFromWallet(Dash.COIN) is SdkWriteResult.NotBroadcast)
         assertEquals(0, source.fundCalls)
         assertFalse(service.isWalletShieldingAvailable())
+    }
+
+    @Test
+    fun walletShielding_isAvailableWhileCatchingUp_withNoReplay() = runBlocking {
+        // Headers at the tip, the filter scan far behind: an ordinary catch-up, which does
+        // not close the gate (as on dashj and iOS).
+        val service = service(
+            readySource(),
+            progress = { caughtUpProgress().copy(filterHeight = 1_400_000, overallPercent = 0.978) }
+        )
+
+        assertTrue(service.isWalletShieldingAvailable())
     }
 
     @Test

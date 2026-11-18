@@ -29,6 +29,11 @@ import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.AbstractBlockChain
@@ -116,6 +121,38 @@ class BlockchainStateDataProvider @Inject constructor(
         return blockchainStateDao.observeState().distinctUntilChanged()
     }
 
+    /**
+     * The row's `replaying` flag for callers that cannot suspend (the send gate): true while a
+     * restore, a rescan or the post-upgrade scan is in progress, false when none is (a wallet
+     * with no row yet has started none), and null while the row has not been read or cannot be.
+     * Null must be read as "may be replaying".
+     */
+    private val replayingNow: StateFlow<Boolean?> by lazy {
+        blockchainStateDao.observeState()
+            .map<BlockchainState?, Boolean?> { it?.replaying ?: false }
+            .catch { emit(null) }
+            .stateIn(coroutineScope, SharingStarted.Eagerly, null)
+    }
+
+    /** See [replayingNow]. */
+    fun isReplayingOrNull(): Boolean? = replayingNow.value
+
+    /**
+     * Whether the SDK engine still has scan work to do, as of its last progress update that
+     * could tell ([de.schildbach.wallet.service.platform.sdk.SdkBlockchainStateUpdate.replayComplete];
+     * a transient ERROR / IDLE / CONNECTING update leaves it as it was). True during a replay
+     * AND during an ordinary catch-up, so it is not `replaying`: it is what keeps the
+     * blockchain service alive and awake while the engine works (the idle rule guard, the
+     * wake lock, the restart alarm), which `replaying` did from #1568 until that flag got its
+     * rescan-only meaning back. In memory only, false until the engine reports: a process that
+     * has just started is covered by the engine-start hold.
+     */
+    @Volatile
+    private var sdkEngineWorking = false
+
+    /** See [sdkEngineWorking]. */
+    fun isSdkEngineWorking(): Boolean = sdkEngineWorking
+
     fun updateImpediments(impediments: Set<Impediment>) {
         coroutineScope.launch {
             serviceImpediments = impediments
@@ -183,23 +220,32 @@ class BlockchainStateDataProvider @Inject constructor(
             // Null percent (transient SDK ERROR) preserves the row's value —
             // a peer hiccup must not flap isSynced() consumers 100 → 0 → 100.
             update.percentageSync?.let { blockchainState.percentageSync = it }
-            // Phase 1b item 7: on the SDK path `replaying` means "the engine is
-            // still doing replay work", and it keeps the blockchain service alive
-            // (idle rule guard + wake lock) until it is not. This used to be
-            // hard-coded false, so nothing protected the post-upgrade replay
-            // and the one-minute restart alarm never fired after an idle stop.
+            // `replaying` means what it meant on dashj: a restore, a Rescan
+            // Blockchain or the post-upgrade SDK scan is in progress. Those
+            // set it ([resetBlockchainState], [markReplayStartedForSdkTakeover]);
+            // the engine's progress only ENDS it. It keeps the blockchain
+            // service alive (idle rule guard + wake lock) and blocks sends
+            // until then.
             //
-            // Set from the LIFECYCLE signal, not the display percent (review,
+            // The engine being behind the tip does not start a replay. From
+            // 2026-09-27 (#1568) to this change every catch-up set the flag
+            // too, so an ordinary launch a few blocks behind read as a replay
+            // and refused payments that dashj and iOS allow.
+            //
+            // Ended on the LIFECYCLE signal, not the display percent (review,
             // 2026-09-23): percentageSync reads 100 at the iOS aggregate
             // threshold while the committed cursor is thousands of blocks
-            // behind and the block pipeline still lags, and deriving the flag
-            // from it let a final-batch park drop the idle-stop guard and the
-            // wake lock with the engine mid-work. A null (transient ERROR /
-            // IDLE / CONNECTING) leaves the flag as it was. The DAO's
-            // clear-at-100% is opt-in and only dashj's scan-progress writer
-            // opts in, so neither this write nor an impediment-only rewrite
-            // of the row can undo the separation.
-            update.replayComplete?.let { blockchainState.replaying = !it }
+            // behind and the block pipeline still lags, and ending the replay
+            // on it let a final-batch park drop the idle-stop guard and the
+            // wake lock with the engine mid-work. Null (transient ERROR /
+            // IDLE / CONNECTING) and false leave the flag as it was. The
+            // DAO's clear-at-100% is opt-in and only dashj's scan-progress
+            // writer opts in, so neither this write nor an impediment-only
+            // rewrite of the row can undo the separation.
+            if (update.replayComplete == true) blockchainState.replaying = false
+            // The engine's own "still working" verdict, for the service's keep-alive only
+            // ([isSdkEngineWorking]): what `replaying` was being overwritten with.
+            update.replayComplete?.let { sdkEngineWorking = !it }
             blockchainState.impediments = composeImpediments()
             blockchainStateDao.saveState(blockchainState)
             // A caught-up snapshot must not REGRESS a COMPLETE stage — that is the
@@ -239,6 +285,7 @@ class BlockchainStateDataProvider @Inject constructor(
     internal fun clearSdkDerivedState() {
         coroutineScope.launch {
             sdkStallNetworkImpediment = false
+            sdkEngineWorking = false
             syncStageFlow.value = null
             val blockchainState = blockchainStateDao.getState()
             if (blockchainState != null) {

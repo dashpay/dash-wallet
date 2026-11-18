@@ -137,7 +137,7 @@ class BlockchainStateDataProviderTest {
         assertEquals(1_500_100, row.bestChainHeight)
         assertEquals(Date(2_000_000_000L), row.bestChainDate)
         assertEquals(90, row.percentageSync)
-        assertTrue("below the tip on the SDK path IS a replay — the service must stay alive", row.replaying)
+        assertTrue("a progress update below the tip does not end the replay the row was in", row.replaying)
         assertEquals("a null chainlockHeight preserves the row's value", 1_499_990, row.chainlockHeight)
         assertEquals("null mnListHeight preserves the row's value", 1_499_000, row.mnlistHeight)
         assertEquals(
@@ -148,15 +148,34 @@ class BlockchainStateDataProviderTest {
     }
 
     @Test
-    fun updateSdkBlockchainState_replayingFollowsThePercentage() {
-        // Phase 1b item 7. Reference install, 2026-09-15: the SDK replay ran
-        // for eleven hours with `replaying` hard-coded false, so the idle rule
-        // stopped the service nine times and nothing rescheduled it.
+    fun updateSdkBlockchainState_endsAReplay_butNeverStartsOne() {
+        // `replaying` means a restore, a rescan or the post-upgrade scan, as on dashj. Those set
+        // it (resetBlockchainState, markReplayStartedForSdkTakeover); the engine merely being
+        // behind the tip does not. From #1568 to 12.0.2 every catch-up set it, and a wallet
+        // opened a few blocks behind refused payments (12.0.1-beta report, 2026-11-17).
         dao.state = BlockchainState(Date(0L), 0, false, EnumSet.noneOf(Impediment::class.java), 0, 0, 100)
 
+        assertFalse("nothing reported yet", provider.isSdkEngineWorking())
         provider.updateSdkBlockchainState(sdkUpdate(percentageSync = 42, syncStage = SyncStage.BLOCKS))
         awaitUntil("below-tip update applied") { dao.state?.percentageSync == 42 }
-        assertTrue("42% is a replay in progress", dao.state!!.replaying)
+        assertFalse("catching up is not a replay", dao.state!!.replaying)
+        // ...but the engine has work, which is what keeps the service alive through it.
+        assertTrue("a catch-up is engine work", provider.isSdkEngineWorking())
+        // A transient update that cannot tell leaves that verdict alone.
+        provider.updateSdkBlockchainState(sdkUpdate(percentageSync = null, syncStage = SyncStage.OFFLINE))
+        awaitUntil("null update applied") { provider.getSyncStage() == SyncStage.OFFLINE }
+        assertTrue("an unknown verdict keeps the last one", provider.isSdkEngineWorking())
+        provider.updateSdkBlockchainState(sdkUpdate(percentageSync = 100, syncStage = SyncStage.COMPLETE))
+        awaitUntil("catch-up finished") { !provider.isSdkEngineWorking() }
+
+        // Phase 1b item 7. Reference install, 2026-09-15: the SDK replay ran for eleven hours
+        // with `replaying` cleared by the first update, so the idle rule stopped the service
+        // nine times and nothing rescheduled it. A replay that was started stays on until the
+        // engine reports it complete.
+        dao.state = BlockchainState(Date(0L), 0, true, EnumSet.noneOf(Impediment::class.java), 0, 0, 0)
+        provider.updateSdkBlockchainState(sdkUpdate(percentageSync = 42, syncStage = SyncStage.BLOCKS))
+        awaitUntil("replay update applied") { dao.state?.percentageSync == 42 }
+        assertTrue("a started replay is still in progress at 42%", dao.state!!.replaying)
 
         // A transient null percent (SDK ERROR blip) preserves both fields.
         provider.updateSdkBlockchainState(sdkUpdate(percentageSync = null, syncStage = SyncStage.HEADERS))
@@ -174,15 +193,16 @@ class BlockchainStateDataProviderTest {
      * Review, 2026-09-23. The display percent reads 100 at the iOS aggregate
      * threshold (plan §35) while the committed cursor is thousands of blocks
      * behind and the block pipeline still lags (the §34 final-batch park).
-     * `replaying` is the idle-stop guard and the replay wake lock; deriving
-     * it from that percent stopped the release-build engine mid-work and
+     * `replaying` is the idle-stop guard and the replay wake lock; ending
+     * it on that percent stopped the release-build engine mid-work and
      * then declined the one-minute restart because the replay was "over".
-     * The flag now follows the lifecycle signal, and the DAO's clear-at-100%
+     * A replay now ends on the lifecycle signal, and the DAO's clear-at-100%
      * must not undo that one line later.
      */
     @Test
     fun updateSdkBlockchainState_replayingFollowsTheLifecycle_notTheDisplayPercent() {
-        dao.state = BlockchainState(Date(0L), 0, false, EnumSet.noneOf(Impediment::class.java), 0, 0, 100)
+        // a replay in progress (restore, rescan or the post-upgrade scan set the flag)
+        dao.state = BlockchainState(Date(0L), 0, true, EnumSet.noneOf(Impediment::class.java), 0, 0, 100)
 
         // The park: display says 100, the engine is still replaying.
         provider.updateSdkBlockchainState(

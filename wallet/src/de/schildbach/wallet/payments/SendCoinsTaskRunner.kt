@@ -1547,8 +1547,18 @@ class SendCoinsTaskRunner @Inject constructor(
             releaseDeferredPayment(payment, wallet)
             throw InvalidPaymentRequestURL("Final payment intent URL is null")
         }
-        // Before anything else: once the wallet is no longer the installed one, nothing of this
-        // payment may be recorded or sent. The reservation goes back.
+        // The build can wait for the send gate (SdkL1SendService.awaitSendGate), and the callers
+        // without a confirm screen (a gift card purchase) come straight from it: a request that
+        // expired meanwhile is not paid. Nothing has been recorded or sent; the reservation goes
+        // back.
+        if (finalPaymentIntent.expired) {
+            releaseDeferredPayment(payment, wallet)
+            throw org.dash.wallet.common.payments.bip70.PaymentProtocolException.Expired(
+                "payment request expired before it was submitted"
+            )
+        }
+        // Once the wallet is no longer the installed one, nothing of this payment may be
+        // recorded or sent. The reservation goes back.
         if (!pendingPaymentVerifier.stillOwnedBy(wallet)) {
             releaseDeferredPayment(payment, wallet)
             throw IllegalStateException(

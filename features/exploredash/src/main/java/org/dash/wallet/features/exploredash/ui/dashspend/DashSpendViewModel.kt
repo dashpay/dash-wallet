@@ -274,12 +274,10 @@ class DashSpendViewModel @Inject constructor(
         blockchainStateProvider.observeState()
             .filterNotNull()
             .onEach { state ->
-                // Same gate as SendCoinsViewModel: a not-yet-synced wallet
-                // cannot pay, so it reuses the REPLAYING signal (and its
-                // translated hint) instead of letting the send fail deep in
-                // the SDK path and surfacing raw exception text. The
-                // persisted `replaying` flag itself is untouched.
-                _isBlockchainReplaying.value = state.replaying || !state.isSynced()
+                // Same rule as SendCoinsViewModel: only a replay (restore,
+                // rescan, the post-upgrade scan) blocks a purchase. A wallet
+                // that is merely catching up may pay.
+                _isBlockchainReplaying.value = state.replaying
             }
             .launchIn(viewModelScope)
     }

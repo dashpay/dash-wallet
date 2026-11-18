@@ -447,20 +447,13 @@ class SendCoinsViewModel @Inject constructor(
         blockchainStateDao.observeState()
             .filterNotNull()
             .onEach { state ->
-                // NOT-SYNCED is folded into the same UI signal as REPLAYING.
-                // Post-cutover the SDK does a from-scratch compact-filter scan
-                // on first launch; a send attempted inside that window failed
-                // deep in the SDK send path and surfaced the raw exception
-                // text ("…ROLLBACK_CUTOVER…") under "Problem sending coins!".
-                // Gating here reuses the existing, translated
-                // send_coins_fragment_hint_replaying hint and the existing
-                // blockContinue wiring in SendCoinsFragment.
-                //
-                // Deliberately NOT done by flipping the persisted `replaying`
-                // flag: that flag has 15+ consumers (shielded transfers,
-                // mixed-funds migration, exchange-rate stamping, DashPay
-                // contact payments) and must keep its own meaning.
-                _isBlockchainReplaying.postValue(state.replaying || !state.isSynced())
+                // Only a replay blocks the screen, as on dashj: a restore, a
+                // Rescan Blockchain, or the SDK's from-scratch scan on the
+                // first launch after the upgrade, which sets the same flag
+                // (markReplayStartedForSdkTakeover). A wallet that is merely
+                // catching up may pay; the send gate
+                // (evaluateWalletFundingGate) applies the same rule.
+                _isBlockchainReplaying.postValue(state.replaying)
             }
             .launchIn(viewModelScope)
 

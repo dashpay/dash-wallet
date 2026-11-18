@@ -1235,6 +1235,12 @@ class SdkL1SendService internal constructor(
      */
     private val l1Progress: () -> ShadowSyncProgress = { ShadowSyncProgress.IDLE },
     /**
+     * The blockchain state's `replaying` flag, for the send gate; null = not known. Same wiring
+     * as [ShieldedBalanceServiceImpl]. Default false: [l1Progress]'s IDLE default already keeps
+     * the gate closed for constructions that provide neither.
+     */
+    private val isReplaying: () -> Boolean? = { false },
+    /**
      * Send-all guard (funds-critical): does the HELD dashj wallet still
      * track ANY app-locked output ([org.bitcoinj.wallet.Wallet.lockOutput] —
      * CrowdNode locks the outputs paying its account address) among its
@@ -1332,7 +1338,8 @@ class SdkL1SendService internal constructor(
         // A Provider: the verifier reaches this service through its engine, so a direct edge
         // would be a dependency cycle.
         pendingPaymentVerifier: javax.inject.Provider<de.schildbach.wallet.payments.PendingDirectPaymentVerifier>,
-        fundingSelection: de.schildbach.wallet.payments.FundingSelectionLock
+        fundingSelection: de.schildbach.wallet.payments.FundingSelectionLock,
+        blockchainStateDataProvider: de.schildbach.wallet.service.BlockchainStateDataProvider
     ) : this(
         source = DashSdkL1SendSource(sdkService),
         dashPayConfig = dashPayConfig,
@@ -1346,6 +1353,7 @@ class SdkL1SendService internal constructor(
             }
         },
         l1Progress = { l1ShadowSyncService.progress.value },
+        isReplaying = { blockchainStateDataProvider.isReplayingOrNull() },
         hasAppLockedSpendableOutputs = {
             // The held dashj wallet stays the AUTHORITY on app-side locks
             // post-cutover (CrowdNode locks via WalletDataAdapter →
@@ -1466,19 +1474,17 @@ class SdkL1SendService internal constructor(
      * binding), so an open gate means "the SDK engine WOULD be used if
      * those pass", not a guarantee.
      */
-    internal fun probeSendGate(): WalletFundingGate = evaluateWalletFundingGate(safeProgress())
+    internal fun probeSendGate(): WalletFundingGate = evaluateWalletFundingGate(safeProgress(), safeReplaying())
 
     /**
-     * [probeSendGate], waiting up to [sendGateWaitMs] for a closed gate to open. A payment screen
-     * opened right after a launch or a return from the background asks while the engine is still
-     * scanning the blocks mined meanwhile, which takes seconds: failing at once left a refusal
-     * on a screen whose wallet was synced moments later (Joel, 12.0.1-beta, 2026-11-17: refused
-     * 3 s before the scan reached the tip). Returns the last answer, open or still closed.
+     * [probeSendGate], waiting up to [sendGateWaitMs] for a closed gate to open. A payment opened
+     * right after a launch (a scanned invoice, a deep link) asks before the engine has started
+     * or found a peer, which takes seconds: on a 12.0.1-beta launch (2026-11-17) the engine was
+     * up 20 s after the process started and the invoice arrived one second later. Returns the
+     * last answer, open or still closed.
      *
-     * The gate of every send a user is waiting on: [sendToAddress], [buildDeferredPayment] and
-     * [buildDeferredMayaDeposit]. Quotes and background work (the Maya max quote, the CoinJoin
-     * drain and consolidation) ask [probeSendGate] once: nobody is waiting on them, and they are
-     * asked again later.
+     * The gate of [sendToAddress] and [buildDeferredPayment]. Everything else (the Maya quote and
+     * deposit, the CoinJoin drain and consolidation) asks [probeSendGate] once.
      */
     internal suspend fun awaitSendGate(): WalletFundingGate {
         var gate = probeSendGate()
@@ -2151,8 +2157,8 @@ class SdkL1SendService internal constructor(
         val walletIdHex = checkNotNull(source.boundWalletIdOrNull()) {
             "app wallet not bound to the SDK"
         }
-        val gate = awaitSendGate()
-        check(gate.allowed) { "$L1_FUNDING_GATE_CLOSED_REASON: ${gate.reason}" }
+        val gate = probeSendGate()
+        check(gate.allowed) { "L1 funding gate closed: ${gate.reason}" }
         // FAIL-CLOSED GUARD (funds-critical), max deposits only: a max deposit
         // selects (essentially) every spendable UTXO the pooled default reaches
         // — BIP44 + BIP32 + every DashPay contact-receiving account — and the
@@ -2323,6 +2329,14 @@ class SdkL1SendService internal constructor(
         isValidAddress(address)
     } catch (e: Exception) {
         false
+    }
+
+    /** The replay flag for the send gate; a failed read is "not known", which keeps it closed. */
+    private fun safeReplaying(): Boolean? = try {
+        isReplaying()
+    } catch (e: Exception) {
+        log.warn("failed to read the blockchain replay state; send gate stays closed", e)
+        null
     }
 
     private fun safeProgress(): ShadowSyncProgress = try {
