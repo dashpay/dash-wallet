@@ -1005,6 +1005,12 @@ class ShieldedBalanceServiceImpl internal constructor(
      */
     private val isReplaying: () -> Boolean? = { false },
     /**
+     * [isReplaying] as it changes, for [observeWalletShieldingAvailable]: the flag can change
+     * with no progress emission to re-read it on. Prod wires
+     * [de.schildbach.wallet.service.BlockchainStateDataProvider.observeReplayingOrNull].
+     */
+    private val isReplayingFlow: () -> Flow<Boolean?> = { flowOf(false) },
+    /**
      * Ensure the SDK's SPV is running before a [shieldFromWallet]
      * broadcast. In this interim architecture the SDK builds and
      * broadcasts the L1 asset lock through its OWN SPV peers, and that SPV
@@ -1123,6 +1129,7 @@ class ShieldedBalanceServiceImpl internal constructor(
         l1Progress = { l1ShadowSyncService.progress.value },
         l1ProgressFlow = { l1ShadowSyncService.progress },
         isReplaying = { blockchainStateDataProvider.isReplayingOrNull() },
+        isReplayingFlow = { blockchainStateDataProvider.observeReplayingOrNull() },
         ensureL1SpvRunning = { l1ShadowSyncService.ensureSpvRunning() },
         noteSelfSpendBroadcast = { l1ShadowSyncService.noteSelfSpendBroadcast() },
         hasAppLockedCoinJoinOutputs = {
@@ -2114,15 +2121,16 @@ class ShieldedBalanceServiceImpl internal constructor(
 
     override fun observeWalletShieldingAvailable(): Flow<Boolean> =
         l1ProgressFlow()
-            .map { progress ->
-                // Same gate as isWalletShieldingAvailable(), re-derived per
-                // progress emission so an open screen unblocks the instant
-                // the SDK engine's filter scan catches up to the chain tip.
+            .combine(isReplayingFlow()) { progress, replaying ->
+                // Same gate as isWalletShieldingAvailable(), re-derived on
+                // each change of EITHER input, so an open screen unblocks the
+                // instant the engine connects or a replay ends: the replay
+                // flag can change with no progress emission to carry it.
                 // Flags-off inert: both reads short-circuit to false and the
                 // progress flow itself stays IDLE while the shadow is not
                 // running.
                 isEnabled() && isL1FundingFlagOn() &&
-                    evaluateWalletFundingGate(progress, safeReplaying()).allowed
+                    evaluateWalletFundingGate(progress, replaying).allowed
             }
             .distinctUntilChanged()
 

@@ -328,7 +328,11 @@ class SdkWalletBinder internal constructor(
     // can stand in for a later process with a fresh binder.
     private val processToken: String = PROCESS_TOKEN,
     // Spacing of [retryAddressPoolBackfill]; injectable for the host JVM.
-    private val backfillRetryDelayMs: Long = ADDRESS_POOL_BACKFILL_RETRY_DELAY_MS
+    private val backfillRetryDelayMs: Long = ADDRESS_POOL_BACKFILL_RETRY_DELAY_MS,
+    // Told when [repayOwedRescans] has armed a rewind to birth: a rescan the app starts by
+    // itself. Production marks the blockchain state as replaying, which is what blocks sends
+    // and keeps the service alive through it, as a restore or Rescan Blockchain does.
+    private val onOwedRescanArmed: () -> Unit = {}
 ) {
     @Inject
     constructor(
@@ -341,7 +345,8 @@ class SdkWalletBinder internal constructor(
         blockchainServiceConfig: BlockchainServiceConfig,
         scope: CoroutineScope,
         backfillGate: DashPayBackfillGate,
-        contactRequestDirectory: DashjPlatformContactRequestDirectory
+        contactRequestDirectory: DashjPlatformContactRequestDirectory,
+        blockchainStateDataProvider: de.schildbach.wallet.service.BlockchainStateDataProvider
     ) : this(
         sdkService = sdkService,
         mnemonicProvider = mnemonicProvider,
@@ -366,7 +371,8 @@ class SdkWalletBinder internal constructor(
                 log.warn("could not save the background trace", e)
             }
         },
-        contactRequestDirectory = contactRequestDirectory
+        contactRequestDirectory = contactRequestDirectory,
+        onOwedRescanArmed = { blockchainStateDataProvider.markReplayStartedForSdkTakeover() }
     )
 
     /** Serializes passes — the single-flight guarantee. */
@@ -2192,6 +2198,10 @@ class SdkWalletBinder internal constructor(
         )
         owedRescanArmedInProcess = armed
         writeArmedOwedRescan(armed)
+        // The scan now restarts from birth: a replay, like the restore or Rescan Blockchain
+        // that marks itself. Best-effort, after the arm it describes.
+        runCatching { onOwedRescanArmed() }
+            .onFailure { log.warn("owed SDK rescan armed, but the replay could not be marked", it) }
         log.info(
             "owed SDK rescan armed on {}… at the {} windows ({}; durable watermark {}, target {}, arm {}): " +
                 "the debt stays owed until the rewind is durable",

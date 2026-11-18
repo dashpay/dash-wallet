@@ -450,6 +450,7 @@ class ShieldedBalanceServiceTest {
         progress: () -> ShadowSyncProgress = { ShadowSyncProgress.IDLE },
         progressFlow: Flow<ShadowSyncProgress> = flowOf(progress()),
         replaying: () -> Boolean? = { false },
+        replayingFlow: Flow<Boolean?> = flowOf(replaying()),
         ensureL1SpvRunning: suspend () -> Boolean = { true },
         noteSelfSpendBroadcast: () -> Unit = {},
         hasAppLockedCoinJoinOutputs: () -> Boolean = { false },
@@ -466,6 +467,7 @@ class ShieldedBalanceServiceTest {
         l1Progress = progress,
         l1ProgressFlow = { progressFlow },
         isReplaying = replaying,
+        isReplayingFlow = { replayingFlow },
         ensureL1SpvRunning = ensureL1SpvRunning,
         noteSelfSpendBroadcast = noteSelfSpendBroadcast,
         hasAppLockedCoinJoinOutputs = hasAppLockedCoinJoinOutputs,
@@ -3264,6 +3266,31 @@ class ShieldedBalanceServiceTest {
     }
 
     @Test
+    fun observeWalletShieldingAvailable_followsTheReplayFlag_withNoProgressChange() = runBlocking {
+        // The flag ends (or is first read) with the engine already at rest: nothing emits on
+        // the progress feed, so the availability has to follow the flag itself.
+        val replayingFlow = MutableStateFlow<Boolean?>(null)
+        val service = service(
+            readySource(),
+            progress = { caughtUpProgress() },
+            progressFlow = MutableStateFlow(caughtUpProgress()),
+            replayingFlow = replayingFlow
+        )
+        val seen = mutableListOf<Boolean>()
+        val job = launch { service.observeWalletShieldingAvailable().collect { seen += it } }
+
+        withTimeout(5_000) { while (seen.isEmpty()) yield() }
+        assertEquals("not known yet: unavailable", listOf(false), seen)
+        replayingFlow.value = true
+        repeat(20) { yield() }
+        assertEquals("a replay: still unavailable", listOf(false), seen)
+        replayingFlow.value = false
+        withTimeout(5_000) { while (seen.size < 2) yield() }
+        assertEquals("the replay ended: available, with no progress emission", listOf(false, true), seen)
+        job.cancel()
+    }
+
+    @Test
     fun walletShielding_isAvailableWhileCatchingUp_withNoReplay() = runBlocking {
         // Headers at the tip, the filter scan far behind: an ordinary catch-up, which does
         // not close the gate (as on dashj and iOS).
@@ -3590,17 +3617,19 @@ class ShieldedBalanceServiceTest {
         val progressFeed = MutableStateFlow(ShadowSyncProgress.IDLE)
         val service = service(source, progress = { progressFeed.value }, progressFlow = progressFeed)
 
-        // Subscribe first (UNDISPATCHED runs the collector to its first
-        // suspension, so it has already emitted the initial closed state
-        // before we move the feed) — no re-subscription happens after.
+        // Subscribe first and wait for the initial closed state: the gate
+        // combines the progress feed with the replay flag, so the first value
+        // arrives a dispatch later, and a feed moved before it would be
+        // conflated into one emission. No re-subscription happens after.
         val seen = mutableListOf<Boolean>()
         val job = launch(start = CoroutineStart.UNDISPATCHED) {
             service.observeWalletShieldingAvailable().take(2).collect { seen.add(it) }
         }
+        withTimeout(5_000) { while (seen.isEmpty()) yield() }
 
         // The SDK filter scan catches up to the tip while collection is live.
         progressFeed.value = caughtUpProgress()
-        job.join()
+        withTimeout(5_000) { job.join() }
 
         // Closed first (funds-safe default), open once caught-up lands —
         // proving the gate is observed per emission, not snapshotted once.

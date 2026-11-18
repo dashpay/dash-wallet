@@ -383,8 +383,10 @@ class SdkWalletBinderTest {
         contactRequests: PlatformContactRequestDirectory = FakeContactRequestDirectory(),
         processToken: String = "test-process",
         backfillRetryDelayMs: Long = 1L,
+        onOwedRescanArmed: () -> Unit = {},
         scope: CoroutineScope
     ) = SdkWalletBinder(
+        onOwedRescanArmed = onOwedRescanArmed,
         sdkService = sdk,
         mnemonicProvider = mnemonic,
         identityConfig = identity,
@@ -2858,6 +2860,27 @@ class SdkWalletBinderTest {
         binder(sdk, config = config, scope = this).bindIfEnabled(unlock)
         assertEquals(2, sdk.armRescanCalls)
         assertNull(owedRescan)
+    }
+
+    /**
+     * A rescan the app arms by itself is a replay like a restore or Rescan Blockchain, and
+     * nothing else marks it: it has to say so, or sends stay open while the wallet's coins
+     * are being found again (pre-review of the rescan-only send gate, 2026-11-17).
+     */
+    @Test
+    fun bind_owedRescanArmed_marksTheReplay_andAFailedArmDoesNot() = runBlocking {
+        val sdk = readySdk()
+        sdk.onArmRescan = { _, _ -> false }
+        owedRescan = true
+        val (config, _) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
+        var marked = 0
+
+        binder(sdk, config = config, onOwedRescanArmed = { marked++ }, scope = this).bindIfEnabled(unlock)
+        assertEquals("nothing was rewound", 0, marked)
+
+        sdk.onArmRescan = { _, _ -> true }
+        binder(sdk, config = config, onOwedRescanArmed = { marked++ }, scope = this).bindIfEnabled(unlock)
+        assertEquals("the rewind to birth is a replay", 1, marked)
     }
 
     /**

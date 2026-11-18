@@ -31,8 +31,9 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -89,6 +90,10 @@ class BlockchainStateDataProvider @Inject constructor(
         const val SECONDS_PER_DAY = 24 * 60 * 60
         val MASTERNODE_COST: Coin = Coin.valueOf(1000, 0)
         const val MASTERNODE_COUNT = 3800
+
+        /** How long [replayingNow] waits before observing the row again after a failed read. */
+        private const val REPLAY_STATE_RETRY_MS = 1_000L
+        private val log = org.slf4j.LoggerFactory.getLogger(BlockchainStateDataProvider::class.java)
     }
 
     // this coroutineScope should execute all jobs sequentially
@@ -126,16 +131,27 @@ class BlockchainStateDataProvider @Inject constructor(
      * restore, a rescan or the post-upgrade scan is in progress, false when none is (a wallet
      * with no row yet has started none), and null while the row has not been read or cannot be.
      * Null must be read as "may be replaying".
+     *
+     * A failed read is null only while it fails: the observation is started again, so the
+     * flag is known again once the database answers (a `catch` would end it for the life of
+     * the process, and every send would be refused until a restart).
      */
-    private val replayingNow: StateFlow<Boolean?> by lazy {
+    private val replayingNow: StateFlow<Boolean?> =
         blockchainStateDao.observeState()
             .map<BlockchainState?, Boolean?> { it?.replaying ?: false }
-            .catch { emit(null) }
+            .retryWhen { cause, _ ->
+                log.warn("could not observe the blockchain replay state; retrying", cause)
+                emit(null)
+                delay(REPLAY_STATE_RETRY_MS)
+                true
+            }
             .stateIn(coroutineScope, SharingStarted.Eagerly, null)
-    }
 
     /** See [replayingNow]. */
     fun isReplayingOrNull(): Boolean? = replayingNow.value
+
+    /** [isReplayingOrNull] as it changes, for a screen that must follow it. */
+    fun observeReplayingOrNull(): Flow<Boolean?> = replayingNow
 
     /**
      * Whether the SDK engine still has scan work to do, as of its last progress update that
@@ -347,6 +363,11 @@ class BlockchainStateDataProvider @Inject constructor(
      * dashj's stale 100%, emulator finding 3), the idle rule keeps the
      * service alive (item 7), and the one-minute restart alarm applies
      * (item 9). Only restore and rescan used to set the flag.
+     *
+     * Also called when the app arms an owed SDK rescan by itself
+     * ([de.schildbach.wallet.service.platform.sdk.SdkWalletBinder]'s
+     * `repayOwedRescans`): the same rewind to birth, with nobody having asked
+     * for it, so nothing else would mark it.
      *
      * Heights, dates and impediments are preserved; the percentage is zeroed
      * because the SDK has scanned nothing yet — its first update replaces it
