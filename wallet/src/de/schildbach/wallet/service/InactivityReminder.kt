@@ -75,8 +75,13 @@ class InactivityReminder @Inject constructor(
         // The reads and the post are one critical section with [cancel], so a reminder is
         // either posted before Reset Wallet cancels it, or sees the reset and is not posted.
         synchronized(postLock) {
-            if (application.isWipeInProgress || !application.walletFileExists()) {
-                log.info("wallet reset in progress or no wallet file, not showing inactivity reminder")
+            // A stopped reset clears the wipe flag but leaves the durable recovery-required
+            // state, and may leave the old wallet file behind.
+            if (application.isWipeInProgress ||
+                application.isWalletWipeRecoveryRequired ||
+                !application.walletFileExists()
+            ) {
+                log.info("wallet reset in progress, needs recovery or no wallet file: not showing inactivity reminder")
                 return
             }
             show(walletExists)
