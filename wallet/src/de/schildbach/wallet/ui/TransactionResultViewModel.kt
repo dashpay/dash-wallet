@@ -167,6 +167,9 @@ class TransactionResultViewModel @Inject constructor(
                         val override = withContext(Dispatchers.IO) { loadSdkDetailOrNull(txId) }
                         if (override != null) {
                             _sdkDirectionOverride.value = override
+                            if (override.recipientsPendingMirror) {
+                                observeUntilRecipientsMirrored(txId) { _sdkDirectionOverride.value = it }
+                            }
                         }
                     }
                     monitorTransactionMetadata(tx.txId)
@@ -180,6 +183,9 @@ class TransactionResultViewModel @Inject constructor(
                     if (detail != null) {
                         _sdkTxDetail.value = detail
                         monitorTransactionMetadata(txId)
+                        if (detail.recipientsPendingMirror) {
+                            observeUntilRecipientsMirrored(txId) { _sdkTxDetail.value = it }
+                        }
                     }
                 }
             }
@@ -198,6 +204,37 @@ class TransactionResultViewModel @Inject constructor(
             log.error("SDK tx-detail lookup failed for {}", txId, t)
             null
         }
+
+    /**
+     * DW-1659: [SdkTxDetail.recipientsPendingMirror] means the OUTGOING
+     * recipient list is withheld only because ownership of an output
+     * couldn't be resolved — a known output's TXO mirror row not landed
+     * yet, or an ambiguous wallet binding. Rather than poll [loadSdkDetailOrNull]
+     * on a timer, observe [SdkTxDetailProvider.observeTxoCountChanges] (the
+     * DAO's own Room count flow over the bound wallet's `txos` table) and
+     * reload on every emission, including the first: the initial
+     * [loadSdkDetailOrNull] call and this collector's subscription are two
+     * separate, non-atomic operations, so a mirror write landing in that
+     * window would otherwise be mistaken for the already-seen baseline and
+     * dropped. Reloading on an unchanged count is a cheap no-op. Publishes
+     * the refreshed detail via [publish] on every change, and stops
+     * observing as soon as one of them is no longer pending. [viewModelScope]
+     * cancels this with the sheet, so it never outlives the screen that
+     * asked for it.
+     */
+    private fun observeUntilRecipientsMirrored(txId: Sha256Hash, publish: (SdkTxDetail) -> Unit) {
+        viewModelScope.launch {
+            val changes = withContext(Dispatchers.IO) {
+                sdkTxDetailProvider.observeTxoCountChanges()
+            } ?: return@launch
+            var resolved = false
+            changes.takeWhile { !resolved }.collect {
+                val detail = withContext(Dispatchers.IO) { loadSdkDetailOrNull(txId) } ?: return@collect
+                publish(detail)
+                resolved = !detail.recipientsPendingMirror
+            }
+        }
+    }
 
     private fun monitorTransactionMetadata(txId: Sha256Hash) {
         // this might take some time, so let it run asynchronously

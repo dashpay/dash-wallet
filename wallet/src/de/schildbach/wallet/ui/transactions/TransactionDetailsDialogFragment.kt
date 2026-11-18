@@ -144,8 +144,24 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment(R.layout.transacti
                 }
             }
 
+            var contactLoaded = false
+            var latestProfile: DashPayProfile? = null
             viewModel.contact.observe(this) { profile ->
+                latestProfile = profile
+                contactLoaded = true
                 finishInitialization(tx, profile)
+            }
+            // DW-1659: the Bug A direction/amount override can refresh once
+            // a withheld recipient's TXO mirror write lands (ViewModel's
+            // bounded retry) — re-bind so the sheet picks up the real
+            // recipient instead of staying on the first, empty snapshot.
+            // Skipped until the first `finishInitialization` has already
+            // bound with the actual contact profile, so this never races
+            // ahead of it with a not-yet-loaded (null) profile.
+            viewModel.sdkDirectionOverride.filterNotNull().observe(viewLifecycleOwner) {
+                if (contactLoaded) {
+                    initiateTransactionBinder(tx, latestProfile)
+                }
             }
             transactionResultViewBinder.setOnRescanTriggered { rescanBlockchain() }
         }

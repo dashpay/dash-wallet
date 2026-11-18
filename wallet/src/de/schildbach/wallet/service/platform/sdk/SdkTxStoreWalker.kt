@@ -128,6 +128,45 @@ internal fun firstUnmirroredKnownOutput(
 }
 
 /**
+ * Which of [candidates] are addresses THIS wallet tracks: scoped to
+ * [walletId] (`core_addresses` carries no walletId of its own, only
+ * accountId — another wallet's address must never read as ours, see
+ * [SdkTxStoreWalker]'s own use below), excluding the watch-only DIP-15
+ * `dashpayExternalAccount` chains (a contact's own funds, never ours). Same
+ * scoped join [SdkTxStoreWalker] runs for its mirror-completeness probe
+ * ([firstUnmirroredKnownOutput]); [SdkTxDetailProvider.load] reuses it with
+ * one transaction's own output addresses as the candidate set.
+ *
+ * @param onQuery [SdkTxStoreWalker]'s own query-count test hook — passed
+ *        through so this query is counted like every other one the walker
+ *        issues (its own KDoc: "invoked once per SQL statement issued").
+ *        The detail-provider call site has no such hook and leaves it null.
+ */
+internal fun knownWalletAddressesAmong(
+    db: DashDatabase,
+    walletId: ByteArray,
+    candidates: Collection<String>,
+    onQuery: ((String) -> Unit)? = null
+): Set<String> {
+    val result = HashSet<String>()
+    for (chunk in candidates.distinct().chunked(SdkTxStoreWalker.TXID_IN_CHUNK)) {
+        val placeholders = chunk.joinToString(",") { "?" }
+        val args = ArrayList<Any?>(1 + chunk.size)
+        args.add(walletId)
+        args.addAll(chunk)
+        val sql = "SELECT ca.address FROM core_addresses ca " +
+            "JOIN accounts a ON a.id = ca.accountId " +
+            "WHERE a.walletId = ? " +
+            "AND a.accountType != ${SdkTxContactResolver.ACCOUNT_TYPE_DASHPAY_EXTERNAL} " +
+            "AND ca.address IN ($placeholders)"
+        onQuery?.invoke(sql)
+        db.openHelper.readableDatabase.query(SimpleSQLiteQuery(sql, args.toTypedArray()))
+            .use { c -> while (c.moveToNext()) result += c.getString(0) }
+    }
+    return result
+}
+
+/**
  * Correct one PROVABLY-MISATTRIBUTED stored record. The SDK's persisted
  * `transactions.direction`/`netAmount` columns come pre-computed from the
  * Rust side, which counts outputs funded on the watch-only DIP-15
@@ -1029,32 +1068,9 @@ internal class SdkTxStoreWalker(
         for (row in needsFacts) {
             facts[row.record.txidHex]?.outputAddresses?.forEach { if (it != null) knownAddressCandidates += it }
         }
-        val knownWalletAddresses = HashSet<String>()
-        for (chunk in knownAddressCandidates.chunked(TXID_IN_CHUNK)) {
-            val placeholders = chunk.joinToString(",") { "?" }
-            // Scoped to THIS wallet: core_addresses is shared across every wallet
-            // in the store and carries no walletId of its own, only accountId.
-            // Another wallet's address is a foreign payee here, not a hole in
-            // our mirror — counting it as "known" would defer the correction
-            // forever, since our mirror will never gain a row for it.
-            val args = ArrayList<Any?>(1 + chunk.size)
-            args.add(walletId)
-            args.addAll(chunk)
-            // A contact's watch-only (DIP-15 external) address is left out too:
-            // the store does not mirror outputs paid to it (0 rows on 94 such
-            // addresses in both 2026-10-28 restore stores), so counting it as
-            // "known" deferred every payment to a contact forever. A row for it,
-            // where a store does write one, is foreign and never moves the
-            // owned net, so its absence cannot make the recompute wrong.
-            rawQuery(
-                "SELECT ca.address FROM core_addresses ca " +
-                    "JOIN accounts a ON a.id = ca.accountId " +
-                    "WHERE a.walletId = ? " +
-                    "AND a.accountType != ${SdkTxContactResolver.ACCOUNT_TYPE_DASHPAY_EXTERNAL} " +
-                    "AND ca.address IN ($placeholders)",
-                args.toTypedArray()
-            ) { c -> while (c.moveToNext()) knownWalletAddresses += c.getString(0) }
-        }
+        // Scoped to THIS wallet, excluding DIP-15 external accounts — see
+        // [knownWalletAddressesAmong]'s KDoc for why both matter.
+        val knownWalletAddresses = knownWalletAddressesAmong(db, walletId, knownAddressCandidates, onQuery)
         // mirroredVouts was filled above, from the SAME read as the funded sums.
 
         val needsFactsHexes = needsFacts.mapTo(HashSet()) { it.record.txidHex }
