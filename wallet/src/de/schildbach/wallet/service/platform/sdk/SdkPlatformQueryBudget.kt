@@ -54,6 +54,12 @@ import java.util.Optional
  *   batch wrappers apply it to each of their calls rather than to the batch,
  *   so a healthy 100-contact batch is never truncated.
  *
+ * Exception: [SdkIdentityQueries] (identity discovery by first key hash, identity
+ * credit balance) has NO legacy fallback. There the bound is a hang bound, not a
+ * routing choice: a timeout throws [SdkIdentityQueryTimeoutException] and the
+ * caller treats the answer as unknown (discovery fails, the repository balance is
+ * null, the `PlatformRepo` balance throws), never as "no identity".
+ *
  * Deliberately NOT applied to anything on the L1 / send path: L1 is SDK-owned
  * with no second implementation to fall back to, so a timeout there would be a
  * failure rather than a routing choice.

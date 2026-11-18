@@ -19,7 +19,10 @@ package de.schildbach.wallet.service.platform
 
 import android.app.Application
 import de.schildbach.wallet.data.CreditBalanceInfo
+import de.schildbach.wallet.service.platform.sdk.DashSdkService
 import de.schildbach.wallet.service.platform.sdk.SdkIdentityJsonException
+import de.schildbach.wallet.service.platform.sdk.SdkIdentityQueryTimeoutException
+import de.schildbach.wallet.service.platform.sdk.SdkNativeLibraryUnavailableException
 import de.schildbach.wallet.service.platform.sdk.SdkIdentityQueries
 import de.schildbach.wallet.service.platform.sdk.SdkIdentityReadSource
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
@@ -48,17 +51,23 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
+import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.util.Base64
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 /**
  * Identity discovery ([IdentityRepository.getIdentityFromPublicKeyId]) and the two balance reads
  * ([IdentityRepository.getIdentityBalance], [PlatformRepo.getIdentityBalance]) go through the
- * Kotlin SDK and keep each caller's null/throw contract, and only a found identity constructs
- * the legacy `Platform` client.
+ * Kotlin SDK only (no legacy fallback on any network) and keep each caller's null/throw contract:
+ * discovery is null only for a proved absence and throws for every failure (network, timeout,
+ * native library), the repository balance is null for every failure, and the PlatformRepo balance
+ * throws an ordinary exception. Only a found identity constructs the legacy `Platform` client.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(
@@ -74,6 +83,14 @@ class IdentityRepositorySdkReadsTest {
     private val keyData = ByteArray(33) { 2 }
 
     private val source = mockk<SdkIdentityReadSource>()
+
+    /** Parks a simulated blocking SDK call past the budget; released in [releaseHungReads]. */
+    private val release = CountDownLatch(1)
+
+    @After
+    fun releaseHungReads() {
+        release.countDown()
+    }
     private val sdkIdentityQueries = SdkIdentityQueries(source)
 
     /** The legacy service; reading its `platform` constructs the legacy client and loads libsdklib. */
@@ -90,7 +107,11 @@ class IdentityRepositorySdkReadsTest {
         every { platformRepo.getBlockchainIdentityKey(0, encryptionKey) } returns firstKey
     }
 
-    private fun repository(repo: PlatformRepo = platformRepo, identity: BlockchainIdentity? = null) =
+    private fun repository(
+        repo: PlatformRepo = platformRepo,
+        identity: BlockchainIdentity? = null,
+        queries: SdkIdentityQueries = sdkIdentityQueries
+    ) =
         IdentityRepositoryImpl(
             walletApplication = mockk(relaxed = true),
             appDatabase = mockk(relaxed = true),
@@ -101,7 +122,7 @@ class IdentityRepositorySdkReadsTest {
             dashSystemService = mockk(relaxed = true),
             sdkUsernameQueries = mockk(relaxed = true),
             sdkProfileQueries = mockk(relaxed = true),
-            sdkIdentityQueries = sdkIdentityQueries
+            sdkIdentityQueries = queries
         ).also { repository ->
             if (identity != null) {
                 val field = IdentityRepositoryImpl::class.java.getDeclaredField("_blockchainIdentityFlow")
@@ -180,12 +201,76 @@ class IdentityRepositorySdkReadsTest {
     }
 
     @Test
-    fun unreachableNetworkCollapsesToNullWithoutTheLegacyClient() = runBlocking {
+    fun unreachableNetworkPropagatesAndIsNeverNoIdentity() {
         for (failure in listOf(DashSdkError.NetworkError("all DAPI nodes failed"), DashSdkError.Timeout("deadline"))) {
             coEvery { source.identityJsonByPublicKeyHash(hashHex) } throws failure
-            assertNull(repository().getIdentityFromPublicKeyId())
+            assertSameFailure(failure, assertThrows(failure.javaClass) {
+                runBlocking { repository().getIdentityFromPublicKeyId() }
+            })
         }
+        // a network failure on a non-unique page propagates too
+        val network = DashSdkError.NetworkError("page")
+        coEvery { source.identityJsonByPublicKeyHash(hashHex) } returns null
+        coEvery { source.identitiesJsonByNonUniquePublicKeyHash(hashHex, null) } throws network
+        assertSameFailure(network, assertThrows(DashSdkError.NetworkError::class.java) {
+            runBlocking { repository().getIdentityFromPublicKeyId() }
+        })
         verify(exactly = 0) { platformService.platform }
+        verify(exactly = 0) { platformService.client }
+        verify(exactly = 0) { platformService.stateRepository }
+    }
+
+    @Test
+    fun discoveryPastItsBudgetIsAFailureWithoutTheLegacyClient() {
+        coEvery { source.identityJsonByPublicKeyHash(hashHex) } answers { release.await(30, TimeUnit.SECONDS); null }
+        val repository = repository(queries = SdkIdentityQueries(source, timeoutMs = 50))
+        assertThrows(SdkIdentityQueryTimeoutException::class.java) {
+            runBlocking { repository.getIdentityFromPublicKeyId() }
+        }
+        coVerify(exactly = 0) { source.identitiesJsonByNonUniquePublicKeyHash(any(), any()) }
+        verify(exactly = 0) { platformService.platform }
+        verify(exactly = 0) { platformService.client }
+    }
+
+    @Test
+    fun nativeLibraryFailureIsAnOrdinaryDiscoveryFailure() {
+        val service = mockk<DashSdkService>()
+        val link = UnsatisfiedLinkError("dlopen failed: libdash_sdk.so")
+        coEvery { service.ensureStarted() } throws link
+        val thrown = assertThrows(SdkNativeLibraryUnavailableException::class.java) {
+            runBlocking { repository(queries = SdkIdentityQueries(service)).getIdentityFromPublicKeyId() }
+        }
+        assertSame(link, thrown.cause)
+        verify(exactly = 0) { platformService.platform }
+        verify(exactly = 0) { platformService.client }
+    }
+
+    /**
+     * Devnet: the wallet gives the SDK no devnet quorum URL (nor a devnet name), so `Sdk.create`
+     * fails at bootstrap: rs-sdk-ffi cannot build the trusted context provider and returns an
+     * `InternalError`.
+     * Every read fails closed through the SDK and never reaches the legacy client.
+     */
+    @Test
+    fun anSdkThatCannotStartOnDevnetFailsClosedForDiscoveryAndBothBalances() = runBlocking {
+        val service = mockk<DashSdkService>()
+        val devnet = DashSdkError.InternalError(
+            "Failed to create trusted context provider: Devnet name must be provided for devnet network"
+        )
+        coEvery { service.ensureStarted() } throws devnet
+        val queries = SdkIdentityQueries(service)
+        val unstartable = testPlatformRepo(sdkIdentityQueries = queries)
+
+        assertSameFailure(devnet, assertThrows(DashSdkError.InternalError::class.java) {
+            runBlocking { repository(queries = queries).getIdentityFromPublicKeyId() }
+        })
+        assertNull(repository(unstartable, walletIdentity, queries).getIdentityBalance())
+        assertSameFailure(devnet, assertThrows(DashSdkError.InternalError::class.java) {
+            runBlocking { unstartable.getIdentityBalance(Identifier.from(identityId)) }
+        })
+        verify(exactly = 0) { platformService.platform }
+        verify(exactly = 0) { unstartable.platform.platform }
+        verify(exactly = 0) { unstartable.platform.client }
     }
 
     @Test
@@ -275,7 +360,7 @@ class IdentityRepositorySdkReadsTest {
 
     @Test
     fun sdkThatCannotStartIsUnknownForTheRepositoryAndThrowsForPlatformRepo() = runBlocking {
-        val service = mockk<de.schildbach.wallet.service.platform.sdk.DashSdkService>()
+        val service = mockk<DashSdkService>()
         val boot = IllegalStateException("SDK bootstrap failed")
         coEvery { service.ensureStarted() } throws boot
         val unstartable = testPlatformRepo(sdkIdentityQueries = SdkIdentityQueries(service))
@@ -286,6 +371,38 @@ class IdentityRepositorySdkReadsTest {
         })
         verify(exactly = 0) { unstartable.platform.platform }
         verify(exactly = 0) { unstartable.platform.client }
+    }
+
+    @Test
+    fun nativeLibraryFailureIsUnknownForTheRepositoryAndAnOrdinaryExceptionFromPlatformRepo() = runBlocking {
+        val service = mockk<DashSdkService>()
+        val link = UnsatisfiedLinkError("dlopen failed: libdash_sdk.so")
+        coEvery { service.ensureStarted() } throws link
+        val unloadable = testPlatformRepo(sdkIdentityQueries = SdkIdentityQueries(service))
+
+        assertNull(repository(unloadable, walletIdentity).getIdentityBalance())
+        val thrown = assertThrows(SdkNativeLibraryUnavailableException::class.java) {
+            runBlocking { unloadable.getIdentityBalance(Identifier.from(identityId)) }
+        }
+        assertSame(link, thrown.cause)
+        // what BuyCreditsViewModel, RequestUserNameViewModel and CreateIdentityService catch
+        assertTrue(thrown is Exception)
+        verify(exactly = 0) { unloadable.platform.platform }
+        verify(exactly = 0) { unloadable.platform.client }
+    }
+
+    @Test
+    fun balancePastItsBudgetIsUnknownForTheRepositoryAndThrowsForPlatformRepo() = runBlocking {
+        coEvery { source.creditBalance(idBase58) } answers { release.await(30, TimeUnit.SECONDS); 5L }
+        val queries = SdkIdentityQueries(source, timeoutMs = 50)
+        val slow = testPlatformRepo(sdkIdentityQueries = queries)
+
+        assertNull(repository(slow, walletIdentity, queries).getIdentityBalance())
+        assertThrows(SdkIdentityQueryTimeoutException::class.java) {
+            runBlocking { slow.getIdentityBalance(Identifier.from(identityId)) }
+        }
+        verify(exactly = 0) { slow.platform.platform }
+        verify(exactly = 0) { slow.platform.client }
     }
 
     @Test

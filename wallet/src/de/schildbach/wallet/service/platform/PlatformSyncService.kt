@@ -2843,7 +2843,18 @@ class PlatformSynchronizationService @Inject constructor(
             // post-cutover synced hook (FIX 1). When it enqueues a recovery, the
             // RestoreIdentityWorker drives the rest — do NOT resume/finish here,
             // matching the original early-return.
-            val recoveryEnqueued = discoverAndRecoverIdentity()
+            // Discovery throws on every failure, an unreached Platform included. syncScope has
+            // no exception handler, so an escape would crash the process and leave dashj's
+            // pre-block future unset; a failed discovery lets block download proceed, as an
+            // unreached Platform always did, and the next preBlockDownload tries again.
+            val recoveryEnqueued = try {
+                discoverAndRecoverIdentity()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                log.warn("preBlockDownload: identity discovery failed; continuing without it", e)
+                false
+            }
             if (recoveryEnqueued) {
                 return@launch
             }

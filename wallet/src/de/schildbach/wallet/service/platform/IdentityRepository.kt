@@ -21,7 +21,6 @@ import de.schildbach.wallet.service.DashSystemService
 import de.schildbach.wallet.service.platform.sdk.SdkIdentityQueries
 import de.schildbach.wallet.service.platform.sdk.SdkProfileQueries
 import de.schildbach.wallet.service.platform.sdk.SdkUsernameQueries
-import de.schildbach.wallet.service.platform.sdk.isSdkNetworkUnavailable
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.PlatformRepo.Companion.TIMESPAN
 import de.schildbach.wallet.ui.dashpay.PlatformRepo.Companion.TOP_CONTACT_COUNT
@@ -138,8 +137,9 @@ interface IdentityRepository {
 
     /**
      * The current identity's credit balance, read through the Kotlin SDK; null when there is no
-     * identity, when the read fails for any reason (the SDK runtime cannot start, the network,
-     * no balance reported), never a fabricated value. Cancellation propagates.
+     * identity, when the read fails for any reason (the SDK runtime cannot start or its native
+     * library cannot load, the network, the 6 s read budget, no balance reported), never a
+     * fabricated value. Cancellation propagates.
      */
     suspend fun getIdentityBalance(): CreditBalanceInfo?
     val hasBlockchainIdentity: Boolean
@@ -171,9 +171,10 @@ interface IdentityRepository {
 
     /**
      * Discovers this wallet's identity on Platform from its first identity key, through the
-     * Kotlin SDK. Null when no identity owns that key, when the wallet encryption key or the first
-     * identity key is unavailable, and when the network could not be reached (logged as such).
-     * Every other failure propagates, as does cancellation. Runs on [Dispatchers.IO].
+     * Kotlin SDK. Null only when Platform proves no identity owns that key, or when the wallet
+     * encryption key or the first identity key is unavailable. Every failure propagates, network
+     * failures and timeouts included (an unreached Platform is never "no identity"), as does
+     * cancellation. Runs on [Dispatchers.IO].
      */
     suspend fun getIdentityFromPublicKeyId(): Identity?
     suspend fun clearBlockchainIdentityData()
@@ -1367,9 +1368,11 @@ class IdentityRepositoryImpl @Inject constructor(
      * See [IdentityRepository.getIdentityFromPublicKeyId].
      *
      * The lookup is [SdkIdentityQueries.identityByPublicKeyHash]; it never constructs the legacy
-     * `Platform` client. An SDK network failure ([isSdkNetworkUnavailable]) yields null, the result
-     * the legacy client's `MaxRetriesReachedException` / `NoAvailableAddressesForRetryException`
-     * gave, so the five callers see no change; the log tells it apart from a proved absence.
+     * `Platform` client, and there is no legacy fallback. Unlike the legacy read, which returned
+     * null for `MaxRetriesReachedException` / `NoAvailableAddressesForRetryException`, an SDK
+     * network failure or a timeout propagates: a creation resumed at `IDENTITY_REGISTERING` must
+     * not take an unreached Platform for "no identity" and register again with a consumed asset
+     * lock.
      *
      * Only a found identity is converted to the legacy model, and only after the legacy client
      * exists: the model's key enums initialise through native getters in `libsdklib`, which only
@@ -1380,19 +1383,7 @@ class IdentityRepositoryImpl @Inject constructor(
     override suspend fun getIdentityFromPublicKeyId(): Identity? = withContext(Dispatchers.IO) {
         val encryptionKey = platformRepo.getWalletEncryptionKey() ?: return@withContext null
         val firstIdentityKey = platformRepo.getBlockchainIdentityKey(0, encryptionKey) ?: return@withContext null
-        val found = try {
-            sdkIdentityQueries.identityByPublicKeyHash(firstIdentityKey.pubKeyHash)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            if (!isSdkNetworkUnavailable(e)) throw e
-            log.warn(
-                "identity discovery: Platform could not be reached ({}); reporting no identity, " +
-                    "not a proved absence",
-                e.javaClass.simpleName
-            )
-            return@withContext null
-        }
+        val found = sdkIdentityQueries.identityByPublicKeyHash(firstIdentityKey.pubKeyHash)
         if (found == null) {
             log.info("identity discovery: Platform proved no identity owns the first identity key")
             return@withContext null
