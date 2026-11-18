@@ -1169,6 +1169,18 @@ public class WalletApplication extends MultiDexApplication
         }
         // The deferred-load wait is the callers' (installWallet, setWallet),
         // before they take walletInstallLock: never while holding it.
+
+        // Before the new wallet is visible to anything that could write its
+        // balance: the stored last-known balances belong to the wallet being
+        // replaced (a recovery-screen restore installs without a reset). A
+        // failure is logged, not fatal: an install must not fail on a display
+        // cache, and a DataStore that cannot be written is one the readers
+        // will most likely fail to read too, which they treat as unknown.
+        try {
+            LastKnownBalances.clearLastKnownBalances(walletUIConfig, dashPayConfig);
+        } catch (final Exception x) {
+            log.error("could not clear the last known balances before installing a wallet", x);
+        }
         EnumSet<AuthenticationKeyChain.KeyChainType> authKeyTypes = EnumSet.of(
                 AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER,
                 AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING,

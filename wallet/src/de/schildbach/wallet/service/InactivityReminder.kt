@@ -43,15 +43,18 @@ import javax.inject.Inject
  * The amount is what the home header shows, from persisted last-known values, not the dashj
  * wallet's own balance: after the cutover to the SDK the dashj wallet is held and its balance
  * is frozen. A wallet load in a receiver process may start the SDK pipelines, but the
- * reminder does not wait for them to publish a balance; the persisted values are the same
- * ones the home header seeds itself from on a cold start.
+ * reminder does not wait for them to publish a balance. It uses the persisted values the
+ * app shows before the live balance arrives (the home header's L1 figure, and the shielded
+ * card's balance).
  * - Transparent (L1): [WalletUIConfig.LAST_TOTAL_BALANCE], written by the dashj balance
  *   observer before the cutover and by the SDK pipeline after it.
- * - Shielded: zero when shielding is disabled, otherwise unknown. The persisted
- *   [DashPayConfig.LAST_SHIELDED_BALANCE_DUFFS] is not used: it carries no wallet identity
- *   (a wallet restored without Reset Wallet can inherit another wallet's value), and the home
- *   header likewise takes the shielded part only from the live runtime once it is READY,
- *   which a receiver process does not wait for.
+ * - Shielded: zero when shielding is disabled, otherwise
+ *   [DashPayConfig.LAST_SHIELDED_BALANCE_DUFFS], written only from a READY runtime and
+ *   removed while a local shielded spend reconciles; unknown when absent.
+ *
+ * Both stored values belong to the installed wallet: Reset Wallet clears them with every
+ * other setting, and every wallet install clears them too (see `clearLastKnownBalances`),
+ * so a wallet restored without a reset never inherits another wallet's amount.
  *
  * A part that cannot be known never makes the amount smaller: the reminder is shown without an amount
  * when the known parts are positive, and not shown at all when they are not. The amount is
@@ -115,16 +118,21 @@ class InactivityReminder @Inject constructor(
     }
 
     /**
-     * Zero when shielding is disabled or unset, as on the home header. Null (unknown) when
-     * it is enabled, or the flag is unreadable: see the class comment for why the persisted
-     * shielded balance is not used.
+     * Zero when shielding is disabled or unset, as on the home header. When it is enabled,
+     * the last balance persisted from a READY runtime; null (unknown) when there is none,
+     * or the flag or the balance is unreadable.
      */
     private fun readShieldedBalance(): Coin? = try {
         val enabled = Constants.SUPPORTS_PLATFORM &&
             runBlocking { dashPayConfig.getPreservingErrors(DashPayConfig.USE_KOTLIN_SDK_SHIELDED) } == true
-        if (enabled) null else Coin.ZERO
+        if (!enabled) {
+            Coin.ZERO
+        } else {
+            runBlocking { dashPayConfig.getPreservingErrors(DashPayConfig.LAST_SHIELDED_BALANCE_DUFFS) }
+                ?.let(Coin::valueOf)
+        }
     } catch (e: Exception) {
-        log.warn("cannot read the shielded feature flag, treating the shielded balance as unknown", e)
+        log.warn("cannot read the shielded balance, treating it as unknown", e)
         null
     }
 

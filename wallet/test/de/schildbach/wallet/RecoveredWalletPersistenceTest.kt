@@ -8,6 +8,7 @@ import de.schildbach.wallet.ui.WalletUriHandlerActivity
 import de.schildbach.wallet.ui.degradedScreenActions
 import de.schildbach.wallet.ui.redirectDegradedWallet
 import de.schildbach.wallet.util.SafeModeRetryWaiters
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
@@ -40,6 +41,8 @@ import de.schildbach.wallet.util.RecoveryResetState
 import de.schildbach.wallet.util.WalletWipeSequence
 import de.schildbach.wallet.util.WalletWipeState
 import kotlinx.coroutines.runBlocking
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+import org.dash.wallet.common.data.WalletUIConfig
 
 @RunWith(RobolectricTestRunner::class)
 @Config(application = Application::class, sdk = [29], manifest = Config.NONE)
@@ -1138,9 +1141,49 @@ class RecoveredWalletPersistenceTest {
     private fun setupCapableApp(): WalletApplication {
         setField("config", mockk<org.dash.wallet.common.Configuration>(relaxed = true))
         setField("cutoverCoordinator", mockk<CutoverCoordinator>(relaxed = true))
+        setField("walletUIConfig", walletUIConfig)
+        setField("dashPayConfig", dashPayConfig)
         val setupApp = backupWritingApp()
         every { setupApp.finalizeInitialization() } returns Unit
         return setupApp
+    }
+
+    private val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
+    private val dashPayConfig = mockk<DashPayConfig>(relaxed = true)
+
+    /**
+     * The stored last-known balances carry no wallet identity: a wallet restored from the
+     * recovery screen installs without Reset Wallet, so the install itself clears them,
+     * and only an install that goes ahead does.
+     */
+    @Test
+    fun `installing a wallet clears the stored balances of the wallet it replaces`() {
+        ReflectionHelpers.setField(app, "wallet", null)
+        ReflectionHelpers.setField(app, "committedWallet", null)
+        assertFalse(primary.exists())
+        val setupApp = setupCapableApp()
+
+        assertEquals(WalletApplication.WalletInstallResult.INSTALLED, setupApp.installWallet(replacementWallet(), false))
+        coVerify(exactly = 1) { walletUIConfig.remove(WalletUIConfig.LAST_TOTAL_BALANCE) }
+        coVerify(exactly = 1) { dashPayConfig.remove(DashPayConfig.LAST_SHIELDED_BALANCE_DUFFS) }
+
+        // A saved wallet is now installed: a second onboarding install is dropped and
+        // must leave the installed wallet's balances alone.
+        setupApp.saveWalletAndFinalizeInitialization()
+        assertEquals(
+            WalletApplication.WalletInstallResult.ALREADY_INSTALLED,
+            setupApp.installWallet(replacementWallet(), false)
+        )
+        coVerify(exactly = 1) { walletUIConfig.remove(WalletUIConfig.LAST_TOTAL_BALANCE) }
+        coVerify(exactly = 1) { dashPayConfig.remove(DashPayConfig.LAST_SHIELDED_BALANCE_DUFFS) }
+
+        // Forgot-PIN recovery replaces it on purpose, and clears them again.
+        assertEquals(
+            WalletApplication.WalletInstallResult.INSTALLED,
+            setupApp.installWallet(replacementWallet(), true)
+        )
+        coVerify(exactly = 2) { walletUIConfig.remove(WalletUIConfig.LAST_TOTAL_BALANCE) }
+        coVerify(exactly = 2) { dashPayConfig.remove(DashPayConfig.LAST_SHIELDED_BALANCE_DUFFS) }
     }
 
     private fun readWallet(file: File): Wallet = file.inputStream().use { WalletProtobufSerializer().readWallet(it) }
