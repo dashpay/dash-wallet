@@ -3879,10 +3879,19 @@ class CutoverUiDataService internal constructor(
      * The LAST KNOWN total balance ([WalletUIConfig.LAST_TOTAL_BALANCE], the
      * same fast-startup seed the dashj
      * [WalletBalanceObserver][de.schildbach.wallet.transactions.WalletBalanceObserver]
-     * maintains), read ONCE at pipeline start — before any SDK figure is
+     * maintains), read at pipeline start — before any SDK figure is
      * published — or null when the key has never been written (first ever
      * run). This is what the header shows while the from-scratch
      * compact-filter scan is still running; see [overlayTotalBalance].
+     *
+     * It then FOLLOWS every figure [updateSdkBalance] persists to that key.
+     * The engine also reads as not synced whenever it is stopped and
+     * restarted in a running process, and the header falls back to this value
+     * each time — so left at the launch read it showed the pre-send balance
+     * again after a send or a shield (12.0.1-beta field report: a wallet
+     * shielded down to 781 duffs showed its launch 11.03225474 DASH at every
+     * engine stop). Only a figure that passed the persist conditions gets
+     * here, so a mid-scan partial still cannot replace it.
      */
     private val _lastKnownTotalBalance = MutableStateFlow<Coin?>(null)
 
@@ -4812,6 +4821,13 @@ class CutoverUiDataService internal constructor(
         if (!persist) return
         runCatching { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, duffs) }
             .onSuccess {
+                // The figure just accepted as the launch seed is also what the
+                // header must fall back to for the rest of THIS process; see
+                // [_lastKnownTotalBalance]. Only after the write succeeded, so
+                // the two never disagree. A zero lands here too: the overlay
+                // ignores a non-positive value and shows the live figure.
+                val previousLastKnown = _lastKnownTotalBalance.value
+                _lastKnownTotalBalance.value = Coin.valueOf(duffs)
                 // EDGE LOG: once per distinct value written, not per tick. The
                 // publication line above is gated on the DISPLAYED figure
                 // changing, and the ticker re-runs this write every interval,
@@ -4822,7 +4838,7 @@ class CutoverUiDataService internal constructor(
                     log.info(
                         "SDK balance PERSISTED as the launch seed: {} duffs (was {}) | l1Synced={} " +
                             "pipelineLagging={} rescanArmedHold={} backfillSettled={} buildsSettled={}",
-                        duffs, _lastKnownTotalBalance.value?.value ?: "none", synced, lagging,
+                        duffs, previousLastKnown?.value ?: "none", synced, lagging,
                         armedRescanHold, backfillStatus.settled, buildsSettled
                     )
                 }

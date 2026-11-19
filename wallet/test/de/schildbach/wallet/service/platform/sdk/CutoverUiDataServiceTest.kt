@@ -1511,6 +1511,90 @@ class CutoverUiDataServiceTest {
     }
 
     @Test
+    fun postCutover_engineStopAfterASpend_holdsThePersistedFigureNotTheLaunchOne() = runTest {
+        // 12.0.1-beta field report: the wallet opened on 11.03225474 DASH, was
+        // shielded down to 781 duffs (persisted as the launch seed), and at
+        // the next engine stop the header went back to the launch figure.
+        val source = FakeSource(balanceDuffs = MutableStateFlow(1_103_225_474L))
+        val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
+        coEvery { walletUIConfig.get(WalletUIConfig.LAST_TOTAL_BALANCE) } returns 1_103_225_474L
+        val synced = MutableStateFlow(true)
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            walletUIConfig = walletUIConfig, l1Synced = synced
+        )
+        service.start()
+        runCurrent()
+
+        // The spend settles while synced and is accepted as the launch seed.
+        source.balanceDuffs.value = 781L
+        runCurrent()
+        coVerify { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 781L) }
+
+        // The engine stops: the header must fall back to the figure just
+        // persisted, not the one read at process start.
+        synced.value = false
+        runCurrent()
+        assertEquals(Coin.valueOf(781), service.overlayTotalBalance(flowOf(Coin.valueOf(999))).first())
+
+        // The hold itself is intact: a mid-scan partial neither reaches the
+        // header nor replaces the held figure.
+        source.balanceDuffs.value = 500L
+        runCurrent()
+        assertEquals(Coin.valueOf(500), service.sdkBalanceOrNull())
+        assertEquals(Coin.valueOf(781), service.overlayTotalBalance(flowOf(Coin.valueOf(999))).first())
+        coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 500L) }
+    }
+
+    @Test
+    fun postCutover_engineStopAfterSpendingEverything_showsZeroNotTheLaunchFigure() = runTest {
+        // A wallet emptied in this process has nothing to hold: the overlay
+        // ignores a non-positive last-known value and shows the live figure.
+        val source = FakeSource(balanceDuffs = MutableStateFlow(1_103_225_474L))
+        val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
+        coEvery { walletUIConfig.get(WalletUIConfig.LAST_TOTAL_BALANCE) } returns 1_103_225_474L
+        val synced = MutableStateFlow(true)
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            walletUIConfig = walletUIConfig, l1Synced = synced
+        )
+        service.start()
+        runCurrent()
+
+        source.balanceDuffs.value = 0L
+        runCurrent()
+        coVerify { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 0L) }
+
+        synced.value = false
+        runCurrent()
+        assertEquals(Coin.ZERO, service.overlayTotalBalance(flowOf(Coin.valueOf(999))).first())
+    }
+
+    @Test
+    fun postCutover_failedSeedWrite_leavesTheHeldFigureAlone() = runTest {
+        // The in-memory figure follows the PERSISTED one, so a write that
+        // failed must not move it: memory and disk never disagree.
+        val source = FakeSource(balanceDuffs = MutableStateFlow(900_000L))
+        val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
+        coEvery { walletUIConfig.get(WalletUIConfig.LAST_TOTAL_BALANCE) } returns 900_000L
+        coEvery { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 781L) } throws
+            java.io.IOException("disk full")
+        val synced = MutableStateFlow(true)
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            walletUIConfig = walletUIConfig, l1Synced = synced
+        )
+        service.start()
+        runCurrent()
+
+        source.balanceDuffs.value = 781L
+        runCurrent()
+        synced.value = false
+        runCurrent()
+        assertEquals(Coin.valueOf(900_000), service.overlayTotalBalance(flowOf(Coin.valueOf(999))).first())
+    }
+
+    @Test
     fun postCutover_armedRescan_publishesTheBalanceButDoesNotPersistIt() = runTest {
         // The app just armed an SPV rescan/replay (heal v2, reset blockchain).
         // Until the engine reflects the watermark rewind the caught-up gate
