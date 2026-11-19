@@ -332,12 +332,7 @@ class SdkWalletBinder internal constructor(
     // Told when [repayOwedRescans] has armed a rewind to birth: a rescan the app starts by
     // itself. Production marks the blockchain state as replaying, which is what blocks sends
     // and keeps the service alive through it, as a restore or Rescan Blockchain does.
-    private val onOwedRescanArmed: () -> Unit = {},
-    // Told when that rewind is known to have taken effect ([settleArmedOwedRescanIfDurable]),
-    // or when the watch for it gives up: only from then can the engine's "complete" end the
-    // replay. Until the SDK acts on an arm (9 to 60 s) its progress still describes the scan
-    // as it was.
-    private val onOwedRescanConfirmed: () -> Unit = {}
+    private val onOwedRescanArmed: () -> Unit = {}
 ) {
     @Inject
     constructor(
@@ -377,8 +372,7 @@ class SdkWalletBinder internal constructor(
             }
         },
         contactRequestDirectory = contactRequestDirectory,
-        onOwedRescanArmed = { blockchainStateDataProvider.markReplayStartedForArmedRescan() },
-        onOwedRescanConfirmed = { blockchainStateDataProvider.noteArmedRescanConfirmed() }
+        onOwedRescanArmed = { blockchainStateDataProvider.markReplayStartedForArmedRescan() }
     )
 
     /** Serializes passes — the single-flight guarantee. */
@@ -2268,7 +2262,6 @@ class SdkWalletBinder internal constructor(
                 "owed SDK rescan on {}… is durable (watermark {}, pre-arm {}, target {}): debt cleared",
                 walletIdHex.take(8), durable, armed.preArmHeight, armed.targetHeight
             )
-            noteOwedRescanConfirmed()
             true
         }
     } catch (e: CancellationException) {
@@ -2276,11 +2269,6 @@ class SdkWalletBinder internal constructor(
     } catch (t: Throwable) {
         log.warn("owed SDK rescan: could not confirm the armed rewind; the debt stays owed", t)
         false
-    }
-
-    private fun noteOwedRescanConfirmed() {
-        runCatching { onOwedRescanConfirmed() }
-            .onFailure { log.warn("owed SDK rescan confirmed, but the replay could not be told", it) }
     }
 
     /** Clear what a durable rewind paid: the recovery debt, and the widening debt when wide. */
@@ -2344,11 +2332,6 @@ class SdkWalletBinder internal constructor(
                     "owed SDK rescan watch on {}… gave up after {} polls; the debt stays owed for the next start",
                     walletIdHex.take(8), OWED_RESCAN_WATCH_MAX_POLLS
                 )
-                // Nothing will confirm this rewind in this process any more (a replay shorter
-                // than one poll is never confirmed, see [settleArmedOwedRescanIfDurable]).
-                // Sends must not stay closed until a restart: from here the engine's own
-                // "complete" ends the replay.
-                noteOwedRescanConfirmed()
             } finally {
                 owedRescanWatchRunning.set(false)
             }

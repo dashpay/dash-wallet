@@ -97,12 +97,18 @@ class BlockchainStateDataProvider @Inject constructor(
         private const val REPLAY_STATE_RETRY_MS = 1_000L
 
         /**
-         * How long after a replay starts, or after an armed rewind is confirmed, the engine's
-         * verdicts are not about it yet ([mayEndReplay]). The progress is sampled once a second
-         * and handed over a moment later, so for a few samples it can still describe the scan
-         * as it was before.
+         * How long after a replay starts the engine's reports are not about it yet
+         * ([mayEndReplay]). The progress is sampled once a second and handed over a moment
+         * later, so for a few samples it can still describe the scan as it was before.
          */
         internal const val REPLAY_VERDICT_SETTLE_MS = 5_000L
+
+        /**
+         * How long a rescan the app armed waits to see the engine leave "caught up" before its
+         * "caught up" is believed anyway. The SDK acts on an armed rewind 9 to 60 s after the
+         * arm and does not say when; one that had nothing to scan never shows work at all.
+         */
+        internal const val ARMED_REPLAY_WORK_WAIT_MS = 60_000L
         private val log = org.slf4j.LoggerFactory.getLogger(BlockchainStateDataProvider::class.java)
     }
 
@@ -172,11 +178,18 @@ class BlockchainStateDataProvider @Inject constructor(
     private var replayGeneration = 0L
 
     /**
-     * From when, on [monotonicMs], the engine's verdicts are about the replay in
-     * [replayStartedHere]. Null while a rescan the app armed has not been confirmed
-     * ([noteArmedRescanConfirmed]): until then no verdict is.
+     * From when, on [monotonicMs], the engine's reports are about the replay in
+     * [replayStartedHere]: [REPLAY_VERDICT_SETTLE_MS] after it started.
      */
-    private var replayVerdictsCountFromMs: Long? = null
+    private var replayVerdictsCountFromMs = 0L
+
+    /**
+     * A rescan the app armed that the engine has not been seen to start. The SDK acts on an
+     * armed rewind 9 to 60 s after the arm, and until then reports "caught up" as before, so
+     * a "caught up" ends this replay only after the engine has reported work, or after
+     * [ARMED_REPLAY_WORK_WAIT_MS] without any.
+     */
+    private var awaitingArmedWork = false
 
     /**
      * Serializes the writers that decide `replaying` across their suspending database calls:
@@ -194,90 +207,94 @@ class BlockchainStateDataProvider @Inject constructor(
     /** [REPLAY_VERDICT_SETTLE_MS]; shortened in tests. */
     internal var replayVerdictSettleMs = REPLAY_VERDICT_SETTLE_MS
 
-    /** The engine's last verdict that could tell, whenever it came. Guarded by [replayLock]. */
+    /** [ARMED_REPLAY_WORK_WAIT_MS]; shortened in tests. */
+    internal var armedReplayWorkWaitMs = ARMED_REPLAY_WORK_WAIT_MS
+
+    /** The engine's last report that could tell, whenever it came. Guarded by [replayLock]. */
     private var lastSdkReplayComplete: Boolean? = null
 
     /**
      * A replay starts now: closes the send gate before this returns.
      *
-     * [armedRescan]: the app armed an SDK rewind ([markReplayStartedForArmedRescan]). The SDK
-     * takes 9 to 60 s to act on one, and until then its progress describes the scan as it was,
-     * "complete" included. So nothing the engine reports counts until the rewind is confirmed.
-     * A restore, a Rescan Blockchain or the takeover that comes on top of an unconfirmed armed
-     * rescan leaves it unconfirmed.
+     * [armedRescan]: the app armed an SDK rewind ([markReplayStartedForArmedRescan]), see
+     * [awaitingArmedWork]. A restore, a Rescan Blockchain or the takeover that comes on top of
+     * an armed rescan the engine has not started yet keeps waiting for that work.
      */
-    private fun noteReplayStarted(armedRescan: Boolean) = synchronized(replayLock) {
-        val awaitingConfirmation = replayStartedHere.value && replayVerdictsCountFromMs == null
-        replayGeneration++
-        replayVerdictsCountFromMs =
-            if (armedRescan || awaitingConfirmation) null else monotonicMs() + replayVerdictSettleMs
-        replayStartedHere.value = true
-    }
-
-    /**
-     * The SDK's saved scan height shows that the rewind the app armed took effect
-     * ([de.schildbach.wallet.service.platform.sdk.SdkWalletBinder]'s `settleArmedOwedRescanIfDurable`),
-     * or the binder stopped waiting for that. From here the engine's verdicts are about the
-     * replay, once the samples taken before this have passed ([REPLAY_VERDICT_SETTLE_MS]).
-     *
-     * The progress feed reports changes only. A replay that had nothing to scan, or finished
-     * before this was called, may never report again until the next block, so the engine's last
-     * word is read once more when the settle time is over.
-     */
-    fun noteArmedRescanConfirmed() {
-        val generation = synchronized(replayLock) {
-            if (!replayStartedHere.value || replayVerdictsCountFromMs != null) return
+    private fun noteReplayStarted(armedRescan: Boolean) {
+        val workWaitMs = armedReplayWorkWaitMs
+        val awaitedGeneration = synchronized(replayLock) {
+            val stillAwaiting = replayStartedHere.value && awaitingArmedWork
+            replayGeneration++
+            awaitingArmedWork = armedRescan || stillAwaiting
             replayVerdictsCountFromMs = monotonicMs() + replayVerdictSettleMs
-            replayGeneration
-        }
+            replayStartedHere.value = true
+            if (awaitingArmedWork) replayGeneration else null
+        } ?: return
         coroutineScope.launch {
-            delay(replayVerdictSettleMs)
-            endConfirmedReplayIfEngineIsDone(generation)
+            delay(workWaitMs)
+            stopAwaitingArmedWork(awaitedGeneration)
         }
     }
 
     /**
-     * End the replay of [generation] if the engine's last word is "complete". The generation is
-     * checked again after the row is read, and the row is only written under [replayRowMutex],
-     * so a replay that starts meanwhile is neither ended in memory nor overwritten in the row.
+     * The engine showed no work for [ARMED_REPLAY_WORK_WAIT_MS] after the arm of [generation]:
+     * the rewind had nothing to scan, or was over between two samples. Its "caught up" counts
+     * from here; if that is its last word the replay ends now, because the progress feed
+     * reports changes only and may not speak again until the next block.
+     *
+     * The generation is checked again after the row is read, and the row is only written under
+     * [replayRowMutex], so a replay that starts meanwhile is neither ended in memory nor
+     * overwritten in the row.
      */
-    private suspend fun endConfirmedReplayIfEngineIsDone(generation: Long) = replayRowMutex.withLock {
-        val state = blockchainStateDao.getState()
+    private suspend fun stopAwaitingArmedWork(generation: Long) = replayRowMutex.withLock {
+        val state = try {
+            blockchainStateDao.getState()
+        } catch (ex: SQLiteException) {
+            log.warn("could not read the blockchain state to end an armed replay", ex)
+            null
+        }
         val ended = synchronized(replayLock) {
-            if (replayGeneration != generation || !replayStartedHere.value || lastSdkReplayComplete != true) {
+            if (replayGeneration != generation || !replayStartedHere.value || !awaitingArmedWork) {
                 false
             } else {
-                replayStartedHere.value = false
-                true
+                awaitingArmedWork = false
+                (lastSdkReplayComplete == true).also { if (it) replayStartedHere.value = false }
             }
         }
         if (!ended) return@withLock
-        log.info("replay ended: its rewind is confirmed and the engine reports no work left")
+        log.info("armed replay ended: the engine showed no work and reports none left")
         if (state != null && state.replaying) {
             state.replaying = false
-            blockchainStateDao.saveState(state)
+            try {
+                blockchainStateDao.saveState(state)
+            } catch (ex: SQLiteException) {
+                log.warn("could not save the end of an armed replay; the next progress update does", ex)
+            }
         }
     }
 
     /**
-     * Whether the engine's verdict [replayComplete] ends the replay.
+     * Whether the engine's report [replayComplete] ends the replay.
      *
      * The flag is only ever ended by a progress update, never started by one, so a "complete"
      * that describes the scan as it was BEFORE the replay would leave sends open for all of it
-     * (review, #1714). For a replay started in this process a verdict therefore counts only if
+     * (review, #1714). For a replay started in this process a report therefore counts only if
      * it was received (at [receivedAtMs], taken when the update was handed over, not when its
-     * job ran) at or after [replayVerdictsCountFromMs]: never before an armed rewind is
-     * confirmed, and not in the first samples after that or after the start.
+     * job ran) at or after [replayVerdictsCountFromMs]. A rescan the app armed also needs the
+     * engine to have reported work first ([awaitingArmedWork]).
      *
      * A replay this process did not start (the row said so at launch) ends on the first
      * "complete", as before: an engine that has just started reports work until it is done.
      */
     private fun mayEndReplay(replayComplete: Boolean, receivedAtMs: Long): Boolean = synchronized(replayLock) {
         lastSdkReplayComplete = replayComplete
+        if (!replayStartedHere.value) return replayComplete
+        if (receivedAtMs < replayVerdictsCountFromMs) return false
+        if (awaitingArmedWork) {
+            if (!replayComplete) awaitingArmedWork = false
+            return false
+        }
         if (!replayComplete) return false
-        if (!replayStartedHere.value) return true
-        val countFrom = replayVerdictsCountFromMs ?: return false
-        if (receivedAtMs < countFrom) return false
         replayStartedHere.value = false
         true
     }
@@ -533,7 +550,8 @@ class BlockchainStateDataProvider @Inject constructor(
      * [markReplayStartedForSdkTakeover] for an owed SDK rescan the app armed by itself
      * ([de.schildbach.wallet.service.platform.sdk.SdkWalletBinder]'s `repayOwedRescans`): the
      * same rewind to birth, with nobody having asked for it, so nothing else would mark it.
-     * This replay ends only after [noteArmedRescanConfirmed].
+     * This replay ends once the engine has reported work and then none left, see
+     * [awaitingArmedWork].
      */
     fun markReplayStartedForArmedRescan() = markReplayStarted(armedRescan = true)
 
