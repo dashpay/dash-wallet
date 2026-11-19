@@ -325,12 +325,15 @@ class BlockchainStateDataProviderTest {
      */
     @Test
     fun aCompletionFromBeforeTheReplay_doesNotEndIt() {
+        var nowMs = 1_000L
+        provider.monotonicMs = { nowMs }
         dao.state = BlockchainState(Date(0L), 10, false, EnumSet.noneOf(Impediment::class.java), 0, 0, 100)
         provider.markReplayStartedForSdkTakeover()
         awaitUntil("marker applied") { dao.state?.replaying == true }
 
         // The stale snapshot: taken at the tip, delivered after the arm.
         provider.updateSdkBlockchainState(sdkUpdate(percentageSync = 100, syncStage = SyncStage.COMPLETE))
+        nowMs += BlockchainStateDataProvider.REPLAY_START_SETTLE_MS
         provider.updateSdkBlockchainState(sdkUpdate(bestChainHeight = 11, percentageSync = 100))
         awaitUntil("both stale updates applied") { dao.state?.bestChainHeight == 11 }
         assertTrue("the replay is still on", dao.state!!.replaying)
@@ -343,23 +346,66 @@ class BlockchainStateDataProviderTest {
         awaitUntil("gate follows") { provider.isReplayingOrNull() == false }
     }
 
+    /**
+     * Pre-review, 2026-11-18. "Working" can be stale too: an update from a catch-up that was
+     * running before the replay started must not count as work on the replay, or the stale
+     * "complete" that follows it ends the replay after all.
+     */
     @Test
-    fun aReplayWithNothingToScan_endsOnACompletionAfterTheGracePeriod() {
+    fun workReportedBeforeTheReplaySettles_doesNotCountAsWorkOnIt() {
         var nowMs = 1_000L
         provider.monotonicMs = { nowMs }
         dao.state = BlockchainState(Date(0L), 10, false, EnumSet.noneOf(Impediment::class.java), 0, 0, 100)
         provider.markReplayStartedForSdkTakeover()
         awaitUntil("marker applied") { dao.state?.replaying == true }
 
-        nowMs += BlockchainStateDataProvider.REPLAY_START_GRACE_MS - 1
-        provider.updateSdkBlockchainState(sdkUpdate(bestChainHeight = 11, percentageSync = 100))
-        awaitUntil("early completion applied") { dao.state?.bestChainHeight == 11 }
-        assertTrue("within the grace period it may be stale", dao.state!!.replaying)
-
+        nowMs += BlockchainStateDataProvider.REPLAY_START_SETTLE_MS - 1
+        provider.updateSdkBlockchainState(sdkUpdate(percentageSync = 99, syncStage = SyncStage.BLOCKS))
         nowMs += 1
-        provider.updateSdkBlockchainState(sdkUpdate(bestChainHeight = 12, percentageSync = 100))
-        awaitUntil("replay ended") { dao.state?.replaying == false }
+        provider.updateSdkBlockchainState(
+            sdkUpdate(bestChainHeight = 11, percentageSync = 100, syncStage = SyncStage.COMPLETE)
+        )
+        awaitUntil("both updates applied") { provider.getSyncStage() == SyncStage.COMPLETE }
+
+        assertTrue("the earlier catch-up's work and completion are not the replay's", dao.state!!.replaying)
+        assertEquals(true, provider.isReplayingOrNull())
+    }
+
+    /**
+     * Pre-review, 2026-11-18. The progress feed reports changes only, so the "complete" turned
+     * away inside the grace period can be the last update for minutes. The replay must end when
+     * the period does, with no further update.
+     */
+    @Test
+    fun aReplayWithNothingToScan_endsWhenTheGracePeriodDoes_withNoFurtherUpdate() {
+        provider.replayStartSettleMs = 0
+        provider.replayStartGraceMs = 1_500
+        dao.state = BlockchainState(Date(0L), 10, false, EnumSet.noneOf(Impediment::class.java), 0, 0, 100)
+        provider.markReplayStartedForSdkTakeover()
+        awaitUntil("marker applied") { dao.state?.replaying == true }
+
+        provider.updateSdkBlockchainState(sdkUpdate(bestChainHeight = 11, percentageSync = 100))
+        awaitUntil("completion applied") { dao.state?.bestChainHeight == 11 }
+        assertTrue("inside the grace period it may be stale", dao.state!!.replaying)
+
+        awaitUntil("replay ended at the deadline") { dao.state?.replaying == false }
         awaitUntil("gate follows") { provider.isReplayingOrNull() == false }
+    }
+
+    @Test
+    fun aReplayTheEngineIsStillWorkingOn_doesNotEndWhenTheGracePeriodDoes() {
+        provider.replayStartSettleMs = 0
+        provider.replayStartGraceMs = 200
+        dao.state = BlockchainState(Date(0L), 10, false, EnumSet.noneOf(Impediment::class.java), 0, 0, 100)
+        provider.markReplayStartedForSdkTakeover()
+        awaitUntil("marker applied") { dao.state?.replaying == true }
+        provider.updateSdkBlockchainState(sdkUpdate(percentageSync = 3, syncStage = SyncStage.BLOCKS))
+        awaitUntil("work reported") { provider.getSyncStage() == SyncStage.BLOCKS && provider.isSdkEngineWorking() }
+
+        Thread.sleep(500)
+
+        assertTrue("still replaying after the deadline", dao.state!!.replaying)
+        assertEquals(true, provider.isReplayingOrNull())
     }
 
     @Test

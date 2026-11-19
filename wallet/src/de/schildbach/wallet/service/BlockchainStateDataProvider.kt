@@ -102,6 +102,13 @@ class BlockchainStateDataProvider @Inject constructor(
          * for a rewind with nothing to scan, which never reports work.
          */
         internal const val REPLAY_START_GRACE_MS = 60_000L
+
+        /**
+         * How long after a replay starts the engine's verdicts are not about it yet: the
+         * progress is sampled once a second and can describe the scan as it was before the
+         * rewind, "working" on an earlier catch-up as much as "complete".
+         */
+        internal const val REPLAY_START_SETTLE_MS = 5_000L
         private val log = org.slf4j.LoggerFactory.getLogger(BlockchainStateDataProvider::class.java)
     }
 
@@ -174,10 +181,51 @@ class BlockchainStateDataProvider @Inject constructor(
     /** A clock that only moves forward; replaced in tests. */
     internal var monotonicMs: () -> Long = { System.nanoTime() / 1_000_000 }
 
+    /** [REPLAY_START_GRACE_MS] and [REPLAY_START_SETTLE_MS]; shortened in tests. */
+    internal var replayStartGraceMs = REPLAY_START_GRACE_MS
+    internal var replayStartSettleMs = REPLAY_START_SETTLE_MS
+
+    /** The engine's last verdict that could tell, whenever it came; serial scope only. */
+    private var lastSdkReplayComplete: Boolean? = null
+
     /** A replay starts now: closes the send gate before this returns. */
-    private fun noteReplayStarted() = synchronized(replayLock) {
-        replayAwaitingEngineSinceMs = monotonicMs()
-        replayStartedHere.value = true
+    private fun noteReplayStarted() {
+        val since = monotonicMs()
+        synchronized(replayLock) {
+            replayAwaitingEngineSinceMs = since
+            replayStartedHere.value = true
+        }
+        // The progress feed only reports changes, so a "complete" turned away inside the grace
+        // period may be the last word for minutes (until the next block). Ask again when the
+        // period ends.
+        coroutineScope.launch {
+            delay(replayStartGraceMs)
+            endReplayIfGraceExpired(since)
+        }
+    }
+
+    /**
+     * The grace period of the replay started at [since] is over with no work reported: if the
+     * engine's last word is "complete", the rewind had nothing to scan (or finished between two
+     * samples) and the replay ends here. Runs on the serial scope.
+     */
+    private suspend fun endReplayIfGraceExpired(since: Long) {
+        val ended = synchronized(replayLock) {
+            if (replayAwaitingEngineSinceMs != since || lastSdkReplayComplete != true) {
+                false
+            } else {
+                replayAwaitingEngineSinceMs = null
+                replayStartedHere.value = false
+                true
+            }
+        }
+        if (!ended) return
+        log.info("replay started here ended after its grace period: the engine reported no work for it")
+        val state = blockchainStateDao.getState() ?: return
+        if (state.replaying) {
+            state.replaying = false
+            blockchainStateDao.saveState(state)
+        }
     }
 
     /**
@@ -189,18 +237,25 @@ class BlockchainStateDataProvider @Inject constructor(
      * progress update, never started by one, so believing that verdict would leave sends
      * open for the whole replay (review, #1714). A replay started in this process therefore
      * ends only after the engine has reported work since it started, or after
-     * [REPLAY_START_GRACE_MS] for a rewind that had nothing to scan.
+     * [REPLAY_START_GRACE_MS] for a rewind that had nothing to scan
+     * ([endReplayIfGraceExpired]).
+     *
+     * "Work" can be stale the same way: an update from a catch-up that was running before the
+     * replay started must not count as work on it. So a verdict received (at [receivedAtMs],
+     * taken when the update was handed over, not when its job ran) within
+     * [REPLAY_START_SETTLE_MS] of the start counts for nothing.
      *
      * A replay this process did not start (the row said so at launch) ends on the first
      * "complete", as before: an engine that has just started reports work until it is done.
      */
-    private fun mayEndReplay(replayComplete: Boolean): Boolean = synchronized(replayLock) {
+    private fun mayEndReplay(replayComplete: Boolean, receivedAtMs: Long): Boolean = synchronized(replayLock) {
+        val since = replayAwaitingEngineSinceMs
+        if (since != null && receivedAtMs - since < replayStartSettleMs) return false
         if (!replayComplete) {
             replayAwaitingEngineSinceMs = null
             return false
         }
-        val since = replayAwaitingEngineSinceMs
-        if (since != null && monotonicMs() - since < REPLAY_START_GRACE_MS) return false
+        if (since != null && monotonicMs() - since < replayStartGraceMs) return false
         replayAwaitingEngineSinceMs = null
         replayStartedHere.value = false
         true
@@ -270,6 +325,8 @@ class BlockchainStateDataProvider @Inject constructor(
      * Serialized with every other writer on [coroutineScope].
      */
     internal fun updateSdkBlockchainState(update: de.schildbach.wallet.service.platform.sdk.SdkBlockchainStateUpdate) {
+        // Taken here, on the caller's thread: see [mayEndReplay].
+        val receivedAtMs = monotonicMs()
         coroutineScope.launch {
             sdkStallNetworkImpediment = update.networkStalled
             val blockchainState = blockchainStateDao.getState() ?: BlockchainState()
@@ -322,7 +379,10 @@ class BlockchainStateDataProvider @Inject constructor(
             //
             // A "complete" that predates a replay started here does not end
             // it: see [mayEndReplay].
-            if (update.replayComplete?.let(::mayEndReplay) == true) blockchainState.replaying = false
+            update.replayComplete?.let { lastSdkReplayComplete = it }
+            if (update.replayComplete?.let { mayEndReplay(it, receivedAtMs) } == true) {
+                blockchainState.replaying = false
+            }
             // The engine's own "still working" verdict, for the service's keep-alive only
             // ([isSdkEngineWorking]): what `replaying` was being overwritten with.
             update.replayComplete?.let { sdkEngineWorking = !it }
@@ -366,6 +426,7 @@ class BlockchainStateDataProvider @Inject constructor(
         coroutineScope.launch {
             sdkStallNetworkImpediment = false
             sdkEngineWorking = false
+            lastSdkReplayComplete = null
             syncStageFlow.value = null
             val blockchainState = blockchainStateDao.getState()
             if (blockchainState != null) {

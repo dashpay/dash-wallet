@@ -331,6 +331,14 @@ internal data class WalletFundingGate(
  * on a coin an unscanned block already spent is rejected by the network and
  * reported as not sent, and nothing is lost.
  *
+ * A DashPay contact backfill does NOT close it either, on purpose (product
+ * decision, 2026-11-18). Setting up a contact makes the SDK rewind its scan to
+ * find past payments on the new contact accounts ([SdkWalletBinder]'s
+ * provisioning sweep, [DashPayBackfillGate]); nothing marks that as a replay.
+ * It is a catch-up for scripts the wallet did not watch before, not a
+ * restore or a rescan the user or a recovery asked for, and blocking it
+ * would stop payments every time a contact is added.
+ *
  * Wallet binding is NOT re-checked here: every caller already preflights
  * the bound wallet, and an unbound wallet cannot produce a non-IDLE
  * progress feed anyway.
