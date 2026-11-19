@@ -1595,12 +1595,11 @@ class CutoverUiDataServiceTest {
     }
 
     @Test
-    fun postCutover_overtakenSeedWrite_cannotPutTheOlderFigureBackAsTheFallback() = runTest {
-        // The balance is published from two collectors at once: the
-        // Room-triggered feed and the event/ticker re-read. The first writes an
-        // older figure and is parked right after its write; the second then
-        // writes the post-spend figure. The older one must not end up as the
-        // fallback once the first resumes.
+    fun postCutover_balanceReadingsArePublishedOneAtATime() = runTest {
+        // Every balance trigger (Room change, tx event, ticker) goes through
+        // ONE collector. With two, a newer reading could be published and
+        // saved while an older one was still mid-save, and the older one then
+        // landed last — as the launch seed and as the header's fallback.
         val events = kotlinx.coroutines.flow.MutableSharedFlow<L1TxEvent>(extraBufferCapacity = 4)
         val source = FakeSource(balanceDuffs = MutableStateFlow(1_103_225_474L))
         val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
@@ -1620,76 +1619,27 @@ class CutoverUiDataServiceTest {
             service.start()
             runCurrent()
 
-            // The Room-triggered collector takes the older figure and parks
-            // with its write done but the fallback not yet updated.
+            // A reading of 900,000 is published and parks mid-save.
             source.balanceDuffs.value = 900_000L
             assertTrue("the older write must be parked", pumpUntil { olderWriteParked.isCompleted })
 
-            // The spend lands: the event re-read publishes the newer figure
-            // (the parked collector cannot see it yet).
+            // The spend lands while that save is still in flight. Its reading
+            // must wait its turn, not overtake.
             source.balanceDuffs.value = 781L
             events.emit(L1TxEvent.Detected(displayHex(3), -899_219L, null, contextCode = 0, directionCode = 0))
-            assertTrue(
-                "the event re-read must have published the newer figure",
-                pumpUntil { service.sdkBalanceOrNull() == Coin.valueOf(781) }
-            )
-
-            // The engine stops before the older write resumes, so nothing
-            // after this point is allowed to persist — or to repair a wrong
-            // fallback.
-            synced.value = false
             runCurrent()
+            assertEquals(Coin.valueOf(900_000), service.sdkBalanceOrNull())
+            coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 781L) }
         } finally {
             releaseOlderWrite.complete(Unit)
         }
-        runCurrent()
 
+        // Once the older save finishes, the newer reading follows it.
+        assertTrue(pumpUntil { service.sdkBalanceOrNull() == Coin.valueOf(781) })
+        runCurrent()
         coVerify { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 781L) }
-        assertEquals(Coin.valueOf(781), service.overlayTotalBalance(flowOf(Coin.valueOf(999))).first())
-    }
-
-    @Test
-    fun postCutover_readingOvertakenBeforeItsSeedWrite_isNotSaved() = runTest {
-        // The Room-triggered collector publishes an older figure and decides
-        // to save it; before it reaches the write, the event re-read publishes
-        // and saves the post-spend figure and the engine stops. The older
-        // reading must then be dropped, not written over the newer one.
-        val events = kotlinx.coroutines.flow.MutableSharedFlow<L1TxEvent>(extraBufferCapacity = 4)
-        val source = FakeSource(balanceDuffs = MutableStateFlow(1_103_225_474L))
-        val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
-        coEvery { walletUIConfig.get(WalletUIConfig.LAST_TOTAL_BALANCE) } returns 1_103_225_474L
-        val synced = MutableStateFlow(true)
-        // The armed-rescan probe runs between the publication and the save
-        // decision's write, on the publishing coroutine: the one place a test
-        // can let the other collector overtake. One-shot, armed below.
-        var overtakeNextPublication = false
-        val service = buildService(
-            source, configWithState("CUT_OVER"), backgroundScope,
-            walletUIConfig = walletUIConfig, txEvents = events, l1Synced = synced,
-            rescanRecentlyArmed = {
-                if (overtakeNextPublication) {
-                    overtakeNextPublication = false
-                    source.balanceDuffs.value = 781L
-                    events.tryEmit(
-                        L1TxEvent.Detected(displayHex(3), -899_219L, null, contextCode = 0, directionCode = 0)
-                    )
-                    runCurrent()
-                    synced.value = false
-                    runCurrent()
-                }
-                false
-            }
-        )
-        service.start()
+        synced.value = false
         runCurrent()
-
-        overtakeNextPublication = true
-        source.balanceDuffs.value = 900_000L
-        runCurrent()
-
-        assertFalse("the overtake must have run", overtakeNextPublication)
-        coVerify { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 781L) }
-        coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 900_000L) }
         assertEquals(Coin.valueOf(781), service.overlayTotalBalance(flowOf(Coin.valueOf(999))).first())
     }
 
