@@ -308,6 +308,8 @@ class BlockchainStateDataProvider @Inject constructor(
     /** See [sdkEngineWorking]. */
     fun isSdkEngineWorking(): Boolean = sdkEngineWorking
 
+    override fun isSyncEngineWorking(): Boolean = sdkEngineWorking
+
     fun updateImpediments(impediments: Set<Impediment>) {
         launchRowWrite {
             serviceImpediments = impediments

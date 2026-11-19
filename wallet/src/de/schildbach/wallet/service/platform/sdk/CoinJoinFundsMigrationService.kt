@@ -230,6 +230,18 @@ private const val COIN_JOIN_FOREIGN_BUCKET = -2
 internal fun BlockchainState?.isSyncedEnoughForMixedFundsCheck(): Boolean =
     this != null && isSynced()
 
+/**
+ * [isSyncedEnoughForMixedFundsCheck], and the sync engine has no work left.
+ *
+ * `replaying` used to stay true for as long as the engine had work, so `isSynced()` covered
+ * an ordinary catch-up too. It now means a restore or a rescan only (#1714: a catch-up must
+ * not block payments), and `isSynced()` can read true at 100% display progress while blocks
+ * are still being processed. A send built on that view is at worst rejected; this balance is
+ * QUOTED to the user and drives a forced prompt, so it keeps the strict rule.
+ */
+internal suspend fun BlockchainStateProvider.isSyncCompleteForMixedFundsCheck(): Boolean =
+    getState().isSyncedEnoughForMixedFundsCheck() && !isSyncEngineWorking()
+
 /** The SDK's signer could not read the seed because the device is locked. */
 private const val SIGNER_LOCKED_MESSAGE = "mnemonic resolver failed with code 3"
 
@@ -497,8 +509,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
      */
     suspend fun mixedFundsToMigrate(): Coin? = withContext(Dispatchers.IO) {
         try {
-            val state = blockchainStateProvider.getState()
-            if (!state.isSyncedEnoughForMixedFundsCheck()) {
+            if (!blockchainStateProvider.isSyncCompleteForMixedFundsCheck()) {
                 log.debug("mixed-funds probe skipped: L1 view not current enough to trust")
                 return@withContext null
             }
@@ -851,7 +862,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
         }
         // Defense in depth: the same gate as the Tools entry, whatever the caller.
         if (!userMigrationAllowed()) return MixedFundsMigrationOutcome.NOT_ATTEMPTED
-        if (!blockchainStateProvider.getState().isSyncedEnoughForMixedFundsCheck()) {
+        if (!blockchainStateProvider.isSyncCompleteForMixedFundsCheck()) {
             return MixedFundsMigrationOutcome.NOT_ATTEMPTED
         }
         // Both routes end in an account-wide drain that cannot skip an app-locked input.
@@ -925,7 +936,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
         }
         // Defense in depth: the same gate as the Tools entry, whatever the caller.
         if (!userMigrationAllowed()) return MixedFundsMigrationOutcome.NOT_ATTEMPTED
-        if (!blockchainStateProvider.getState().isSyncedEnoughForMixedFundsCheck()) {
+        if (!blockchainStateProvider.isSyncCompleteForMixedFundsCheck()) {
             return MixedFundsMigrationOutcome.NOT_ATTEMPTED
         }
         val snapshot = coinJoinConsolidationSnapshot(dashSdkService, ::persistedInstantLocks)
@@ -1288,7 +1299,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
         val recorded = stage.observation
         stage.walletId != null &&
             (recorded != null || (!stage.unidentifiedTx && !stage.mayBeFinalTransfer)) &&
-            blockchainStateProvider.getState().isSyncedEnoughForMixedFundsCheck() &&
+            blockchainStateProvider.isSyncCompleteForMixedFundsCheck() &&
             shieldedBalanceService.ensureShieldedReady() &&
             shieldedBalanceService.unsuppressedCoinJoinShieldLockCount() == 0 &&
             coinJoinConsolidationSnapshot(dashSdkService, ::persistedInstantLocks).let { snapshot ->
@@ -1600,7 +1611,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
         val strict = shieldedBalanceService.pendingCoinJoinShieldLockCount() ?: return false
         if (strict <= 0) return false
         if (shieldedBalanceService.unsuppressedCoinJoinShieldLockCount() != 0) return false
-        return blockchainStateProvider.getState().isSyncedEnoughForMixedFundsCheck() &&
+        return blockchainStateProvider.isSyncCompleteForMixedFundsCheck() &&
             sdkCoinJoinConfirmedDuffs() == 0L
     }
 
@@ -2010,7 +2021,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
             // No settling lock to tell apart: any pending lock may be its own, so strict.
             ShieldSettlement.NotRecorded ->
                 strict == 0 &&
-                    blockchainStateProvider.getState().isSyncedEnoughForMixedFundsCheck() &&
+                    blockchainStateProvider.isSyncCompleteForMixedFundsCheck() &&
                     sdkCoinJoinConfirmedDuffs() == 0L &&
                     shieldedBalanceService.pendingCoinJoinShieldLockCount() == 0
         }
@@ -2248,7 +2259,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
                 delay(IN_FLIGHT_POLL_MS)
                 continue
             }
-            if (!blockchainStateProvider.getState().isSyncedEnoughForMixedFundsCheck()) {
+            if (!blockchainStateProvider.isSyncCompleteForMixedFundsCheck()) {
                 delay(IN_FLIGHT_POLL_MS)
                 continue
             }
@@ -2408,7 +2419,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
             val activeWallet = activeSdkWalletOrNull()
             if (activeWallet == null) { delay(IN_FLIGHT_POLL_MS); continue }
             if (activeWallet != state.walletId) return walletRebound(state.walletId)
-            if (!blockchainStateProvider.getState().isSyncedEnoughForMixedFundsCheck()) {
+            if (!blockchainStateProvider.isSyncCompleteForMixedFundsCheck()) {
                 delay(IN_FLIGHT_POLL_MS)
                 continue
             }

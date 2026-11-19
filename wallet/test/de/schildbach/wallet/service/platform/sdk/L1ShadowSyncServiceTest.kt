@@ -1401,6 +1401,30 @@ class L1ShadowSyncServiceTest {
         assertEquals(2, source.startCalls)
     }
 
+    /**
+     * Pre-review, 2026-11-19. The native stop can take longer than a replay's settle time. The
+     * last snapshot of the session being torn down must not stand as the engine's word
+     * meanwhile: the scanner reads stopped from the start of its stop.
+     */
+    @Test
+    fun stop_readsIdle_whileTheNativeStopIsStillRunning() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val gate = CompletableDeferred<Unit>()
+        source.onStop = { gate.await() }
+        val service = service(source)
+        assertTrue(service.startIfEnabled())
+        source.progressFlow.value = syncing(headers = sub(SpvSyncState.SYNCING, 10, 100))
+        assertEquals(ShadowSyncPhase.HEADERS, service.progress.value.phase)
+
+        val stop = launch { service.stop() }
+        withTimeout(5_000) { while (source.stopCalls == 0) delay(5) }
+
+        assertEquals("already idle inside stopSpv", ShadowSyncProgress.IDLE, service.progress.value)
+        gate.complete(Unit)
+        withTimeout(5_000) { stop.join() }
+        assertEquals(ShadowSyncProgress.IDLE, service.progress.value)
+    }
+
     @Test
     fun stop_stopsSpvAndResetsProgress_andIsIdempotent() = runBlocking {
         val source = FakeSource(boundWalletId = walletIdHex)

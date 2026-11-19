@@ -3506,9 +3506,15 @@ class L1ShadowSyncService internal constructor(
             durableHeightJob?.cancel()
             durableHeightJob = null
             synchronized(breakdownLock) { breakdownRun.also { breakdownRun = null } }?.cancel()
+            // IDLE from here, not only once the native stop has returned: that can take longer
+            // than a replay's settle time, and until it did the last snapshot of the session
+            // being torn down ("synced", with peers) stood as the engine's current word, for
+            // the send gate and for a replay's second look alike (pre-review, 2026-11-19).
+            _progress.value = ShadowSyncProgress.IDLE
             runCatching { source.stopSpv() }
                 .onFailure { log.warn("failed to stop the shadow SPV client", it) }
             logWatermarkAtStop(walletIdHex, committedAtStop, filterAtStop)
+            // Again: the cancelled monitor is not joined and may have written once more.
             _progress.value = ShadowSyncProgress.IDLE
             sessionHeaderStart = 0L // the next session measures its own work
             sessionFilterStart = 0L
