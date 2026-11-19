@@ -460,6 +460,64 @@ internal fun shadowProgressLine(p: ShadowSyncProgress): String = String.format(
  * two can disagree by design — the UI settled, the memory telemetry still
  * sampling — for as long as the pipeline lags. Pure — host-testable.
  */
+/**
+ * The app's copy of the wallet's committed scan height ([ShadowSyncProgress.walletSyncedHeight]).
+ * 0 = unknown.
+ *
+ * The engine reports that height only when it goes UP (`SyncHeightAdvanced`). A rescan the app
+ * arms lowers it inside the engine at once, but nothing is reported until the rescan commits
+ * its first batch, 9 to 60 s later or whenever the scanner next runs; until then a copy fed
+ * by reports alone still says "at the tip". So the arm lowers the copy itself
+ * ([rescanArmed]). The floor is kept until the engine's next report, so that a stop and start
+ * in between, which seeds the copy from the saved height (not lowered by the arm), does not
+ * raise it again. iOS avoids the same window by rewinding only before the scanner starts.
+ *
+ * A batch that was in flight at the arm cannot raise the height: the scanner only advances a
+ * wallet whose height is next to the batch's start. A report already on its way to the app at
+ * the arm still can; the SDK has no call to read the height itself.
+ */
+internal class CommittedScanCursor {
+    private val height = MutableStateFlow(0L)
+    private var armedFloor = 0L
+
+    val value: Long get() = height.value
+
+    /** The saved height at the start of a scanner session. */
+    @Synchronized
+    fun seed(savedHeight: Long) {
+        val floor = armedFloor
+        height.value = if (floor > 0L && (savedHeight <= 0L || savedHeight > floor)) floor else savedHeight
+    }
+
+    /** The engine reported a committed batch. Latest wins: a rescan climbs again from its floor. */
+    @Synchronized
+    fun engineAdvanced(reportedHeight: Long) {
+        armedFloor = 0L
+        height.value = reportedHeight
+    }
+
+    /** The scanner stopped; the next start seeds again. An armed floor stays. */
+    @Synchronized
+    fun sessionStopped() {
+        height.value = 0L
+    }
+
+    /**
+     * The app armed a rewind to [targetHeight]. True when the copy now reads at or below it,
+     * false when the copy is unknown and so cannot show the rewind yet.
+     */
+    @Synchronized
+    fun rescanArmed(targetHeight: Long): Boolean {
+        val floor = targetHeight.coerceAtLeast(1L)
+        val current = height.value
+        if (current in 1L..floor) return true
+        armedFloor = floor
+        if (current <= 0L) return false
+        height.value = floor
+        return true
+    }
+}
+
 internal val ShadowSyncProgress.replayActive: Boolean get() =
     !(synced || scanCaughtUpToTip) || blockPipelineLagging
 
@@ -2723,7 +2781,22 @@ class L1ShadowSyncService internal constructor(
      * hide exactly the replay churn the drain predicate exists to see).
      * 0 = unknown. Reset on [stop]; re-seeded on the next start.
      */
-    private val _engineWalletSyncedHeight = MutableStateFlow(0L)
+    private val _engineWalletSyncedHeight = CommittedScanCursor()
+
+    /**
+     * The app armed an SDK rewind of the filter scan to [targetHeight]
+     * ([DashSdkService.armSpvRescan]): the copy of the scan height shows it from now, see
+     * [CommittedScanCursor]. True when it does, false when the height is not known yet.
+     */
+    fun noteSpvRescanArmed(targetHeight: Long): Boolean {
+        val before = _engineWalletSyncedHeight.value
+        val shown = _engineWalletSyncedHeight.rescanArmed(targetHeight)
+        log.info(
+            "armed SPV rescan to {}: committed scan height {} -> {}{}",
+            targetHeight, before, _engineWalletSyncedHeight.value, if (shown) "" else " (unknown, floor kept)"
+        )
+        return shown
+    }
 
     /**
      * The SDK's DURABLE `WalletEntity.syncedHeight` — where a restart would
@@ -3232,14 +3305,15 @@ class L1ShadowSyncService internal constructor(
                     // watermark so the drain predicate has evidence before the
                     // session's first SyncHeightAdvanced event; a failed read
                     // leaves 0 (= unknown, never treated as lagging).
-                    _engineWalletSyncedHeight.value = runCatching {
+                    val savedHeight = runCatching {
                         source.sdkWalletSyncedHeight(walletIdHex) ?: 0L
                     }.getOrElse { t ->
                         log.warn("durable syncedHeight seed read failed; cursor starts unknown", t)
                         0L
                     }
+                    _engineWalletSyncedHeight.seed(savedHeight)
                     val durableGeneration = synchronized(durableHeightLock) {
-                        durableSyncedHeight = _engineWalletSyncedHeight.value
+                        durableSyncedHeight = savedHeight
                         durableHeightGeneration
                     }
                     lastProbeHeartbeatMs = nowMs()
@@ -3369,7 +3443,7 @@ class L1ShadowSyncService internal constructor(
             _progress.value = ShadowSyncProgress.IDLE
             sessionHeaderStart = 0L // the next session measures its own work
             sessionFilterStart = 0L
-            _engineWalletSyncedHeight.value = 0L // re-seeded on the next start
+            _engineWalletSyncedHeight.sessionStopped() // re-seeded on the next start
             synchronized(durableHeightLock) {
                 durableHeightGeneration++
                 durableSyncedHeight = 0L
@@ -3699,7 +3773,7 @@ class L1ShadowSyncService internal constructor(
                     // armed rescan the first event is legitimately LOWER than
                     // the tracked value and must replace it.
                     parseL1SyncHeightAdvanced(debug)?.let { height ->
-                        _engineWalletSyncedHeight.value = height
+                        _engineWalletSyncedHeight.engineAdvanced(height)
                     }
                     // A block that stored or confirmed a wallet transaction, or
                     // a sweep that removed one, changes the history the

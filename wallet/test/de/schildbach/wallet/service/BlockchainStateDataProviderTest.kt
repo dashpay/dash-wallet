@@ -379,6 +379,31 @@ class BlockchainStateDataProviderTest {
         awaitUntil("gate follows") { provider.isReplayingOrNull() == false }
     }
 
+    /**
+     * The app's copy of the scan height was lowered at the arm, so the progress reads "not
+     * caught up" until the rescan is back at the tip: no work has to be seen first.
+     */
+    @Test
+    fun anArmedRescanWhoseScanHeightWasLowered_endsOnTheFirstCaughtUpAfterTheSettleTime() {
+        var nowMs = 1_000L
+        provider.monotonicMs = { nowMs }
+        dao.state = syncedRow()
+        provider.markReplayStartedForArmedRescan(scanHeightLowered = true)
+        awaitUntil("marker applied") { dao.state?.replaying == true }
+
+        // A sample taken before the arm, handed over just after it.
+        nowMs += BlockchainStateDataProvider.REPLAY_VERDICT_SETTLE_MS - 1
+        provider.updateSdkBlockchainState(caughtUp(11))
+        awaitUntil("applied") { dao.state?.bestChainHeight == 11 }
+        assertTrue(dao.state!!.replaying)
+        assertEquals(true, provider.isReplayingOrNull())
+
+        nowMs += 1
+        provider.updateSdkBlockchainState(caughtUp(12))
+        awaitUntil("replay ended") { dao.state?.replaying == false }
+        awaitUntil("gate follows") { provider.isReplayingOrNull() == false }
+    }
+
     /** A report sampled before the arm can be handed over just after it: it is not the rescan's work. */
     @Test
     fun workReportedInTheFirstSamplesAfterTheArm_isNotTheRescans() {

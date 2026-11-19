@@ -383,7 +383,7 @@ class SdkWalletBinderTest {
         contactRequests: PlatformContactRequestDirectory = FakeContactRequestDirectory(),
         processToken: String = "test-process",
         backfillRetryDelayMs: Long = 1L,
-        onOwedRescanArmed: () -> Unit = {},
+        onOwedRescanArmed: (Long?) -> Unit = {},
         scope: CoroutineScope
     ) = SdkWalletBinder(
         onOwedRescanArmed = onOwedRescanArmed,
@@ -2873,14 +2873,15 @@ class SdkWalletBinderTest {
         sdk.onArmRescan = { _, _ -> false }
         owedRescan = true
         val (config, _) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
-        var marked = 0
+        sdk.rescanTarget = 123_456L
+        val marked = mutableListOf<Long?>()
 
-        binder(sdk, config = config, onOwedRescanArmed = { marked++ }, scope = this).bindIfEnabled(unlock)
-        assertEquals("nothing was rewound", 0, marked)
+        binder(sdk, config = config, onOwedRescanArmed = { marked += it }, scope = this).bindIfEnabled(unlock)
+        assertEquals("nothing was rewound", emptyList<Long?>(), marked)
 
         sdk.onArmRescan = { _, _ -> true }
-        binder(sdk, config = config, onOwedRescanArmed = { marked++ }, scope = this).bindIfEnabled(unlock)
-        assertEquals("the rewind to birth is a replay", 1, marked)
+        binder(sdk, config = config, onOwedRescanArmed = { marked += it }, scope = this).bindIfEnabled(unlock)
+        assertEquals("the rewind to birth is a replay, told with its height", listOf<Long?>(123_456L), marked)
     }
 
     /**

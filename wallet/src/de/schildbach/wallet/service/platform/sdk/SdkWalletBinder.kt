@@ -332,7 +332,8 @@ class SdkWalletBinder internal constructor(
     // Told when [repayOwedRescans] has armed a rewind to birth: a rescan the app starts by
     // itself. Production marks the blockchain state as replaying, which is what blocks sends
     // and keeps the service alive through it, as a restore or Rescan Blockchain does.
-    private val onOwedRescanArmed: () -> Unit = {}
+    // Its argument is the height the scan was rewound to, null when unknown.
+    private val onOwedRescanArmed: (targetHeight: Long?) -> Unit = {}
 ) {
     @Inject
     constructor(
@@ -346,7 +347,9 @@ class SdkWalletBinder internal constructor(
         scope: CoroutineScope,
         backfillGate: DashPayBackfillGate,
         contactRequestDirectory: DashjPlatformContactRequestDirectory,
-        blockchainStateDataProvider: de.schildbach.wallet.service.BlockchainStateDataProvider
+        blockchainStateDataProvider: de.schildbach.wallet.service.BlockchainStateDataProvider,
+        // A Provider: L1ShadowSyncService takes this binder.
+        l1ShadowSyncService: javax.inject.Provider<L1ShadowSyncService>
     ) : this(
         sdkService = sdkService,
         mnemonicProvider = mnemonicProvider,
@@ -372,7 +375,18 @@ class SdkWalletBinder internal constructor(
             }
         },
         contactRequestDirectory = contactRequestDirectory,
-        onOwedRescanArmed = { blockchainStateDataProvider.markReplayStartedForArmedRescan() }
+        onOwedRescanArmed = { targetHeight ->
+            // The engine reports nothing about the rewind until the rescan commits its first
+            // batch, so the app's copy of the scan height is lowered here: "caught up" then
+            // reads false from now until the rescan is back at the tip.
+            val scanHeightLowered = targetHeight != null && try {
+                l1ShadowSyncService.get().noteSpvRescanArmed(targetHeight)
+            } catch (t: Throwable) {
+                log.warn("owed SDK rescan armed, but the scan height could not be lowered", t)
+                false
+            }
+            blockchainStateDataProvider.markReplayStartedForArmedRescan(scanHeightLowered)
+        }
     )
 
     /** Serializes passes — the single-flight guarantee. */
@@ -2192,12 +2206,13 @@ class SdkWalletBinder internal constructor(
         // The scan now restarts from birth: a replay, like the restore or Rescan Blockchain
         // that marks itself. First thing after the arm, before anything here suspends: the
         // marker closes the send gate before it returns.
-        runCatching { onOwedRescanArmed() }
+        val targetHeight = sdkService.spvRescanTargetHeight(birthTimeSecs)
+        runCatching { onOwedRescanArmed(targetHeight) }
             .onFailure { log.warn("owed SDK rescan armed, but the replay could not be marked", it) }
         val armed = ArmedOwedRescan(
             walletIdHex = walletIdHex,
             preArmHeight = preArmHeight,
-            targetHeight = sdkService.spvRescanTargetHeight(birthTimeSecs),
+            targetHeight = targetHeight,
             wide = widened,
             arms = saturatingIncrement(previous?.arms ?: 0)
         )

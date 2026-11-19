@@ -184,8 +184,9 @@ class BlockchainStateDataProvider @Inject constructor(
     private var replayVerdictsCountFromMs = 0L
 
     /**
-     * A rescan the app armed that the engine has not been seen to start. The SDK acts on an
-     * armed rewind 9 to 60 s after the arm, and until then reports "caught up" as before, so
+     * A rescan the app armed that the engine has not been seen to start, when the app's copy
+     * of the scan height could not be lowered to show it. The SDK acts on an armed rewind
+     * 9 to 60 s after the arm, and until then reports "caught up" as before, so
      * a "caught up" ends this replay only after the engine has reported work, or after
      * [ARMED_REPLAY_WORK_WAIT_MS] without any.
      */
@@ -550,10 +551,16 @@ class BlockchainStateDataProvider @Inject constructor(
      * [markReplayStartedForSdkTakeover] for an owed SDK rescan the app armed by itself
      * ([de.schildbach.wallet.service.platform.sdk.SdkWalletBinder]'s `repayOwedRescans`): the
      * same rewind to birth, with nobody having asked for it, so nothing else would mark it.
-     * This replay ends once the engine has reported work and then none left, see
-     * [awaitingArmedWork].
+     *
+     * [scanHeightLowered]: the app's copy of the scan height shows the rewind already
+     * (`L1ShadowSyncService.noteSpvRescanArmed`), so the engine's progress reads "not caught
+     * up" from the arm until the rescan is back at the tip, and this replay ends like any
+     * other. Without it (the height is unknown) the progress cannot be told from the scan
+     * as it was, and the replay ends once the engine has reported work and then none left,
+     * see [awaitingArmedWork].
      */
-    fun markReplayStartedForArmedRescan() = markReplayStarted(armedRescan = true)
+    fun markReplayStartedForArmedRescan(scanHeightLowered: Boolean = false) =
+        markReplayStarted(armedRescan = !scanHeightLowered)
 
     private fun markReplayStarted(armedRescan: Boolean) {
         noteReplayStarted(armedRescan)
