@@ -198,7 +198,6 @@ class IdentityRepositorySdkReadsTest {
 
         verify(exactly = 0) { platformService.platform }
         verify(exactly = 0) { platformService.client }
-        verify(exactly = 0) { platformService.stateRepository }
     }
 
     @Test
@@ -218,7 +217,6 @@ class IdentityRepositorySdkReadsTest {
         })
         verify(exactly = 0) { platformService.platform }
         verify(exactly = 0) { platformService.client }
-        verify(exactly = 0) { platformService.stateRepository }
     }
 
     @Test
@@ -234,7 +232,6 @@ class IdentityRepositorySdkReadsTest {
         }
         verify(exactly = 0) { platformService.platform }
         verify(exactly = 0) { platformService.client }
-        verify(exactly = 0) { platformService.stateRepository }
     }
 
     @Test

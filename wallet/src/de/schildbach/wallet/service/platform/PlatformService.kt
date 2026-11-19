@@ -38,7 +38,6 @@ import org.dashj.platform.sdk.callbacks.ContextProvider
 import org.dashj.platform.sdk.platform.Identities
 import org.dashj.platform.sdk.platform.Names
 import org.dashj.platform.sdk.platform.Platform
-import org.dashj.platform.sdk.platform.PlatformStateRepository
 import org.dashj.platform.wallet.IdentityVerify
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
@@ -50,7 +49,6 @@ import javax.inject.Inject
 interface PlatformService {
     val dpp: DashPlatformProtocol
     val platform: Platform
-    val stateRepository: PlatformStateRepository
     val identities: Identities
     val names: Names
     val profiles: Profiles
@@ -163,7 +161,6 @@ class PlatformServiceImplementation @Inject constructor(
     override val identityVerify
         get() = _identityVerify!!
     override val dpp: DashPlatformProtocol by lazy { platform.dpp }
-    override val stateRepository: PlatformStateRepository by lazy { platform.stateRepository }
     override val identities: Identities by lazy { platform.identities }
     override val names: Names by lazy { platform.names }
     override val client: DapiClient by lazy { platform.client }

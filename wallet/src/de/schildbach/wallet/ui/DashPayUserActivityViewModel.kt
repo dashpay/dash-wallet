@@ -128,8 +128,6 @@ class DashPayUserActivityViewModel @Inject constructor(
                 log.error("Failed to load Profile", ex)
             }
 
-            platformRepo.platform.stateRepository.addValidIdentity(userData.dashPayProfile.userIdentifier)
-            
             // Check if there's an ongoing contact request operation for this user
             if (SendContactRequestOperation.hasActiveOperation(context, userData.dashPayProfile.userId)) {
                 initContactRequestStatusObservation(userData.dashPayProfile.userId)
