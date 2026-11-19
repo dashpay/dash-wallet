@@ -119,6 +119,21 @@ fun shouldStopForIdle(history: List<SyncActivitySample>, replaying: Boolean, app
     !replaying && !appOpen && isSyncIdle(history)
 
 /**
+ * Whether the quiet samples in [history] are dropped because the app is open
+ * ([shouldStopForIdle]'s `appOpen`): the quiet window must start when the
+ * user LEAVES, not while they were looking at the app. True for an idle
+ * history and also for one still too short to judge that holds nothing but
+ * quiet samples — otherwise a lone quiet sample taken with the app open
+ * would count towards the stop, and leaving just before the next tick would
+ * stop the service on that tick. A history with recent activity is kept.
+ * Pure — host-testable.
+ */
+fun quietSamplesDroppedWhileAppOpen(history: List<SyncActivitySample>, appOpen: Boolean): Boolean =
+    appOpen && history.isNotEmpty() && (isSyncIdle(history) || history.all { it == QUIET_SAMPLE })
+
+private val QUIET_SAMPLE = SyncActivitySample(0, 0, 0, 0)
+
+/**
  * The longest an in-flight SDK engine start keeps an idle service alive
  * ([engineStartHoldsService]). A healthy start is the DashPay bring-up
  * (budgeted at 20 s) plus the SPV client's load of its stored header chain,

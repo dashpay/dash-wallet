@@ -159,6 +159,36 @@ class SyncActivityIdleDetectorTest {
     }
 
     @Test
+    fun quietSamples_areDroppedWhileTheAppIsOpen_soTheQuietWindowStartsWhenTheUserLeaves() {
+        val stable = progress()
+        val quiet = sdkActivitySample(stable, stable, txEventsSinceLastSample = 0)
+        val active = sdkActivitySample(
+            progress(headerHeight = 1_500_000, filterHeight = 1_400_000, mnListHeight = 1_499_000),
+            progress(headerHeight = 1_500_020, filterHeight = 1_402_000, mnListHeight = 1_499_010),
+            txEventsSinceLastSample = 0
+        )
+
+        // An idle history is dropped…
+        assertTrue(quietSamplesDroppedWhileAppOpen(listOf(quiet, quiet, quiet), appOpen = true))
+        // …and so is a lone quiet sample, too short for an idle verdict:
+        // kept, it would be the first of the two the stop needs, and leaving
+        // the app just before the next tick would stop the service on it.
+        assertFalse(isSyncIdle(listOf(quiet)))
+        assertTrue(quietSamplesDroppedWhileAppOpen(listOf(quiet), appOpen = true))
+
+        // Recent activity is kept, and nothing is dropped in the background.
+        assertFalse(quietSamplesDroppedWhileAppOpen(listOf(active), appOpen = true))
+        assertFalse(quietSamplesDroppedWhileAppOpen(listOf(quiet, active), appOpen = true))
+        assertFalse(quietSamplesDroppedWhileAppOpen(listOf(quiet, quiet, quiet), appOpen = false))
+        assertFalse(quietSamplesDroppedWhileAppOpen(emptyList(), appOpen = true))
+
+        // The ticks after the user leaves, starting from the emptied history:
+        // one quiet sample is not enough, the second stops the service.
+        assertFalse(shouldStopForIdle(listOf(quiet), replaying = false, appOpen = false))
+        assertTrue(shouldStopForIdle(listOf(quiet, quiet), replaying = false, appOpen = false))
+    }
+
+    @Test
     fun activeCounters_neverStop_regardlessOfTheReplayFlag() {
         val before = progress(headerHeight = 1_500_000, filterHeight = 1_400_000, mnListHeight = 1_499_000)
         val after = progress(headerHeight = 1_500_020, filterHeight = 1_402_000, mnListHeight = 1_499_010)

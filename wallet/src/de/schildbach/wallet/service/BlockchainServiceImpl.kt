@@ -2618,12 +2618,13 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             // user would accept, whatever the counters say (see [shouldStopForIdle]).
             // Read from the monitor itself, not the copy this service collects.
             val appOpen = !AppForegroundMonitor.isInBackground
-            if (isSyncIdle(activityHistory) && appOpen) {
+            if (quietSamplesDroppedWhileAppOpen(activityHistory, appOpen)) {
                 log.info("idle counters, but the app is open — keeping the service alive")
                 // As for the engine start above: the quiet samples must not
                 // carry over, or the first tick after the user leaves would
                 // stop the service at once and a quick return would find the
-                // engine restarting.
+                // engine restarting. That includes a lone quiet sample, so the
+                // quiet window always starts from empty when the user leaves.
                 activityHistory.clear()
                 return
             }
