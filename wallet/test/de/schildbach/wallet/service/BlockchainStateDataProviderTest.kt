@@ -376,6 +376,62 @@ class BlockchainStateDataProviderTest {
         awaitUntil("gate follows") { provider.isReplayingOrNull() == false }
     }
 
+    /**
+     * Pre-review, 2026-11-19. The feed reports changes only: a "caught up" ignored in the
+     * settle time is not reported again until the next block, so it is read once more when
+     * the settle time is over.
+     */
+    @Test
+    fun aReplayThatIsOverWithinTheSettleTime_endsWhenItIsOver_withoutAnotherReport() {
+        provider.replayVerdictSettleMs = 400
+        dao.state = syncedRow()
+        provider.markReplayStartedForArmedRescan()
+        awaitUntil("marker applied") { dao.state?.replaying == true }
+
+        provider.updateSdkBlockchainState(caughtUp(11))
+        awaitUntil("applied") { dao.state?.bestChainHeight == 11 }
+        assertTrue("not before the settle time is over", dao.state!!.replaying)
+        assertEquals(true, provider.isReplayingOrNull())
+
+        awaitUntil("replay ended") { dao.state?.replaying == false }
+        awaitUntil("gate follows") { provider.isReplayingOrNull() == false }
+    }
+
+    /** A scanner that stopped after its last "caught up" (the restart for a rescan) has not said so. */
+    @Test
+    fun aCaughtUpFollowedByAStoppedScanner_doesNotEndTheReplayAtTheSettleTime() {
+        provider.replayVerdictSettleMs = 300
+        dao.state = syncedRow()
+        provider.markReplayStartedForArmedRescan()
+        awaitUntil("marker applied") { dao.state?.replaying == true }
+
+        provider.updateSdkBlockchainState(caughtUp(11))
+        provider.updateSdkBlockchainState(sdkUpdate(bestChainHeight = 12, replayComplete = null))
+        awaitUntil("both applied") { dao.state?.bestChainHeight == 12 }
+
+        Thread.sleep(800) // past the settle time and its second look
+        assertTrue(dao.state!!.replaying)
+        assertEquals(true, provider.isReplayingOrNull())
+    }
+
+    @Test
+    fun theSecondLookOfAnEarlierReplay_doesNotEndANewerOne() {
+        provider.replayVerdictSettleMs = 300
+        dao.state = syncedRow()
+        provider.markReplayStartedForArmedRescan()
+        awaitUntil("marker applied") { dao.state?.replaying == true }
+        provider.updateSdkBlockchainState(caughtUp(11))
+        awaitUntil("applied") { dao.state?.bestChainHeight == 11 }
+
+        // A second replay starts before the first one's second look; its own is far off.
+        provider.replayVerdictSettleMs = 60_000
+        provider.markReplayStartedForArmedRescan()
+        Thread.sleep(800)
+
+        assertTrue("the row still says replaying", dao.state!!.replaying)
+        assertEquals(true, provider.isReplayingOrNull())
+    }
+
     /** A second replay started before the first one's settle time is over starts its own. */
     @Test
     fun aReplayStartedAgain_startsItsSettleTimeAgain() {

@@ -164,8 +164,17 @@ class BlockchainStateDataProvider @Inject constructor(
      */
     private val replayStartedHere = MutableStateFlow(false)
 
-    /** Guards [replayVerdictsCountFromMs] and every change of [replayStartedHere]. */
+    /** Guards the three fields below and every change of [replayStartedHere]. */
     private val replayLock = Any()
+
+    /** Counts the replays started here, so a job that belongs to an earlier one can tell. */
+    private var replayGeneration = 0L
+
+    /**
+     * The engine's last report: true "complete", false still working, null when it could not
+     * tell (stopped, connecting, error) or has not reported.
+     */
+    private var lastSdkReplayComplete: Boolean? = null
 
     /**
      * From when, on [monotonicMs], the engine's reports are about the replay in
@@ -189,10 +198,58 @@ class BlockchainStateDataProvider @Inject constructor(
     /** [REPLAY_VERDICT_SETTLE_MS]; shortened in tests. */
     internal var replayVerdictSettleMs = REPLAY_VERDICT_SETTLE_MS
 
-    /** A replay starts now: closes the send gate before this returns. */
-    private fun noteReplayStarted() = synchronized(replayLock) {
-        replayVerdictsCountFromMs = monotonicMs() + replayVerdictSettleMs
-        replayStartedHere.value = true
+    /**
+     * A replay starts now: closes the send gate before this returns.
+     *
+     * The progress feed reports changes only. A replay that had nothing to scan, or was over
+     * within the settle time, has its "complete" ignored ([mayEndReplay]) and may not be
+     * reported again until the next block, so the engine's last word is read once more when
+     * the settle time is over.
+     */
+    private fun noteReplayStarted() {
+        val settleMs = replayVerdictSettleMs
+        val generation = synchronized(replayLock) {
+            replayVerdictsCountFromMs = monotonicMs() + settleMs
+            replayStartedHere.value = true
+            ++replayGeneration
+        }
+        coroutineScope.launch {
+            delay(settleMs)
+            endReplayIfEngineIsDone(generation)
+        }
+    }
+
+    /**
+     * End the replay of [generation] if the engine's last report is "complete". The generation
+     * is checked again after the row is read, and the row is only written under
+     * [replayRowMutex], so a replay that starts meanwhile is neither ended in memory nor
+     * overwritten in the row.
+     */
+    private suspend fun endReplayIfEngineIsDone(generation: Long) = replayRowMutex.withLock {
+        val state = try {
+            blockchainStateDao.getState()
+        } catch (ex: SQLiteException) {
+            log.warn("could not read the blockchain state to end a replay", ex)
+            null
+        }
+        val ended = synchronized(replayLock) {
+            if (replayGeneration != generation || !replayStartedHere.value || lastSdkReplayComplete != true) {
+                false
+            } else {
+                replayStartedHere.value = false
+                true
+            }
+        }
+        if (!ended) return@withLock
+        log.info("replay ended at its settle time: the engine reports no work left")
+        if (state != null && state.replaying) {
+            state.replaying = false
+            try {
+                blockchainStateDao.saveState(state)
+            } catch (ex: SQLiteException) {
+                log.warn("could not save the end of a replay; the next progress update does", ex)
+            }
+        }
     }
 
     /**
@@ -208,8 +265,9 @@ class BlockchainStateDataProvider @Inject constructor(
      * A replay this process did not start (the row said so at launch) ends on the first
      * "complete", as before: an engine that has just started reports work until it is done.
      */
-    private fun mayEndReplay(replayComplete: Boolean, receivedAtMs: Long): Boolean = synchronized(replayLock) {
-        if (!replayComplete) return false
+    private fun mayEndReplay(replayComplete: Boolean?, receivedAtMs: Long): Boolean = synchronized(replayLock) {
+        lastSdkReplayComplete = replayComplete
+        if (replayComplete != true) return false
         if (!replayStartedHere.value) return true
         if (receivedAtMs < replayVerdictsCountFromMs) return false
         replayStartedHere.value = false
@@ -334,7 +392,7 @@ class BlockchainStateDataProvider @Inject constructor(
             //
             // A "complete" that predates a replay started here does not end
             // it: see [mayEndReplay].
-            if (update.replayComplete?.let { mayEndReplay(it, receivedAtMs) } == true) {
+            if (mayEndReplay(update.replayComplete, receivedAtMs)) {
                 blockchainState.replaying = false
             }
             // The engine's own "still working" verdict, for the service's keep-alive only
@@ -380,6 +438,7 @@ class BlockchainStateDataProvider @Inject constructor(
         launchRowWrite {
             sdkStallNetworkImpediment = false
             sdkEngineWorking = false
+            synchronized(replayLock) { lastSdkReplayComplete = null }
             syncStageFlow.value = null
             val blockchainState = blockchainStateDao.getState()
             if (blockchainState != null) {
