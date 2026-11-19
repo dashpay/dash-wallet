@@ -139,23 +139,6 @@ class CoinJoinMixedFundsSourceTest {
         assertTrue(f.service.shouldPrompt())
     }
 
-    /**
-     * Review, #1714. `replaying` no longer covers an ordinary catch-up, so `isSynced()` can read
-     * true at 100% display progress while blocks are still being processed. This balance is
-     * quoted and drives a forced prompt: it waits for the engine to have no work left.
-     */
-    @Test
-    fun postCutover_engineStillWorkingOnACatchUp_doesNotQuoteOrPrompt() = runTest {
-        val f = Fixture(this, cutover = true, sdkJson = coinJoinRow(150_000_000L))
-        every { f.blockchain.isSyncEngineWorking() } returns true
-        assertNull(f.service.mixedFundsToMigrate())
-        assertFalse(f.service.shouldPrompt())
-
-        every { f.blockchain.isSyncEngineWorking() } returns false
-        assertEquals(Coin.valueOf(150_000_000L), f.service.mixedFundsToMigrate())
-        assertTrue(f.service.shouldPrompt())
-    }
-
     @Test
     fun postCutover_closedConsolidationGateWithoutShielding_doesNotPrompt() = runTest {
         val f = Fixture(this, cutover = true, sdkJson = coinJoinRow(150_000_000L))

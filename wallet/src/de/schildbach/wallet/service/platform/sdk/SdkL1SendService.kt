@@ -244,12 +244,9 @@ internal fun sendAllFeeReserveDuffs(pooledUtxoCount: Int?): Long {
 
 /**
  * The [SdkWriteResult.NotBroadcast] reason prefix for a CLOSED L1 funding
- * gate — a restore or rescan is replaying the wallet's history, or the
- * engine is not running, has no peers or reports an error
- * ([evaluateWalletFundingGate]); an ordinary catch-up does not close it.
- * It is a refusal before anything is built or submitted, and the one that
- * genuinely means "the wallet is not ready to send yet".
- * [de.schildbach.wallet.payments.SendCoinsTaskRunner]
+ * gate — the engine is not running or its filter scan has not caught up to
+ * the chain tip yet, i.e. the one refusal that genuinely means "the wallet
+ * is not synced enough to send". [de.schildbach.wallet.payments.SendCoinsTaskRunner]
  * keys the user-facing "not fully synced" diagnosis off this prefix; every
  * other NotBroadcast reason (flag off, bad address, builder shortfall, …)
  * must NOT be presented as a sync problem.
@@ -1177,9 +1174,8 @@ internal class DashSdkL1SendSource(
  *
  * The SDK spends from its OWN SPV view of the shared seed's UTXOs, so a
  * send is only allowed when [evaluateWalletFundingGate] passes on the
- * engine's live sync progress ([L1ShadowSyncService.progress]) and the
- * replay flag: engine running with peers, no sync error, and no replay
- * (restore or rescan) in progress. An ordinary catch-up is allowed. The old
+ * engine's live sync progress ([L1ShadowSyncService.progress]): engine
+ * running and its filter scan caught up to the chain tip. The old
  * dashj-parity requirement is retired — the held dashj wallet is frozen
  * post-cutover and can never learn of external receives, so parity would
  * close this gate forever after the first inbound payment (and the SDK's
@@ -1238,12 +1234,6 @@ class SdkL1SendService internal constructor(
      * constructions that don't provide it.
      */
     private val l1Progress: () -> ShadowSyncProgress = { ShadowSyncProgress.IDLE },
-    /**
-     * The blockchain state's `replaying` flag, for the send gate; null = not known. Same wiring
-     * as [ShieldedBalanceServiceImpl]. Default false: [l1Progress]'s IDLE default already keeps
-     * the gate closed for constructions that provide neither.
-     */
-    private val isReplaying: () -> Boolean? = { false },
     /**
      * Send-all guard (funds-critical): does the HELD dashj wallet still
      * track ANY app-locked output ([org.bitcoinj.wallet.Wallet.lockOutput] —
@@ -1342,8 +1332,7 @@ class SdkL1SendService internal constructor(
         // A Provider: the verifier reaches this service through its engine, so a direct edge
         // would be a dependency cycle.
         pendingPaymentVerifier: javax.inject.Provider<de.schildbach.wallet.payments.PendingDirectPaymentVerifier>,
-        fundingSelection: de.schildbach.wallet.payments.FundingSelectionLock,
-        blockchainStateDataProvider: de.schildbach.wallet.service.BlockchainStateDataProvider
+        fundingSelection: de.schildbach.wallet.payments.FundingSelectionLock
     ) : this(
         source = DashSdkL1SendSource(sdkService),
         dashPayConfig = dashPayConfig,
@@ -1357,7 +1346,6 @@ class SdkL1SendService internal constructor(
             }
         },
         l1Progress = { l1ShadowSyncService.progress.value },
-        isReplaying = { blockchainStateDataProvider.isReplayingOrNull() },
         hasAppLockedSpendableOutputs = {
             // The held dashj wallet stays the AUTHORITY on app-side locks
             // post-cutover (CrowdNode locks via WalletDataAdapter →
@@ -1469,9 +1457,8 @@ class SdkL1SendService internal constructor(
     /**
      * Read-only probe of the L1 send evidence gate — THE SAME predicate
      * [sendToAddress] evaluates before broadcasting ([evaluateWalletFundingGate]
-     * over the engine's live progress and the replay state: engine running
-     * with peers, no restore or rescan replaying; an ordinary catch-up is
-     * allowed). Extracted so the debug settings screen can show
+     * over the engine's live progress: engine running + filter scan caught
+     * up to the chain tip). Extracted so the debug settings screen can show
      * the live gate state without approximating the rule. Never mutates
      * anything and never throws — a progress-read failure reads as a closed
      * gate, exactly as it would on a real send ([safeProgress]).
@@ -1479,52 +1466,56 @@ class SdkL1SendService internal constructor(
      * binding), so an open gate means "the SDK engine WOULD be used if
      * those pass", not a guarantee.
      */
-    internal fun probeSendGate(): WalletFundingGate = evaluateWalletFundingGate(safeProgress(), safeReplaying())
+    internal fun probeSendGate(): WalletFundingGate = evaluateWalletFundingGate(safeProgress())
 
     /**
-     * The gate asked again under the funding hold, right before the SDK selects coins: null when
-     * it is open, otherwise the refusal. The first answer ([awaitSendGate] or [probeSendGate])
-     * comes before the wait for the hold, and a rescan can start during that wait (review,
-     * #1714). Asked once, never waited for. Not asked by the paths that only finish something
-     * already built ([broadcastDeferredPayment], [rebroadcastCoinJoinConsolidation]).
-     */
-    private fun gateRefusalUnderHold(): String? =
-        probeSendGate().takeIf { !it.allowed }?.let { "$L1_FUNDING_GATE_CLOSED_REASON: ${it.reason}" }
-
-    /**
-     * [gateRefusalUnderHold] for the paths that wait once more, for the SDK's send lock
-     * ([SdkL1SendSource.withCoreSendLock]): asked inside that lock, right before the submission
-     * is marked. Thrown, because the lock's block returns a txid; nothing has been built.
-     */
-    private fun checkGateInsideSendLock() {
-        gateRefusalUnderHold()?.let { throw GateClosedInsideSendLock(it) }
-    }
-
-    private class GateClosedInsideSendLock(val reason: String) : IllegalStateException(reason)
-
-    /**
-     * [probeSendGate], waiting up to [sendGateWaitMs] for a closed gate to open. A payment opened
-     * right after a launch (a scanned invoice, a deep link) asks before the engine has started
-     * or found a peer, which takes seconds: on a 12.0.1-beta launch (2026-11-17) the engine was
-     * up 20 s after the process started and the invoice arrived one second later. Returns the
-     * last answer, open or still closed. Only a gate that can open within seconds is waited
-     * for ([WalletFundingGate.mayOpenSoon]): a replay or an engine error is answered at once.
+     * [probeSendGate], waiting up to [sendGateWaitMs] for a closed gate to open. A payment screen
+     * opened right after a launch or a return from the background asks while the engine is still
+     * scanning the blocks mined meanwhile, which takes seconds: failing at once left a refusal
+     * on a screen whose wallet was synced moments later (Joel, 12.0.1-beta, 2026-11-17: refused
+     * 3 s before the scan reached the tip). Returns the last answer, open or still closed.
      *
-     * The gate of [sendToAddress] and [buildDeferredPayment]. Everything else (the Maya quote and
-     * deposit, the CoinJoin drain and consolidation) asks [probeSendGate] once.
+     * The gate of every send a user is waiting on: [sendToAddress] (not a send-all, see there),
+     * [buildDeferredPayment] and [buildDeferredMayaDeposit]. Quotes and background work (the
+     * Maya max quote, the CoinJoin drain and consolidation) ask [probeSendGate] once: nobody is
+     * waiting on them, and they are asked again later.
+     *
+     * @param alreadyWaitedMs time the caller already spent in [awaitBoundWalletId], taken off
+     *   this wait: one send waits [sendGateWaitMs] in all.
      */
-    internal suspend fun awaitSendGate(): WalletFundingGate {
+    internal suspend fun awaitSendGate(alreadyWaitedMs: Long = 0L): WalletFundingGate {
         var gate = probeSendGate()
-        var waitedMs = 0L
-        while (!gate.allowed && gate.mayOpenSoon && waitedMs < sendGateWaitMs) {
+        var waitedMs = alreadyWaitedMs
+        while (!gate.allowed && waitedMs < sendGateWaitMs) {
             delay(SEND_GATE_POLL_MS)
             waitedMs += SEND_GATE_POLL_MS
             gate = probeSendGate()
         }
-        if (waitedMs > 0) {
+        if (waitedMs > alreadyWaitedMs) {
             log.info("SDK send gate after waiting {} ms: allowed={} ({})", waitedMs, gate.allowed, gate.reason)
         }
         return gate
+    }
+
+    /**
+     * [SdkL1SendSource.boundWalletIdOrNull], asked again for up to [sendGateWaitMs] while it
+     * answers null. The app wallet is registered with the SDK by a bind that runs apart from the
+     * runtime's start, so a payment request opened right after a launch can ask before it
+     * (thepastaclaw on #1714). Returns the id, or null when there is still none, and the time
+     * spent for [awaitSendGate].
+     */
+    private suspend fun awaitBoundWalletId(): Pair<String?, Long> {
+        var bound = source.boundWalletIdOrNull()
+        var waitedMs = 0L
+        while (bound == null && waitedMs < sendGateWaitMs) {
+            delay(SEND_GATE_POLL_MS)
+            waitedMs += SEND_GATE_POLL_MS
+            bound = source.boundWalletIdOrNull()
+        }
+        if (waitedMs > 0) {
+            log.info("SDK wallet bind after waiting {} ms: bound={}", waitedMs, bound != null)
+        }
+        return bound to waitedMs
     }
 
     /**
@@ -1587,21 +1578,26 @@ class SdkL1SendService internal constructor(
             return notBroadcast(operation, "malformed or wrong-network address", null)
         }
 
-        // Preflight — nothing has been submitted if any of this fails.
-        val walletIdHex = try {
-            source.boundWalletIdOrNull()
-                ?: return notBroadcast(operation, "app wallet not bound to the SDK", null)
+        // Preflight — nothing has been submitted if any of this fails. A send-all asks once
+        // and never waits; see the gate below.
+        val (walletIdHex, bindWaitMs) = try {
+            val (bound, waitedMs) = if (emptyWallet) source.boundWalletIdOrNull() to 0L else awaitBoundWalletId()
+            (bound ?: return notBroadcast(operation, "app wallet not bound to the SDK", null)) to waitedMs
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             return notBroadcast(operation, "SDK bootstrap/bind lookup failed", t)
         }
 
         // Evidence gate — the same rule as shieldFromWallet, via the SAME
-        // helper: engine running with peers, no sync error, no replay in progress
+        // helper: engine running + filter scan caught up to the chain tip
         // (SDK-only preconditions — see evaluateWalletFundingGate).
         // Shared with the debug settings status line via probeSendGate. A user is waiting on
         // this send, so a gate that is about to open is waited for ([awaitSendGate]).
-        val gate = awaitSendGate()
+        // Not a send-all: it pays whatever the wallet holds when it runs, and the amount the
+        // user confirmed was read before the wait. Coins the scan finds during a wait would go
+        // out with it, above that amount (thepastaclaw on #1714). It is refused at once, as
+        // before the wait existed, and the user sends again from a synced screen.
+        val gate = if (emptyWallet) probeSendGate() else awaitSendGate(bindWaitMs)
         if (!gate.allowed) {
             return notBroadcast(operation, "$L1_FUNDING_GATE_CLOSED_REASON: ${gate.reason}", null)
         }
@@ -1691,7 +1687,6 @@ class SdkL1SendService internal constructor(
             // Last, right before the SDK call: the wallet bound now is still the one this send
             // was decided for.
             boundWalletRefusal(walletIdHex)?.let { return@withSharedOrNotBroadcast notBroadcast(operation, it, null) }
-            gateRefusalUnderHold()?.let { return@withSharedOrNotBroadcast notBroadcast(operation, it, null) }
             try {
                 val txidHex = if (sendAllFloor != null) {
                     // ONE core-send-lock acquisition across BOTH drain attempts:
@@ -1705,7 +1700,6 @@ class SdkL1SendService internal constructor(
                         // Inside the lock, right before the native call: a wipe that cancels the
                         // (cancellable) wait for the lock has sent nothing — NotBroadcast. From
                         // here a wipe that cancels this leaves the outcome unknown.
-                        checkGateInsideSendLock()
                         mark.submitting()
                         try {
                             source.sendAllToAddress(walletIdHex, address, sendAllFloor)
@@ -1718,10 +1712,6 @@ class SdkL1SendService internal constructor(
                                 "SDK {}: floor {} duffs not deliverable at fee; retrying engine-authoritatively",
                                 operation, sendAllFloor, t
                             )
-                            // The send lock does not hold off a rescan: one that started
-                            // during the first attempt stops the second. That attempt was
-                            // not broadcast and this one has not begun, so NotBroadcast.
-                            checkGateInsideSendLock()
                             source.sendAllToAddress(walletIdHex, address, 1L)
                         }
                     }
@@ -1740,8 +1730,6 @@ class SdkL1SendService internal constructor(
                 runCatching { bridgeAfterBroadcast(txidHex) }
                     .onFailure { log.warn("failed to launch the bridged-tx commit for {}", txidHex, it) }
                 SdkWriteResult.Broadcast(txidHex)
-            } catch (t: GateClosedInsideSendLock) {
-                notBroadcast(operation, t.reason, null)
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
                 val classified = classifyCoreSendFailure(t)
@@ -1838,12 +1826,10 @@ class SdkL1SendService internal constructor(
                 return@withSharedOrNotBroadcast notBroadcast(operation, L1_PENDING_PAYMENT_UNPROTECTED_REASON, null)
             }
             boundWalletRefusal(walletIdHex)?.let { return@withSharedOrNotBroadcast notBroadcast(operation, it, null) }
-            gateRefusalUnderHold()?.let { return@withSharedOrNotBroadcast notBroadcast(operation, it, null) }
             try {
                 val txidHex = source.withCoreSendLock(walletIdHex) {
                     // Inside the lock, right before the native call: a wipe that cancels the wait
                     // for the lock has sent nothing — NotBroadcast.
-                    checkGateInsideSendLock()
                     mark.submitting()
                     source.drainCoinJoinToAddress(walletIdHex, address, COIN_JOIN_DRAIN_FLOOR_DUFFS)
                 }
@@ -1853,8 +1839,6 @@ class SdkL1SendService internal constructor(
                 runCatching { bridgeAfterBroadcast(txidHex) }
                     .onFailure { log.warn("failed to launch the bridged-tx commit for {}", txidHex, it) }
                 SdkWriteResult.Broadcast(txidHex)
-            } catch (t: GateClosedInsideSendLock) {
-                notBroadcast(operation, t.reason, null)
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
                 when (val classified = classifyCoreSendFailure(t)) {
@@ -1921,7 +1905,6 @@ class SdkL1SendService internal constructor(
                     return@withSharedOrNotBroadcast notBroadcast(operation, L1_PENDING_PAYMENT_UNPROTECTED_REASON, null)
                 }
                 boundWalletRefusal(walletId)?.let { return@withSharedOrNotBroadcast notBroadcast(operation, it, null) }
-                gateRefusalUnderHold()?.let { return@withSharedOrNotBroadcast notBroadcast(operation, it, null) }
                 consolidateCoinJoinUnderHold(walletId, destination, amount, drain, prepared, mark).also { completed = it }
             }
         } catch (e: CancellationException) {
@@ -1938,7 +1921,6 @@ class SdkL1SendService internal constructor(
         return try {
             val txid = source.withCoreSendLock(walletId) {
                 checkNotNull(source.destinationOwner(walletId, destination)) { DESTINATION_NOT_OWNED }
-                checkGateInsideSendLock()
                 // Once [prepared] records the txid, the broadcast must follow: a cancellation
                 // in between would abandon a tx the stage already records as sent.
                 mark.submitting()
@@ -1953,8 +1935,6 @@ class SdkL1SendService internal constructor(
             runCatching { onSelfSpendBroadcast() }
             runCatching { bridgeAfterBroadcast(txid) }
             SdkWriteResult.Broadcast(txid)
-        } catch (t: GateClosedInsideSendLock) {
-            SdkWriteResult.NotBroadcast(t.reason)
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             if (!preparedForBroadcast) SdkWriteResult.NotBroadcast("consolidation preparation failed", t)
@@ -2056,10 +2036,13 @@ class SdkL1SendService internal constructor(
             }
             clean to amountDuffs
         }
-        val walletIdHex = checkNotNull(source.boundWalletIdOrNull()) {
-            "app wallet not bound to the SDK"
+        val (boundWalletId, bindWaitMs) = awaitBoundWalletId()
+        // Still none after the wait: refused as a closed gate, so the screen says "syncing" and
+        // offers the build again. Nothing was built.
+        val walletIdHex = checkNotNull(boundWalletId) {
+            "$L1_FUNDING_GATE_CLOSED_REASON: app wallet not bound to the SDK yet"
         }
-        val gate = awaitSendGate()
+        val gate = awaitSendGate(bindWaitMs)
         check(gate.allowed) { "$L1_FUNDING_GATE_CLOSED_REASON: ${gate.reason}" }
         val reservedAtHeight = reservationHeightLowerBound()
         // Re-asked under the shared selection lock, held through selection and the reservation
@@ -2068,7 +2051,6 @@ class SdkL1SendService internal constructor(
             if (pendingPaymentInputsExposed()) throw paymentStillConfirming("l1DeferredBuild")
             check(stillOwned()) { "the wallet this payment was confirmed on has been wiped; not building it" }
             boundWalletRefusal(walletIdHex)?.let { throw IllegalStateException(it) }
-            gateRefusalUnderHold()?.let { throw IllegalStateException(it) }
             source.buildDeferredPayment(walletIdHex, trimmed).stamped(walletIdHex, reservedAtHeight)
         }
         log.info(
@@ -2201,8 +2183,8 @@ class SdkL1SendService internal constructor(
         val walletIdHex = checkNotNull(source.boundWalletIdOrNull()) {
             "app wallet not bound to the SDK"
         }
-        val gate = probeSendGate()
-        check(gate.allowed) { "L1 funding gate closed: ${gate.reason}" }
+        val gate = awaitSendGate()
+        check(gate.allowed) { "$L1_FUNDING_GATE_CLOSED_REASON: ${gate.reason}" }
         // FAIL-CLOSED GUARD (funds-critical), max deposits only: a max deposit
         // selects (essentially) every spendable UTXO the pooled default reaches
         // — BIP44 + BIP32 + every DashPay contact-receiving account — and the
@@ -2232,7 +2214,6 @@ class SdkL1SendService internal constructor(
             if (pendingPaymentInputsExposed()) throw paymentStillConfirming("mayaDepositBuild")
             check(stillOwned()) { "the wallet this deposit was confirmed on has been wiped; not building it" }
             boundWalletRefusal(walletIdHex)?.let { throw IllegalStateException(it) }
-            gateRefusalUnderHold()?.let { throw IllegalStateException(it) }
             source.buildDeferredMayaDeposit(walletIdHex, vault, vaultDuffs, memo)
         }
             .stamped(walletIdHex, reservedAtHeight)
@@ -2374,14 +2355,6 @@ class SdkL1SendService internal constructor(
         isValidAddress(address)
     } catch (e: Exception) {
         false
-    }
-
-    /** The replay flag for the send gate; a failed read is "not known", which keeps it closed. */
-    private fun safeReplaying(): Boolean? = try {
-        isReplaying()
-    } catch (e: Exception) {
-        log.warn("failed to read the blockchain replay state; send gate stays closed", e)
-        null
     }
 
     private fun safeProgress(): ShadowSyncProgress = try {

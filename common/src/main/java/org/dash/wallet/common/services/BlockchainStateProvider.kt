@@ -49,12 +49,4 @@ interface BlockchainStateProvider {
 
     fun observeSyncStage(): Flow<SyncStage?>
     fun getSyncStage(): SyncStage
-
-    /**
-     * Whether the sync engine last reported work still to do: an ordinary catch-up as well as
-     * a replay. [BlockchainState.replaying] is true only for a restore or a rescan, and
-     * [BlockchainState.isSynced] can read true while a catch-up is still being processed, so a
-     * caller that needs a FINAL view of the wallet asks this too. False when nothing reported.
-     */
-    fun isSyncEngineWorking(): Boolean = false
 }

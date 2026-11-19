@@ -1615,7 +1615,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
      */
     private fun rescheduleIfReplayInterrupted() {
         try {
-            val replaying = replayOrEngineWorking()
+            val replaying = blockchainState?.replaying == true
             val deliberateStop = deleteWalletFileOnShutdown || resetBlockchainOnShutdown
             val bindBlocked = ::sdkBindRetryService.isInitialized && sdkBindRetryService.blocker.value != null
             when (
@@ -2556,7 +2556,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             // replay, so the service is allowed to idle out — the unlock
             // receiver / foreground edge bring it back.
             val bindBlocked = sdkBindBlocked()
-            val replaying = replayOrEngineWorking() && !bindBlocked
+            val replaying = blockchainState?.replaying == true && !bindBlocked
             // An SDK engine start in flight reports no progress, so it reads idle too.
             // Same treatment as a replay — stay up, and hold the wake lock so the
             // start is not dozed — but capped (see [engineStartHoldsService]).
@@ -3932,23 +3932,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         )
     }
 
-    /**
-     * What keeps this service alive and awake through scan work: a replay (the row's
-     * `replaying` flag: a restore, a Rescan Blockchain or the post-upgrade scan), or, once the
-     * SDK owns L1, an engine that still has work to do
-     * ([BlockchainStateDataProvider.isSdkEngineWorking]), which includes an ordinary catch-up.
-     * The idle rule guard, the replay wake lock and the restart alarm all ask this. `replaying`
-     * alone answered it from #1568 until the flag got its rescan-only meaning back.
-     */
-    private fun replayOrEngineWorking(): Boolean = blockchainState?.replaying == true || sdkEngineWorking()
-
-    /** The engine half of [replayOrEngineWorking]. */
-    private fun sdkEngineWorking(): Boolean =
-        dashjHeldByCutover && blockchainStateDataProvider.isSdkEngineWorking()
-
     /** The replay half of the hold decision, read now. */
     private fun replayWakeLockDue(): Boolean = dashjHeldByCutover && replayHoldsWakeLock(
-        replaying = replayOrEngineWorking() && !sdkBindBlocked(),
+        replaying = blockchainState?.replaying == true && !sdkBindBlocked(),
         networkImpeded = impediments.contains(Impediment.NETWORK),
         filterScanWedged = l1ShadowSyncService.filterScanWedged()
     )
@@ -4194,10 +4180,8 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                                     "staying in the foreground until it is done"
                             )
                         }
-                    } else if (blockchainState.replaying || syncing || sdkEngineWorking()) {
-                        // Shows ongoing notification when synchronizing the blockchain. Engine
-                        // work counts, as it did while `replaying` carried it (#1568): a
-                        // catch-up whose tip is under an hour old is still a sync.
+                    } else if (blockchainState.replaying || syncing) {
+                        //Shows ongoing notification when synchronizing the blockchain
                         val notification = createNetworkSyncNotification(blockchainState)
                         nm!!.notify(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification)
                     }

@@ -131,10 +131,9 @@ class PaymentProtocolViewModel @Inject constructor(
         get() = deferredPayment != null || isResubmission
 
     /**
-     * True when the preview could not be built only because the send gate was closed
-     * ([SendEngineNotSyncedException]: a restore or rescan in progress, or the engine not running
-     * or without peers): nothing was built or reserved, so building again is safe, and it
-     * succeeds once the gate opens. No other failure is retried here.
+     * True when the preview could not be built only because the wallet had not caught up with the
+     * chain ([SendEngineNotSyncedException]): nothing was built or reserved, so building again is
+     * safe, and it succeeds once the scan reaches the tip. No other failure is retried here.
      */
     val canRetryPreview: Boolean
         get() = !canSendPayment && finalPaymentIntent != null &&
@@ -148,9 +147,20 @@ class PaymentProtocolViewModel @Inject constructor(
     fun retryPreview() {
         val paymentIntent = finalPaymentIntent ?: return
         if (!canRetryPreview) return
+        retryResultPending = true
         _sendRequestLiveData.value = Resource.loading(null)
         viewModelScope.launch(Dispatchers.IO) { createBaseSendRequest(paymentIntent) }
     }
+
+    /**
+     * True from [retryPreview] until the screen has taken that build's result. Kept here and not
+     * in the fragment: the build outlives a rotation, and the fragment that receives its failure
+     * must still know the user asked for it (thepastaclaw on #1714). Main thread only.
+     */
+    private var retryResultPending = false
+
+    /** Whether the result now shown answers a [retryPreview]; true once per retry. */
+    fun consumeRetryResult(): Boolean = retryResultPending.also { retryResultPending = false }
 
     private val _sendRequestLiveData = MutableLiveData<Resource<SendRequest?>>()
     val sendRequestLiveData: LiveData<Resource<SendRequest?>>

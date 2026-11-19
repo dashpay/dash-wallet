@@ -326,13 +326,10 @@ class SdkL1SendServiceTest {
         unprotectedPendingPayment: suspend () -> Boolean = { false },
         // No wait by default, so a closed-gate test refuses at once; the wait has its own tests.
         sendGateWaitMs: Long = 0L,
-        // No replay by default; null = the replay state could not be read.
-        replaying: () -> Boolean? = { false },
         fundingSelection: de.schildbach.wallet.payments.FundingSelectionLock =
             de.schildbach.wallet.payments.FundingSelectionLock()
     ) = SdkL1SendService(
         sendGateWaitMs = sendGateWaitMs,
-        isReplaying = replaying,
         source = source,
         dashPayConfig = config(enabled, cutoverState),
         isValidAddress = addressValid,
@@ -606,7 +603,6 @@ class SdkL1SendServiceTest {
         source: FakeSource,
         seamRegistry: SeamOutputLockRegistry = SeamOutputLockRegistry(),
         unprotectedPendingPayment: suspend () -> Boolean = { false },
-        replaying: () -> Boolean? = { false },
         fundingSelection: de.schildbach.wallet.payments.FundingSelectionLock =
             de.schildbach.wallet.payments.FundingSelectionLock()
     ) = SdkL1SendService(
@@ -614,7 +610,6 @@ class SdkL1SendServiceTest {
         dashPayConfig = config(true),
         isValidAddress = { true },
         l1Progress = { caughtUpProgress() },
-        isReplaying = replaying,
         hasAppLockedCoinJoinOutputs = { false },
         seamOutputLockRegistry = seamRegistry,
         hasUnprotectedPendingPayment = unprotectedPendingPayment,
@@ -922,101 +917,92 @@ class SdkL1SendServiceTest {
     }
 
     @Test
-    fun behindTheTip_withNoReplay_isBroadcast() = runBlocking {
-        // An ordinary catch-up does not close the gate, as on dashj and iOS (12.0.1-beta
-        // report, 2026-11-17: a launch 208 blocks behind refused a payment). Every shape the
-        // gate refused from #1632 on: headers still climbing, the filter scan behind the tip,
-        // the wallet cursor behind or unknown.
-        val openProgressions = listOf(
+    fun gateClosed_scanNotCaughtUp_isNotBroadcast() = runBlocking {
+        val source = readySource()
+        // Every genuinely-not-caught-up shape closes the gate: headers still
+        // climbing, a filter scan far behind the header tip, and an all-zero
+        // snapshot (the post-reset watermark signature, even if it claimed
+        // SYNCED). Note the gate does NOT key on the phase label — it opens
+        // on caught-up alone — so these fixtures are behind on the HEIGHTS.
+        val closedProgressions = listOf(
             caughtUpProgress().copy(phase = ShadowSyncPhase.HEADERS, headerHeight = 1_400_000, filterHeight = 0),
+            // 100k filters behind: the aggregate has to be honest too —
+            // (100 + 100 + 93.3) / 3 — or the iOS rule would call it caught up.
             caughtUpProgress().copy(filterHeight = 1_400_000, overallPercent = 0.978),
-            caughtUpProgress().copy(filterHeight = 1_500_000 - 208, walletSyncedHeight = 1_500_000 - 208),
-            caughtUpProgress().copy(walletSyncedHeight = 1_200_000),
-            caughtUpProgress().copy(walletSyncedHeight = 0)
+            caughtUpProgress().copy(
+                phase = ShadowSyncPhase.SYNCED,
+                headerHeight = 0, headerTarget = 0, filterHeight = 0, filterTarget = 0
+            )
         )
-        for (progress in openProgressions) {
-            val source = readySource()
+        for (progress in closedProgressions) {
             val result = service(source, progress = { progress })
                 .sendToAddress(validAddress, amount, emptyWallet = false)
-            assertTrue("$progress must not close the gate: $result", result is SdkWriteResult.Broadcast)
+            assertTrue("$progress must close the gate", result is SdkWriteResult.NotBroadcast)
         }
+        assertEquals(0, source.sendCalls)
     }
 
     @Test
-    fun gateClosed_replayInProgress_isNotBroadcast() = runBlocking {
-        // A restore, a Rescan Blockchain or the post-upgrade scan: the wallet's coins are being
-        // found again, so nothing is spent from that view, wherever the scan stands.
+    fun gateClosed_pipelineLagging_isNotBroadcast() = runBlocking {
+        // 2026-09-21: the DISPLAY predicate dropped the pipeline-lag veto (iOS
+        // rule). The SEND gate must not follow it. Filters at the tip and the
+        // aggregate at 100%, but the wallet cursor 300k blocks back = matched
+        // blocks still being processed = this wallet's own spends not yet
+        // applied to the ledger. A send built on that ledger can pick a UTXO
+        // already spent — the double-spend shape of the 48.86 DASH incident.
         val source = readySource()
-        val result = service(source, replaying = { true })
+        val lagging = caughtUpProgress().copy(walletSyncedHeight = 1_200_000)
+        assertTrue("fixture must read caught up for the display", lagging.scanCaughtUpToTip)
+        assertTrue("…and provably lagging", lagging.blockPipelineLagging)
+
+        val result = service(source, progress = { lagging })
             .sendToAddress(validAddress, amount, emptyWallet = false)
 
         assertTrue(result is SdkWriteResult.NotBroadcast)
         val reason = (result as SdkWriteResult.NotBroadcast).reason
-        assertTrue(reason, reason.contains(L1_FUNDING_GATE_CLOSED_REASON))
-        assertTrue(reason, reason.contains("replay"))
+        assertTrue(
+            "the reason must name the pipeline, not the scan: $reason",
+            reason.contains("processing matched blocks")
+        )
         assertEquals(0, source.sendCalls)
     }
 
-    /**
-     * Review, #1714. The first answer comes before the wait for the funding hold; a rescan that
-     * starts during that wait must still stop the send. The replay flag here is false for the
-     * first question and true for the one asked under the hold.
-     */
     @Test
-    fun aReplayThatStartsAfterTheFirstGateAnswer_stopsTheSendUnderTheHold() = runBlocking {
+    fun gateClosed_unknownWalletCursor_atTheTip_isNotBroadcast() = runBlocking {
+        // PastaClaw on #1632: filters at the tip, but no evidence the matched
+        // blocks were applied — the UTXO view may still miss a spend.
         val source = readySource()
-        var asked = 0
-        val result = service(source, replaying = { asked++ > 0 })
+        val unknownCursor = caughtUpProgress().copy(walletSyncedHeight = 0)
+        val result = service(source, progress = { unknownCursor })
             .sendToAddress(validAddress, amount, emptyWallet = false)
-
-        assertTrue("refused: $result", result is SdkWriteResult.NotBroadcast)
+        assertTrue(result is SdkWriteResult.NotBroadcast)
         val reason = (result as SdkWriteResult.NotBroadcast).reason
-        assertTrue(reason, reason.contains(L1_FUNDING_GATE_CLOSED_REASON))
-        assertEquals("asked before the hold and under it", 2, asked)
+        assertTrue(reason, reason.contains("cursor is not known"))
         assertEquals(0, source.sendCalls)
     }
 
     @Test
-    fun aReplayThatStartsAfterTheFirstGateAnswer_stopsTheDeferredBuildUnderTheHold() = runBlocking {
-        val source = FakeSource(boundWalletId = { walletId })
-        var asked = 0
-        val svc = service(source, replaying = { asked++ > 0 })
-
-        val failure = runCatching {
-            svc.buildDeferredPayment(listOf(validAddress to 10_000L), stillOwned = { true })
-        }.exceptionOrNull()
-
-        assertTrue("an IllegalStateException, got $failure", failure is IllegalStateException)
-        assertTrue(failure?.message.orEmpty().contains(L1_FUNDING_GATE_CLOSED_REASON))
-        assertEquals("nothing built or reserved", 0, source.deferredBuildCalls)
-    }
-
-    @Test
-    fun aReplayThatStartsAfterTheFirstGateAnswer_stopsTheMayaBuildUnderTheHold() = runBlocking {
-        val source = mayaSource(spendable = 1_000_000L, feeDuffs = 500L)
-        var asked = 0
-        val svc = service(source, replaying = { asked++ > 0 })
-
-        val failure = runCatching {
-            svc.buildDeferredMayaDeposit(validAddress, 50_000L, ByteArray(40), stillOwned = { true })
-        }.exceptionOrNull()
-
-        assertTrue("an IllegalStateException, got $failure", failure is IllegalStateException)
-        assertTrue(failure?.message.orEmpty().contains(L1_FUNDING_GATE_CLOSED_REASON))
-        assertEquals("nothing built or reserved", 0, source.mayaBuildCalls)
-    }
-
-    @Test
-    fun gateClosed_replayStateUnknownOrUnreadable_isNotBroadcast() = runBlocking {
-        // "Not read yet" and a failed read are not "no replay".
+    fun gateClosed_aggregateRuleOnly_withUnknownWalletCursor_isNotBroadcast() = runBlocking {
+        // The §34 shape: filters 2,167 short of the tip, the aggregate at
+        // 99.954% (the DISPLAY's iOS rule calls that synced), and the wallet
+        // cursor unknown, so the pipeline veto has no evidence to act on. The
+        // unscanned blocks can hold a spend of a UTXO this wallet still reads
+        // unspent; the send gate must keep the height rule.
         val source = readySource()
-        val unknown = service(source, replaying = { null })
-            .sendToAddress(validAddress, amount, emptyWallet = false)
-        val unreadable = service(source, replaying = { throw IllegalStateException("row unreadable") })
+        val aggregateOnly = caughtUpProgress().copy(
+            headerHeight = 1_558_166, headerTarget = 1_558_166,
+            filterHeight = 1_555_999, filterTarget = 1_558_166, overallPercent = 0.99954,
+            walletSyncedHeight = 0
+        )
+        assertTrue("fixture must read caught up for the display", aggregateOnly.scanCaughtUpToTip)
+        assertFalse("…with no pipeline evidence", aggregateOnly.blockPipelineLagging)
+
+        val result = service(source, progress = { aggregateOnly })
             .sendToAddress(validAddress, amount, emptyWallet = false)
 
-        assertTrue(unknown is SdkWriteResult.NotBroadcast)
-        assertTrue(unreadable is SdkWriteResult.NotBroadcast)
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        val reason = (result as SdkWriteResult.NotBroadcast).reason
+        assertTrue(reason, reason.contains("short of the chain tip"))
         assertEquals(0, source.sendCalls)
     }
 
@@ -1045,9 +1031,8 @@ class SdkL1SendServiceTest {
             service(source, progress = { caughtUpProgress().copy(phase = ShadowSyncPhase.ERROR) })
                 .probeSendGate().allowed
         )
-        assertFalse(service(source, replaying = { true }).probeSendGate().allowed)
-        // Behind the tip with no replay: open.
-        assertTrue(
+        assertFalse(
+            // 100k behind with an honest aggregate, or the iOS rule opens it.
             service(source, progress = { caughtUpProgress().copy(filterHeight = 1_400_000, overallPercent = 0.978) })
                 .probeSendGate().allowed
         )
@@ -2083,63 +2068,6 @@ class SdkL1SendServiceTest {
         }
     }
 
-    /**
-     * Review, #1714. The send lock does not hold off a rescan: one that starts during the
-     * first drain attempt must stop the adjust-down retry, which selects coins again.
-     */
-    @Test
-    fun sendAll_aReplayThatStartsDuringTheFirstAttempt_stopsTheAdjustDownRetry() = runBlocking {
-        var replayNow = false
-        val source = drainReadySource(spendable = 5_000_000L)
-        source.onSendAll = { _, _, _ ->
-            replayNow = true
-            throw DashSdkError.PlatformWallet.WalletOperation(
-                "transaction build failed: Insufficient funds: available 5000000, required 5001480"
-            )
-        }
-        val svc = service(source, enabled = false, cutoverState = "CUT_OVER", replaying = { replayNow })
-
-        val result = svc.sendToAddress(validAddress, amount, emptyWallet = true)
-
-        assertTrue("refused: $result", result is SdkWriteResult.NotBroadcast)
-        val reason = (result as SdkWriteResult.NotBroadcast).reason
-        assertTrue(reason, reason.contains(L1_FUNDING_GATE_CLOSED_REASON))
-        assertEquals("the retry never reached the SDK", 1, source.sendAllFloors.size)
-    }
-
-    /**
-     * Pre-review, 2026-11-18. Send-all and the CoinJoin paths wait once more after the funding
-     * hold, for the SDK's send lock. A rescan that starts during that wait must stop them too.
-     */
-    @Test
-    fun sendAll_aReplayThatStartsWhileWaitingForTheCoreSendLock_isNotBroadcast() = runBlocking {
-        var replayNow = false
-        val source = drainReadySource().apply { waitForCoreSendLock = { replayNow = true } }
-        val svc = service(source, enabled = false, cutoverState = "CUT_OVER", replaying = { replayNow })
-
-        val result = svc.sendToAddress(validAddress, amount, emptyWallet = true)
-
-        assertTrue("refused: $result", result is SdkWriteResult.NotBroadcast)
-        val reason = (result as SdkWriteResult.NotBroadcast).reason
-        assertTrue(reason, reason.contains(L1_FUNDING_GATE_CLOSED_REASON))
-        assertEquals("never reached the SDK drain", 0, source.sendAllCalls)
-    }
-
-    @Test
-    fun coinJoinDrain_aReplayThatStartsWhileWaitingForTheCoreSendLock_isNotBroadcast() = runBlocking {
-        var replayNow = false
-        val source = readySource().apply {
-            onDrainCoinJoin = { _, _, _ -> txid }
-            waitForCoreSendLock = { replayNow = true }
-        }
-        val svc = consolidationService(source, replaying = { replayNow })
-
-        val result = svc.drainCoinJoinAccountTo(validAddress)
-
-        assertTrue("refused: $result", result is SdkWriteResult.NotBroadcast)
-        assertEquals("never reached the SDK drain", 0, source.drainCoinJoinCalls)
-    }
-
     @Test
     fun coinJoinDrain_aWipeWhileWaitingForTheCoreSendLock_isNotBroadcast() = runBlocking {
         val lock = de.schildbach.wallet.payments.FundingSelectionLock()
@@ -2237,17 +2165,19 @@ class SdkL1SendServiceTest {
 
     // --- buildDeferredPayment waits for the funding gate (Joel, 12.0.1-beta, 2026-11-17) --------
 
-    /** The engine up but still looking for a peer, as in the first seconds after a launch. */
-    private fun noPeersYet() = caughtUpProgress().copy(phase = ShadowSyncPhase.CONNECTING)
+    /** The scan [blocksShort] of the tip with the aggregate at 100%: the label reads synced, the gate does not. */
+    private fun scanShortOfTip(blocksShort: Long) = caughtUpProgress().let {
+        it.copy(filterHeight = it.filterHeight - blocksShort, walletSyncedHeight = it.walletSyncedHeight - blocksShort)
+    }
 
     @Test
-    fun buildDeferredPayment_waitsForTheEngineToFindAPeer_thenBuilds() = runBlocking {
+    fun buildDeferredPayment_waitsForAScanThatReachesTheTip_thenBuilds() = runBlocking {
         var probes = 0
         val source = FakeSource(boundWalletId = { walletId })
-        // no peer for the first three probes, as right after a launch
+        // short of the tip for the first three probes, as right after a launch
         val svc = service(
             source,
-            progress = { if (probes++ < 3) noPeersYet() else caughtUpProgress() },
+            progress = { if (probes++ < 3) scanShortOfTip(208) else caughtUpProgress() },
             sendGateWaitMs = SEND_GATE_WAIT_MS
         )
 
@@ -2258,12 +2188,12 @@ class SdkL1SendServiceTest {
     }
 
     @Test
-    fun sendToAddress_waitsForTheEngineToFindAPeer_thenSends() = runBlocking {
+    fun sendToAddress_waitsForAScanThatReachesTheTip_thenSends() = runBlocking {
         var probes = 0
         val source = readySource()
         val svc = service(
             source,
-            progress = { if (probes++ < 2) noPeersYet() else caughtUpProgress() },
+            progress = { if (probes++ < 2) scanShortOfTip(208) else caughtUpProgress() },
             sendGateWaitMs = SEND_GATE_WAIT_MS
         )
 
@@ -2273,45 +2203,10 @@ class SdkL1SendServiceTest {
     }
 
     @Test
-    fun sendToAddress_duringAReplay_refusesAtOnce_evenWithAWaitConfigured() = runBlocking {
-        // A replay takes minutes to hours: waiting 30 s for it would only delay the refusal.
-        var probes = 0
-        val svc = service(
-            readySource(),
-            progress = { probes++; caughtUpProgress() },
-            replaying = { true },
-            sendGateWaitMs = SEND_GATE_WAIT_MS
-        )
-
-        val result = svc.sendToAddress(validAddress, amount, emptyWallet = false)
-
-        assertTrue("refused: $result", result is SdkWriteResult.NotBroadcast)
-        assertEquals("asked once, no wait", 1, probes)
-    }
-
-    @Test
-    fun sendToAddress_duringAReplay_refusesAtOnce_evenWhileTheEngineHasNoPeers() = runBlocking {
-        // Review, #1714: "no peers yet" used to answer first and was waited for.
-        var probes = 0
-        val svc = service(
-            readySource(),
-            progress = { probes++; noPeersYet() },
-            replaying = { true },
-            sendGateWaitMs = SEND_GATE_WAIT_MS
-        )
-
-        val result = svc.sendToAddress(validAddress, amount, emptyWallet = false)
-
-        assertTrue("refused: $result", result is SdkWriteResult.NotBroadcast)
-        assertTrue((result as SdkWriteResult.NotBroadcast).reason.contains("replay"))
-        assertEquals("asked once, no wait", 1, probes)
-    }
-
-    @Test
     fun sendToAddress_withNoWaitConfigured_refusesAtOnce() = runBlocking {
         var probes = 0
         val source = readySource()
-        val svc = service(source, progress = { probes++; noPeersYet() })
+        val svc = service(source, progress = { probes++; scanShortOfTip(208) })
 
         val result = svc.sendToAddress(validAddress, amount, emptyWallet = false)
 
@@ -2321,12 +2216,12 @@ class SdkL1SendServiceTest {
     }
 
     @Test
-    fun buildDeferredPayment_refusesWithTheGateReason_whenNoPeerIsFound() = runBlocking {
+    fun buildDeferredPayment_refusesWithTheGateReason_whenTheScanStaysShort() = runBlocking {
         var probes = 0
         val source = FakeSource(boundWalletId = { walletId })
         val svc = service(
             source,
-            progress = { probes++; noPeersYet() },
+            progress = { probes++; scanShortOfTip(208) },
             sendGateWaitMs = 2 * SEND_GATE_POLL_MS
         )
 
@@ -2337,8 +2232,59 @@ class SdkL1SendServiceTest {
         assertTrue("an IllegalStateException, got $failure", failure is IllegalStateException)
         val reason = failure?.message.orEmpty()
         assertTrue(reason, reason.contains(L1_FUNDING_GATE_CLOSED_REASON))
-        assertTrue(reason, reason.contains("waiting for peers"))
+        assertTrue(reason, reason.contains("short of the chain tip"))
         assertEquals("one probe, then one per poll of the wait", 3, probes)
+    }
+
+    /**
+     * thepastaclaw on #1714. A send-all pays whatever the wallet holds when it runs. Coins found
+     * during a wait would go out above the amount the user confirmed, so it never waits.
+     */
+    @Test
+    fun sendAll_doesNotWaitForTheGate() = runBlocking {
+        var probes = 0
+        val source = drainReadySource()
+        val svc = service(
+            source,
+            enabled = false,
+            cutoverState = "CUT_OVER",
+            progress = { if (probes++ < 2) scanShortOfTip(208) else caughtUpProgress() },
+            sendGateWaitMs = SEND_GATE_WAIT_MS
+        )
+
+        val result = svc.sendToAddress(validAddress, amount, emptyWallet = true)
+
+        assertTrue("refused: $result", result is SdkWriteResult.NotBroadcast)
+        assertTrue((result as SdkWriteResult.NotBroadcast).reason.contains(L1_FUNDING_GATE_CLOSED_REASON))
+        assertEquals("asked once, no wait", 1, probes)
+        assertEquals(0, source.sendAllCalls)
+    }
+
+    /** thepastaclaw on #1714: the wallet's bind can finish after a payment request was opened. */
+    @Test
+    fun buildDeferredPayment_waitsForAWalletThatIsBoundMeanwhile_thenBuilds() = runBlocking {
+        var asks = 0
+        val source = FakeSource(boundWalletId = { if (asks++ < 2) null else walletId })
+        val svc = service(source, sendGateWaitMs = SEND_GATE_WAIT_MS)
+
+        val payment = svc.buildDeferredPayment(listOf(validAddress to 10_000L), stillOwned = { true })
+
+        assertTrue("built once the wallet was bound", payment.txidHex.isNotEmpty())
+    }
+
+    @Test
+    fun buildDeferredPayment_refusesAsAClosedGate_whenTheWalletStaysUnbound() = runBlocking {
+        val source = FakeSource(boundWalletId = { null })
+        val svc = service(source, sendGateWaitMs = 2 * SEND_GATE_POLL_MS)
+
+        val failure = runCatching {
+            svc.buildDeferredPayment(listOf(validAddress to 10_000L), stillOwned = { true })
+        }.exceptionOrNull()
+
+        assertTrue("an IllegalStateException, got $failure", failure is IllegalStateException)
+        val reason = failure?.message.orEmpty()
+        assertTrue("typed as retryable by its prefix: $reason", reason.contains(L1_FUNDING_GATE_CLOSED_REASON))
+        assertTrue(reason, reason.contains("not bound"))
     }
 
     @Test
@@ -2593,18 +2539,26 @@ class SdkL1SendServiceTest {
     }
 
     @Test
-    fun aDeferredBuildWithNoCommittedCursor_recordsNoHeight() = runBlocking {
+    fun aDeferredBuildWithNoCommittedCursor_isRefusedBeforeReserving() = runBlocking {
         // Review 28775c57d545: header and filter cursors at the tip say nothing about how far the
         // engine has processed (that can be 100 blocks behind), so they must never stand in for
-        // the reservation height. An unknown cursor records none, and the pending-payment gate
-        // does not trust a reservation with no height.
+        // the reservation height. Since #1632 an unknown cursor does not get that far: the funding
+        // gate refuses it ("wallet scan cursor is not known yet") before anything is reserved, so
+        // no reservation is ever stamped from an unknown cursor. reservationHeightLowerBound()'s
+        // null stays as the defence behind the gate.
         val source = mayaSource(spendable = 1_000_000L, feeDuffs = 500L)
         val noCommittedCursor = caughtUpProgress().copy(walletSyncedHeight = 0)
+        val refused = try {
+            service(source, progress = { noCommittedCursor })
+                .buildDeferredMayaDeposit(validAddress, 50_000L, ByteArray(40), stillOwned = { true })
+            null
+        } catch (e: IllegalStateException) {
+            e
+        }
 
-        val payment = service(source, progress = { noCommittedCursor })
-            .buildDeferredMayaDeposit(validAddress, 50_000L, ByteArray(40), stillOwned = { true })
-
-        assertNull("no height from the scan cursors", payment.reservedAtHeight)
+        assertNotNull("the gate refuses an unknown cursor", refused)
+        assertTrue(refused!!.message, refused.message!!.contains("cursor is not known"))
+        assertEquals("nothing was reserved", 0, source.mayaBuildCalls)
     }
 
     @Test

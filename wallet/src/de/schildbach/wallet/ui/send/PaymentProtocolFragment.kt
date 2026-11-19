@@ -72,9 +72,6 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
     }
 
     private var userAuthorizedDuring = false
-
-    /** Set while a confirm is rebuilding a preview that was refused for syncing; see the observer. */
-    private var retryingPreview = false
     private val viewModel by viewModels<PaymentProtocolViewModel>()
     private val binding by viewBinding(FragmentPaymentProtocolBinding::bind)
     private val args by navArgs<PaymentProtocolFragmentArgs>()
@@ -132,7 +129,6 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
             // Refused only because the wallet was still syncing when the screen opened: build
             // again. A success shows the payment with its real fee to confirm; a failure is
             // reported by the observer.
-            retryingPreview = true
             viewModel.retryPreview()
         } else {
             handleSendRequestException()
@@ -168,7 +164,7 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
                     binding.viewFlipper.displayedChild = VIEW_LOADING
                 }
                 Status.SUCCESS -> {
-                    retryingPreview = false
+                    viewModel.consumeRetryResult()
                     displayRequest(viewModel.finalPaymentIntent!!)
                     binding.viewFlipper.displayedChild = VIEW_PAYMENT
                 }
@@ -190,8 +186,8 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
                         // preview build error (eg insufficient funds)
                         displayRequest(viewModel.finalPaymentIntent!!)
                         binding.viewFlipper.displayedChild = VIEW_PAYMENT
-                        val retried = retryingPreview
-                        retryingPreview = false
+                        // Asked of the ViewModel: a retry's failure can arrive after a rotation.
+                        val retried = viewModel.consumeRetryResult()
                         if ((userAuthorizedDuring || retried) && !viewModel.canSendPayment) {
                             handleSendRequestException()
                         }

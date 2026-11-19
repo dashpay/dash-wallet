@@ -328,17 +328,7 @@ class SdkWalletBinder internal constructor(
     // can stand in for a later process with a fresh binder.
     private val processToken: String = PROCESS_TOKEN,
     // Spacing of [retryAddressPoolBackfill]; injectable for the host JVM.
-    private val backfillRetryDelayMs: Long = ADDRESS_POOL_BACKFILL_RETRY_DELAY_MS,
-    // Told when [repayOwedRescans] has armed a rewind to birth: a rescan the app starts by
-    // itself. Production marks the blockchain state as replaying, which is what blocks sends
-    // and keeps the service alive through it, as a restore or Rescan Blockchain does.
-    // Its argument is the height the scan was rewound to, null when unknown.
-    private val onOwedRescanArmed: (targetHeight: Long?) -> Unit = {},
-    // Whether the SPV scanner is running, and a restart of it. An owed rescan is never armed
-    // on a running scanner ([repayOwedRescans]): the scanner is restarted, and its start gate
-    // ([ensureScanMayAdvance]) arms the rewind before it scans.
-    private val scannerRunning: () -> Boolean = { false },
-    private val restartScanner: () -> Unit = {}
+    private val backfillRetryDelayMs: Long = ADDRESS_POOL_BACKFILL_RETRY_DELAY_MS
 ) {
     @Inject
     constructor(
@@ -351,10 +341,7 @@ class SdkWalletBinder internal constructor(
         blockchainServiceConfig: BlockchainServiceConfig,
         scope: CoroutineScope,
         backfillGate: DashPayBackfillGate,
-        contactRequestDirectory: DashjPlatformContactRequestDirectory,
-        blockchainStateDataProvider: de.schildbach.wallet.service.BlockchainStateDataProvider,
-        // A Provider: L1ShadowSyncService takes this binder.
-        l1ShadowSyncService: javax.inject.Provider<L1ShadowSyncService>
+        contactRequestDirectory: DashjPlatformContactRequestDirectory
     ) : this(
         sdkService = sdkService,
         mnemonicProvider = mnemonicProvider,
@@ -379,21 +366,7 @@ class SdkWalletBinder internal constructor(
                 log.warn("could not save the background trace", e)
             }
         },
-        contactRequestDirectory = contactRequestDirectory,
-        onOwedRescanArmed = { targetHeight ->
-            // The marker first: it is what closes the send gate.
-            blockchainStateDataProvider.markReplayStartedForArmedRescan()
-            // The engine reports its scan height only when it goes up, and the saved height is
-            // not lowered by the arm, so the app's copy is lowered here: the scan reads "not
-            // caught up" until the rescan is back at the tip.
-            try {
-                l1ShadowSyncService.get().noteSpvRescanArmed(targetHeight)
-            } catch (t: Throwable) {
-                log.warn("owed SDK rescan armed, but the scan height could not be lowered", t)
-            }
-        },
-        scannerRunning = { l1ShadowSyncService.get().isEngineRunning() },
-        restartScanner = { l1ShadowSyncService.get().launchOwedRescanRestart() }
+        contactRequestDirectory = contactRequestDirectory
     )
 
     /** Serializes passes — the single-flight guarantee. */
@@ -2163,10 +2136,6 @@ class SdkWalletBinder internal constructor(
      * successful widening rescans again with the wider script set; the
      * widening debt alone is left to that widening.
      *
-     * The rewind is armed only with the scanner stopped. When it is running, this marks the
-     * replay, restarts the scanner and returns true: the debts are recorded, and the start
-     * gate arms them before the scanner scans again.
-     *
      * A successful arm does NOT clear the debts (review, 2026-10-02):
      * [DashSdkService.armSpvRescan] rewinds the SDK's checkpoint in memory
      * only, and a process that dies before the filter loop persists progress
@@ -2207,38 +2176,17 @@ class SdkWalletBinder internal constructor(
         if (inProcess != null && inProcess.walletIdHex == walletIdHex && (inProcess.wide || !needsWide)) {
             return true
         }
-        val birthTimeSecs = resolveBirthTimeSecs()
-        if (scannerRunning()) {
-            // Never on a running scanner: it would notice the rewind only on its next tick and
-            // look caught up until then. The debts are recorded, so restart it; its start gate
-            // comes back here with the scanner stopped and arms. Sends close now.
-            runCatching { onOwedRescanArmed(sdkService.spvRescanTargetHeight(birthTimeSecs)) }
-                .onFailure { log.warn("owed SDK rescan: the replay could not be marked", it) }
-            log.info(
-                "owed SDK rescan on {}…: the scanner is running, restarting it so the rewind is armed " +
-                    "before it scans",
-                walletIdHex.take(8)
-            )
-            runCatching { restartScanner() }
-                .onFailure { log.warn("owed SDK rescan: the scanner restart could not be launched", it) }
-            return true
-        }
         val previous = readArmedOwedRescan()?.takeIf { it.walletIdHex == walletIdHex }
+        val birthTimeSecs = resolveBirthTimeSecs()
         val preArmHeight = sdkService.durableSpvSyncedHeight(walletIdHex)
         if (!sdkService.armSpvRescan(walletIdHex, birthTimeSecs)) {
             log.warn("owed SDK rescan: arm failed; the debt stays owed")
             return false
         }
-        // The scan now restarts from birth: a replay, like the restore or Rescan Blockchain
-        // that marks itself. First thing after the arm, before anything here suspends: the
-        // marker closes the send gate before it returns.
-        val targetHeight = sdkService.spvRescanTargetHeight(birthTimeSecs)
-        runCatching { onOwedRescanArmed(targetHeight) }
-            .onFailure { log.warn("owed SDK rescan armed, but the replay could not be marked", it) }
         val armed = ArmedOwedRescan(
             walletIdHex = walletIdHex,
             preArmHeight = preArmHeight,
-            targetHeight = targetHeight,
+            targetHeight = sdkService.spvRescanTargetHeight(birthTimeSecs),
             wide = widened,
             arms = saturatingIncrement(previous?.arms ?: 0)
         )

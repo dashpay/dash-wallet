@@ -82,7 +82,7 @@ class FundingSelectionLockSingletonTest {
         )
         val sdk = SdkL1SendService(
             mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true),
-            mockk(relaxed = true), mockk(relaxed = true), { verifier }, lock, mockk(relaxed = true)
+            mockk(relaxed = true), mockk(relaxed = true), { verifier }, lock
         )
         val provided = AppModule.provideSendPaymentService(
             mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true),

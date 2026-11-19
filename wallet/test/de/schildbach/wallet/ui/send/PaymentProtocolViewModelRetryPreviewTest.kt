@@ -111,6 +111,28 @@ class PaymentProtocolViewModelRetryPreviewTest {
         runBlocking { coVerify(exactly = 2) { runner.buildDeferredBip70Payment(any(), any()) } }
     }
 
+    /**
+     * thepastaclaw on #1714. The fragment that receives a retry's failure can be a new one (a
+     * rotation during the rebuild), so the ViewModel remembers that the user asked for it.
+     */
+    @Test
+    fun `a retry that is refused again is reported once as the answer to a retry`() {
+        val runner = mockk<SendCoinsTaskRunner>(relaxed = true)
+        coEvery { runner.buildDeferredBip70Payment(any(), any()) } throws
+            SendEngineNotSyncedException("L1 funding gate closed: scan short of the chain tip")
+        val viewModel = buildViewModel(runner)
+
+        openInvoice(viewModel)
+        awaitCondition("the refusal is stored") { viewModel.sendRequestLiveData.value?.exception != null }
+        assertFalse("the first build is not a retry", viewModel.consumeRetryResult())
+
+        viewModel.retryPreview()
+        awaitCondition("the second refusal is stored") { viewModel.sendRequestLiveData.value?.exception != null }
+
+        assertTrue("the result answers a retry", viewModel.consumeRetryResult())
+        assertFalse("reported once", viewModel.consumeRetryResult())
+    }
+
     @Test
     fun `a preview that failed for another reason is not built again`() {
         val runner = mockk<SendCoinsTaskRunner>(relaxed = true)

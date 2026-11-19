@@ -275,26 +275,18 @@ internal fun ceilCreditsToDuffs(credits: Long): Long {
 /**
  * Decision of the L1 funding gate shared by
  * [ShieldedBalanceService.shieldFromWallet] and [SdkL1SendService].
- * [allowed] while the SDK engine can broadcast and no replay is in progress.
+ * [allowed] only when runtime evidence shows the SDK's OWN Core wallet has
+ * a complete, current view of the chain to spend from.
  */
-internal data class WalletFundingGate(
-    val allowed: Boolean,
-    val reason: String,
-    /**
-     * A closed gate that can open within seconds: the engine is starting or looking for a
-     * peer, or the replay state has not been read yet. A send a user is waiting on may wait
-     * for it ([SdkL1SendService.awaitSendGate]). False for a replay, which takes far longer,
-     * and for an engine error.
-     */
-    val mayOpenSoon: Boolean = false
-)
+internal data class WalletFundingGate(val allowed: Boolean, val reason: String)
 
 /**
  * Evaluate the L1 funding gate from the SDK engine's OWN live sync
  * progress — pure, host-testable.
  *
  * The SDK builds and broadcasts the L1 asset lock / send from its OWN SPV
- * wallet. The old design required SDK-vs-dashj balance
+ * wallet, so spending is only allowed once that SPV has a complete,
+ * current view of the chain. The old design required SDK-vs-dashj balance
  * PARITY (estimated AND confirmed both matching dashj). That requirement
  * is RETIRED here for two independent reasons, both confirmed on device:
  *
@@ -309,65 +301,97 @@ internal data class WalletFundingGate(
  *    never latches while the shadow perpetually chases the moving tip, so
  *    `synced=false` reads forever even with headers at the tip.
  *
- * What closes it now is what closed a dashj send, and what closes one on
- * iOS: no engine to broadcast through, or a replay in progress.
+ * The replacement preconditions still FAIL CLOSED on every real problem,
+ * using SDK-internal signals only ([progress] is [L1ShadowSyncService]'s
+ * live 1 Hz feed, which resets to [ShadowSyncProgress.IDLE] the moment the
+ * engine stops — so IDLE IS the "stale/not running" state, no clock
+ * needed):
  * - engine running and connected: phase is not [ShadowSyncPhase.IDLE] or
- *   [ShadowSyncPhase.CONNECTING] ([progress] is [L1ShadowSyncService]'s
- *   live 1 Hz feed, which resets to IDLE the moment the engine stops, so
- *   IDLE is the "stale/not running" state, no clock needed);
+ *   [ShadowSyncPhase.CONNECTING];
  * - no sync error: phase is not [ShadowSyncPhase.ERROR];
- * - no replay: [replaying] is the blockchain state's flag, true from a
- *   restore, a Rescan Blockchain or the post-upgrade SDK scan until the
- *   engine has caught up. During one the wallet's coins are being found
- *   again, so its view of them is incomplete. Null (the flag has not been
- *   read, or cannot be) closes too.
- *
- * An ordinary catch-up does NOT close it. From #1632 (2026-10-27) the gate
- * also required the filter scan and the wallet cursor within
- * [ShadowSyncProgress.SCAN_TIP_TOLERANCE_BLOCKS] of the tip, and before that
- * the cursor alone, so a wallet opened a few blocks behind refused every
- * payment until it had caught up (12.0.1-beta report, 2026-11-17: refused 3 s
- * before the tip). dashj never blocked on that, and iOS does not: a send built
- * on a coin an unscanned block already spent is rejected by the network, and
- * nothing is lost. It is not always REPORTED as not sent: when the SDK gets no
- * answer about the broadcast the outcome is unknown
- * ([SdkWriteResult.Ambiguous]), and the app keeps the payment as possibly sent
- * until it is confirmed or released, which is not a safe moment to retry.
- *
- * A DashPay contact backfill does NOT close it either, on purpose (product
- * decision, 2026-11-18). Setting up a contact makes the SDK rewind its scan to
- * find past payments on the new contact accounts ([SdkWalletBinder]'s
- * provisioning sweep, [DashPayBackfillGate]); nothing marks that as a replay.
- * It is a catch-up for scripts the wallet did not watch before, not a
- * restore or a rescan the user or a recovery asked for, and blocking it
- * would stop payments every time a contact is added.
+ * - chain view current: [ShadowSyncProgress.scanCaughtUpToTip] — the header
+ *   chain is at a known tip AND the wallet-relevant filter scan has caught
+ *   up to it. Deliberately NOT phase==SYNCED (a live shadow may never
+ *   report it) and NOT dashj parity (retired above); an all-zero snapshot
+ *   or a filter scan short of the tip still keeps the gate closed;
+ * - filter scan within [ShadowSyncProgress.SCAN_TIP_TOLERANCE_BLOCKS] of the
+ *   tip: the HEIGHT rule, even where the display's aggregate rule says
+ *   caught up;
+ * - wallet cursor known: [ShadowSyncProgress.walletSyncedHeight] above 0;
+ * - block pipeline drained: not [ShadowSyncProgress.blockPipelineLagging],
+ *   and the wallet cursor within tolerance of the tip.
  *
  * Wallet binding is NOT re-checked here: every caller already preflights
  * the bound wallet, and an unbound wallet cannot produce a non-IDLE
  * progress feed anyway.
  */
 internal fun evaluateWalletFundingGate(
-    progress: ShadowSyncProgress,
-    replaying: Boolean?
+    progress: ShadowSyncProgress
 ): WalletFundingGate = when {
-    // First: a replay known to be in progress is not worth a send's wait, whatever the engine
-    // is doing. Behind the IDLE and CONNECTING answers it was waited for (review, #1714).
-    replaying == true ->
-        WalletFundingGate(false, "a blockchain replay (restore or rescan) is in progress")
     progress.phase == ShadowSyncPhase.IDLE ->
-        WalletFundingGate(false, "SDK L1 engine not running", mayOpenSoon = true)
-    // Waiting for peers: nothing can be broadcast, and after a route loss or a
-    // restart the snapshot can keep the previous session's heights (PastaClaw on
-    // #1632). The display already reads this phase as offline
-    // (SdkBlockchainStateMapper).
+        WalletFundingGate(false, "SDK L1 engine not running")
+    // Waiting for peers: after a route loss or a restart the snapshot can keep
+    // the previous session's heights, which would pass every height rule below
+    // while the engine cannot see a single new block (PastaClaw on #1632). The
+    // display already reads this phase as offline (SdkBlockchainStateMapper).
     progress.phase == ShadowSyncPhase.CONNECTING ->
-        WalletFundingGate(false, "SDK L1 engine is waiting for peers", mayOpenSoon = true)
+        WalletFundingGate(false, "SDK L1 engine is waiting for peers")
     progress.phase == ShadowSyncPhase.ERROR ->
         WalletFundingGate(false, "SDK L1 engine reported a sync error")
-    replaying == null ->
-        WalletFundingGate(false, "the blockchain replay state is not known yet", mayOpenSoon = true)
-    else -> WalletFundingGate(true, "SDK L1 engine running and no replay in progress")
+    !progress.scanCaughtUpToTip ->
+        WalletFundingGate(false, "SDK L1 filter scan has not caught up to the chain tip yet")
+    // THIS GATE STARTS A SPEND, so it keeps the HEIGHT rule too.
+    // `scanCaughtUpToTip` also passes on the iOS aggregate rule, which
+    // tolerates a filter shortfall of up to 0.3% of chain height (~4,600
+    // blocks on testnet) — right for a label, wrong for funding: an unscanned
+    // block can hold a spend of a UTXO this wallet still reads unspent, or a
+    // receive the balance is missing. The cursor rules below close that gap
+    // too (an unknown cursor, or one the §34 stall parks with the filter
+    // cursor), but this check names the cause and does not depend on the
+    // cursor feed. The funds-safety argument of SCAN_TIP_TOLERANCE_BLOCKS
+    // needs the scan itself within tolerance.
+    // Measured against the HIGHEST tip the snapshot knows, not headerTarget
+    // alone: dash-spv restores the header target from the last peer report
+    // at engine start, which can sit below the stored header tip until a peer
+    // raises it, while the filter target is already that stored tip.
+    fundingTipHeight(progress) - progress.filterHeight > ShadowSyncProgress.SCAN_TIP_TOLERANCE_BLOCKS ->
+        WalletFundingGate(false, "SDK L1 filter scan is still short of the chain tip")
+    // …and it keeps the veto the DISPLAY predicate
+    // dropped on 2026-09-21. `scanCaughtUpToTip` now also accepts the iOS
+    // aggregate rule and no longer requires the block pipeline drained; that
+    // is right for a label and wrong for funding. Matched blocks still being
+    // processed means SPENDS not yet applied to the ledger — a UTXO this
+    // wallet already spent still reads unspent, and a transfer built on it is
+    // a double-spend the network rejects (the 48.86 DASH incident's shape).
+    // The wallet cursor within tolerance of the tip is the evidence those
+    // blocks are through; until then the gate stays closed.
+    //
+    // An UNKNOWN cursor (0) is no evidence either way, so it closes too
+    // (PastaClaw on #1632: filters at the tip with the cursor unknown opened a
+    // spend over a UTXO view nothing proved current). It cannot wedge a synced
+    // wallet: the cursor is seeded at engine start from the SDK's durable
+    // `WalletEntity.syncedHeight`, and dash-spv emits `SyncHeightAdvanced` for
+    // every wallet a committed filter batch covered, matches or not, which is
+    // also what the durable value is written from. A fresh testnet wallet on
+    // the emulator (2026-10-24) logged a non-zero cursor from its first batch
+    // on, and its restart was seeded from the durable value. Unknown is left
+    // for a failed seed read before the next batch commits, or a wallet no
+    // batch has covered yet.
+    progress.walletSyncedHeight <= 0L ->
+        WalletFundingGate(false, "SDK L1 wallet scan cursor is not known yet")
+    // Measured against the same highest-known tip as the height rule above:
+    // `blockPipelineLagging` reads headerTarget alone, which a restart can
+    // leave below the stored tip while the filters already reach it.
+    progress.blockPipelineLagging ||
+        fundingTipHeight(progress) - progress.walletSyncedHeight >
+        ShadowSyncProgress.SCAN_TIP_TOLERANCE_BLOCKS ->
+        WalletFundingGate(false, "SDK L1 block pipeline is still processing matched blocks")
+    else -> WalletFundingGate(true, "SDK L1 filter scan caught up to the chain tip")
 }
+
+/** The highest chain tip a progress snapshot knows: the reference both spend-gate height checks measure against. */
+private fun fundingTipHeight(progress: ShadowSyncProgress): Long =
+    maxOf(progress.bestKnownTipHeight, progress.filterTarget)
 
 /**
  * Pure [ShieldedSyncStatus] decision — host-testable. [ready] is the bring-up
@@ -982,8 +1006,7 @@ internal class DashSdkShieldedSource(
  *
  * So [shieldFromWallet] runs the SDK's own pipeline and is hard-gated on
  * the SDK engine's live sync progress ([L1ShadowSyncService.progress]):
- * the SDK engine must be running with peers, report no error, and no
- * replay may be in progress; an ordinary catch-up is allowed (see
+ * the SDK SPV must have its filter scan caught up to the chain tip (see
  * [evaluateWalletFundingGate] — the gate runs on SDK-only preconditions;
  * the old dashj-parity requirement is retired because the frozen held
  * wallet makes parity permanently unsatisfiable and the SDK's SYNCED flag
@@ -1020,20 +1043,6 @@ class ShieldedBalanceServiceImpl internal constructor(
      * write preflight reads) — the UI re-derives the gate on each emission.
      */
     private val l1ProgressFlow: () -> Flow<ShadowSyncProgress> = { flowOf(ShadowSyncProgress.IDLE) },
-    /**
-     * The blockchain state's `replaying` flag, for the funding gate
-     * ([evaluateWalletFundingGate]); null = not known. Prod wires
-     * [de.schildbach.wallet.service.BlockchainStateDataProvider.isReplayingOrNull].
-     * Default false: [l1Progress]'s IDLE default already keeps the gate closed
-     * for constructions that provide neither.
-     */
-    private val isReplaying: () -> Boolean? = { false },
-    /**
-     * [isReplaying] as it changes, for [observeWalletShieldingAvailable]: the flag can change
-     * with no progress emission to re-read it on. Prod wires
-     * [de.schildbach.wallet.service.BlockchainStateDataProvider.observeReplayingOrNull].
-     */
-    private val isReplayingFlow: () -> Flow<Boolean?> = { flowOf(false) },
     /**
      * Ensure the SDK's SPV is running before a [shieldFromWallet]
      * broadcast. In this interim architecture the SDK builds and
@@ -1137,8 +1146,7 @@ class ShieldedBalanceServiceImpl internal constructor(
         assetLockKindResolver: AssetLockKindResolver,
         walletData: de.schildbach.wallet.data.WalletData,
         seamOutputLockRegistry: SeamOutputLockRegistry,
-        fundingGate: de.schildbach.wallet.payments.PendingPaymentFundingGate,
-        blockchainStateDataProvider: de.schildbach.wallet.service.BlockchainStateDataProvider
+        fundingGate: de.schildbach.wallet.payments.PendingPaymentFundingGate
     ) : this(
         source = DashSdkShieldedSource(sdkService),
         dashPayConfig = dashPayConfig,
@@ -1152,8 +1160,6 @@ class ShieldedBalanceServiceImpl internal constructor(
         displayHrp = { shieldedHrp(toSdkNetwork(Constants.NETWORK_PARAMETERS)) },
         l1Progress = { l1ShadowSyncService.progress.value },
         l1ProgressFlow = { l1ShadowSyncService.progress },
-        isReplaying = { blockchainStateDataProvider.isReplayingOrNull() },
-        isReplayingFlow = { blockchainStateDataProvider.observeReplayingOrNull() },
         ensureL1SpvRunning = { l1ShadowSyncService.ensureSpvRunning() },
         noteSelfSpendBroadcast = { l1ShadowSyncService.noteSelfSpendBroadcast() },
         hasAppLockedCoinJoinOutputs = {
@@ -2141,20 +2147,19 @@ class ShieldedBalanceServiceImpl internal constructor(
 
     override suspend fun isWalletShieldingAvailable(): Boolean =
         isEnabled() && isL1FundingFlagOn() &&
-            evaluateWalletFundingGate(safeProgress(), safeReplaying()).allowed
+            evaluateWalletFundingGate(safeProgress()).allowed
 
     override fun observeWalletShieldingAvailable(): Flow<Boolean> =
         l1ProgressFlow()
-            .combine(isReplayingFlow()) { progress, replaying ->
-                // Same gate as isWalletShieldingAvailable(), re-derived on
-                // each change of EITHER input, so an open screen unblocks the
-                // instant the engine connects or a replay ends: the replay
-                // flag can change with no progress emission to carry it.
+            .map { progress ->
+                // Same gate as isWalletShieldingAvailable(), re-derived per
+                // progress emission so an open screen unblocks the instant
+                // the SDK engine's filter scan catches up to the chain tip.
                 // Flags-off inert: both reads short-circuit to false and the
                 // progress flow itself stays IDLE while the shadow is not
                 // running.
                 isEnabled() && isL1FundingFlagOn() &&
-                    evaluateWalletFundingGate(progress, replaying).allowed
+                    evaluateWalletFundingGate(progress).allowed
             }
             .distinctUntilChanged()
 
@@ -2266,10 +2271,9 @@ class ShieldedBalanceServiceImpl internal constructor(
             ?: return notBroadcast(operation, "shielded runtime not ready", null)
 
         // Funding gate: the SDK builds the lock from its OWN SPV wallet,
-        // so require a running engine with peers, no sync error and no
-        // replay in progress (SDK-only preconditions — see
-        // evaluateWalletFundingGate). Asked again after the waits below.
-        val gate = evaluateWalletFundingGate(safeProgress(), safeReplaying())
+        // so require live evidence that its scan is caught up to the chain
+        // tip (SDK-only preconditions — see evaluateWalletFundingGate).
+        val gate = evaluateWalletFundingGate(safeProgress())
         if (!gate.allowed) {
             return notBroadcast(operation, "L1 funding gate closed: ${gate.reason}", null)
         }
@@ -2396,16 +2400,6 @@ class ShieldedBalanceServiceImpl internal constructor(
                         true
                     }
                     if (blocked) return@withSharedSubmission null
-                    // The engine and replay gate again, after every wait above (the shield mutex,
-                    // this hold): a rescan can start while a shield waits behind another one
-                    // (review, #1714). Before the checkpoint, so nothing is recorded as submitted.
-                    // Fresh funding only: resuming an existing lock never comes through here.
-                    val gateNow = evaluateWalletFundingGate(safeProgress(), safeReplaying())
-                    if (!gateNow.allowed) {
-                        return@withSharedSubmission de.schildbach.wallet.payments.FundingSelectionLock.Selected(
-                            notBroadcast(operation, "L1 funding gate closed: ${gateNow.reason}", null)
-                        )
-                    }
                     de.schildbach.wallet.payments.FundingSelectionLock.Selected(
                     // The caller's durable submission checkpoint: from here on the
                     // native call may broadcast, so a caller interrupted after this
@@ -2637,14 +2631,6 @@ class ShieldedBalanceServiceImpl internal constructor(
             }
             resumed
         }
-    }
-
-    /** The replay flag for the funding gate; a failed read is "not known", which keeps it closed. */
-    private fun safeReplaying(): Boolean? = try {
-        isReplaying()
-    } catch (e: Exception) {
-        log.warn("failed to read the blockchain replay state; funding gate stays closed", e)
-        null
     }
 
     private fun safeProgress(): ShadowSyncProgress = try {

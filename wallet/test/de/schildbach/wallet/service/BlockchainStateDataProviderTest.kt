@@ -137,7 +137,7 @@ class BlockchainStateDataProviderTest {
         assertEquals(1_500_100, row.bestChainHeight)
         assertEquals(Date(2_000_000_000L), row.bestChainDate)
         assertEquals(90, row.percentageSync)
-        assertTrue("a progress update below the tip does not end the replay the row was in", row.replaying)
+        assertTrue("below the tip on the SDK path IS a replay — the service must stay alive", row.replaying)
         assertEquals("a null chainlockHeight preserves the row's value", 1_499_990, row.chainlockHeight)
         assertEquals("null mnListHeight preserves the row's value", 1_499_000, row.mnlistHeight)
         assertEquals(
@@ -148,41 +148,15 @@ class BlockchainStateDataProviderTest {
     }
 
     @Test
-    fun updateSdkBlockchainState_endsAReplay_butNeverStartsOne() {
-        // `replaying` means a restore, a rescan or the post-upgrade scan, as on dashj. Those set
-        // it (resetBlockchainState, markReplayStartedForSdkTakeover); the engine merely being
-        // behind the tip does not. From #1568 to 12.0.2 every catch-up set it, and a wallet
-        // opened a few blocks behind refused payments (12.0.1-beta report, 2026-11-17).
+    fun updateSdkBlockchainState_replayingFollowsThePercentage() {
+        // Phase 1b item 7. Reference install, 2026-09-15: the SDK replay ran
+        // for eleven hours with `replaying` hard-coded false, so the idle rule
+        // stopped the service nine times and nothing rescheduled it.
         dao.state = BlockchainState(Date(0L), 0, false, EnumSet.noneOf(Impediment::class.java), 0, 0, 100)
 
-        assertFalse("nothing reported yet", provider.isSdkEngineWorking())
         provider.updateSdkBlockchainState(sdkUpdate(percentageSync = 42, syncStage = SyncStage.BLOCKS))
-        // The stage is published last on the writer thread: only then is the update done.
-        awaitUntil("below-tip update applied") {
-            provider.getSyncStage() == SyncStage.BLOCKS && provider.isSdkEngineWorking()
-        }
-        assertFalse("catching up is not a replay", dao.state!!.replaying)
-        // ...but the engine has work, which is what keeps the service alive through it.
-        assertTrue("a catch-up is engine work", provider.isSdkEngineWorking())
-        // A transient update that cannot tell leaves that verdict alone.
-        provider.updateSdkBlockchainState(sdkUpdate(percentageSync = null, syncStage = SyncStage.OFFLINE))
-        awaitUntil("null update applied") { provider.getSyncStage() == SyncStage.OFFLINE }
-        assertTrue("an unknown verdict keeps the last one", provider.isSdkEngineWorking())
-        provider.updateSdkBlockchainState(sdkUpdate(percentageSync = 100, syncStage = SyncStage.COMPLETE))
-        // Stage last again: the fixture below must not be replaced under a running update.
-        awaitUntil("catch-up finished") {
-            provider.getSyncStage() == SyncStage.COMPLETE && !provider.isSdkEngineWorking()
-        }
-
-        // Phase 1b item 7. Reference install, 2026-09-15: the SDK replay ran for eleven hours
-        // with `replaying` cleared by the first update, so the idle rule stopped the service
-        // nine times and nothing rescheduled it. A replay that was started stays on until the
-        // engine reports it complete.
-        dao.state = BlockchainState(Date(0L), 0, true, EnumSet.noneOf(Impediment::class.java), 0, 0, 0)
-        provider.updateSdkBlockchainState(sdkUpdate(percentageSync = 42, syncStage = SyncStage.BLOCKS))
-        awaitUntil("replay update applied") { provider.getSyncStage() == SyncStage.BLOCKS }
-        assertEquals(42, dao.state!!.percentageSync)
-        assertTrue("a started replay is still in progress at 42%", dao.state!!.replaying)
+        awaitUntil("below-tip update applied") { dao.state?.percentageSync == 42 }
+        assertTrue("42% is a replay in progress", dao.state!!.replaying)
 
         // A transient null percent (SDK ERROR blip) preserves both fields.
         provider.updateSdkBlockchainState(sdkUpdate(percentageSync = null, syncStage = SyncStage.HEADERS))
@@ -191,8 +165,7 @@ class BlockchainStateDataProviderTest {
         assertTrue("a null percent must not clear the replay flag", dao.state!!.replaying)
 
         provider.updateSdkBlockchainState(sdkUpdate(percentageSync = 100, syncStage = SyncStage.COMPLETE))
-        awaitUntil("tip update applied") { provider.getSyncStage() == SyncStage.COMPLETE }
-        assertEquals(100, dao.state!!.percentageSync)
+        awaitUntil("tip update applied") { dao.state?.percentageSync == 100 }
         assertFalse("at the tip the replay is over", dao.state!!.replaying)
         assertTrue(dao.state!!.isSynced())
     }
@@ -201,16 +174,15 @@ class BlockchainStateDataProviderTest {
      * Review, 2026-09-23. The display percent reads 100 at the iOS aggregate
      * threshold (plan §35) while the committed cursor is thousands of blocks
      * behind and the block pipeline still lags (the §34 final-batch park).
-     * `replaying` is the idle-stop guard and the replay wake lock; ending
-     * it on that percent stopped the release-build engine mid-work and
+     * `replaying` is the idle-stop guard and the replay wake lock; deriving
+     * it from that percent stopped the release-build engine mid-work and
      * then declined the one-minute restart because the replay was "over".
-     * A replay now ends on the lifecycle signal, and the DAO's clear-at-100%
+     * The flag now follows the lifecycle signal, and the DAO's clear-at-100%
      * must not undo that one line later.
      */
     @Test
     fun updateSdkBlockchainState_replayingFollowsTheLifecycle_notTheDisplayPercent() {
-        // a replay in progress (restore, rescan or the post-upgrade scan set the flag)
-        dao.state = BlockchainState(Date(0L), 0, true, EnumSet.noneOf(Impediment::class.java), 0, 0, 100)
+        dao.state = BlockchainState(Date(0L), 0, false, EnumSet.noneOf(Impediment::class.java), 0, 0, 100)
 
         // The park: display says 100, the engine is still replaying.
         provider.updateSdkBlockchainState(
@@ -305,173 +277,6 @@ class BlockchainStateDataProviderTest {
         Thread.sleep(100)
         assertEquals(55, dao.state!!.percentageSync)
         assertTrue(dao.state!!.replaying)
-    }
-
-    @Test
-    fun aReplayStartedHere_closesTheGateAtOnce_withoutWaitingForTheRow() {
-        // The fake DAO's observation never changes, so only the in-memory marker can answer.
-        dao.state = BlockchainState(Date(0L), 10, false, EnumSet.noneOf(Impediment::class.java), 0, 0, 100)
-        awaitUntil("row read") { provider.isReplayingOrNull() == false }
-
-        provider.markReplayStartedForSdkTakeover()
-
-        assertEquals("closed when the call returns", true, provider.isReplayingOrNull())
-    }
-
-    private fun syncedRow() =
-        BlockchainState(Date(0L), 10, false, EnumSet.noneOf(Impediment::class.java), 0, 0, 100)
-
-    /**
-     * Review, #1714. The progress is sampled before it is queued. A progress update only ever
-     * ends a replay, so a "complete" that predates the replay would end it for good.
-     */
-    @Test
-    fun aCompletionFromBeforeARestoreOrTakeover_doesNotEndIt() {
-        var nowMs = 1_000L
-        provider.monotonicMs = { nowMs }
-        dao.state = syncedRow()
-        provider.markReplayStartedForSdkTakeover()
-        awaitUntil("marker applied") { dao.state?.replaying == true }
-
-        // Handed over in the first samples after the start: about the scan as it was.
-        nowMs += BlockchainStateDataProvider.REPLAY_VERDICT_SETTLE_MS - 1
-        provider.updateSdkBlockchainState(sdkUpdate(bestChainHeight = 11, percentageSync = 100))
-        awaitUntil("stale update applied") { dao.state?.bestChainHeight == 11 }
-        assertTrue("the replay is still on", dao.state!!.replaying)
-        assertEquals(true, provider.isReplayingOrNull())
-
-        nowMs += 1
-        provider.updateSdkBlockchainState(sdkUpdate(percentageSync = 100, syncStage = SyncStage.COMPLETE))
-        awaitUntil("replay ended") { dao.state?.replaying == false }
-        awaitUntil("gate follows") { provider.isReplayingOrNull() == false }
-    }
-
-    private fun caughtUp(height: Int) =
-        sdkUpdate(bestChainHeight = height, percentageSync = 100, syncStage = SyncStage.COMPLETE)
-
-    /**
-     * A rescan the app arms is armed with the scanner stopped and the app's copy of the scan
-     * height lowered, so the progress reads "not caught up" until the rescan is back at the
-     * tip: it ends like a restore, on the first "caught up" after the first samples.
-     */
-    @Test
-    fun anArmedRescan_endsOnTheFirstCaughtUpAfterTheSettleTime() {
-        var nowMs = 1_000L
-        provider.monotonicMs = { nowMs }
-        dao.state = syncedRow()
-        provider.markReplayStartedForArmedRescan()
-        awaitUntil("marker applied") { dao.state?.replaying == true }
-        assertEquals(true, provider.isReplayingOrNull())
-
-        // A sample taken before the arm, handed over just after it.
-        nowMs += BlockchainStateDataProvider.REPLAY_VERDICT_SETTLE_MS - 1
-        provider.updateSdkBlockchainState(caughtUp(11))
-        awaitUntil("applied") { dao.state?.bestChainHeight == 11 }
-        assertTrue(dao.state!!.replaying)
-        assertEquals(true, provider.isReplayingOrNull())
-
-        nowMs += 1
-        provider.updateSdkBlockchainState(caughtUp(12))
-        awaitUntil("replay ended") { dao.state?.replaying == false }
-        awaitUntil("gate follows") { provider.isReplayingOrNull() == false }
-    }
-
-    /**
-     * Pre-review, 2026-11-19. The feed reports changes only: a "caught up" ignored in the
-     * settle time is not reported again until the next block, so it is read once more when
-     * the settle time is over.
-     */
-    @Test
-    fun aReplayThatIsOverWithinTheSettleTime_endsWhenItIsOver_withoutAnotherReport() {
-        provider.replayVerdictSettleMs = 400
-        dao.state = syncedRow()
-        provider.markReplayStartedForArmedRescan()
-        awaitUntil("marker applied") { dao.state?.replaying == true }
-
-        provider.updateSdkBlockchainState(caughtUp(11))
-        awaitUntil("applied") { dao.state?.bestChainHeight == 11 }
-        assertTrue("not before the settle time is over", dao.state!!.replaying)
-        assertEquals(true, provider.isReplayingOrNull())
-
-        awaitUntil("replay ended") { dao.state?.replaying == false }
-        awaitUntil("gate follows") { provider.isReplayingOrNull() == false }
-    }
-
-    /**
-     * Pre-review, 2026-11-19. While the scanner is stopped for a rescan it reports nothing,
-     * for longer than the settle time: its "caught up" from before the replay is not its
-     * last word about it.
-     */
-    @Test
-    fun aCaughtUpFromBeforeTheReplay_doesNotEndItAtTheSettleTime() {
-        var nowMs = 1_000L
-        provider.monotonicMs = { nowMs }
-        provider.replayVerdictSettleMs = 300
-        dao.state = syncedRow()
-        // Handed over before the replay starts; its job may run before or after the start.
-        provider.updateSdkBlockchainState(caughtUp(11))
-        nowMs += 1
-
-        provider.markReplayStartedForArmedRescan()
-        awaitUntil("applied") { dao.state?.bestChainHeight == 11 }
-        awaitUntil("marker applied") { dao.state?.replaying == true }
-
-        Thread.sleep(800) // past the settle time and its second look
-        assertTrue(dao.state!!.replaying)
-        assertEquals(true, provider.isReplayingOrNull())
-    }
-
-    /** A scanner that stopped after its last "caught up" (the restart for a rescan) has not said so. */
-    @Test
-    fun aCaughtUpFollowedByAStoppedScanner_doesNotEndTheReplayAtTheSettleTime() {
-        provider.replayVerdictSettleMs = 300
-        dao.state = syncedRow()
-        provider.markReplayStartedForArmedRescan()
-        awaitUntil("marker applied") { dao.state?.replaying == true }
-
-        provider.updateSdkBlockchainState(caughtUp(11))
-        provider.updateSdkBlockchainState(sdkUpdate(bestChainHeight = 12, replayComplete = null))
-        awaitUntil("both applied") { dao.state?.bestChainHeight == 12 }
-
-        Thread.sleep(800) // past the settle time and its second look
-        assertTrue(dao.state!!.replaying)
-        assertEquals(true, provider.isReplayingOrNull())
-    }
-
-    @Test
-    fun theSecondLookOfAnEarlierReplay_doesNotEndANewerOne() {
-        provider.replayVerdictSettleMs = 300
-        dao.state = syncedRow()
-        provider.markReplayStartedForArmedRescan()
-        awaitUntil("marker applied") { dao.state?.replaying == true }
-        provider.updateSdkBlockchainState(caughtUp(11))
-        awaitUntil("applied") { dao.state?.bestChainHeight == 11 }
-
-        // A second replay starts before the first one's second look; its own is far off.
-        provider.replayVerdictSettleMs = 60_000
-        provider.markReplayStartedForArmedRescan()
-        Thread.sleep(800)
-
-        assertTrue("the row still says replaying", dao.state!!.replaying)
-        assertEquals(true, provider.isReplayingOrNull())
-    }
-
-    /** A second replay started before the first one's settle time is over starts its own. */
-    @Test
-    fun aReplayStartedAgain_startsItsSettleTimeAgain() {
-        var nowMs = 1_000L
-        provider.monotonicMs = { nowMs }
-        dao.state = syncedRow()
-        provider.markReplayStartedForArmedRescan()
-        nowMs += BlockchainStateDataProvider.REPLAY_VERDICT_SETTLE_MS
-        provider.markReplayStartedForArmedRescan()
-        awaitUntil("marker applied") { dao.state?.replaying == true }
-
-        provider.updateSdkBlockchainState(caughtUp(11))
-        awaitUntil("applied") { dao.state?.bestChainHeight == 11 }
-
-        assertTrue(dao.state!!.replaying)
-        assertEquals(true, provider.isReplayingOrNull())
     }
 
     @Test

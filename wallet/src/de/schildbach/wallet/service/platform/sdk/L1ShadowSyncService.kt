@@ -460,66 +460,6 @@ internal fun shadowProgressLine(p: ShadowSyncProgress): String = String.format(
  * two can disagree by design — the UI settled, the memory telemetry still
  * sampling — for as long as the pipeline lags. Pure — host-testable.
  */
-/**
- * The app's copy of the wallet's committed scan height ([ShadowSyncProgress.walletSyncedHeight]).
- * 0 = unknown.
- *
- * The engine reports that height only when it goes UP (`SyncHeightAdvanced`). A rescan the app
- * arms lowers it inside the engine at once, but nothing is reported until the rescan commits
- * its first batch, 9 to 60 s later or whenever the scanner next runs; until then a copy fed
- * by reports alone still says "at the tip". So the arm lowers the copy itself
- * ([rescanArmed]). The floor is kept until the engine's next report, so that a stop and start
- * in between, which seeds the copy from the saved height (not lowered by the arm), does not
- * raise it again.
- *
- * An owed rescan is armed with the scanner stopped ([L1ShadowSyncService.launchOwedRescanRestart]),
- * as iOS and 11.9 do, so the copy is normally unknown at the arm and the floor takes effect at
- * the seed that follows.
- *
- * A batch that was in flight at the arm cannot raise the height: the scanner only advances a
- * wallet whose height is next to the batch's start. A report already on its way to the app at
- * the arm still can; the SDK has no call to read the height itself.
- */
-internal class CommittedScanCursor {
-    private val height = MutableStateFlow(0L)
-    private var armedFloor = 0L
-
-    val value: Long get() = height.value
-
-    /** The saved height at the start of a scanner session. */
-    @Synchronized
-    fun seed(savedHeight: Long) {
-        val floor = armedFloor
-        height.value = if (floor > 0L && (savedHeight <= 0L || savedHeight > floor)) floor else savedHeight
-    }
-
-    /** The engine reported a committed batch. Latest wins: a rescan climbs again from its floor. */
-    @Synchronized
-    fun engineAdvanced(reportedHeight: Long) {
-        armedFloor = 0L
-        height.value = reportedHeight
-    }
-
-    /** The scanner stopped; the next start seeds again. An armed floor stays. */
-    @Synchronized
-    fun sessionStopped() {
-        height.value = 0L
-    }
-
-    /**
-     * The app armed a rewind to [targetHeight], or is about to: the copy reads at or below it
-     * from now, and so does the next seed.
-     */
-    @Synchronized
-    fun rescanArmed(targetHeight: Long) {
-        val floor = targetHeight.coerceAtLeast(1L)
-        val current = height.value
-        if (current in 1L..floor) return
-        armedFloor = floor
-        if (current > floor) height.value = floor
-    }
-}
-
 internal val ShadowSyncProgress.replayActive: Boolean get() =
     !(synced || scanCaughtUpToTip) || blockPipelineLagging
 
@@ -2783,84 +2723,7 @@ class L1ShadowSyncService internal constructor(
      * hide exactly the replay churn the drain predicate exists to see).
      * 0 = unknown. Reset on [stop]; re-seeded on the next start.
      */
-    private val _engineWalletSyncedHeight = CommittedScanCursor()
-
-    /**
-     * The app armed an SDK rewind of the filter scan ([DashSdkService.armSpvRescan]) to
-     * [targetHeight], or decided to: the copy of the scan height shows it from now, see
-     * [CommittedScanCursor]. A null target (it could not be worked out) is taken as the start
-     * of the chain, so the scan reads "not caught up" until the engine reports its height.
-     */
-    fun noteSpvRescanArmed(targetHeight: Long?) {
-        val before = _engineWalletSyncedHeight.value
-        _engineWalletSyncedHeight.rescanArmed(targetHeight ?: 1L)
-        log.info(
-            "SPV rescan to {}: committed scan height {} -> {} (0 = scanner stopped, applied when it starts)",
-            targetHeight, before, _engineWalletSyncedHeight.value
-        )
-    }
-
-    private val owedRescanRestartLock = Any()
-    private var owedRescanRestartJob: Job? = null
-    private var owedRescanRestartGeneration = 0L
-
-    /**
-     * Stop the scanner and start it again, so that a rescan the app owes is armed by the start
-     * gate ([scanMayAdvance]) BEFORE the scanner runs, never on a running one.
-     *
-     * A rewind armed on a running scanner is only noticed on its next tick, 9 to 60 s later,
-     * and nothing reports when; until then the engine looks caught up. Started at the rewound
-     * height it reports "syncing" from its first report, which is how 11.9 rescanned (stop
-     * the service, delete the chain, start) and how iOS does (it rewinds only before
-     * `startSpv`). The blockchain service itself keeps running.
-     *
-     * Same ordering against an external [stop] as [launchStallRestart]: the generation is
-     * sampled here, and a stop that lands before the start leaves the engine down; the next
-     * start's gate then arms the rescan. Unlike that restart, the generation is also checked
-     * before the teardown, and a failed start is retried. One at a time: a second call while
-     * one of the same generation is in flight returns that one. One left over from before an
-     * external stop is about to give up, so it is not reused.
-     */
-    internal fun launchOwedRescanRestart(): Job = synchronized(owedRescanRestartLock) {
-        val generation = externalStopGeneration
-        owedRescanRestartJob?.takeIf { it.isActive && owedRescanRestartGeneration == generation }
-            ?.let { return@synchronized it }
-        owedRescanRestartGeneration = generation
-        scope.launch {
-            runCatching {
-                // The generation is checked under the scanner's mutex BEFORE the teardown: a
-                // restart that waited behind an external stop must not stop the session that
-                // was started after it.
-                stopInternal(onlyIfGeneration = generation)
-                var started = false
-                var attempt = 0
-                // This stopped a working scanner, so it must not leave it down: a start that
-                // fails (startSpv throwing, say) is tried again with the scan gate's backoff,
-                // until it runs or an external stop takes over.
-                while (externalStopGeneration == generation) {
-                    started = startIfEnabled(expectedExternalStopGeneration = generation)
-                    if (started) break
-                    val retryInMs =
-                        (scanGateRetryInitialMs shl attempt.coerceAtMost(20)).coerceAtMost(scanGateRetryMaxMs)
-                    attempt++
-                    log.warn("owed-rescan restart: the scanner did not start; retrying in {}s", retryInMs / 1000)
-                    delay(retryInMs)
-                }
-                if (!started) {
-                    log.info("owed-rescan restart: an external stop() arrived — leaving the engine stopped")
-                }
-                started
-            }.onSuccess { started ->
-                log.info(
-                    "owed-rescan restart: started={} (false = the next start arms the rescan before it scans)",
-                    started
-                )
-            }.onFailure {
-                if (it is CancellationException) throw it
-                log.warn("owed-rescan restart failed; the rescan stays owed", it)
-            }
-        }.also { owedRescanRestartJob = it }
-    }
+    private val _engineWalletSyncedHeight = MutableStateFlow(0L)
 
     /**
      * The SDK's DURABLE `WalletEntity.syncedHeight` — where a restart would
@@ -3369,15 +3232,14 @@ class L1ShadowSyncService internal constructor(
                     // watermark so the drain predicate has evidence before the
                     // session's first SyncHeightAdvanced event; a failed read
                     // leaves 0 (= unknown, never treated as lagging).
-                    val savedHeight = runCatching {
+                    _engineWalletSyncedHeight.value = runCatching {
                         source.sdkWalletSyncedHeight(walletIdHex) ?: 0L
                     }.getOrElse { t ->
                         log.warn("durable syncedHeight seed read failed; cursor starts unknown", t)
                         0L
                     }
-                    _engineWalletSyncedHeight.seed(savedHeight)
                     val durableGeneration = synchronized(durableHeightLock) {
-                        durableSyncedHeight = savedHeight
+                        durableSyncedHeight = _engineWalletSyncedHeight.value
                         durableHeightGeneration
                     }
                     lastProbeHeartbeatMs = nowMs()
@@ -3450,13 +3312,8 @@ class L1ShadowSyncService internal constructor(
         return delayMs
     }
 
-    /**
-     * [onlyIfGeneration]: stop only if no external [stop] arrived since that generation was
-     * sampled; checked under [mutex], so a queued restart cannot stop a newer session.
-     */
-    private suspend fun stopInternal(onlyIfGeneration: Long? = null) {
+    private suspend fun stopInternal() {
         mutex.withLock {
-            if (onlyIfGeneration != null && externalStopGeneration != onlyIfGeneration) return
             // BEFORE the early return. A bring-up that outlived its budget is
             // not one of the loop jobs, and it is not covered by
             // runningWalletIdHex either — a start that detached one and then
@@ -3506,19 +3363,13 @@ class L1ShadowSyncService internal constructor(
             durableHeightJob?.cancel()
             durableHeightJob = null
             synchronized(breakdownLock) { breakdownRun.also { breakdownRun = null } }?.cancel()
-            // IDLE from here, not only once the native stop has returned: that can take longer
-            // than a replay's settle time, and until it did the last snapshot of the session
-            // being torn down ("synced", with peers) stood as the engine's current word, for
-            // the send gate and for a replay's second look alike (pre-review, 2026-11-19).
-            _progress.value = ShadowSyncProgress.IDLE
             runCatching { source.stopSpv() }
                 .onFailure { log.warn("failed to stop the shadow SPV client", it) }
             logWatermarkAtStop(walletIdHex, committedAtStop, filterAtStop)
-            // Again: the cancelled monitor is not joined and may have written once more.
             _progress.value = ShadowSyncProgress.IDLE
             sessionHeaderStart = 0L // the next session measures its own work
             sessionFilterStart = 0L
-            _engineWalletSyncedHeight.sessionStopped() // re-seeded on the next start
+            _engineWalletSyncedHeight.value = 0L // re-seeded on the next start
             synchronized(durableHeightLock) {
                 durableHeightGeneration++
                 durableSyncedHeight = 0L
@@ -3848,7 +3699,7 @@ class L1ShadowSyncService internal constructor(
                     // armed rescan the first event is legitimately LOWER than
                     // the tracked value and must replace it.
                     parseL1SyncHeightAdvanced(debug)?.let { height ->
-                        _engineWalletSyncedHeight.engineAdvanced(height)
+                        _engineWalletSyncedHeight.value = height
                     }
                     // A block that stored or confirmed a wallet transaction, or
                     // a sweep that removed one, changes the history the
