@@ -397,6 +397,30 @@ class BlockchainStateDataProviderTest {
         awaitUntil("gate follows") { provider.isReplayingOrNull() == false }
     }
 
+    /**
+     * Pre-review, 2026-11-19. While the scanner is stopped for a rescan it reports nothing,
+     * for longer than the settle time: its "caught up" from before the replay is not its
+     * last word about it.
+     */
+    @Test
+    fun aCaughtUpFromBeforeTheReplay_doesNotEndItAtTheSettleTime() {
+        var nowMs = 1_000L
+        provider.monotonicMs = { nowMs }
+        provider.replayVerdictSettleMs = 300
+        dao.state = syncedRow()
+        // Handed over before the replay starts; its job may run before or after the start.
+        provider.updateSdkBlockchainState(caughtUp(11))
+        nowMs += 1
+
+        provider.markReplayStartedForArmedRescan()
+        awaitUntil("applied") { dao.state?.bestChainHeight == 11 }
+        awaitUntil("marker applied") { dao.state?.replaying == true }
+
+        Thread.sleep(800) // past the settle time and its second look
+        assertTrue(dao.state!!.replaying)
+        assertEquals(true, provider.isReplayingOrNull())
+    }
+
     /** A scanner that stopped after its last "caught up" (the restart for a rescan) has not said so. */
     @Test
     fun aCaughtUpFollowedByAStoppedScanner_doesNotEndTheReplayAtTheSettleTime() {

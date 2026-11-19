@@ -164,7 +164,7 @@ class BlockchainStateDataProvider @Inject constructor(
      */
     private val replayStartedHere = MutableStateFlow(false)
 
-    /** Guards the three fields below and every change of [replayStartedHere]. */
+    /** Guards the four fields below and every change of [replayStartedHere]. */
     private val replayLock = Any()
 
     /** Counts the replays started here, so a job that belongs to an earlier one can tell. */
@@ -181,6 +181,9 @@ class BlockchainStateDataProvider @Inject constructor(
      * [replayStartedHere]: [REPLAY_VERDICT_SETTLE_MS] after it started.
      */
     private var replayVerdictsCountFromMs = 0L
+
+    /** When, on [monotonicMs], the replay in [replayStartedHere] started. */
+    private var replayStartedAtMs = 0L
 
     /**
      * Serializes the writers that decide `replaying` across their suspending database calls:
@@ -209,8 +212,12 @@ class BlockchainStateDataProvider @Inject constructor(
     private fun noteReplayStarted() {
         val settleMs = replayVerdictSettleMs
         val generation = synchronized(replayLock) {
-            replayVerdictsCountFromMs = monotonicMs() + settleMs
+            replayStartedAtMs = monotonicMs()
+            replayVerdictsCountFromMs = replayStartedAtMs + settleMs
             replayStartedHere.value = true
+            // The last word must be one the engine says after this: while the scanner is
+            // being stopped for a rescan it reports nothing, for longer than the settle time.
+            lastSdkReplayComplete = null
             ++replayGeneration
         }
         coroutineScope.launch {
@@ -266,6 +273,9 @@ class BlockchainStateDataProvider @Inject constructor(
      * "complete", as before: an engine that has just started reports work until it is done.
      */
     private fun mayEndReplay(replayComplete: Boolean?, receivedAtMs: Long): Boolean = synchronized(replayLock) {
+        // A report handed over before the replay started, whose job runs only now, says
+        // nothing about it.
+        if (replayStartedHere.value && receivedAtMs < replayStartedAtMs) return false
         lastSdkReplayComplete = replayComplete
         if (replayComplete != true) return false
         if (!replayStartedHere.value) return true

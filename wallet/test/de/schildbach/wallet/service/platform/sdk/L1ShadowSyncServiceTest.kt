@@ -1462,6 +1462,48 @@ class L1ShadowSyncServiceTest {
         assertFalse(service.isShadowSpvRunning())
     }
 
+    /** Pre-review, 2026-11-19: a restart queued behind an external stop must not stop the next session. */
+    @Test
+    fun owedRescanRestart_decidedBeforeAnExternalStop_doesNotStopTheSessionStartedAfterIt() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val gate = CompletableDeferred<Unit>()
+        val service = service(source)
+        assertTrue(service.startIfEnabled())
+
+        // The external stop holds the scanner's mutex; the restart queues behind it.
+        source.onStop = { gate.await() }
+        val external = launch { service.stop() }
+        withTimeout(5_000) { while (source.stopCalls == 0) delay(5) }
+        val restart = service.launchOwedRescanRestart()
+        delay(50)
+        source.onStop = {}
+        gate.complete(Unit)
+        withTimeout(5_000) { external.join() }
+        // A new session starts before the queued restart gets to run its stop.
+        assertTrue(service.startIfEnabled())
+        withTimeout(5_000) { restart.join() }
+
+        assertEquals("only the external stop stopped a scanner", 1, source.stopCalls)
+        assertTrue("the newer session is still running", service.isEngineRunning())
+        service.stop()
+    }
+
+    /** Pre-review, 2026-11-19: the restart stopped a working scanner, so a failed start is tried again. */
+    @Test
+    fun owedRescanRestart_whoseStartFails_triesAgainUntilTheScannerRuns() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val service = service(source, scanGateRetryInitialMs = 10L)
+        assertTrue(service.startIfEnabled())
+        var failures = 2
+        source.onStart = { if (failures-- > 0) throw IllegalStateException("startSpv failed") }
+
+        withTimeout(5_000) { service.launchOwedRescanRestart().join() }
+
+        assertTrue("running again after two failed starts", service.isEngineRunning())
+        assertEquals("the first start, two failures and the one that worked", 4, source.startCalls)
+        service.stop()
+    }
+
     /** The app's copy of the scan height is lowered by the arm and survives the restart's seed. */
     @Test
     fun aRescanArmedWhileStopped_isShownOnceTheScannerStarts() = runBlocking {

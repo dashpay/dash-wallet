@@ -2815,20 +2815,37 @@ class L1ShadowSyncService internal constructor(
      *
      * Same ordering against an external [stop] as [launchStallRestart]: the generation is
      * sampled here, and a stop that lands before the start leaves the engine down; the next
-     * start's gate then arms the rescan. One at a time: a second call while one is in flight
-     * returns that one.
+     * start's gate then arms the rescan. Unlike that restart, the generation is also checked
+     * before the teardown, and a failed start is retried. One at a time: a second call while
+     * one is in flight returns that one.
      */
     internal fun launchOwedRescanRestart(): Job = synchronized(owedRescanRestartLock) {
         owedRescanRestartJob?.takeIf { it.isActive }?.let { return@synchronized it }
         val generation = externalStopGeneration
         scope.launch {
             runCatching {
-                stopInternal()
-                if (externalStopGeneration != generation) {
-                    log.info("owed-rescan restart: an external stop() arrived — leaving the engine stopped")
-                    return@runCatching false
+                // The generation is checked under the scanner's mutex BEFORE the teardown: a
+                // restart that waited behind an external stop must not stop the session that
+                // was started after it.
+                stopInternal(onlyIfGeneration = generation)
+                var started = false
+                var attempt = 0
+                // This stopped a working scanner, so it must not leave it down: a start that
+                // fails (startSpv throwing, say) is tried again with the scan gate's backoff,
+                // until it runs or an external stop takes over.
+                while (externalStopGeneration == generation) {
+                    started = startIfEnabled(expectedExternalStopGeneration = generation)
+                    if (started) break
+                    val retryInMs =
+                        (scanGateRetryInitialMs shl attempt.coerceAtMost(20)).coerceAtMost(scanGateRetryMaxMs)
+                    attempt++
+                    log.warn("owed-rescan restart: the scanner did not start; retrying in {}s", retryInMs / 1000)
+                    delay(retryInMs)
                 }
-                startIfEnabled(expectedExternalStopGeneration = generation)
+                if (!started) {
+                    log.info("owed-rescan restart: an external stop() arrived — leaving the engine stopped")
+                }
+                started
             }.onSuccess { started ->
                 log.info(
                     "owed-rescan restart: started={} (false = the next start arms the rescan before it scans)",
@@ -3429,8 +3446,13 @@ class L1ShadowSyncService internal constructor(
         return delayMs
     }
 
-    private suspend fun stopInternal() {
+    /**
+     * [onlyIfGeneration]: stop only if no external [stop] arrived since that generation was
+     * sampled; checked under [mutex], so a queued restart cannot stop a newer session.
+     */
+    private suspend fun stopInternal(onlyIfGeneration: Long? = null) {
         mutex.withLock {
+            if (onlyIfGeneration != null && externalStopGeneration != onlyIfGeneration) return
             // BEFORE the early return. A bring-up that outlived its budget is
             // not one of the loop jobs, and it is not covered by
             // runningWalletIdHex either — a start that detached one and then
