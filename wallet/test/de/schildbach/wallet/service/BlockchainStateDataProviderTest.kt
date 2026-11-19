@@ -346,50 +346,22 @@ class BlockchainStateDataProviderTest {
         awaitUntil("gate follows") { provider.isReplayingOrNull() == false }
     }
 
-    private fun working() = sdkUpdate(percentageSync = 3, syncStage = SyncStage.BLOCKS)
-
     private fun caughtUp(height: Int) =
         sdkUpdate(bestChainHeight = height, percentageSync = 100, syncStage = SyncStage.COMPLETE)
 
     /**
-     * The SDK acts on an armed rewind 9 to 60 s after the arm and does not say when; until then
-     * it reports "caught up" as before. So a rescan the app armed ends on "caught up" only
-     * after the engine has reported work.
+     * A rescan the app arms is armed with the scanner stopped and the app's copy of the scan
+     * height lowered, so the progress reads "not caught up" until the rescan is back at the
+     * tip: it ends like a restore, on the first "caught up" after the first samples.
      */
     @Test
-    fun anArmedRescan_endsOnCaughtUp_onlyAfterTheEngineHasReportedWork() {
+    fun anArmedRescan_endsOnTheFirstCaughtUpAfterTheSettleTime() {
         var nowMs = 1_000L
         provider.monotonicMs = { nowMs }
         dao.state = syncedRow()
         provider.markReplayStartedForArmedRescan()
         awaitUntil("marker applied") { dao.state?.replaying == true }
-
-        nowMs += 30_000 // the SDK has not looked at the arm yet
-        provider.updateSdkBlockchainState(caughtUp(11))
-        awaitUntil("applied") { dao.state?.bestChainHeight == 11 }
-        assertTrue("caught up as before the arm: not the rescan's", dao.state!!.replaying)
         assertEquals(true, provider.isReplayingOrNull())
-
-        provider.updateSdkBlockchainState(working())
-        awaitUntil("work reported") { provider.getSyncStage() == SyncStage.BLOCKS && provider.isSdkEngineWorking() }
-        assertTrue(dao.state!!.replaying)
-
-        provider.updateSdkBlockchainState(caughtUp(12))
-        awaitUntil("replay ended") { dao.state?.replaying == false }
-        awaitUntil("gate follows") { provider.isReplayingOrNull() == false }
-    }
-
-    /**
-     * The app's copy of the scan height was lowered at the arm, so the progress reads "not
-     * caught up" until the rescan is back at the tip: no work has to be seen first.
-     */
-    @Test
-    fun anArmedRescanWhoseScanHeightWasLowered_endsOnTheFirstCaughtUpAfterTheSettleTime() {
-        var nowMs = 1_000L
-        provider.monotonicMs = { nowMs }
-        dao.state = syncedRow()
-        provider.markReplayStartedForArmedRescan(scanHeightLowered = true)
-        awaitUntil("marker applied") { dao.state?.replaying == true }
 
         // A sample taken before the arm, handed over just after it.
         nowMs += BlockchainStateDataProvider.REPLAY_VERDICT_SETTLE_MS - 1
@@ -404,92 +376,17 @@ class BlockchainStateDataProviderTest {
         awaitUntil("gate follows") { provider.isReplayingOrNull() == false }
     }
 
-    /** A report sampled before the arm can be handed over just after it: it is not the rescan's work. */
+    /** A second replay started before the first one's settle time is over starts its own. */
     @Test
-    fun workReportedInTheFirstSamplesAfterTheArm_isNotTheRescans() {
+    fun aReplayStartedAgain_startsItsSettleTimeAgain() {
         var nowMs = 1_000L
         provider.monotonicMs = { nowMs }
         dao.state = syncedRow()
         provider.markReplayStartedForArmedRescan()
-        awaitUntil("marker applied") { dao.state?.replaying == true }
-
-        nowMs += BlockchainStateDataProvider.REPLAY_VERDICT_SETTLE_MS - 1
-        provider.updateSdkBlockchainState(working())
-        nowMs += 10_000
-        provider.updateSdkBlockchainState(caughtUp(11))
-        awaitUntil("both applied") { dao.state?.bestChainHeight == 11 }
-
-        assertTrue(dao.state!!.replaying)
-        assertEquals(true, provider.isReplayingOrNull())
-    }
-
-    /** A rewind with nothing to scan never shows work: sends must not stay closed for it. */
-    @Test
-    fun anArmedRescanTheEngineShowsNoWorkOn_endsAfterTheWait() {
-        provider.replayVerdictSettleMs = 0
-        provider.armedReplayWorkWaitMs = 400
-        dao.state = syncedRow()
+        nowMs += BlockchainStateDataProvider.REPLAY_VERDICT_SETTLE_MS
         provider.markReplayStartedForArmedRescan()
         awaitUntil("marker applied") { dao.state?.replaying == true }
 
-        provider.updateSdkBlockchainState(caughtUp(11))
-        awaitUntil("applied") { dao.state?.bestChainHeight == 11 }
-        assertTrue("not before the wait is over", dao.state!!.replaying)
-        assertEquals(true, provider.isReplayingOrNull())
-
-        awaitUntil("replay ended") { dao.state?.replaying == false }
-        awaitUntil("gate follows") { provider.isReplayingOrNull() == false }
-    }
-
-    @Test
-    fun theWaitDoesNotEndARescanTheEngineIsWorkingOn() {
-        provider.replayVerdictSettleMs = 0
-        provider.armedReplayWorkWaitMs = 300
-        dao.state = syncedRow()
-        provider.markReplayStartedForArmedRescan()
-        awaitUntil("marker applied") { dao.state?.replaying == true }
-        provider.updateSdkBlockchainState(working())
-        awaitUntil("work reported") { provider.getSyncStage() == SyncStage.BLOCKS && provider.isSdkEngineWorking() }
-
-        Thread.sleep(800) // past the wait
-        assertTrue(dao.state!!.replaying)
-        assertEquals(true, provider.isReplayingOrNull())
-
-        provider.updateSdkBlockchainState(caughtUp(11))
-        awaitUntil("replay ended") { dao.state?.replaying == false }
-        awaitUntil("gate follows") { provider.isReplayingOrNull() == false }
-    }
-
-    /** Pre-review, 2026-11-18: a job that belongs to an earlier replay must not end a newer one. */
-    @Test
-    fun theWaitOfAnEarlierArm_doesNotEndANewerOne() {
-        provider.replayVerdictSettleMs = 0
-        provider.armedReplayWorkWaitMs = 300
-        dao.state = syncedRow()
-        provider.markReplayStartedForArmedRescan()
-        awaitUntil("marker applied") { dao.state?.replaying == true }
-        provider.updateSdkBlockchainState(caughtUp(11))
-        awaitUntil("applied") { dao.state?.bestChainHeight == 11 }
-
-        // A second rescan is armed before the first one's wait is over.
-        provider.armedReplayWorkWaitMs = 60_000
-        provider.markReplayStartedForArmedRescan()
-        Thread.sleep(800)
-
-        assertTrue("the row still says replaying", dao.state!!.replaying)
-        assertEquals(true, provider.isReplayingOrNull())
-    }
-
-    @Test
-    fun aRestoreOnTopOfAnArmedRescanNotYetStarted_stillWaitsForItsWork() {
-        var nowMs = 1_000L
-        provider.monotonicMs = { nowMs }
-        dao.state = syncedRow()
-        provider.markReplayStartedForArmedRescan()
-        provider.markReplayStartedForSdkTakeover()
-        awaitUntil("marker applied") { dao.state?.replaying == true }
-
-        nowMs += 10 * BlockchainStateDataProvider.REPLAY_VERDICT_SETTLE_MS
         provider.updateSdkBlockchainState(caughtUp(11))
         awaitUntil("applied") { dao.state?.bestChainHeight == 11 }
 

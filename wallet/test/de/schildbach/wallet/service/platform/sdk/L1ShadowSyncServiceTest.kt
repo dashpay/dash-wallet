@@ -1424,6 +1424,57 @@ class L1ShadowSyncServiceTest {
         assertEquals(2, source.startCalls)
     }
 
+    // ── The owed-rescan restart: the rewind is armed by the start gate, with the scanner stopped ──
+
+    @Test
+    fun owedRescanRestart_stopsTheScanner_andItsStartGateRunsBeforeItScansAgain() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val gateSawStartCalls = mutableListOf<Int>()
+        val service = service(source, scanMayAdvance = { gateSawStartCalls += source.startCalls; true })
+        assertTrue(service.startIfEnabled())
+
+        service.launchOwedRescanRestart().join()
+
+        assertEquals(1, source.stopCalls)
+        assertEquals("stopped and started again", 2, source.startCalls)
+        assertEquals("the gate ran before each start of the scanner", listOf(0, 1), gateSawStartCalls)
+        service.stop()
+    }
+
+    @Test
+    fun owedRescanRestart_doesNotStartTheEngine_whenAnExternalStopArrivesMidRestart() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val gate = CompletableDeferred<Unit>()
+        source.onStop = { gate.await() } // the restart's stop parks in stopSpv
+        val service = service(source)
+        assertTrue(service.startIfEnabled())
+
+        val restart = service.launchOwedRescanRestart()
+        withTimeout(5_000) { while (source.stopCalls == 0) delay(5) }
+        assertTrue("a second request joins the one in flight", service.launchOwedRescanRestart() === restart)
+
+        val external = launch { service.stop() }
+        delay(50)
+        gate.complete(Unit)
+        withTimeout(5_000) { restart.join(); external.join() }
+
+        assertEquals("the engine was NOT started again after the external stop", 1, source.startCalls)
+        assertFalse(service.isShadowSpvRunning())
+    }
+
+    /** The app's copy of the scan height is lowered by the arm and survives the restart's seed. */
+    @Test
+    fun aRescanArmedWhileStopped_isShownOnceTheScannerStarts() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val service = service(source)
+
+        service.noteSpvRescanArmed(900_000L)
+        assertEquals("unknown while stopped", 0L, service.engineCommittedHeight())
+
+        service.noteSpvRescanArmed(null)
+        assertEquals(0L, service.engineCommittedHeight())
+    }
+
     // ── The filter-stall restart against an external stop (review, 2026-09-23) ──
 
     /** Positive control: with nobody else stopping, the restart restarts. */

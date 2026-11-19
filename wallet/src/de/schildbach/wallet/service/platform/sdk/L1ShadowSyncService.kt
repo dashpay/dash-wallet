@@ -470,7 +470,11 @@ internal fun shadowProgressLine(p: ShadowSyncProgress): String = String.format(
  * by reports alone still says "at the tip". So the arm lowers the copy itself
  * ([rescanArmed]). The floor is kept until the engine's next report, so that a stop and start
  * in between, which seeds the copy from the saved height (not lowered by the arm), does not
- * raise it again. iOS avoids the same window by rewinding only before the scanner starts.
+ * raise it again.
+ *
+ * An owed rescan is armed with the scanner stopped ([L1ShadowSyncService.launchOwedRescanRestart]),
+ * as iOS and 11.9 do, so the copy is normally unknown at the arm and the floor takes effect at
+ * the seed that follows.
  *
  * A batch that was in flight at the arm cannot raise the height: the scanner only advances a
  * wallet whose height is next to the batch's start. A report already on its way to the app at
@@ -503,18 +507,16 @@ internal class CommittedScanCursor {
     }
 
     /**
-     * The app armed a rewind to [targetHeight]. True when the copy now reads at or below it,
-     * false when the copy is unknown and so cannot show the rewind yet.
+     * The app armed a rewind to [targetHeight], or is about to: the copy reads at or below it
+     * from now, and so does the next seed.
      */
     @Synchronized
-    fun rescanArmed(targetHeight: Long): Boolean {
+    fun rescanArmed(targetHeight: Long) {
         val floor = targetHeight.coerceAtLeast(1L)
         val current = height.value
-        if (current in 1L..floor) return true
+        if (current in 1L..floor) return
         armedFloor = floor
-        if (current <= 0L) return false
-        height.value = floor
-        return true
+        if (current > floor) height.value = floor
     }
 }
 
@@ -2784,18 +2786,59 @@ class L1ShadowSyncService internal constructor(
     private val _engineWalletSyncedHeight = CommittedScanCursor()
 
     /**
-     * The app armed an SDK rewind of the filter scan to [targetHeight]
-     * ([DashSdkService.armSpvRescan]): the copy of the scan height shows it from now, see
-     * [CommittedScanCursor]. True when it does, false when the height is not known yet.
+     * The app armed an SDK rewind of the filter scan ([DashSdkService.armSpvRescan]) to
+     * [targetHeight], or decided to: the copy of the scan height shows it from now, see
+     * [CommittedScanCursor]. A null target (it could not be worked out) is taken as the start
+     * of the chain, so the scan reads "not caught up" until the engine reports its height.
      */
-    fun noteSpvRescanArmed(targetHeight: Long): Boolean {
+    fun noteSpvRescanArmed(targetHeight: Long?) {
         val before = _engineWalletSyncedHeight.value
-        val shown = _engineWalletSyncedHeight.rescanArmed(targetHeight)
+        _engineWalletSyncedHeight.rescanArmed(targetHeight ?: 1L)
         log.info(
-            "armed SPV rescan to {}: committed scan height {} -> {}{}",
-            targetHeight, before, _engineWalletSyncedHeight.value, if (shown) "" else " (unknown, floor kept)"
+            "SPV rescan to {}: committed scan height {} -> {} (0 = scanner stopped, applied when it starts)",
+            targetHeight, before, _engineWalletSyncedHeight.value
         )
-        return shown
+    }
+
+    private val owedRescanRestartLock = Any()
+    private var owedRescanRestartJob: Job? = null
+
+    /**
+     * Stop the scanner and start it again, so that a rescan the app owes is armed by the start
+     * gate ([scanMayAdvance]) BEFORE the scanner runs, never on a running one.
+     *
+     * A rewind armed on a running scanner is only noticed on its next tick, 9 to 60 s later,
+     * and nothing reports when; until then the engine looks caught up. Started at the rewound
+     * height it reports "syncing" from its first report, which is how 11.9 rescanned (stop
+     * the service, delete the chain, start) and how iOS does (it rewinds only before
+     * `startSpv`). The blockchain service itself keeps running.
+     *
+     * Same ordering against an external [stop] as [launchStallRestart]: the generation is
+     * sampled here, and a stop that lands before the start leaves the engine down; the next
+     * start's gate then arms the rescan. One at a time: a second call while one is in flight
+     * returns that one.
+     */
+    internal fun launchOwedRescanRestart(): Job = synchronized(owedRescanRestartLock) {
+        owedRescanRestartJob?.takeIf { it.isActive }?.let { return@synchronized it }
+        val generation = externalStopGeneration
+        scope.launch {
+            runCatching {
+                stopInternal()
+                if (externalStopGeneration != generation) {
+                    log.info("owed-rescan restart: an external stop() arrived — leaving the engine stopped")
+                    return@runCatching false
+                }
+                startIfEnabled(expectedExternalStopGeneration = generation)
+            }.onSuccess { started ->
+                log.info(
+                    "owed-rescan restart: started={} (false = the next start arms the rescan before it scans)",
+                    started
+                )
+            }.onFailure {
+                if (it is CancellationException) throw it
+                log.warn("owed-rescan restart failed; the rescan stays owed", it)
+            }
+        }.also { owedRescanRestartJob = it }
     }
 
     /**

@@ -18,8 +18,6 @@
 package de.schildbach.wallet.service.platform.sdk
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -33,7 +31,7 @@ class CommittedScanCursorTest {
     fun anArm_lowersTheCopyAtOnce_andTheRescanClimbsFromThere() {
         cursor.seed(1_500_000L)
 
-        assertTrue(cursor.rescanArmed(900_000L))
+        cursor.rescanArmed(900_000L)
         assertEquals(900_000L, cursor.value)
 
         cursor.engineAdvanced(905_000L)
@@ -46,7 +44,7 @@ class CommittedScanCursorTest {
     fun anArmAtOrAboveTheCopy_changesNothing() {
         cursor.seed(900_000L)
 
-        assertTrue(cursor.rescanArmed(900_000L))
+        cursor.rescanArmed(900_000L)
         assertEquals(900_000L, cursor.value)
 
         // No floor is kept: a later session seeds as usual.
@@ -73,10 +71,11 @@ class CommittedScanCursorTest {
         assertEquals(910_000L, cursor.value)
     }
 
+    /** The usual case: the rescan is armed with the scanner stopped, before it starts. */
     @Test
-    fun anArmWhileTheHeightIsUnknown_isShownByTheNextSeed() {
-        assertFalse("nothing to lower yet", cursor.rescanArmed(900_000L))
-        assertEquals(0L, cursor.value)
+    fun anArmWhileTheScannerIsStopped_isShownByTheSeedOfItsStart() {
+        cursor.rescanArmed(900_000L)
+        assertEquals("unknown while stopped", 0L, cursor.value)
 
         cursor.seed(1_500_000L)
         assertEquals(900_000L, cursor.value)
@@ -96,7 +95,7 @@ class CommittedScanCursorTest {
     fun aRewindToHeightZero_isStillVisible() {
         cursor.seed(1_500_000L)
 
-        assertTrue(cursor.rescanArmed(0L))
+        cursor.rescanArmed(0L)
         assertEquals("0 would read as unknown", 1L, cursor.value)
     }
 }

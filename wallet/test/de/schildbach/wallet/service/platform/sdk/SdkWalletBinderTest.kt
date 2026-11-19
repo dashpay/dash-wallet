@@ -384,9 +384,13 @@ class SdkWalletBinderTest {
         processToken: String = "test-process",
         backfillRetryDelayMs: Long = 1L,
         onOwedRescanArmed: (Long?) -> Unit = {},
+        scannerRunning: () -> Boolean = { false },
+        restartScanner: () -> Unit = {},
         scope: CoroutineScope
     ) = SdkWalletBinder(
         onOwedRescanArmed = onOwedRescanArmed,
+        scannerRunning = scannerRunning,
+        restartScanner = restartScanner,
         sdkService = sdk,
         mnemonicProvider = mnemonic,
         identityConfig = identity,
@@ -2882,6 +2886,45 @@ class SdkWalletBinderTest {
         sdk.onArmRescan = { _, _ -> true }
         binder(sdk, config = config, onOwedRescanArmed = { marked += it }, scope = this).bindIfEnabled(unlock)
         assertEquals("the rewind to birth is a replay, told with its height", listOf<Long?>(123_456L), marked)
+    }
+
+    /**
+     * A rewind armed on a running scanner is noticed only on its next tick, with the engine
+     * looking caught up until then. So the binder never arms one there: it restarts the
+     * scanner, whose start gate arms the rewind before it scans (as 11.9 and iOS do).
+     */
+    @Test
+    fun bind_owedRescan_withTheScannerRunning_restartsIt_andArmsOnlyOnceItIsStopped() = runBlocking {
+        val sdk = readySdk()
+        sdk.rescanTarget = 123_456L
+        var arms = 0
+        sdk.onArmRescan = { _, _ -> arms++; true }
+        owedRescan = true
+        val (config, _) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
+        var running = true
+        var restarts = 0
+        val marked = mutableListOf<Long?>()
+        val binder = binder(
+            sdk,
+            config = config,
+            onOwedRescanArmed = { marked += it },
+            scannerRunning = { running },
+            restartScanner = { restarts++ },
+            scope = this
+        )
+
+        binder.bindIfEnabled(unlock)
+        assertEquals("not armed on the running scanner", 0, arms)
+        assertEquals(1, restarts)
+        assertEquals("sends close at the decision", listOf<Long?>(123_456L), marked)
+        assertEquals("the debt stays owed", true, owedRescan)
+
+        // The restart: the scanner is stopped, and its start gate comes to the binder.
+        running = false
+        assertTrue(binder.ensureScanMayAdvance(walletId))
+        assertEquals("armed before the scanner runs", 1, arms)
+        assertEquals("no second restart", 1, restarts)
+        coroutineContext.cancelChildren()
     }
 
     /**
