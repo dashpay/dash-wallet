@@ -3876,6 +3876,18 @@ class CutoverUiDataService internal constructor(
     private var lastPersistedDuffs: Long? = null
 
     /**
+     * Makes the [WalletUIConfig.LAST_TOTAL_BALANCE] write and the
+     * [_lastKnownTotalBalance] update that follows it one step.
+     * [updateSdkBalance] runs from two collectors at once (the Room-triggered
+     * feed and the event/ticker re-read); without this, one could write an
+     * older figure, be overtaken by the other's write AND fallback update,
+     * then set the fallback back to its older figure — memory behind disk,
+     * with nothing to repair it once the engine reads as not synced. Also
+     * guards [lastPersistedDuffs].
+     */
+    private val launchSeedMutex = Mutex()
+
+    /**
      * The LAST KNOWN total balance ([WalletUIConfig.LAST_TOTAL_BALANCE], the
      * same fast-startup seed the dashj
      * [WalletBalanceObserver][de.schildbach.wallet.transactions.WalletBalanceObserver]
@@ -4819,31 +4831,37 @@ class CutoverUiDataService internal constructor(
             )
         }
         if (!persist) return
-        runCatching { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, duffs) }
-            .onSuccess {
-                // The figure just accepted as the launch seed is also what the
-                // header must fall back to for the rest of THIS process; see
-                // [_lastKnownTotalBalance]. Only after the write succeeded, so
-                // the two never disagree. A zero lands here too: the overlay
-                // ignores a non-positive value and shows the live figure.
-                val previousLastKnown = _lastKnownTotalBalance.value
-                _lastKnownTotalBalance.value = Coin.valueOf(duffs)
-                // EDGE LOG: once per distinct value written, not per tick. The
-                // publication line above is gated on the DISPLAYED figure
-                // changing, and the ticker re-runs this write every interval,
-                // so a seed that lands only after the pipeline drains — with
-                // the figure long settled — used to leave no trace at all.
-                if (lastPersistedDuffs != duffs) {
-                    lastPersistedDuffs = duffs
-                    log.info(
-                        "SDK balance PERSISTED as the launch seed: {} duffs (was {}) | l1Synced={} " +
-                            "pipelineLagging={} rescanArmedHold={} backfillSettled={} buildsSettled={}",
-                        duffs, previousLastKnown?.value ?: "none", synced, lagging,
-                        armedRescanHold, backfillStatus.settled, buildsSettled
-                    )
-                }
+        // The write and the fallback update are ONE step ([launchSeedMutex]).
+        launchSeedMutex.withLock {
+            try {
+                walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, duffs)
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                log.warn("failed to persist LAST_TOTAL_BALANCE", t)
+                return
             }
-            .onFailure { log.warn("failed to persist LAST_TOTAL_BALANCE", it) }
+            // The figure just accepted as the launch seed is also what the
+            // header must fall back to for the rest of THIS process; see
+            // [_lastKnownTotalBalance]. Only after the write succeeded, so
+            // the two never disagree. A zero lands here too: the overlay
+            // ignores a non-positive value and shows the live figure.
+            val previousLastKnown = _lastKnownTotalBalance.value
+            _lastKnownTotalBalance.value = Coin.valueOf(duffs)
+            // EDGE LOG: once per distinct value written, not per tick. The
+            // publication line above is gated on the DISPLAYED figure
+            // changing, and the ticker re-runs this write every interval,
+            // so a seed that lands only after the pipeline drains — with
+            // the figure long settled — used to leave no trace at all.
+            if (lastPersistedDuffs != duffs) {
+                lastPersistedDuffs = duffs
+                log.info(
+                    "SDK balance PERSISTED as the launch seed: {} duffs (was {}) | l1Synced={} " +
+                        "pipelineLagging={} rescanArmedHold={} backfillSettled={} buildsSettled={}",
+                    duffs, previousLastKnown?.value ?: "none", synced, lagging,
+                    armedRescanHold, backfillStatus.settled, buildsSettled
+                )
+            }
+        }
     }
 
     /** One unit of tx-feed work, so all feeds share ONE sequential collector. */

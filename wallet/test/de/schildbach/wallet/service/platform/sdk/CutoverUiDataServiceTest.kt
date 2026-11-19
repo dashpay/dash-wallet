@@ -1595,6 +1595,60 @@ class CutoverUiDataServiceTest {
     }
 
     @Test
+    fun postCutover_overtakenSeedWrite_cannotPutTheOlderFigureBackAsTheFallback() = runTest {
+        // The balance is published from two collectors at once: the
+        // Room-triggered feed and the event/ticker re-read. The first writes an
+        // older figure and is parked right after its write; the second then
+        // writes the post-spend figure. The older one must not end up as the
+        // fallback once the first resumes.
+        val events = kotlinx.coroutines.flow.MutableSharedFlow<L1TxEvent>(extraBufferCapacity = 4)
+        val source = FakeSource(balanceDuffs = MutableStateFlow(1_103_225_474L))
+        val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
+        coEvery { walletUIConfig.get(WalletUIConfig.LAST_TOTAL_BALANCE) } returns 1_103_225_474L
+        val olderWriteParked = CompletableDeferred<Unit>()
+        val releaseOlderWrite = CompletableDeferred<Unit>()
+        coEvery { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 900_000L) } coAnswers {
+            olderWriteParked.complete(Unit)
+            releaseOlderWrite.await()
+        }
+        val synced = MutableStateFlow(true)
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            walletUIConfig = walletUIConfig, txEvents = events, l1Synced = synced
+        )
+        try {
+            service.start()
+            runCurrent()
+
+            // The Room-triggered collector takes the older figure and parks
+            // with its write done but the fallback not yet updated.
+            source.balanceDuffs.value = 900_000L
+            assertTrue("the older write must be parked", pumpUntil { olderWriteParked.isCompleted })
+
+            // The spend lands: the event re-read publishes the newer figure
+            // (the parked collector cannot see it yet).
+            source.balanceDuffs.value = 781L
+            events.emit(L1TxEvent.Detected(displayHex(3), -899_219L, null, contextCode = 0, directionCode = 0))
+            assertTrue(
+                "the event re-read must have published the newer figure",
+                pumpUntil { service.sdkBalanceOrNull() == Coin.valueOf(781) }
+            )
+
+            // The engine stops before the older write resumes, so nothing
+            // after this point is allowed to persist — or to repair a wrong
+            // fallback.
+            synced.value = false
+            runCurrent()
+        } finally {
+            releaseOlderWrite.complete(Unit)
+        }
+        runCurrent()
+
+        coVerify { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 781L) }
+        assertEquals(Coin.valueOf(781), service.overlayTotalBalance(flowOf(Coin.valueOf(999))).first())
+    }
+
+    @Test
     fun postCutover_armedRescan_publishesTheBalanceButDoesNotPersistIt() = runTest {
         // The app just armed an SPV rescan/replay (heal v2, reset blockchain).
         // Until the engine reflects the watermark rewind the caught-up gate
