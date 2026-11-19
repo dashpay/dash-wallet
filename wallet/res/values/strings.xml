@@ -505,4 +505,7 @@
     <string name="buy_credits_current_identity_balance_unavailable">unavailable</string>
     <string name="payment_request_resending_earlier_payment">This request was paid before, but that payment was never confirmed. Confirming sends the same payment again, so you cannot be charged twice.</string>
     <string name="dash_connect_revoke_access">Revoke access</string>
+    <string name="incomplete_install_title">Install Dash Wallet from Google Play</string>
+    <string name="incomplete_install_message">This copy of Dash Wallet is missing files it needs to run on this device. This can happen when the app is copied from another phone or installed from outside Google Play.\n\nInstall or update Dash Wallet from Google Play. Uninstalling the app deletes the wallet on this device, so only uninstall it if you have your recovery phrase.</string>
+    <string name="incomplete_install_open_play">Open Google Play</string>
 </resources>
