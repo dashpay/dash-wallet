@@ -171,10 +171,12 @@ interface IdentityRepository {
 
     /**
      * Discovers this wallet's identity on Platform from its first identity key, through the
-     * Kotlin SDK. Null only when Platform proves no identity owns that key, or when the wallet
-     * encryption key or the first identity key is unavailable. Every failure propagates, network
-     * failures and timeouts included (an unreached Platform is never "no identity"), as does
-     * cancellation. Runs on [Dispatchers.IO].
+     * Kotlin SDK. Null only when Platform proves no identity owns that key, or when the wallet has
+     * no BLOCKCHAIN_IDENTITY authentication key chain to derive it from. Every failure propagates,
+     * network failures and timeouts included (an unreached Platform is never "no identity"), as
+     * does an encrypted wallet whose encryption key cannot be read
+     * ([IdentityDiscoveryKeyUnavailableException]) and cancellation. An unencrypted wallet derives
+     * the key without one. Runs on [Dispatchers.IO].
      */
     suspend fun getIdentityFromPublicKeyId(): Identity?
     suspend fun clearBlockchainIdentityData()
@@ -1372,7 +1374,9 @@ class IdentityRepositoryImpl @Inject constructor(
      * null for `MaxRetriesReachedException` / `NoAvailableAddressesForRetryException`, an SDK
      * network failure or a timeout propagates: a creation resumed at `IDENTITY_REGISTERING` must
      * not take an unreached Platform for "no identity" and register again with a consumed asset
-     * lock.
+     * lock. For the same reason an encrypted wallet whose key read fails (`getWalletEncryptionKey`
+     * returns null when `SecurityGuard` cannot supply the password) throws rather than returning
+     * null, without querying Platform.
      *
      * Only a found identity is converted to the legacy model, and only after the legacy client
      * exists: the model's key enums initialise through native getters in `libsdklib`, which only
@@ -1381,7 +1385,13 @@ class IdentityRepositoryImpl @Inject constructor(
      * anyway (`BlockchainIdentity` and the legacy identity recovery).
      */
     override suspend fun getIdentityFromPublicKeyId(): Identity? = withContext(Dispatchers.IO) {
-        val encryptionKey = platformRepo.getWalletEncryptionKey() ?: return@withContext null
+        val wallet = checkNotNull(walletDataProvider.wallet) { "identity discovery: the wallet is not loaded" }
+        val encryptionKey = if (wallet.isEncrypted) {
+            platformRepo.getWalletEncryptionKey()
+                ?: throw IdentityDiscoveryKeyUnavailableException("identity discovery: the wallet encryption key could not be read")
+        } else {
+            null // the identity key chain is not encrypted; no key needed to derive the first key
+        }
         val firstIdentityKey = platformRepo.getBlockchainIdentityKey(0, encryptionKey) ?: return@withContext null
         val found = sdkIdentityQueries.identityByPublicKeyHash(firstIdentityKey.pubKeyHash)
         if (found == null) {
@@ -1392,6 +1402,13 @@ class IdentityRepositoryImpl @Inject constructor(
         found.toLegacyIdentity()
     }
 }
+
+/**
+ * Identity discovery could not read the wallet encryption key of an encrypted wallet, so it could
+ * not derive the first identity key. Platform was not queried: this is an unknown, never "no
+ * identity".
+ */
+class IdentityDiscoveryKeyUnavailableException(message: String) : IllegalStateException(message)
 
 /**
  * True when [recordPrimary] is the name requested for [identityId] ([requested], the durable

@@ -19,6 +19,7 @@ package de.schildbach.wallet.service.platform
 
 import android.app.Application
 import de.schildbach.wallet.data.CreditBalanceInfo
+import de.schildbach.wallet.data.WalletData
 import de.schildbach.wallet.service.platform.sdk.DashSdkService
 import de.schildbach.wallet.service.platform.sdk.SdkAmbiguousIdentityException
 import de.schildbach.wallet.service.platform.sdk.SdkIdentityJsonException
@@ -40,6 +41,7 @@ import kotlinx.coroutines.runBlocking
 import org.bitcoinj.core.Base58
 import org.bitcoinj.core.Utils
 import org.bitcoinj.crypto.IDeterministicKey
+import org.bitcoinj.wallet.Wallet
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dashfoundation.dashsdk.errors.DashSdkError
 import org.dashj.platform.dashpay.BlockchainIdentity
@@ -99,6 +101,10 @@ class IdentityRepositorySdkReadsTest {
     private val platformRepo = mockk<PlatformRepo>(relaxed = true)
     private val encryptionKey = mockk<KeyParameter>()
 
+    /** The wallet discovery reads `isEncrypted` from; encrypted unless a test says otherwise. */
+    private val wallet = mockk<Wallet> { every { isEncrypted } returns true }
+    private val walletData = mockk<WalletData> { every { wallet } returns this@IdentityRepositorySdkReadsTest.wallet }
+
     init {
         every { platformRepo.platform } returns platformService
         every { platformService.platform } returns mockk<Platform>(relaxed = true)
@@ -117,7 +123,7 @@ class IdentityRepositorySdkReadsTest {
             walletApplication = mockk(relaxed = true),
             appDatabase = mockk(relaxed = true),
             blockchainIdentityDataStorage = mockk(relaxed = true),
-            walletDataProvider = mockk(relaxed = true),
+            walletDataProvider = walletData,
             platformRepo = repo,
             dashPayConfig = mockk(relaxed = true),
             dashSystemService = mockk(relaxed = true),
@@ -319,11 +325,37 @@ class IdentityRepositorySdkReadsTest {
     }
 
     @Test
-    fun noEncryptionKeyOrNoFirstIdentityKeyIsNullWithoutAnyQuery() = runBlocking {
+    fun encryptedWalletWhoseKeyReadFailsThrowsWithoutAnyQuery() {
+        // getWalletEncryptionKey() is null on an encrypted wallet when SecurityGuard cannot
+        // supply the password: an unknown, never "no identity"
         every { platformRepo.getWalletEncryptionKey() } returns null
+
+        assertThrows(IdentityDiscoveryKeyUnavailableException::class.java) {
+            runBlocking { repository().getIdentityFromPublicKeyId() }
+        }
+
+        coVerify(exactly = 0) { source.identityJsonByPublicKeyHash(any()) }
+        coVerify(exactly = 0) { source.identitiesJsonByNonUniquePublicKeyHash(any(), any()) }
+        verify(exactly = 0) { platformService.platform }
+    }
+
+    @Test
+    fun unencryptedWalletDerivesTheFirstKeyWithoutAnEncryptionKeyAndQueries() = runBlocking {
+        every { wallet.isEncrypted } returns false
+        val firstKey = mockk<IDeterministicKey>()
+        every { firstKey.pubKeyHash } returns firstKeyHash
+        every { platformRepo.getBlockchainIdentityKey(0, null) } returns firstKey
+        coEvery { source.identityJsonByPublicKeyHash(hashHex) } returns null
+        coEvery { source.identitiesJsonByNonUniquePublicKeyHash(hashHex, null) } returns "[]"
+
         assertNull(repository().getIdentityFromPublicKeyId())
 
-        every { platformRepo.getWalletEncryptionKey() } returns encryptionKey
+        verify(exactly = 0) { platformRepo.getWalletEncryptionKey() }
+        coVerify(exactly = 1) { source.identityJsonByPublicKeyHash(hashHex) }
+    }
+
+    @Test
+    fun noFirstIdentityKeyIsNullWithoutAnyQuery() = runBlocking {
         every { platformRepo.getBlockchainIdentityKey(0, encryptionKey) } returns null
         assertNull(repository().getIdentityFromPublicKeyId())
 
