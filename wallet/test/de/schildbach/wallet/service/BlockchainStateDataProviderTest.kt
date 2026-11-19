@@ -318,93 +318,136 @@ class BlockchainStateDataProviderTest {
         assertEquals("closed when the call returns", true, provider.isReplayingOrNull())
     }
 
+    private fun syncedRow() =
+        BlockchainState(Date(0L), 10, false, EnumSet.noneOf(Impediment::class.java), 0, 0, 100)
+
     /**
-     * Review, #1714. The progress is sampled before it is queued, and the engine can report
-     * "synced" for a moment after a rewind is armed. A progress update only ever ends a replay,
-     * so a "complete" that predates the replay would end it for good.
+     * Review, #1714. The progress is sampled before it is queued. A progress update only ever
+     * ends a replay, so a "complete" that predates the replay would end it for good.
      */
     @Test
-    fun aCompletionFromBeforeTheReplay_doesNotEndIt() {
+    fun aCompletionFromBeforeARestoreOrTakeover_doesNotEndIt() {
         var nowMs = 1_000L
         provider.monotonicMs = { nowMs }
-        dao.state = BlockchainState(Date(0L), 10, false, EnumSet.noneOf(Impediment::class.java), 0, 0, 100)
+        dao.state = syncedRow()
         provider.markReplayStartedForSdkTakeover()
         awaitUntil("marker applied") { dao.state?.replaying == true }
 
-        // The stale snapshot: taken at the tip, delivered after the arm.
-        provider.updateSdkBlockchainState(sdkUpdate(percentageSync = 100, syncStage = SyncStage.COMPLETE))
-        nowMs += BlockchainStateDataProvider.REPLAY_START_SETTLE_MS
+        // Handed over in the first samples after the start: about the scan as it was.
+        nowMs += BlockchainStateDataProvider.REPLAY_VERDICT_SETTLE_MS - 1
         provider.updateSdkBlockchainState(sdkUpdate(bestChainHeight = 11, percentageSync = 100))
-        awaitUntil("both stale updates applied") { dao.state?.bestChainHeight == 11 }
+        awaitUntil("stale update applied") { dao.state?.bestChainHeight == 11 }
         assertTrue("the replay is still on", dao.state!!.replaying)
         assertEquals(true, provider.isReplayingOrNull())
 
-        // The engine picks the rewind up, works, and finishes: that completion counts.
-        provider.updateSdkBlockchainState(sdkUpdate(percentageSync = 3, syncStage = SyncStage.BLOCKS))
+        nowMs += 1
         provider.updateSdkBlockchainState(sdkUpdate(percentageSync = 100, syncStage = SyncStage.COMPLETE))
         awaitUntil("replay ended") { dao.state?.replaying == false }
         awaitUntil("gate follows") { provider.isReplayingOrNull() == false }
     }
 
     /**
-     * Pre-review, 2026-11-18. "Working" can be stale too: an update from a catch-up that was
-     * running before the replay started must not count as work on the replay, or the stale
-     * "complete" that follows it ends the replay after all.
+     * Pre-review, 2026-11-18. The SDK takes 9 to 60 s to act on an armed rewind, and until then
+     * its progress describes the scan as it was: "complete", and "working" on a catch-up that
+     * was already running. No timing rule tells those from the replay's own reports, so none
+     * of them counts until the binder has seen the rewind take effect.
      */
     @Test
-    fun workReportedBeforeTheReplaySettles_doesNotCountAsWorkOnIt() {
+    fun anArmedRescan_isNotEndedByAnyVerdict_untilItsRewindIsConfirmed() {
         var nowMs = 1_000L
         provider.monotonicMs = { nowMs }
-        dao.state = BlockchainState(Date(0L), 10, false, EnumSet.noneOf(Impediment::class.java), 0, 0, 100)
-        provider.markReplayStartedForSdkTakeover()
+        provider.replayVerdictSettleMs = 0
+        dao.state = syncedRow()
+        provider.markReplayStartedForArmedRescan()
         awaitUntil("marker applied") { dao.state?.replaying == true }
 
-        nowMs += BlockchainStateDataProvider.REPLAY_START_SETTLE_MS - 1
+        nowMs += 120_000 // however long: time alone proves nothing
         provider.updateSdkBlockchainState(sdkUpdate(percentageSync = 99, syncStage = SyncStage.BLOCKS))
-        nowMs += 1
         provider.updateSdkBlockchainState(
             sdkUpdate(bestChainHeight = 11, percentageSync = 100, syncStage = SyncStage.COMPLETE)
         )
         awaitUntil("both updates applied") { provider.getSyncStage() == SyncStage.COMPLETE }
-
         assertTrue("the earlier catch-up's work and completion are not the replay's", dao.state!!.replaying)
         assertEquals(true, provider.isReplayingOrNull())
-    }
 
-    /**
-     * Pre-review, 2026-11-18. The progress feed reports changes only, so the "complete" turned
-     * away inside the grace period can be the last update for minutes. The replay must end when
-     * the period does, with no further update.
-     */
-    @Test
-    fun aReplayWithNothingToScan_endsWhenTheGracePeriodDoes_withNoFurtherUpdate() {
-        provider.replayStartSettleMs = 0
-        provider.replayStartGraceMs = 1_500
-        dao.state = BlockchainState(Date(0L), 10, false, EnumSet.noneOf(Impediment::class.java), 0, 0, 100)
-        provider.markReplayStartedForSdkTakeover()
-        awaitUntil("marker applied") { dao.state?.replaying == true }
-
-        provider.updateSdkBlockchainState(sdkUpdate(bestChainHeight = 11, percentageSync = 100))
-        awaitUntil("completion applied") { dao.state?.bestChainHeight == 11 }
-        assertTrue("inside the grace period it may be stale", dao.state!!.replaying)
-
-        awaitUntil("replay ended at the deadline") { dao.state?.replaying == false }
+        // The rewind took effect and the engine's last word is "complete": nothing was left
+        // to scan, and no further update is needed to say so.
+        provider.noteArmedRescanConfirmed()
+        awaitUntil("replay ended") { dao.state?.replaying == false }
         awaitUntil("gate follows") { provider.isReplayingOrNull() == false }
     }
 
     @Test
-    fun aReplayTheEngineIsStillWorkingOn_doesNotEndWhenTheGracePeriodDoes() {
-        provider.replayStartSettleMs = 0
-        provider.replayStartGraceMs = 200
-        dao.state = BlockchainState(Date(0L), 10, false, EnumSet.noneOf(Impediment::class.java), 0, 0, 100)
-        provider.markReplayStartedForSdkTakeover()
+    fun aConfirmedRescanTheEngineIsWorkingOn_endsOnItsCompletion_notBefore() {
+        provider.replayVerdictSettleMs = 0
+        dao.state = syncedRow()
+        provider.markReplayStartedForArmedRescan()
         awaitUntil("marker applied") { dao.state?.replaying == true }
         provider.updateSdkBlockchainState(sdkUpdate(percentageSync = 3, syncStage = SyncStage.BLOCKS))
         awaitUntil("work reported") { provider.getSyncStage() == SyncStage.BLOCKS && provider.isSdkEngineWorking() }
 
-        Thread.sleep(500)
+        provider.noteArmedRescanConfirmed()
+        Thread.sleep(300)
+        assertTrue("confirmed, but the engine is still scanning", dao.state!!.replaying)
+        assertEquals(true, provider.isReplayingOrNull())
 
-        assertTrue("still replaying after the deadline", dao.state!!.replaying)
+        provider.updateSdkBlockchainState(sdkUpdate(percentageSync = 100, syncStage = SyncStage.COMPLETE))
+        awaitUntil("replay ended") { dao.state?.replaying == false }
+        awaitUntil("gate follows") { provider.isReplayingOrNull() == false }
+    }
+
+    @Test
+    fun aCompletionInTheFirstSamplesAfterTheConfirmation_isOverruledByWorkThatFollows() {
+        provider.replayVerdictSettleMs = 600
+        dao.state = syncedRow()
+        provider.markReplayStartedForArmedRescan()
+        awaitUntil("marker applied") { dao.state?.replaying == true }
+
+        provider.noteArmedRescanConfirmed()
+        // Still the sample from before the rewind...
+        provider.updateSdkBlockchainState(sdkUpdate(bestChainHeight = 11, percentageSync = 100))
+        // ...then the engine shows the rewind.
+        provider.updateSdkBlockchainState(sdkUpdate(percentageSync = 3, syncStage = SyncStage.BLOCKS))
+        awaitUntil("both applied") { provider.getSyncStage() == SyncStage.BLOCKS && provider.isSdkEngineWorking() }
+
+        Thread.sleep(1_000) // past the settle time and its second look
+        assertTrue(dao.state!!.replaying)
+        assertEquals(true, provider.isReplayingOrNull())
+    }
+
+    /** Pre-review, 2026-11-18: a job that belongs to an earlier replay must not end a newer one. */
+    @Test
+    fun theSecondLookOfAnEarlierReplay_doesNotEndANewerOne() {
+        provider.replayVerdictSettleMs = 300
+        dao.state = syncedRow()
+        provider.markReplayStartedForArmedRescan()
+        awaitUntil("marker applied") { dao.state?.replaying == true }
+        provider.updateSdkBlockchainState(sdkUpdate(bestChainHeight = 11, percentageSync = 100))
+        awaitUntil("completion applied") { dao.state?.bestChainHeight == 11 }
+        provider.noteArmedRescanConfirmed()
+
+        // A second rescan is armed before the first one's second look runs.
+        provider.markReplayStartedForArmedRescan()
+        Thread.sleep(800)
+
+        assertTrue("the row still says replaying", dao.state!!.replaying)
+        assertEquals(true, provider.isReplayingOrNull())
+    }
+
+    @Test
+    fun aRestoreOnTopOfAnUnconfirmedArmedRescan_leavesItUnconfirmed() {
+        var nowMs = 1_000L
+        provider.monotonicMs = { nowMs }
+        dao.state = syncedRow()
+        provider.markReplayStartedForArmedRescan()
+        provider.markReplayStartedForSdkTakeover()
+        awaitUntil("marker applied") { dao.state?.replaying == true }
+
+        nowMs += 10 * BlockchainStateDataProvider.REPLAY_VERDICT_SETTLE_MS
+        provider.updateSdkBlockchainState(sdkUpdate(bestChainHeight = 11, percentageSync = 100))
+        awaitUntil("completion applied") { dao.state?.bestChainHeight == 11 }
+
+        assertTrue(dao.state!!.replaying)
         assertEquals(true, provider.isReplayingOrNull())
     }
 

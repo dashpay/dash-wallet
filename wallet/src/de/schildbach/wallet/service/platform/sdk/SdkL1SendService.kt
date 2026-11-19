@@ -1488,6 +1488,17 @@ class SdkL1SendService internal constructor(
         probeSendGate().takeIf { !it.allowed }?.let { "$L1_FUNDING_GATE_CLOSED_REASON: ${it.reason}" }
 
     /**
+     * [gateRefusalUnderHold] for the paths that wait once more, for the SDK's send lock
+     * ([SdkL1SendSource.withCoreSendLock]): asked inside that lock, right before the submission
+     * is marked. Thrown, because the lock's block returns a txid; nothing has been built.
+     */
+    private fun checkGateInsideSendLock() {
+        gateRefusalUnderHold()?.let { throw GateClosedInsideSendLock(it) }
+    }
+
+    private class GateClosedInsideSendLock(val reason: String) : IllegalStateException(reason)
+
+    /**
      * [probeSendGate], waiting up to [sendGateWaitMs] for a closed gate to open. A payment opened
      * right after a launch (a scanned invoice, a deep link) asks before the engine has started
      * or found a peer, which takes seconds: on a 12.0.1-beta launch (2026-11-17) the engine was
@@ -1690,6 +1701,7 @@ class SdkL1SendService internal constructor(
                         // Inside the lock, right before the native call: a wipe that cancels the
                         // (cancellable) wait for the lock has sent nothing — NotBroadcast. From
                         // here a wipe that cancels this leaves the outcome unknown.
+                        checkGateInsideSendLock()
                         mark.submitting()
                         try {
                             source.sendAllToAddress(walletIdHex, address, sendAllFloor)
@@ -1720,6 +1732,8 @@ class SdkL1SendService internal constructor(
                 runCatching { bridgeAfterBroadcast(txidHex) }
                     .onFailure { log.warn("failed to launch the bridged-tx commit for {}", txidHex, it) }
                 SdkWriteResult.Broadcast(txidHex)
+            } catch (t: GateClosedInsideSendLock) {
+                notBroadcast(operation, t.reason, null)
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
                 val classified = classifyCoreSendFailure(t)
@@ -1821,6 +1835,7 @@ class SdkL1SendService internal constructor(
                 val txidHex = source.withCoreSendLock(walletIdHex) {
                     // Inside the lock, right before the native call: a wipe that cancels the wait
                     // for the lock has sent nothing — NotBroadcast.
+                    checkGateInsideSendLock()
                     mark.submitting()
                     source.drainCoinJoinToAddress(walletIdHex, address, COIN_JOIN_DRAIN_FLOOR_DUFFS)
                 }
@@ -1830,6 +1845,8 @@ class SdkL1SendService internal constructor(
                 runCatching { bridgeAfterBroadcast(txidHex) }
                     .onFailure { log.warn("failed to launch the bridged-tx commit for {}", txidHex, it) }
                 SdkWriteResult.Broadcast(txidHex)
+            } catch (t: GateClosedInsideSendLock) {
+                notBroadcast(operation, t.reason, null)
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
                 when (val classified = classifyCoreSendFailure(t)) {
@@ -1913,6 +1930,7 @@ class SdkL1SendService internal constructor(
         return try {
             val txid = source.withCoreSendLock(walletId) {
                 checkNotNull(source.destinationOwner(walletId, destination)) { DESTINATION_NOT_OWNED }
+                checkGateInsideSendLock()
                 // Once [prepared] records the txid, the broadcast must follow: a cancellation
                 // in between would abandon a tx the stage already records as sent.
                 mark.submitting()
@@ -1927,6 +1945,8 @@ class SdkL1SendService internal constructor(
             runCatching { onSelfSpendBroadcast() }
             runCatching { bridgeAfterBroadcast(txid) }
             SdkWriteResult.Broadcast(txid)
+        } catch (t: GateClosedInsideSendLock) {
+            SdkWriteResult.NotBroadcast(t.reason)
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             if (!preparedForBroadcast) SdkWriteResult.NotBroadcast("consolidation preparation failed", t)

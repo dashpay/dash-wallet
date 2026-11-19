@@ -606,6 +606,7 @@ class SdkL1SendServiceTest {
         source: FakeSource,
         seamRegistry: SeamOutputLockRegistry = SeamOutputLockRegistry(),
         unprotectedPendingPayment: suspend () -> Boolean = { false },
+        replaying: () -> Boolean? = { false },
         fundingSelection: de.schildbach.wallet.payments.FundingSelectionLock =
             de.schildbach.wallet.payments.FundingSelectionLock()
     ) = SdkL1SendService(
@@ -613,6 +614,7 @@ class SdkL1SendServiceTest {
         dashPayConfig = config(true),
         isValidAddress = { true },
         l1Progress = { caughtUpProgress() },
+        isReplaying = replaying,
         hasAppLockedCoinJoinOutputs = { false },
         seamOutputLockRegistry = seamRegistry,
         hasUnprotectedPendingPayment = unprotectedPendingPayment,
@@ -2079,6 +2081,39 @@ class SdkL1SendServiceTest {
         } finally {
             lock.lowerWipeBarrier()
         }
+    }
+
+    /**
+     * Pre-review, 2026-11-18. Send-all and the CoinJoin paths wait once more after the funding
+     * hold, for the SDK's send lock. A rescan that starts during that wait must stop them too.
+     */
+    @Test
+    fun sendAll_aReplayThatStartsWhileWaitingForTheCoreSendLock_isNotBroadcast() = runBlocking {
+        var replayNow = false
+        val source = drainReadySource().apply { waitForCoreSendLock = { replayNow = true } }
+        val svc = service(source, enabled = false, cutoverState = "CUT_OVER", replaying = { replayNow })
+
+        val result = svc.sendToAddress(validAddress, amount, emptyWallet = true)
+
+        assertTrue("refused: $result", result is SdkWriteResult.NotBroadcast)
+        val reason = (result as SdkWriteResult.NotBroadcast).reason
+        assertTrue(reason, reason.contains(L1_FUNDING_GATE_CLOSED_REASON))
+        assertEquals("never reached the SDK drain", 0, source.sendAllCalls)
+    }
+
+    @Test
+    fun coinJoinDrain_aReplayThatStartsWhileWaitingForTheCoreSendLock_isNotBroadcast() = runBlocking {
+        var replayNow = false
+        val source = readySource().apply {
+            onDrainCoinJoin = { _, _, _ -> txid }
+            waitForCoreSendLock = { replayNow = true }
+        }
+        val svc = consolidationService(source, replaying = { replayNow })
+
+        val result = svc.drainCoinJoinAccountTo(validAddress)
+
+        assertTrue("refused: $result", result is SdkWriteResult.NotBroadcast)
+        assertEquals("never reached the SDK drain", 0, source.drainCoinJoinCalls)
     }
 
     @Test

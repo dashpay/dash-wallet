@@ -384,9 +384,11 @@ class SdkWalletBinderTest {
         processToken: String = "test-process",
         backfillRetryDelayMs: Long = 1L,
         onOwedRescanArmed: () -> Unit = {},
+        onOwedRescanConfirmed: () -> Unit = {},
         scope: CoroutineScope
     ) = SdkWalletBinder(
         onOwedRescanArmed = onOwedRescanArmed,
+        onOwedRescanConfirmed = onOwedRescanConfirmed,
         sdkService = sdk,
         mnemonicProvider = mnemonic,
         identityConfig = identity,
@@ -2881,6 +2883,36 @@ class SdkWalletBinderTest {
         sdk.onArmRescan = { _, _ -> true }
         binder(sdk, config = config, onOwedRescanArmed = { marked++ }, scope = this).bindIfEnabled(unlock)
         assertEquals("the rewind to birth is a replay", 1, marked)
+    }
+
+    /**
+     * Pre-review, 2026-11-18. The replay an arm starts may only be ended by the engine once the
+     * rewind is known to have taken effect: until the SDK acts on the arm its progress still
+     * says "synced". The binder's evidence is the SDK's saved scan height.
+     */
+    @Test
+    fun bind_owedRescan_isConfirmedOnlyOnceTheRewindIsDurable() = runBlocking {
+        val sdk = readySdk()
+        sdk.persistsRewindOnArm = false
+        sdk.durableHeight = 900_000L
+        owedRescan = true
+        val (config, _) = healConfig(recordedVersion = SdkWalletBinder.GAP_WIDEN_HEAL_VERSION)
+        val events = mutableListOf<String>()
+
+        binder(
+            sdk,
+            config = config,
+            onOwedRescanArmed = { events += "armed" },
+            onOwedRescanConfirmed = { events += "confirmed" },
+            scope = this
+        ).bindIfEnabled(unlock)
+        assertEquals("armed, the rewind not yet seen", listOf("armed"), events)
+
+        // The SDK persists the rewound height; the watch sees it.
+        sdk.durableHeight = 0L
+        withTimeout(5_000) { while (events.size < 2) delay(10) }
+        assertEquals(listOf("armed", "confirmed"), events)
+        coroutineContext.cancelChildren()
     }
 
     /**
