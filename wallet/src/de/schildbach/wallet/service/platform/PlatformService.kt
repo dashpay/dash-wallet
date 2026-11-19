@@ -106,28 +106,6 @@ interface PlatformService {
     fun getContactIdentity(userId: Identifier): Identity?
 }
 
-fun <T> platformLazy(initializer: () -> T): Lazy<T?> {
-    return object : Lazy<T?> {
-        private var _value: Any? = UNINITIALIZED
-        override val value: T?
-            get() {
-                if (_value === UNINITIALIZED) {
-                    _value = if (Constants.SUPPORTS_PLATFORM) {
-                        initializer.invoke()
-                    } else {
-                        null
-                    }
-                }
-                @Suppress("UNCHECKED_CAST")
-                return _value as T?
-            }
-
-        override fun isInitialized() = _value !== UNINITIALIZED
-    }
-}
-
-private object UNINITIALIZED
-
 /**
  * [PlatformService.hasApp]'s decision: a name [registry] knows is answered from it when Platform
  * is supported, without calling [legacyHasApp] (which constructs the legacy client); every other
@@ -143,17 +121,66 @@ internal fun resolveHasApp(
     return registered ?: legacyHasApp(app)
 }
 
-class PlatformServiceImplementation @Inject constructor(
+/**
+ * The legacy `org.dashj.platform` client is constructed on its first genuine use, not when the
+ * service is injected: its constructor loads `libsdklib`.
+ *
+ * [creationLock] guards creating and publishing [legacyClient] and storing and applying
+ * [masternodeListManager], so concurrent first callers get one client, and the context provider,
+ * the latest manager and the Sakura address handling are attached before the client is visible.
+ * Code run under the lock touches only the client being wired (constructor, field setters,
+ * address-provider replacement): nothing that calls back into this service or blocks on the
+ * network. The JNI quorum callback reads the `@Volatile` manager without the lock.
+ */
+class PlatformServiceImplementation internal constructor(
     val walletDataProvider: WalletData,
-    private val systemContractIds: SystemContractIds
+    private val systemContractIds: SystemContractIds,
+    private val platformSupported: Boolean,
+    private val clientFactory: (NetworkParameters) -> Platform
 ) : PlatformService {
+
+    @Inject
+    constructor(walletDataProvider: WalletData, systemContractIds: SystemContractIds) : this(
+        walletDataProvider,
+        systemContractIds,
+        Constants.SUPPORTS_PLATFORM,
+        ::createNetworkPlatform
+    )
+
+    private val creationLock = Any()
+
+    @Volatile
+    private var legacyClient: Platform? = null
+
+    /** Latest manager supplied (latest wins); read by the JNI quorum callback without the lock. */
+    @Volatile
+    private var masternodeListManager: SimplifiedMasternodeListManager? = null
+
+    /**
+     * The legacy client, created on the first call (null when Platform is not supported). A
+     * failing constructor or wiring publishes nothing and propagates; the next call retries.
+     */
+    private fun legacyClientOrNull(): Platform? {
+        if (!platformSupported) return null
+        legacyClient?.let { return it }
+        synchronized(creationLock) {
+            legacyClient?.let { return it }
+            val created = clientFactory(params)
+            created.client.contextProvider = quorumContextProvider
+            masternodeListManager?.let { applyMasternodeListManager(created, it) }
+            legacyClient = created
+            return created
+        }
+    }
+
     // none of the following should be initialized if platform is not supported
-    private val _platform by platformLazy { createNetworkPlatform(Constants.NETWORK_PARAMETERS) }
     override val platform: Platform
-        get() = _platform!!
-    private val _profiles by platformLazy { Profiles(platform) }
-    private val _contactRequests by platformLazy {  ContactRequests(platform) }
-    private val _identityVerify by platformLazy {  IdentityVerify(platform) }
+        get() = legacyClientOrNull()!!
+    // Synchronized lazies over [platform]: each wrapper is built once, on the one client. A
+    // throwing initializer leaves the lazy uninitialized, so the next read runs it again.
+    private val _profiles by lazy { if (platformSupported) Profiles(platform) else null }
+    private val _contactRequests by lazy { if (platformSupported) ContactRequests(platform) else null }
+    private val _identityVerify by lazy { if (platformSupported) IdentityVerify(platform) else null }
     override val profiles
         get() = _profiles!!
     override val contactRequests
@@ -165,7 +192,6 @@ class PlatformServiceImplementation @Inject constructor(
     override val names: Names by lazy { platform.names }
     override val client: DapiClient by lazy { platform.client }
     override val params: NetworkParameters = Constants.NETWORK_PARAMETERS
-    private lateinit var masternodeListManager: SimplifiedMasternodeListManager
 
     /** One-shot flag so an unwired quorum lookup logs once, not per call. */
     @Volatile
@@ -173,59 +199,57 @@ class PlatformServiceImplementation @Inject constructor(
     companion object {
         private val log = LoggerFactory.getLogger(PlatformServiceImplementation::class.java)
     }
-    init {
-        val contextProvider = object : ContextProvider() {
-            override fun getQuorumPublicKey(
-                quorumType: Int,
-                quorumHashBytes: ByteArray?,
-                coreChainLockedHeight: Int
-            ): ByteArray? {
-                // Post-cutover (Phase 5d) the dashj engine may be held, and
-                // until BlockchainServiceImpl wires the SDK-sourced quorum
-                // manager this field is uninitialized. A thrown exception
-                // here crosses a JNI boundary into the rust DAPI client —
-                // observed live as lateinit crash spam plus banned DAPI
-                // addresses — so degrade to "not found" instead (contained,
-                // logged once).
-                if (!::masternodeListManager.isInitialized) {
-                    if (!loggedUnwiredQuorumLookup) {
-                        loggedUnwiredQuorumLookup = true
-                        log.warn(
-                            "quorum lookup before a masternode list manager is wired " +
-                                "(cutover holding dashj?) — returning not-found until " +
-                                "setMasternodeListManager runs"
-                        )
-                    }
-                    return null
-                }
-                return try {
-                    val quorumHash = Sha256Hash.wrap(quorumHashBytes)
-                    var quorumPublicKey: ByteArray? = null
-                    log.info("searching for quorum: $quorumType, $quorumHash, $coreChainLockedHeight")
-                    walletDataProvider.wallet?.context?.let { Context.propagate(it) }
-                    masternodeListManager.getQuorumListAtTip(
-                        LLMQParameters.LLMQType.fromValue(
-                            quorumType
-                        )
-                    ).forEachQuorum(true) {
-                        if (it.llmqType.value == quorumType && it.quorumHash == quorumHash) {
-                            quorumPublicKey = it.quorumPublicKey.serialize(false)
-                        }
-                    }
-                    log.info("searching for quorum: result: ${quorumPublicKey?.toHex()}")
-                    quorumPublicKey
-                } catch (e: Exception) {
-                    // Never throw across the JNI callback boundary.
-                    log.warn("quorum lookup failed: {}", e.toString())
-                    null
-                }
-            }
 
-            override fun getDataContract(identifier: org.dashj.platform.sdk.Identifier?): ByteArray {
-                TODO("Not yet implemented")
+    private val quorumContextProvider = object : ContextProvider() {
+        override fun getQuorumPublicKey(
+            quorumType: Int,
+            quorumHashBytes: ByteArray?,
+            coreChainLockedHeight: Int
+        ): ByteArray? {
+            // Post-cutover (Phase 5d) the dashj engine may be held, and
+            // until BlockchainServiceImpl wires the SDK-sourced quorum
+            // manager none is set. A thrown exception here crosses a JNI
+            // boundary into the rust DAPI client — observed live as
+            // lateinit crash spam plus banned DAPI addresses — so degrade
+            // to "not found" instead (contained, logged once).
+            val manager = masternodeListManager
+            if (manager == null) {
+                if (!loggedUnwiredQuorumLookup) {
+                    loggedUnwiredQuorumLookup = true
+                    log.warn(
+                        "quorum lookup before a masternode list manager is wired " +
+                            "(cutover holding dashj?) — returning not-found until " +
+                            "setMasternodeListManager runs"
+                    )
+                }
+                return null
+            }
+            return try {
+                val quorumHash = Sha256Hash.wrap(quorumHashBytes)
+                var quorumPublicKey: ByteArray? = null
+                log.info("searching for quorum: $quorumType, $quorumHash, $coreChainLockedHeight")
+                walletDataProvider.wallet?.context?.let { Context.propagate(it) }
+                manager.getQuorumListAtTip(
+                    LLMQParameters.LLMQType.fromValue(
+                        quorumType
+                    )
+                ).forEachQuorum(true) {
+                    if (it.llmqType.value == quorumType && it.quorumHash == quorumHash) {
+                        quorumPublicKey = it.quorumPublicKey.serialize(false)
+                    }
+                }
+                log.info("searching for quorum: result: ${quorumPublicKey?.toHex()}")
+                quorumPublicKey
+            } catch (e: Exception) {
+                // Never throw across the JNI callback boundary.
+                log.warn("quorum lookup failed: {}", e.toString())
+                null
             }
         }
-        _platform?.client?.contextProvider = contextProvider
+
+        override fun getDataContract(identifier: org.dashj.platform.sdk.Identifier?): ByteArray {
+            TODO("Not yet implemented")
+        }
     }
 
     /**
@@ -266,13 +290,24 @@ class PlatformServiceImplementation @Inject constructor(
         }
     }
 
+    /**
+     * Stores [masternodeListManager] (latest wins) without constructing the legacy client, and
+     * applies it to the client if one exists; a client created later gets it at creation.
+     */
     override fun setMasternodeListManager(masternodeListManager: SimplifiedMasternodeListManager) {
-        this.masternodeListManager = masternodeListManager
-        val configuredAddresses = platform.client.dapiAddressListProvider
-        platform.setMasternodeListManager(masternodeListManager)
+        synchronized(creationLock) {
+            this.masternodeListManager = masternodeListManager
+            legacyClient?.let { applyMasternodeListManager(it, masternodeListManager) }
+        }
+    }
+
+    /** Runs under [creationLock]. */
+    private fun applyMasternodeListManager(client: Platform, manager: SimplifiedMasternodeListManager) {
+        val configuredAddresses = client.client.dapiAddressListProvider
+        client.setMasternodeListManager(manager)
         if (params is de.schildbach.wallet.network.SakuraDevNetParams) {
             // Keep Sakura's explicit HTTPS ports; the SDK's legacy discovery replaces them.
-            platform.client.dapiAddressListProvider = configuredAddresses
+            client.client.dapiAddressListProvider = configuredAddresses
         }
     }
 
