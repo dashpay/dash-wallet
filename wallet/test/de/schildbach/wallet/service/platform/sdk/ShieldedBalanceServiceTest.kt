@@ -3288,7 +3288,14 @@ class ShieldedBalanceServiceTest {
         // the funding hold. False for that question, true for the one asked after the waits.
         val source = readySource()
         var asked = 0
-        val service = service(source, progress = { caughtUpProgress() }, replaying = { asked++ > 0 })
+        // The flow is passed apart: its default would ask [replaying] once while the fixture is
+        // built, and the first real question would then already be answered "replaying".
+        val service = service(
+            source,
+            progress = { caughtUpProgress() },
+            replaying = { asked++ > 0 },
+            replayingFlow = flowOf(false)
+        )
 
         val result = service.shieldFromWallet(Dash.COIN)
 

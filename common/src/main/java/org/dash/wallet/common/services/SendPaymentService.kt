@@ -49,10 +49,11 @@ class PaymentStillConfirmingException(message: String) : IllegalStateException(m
 
 /**
  * Thrown instead of sending when the SDK engine refused because its L1 funding gate is closed:
- * the engine is not running, or its filter scan has not caught up to the chain tip. This is the
- * one send failure that means "not synced yet", and the only one a screen may present as such
+ * a restore or rescan is replaying the wallet's history, or the engine is not running, has no
+ * peers or reports an error. Being behind the chain tip does not close it. This is the one send
+ * failure that means "not synced yet", and the only one a screen may present as such
  * (`R.string.send_coins_fragment_hint_replaying`). Nothing was built, signed or sent, and the same
- * payment works once the scan reaches the tip.
+ * payment works once the gate opens.
  */
 class SendEngineNotSyncedException(message: String) : IllegalStateException(message)
 

@@ -1504,6 +1504,34 @@ class L1ShadowSyncServiceTest {
         service.stop()
     }
 
+    /** Review, #1714: a restart left over from before an external stop is about to give up. */
+    @Test
+    fun owedRescanRestart_leftOverFromBeforeAnExternalStop_isNotReusedForANewSession() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val service = service(source, scanGateRetryInitialMs = 60_000L)
+        assertTrue(service.startIfEnabled())
+        // Restart A stops the scanner, fails to start it and waits in its backoff.
+        source.onStart = { throw IllegalStateException("startSpv failed") }
+        val restartA = service.launchOwedRescanRestart()
+        withTimeout(5_000) { while (source.startCalls < 2) delay(5) }
+        assertTrue(restartA.isActive)
+
+        // An external stop, then a new session.
+        service.stop()
+        source.onStart = {}
+        assertTrue(service.startIfEnabled())
+        val startsBefore = source.startCalls
+
+        val restartB = service.launchOwedRescanRestart()
+        assertTrue("a restart of its own", restartB !== restartA)
+        withTimeout(5_000) { restartB.join() }
+
+        assertEquals("the new session was restarted", startsBefore + 1, source.startCalls)
+        assertTrue(service.isEngineRunning())
+        restartA.cancel()
+        service.stop()
+    }
+
     /** The app's copy of the scan height is lowered by the arm and survives the restart's seed. */
     @Test
     fun aRescanArmedWhileStopped_isShownOnceTheScannerStarts() = runBlocking {

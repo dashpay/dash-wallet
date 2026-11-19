@@ -244,9 +244,12 @@ internal fun sendAllFeeReserveDuffs(pooledUtxoCount: Int?): Long {
 
 /**
  * The [SdkWriteResult.NotBroadcast] reason prefix for a CLOSED L1 funding
- * gate — the engine is not running or its filter scan has not caught up to
- * the chain tip yet, i.e. the one refusal that genuinely means "the wallet
- * is not synced enough to send". [de.schildbach.wallet.payments.SendCoinsTaskRunner]
+ * gate — a restore or rescan is replaying the wallet's history, or the
+ * engine is not running, has no peers or reports an error
+ * ([evaluateWalletFundingGate]); an ordinary catch-up does not close it.
+ * It is a refusal before anything is built or submitted, and the one that
+ * genuinely means "the wallet is not ready to send yet".
+ * [de.schildbach.wallet.payments.SendCoinsTaskRunner]
  * keys the user-facing "not fully synced" diagnosis off this prefix; every
  * other NotBroadcast reason (flag off, bad address, builder shortfall, …)
  * must NOT be presented as a sync problem.
@@ -1466,8 +1469,9 @@ class SdkL1SendService internal constructor(
     /**
      * Read-only probe of the L1 send evidence gate — THE SAME predicate
      * [sendToAddress] evaluates before broadcasting ([evaluateWalletFundingGate]
-     * over the engine's live progress: engine running + filter scan caught
-     * up to the chain tip). Extracted so the debug settings screen can show
+     * over the engine's live progress and the replay state: engine running
+     * with peers, no restore or rescan replaying; an ordinary catch-up is
+     * allowed). Extracted so the debug settings screen can show
      * the live gate state without approximating the rule. Never mutates
      * anything and never throws — a progress-read failure reads as a closed
      * gate, exactly as it would on a real send ([safeProgress]).
@@ -1714,6 +1718,10 @@ class SdkL1SendService internal constructor(
                                 "SDK {}: floor {} duffs not deliverable at fee; retrying engine-authoritatively",
                                 operation, sendAllFloor, t
                             )
+                            // The send lock does not hold off a rescan: one that started
+                            // during the first attempt stops the second. That attempt was
+                            // not broadcast and this one has not begun, so NotBroadcast.
+                            checkGateInsideSendLock()
                             source.sendAllToAddress(walletIdHex, address, 1L)
                         }
                     }

@@ -2084,6 +2084,30 @@ class SdkL1SendServiceTest {
     }
 
     /**
+     * Review, #1714. The send lock does not hold off a rescan: one that starts during the
+     * first drain attempt must stop the adjust-down retry, which selects coins again.
+     */
+    @Test
+    fun sendAll_aReplayThatStartsDuringTheFirstAttempt_stopsTheAdjustDownRetry() = runBlocking {
+        var replayNow = false
+        val source = drainReadySource(spendable = 5_000_000L)
+        source.onSendAll = { _, _, _ ->
+            replayNow = true
+            throw DashSdkError.PlatformWallet.WalletOperation(
+                "transaction build failed: Insufficient funds: available 5000000, required 5001480"
+            )
+        }
+        val svc = service(source, enabled = false, cutoverState = "CUT_OVER", replaying = { replayNow })
+
+        val result = svc.sendToAddress(validAddress, amount, emptyWallet = true)
+
+        assertTrue("refused: $result", result is SdkWriteResult.NotBroadcast)
+        val reason = (result as SdkWriteResult.NotBroadcast).reason
+        assertTrue(reason, reason.contains(L1_FUNDING_GATE_CLOSED_REASON))
+        assertEquals("the retry never reached the SDK", 1, source.sendAllFloors.size)
+    }
+
+    /**
      * Pre-review, 2026-11-18. Send-all and the CoinJoin paths wait once more after the funding
      * hold, for the SDK's send lock. A rescan that starts during that wait must stop them too.
      */

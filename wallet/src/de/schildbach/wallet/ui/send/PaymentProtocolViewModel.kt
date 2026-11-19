@@ -131,9 +131,10 @@ class PaymentProtocolViewModel @Inject constructor(
         get() = deferredPayment != null || isResubmission
 
     /**
-     * True when the preview could not be built only because the wallet had not caught up with the
-     * chain ([SendEngineNotSyncedException]): nothing was built or reserved, so building again is
-     * safe, and it succeeds once the scan reaches the tip. No other failure is retried here.
+     * True when the preview could not be built only because the send gate was closed
+     * ([SendEngineNotSyncedException]: a restore or rescan in progress, or the engine not running
+     * or without peers): nothing was built or reserved, so building again is safe, and it
+     * succeeds once the gate opens. No other failure is retried here.
      */
     val canRetryPreview: Boolean
         get() = !canSendPayment && finalPaymentIntent != null &&

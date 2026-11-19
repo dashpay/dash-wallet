@@ -2802,6 +2802,7 @@ class L1ShadowSyncService internal constructor(
 
     private val owedRescanRestartLock = Any()
     private var owedRescanRestartJob: Job? = null
+    private var owedRescanRestartGeneration = 0L
 
     /**
      * Stop the scanner and start it again, so that a rescan the app owes is armed by the start
@@ -2817,11 +2818,14 @@ class L1ShadowSyncService internal constructor(
      * sampled here, and a stop that lands before the start leaves the engine down; the next
      * start's gate then arms the rescan. Unlike that restart, the generation is also checked
      * before the teardown, and a failed start is retried. One at a time: a second call while
-     * one is in flight returns that one.
+     * one of the same generation is in flight returns that one. One left over from before an
+     * external stop is about to give up, so it is not reused.
      */
     internal fun launchOwedRescanRestart(): Job = synchronized(owedRescanRestartLock) {
-        owedRescanRestartJob?.takeIf { it.isActive }?.let { return@synchronized it }
         val generation = externalStopGeneration
+        owedRescanRestartJob?.takeIf { it.isActive && owedRescanRestartGeneration == generation }
+            ?.let { return@synchronized it }
+        owedRescanRestartGeneration = generation
         scope.launch {
             runCatching {
                 // The generation is checked under the scanner's mutex BEFORE the teardown: a

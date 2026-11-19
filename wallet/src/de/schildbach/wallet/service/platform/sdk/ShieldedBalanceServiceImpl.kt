@@ -328,8 +328,11 @@ internal data class WalletFundingGate(
  * the cursor alone, so a wallet opened a few blocks behind refused every
  * payment until it had caught up (12.0.1-beta report, 2026-11-17: refused 3 s
  * before the tip). dashj never blocked on that, and iOS does not: a send built
- * on a coin an unscanned block already spent is rejected by the network and
- * reported as not sent, and nothing is lost.
+ * on a coin an unscanned block already spent is rejected by the network, and
+ * nothing is lost. It is not always REPORTED as not sent: when the SDK gets no
+ * answer about the broadcast the outcome is unknown
+ * ([SdkWriteResult.Ambiguous]), and the app keeps the payment as possibly sent
+ * until it is confirmed or released, which is not a safe moment to retry.
  *
  * A DashPay contact backfill does NOT close it either, on purpose (product
  * decision, 2026-11-18). Setting up a contact makes the SDK rewind its scan to
