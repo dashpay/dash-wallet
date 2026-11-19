@@ -28,6 +28,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -72,7 +73,8 @@ class BlockchainStateDataProvider @Inject constructor(
     private val dashSystemService: DashSystemService,
     private val blockchainStateDao: BlockchainStateDao,
     private val walletDataProvider: WalletData,
-    private val configuration: Configuration
+    private val configuration: Configuration,
+    private val dashPayConfig: de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 ) : BlockchainStateProvider {
     companion object {
         /**
@@ -115,6 +117,12 @@ class BlockchainStateDataProvider @Inject constructor(
     override fun observeState(): Flow<BlockchainState?> {
         return blockchainStateDao.observeState().distinctUntilChanged()
     }
+
+    /** See [de.schildbach.wallet.ui.dashpay.utils.DashPayConfig.SDK_L1_FIRST_SYNC_DONE_WALLET]. */
+    override fun observeFirstSyncDone(): Flow<Boolean> =
+        dashPayConfig.observe(de.schildbach.wallet.ui.dashpay.utils.DashPayConfig.SDK_L1_FIRST_SYNC_DONE_WALLET)
+            .map { it != null }
+            .distinctUntilChanged()
 
     fun updateImpediments(impediments: Set<Impediment>) {
         coroutineScope.launch {

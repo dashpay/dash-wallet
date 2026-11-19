@@ -50,6 +50,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -103,6 +104,7 @@ class SendCoinsViewModel @Inject constructor(
     walletDataProvider: WalletData,
     walletApplication: WalletApplication,
     blockchainStateDao: BlockchainStateDao,
+    blockchainStateProvider: org.dash.wallet.common.services.BlockchainStateProvider,
     val biometricHelper: BiometricHelper,
     private val analytics: AnalyticsService,
     private val configuration: Configuration,
@@ -446,7 +448,7 @@ class SendCoinsViewModel @Inject constructor(
     init {
         blockchainStateDao.observeState()
             .filterNotNull()
-            .onEach { state ->
+            .combine(blockchainStateProvider.observeFirstSyncDone()) { state, firstSyncDone ->
                 // NOT-SYNCED is folded into the same UI signal as REPLAYING.
                 // Post-cutover the SDK does a from-scratch compact-filter scan
                 // on first launch; a send attempted inside that window failed
@@ -460,7 +462,12 @@ class SendCoinsViewModel @Inject constructor(
                 // flag: that flag has 15+ consumers (shielded transfers,
                 // mixed-funds migration, exchange-rate stamping, DashPay
                 // contact payments) and must keep its own meaning.
-                _isBlockchainReplaying.postValue(state.replaying || !state.isSynced())
+                //
+                // Only until the wallet has finished its first scan (a restore,
+                // the first scan after the upgrade). After that a wallet that is
+                // merely catching up may pay, as on 11.9 and iOS; the send gate
+                // (evaluateWalletFundingGate) applies the same rule.
+                _isBlockchainReplaying.postValue(!firstSyncDone && (state.replaying || !state.isSynced()))
             }
             .launchIn(viewModelScope)
 

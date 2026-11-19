@@ -128,6 +128,9 @@ class SendCoinsViewModelOutcomeUnknownTest {
             walletData,
             mockk<WalletApplication>(relaxed = true),
             blockchainStateDao,
+            mockk<org.dash.wallet.common.services.BlockchainStateProvider> {
+                every { observeFirstSyncDone() } returns kotlinx.coroutines.flow.flowOf(false)
+            },
             mockk(relaxed = true),
             mockk(relaxed = true),
             mockk(relaxed = true),

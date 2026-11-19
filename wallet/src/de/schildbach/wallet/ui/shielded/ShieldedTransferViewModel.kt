@@ -132,8 +132,11 @@ internal fun mapVerificationStatus(
  * [ShieldedTransferUIState.blockedReason]; the composable only picks the
  * string. Ordered by which problem the user must wait out first:
  *
- * 1. [CHAIN_SYNCING] — the runtime is not up or the dashj L1 chain is
- *    still syncing; both directions are blocked.
+ * 1. [CHAIN_SYNCING] — the runtime is not up or the L1 chain is still
+ *    syncing. Shielded → Dash Wallet is blocked until the chain is synced;
+ *    Dash Wallet → Shielded only while its funding gate is closed too (the
+ *    wallet's first scan, or no engine), not during an ordinary catch-up
+ *    ([ShieldedTransferUIState.chainBlocksDirection]).
  * 2. [POOL_SYNCING] — the shielded pool is still catching up
  *    ([ShieldedSyncStatus] != READY); both directions are blocked (see
  *    [ShieldedTransferUIState.shieldedPoolReady]).
@@ -242,8 +245,9 @@ data class ShieldedTransferUIState(
      * the canonical [org.dash.wallet.common.data.entity.BlockchainState
      * .isSynced], OR an idle-synced wallet whose chain tip is current but
      * whose persisted sync percentage was reset by the app restart).
-     * Both transfer directions are blocked until then — conservative
-     * `false` default until the first state emission.
+     * Blocks Shielded → Dash Wallet until then; Dash Wallet → Shielded
+     * follows its funding gate instead ([chainBlocksDirection]).
+     * Conservative `false` default until the first state emission.
      */
     val chainSynced: Boolean = false,
     /**
@@ -369,6 +373,21 @@ data class ShieldedTransferUIState(
         get() = direction == ShieldedTransferDirection.FromShielded || walletShieldingAvailable
 
     /**
+     * Whether an unsynced chain blocks the selected direction.
+     *
+     * Dash Wallet → Shielded spends L1 funds, and whether those may be spent is the funding
+     * gate's answer ([walletShieldingAvailable], the rule every payment uses): closed during the
+     * wallet's first scan, open during an ordinary catch-up after it. Asking [chainSynced] on top
+     * refused the transfer for all of a catch-up while the service would have made it. So the
+     * chain blocks this direction only when the funding gate is closed as well, which keeps the
+     * "syncing" message for a first scan. Shielded → Dash Wallet keeps the chain requirement:
+     * `replaying` and `isSynced` are unchanged, so it still waits out a catch-up.
+     */
+    val chainBlocksDirection: Boolean
+        get() = !chainSynced &&
+            (direction == ShieldedTransferDirection.FromShielded || !walletShieldingAvailable)
+
+    /**
      * True once the shielded pool has caught up ([ShieldedSyncStatus.READY]).
      * Gates BOTH directions:
      *
@@ -395,7 +414,7 @@ data class ShieldedTransferUIState(
     val blockedReason: ShieldedBlockedReason?
         get() = when {
             !readyCheckDone -> null
-            !ready || !chainSynced -> ShieldedBlockedReason.CHAIN_SYNCING
+            !ready || chainBlocksDirection -> ShieldedBlockedReason.CHAIN_SYNCING
             !shieldedPoolReady -> ShieldedBlockedReason.POOL_SYNCING
             !directionAvailable -> ShieldedBlockedReason.FUNDING_PENDING
             else -> null
@@ -432,7 +451,7 @@ data class ShieldedTransferUIState(
      * (or, mirror case, waving through one the live numbers would have blocked).
      */
     val canSubmit: Boolean
-        get() = ready && chainSynced && shieldedPoolReady && directionAvailable &&
+        get() = ready && !chainBlocksDirection && shieldedPoolReady && directionAvailable &&
             // NotSent is provably pre-broadcast, so retrying is safe
             (submitState == ShieldedSubmitState.Idle || submitState is ShieldedSubmitState.NotSent)
 

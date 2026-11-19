@@ -151,7 +151,14 @@ data class ShadowSyncProgress(
      */
     val sessionHeaderStart: Long = 0,
     /** The lowest filter cursor this engine session has reported; see [sessionHeaderStart]. */
-    val sessionFilterStart: Long = 0
+    val sessionFilterStart: Long = 0,
+    /**
+     * The wallet this snapshot is for has finished its first scan
+     * ([de.schildbach.wallet.ui.dashpay.utils.DashPayConfig.SDK_L1_FIRST_SYNC_DONE_WALLET]).
+     * [evaluateWalletFundingGate] then lets a send through while the engine is merely catching
+     * up. False when not known.
+     */
+    val firstSyncDone: Boolean = false
 ) {
     /** The shadow chain is fully synced — parity mismatches count as real from here. */
     val synced: Boolean get() = phase == ShadowSyncPhase.SYNCED
@@ -2826,6 +2833,12 @@ class L1ShadowSyncService internal constructor(
     @Volatile private var sessionHeaderStart = 0L
     @Volatile private var sessionFilterStart = 0L
 
+    /**
+     * [DashPayConfig.SDK_L1_FIRST_SYNC_DONE_WALLET] as this process knows it: read when a
+     * session's progress monitor starts, set when the record is written, cleared with it.
+     */
+    @Volatile private var firstSyncDoneWalletIdHex: String? = null
+
     /** Live shadow SPV progress ([ShadowSyncProgress.IDLE] while stopped). */
     val progress: StateFlow<ShadowSyncProgress> = _progress.asStateFlow()
 
@@ -3509,6 +3522,56 @@ class L1ShadowSyncService internal constructor(
         }
     }
 
+    /** The saved record, or null when there is none or it cannot be read (strict gate). */
+    private suspend fun readFirstSyncDone(): String? = try {
+        dashPayConfig.get(DashPayConfig.SDK_L1_FIRST_SYNC_DONE_WALLET)
+    } catch (e: CancellationException) {
+        throw e
+    } catch (t: Throwable) {
+        log.warn("could not read the first-sync record; sends keep the strict gate", t)
+        null
+    }
+
+    /**
+     * Saves that [walletIdHex] finished its first scan. False when nothing was saved: the write
+     * failed, or the SDK does not own L1 yet (before the cutover this scan is a shadow next to
+     * dashj, whose own replay still blocks the send screens).
+     */
+    private suspend fun recordFirstSyncDone(walletIdHex: String): Boolean = try {
+        if (!readCutoverCommitted()) {
+            false
+        } else {
+            dashPayConfig.set(DashPayConfig.SDK_L1_FIRST_SYNC_DONE_WALLET, walletIdHex)
+            firstSyncDoneWalletIdHex = walletIdHex
+            log.info(
+                "L1 first scan finished for SDK wallet {}…: a catch-up no longer blocks sending",
+                walletIdHex.take(8)
+            )
+            true
+        }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (t: Throwable) {
+        log.warn("could not save the first-sync record; sends keep the strict gate", t)
+        false
+    }
+
+    /**
+     * Removes the first-sync record before the SDK wallet's rows, or the wallet, are deleted:
+     * the scan that rebuilds them is a first scan again. False when it could not be removed,
+     * in which case nothing may be deleted.
+     */
+    private suspend fun forgetFirstSyncDone(what: String): Boolean = try {
+        dashPayConfig.remove(DashPayConfig.SDK_L1_FIRST_SYNC_DONE_WALLET)
+        firstSyncDoneWalletIdHex = null
+        true
+    } catch (e: CancellationException) {
+        throw e
+    } catch (t: Throwable) {
+        log.warn("{}: could not remove the first-sync record; nothing deleted", what, t)
+        false
+    }
+
     /**
      * Mirror the manager's 1 Hz progress feed into [progress], logging the
      * one-line summary at most every [progressLogIntervalMs] — except the
@@ -3520,6 +3583,7 @@ class L1ShadowSyncService internal constructor(
      * observed going dark for an hour in the field — see [watchdogLoop]).
      */
     private suspend fun monitorProgress() {
+        firstSyncDoneWalletIdHex = readFirstSyncDone()
         var lastLogMs = 0L
         var lastPhase = ShadowSyncPhase.IDLE
         var lastTelemetryMs = 0L
@@ -3544,11 +3608,21 @@ class L1ShadowSyncService internal constructor(
                     if (raw.filterHeight > 0 && (sessionFilterStart == 0L || raw.filterHeight < sessionFilterStart)) {
                         sessionFilterStart = raw.filterHeight
                     }
-                    val mapped = raw.copy(
+                    val sessionWalletIdHex = runningWalletIdHex.value
+                    var mapped = raw.copy(
                         walletSyncedHeight = _engineWalletSyncedHeight.value,
                         sessionHeaderStart = sessionHeaderStart,
-                        sessionFilterStart = sessionFilterStart
+                        sessionFilterStart = sessionFilterStart,
+                        firstSyncDone = sessionWalletIdHex != null && firstSyncDoneWalletIdHex == sessionWalletIdHex
                     )
+                    // The first time the strict gate passes for this wallet, its first scan
+                    // is over: saved, so later catch-ups do not block sending.
+                    if (!mapped.firstSyncDone && sessionWalletIdHex != null &&
+                        evaluateWalletFundingGate(mapped).allowed &&
+                        recordFirstSyncDone(sessionWalletIdHex)
+                    ) {
+                        mapped = mapped.copy(firstSyncDone = true)
+                    }
                     _progress.value = mapped
                     filterStallDecider.onFilterProgress(mapped.filterHeight)
                     // Verification verdict from the chain state: still
@@ -5063,6 +5137,7 @@ class L1ShadowSyncService internal constructor(
                     if (!beginPaidHistoryInvalidation(walletIdHex, "shadow reset")) {
                         return false
                     }
+                    if (!forgetFirstSyncDone("shadow reset")) return false
                     runCatching { source.stopSpv() }
                         .onFailure { log.warn("shadow reset: SPV stop failed; continuing", it) }
                     _progress.value = ShadowSyncProgress.IDLE
@@ -5299,6 +5374,7 @@ class L1ShadowSyncService internal constructor(
                         if (!beginPaidHistoryInvalidation(walletIdHex, "wallet re-creation")) {
                             return false
                         }
+                        if (!forgetFirstSyncDone("wallet re-creation")) return false
                         recreator.removeSdkWallet(walletIdHex)
                         deleteSpvDataDir()
                         runCatching { dashPayConfig.set(DashPayConfig.L1_SHADOW_LAST_RESET, nowMs()) }

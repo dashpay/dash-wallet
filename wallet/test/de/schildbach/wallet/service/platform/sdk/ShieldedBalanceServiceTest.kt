@@ -3182,6 +3182,26 @@ class ShieldedBalanceServiceTest {
 
     // ── shieldFromWallet: the L1 funding gate ─────────────────────────────
 
+    /**
+     * Once the wallet's first scan is over ([ShadowSyncProgress.firstSyncDone]) an ordinary
+     * catch-up does not close the gate; an engine that is not running, has no peers or reports
+     * an error still does.
+     */
+    @Test
+    fun fundingGate_afterTheFirstScan_aCatchUpDoesNotClose() {
+        val behind = caughtUpProgress().let {
+            it.copy(filterHeight = it.filterHeight - 208, walletSyncedHeight = it.walletSyncedHeight - 208)
+        }
+        assertFalse("strict during the first scan", evaluateWalletFundingGate(behind).allowed)
+
+        val later = behind.copy(firstSyncDone = true)
+        assertTrue("open during a catch-up after it", evaluateWalletFundingGate(later).allowed)
+
+        assertFalse(evaluateWalletFundingGate(later.copy(phase = ShadowSyncPhase.IDLE)).allowed)
+        assertFalse(evaluateWalletFundingGate(later.copy(phase = ShadowSyncPhase.CONNECTING)).allowed)
+        assertFalse(evaluateWalletFundingGate(later.copy(phase = ShadowSyncPhase.ERROR)).allowed)
+    }
+
     @Test
     fun fundingGate_pure_decisionTable() {
         // The fix: the gate OPENS on caught-up alone — phase is FILTERS,

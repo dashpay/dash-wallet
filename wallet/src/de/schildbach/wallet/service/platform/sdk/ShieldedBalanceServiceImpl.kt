@@ -321,6 +321,11 @@ internal data class WalletFundingGate(val allowed: Boolean, val reason: String)
  * - block pipeline drained: not [ShadowSyncProgress.blockPipelineLagging],
  *   and the wallet cursor within tolerance of the tip.
  *
+ * The chain-view rules (everything after the first three) apply until the
+ * wallet has finished its FIRST scan. Once it has
+ * ([ShadowSyncProgress.firstSyncDone]) a running, connected, error-free
+ * engine is enough: an ordinary catch-up does not block a payment.
+ *
  * Wallet binding is NOT re-checked here: every caller already preflights
  * the bound wallet, and an unbound wallet cannot produce a non-IDLE
  * progress feed anyway.
@@ -338,6 +343,15 @@ internal fun evaluateWalletFundingGate(
         WalletFundingGate(false, "SDK L1 engine is waiting for peers")
     progress.phase == ShadowSyncPhase.ERROR ->
         WalletFundingGate(false, "SDK L1 engine reported a sync error")
+    // The wallet's first scan is over (a saved record, [ShadowSyncProgress.firstSyncDone]):
+    // from here the engine is at most catching up on blocks mined while the app was away,
+    // and that does not block a payment, as on 11.9 (which blocked only a replay) and iOS
+    // (only a restored wallet's first sync). A coin an unscanned block already spent makes
+    // a transaction the network rejects; it is reported as not sent. The rules below are
+    // for the first scan: a restore, or the first one after the upgrade, where most of the
+    // wallet's history is still unknown.
+    progress.firstSyncDone ->
+        WalletFundingGate(true, "SDK L1 engine running; the wallet's first scan is finished")
     !progress.scanCaughtUpToTip ->
         WalletFundingGate(false, "SDK L1 filter scan has not caught up to the chain tip yet")
     // THIS GATE STARTS A SPEND, so it keeps the HEIGHT rule too.
