@@ -3882,8 +3882,10 @@ class CutoverUiDataService internal constructor(
      * feed and the event/ticker re-read); without this, one could write an
      * older figure, be overtaken by the other's write AND fallback update,
      * then set the fallback back to its older figure — memory behind disk,
-     * with nothing to repair it once the engine reads as not synced. Also
-     * guards [lastPersistedDuffs].
+     * with nothing to repair it once the engine reads as not synced. Under
+     * the lock the write is skipped when the figure is no longer the
+     * published one, so a call that waited here cannot save an overtaken
+     * reading. Also guards [lastPersistedDuffs].
      */
     private val launchSeedMutex = Mutex()
 
@@ -4833,6 +4835,10 @@ class CutoverUiDataService internal constructor(
         if (!persist) return
         // The write and the fallback update are ONE step ([launchSeedMutex]).
         launchSeedMutex.withLock {
+            // A reading that was overtaken while this call waited for the
+            // lock is no longer the published balance: it must not be saved
+            // over the newer one, nor become the fallback.
+            if (_sdkTotalBalance.value?.value != duffs) return
             try {
                 walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, duffs)
             } catch (t: Throwable) {

@@ -1649,6 +1649,51 @@ class CutoverUiDataServiceTest {
     }
 
     @Test
+    fun postCutover_readingOvertakenBeforeItsSeedWrite_isNotSaved() = runTest {
+        // The Room-triggered collector publishes an older figure and decides
+        // to save it; before it reaches the write, the event re-read publishes
+        // and saves the post-spend figure and the engine stops. The older
+        // reading must then be dropped, not written over the newer one.
+        val events = kotlinx.coroutines.flow.MutableSharedFlow<L1TxEvent>(extraBufferCapacity = 4)
+        val source = FakeSource(balanceDuffs = MutableStateFlow(1_103_225_474L))
+        val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
+        coEvery { walletUIConfig.get(WalletUIConfig.LAST_TOTAL_BALANCE) } returns 1_103_225_474L
+        val synced = MutableStateFlow(true)
+        // The armed-rescan probe runs between the publication and the save
+        // decision's write, on the publishing coroutine: the one place a test
+        // can let the other collector overtake. One-shot, armed below.
+        var overtakeNextPublication = false
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            walletUIConfig = walletUIConfig, txEvents = events, l1Synced = synced,
+            rescanRecentlyArmed = {
+                if (overtakeNextPublication) {
+                    overtakeNextPublication = false
+                    source.balanceDuffs.value = 781L
+                    events.tryEmit(
+                        L1TxEvent.Detected(displayHex(3), -899_219L, null, contextCode = 0, directionCode = 0)
+                    )
+                    runCurrent()
+                    synced.value = false
+                    runCurrent()
+                }
+                false
+            }
+        )
+        service.start()
+        runCurrent()
+
+        overtakeNextPublication = true
+        source.balanceDuffs.value = 900_000L
+        runCurrent()
+
+        assertFalse("the overtake must have run", overtakeNextPublication)
+        coVerify { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 781L) }
+        coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 900_000L) }
+        assertEquals(Coin.valueOf(781), service.overlayTotalBalance(flowOf(Coin.valueOf(999))).first())
+    }
+
+    @Test
     fun postCutover_armedRescan_publishesTheBalanceButDoesNotPersistIt() = runTest {
         // The app just armed an SPV rescan/replay (heal v2, reset blockchain).
         // Until the engine reflects the watermark rewind the caught-up gate
