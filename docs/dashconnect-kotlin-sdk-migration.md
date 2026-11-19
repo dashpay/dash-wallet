@@ -58,6 +58,31 @@ The maintainer answered the plan's three open questions, and settled how DashCon
    `invalid_link` (`wallet/res/values/strings-dashpay.xml:430`) says the link is invalid. So the toast needs one new
    string in every locale, with its wording taken from the designer's Figma copy, not written by us.
 
+## Relation to #1540
+
+[#1540](https://github.com/dashpay/dash-wallet/issues/1540) ("SDK cutover — Platform SDK A: retire the legacy
+platform client (stop loading libsdklib)") retires kotlin-platform for the whole wallet in five steps. This plan is
+the DashConnect part of it:
+
+| #1540 step | DashConnect (this plan) |
+|---|---|
+| 1. Resolve hard SDK gaps | This doc is the DashConnect half of step 1. What still blocks is the three bindings (PR-2, PR-3, PR-6), the SDK bump and the phase 0 testnet checks; token purchase also depends on PR-1. Encrypted txMetadata is out of scope here. |
+| 2. Remove hidden `Platform` dependencies | Contract IDs are not read from `Platform`: `RESPONSE_CONTRACT`, `DASHPAY` and the other system contract IDs are constants in `AppConnectSession.kt` (:63-72). Identity data comes from the reads in the [call map](#reads). But `AppConnectSession` also uses `Platform` in ways the call map does not list: it registers the response contract in `platform.apps` (`register()`, :504), builds the response document locally with `platform.documents.create` (:548), and passes `platform.rustSdk` and `platform.coreBlockHeight` to the put (:553). All of these are in `ui/more/connections` and go away in the same change as the calls in the call map, so DashConnect adds nothing to step 2. |
+| 3. Port reads, removing each fallback after a parity check | DashConnect does not follow the read-then-write order. It has no legacy path before the cutover ([Decisions](#decisions-2026-11-17)), so its reads and writes move in one change. There is no parity period and no fallback to remove. |
+| 4. Port writes and recovery; a write with an uncertain outcome is never retried as a new write | Same single change. The no-retry rule is met by the iOS-style outcome handling in [Phase 4](#phase-4-move-reads-then-writes): record an intent, no retry, read again on a non-consensus failure, and report a failed purchase as "outcome unknown". |
+| 5. Remove the legacy client and `libsdklib.so`, then verify | [Phase 5](#phase-5-remove-the-legacy-path) takes DashConnect off #1540's list but does not finish step 5. `libsdklib.so` stays while DashPay (`PlatformRepo`, `PlatformSyncService`) and `addMissingKeys` still use it. |
+
+[kotlin-platform#43](https://github.com/dashpay/kotlin-platform/issues/43) (the `addMissingKeys` duplicate-key race)
+goes away only when DashPay's key registration moves to `IdentityUpdates` under #1540 step 4. DashConnect leaving
+`addMissingKeys` does not fix it for DashPay. That port must still issue the identity's existing wallet-controlled
+keys before it decides what is missing, or the same multi-device race comes back on the new SDK (see
+[Key registration](#key-registration)).
+
+What users see: DashConnect is on today in prod, testnet and devnet (`Constants.SUPPORTS_CONNECT = true` on master
+and in v11.9.2, `wallet/src/de/schildbach/wallet/Constants.java`). Because it is hidden before the cutover
+([Decisions](#decisions-2026-11-17), item 4), any release from this line that ships before the cutover removes
+DashConnect for existing users until the cutover ships.
+
 ## Scope
 
 All Platform calls live in `wallet/src/de/schildbach/wallet/ui/more/connections/`:
