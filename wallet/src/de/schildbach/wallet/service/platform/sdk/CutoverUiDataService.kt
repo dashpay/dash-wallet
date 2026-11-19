@@ -2599,7 +2599,7 @@ class CutoverUiDataService internal constructor(
      */
     private val reconcileInitialDelayMs: Long = RECONCILE_INITIAL_DELAY_MS,
     /**
-     * Where [refreshNativeSplit] runs its blocking receive-address read. The
+     * Where [refreshReceiveAddress] runs its blocking receive-address read. The
      * refresh lanes publish everything else on [scope]'s dispatcher; a fixed
      * [kotlinx.coroutines.Dispatchers.IO] here put one real-thread hop in the
      * middle of every refresh, so a virtual-time test could assert before the
@@ -4541,9 +4541,25 @@ class CutoverUiDataService internal constructor(
         // its own collector, two publications could interleave and an older
         // reading be saved as the launch seed, or become the header's
         // fallback, after a newer one ([updateSdkBalance]).
+        // The receive-address read blocks in the FFI, so it gets its own
+        // collector: parked, it must not hold up a balance reading
+        // ([refreshReceiveAddress]). The ticker emits at once, which is the
+        // initial read.
         launch {
+            merge(txEvents.map { }, ticker()).collect {
+                try {
+                    refreshReceiveAddress()
+                } catch (t: Throwable) {
+                    if (t is CancellationException) throw t
+                    log.warn("engine receive-address re-read failed", t)
+                }
+            }
+        }
+        launch {
+            // NOT deduplicated: the source's figure is thrown away and the
+            // collector reads again, so a filter on that figure would drop the
+            // retry after a failed re-read of an unchanged total.
             val roomTrigger = source.observeTotalDuffs(walletIdHex)
-                .distinctUntilChanged()
                 .catch { e -> log.error("SDK balance flow failed; Room-triggered balance re-reads stop", e) }
                 .map { }
             merge(roomTrigger, txEvents.map { }, ticker()).collect {
@@ -4671,10 +4687,20 @@ class CutoverUiDataService internal constructor(
             log.warn("SDK spendable-UTXO-count read failed; falling back to the dashj count", t)
             _sdkSpendableUtxoCount.value = null
         }
-        // The RECEIVE ADDRESS rides the same cadence for a reason of its own:
-        // the only thing that moves the engine's pointer is a receive landing on
-        // the current address, and that is precisely an engine tx event — one of
-        // the two triggers of this function. Unlike the reads above, a failed one
+    }
+
+    /**
+     * Re-read the engine's next receive address into the overlay cache. Runs
+     * in its OWN collector ([balancePipeline]), not inside
+     * [refreshNativeSplit]: this read blocks in the FFI, and while it was part
+     * of the balance refresh a parked one kept every later balance reading
+     * from being published or saved.
+     */
+    private suspend fun refreshReceiveAddress() {
+        // The RECEIVE ADDRESS rides the tx-event and ticker cadence for a reason
+        // of its own: the only thing that moves the engine's pointer is a receive
+        // landing on the current address, and that is precisely an engine tx
+        // event. Unlike the balance-side reads, a failed one
         // HOLDS the last known address instead of dropping to null: null sends
         // the overlay back to the frozen dashj index-0 address, which is the
         // defect ([sdkReceiveAddressOrNull]), whereas a slightly stale engine
