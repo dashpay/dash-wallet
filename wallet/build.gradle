@@ -171,6 +171,8 @@ dependencies {
     implementation 'com.google.firebase:firebase-inappmessaging-display'
     implementation 'com.google.firebase:firebase-installations'
     implementation 'com.google.firebase:firebase-messaging-ktx'
+    // Reports installs that lack their native libraries (install/InertComponents.kt)
+    implementation 'com.google.firebase:firebase-crashlytics'
 
     // AppsFlyer SDK for deep linking
     implementation 'com.appsflyer:af-android-sdk:6.17.0'

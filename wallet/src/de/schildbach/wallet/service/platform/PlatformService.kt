@@ -108,16 +108,30 @@ interface PlatformService {
     fun getContactIdentity(userId: Identifier): Identity?
 }
 
+/**
+ * A synchronized lazy that yields `null` when Platform is not supported.
+ *
+ * Synchronized because the first read is no longer pinned to the main thread:
+ * [PlatformServiceImplementation] used to create the platform in its
+ * constructor (during Hilt injection in `Application.onCreate`), and now
+ * creates it on first use, which may happen on any thread. An initializer that
+ * throws leaves the value uninitialized, so a later read tries again.
+ */
 fun <T> platformLazy(initializer: () -> T): Lazy<T?> {
     return object : Lazy<T?> {
+        @Volatile
         private var _value: Any? = UNINITIALIZED
         override val value: T?
             get() {
                 if (_value === UNINITIALIZED) {
-                    _value = if (Constants.SUPPORTS_PLATFORM) {
-                        initializer.invoke()
-                    } else {
-                        null
+                    synchronized(this) {
+                        if (_value === UNINITIALIZED) {
+                            _value = if (Constants.SUPPORTS_PLATFORM) {
+                                initializer.invoke()
+                            } else {
+                                null
+                            }
+                        }
                     }
                 }
                 @Suppress("UNCHECKED_CAST")
@@ -133,8 +147,17 @@ private object UNINITIALIZED
 class PlatformServiceImplementation @Inject constructor(
     val walletDataProvider: WalletData
 ) : PlatformService {
-    // none of the following should be initialized if platform is not supported
-    private val _platform by platformLazy { createNetworkPlatform(Constants.NETWORK_PARAMETERS) }
+    // None of the following should be initialized if platform is not supported.
+    // Construction must not load native code: Hilt builds this class while it
+    // injects WalletApplication, so a `Platform` created here would dlopen
+    // libsdklib.so before the app has any UI, and a failed load would kill the
+    // process at launch. The platform and its quorum callback are created on
+    // first use instead.
+    private val _platform by platformLazy {
+        createNetworkPlatform(Constants.NETWORK_PARAMETERS).also {
+            it.client.contextProvider = createContextProvider()
+        }
+    }
     override val platform: Platform
         get() = _platform!!
     private val _profiles by platformLazy { Profiles(platform) }
@@ -160,8 +183,8 @@ class PlatformServiceImplementation @Inject constructor(
     companion object {
         private val log = LoggerFactory.getLogger(PlatformServiceImplementation::class.java)
     }
-    init {
-        val contextProvider = object : ContextProvider() {
+    private fun createContextProvider(): ContextProvider {
+        return object : ContextProvider() {
             override fun getQuorumPublicKey(
                 quorumType: Int,
                 quorumHashBytes: ByteArray?,
@@ -212,7 +235,6 @@ class PlatformServiceImplementation @Inject constructor(
                 TODO("Not yet implemented")
             }
         }
-        _platform?.client?.contextProvider = contextProvider
     }
 
     override fun hasApp(app: String): Boolean {
