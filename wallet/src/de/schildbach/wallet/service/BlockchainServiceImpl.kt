@@ -3940,9 +3940,11 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
      * The idle rule guard, the replay wake lock and the restart alarm all ask this. `replaying`
      * alone answered it from #1568 until the flag got its rescan-only meaning back.
      */
-    private fun replayOrEngineWorking(): Boolean =
-        blockchainState?.replaying == true ||
-            (dashjHeldByCutover && blockchainStateDataProvider.isSdkEngineWorking())
+    private fun replayOrEngineWorking(): Boolean = blockchainState?.replaying == true || sdkEngineWorking()
+
+    /** The engine half of [replayOrEngineWorking]. */
+    private fun sdkEngineWorking(): Boolean =
+        dashjHeldByCutover && blockchainStateDataProvider.isSdkEngineWorking()
 
     /** The replay half of the hold decision, read now. */
     private fun replayWakeLockDue(): Boolean = dashjHeldByCutover && replayHoldsWakeLock(
@@ -4192,8 +4194,10 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                                     "staying in the foreground until it is done"
                             )
                         }
-                    } else if (blockchainState.replaying || syncing) {
-                        //Shows ongoing notification when synchronizing the blockchain
+                    } else if (blockchainState.replaying || syncing || sdkEngineWorking()) {
+                        // Shows ongoing notification when synchronizing the blockchain. Engine
+                        // work counts, as it did while `replaying` carried it (#1568): a
+                        // catch-up whose tip is under an hour old is still a sync.
                         val notification = createNetworkSyncNotification(blockchainState)
                         nm!!.notify(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification)
                     }

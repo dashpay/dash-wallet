@@ -2189,6 +2189,11 @@ class SdkWalletBinder internal constructor(
             log.warn("owed SDK rescan: arm failed; the debt stays owed")
             return false
         }
+        // The scan now restarts from birth: a replay, like the restore or Rescan Blockchain
+        // that marks itself. First thing after the arm, before anything here suspends: the
+        // marker closes the send gate before it returns.
+        runCatching { onOwedRescanArmed() }
+            .onFailure { log.warn("owed SDK rescan armed, but the replay could not be marked", it) }
         val armed = ArmedOwedRescan(
             walletIdHex = walletIdHex,
             preArmHeight = preArmHeight,
@@ -2198,10 +2203,6 @@ class SdkWalletBinder internal constructor(
         )
         owedRescanArmedInProcess = armed
         writeArmedOwedRescan(armed)
-        // The scan now restarts from birth: a replay, like the restore or Rescan Blockchain
-        // that marks itself. Best-effort, after the arm it describes.
-        runCatching { onOwedRescanArmed() }
-            .onFailure { log.warn("owed SDK rescan armed, but the replay could not be marked", it) }
         log.info(
             "owed SDK rescan armed on {}… at the {} windows ({}; durable watermark {}, target {}, arm {}): " +
                 "the debt stays owed until the rewind is durable",

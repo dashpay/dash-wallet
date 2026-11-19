@@ -955,6 +955,55 @@ class SdkL1SendServiceTest {
         assertEquals(0, source.sendCalls)
     }
 
+    /**
+     * Review, #1714. The first answer comes before the wait for the funding hold; a rescan that
+     * starts during that wait must still stop the send. The replay flag here is false for the
+     * first question and true for the one asked under the hold.
+     */
+    @Test
+    fun aReplayThatStartsAfterTheFirstGateAnswer_stopsTheSendUnderTheHold() = runBlocking {
+        val source = readySource()
+        var asked = 0
+        val result = service(source, replaying = { asked++ > 0 })
+            .sendToAddress(validAddress, amount, emptyWallet = false)
+
+        assertTrue("refused: $result", result is SdkWriteResult.NotBroadcast)
+        val reason = (result as SdkWriteResult.NotBroadcast).reason
+        assertTrue(reason, reason.contains(L1_FUNDING_GATE_CLOSED_REASON))
+        assertEquals("asked before the hold and under it", 2, asked)
+        assertEquals(0, source.sendCalls)
+    }
+
+    @Test
+    fun aReplayThatStartsAfterTheFirstGateAnswer_stopsTheDeferredBuildUnderTheHold() = runBlocking {
+        val source = FakeSource(boundWalletId = { walletId })
+        var asked = 0
+        val svc = service(source, replaying = { asked++ > 0 })
+
+        val failure = runCatching {
+            svc.buildDeferredPayment(listOf(validAddress to 10_000L), stillOwned = { true })
+        }.exceptionOrNull()
+
+        assertTrue("an IllegalStateException, got $failure", failure is IllegalStateException)
+        assertTrue(failure?.message.orEmpty().contains(L1_FUNDING_GATE_CLOSED_REASON))
+        assertEquals("nothing built or reserved", 0, source.deferredBuildCalls)
+    }
+
+    @Test
+    fun aReplayThatStartsAfterTheFirstGateAnswer_stopsTheMayaBuildUnderTheHold() = runBlocking {
+        val source = mayaSource(spendable = 1_000_000L, feeDuffs = 500L)
+        var asked = 0
+        val svc = service(source, replaying = { asked++ > 0 })
+
+        val failure = runCatching {
+            svc.buildDeferredMayaDeposit(validAddress, 50_000L, ByteArray(40), stillOwned = { true })
+        }.exceptionOrNull()
+
+        assertTrue("an IllegalStateException, got $failure", failure is IllegalStateException)
+        assertTrue(failure?.message.orEmpty().contains(L1_FUNDING_GATE_CLOSED_REASON))
+        assertEquals("nothing built or reserved", 0, source.mayaBuildCalls)
+    }
+
     @Test
     fun gateClosed_replayStateUnknownOrUnreadable_isNotBroadcast() = runBlocking {
         // "Not read yet" and a failed read are not "no replay".
@@ -2178,6 +2227,24 @@ class SdkL1SendServiceTest {
         val result = svc.sendToAddress(validAddress, amount, emptyWallet = false)
 
         assertTrue("refused: $result", result is SdkWriteResult.NotBroadcast)
+        assertEquals("asked once, no wait", 1, probes)
+    }
+
+    @Test
+    fun sendToAddress_duringAReplay_refusesAtOnce_evenWhileTheEngineHasNoPeers() = runBlocking {
+        // Review, #1714: "no peers yet" used to answer first and was waited for.
+        var probes = 0
+        val svc = service(
+            readySource(),
+            progress = { probes++; noPeersYet() },
+            replaying = { true },
+            sendGateWaitMs = SEND_GATE_WAIT_MS
+        )
+
+        val result = svc.sendToAddress(validAddress, amount, emptyWallet = false)
+
+        assertTrue("refused: $result", result is SdkWriteResult.NotBroadcast)
+        assertTrue((result as SdkWriteResult.NotBroadcast).reason.contains("replay"))
         assertEquals("asked once, no wait", 1, probes)
     }
 

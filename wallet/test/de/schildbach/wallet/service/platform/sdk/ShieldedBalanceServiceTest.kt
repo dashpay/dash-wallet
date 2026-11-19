@@ -3221,6 +3221,13 @@ class ShieldedBalanceServiceTest {
         // starting or finding a peer, a replay state not read yet. Not a replay,
         // not an error.
         assertFalse(replay.mayOpenSoon)
+        // ...also while the engine is starting or looking for a peer: the replay answers first.
+        for (phase in listOf(ShadowSyncPhase.IDLE, ShadowSyncPhase.CONNECTING)) {
+            val replayAtStart = evaluateWalletFundingGate(caughtUp.copy(phase = phase), replaying = true)
+            assertFalse(replayAtStart.allowed)
+            assertTrue(replayAtStart.reason, replayAtStart.reason.contains("replay"))
+            assertFalse("$phase with a replay is not waited for", replayAtStart.mayOpenSoon)
+        }
         assertTrue(connecting.mayOpenSoon)
         assertTrue(evaluateWalletFundingGate(ShadowSyncProgress.IDLE, replaying = false).mayOpenSoon)
         assertTrue(evaluateWalletFundingGate(caughtUp, replaying = null).mayOpenSoon)
@@ -3273,6 +3280,22 @@ class ShieldedBalanceServiceTest {
         assertTrue(service.shieldFromWallet(Dash.COIN) is SdkWriteResult.NotBroadcast)
         assertEquals(0, source.fundCalls)
         assertFalse(service.isWalletShieldingAvailable())
+    }
+
+    @Test
+    fun shieldFromWallet_aReplayThatStartsWhileItWaits_isNotBroadcast() = runBlocking {
+        // Review, #1714: the first gate answer comes before the waits for the shield mutex and
+        // the funding hold. False for that question, true for the one asked after the waits.
+        val source = readySource()
+        var asked = 0
+        val service = service(source, progress = { caughtUpProgress() }, replaying = { asked++ > 0 })
+
+        val result = service.shieldFromWallet(Dash.COIN)
+
+        assertTrue("refused: $result", result is SdkWriteResult.NotBroadcast)
+        assertTrue((result as SdkWriteResult.NotBroadcast).reason.contains("replay"))
+        assertEquals("asked before the waits and after them", 2, asked)
+        assertEquals("no asset lock funded", 0, source.fundCalls)
     }
 
     @Test

@@ -27,6 +27,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -93,6 +94,14 @@ class BlockchainStateDataProvider @Inject constructor(
 
         /** How long [replayingNow] waits before observing the row again after a failed read. */
         private const val REPLAY_STATE_RETRY_MS = 1_000L
+
+        /**
+         * How long a replay started in this process waits for the engine to report work on it
+         * before a "complete" report is believed anyway ([mayEndReplay]). The engine's progress
+         * is sampled once a second, so a rewind shows up within seconds; the limit only matters
+         * for a rewind with nothing to scan, which never reports work.
+         */
+        internal const val REPLAY_START_GRACE_MS = 60_000L
         private val log = org.slf4j.LoggerFactory.getLogger(BlockchainStateDataProvider::class.java)
     }
 
@@ -147,11 +156,63 @@ class BlockchainStateDataProvider @Inject constructor(
             }
             .stateIn(coroutineScope, SharingStarted.Eagerly, null)
 
-    /** See [replayingNow]. */
-    fun isReplayingOrNull(): Boolean? = replayingNow.value
+    /**
+     * A replay this process started ([noteReplayStarted]) and the engine has not finished. Set
+     * on the caller's thread, before the row is saved: the row is written by a queued job and
+     * [replayingNow] follows it later still, and a send must not pass in between, nor if that
+     * save fails.
+     */
+    private val replayStartedHere = MutableStateFlow(false)
+
+    /**
+     * When the replay in [replayStartedHere] started, on [monotonicMs], until the engine has
+     * reported work since; null once it has. Guarded by [replayLock].
+     */
+    private var replayAwaitingEngineSinceMs: Long? = null
+    private val replayLock = Any()
+
+    /** A clock that only moves forward; replaced in tests. */
+    internal var monotonicMs: () -> Long = { System.nanoTime() / 1_000_000 }
+
+    /** A replay starts now: closes the send gate before this returns. */
+    private fun noteReplayStarted() = synchronized(replayLock) {
+        replayAwaitingEngineSinceMs = monotonicMs()
+        replayStartedHere.value = true
+    }
+
+    /**
+     * Whether the engine's verdict [replayComplete] ends the replay.
+     *
+     * A "complete" verdict can describe the scan as it was BEFORE the replay started: the
+     * progress is sampled once a second and queued, and the engine can go on reporting
+     * "synced" for a moment after a rewind is armed. The flag is only ever ended by a
+     * progress update, never started by one, so believing that verdict would leave sends
+     * open for the whole replay (review, #1714). A replay started in this process therefore
+     * ends only after the engine has reported work since it started, or after
+     * [REPLAY_START_GRACE_MS] for a rewind that had nothing to scan.
+     *
+     * A replay this process did not start (the row said so at launch) ends on the first
+     * "complete", as before: an engine that has just started reports work until it is done.
+     */
+    private fun mayEndReplay(replayComplete: Boolean): Boolean = synchronized(replayLock) {
+        if (!replayComplete) {
+            replayAwaitingEngineSinceMs = null
+            return false
+        }
+        val since = replayAwaitingEngineSinceMs
+        if (since != null && monotonicMs() - since < REPLAY_START_GRACE_MS) return false
+        replayAwaitingEngineSinceMs = null
+        replayStartedHere.value = false
+        true
+    }
+
+    /** See [replayingNow] and [replayStartedHere]. */
+    fun isReplayingOrNull(): Boolean? = if (replayStartedHere.value) true else replayingNow.value
 
     /** [isReplayingOrNull] as it changes, for a screen that must follow it. */
-    fun observeReplayingOrNull(): Flow<Boolean?> = replayingNow
+    fun observeReplayingOrNull(): Flow<Boolean?> =
+        replayingNow.combine(replayStartedHere) { row, startedHere -> if (startedHere) true else row }
+            .distinctUntilChanged()
 
     /**
      * Whether the SDK engine still has scan work to do, as of its last progress update that
@@ -258,7 +319,10 @@ class BlockchainStateDataProvider @Inject constructor(
             // DAO's clear-at-100% is opt-in and only dashj's scan-progress
             // writer opts in, so neither this write nor an impediment-only
             // rewrite of the row can undo the separation.
-            if (update.replayComplete == true) blockchainState.replaying = false
+            //
+            // A "complete" that predates a replay started here does not end
+            // it: see [mayEndReplay].
+            if (update.replayComplete?.let(::mayEndReplay) == true) blockchainState.replaying = false
             // The engine's own "still working" verdict, for the service's keep-alive only
             // ([isSdkEngineWorking]): what `replaying` was being overwritten with.
             update.replayComplete?.let { sdkEngineWorking = !it }
@@ -332,6 +396,13 @@ class BlockchainStateDataProvider @Inject constructor(
             // The one writer whose percent IS the scan position: dashj's own
             // download progress ends a replay at 100%.
             blockchainStateDao.saveState(blockchainState, clearReplayAtHundredPercent = true)
+            // The same end for a replay started in this process (pre-cutover, dashj scans it).
+            if (percentageSync == 100) {
+                synchronized(replayLock) {
+                    replayAwaitingEngineSinceMs = null
+                    replayStartedHere.value = false
+                }
+            }
             syncStageFlow.value = syncStage?.toNeutral()
         }
     }
@@ -346,6 +417,7 @@ class BlockchainStateDataProvider @Inject constructor(
     }
 
     fun resetBlockchainState() {
+        noteReplayStarted()
         coroutineScope.launch {
             blockchainStateDao.saveState(
                 BlockchainState(true)
@@ -373,8 +445,12 @@ class BlockchainStateDataProvider @Inject constructor(
      * because the SDK has scanned nothing yet — its first update replaces it
      * with the real figure. Idempotent: a row already mid-replay is left
      * alone. Never throws.
+     *
+     * The send gate is closed when this returns ([noteReplayStarted]); the row
+     * and the stage follow from the queued job.
      */
     fun markReplayStartedForSdkTakeover() {
+        noteReplayStarted()
         coroutineScope.launch {
             val state = try {
                 blockchainStateDao.getState()

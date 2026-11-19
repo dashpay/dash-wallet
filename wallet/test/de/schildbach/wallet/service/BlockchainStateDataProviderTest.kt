@@ -157,7 +157,10 @@ class BlockchainStateDataProviderTest {
 
         assertFalse("nothing reported yet", provider.isSdkEngineWorking())
         provider.updateSdkBlockchainState(sdkUpdate(percentageSync = 42, syncStage = SyncStage.BLOCKS))
-        awaitUntil("below-tip update applied") { dao.state?.percentageSync == 42 }
+        // The stage is published last on the writer thread: only then is the update done.
+        awaitUntil("below-tip update applied") {
+            provider.getSyncStage() == SyncStage.BLOCKS && provider.isSdkEngineWorking()
+        }
         assertFalse("catching up is not a replay", dao.state!!.replaying)
         // ...but the engine has work, which is what keeps the service alive through it.
         assertTrue("a catch-up is engine work", provider.isSdkEngineWorking())
@@ -166,7 +169,10 @@ class BlockchainStateDataProviderTest {
         awaitUntil("null update applied") { provider.getSyncStage() == SyncStage.OFFLINE }
         assertTrue("an unknown verdict keeps the last one", provider.isSdkEngineWorking())
         provider.updateSdkBlockchainState(sdkUpdate(percentageSync = 100, syncStage = SyncStage.COMPLETE))
-        awaitUntil("catch-up finished") { !provider.isSdkEngineWorking() }
+        // Stage last again: the fixture below must not be replaced under a running update.
+        awaitUntil("catch-up finished") {
+            provider.getSyncStage() == SyncStage.COMPLETE && !provider.isSdkEngineWorking()
+        }
 
         // Phase 1b item 7. Reference install, 2026-09-15: the SDK replay ran for eleven hours
         // with `replaying` cleared by the first update, so the idle rule stopped the service
@@ -174,7 +180,8 @@ class BlockchainStateDataProviderTest {
         // engine reports it complete.
         dao.state = BlockchainState(Date(0L), 0, true, EnumSet.noneOf(Impediment::class.java), 0, 0, 0)
         provider.updateSdkBlockchainState(sdkUpdate(percentageSync = 42, syncStage = SyncStage.BLOCKS))
-        awaitUntil("replay update applied") { dao.state?.percentageSync == 42 }
+        awaitUntil("replay update applied") { provider.getSyncStage() == SyncStage.BLOCKS }
+        assertEquals(42, dao.state!!.percentageSync)
         assertTrue("a started replay is still in progress at 42%", dao.state!!.replaying)
 
         // A transient null percent (SDK ERROR blip) preserves both fields.
@@ -184,7 +191,8 @@ class BlockchainStateDataProviderTest {
         assertTrue("a null percent must not clear the replay flag", dao.state!!.replaying)
 
         provider.updateSdkBlockchainState(sdkUpdate(percentageSync = 100, syncStage = SyncStage.COMPLETE))
-        awaitUntil("tip update applied") { dao.state?.percentageSync == 100 }
+        awaitUntil("tip update applied") { provider.getSyncStage() == SyncStage.COMPLETE }
+        assertEquals(100, dao.state!!.percentageSync)
         assertFalse("at the tip the replay is over", dao.state!!.replaying)
         assertTrue(dao.state!!.isSynced())
     }
@@ -297,6 +305,61 @@ class BlockchainStateDataProviderTest {
         Thread.sleep(100)
         assertEquals(55, dao.state!!.percentageSync)
         assertTrue(dao.state!!.replaying)
+    }
+
+    @Test
+    fun aReplayStartedHere_closesTheGateAtOnce_withoutWaitingForTheRow() {
+        // The fake DAO's observation never changes, so only the in-memory marker can answer.
+        dao.state = BlockchainState(Date(0L), 10, false, EnumSet.noneOf(Impediment::class.java), 0, 0, 100)
+        awaitUntil("row read") { provider.isReplayingOrNull() == false }
+
+        provider.markReplayStartedForSdkTakeover()
+
+        assertEquals("closed when the call returns", true, provider.isReplayingOrNull())
+    }
+
+    /**
+     * Review, #1714. The progress is sampled before it is queued, and the engine can report
+     * "synced" for a moment after a rewind is armed. A progress update only ever ends a replay,
+     * so a "complete" that predates the replay would end it for good.
+     */
+    @Test
+    fun aCompletionFromBeforeTheReplay_doesNotEndIt() {
+        dao.state = BlockchainState(Date(0L), 10, false, EnumSet.noneOf(Impediment::class.java), 0, 0, 100)
+        provider.markReplayStartedForSdkTakeover()
+        awaitUntil("marker applied") { dao.state?.replaying == true }
+
+        // The stale snapshot: taken at the tip, delivered after the arm.
+        provider.updateSdkBlockchainState(sdkUpdate(percentageSync = 100, syncStage = SyncStage.COMPLETE))
+        provider.updateSdkBlockchainState(sdkUpdate(bestChainHeight = 11, percentageSync = 100))
+        awaitUntil("both stale updates applied") { dao.state?.bestChainHeight == 11 }
+        assertTrue("the replay is still on", dao.state!!.replaying)
+        assertEquals(true, provider.isReplayingOrNull())
+
+        // The engine picks the rewind up, works, and finishes: that completion counts.
+        provider.updateSdkBlockchainState(sdkUpdate(percentageSync = 3, syncStage = SyncStage.BLOCKS))
+        provider.updateSdkBlockchainState(sdkUpdate(percentageSync = 100, syncStage = SyncStage.COMPLETE))
+        awaitUntil("replay ended") { dao.state?.replaying == false }
+        awaitUntil("gate follows") { provider.isReplayingOrNull() == false }
+    }
+
+    @Test
+    fun aReplayWithNothingToScan_endsOnACompletionAfterTheGracePeriod() {
+        var nowMs = 1_000L
+        provider.monotonicMs = { nowMs }
+        dao.state = BlockchainState(Date(0L), 10, false, EnumSet.noneOf(Impediment::class.java), 0, 0, 100)
+        provider.markReplayStartedForSdkTakeover()
+        awaitUntil("marker applied") { dao.state?.replaying == true }
+
+        nowMs += BlockchainStateDataProvider.REPLAY_START_GRACE_MS - 1
+        provider.updateSdkBlockchainState(sdkUpdate(bestChainHeight = 11, percentageSync = 100))
+        awaitUntil("early completion applied") { dao.state?.bestChainHeight == 11 }
+        assertTrue("within the grace period it may be stale", dao.state!!.replaying)
+
+        nowMs += 1
+        provider.updateSdkBlockchainState(sdkUpdate(bestChainHeight = 12, percentageSync = 100))
+        awaitUntil("replay ended") { dao.state?.replaying == false }
+        awaitUntil("gate follows") { provider.isReplayingOrNull() == false }
     }
 
     @Test

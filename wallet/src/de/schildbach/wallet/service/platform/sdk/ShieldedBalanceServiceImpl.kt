@@ -339,6 +339,10 @@ internal fun evaluateWalletFundingGate(
     progress: ShadowSyncProgress,
     replaying: Boolean?
 ): WalletFundingGate = when {
+    // First: a replay known to be in progress is not worth a send's wait, whatever the engine
+    // is doing. Behind the IDLE and CONNECTING answers it was waited for (review, #1714).
+    replaying == true ->
+        WalletFundingGate(false, "a blockchain replay (restore or rescan) is in progress")
     progress.phase == ShadowSyncPhase.IDLE ->
         WalletFundingGate(false, "SDK L1 engine not running", mayOpenSoon = true)
     // Waiting for peers: nothing can be broadcast, and after a route loss or a
@@ -351,8 +355,6 @@ internal fun evaluateWalletFundingGate(
         WalletFundingGate(false, "SDK L1 engine reported a sync error")
     replaying == null ->
         WalletFundingGate(false, "the blockchain replay state is not known yet", mayOpenSoon = true)
-    replaying ->
-        WalletFundingGate(false, "a blockchain replay (restore or rescan) is in progress")
     else -> WalletFundingGate(true, "SDK L1 engine running and no replay in progress")
 }
 
@@ -969,7 +971,8 @@ internal class DashSdkShieldedSource(
  *
  * So [shieldFromWallet] runs the SDK's own pipeline and is hard-gated on
  * the SDK engine's live sync progress ([L1ShadowSyncService.progress]):
- * the SDK SPV must have its filter scan caught up to the chain tip (see
+ * the SDK engine must be running with peers, report no error, and no
+ * replay may be in progress; an ordinary catch-up is allowed (see
  * [evaluateWalletFundingGate] — the gate runs on SDK-only preconditions;
  * the old dashj-parity requirement is retired because the frozen held
  * wallet makes parity permanently unsatisfiable and the SDK's SYNCED flag
@@ -2252,8 +2255,9 @@ class ShieldedBalanceServiceImpl internal constructor(
             ?: return notBroadcast(operation, "shielded runtime not ready", null)
 
         // Funding gate: the SDK builds the lock from its OWN SPV wallet,
-        // so require live evidence that its scan is caught up to the chain
-        // tip (SDK-only preconditions — see evaluateWalletFundingGate).
+        // so require a running engine with peers, no sync error and no
+        // replay in progress (SDK-only preconditions — see
+        // evaluateWalletFundingGate). Asked again after the waits below.
         val gate = evaluateWalletFundingGate(safeProgress(), safeReplaying())
         if (!gate.allowed) {
             return notBroadcast(operation, "L1 funding gate closed: ${gate.reason}", null)
@@ -2381,6 +2385,16 @@ class ShieldedBalanceServiceImpl internal constructor(
                         true
                     }
                     if (blocked) return@withSharedSubmission null
+                    // The engine and replay gate again, after every wait above (the shield mutex,
+                    // this hold): a rescan can start while a shield waits behind another one
+                    // (review, #1714). Before the checkpoint, so nothing is recorded as submitted.
+                    // Fresh funding only: resuming an existing lock never comes through here.
+                    val gateNow = evaluateWalletFundingGate(safeProgress(), safeReplaying())
+                    if (!gateNow.allowed) {
+                        return@withSharedSubmission de.schildbach.wallet.payments.FundingSelectionLock.Selected(
+                            notBroadcast(operation, "L1 funding gate closed: ${gateNow.reason}", null)
+                        )
+                    }
                     de.schildbach.wallet.payments.FundingSelectionLock.Selected(
                     // The caller's durable submission checkpoint: from here on the
                     // native call may broadcast, so a caller interrupted after this
