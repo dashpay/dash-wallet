@@ -2614,6 +2614,19 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 )
                 return
             }
+            // The app is on screen: the service is not idle in any sense the
+            // user would accept, whatever the counters say (see [shouldStopForIdle]).
+            // Read from the monitor itself, not the copy this service collects.
+            val appOpen = !AppForegroundMonitor.isInBackground
+            if (isSyncIdle(activityHistory) && appOpen) {
+                log.info("idle counters, but the app is open — keeping the service alive")
+                // As for the engine start above: the quiet samples must not
+                // carry over, or the first tick after the user leaves would
+                // stop the service at once and a quick return would find the
+                // engine restarting.
+                activityHistory.clear()
+                return
+            }
             if (isSyncIdle(activityHistory) && bindBlocked) {
                 log.info(
                     "idling detected with the SDK bind blocked ({}) — stopping the service; the " +
@@ -2621,7 +2634,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     sdkBindRetryService.blocker.value
                 )
             }
-            if (shouldStopForIdle(activityHistory, replaying)) {
+            if (shouldStopForIdle(activityHistory, replaying, appOpen)) {
                 onIdleVerdict()
             }
         }

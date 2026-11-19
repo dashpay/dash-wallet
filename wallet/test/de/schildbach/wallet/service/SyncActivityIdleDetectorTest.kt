@@ -135,8 +135,27 @@ class SyncActivityIdleDetectorTest {
         val sample = sdkActivitySample(stable, stable, txEventsSinceLastSample = 0)
         val history = List(MIN_COLLECT_HISTORY + 3) { sample }
         assertTrue("the counters themselves read idle", isSyncIdle(history))
-        assertFalse("…but a replay keeps the service alive", shouldStopForIdle(history, replaying = true))
-        assertTrue("…and once the replay is over the same history stops it", shouldStopForIdle(history, replaying = false))
+        assertFalse("…but a replay keeps the service alive", shouldStopForIdle(history, replaying = true, appOpen = false))
+        assertTrue("…and once the replay is over the same history stops it", shouldStopForIdle(history, replaying = false, appOpen = false))
+    }
+
+    @Test
+    fun idleCounters_doNotStopTheService_whileTheAppIsOpen() {
+        // 12.0.1-beta field log: three quiet samples taken in the background,
+        // then the user opened and unlocked the app and the next tick stopped
+        // the service — and with it the engine behind the balance.
+        val stable = progress()
+        val sample = sdkActivitySample(stable, stable, txEventsSinceLastSample = 0)
+        val history = List(MIN_COLLECT_HISTORY + 1) { sample }
+        assertTrue("the counters themselves read idle", isSyncIdle(history))
+        assertFalse(
+            "the app on screen keeps the service alive",
+            shouldStopForIdle(history, replaying = false, appOpen = true)
+        )
+        assertTrue(
+            "in the background the same history still stops it",
+            shouldStopForIdle(history, replaying = false, appOpen = false)
+        )
     }
 
     @Test
@@ -144,8 +163,8 @@ class SyncActivityIdleDetectorTest {
         val before = progress(headerHeight = 1_500_000, filterHeight = 1_400_000, mnListHeight = 1_499_000)
         val after = progress(headerHeight = 1_500_020, filterHeight = 1_402_000, mnListHeight = 1_499_010)
         val sample = sdkActivitySample(before, after, txEventsSinceLastSample = 0)
-        assertFalse(shouldStopForIdle(listOf(sample, sample), replaying = false))
-        assertFalse(shouldStopForIdle(listOf(sample, sample), replaying = true))
+        assertFalse(shouldStopForIdle(listOf(sample, sample), replaying = false, appOpen = false))
+        assertFalse(shouldStopForIdle(listOf(sample, sample), replaying = true, appOpen = false))
     }
 
     // ── The missing-blockstore wallet.reset() guard ───────────────────
