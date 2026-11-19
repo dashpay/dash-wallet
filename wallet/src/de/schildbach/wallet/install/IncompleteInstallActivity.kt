@@ -25,14 +25,18 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -96,15 +100,25 @@ private fun IncompleteInstallScreen(onOpenPlay: () -> Unit) {
             .fillMaxSize()
             .background(LocalDashColors.current.backgroundPrimary)
             .systemBarsPadding()
-            .padding(horizontal = 20.dp, vertical = 20.dp),
-        verticalArrangement = Arrangement.Center
+            .padding(horizontal = 20.dp, vertical = 20.dp)
     ) {
-        Spacer(modifier = Modifier.weight(1f))
-        FeatureTopText(
-            heading = stringResource(R.string.incomplete_install_title),
-            text = stringResource(R.string.incomplete_install_message)
-        )
-        Spacer(modifier = Modifier.weight(1f))
+        // The text takes the space above the button and scrolls inside it, so with
+        // large accessibility text the button (the screen's only action) and the
+        // whole uninstall warning both stay reachable.
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth(),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                FeatureTopText(
+                    heading = stringResource(R.string.incomplete_install_title),
+                    text = stringResource(R.string.incomplete_install_message)
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(16.dp))
         DashButton(
             modifier = Modifier.fillMaxWidth(),
             text = stringResource(R.string.incomplete_install_open_play),
