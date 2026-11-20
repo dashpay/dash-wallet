@@ -20,6 +20,7 @@ package de.schildbach.wallet.service.platform.sdk
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.payments.parsers.AddressNetwork
 import org.dash.wallet.common.payments.parsers.Base58
+import org.dashfoundation.dashsdk.errors.DashSdkError
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -487,5 +488,18 @@ class ExternalSendModelsTest {
         assertEquals(1L, coreToPlatformMaxDuffs(63_193L, 2))
         assertNull(coreToPlatformMaxDuffs(63_192L, 2))
         assertNull(coreToPlatformMaxDuffs(0L, 2))
+    }
+
+    @Test
+    fun notSentReasonFor_platformShieldCapacityExceeded_isInsufficientFunds() {
+        val error = DashSdkError.PlatformWallet.PlatformShieldCapacityExceeded("capacity exceeded")
+        for (thrown in listOf<Throwable>(error, RuntimeException("shield failed", error))) {
+            val classified = classifyBroadcastFailure(thrown)
+            assertTrue(classified is SdkWriteResult.NotBroadcast)
+            assertEquals(
+                NotSentReason.INSUFFICIENT_FUNDS,
+                notSentReasonFor(classified as SdkWriteResult.NotBroadcast)
+            )
+        }
     }
 }
