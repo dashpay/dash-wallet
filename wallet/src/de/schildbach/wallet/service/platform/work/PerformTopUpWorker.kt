@@ -25,6 +25,7 @@ import androidx.work.workDataOf
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
+import de.schildbach.wallet.service.platform.sdk.CORE_MIN_IDENTITY_TOP_UP_DUFFS
 import de.schildbach.wallet.service.platform.sdk.SdkTransparentTopUp
 import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
 import de.schildbach.wallet.service.platform.sdk.REASON_PRE_BROADCAST_ASSET_LOCK_SELECTION
@@ -97,13 +98,13 @@ class PerformTopUpWorker @AssistedInject constructor(
         const val KEY_SDK_CALL_STARTED = "PerformTopUpWorker.SDK_CALL_STARTED"
 
         /**
-         * Platform's minimum for an IdentityTopUp asset lock, in duffs:
-         * identity_topup_base_cost (500) + the 50,000-duff processing floor —
-         * the same figure the SDK FFI enforces as MIN_TOP_UP_DUFFS. A MAX
-         * retry adjusted below this would broadcast a lock Core accepts but
-         * Platform deterministically rejects, stranding the balance.
+         * Platform's minimum for an IdentityTopUp asset lock, in duffs
+         * ([CORE_MIN_IDENTITY_TOP_UP_DUFFS]) — the same figure the SDK FFI
+         * enforces as MIN_TOP_UP_DUFFS. A MAX retry adjusted below this would
+         * broadcast a lock Core accepts but Platform deterministically
+         * rejects, stranding the balance.
          */
-        const val PLATFORM_TOP_UP_FLOOR_DUFFS = 50_500L
+        const val PLATFORM_TOP_UP_FLOOR_DUFFS = CORE_MIN_IDENTITY_TOP_UP_DUFFS
     }
 
     override suspend fun doWorkWithBaseProgress(): Result {
