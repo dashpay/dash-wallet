@@ -1569,6 +1569,11 @@ class ExternalSendServiceImpl internal constructor(
                     log.info("external send {}: an earlier top-up lock was already consumed; skipped", pair)
                 }
             }
+            // A NEW lock below Platform's top-up minimum would be broadcast and then rejected;
+            // checked only after the resume gate, which completes an earlier lock at any amount.
+            if (amount.duffs < CORE_MIN_IDENTITY_TOP_UP_DUFFS) {
+                return@submitUnderWipeBarrier SdkWriteResult.NotBroadcast(BELOW_IDENTITY_TOP_UP_MINIMUM_REASON)
+            }
             if (readOrNull("L1 funding gate") { this.source.coreFundingGateOpen() } != true) {
                 return@submitUnderWipeBarrier SdkWriteResult.NotBroadcast(L1_FUNDING_GATE_CLOSED_REASON)
             }
