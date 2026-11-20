@@ -66,11 +66,12 @@ open class WalletUIConfig @Inject constructor(
         val EXCHANGE_CURRENCY_DETECTED = booleanPreferencesKey("exchange_currency_detected")
         val LAST_TOTAL_BALANCE = longPreferencesKey("last_total_balance")
         /**
-         * True once the stored last-known balances are known to belong to the installed wallet:
-         * set by every install-time clear, and by the one-time clear of values an earlier
-         * version stored (see `LastKnownBalances.kt` in the wallet module).
+         * True when [LAST_TOTAL_BALANCE] was written by a version that clears it on every wallet
+         * install, so it belongs to the installed wallet. Written after the value and removed
+         * before it (see `LastKnownBalances.kt` in the wallet module). A value an earlier
+         * version stored has no flag and is not shown outside the app.
          */
-        val LAST_BALANCES_OWNED = booleanPreferencesKey("last_balances_owned")
+        val LAST_TOTAL_BALANCE_OWNED = booleanPreferencesKey("last_total_balance_owned")
         val CUSTOMIZED_SHORTCUTS = stringPreferencesKey("customized_shortcuts")
         val IS_SHORTCUT_INFO_HIDDEN = booleanPreferencesKey("is_shortcut_info_hidden")
     }

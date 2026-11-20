@@ -17,63 +17,37 @@
 package de.schildbach.wallet
 
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
-import io.mockk.coEvery
-import io.mockk.coVerify
 import io.mockk.coVerifyOrder
 import io.mockk.mockk
 import org.dash.wallet.common.data.WalletUIConfig
-import org.junit.Assert.assertThrows
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
-import java.io.IOException
 
 class LastKnownBalancesTest {
     private val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
     private val dashPayConfig = mockk<DashPayConfig>(relaxed = true)
 
     @Test
-    fun `balances an earlier version stored are cleared once, the marker last`() {
-        coEvery { walletUIConfig.getPreservingErrors(WalletUIConfig.LAST_BALANCES_OWNED) } returns null
-
-        ensureLastKnownBalancesOwned(walletUIConfig, dashPayConfig)
-
-        coVerifyOrder {
-            walletUIConfig.remove(WalletUIConfig.LAST_TOTAL_BALANCE)
-            dashPayConfig.remove(DashPayConfig.LAST_SHIELDED_BALANCE_DUFFS)
-            walletUIConfig.set(WalletUIConfig.LAST_BALANCES_OWNED, true)
-        }
+    fun `a value counts only with its ownership flag`() {
+        assertEquals(5L, ownedOrNull(5L, true))
+        // stored by an earlier version: may belong to a previous wallet
+        assertNull(ownedOrNull(5L, null))
+        assertNull(ownedOrNull(5L, false))
+        assertNull(ownedOrNull(null, true))
     }
 
     @Test
-    fun `balances already owned by the installed wallet are left alone`() {
-        coEvery { walletUIConfig.getPreservingErrors(WalletUIConfig.LAST_BALANCES_OWNED) } returns true
-
-        ensureLastKnownBalancesOwned(walletUIConfig, dashPayConfig)
-
-        coVerify(exactly = 0) { walletUIConfig.remove(any<androidx.datastore.preferences.core.Preferences.Key<Long>>()) }
-        coVerify(exactly = 0) { dashPayConfig.remove(any<androidx.datastore.preferences.core.Preferences.Key<Long>>()) }
-    }
-
-    @Test
-    fun `an unreadable marker throws, so the caller treats both balances as unknown`() {
-        coEvery { walletUIConfig.getPreservingErrors(WalletUIConfig.LAST_BALANCES_OWNED) } throws IOException("unreadable")
-
-        assertThrows(IOException::class.java) { ensureLastKnownBalancesOwned(walletUIConfig, dashPayConfig) }
-        coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_BALANCES_OWNED, true) }
-    }
-
-    @Test
-    fun `a clear stopped part way leaves no marker, so it runs again`() {
-        coEvery { walletUIConfig.getPreservingErrors(WalletUIConfig.LAST_BALANCES_OWNED) } returns null
-        coEvery { dashPayConfig.remove(DashPayConfig.LAST_SHIELDED_BALANCE_DUFFS) } throws IOException("disk full")
-
-        assertThrows(IOException::class.java) { ensureLastKnownBalancesOwned(walletUIConfig, dashPayConfig) }
-        coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_BALANCES_OWNED, true) }
-    }
-
-    @Test
-    fun `an install-time clear also marks the balances as owned`() {
+    fun `an install-time clear removes each flag before its value`() {
         clearLastKnownBalances(walletUIConfig, dashPayConfig)
 
-        coVerify(exactly = 1) { walletUIConfig.set(WalletUIConfig.LAST_BALANCES_OWNED, true) }
+        coVerifyOrder {
+            walletUIConfig.remove(WalletUIConfig.LAST_TOTAL_BALANCE_OWNED)
+            walletUIConfig.remove(WalletUIConfig.LAST_TOTAL_BALANCE)
+        }
+        coVerifyOrder {
+            dashPayConfig.remove(DashPayConfig.LAST_SHIELDED_BALANCE_OWNED)
+            dashPayConfig.remove(DashPayConfig.LAST_SHIELDED_BALANCE_DUFFS)
+        }
     }
 }

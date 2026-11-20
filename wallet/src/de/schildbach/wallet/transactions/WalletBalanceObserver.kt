@@ -107,6 +107,8 @@ class WalletBalanceObserver(
 
             val totalBalance = wallet.getBalance(BalanceType.ESTIMATED)
             walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, totalBalance.value)
+            // After the value: a death between the two leaves it unflagged, so unknown.
+            walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE_OWNED, true)
             _totalBalance.emit(totalBalance)
             isSeeded = true
         }

@@ -4810,7 +4810,11 @@ class CutoverUiDataService internal constructor(
             )
         }
         if (!persist) return
-        runCatching { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, duffs) }
+        runCatching {
+            walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, duffs)
+            // After the value: a death between the two leaves it unflagged, so unknown.
+            walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE_OWNED, true)
+        }
             .onSuccess {
                 // EDGE LOG: once per distinct value written, not per tick. The
                 // publication line above is gated on the DISPLAYED figure

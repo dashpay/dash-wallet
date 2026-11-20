@@ -60,6 +60,8 @@ class DashPayConfigShieldedBalanceCacheTest {
     fun noReconcile_persistsTheBalance() = runBlocking {
         assertTrue(cfg.setLastShieldedBalanceDuffsUnlessReconciling(1_000_000_000L))
         assertEquals(1_000_000_000L, cfg.getLastShieldedBalanceDuffs())
+        // Written with it: the value belongs to the installed wallet.
+        assertEquals(true, cfg.get(DashPayConfig.LAST_SHIELDED_BALANCE_OWNED))
     }
 
     @Test

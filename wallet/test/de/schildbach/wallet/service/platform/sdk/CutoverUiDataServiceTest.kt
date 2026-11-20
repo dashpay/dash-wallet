@@ -26,6 +26,7 @@ import de.schildbach.wallet_test.R
 import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -1475,7 +1476,10 @@ class CutoverUiDataServiceTest {
             Coin.valueOf(123_456),
             service.overlayTotalBalance(flowOf(Coin.valueOf(999))).first()
         )
-        coVerify { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 123_456L) }
+        coVerifyOrder {
+            walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 123_456L)
+            walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE_OWNED, true)
+        }
 
         // Live update: a new SDK balance lands without any dashj involvement.
         source.balanceDuffs.value = 200_000L
