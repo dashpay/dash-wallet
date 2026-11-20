@@ -651,6 +651,63 @@ class ExternalSendServiceImplTest {
         assertTrue(blocked.calls.isEmpty())
     }
 
+    // ── Core → Identity below Platform's top-up minimum (MO-1121) ─────
+
+    @Test
+    fun coreToSomeoneElsesIdentity_belowTheTopUpMinimum_isNotSent_withNoBuild() = runBlocking {
+        val source = source()
+        assertEquals(
+            ExternalSendResult.NotSent(NotSentReason.GENERIC),
+            service(source).send(SendBalance.CORE, otherIdentity, Dash(CORE_MIN_IDENTITY_TOP_UP_DUFFS - 1), false)
+        )
+        assertTrue(source.calls.isEmpty())
+    }
+
+    @Test
+    fun coreToSomeoneElsesIdentity_atTheTopUpMinimum_isBuilt() = runBlocking {
+        val source = source()
+        assertEquals(
+            ExternalSendResult.Sent(null),
+            service(source).send(SendBalance.CORE, otherIdentity, Dash(CORE_MIN_IDENTITY_TOP_UP_DUFFS), false)
+        )
+        assertEquals(listOf("coreTopUpExternalIdentity"), source.calls)
+        assertEquals(CORE_MIN_IDENTITY_TOP_UP_DUFFS, source.lastDuffs)
+    }
+
+    @Test
+    fun coreToSomeoneElsesIdentity_belowTheTopUpMinimum_stillResumesAnEarlierLock() = runBlocking {
+        val earlier = externalLock(5)
+        val source = source().apply { externalLocks = { listOf(earlier) } }
+        assertEquals(
+            ExternalSendResult.NotSent(NotSentReason.EARLIER_TOP_UP_COMPLETED),
+            service(source).send(SendBalance.CORE, otherIdentity, Dash(1_000L), false)
+        )
+        assertEquals(listOf("resumeTopUpToRecordedRecipient"), source.calls)
+    }
+
+    @Test
+    fun coreToSomeoneElsesIdentity_belowTheMinimum_afterAConsumedEarlierLock_isNotSent_withNoBuild() = runBlocking {
+        val source = source().apply {
+            externalLocks = { listOf(externalLock(5)) }
+            resumeRecorded = { throw DashSdkError.PlatformWallet.AssetLockAlreadyConsumed("consumed") }
+        }
+        assertEquals(
+            ExternalSendResult.NotSent(NotSentReason.GENERIC),
+            service(source).send(SendBalance.CORE, otherIdentity, Dash(1_000L), false)
+        )
+        assertEquals(listOf("resumeTopUpToRecordedRecipient"), source.calls)
+    }
+
+    @Test
+    fun coreToOwnIdentity_theTopUpRefusesBelowTheMinimum_isNotSent() = runBlocking {
+        val source = source().apply { coreTopUpResult = { SdkWriteResult.NotBroadcast(BELOW_IDENTITY_TOP_UP_MINIMUM_REASON) } }
+        assertEquals(
+            ExternalSendResult.NotSent(NotSentReason.GENERIC),
+            service(source).send(SendBalance.CORE, ownIdentity, Dash(CORE_MIN_IDENTITY_TOP_UP_DUFFS - 1), false)
+        )
+        assertEquals(listOf("coreTopUpIdentity"), source.calls)
+    }
+
     @Test
     fun shieldedToEachDestination_callsItsShieldedWrite() = runBlocking {
         val expected = mapOf(
