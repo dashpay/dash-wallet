@@ -93,6 +93,9 @@ internal fun wipeCancelledWriteResult(
  *   [DashSdkError.PlatformWallet.ShieldedNoRecordedAnchor]) — shielded-op
  *   codes that shouldn't appear on a document transition, classified
  *   correctly in case they ever do.
+ * - [DashSdkError.PlatformWallet.PlatformShieldCapacityExceeded] (also when wrapped):
+ *   the Platform → Shielded shield's input set cannot cover the amount plus input 0's
+ *   fee reserve, raised before anything is built.
  *
  * Also definitively pre-broadcast, message-matched because the SDK exposes no
  * typed error for them: the shielded BUILD-INPUT refusals (exit-denomination
@@ -155,6 +158,27 @@ internal const val REASON_SHIELDED_IDENTITY_DEBIT_PENDING =
     "pre-broadcast: an earlier identity shield is still unresolved"
 
 /**
+ * [classifyBroadcastFailure] reason for [DashSdkError.PlatformWallet.PlatformShieldCapacityExceeded]
+ * (native code 41): a Platform → Shielded shield (Type 15) whose Platform Payment account's
+ * deterministic input set cannot cover the amount plus input 0's retained fee reserve. Raised
+ * while fetching the input nonces, before anything is built — nothing was broadcast. The SDK
+ * says to confirm a SMALLER amount, not to retry unchanged, so the UI reads it as a shortfall.
+ */
+internal const val REASON_PLATFORM_SHIELD_CAPACITY_EXCEEDED =
+    "pre-broadcast: the platform addresses cannot cover the shield amount and fee reserve"
+
+/** Whether [t], or an error in its cause chain, is [DashSdkError.PlatformWallet.PlatformShieldCapacityExceeded]. */
+private fun isPlatformShieldCapacityExceeded(t: Throwable): Boolean {
+    var cause: Throwable? = t
+    var hops = 0
+    while (cause != null && hops++ < 8) {
+        if (cause is DashSdkError.PlatformWallet.PlatformShieldCapacityExceeded) return true
+        cause = cause.cause
+    }
+    return false
+}
+
+/**
  * Whether [t], or an SDK error in its cause chain, is a TYPED "the submission may have
  * executed, its result is unproven" outcome: rs-sdk `StateTransitionResultUnconfirmed`
  * (dashpay/platform#5556) as [DashSdkError.StateTransitionResultUnconfirmed] (rs-sdk-ffi
@@ -188,6 +212,11 @@ internal fun classifyBroadcastFailure(t: Throwable): SdkWriteResult<Nothing> = w
     // message embeds an arbitrary diagnostic ("Insufficient funds", "no private key stored",
     // …) that must never turn it into NotBroadcast.
     isSubmissionOutcomeUnconfirmed(t) -> SdkWriteResult.Ambiguous(t)
+    // Raised by the Platform → Shielded shield while fetching the input nonces, before
+    // building (rs-platform-wallet `map_shield_input_fetch_error`): nothing was built or
+    // broadcast. Checked through the cause chain, but only after the unconfirmed arm above.
+    isPlatformShieldCapacityExceeded(t) ->
+        SdkWriteResult.NotBroadcast(REASON_PLATFORM_SHIELD_CAPACITY_EXCEEDED, t)
     t is DashSdkError.InvalidParameter ||
         t is DashSdkError.InvalidState ||
         t is DashSdkError.NotFound ||

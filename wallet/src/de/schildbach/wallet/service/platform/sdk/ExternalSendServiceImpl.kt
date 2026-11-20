@@ -115,6 +115,7 @@ internal fun notSentReasonFor(result: SdkWriteResult.NotBroadcast): NotSentReaso
         any(
             REASON_PRE_BROADCAST_BUILD_SHORTFALL,
             REASON_PRE_BROADCAST_ASSET_LOCK_SELECTION,
+            REASON_PLATFORM_SHIELD_CAPACITY_EXCEEDED,
             "Insufficient shielded balance",
             "asset lock coin selection is short",
             "does not cover the shield pool fee"
