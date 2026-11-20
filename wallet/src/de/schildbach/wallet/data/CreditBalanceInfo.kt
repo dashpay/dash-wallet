@@ -13,7 +13,9 @@ data class CreditBalanceInfo(
         const val CREDITS_PER_DUFF = 1_000
         const val MAX_OPERATION_COST = 100_000_000.toLong()
         val MAX_OPERATION_COST_COIN = MAX_OPERATION_COST / CREDITS_PER_DUFF
-        const val LOW_BALANCE = MAX_OPERATION_COST * 10
+        // warn when only ~2 operations worth of credits remain, so users onboarded
+        // with small invites (0.003 - 0.01 DASH) are not warned on every operation
+        const val LOW_BALANCE = MAX_OPERATION_COST * 2
     }
     fun isBalanceEnough(): Boolean {
         return balance >= MAX_OPERATION_COST

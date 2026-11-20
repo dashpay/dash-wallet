@@ -19,6 +19,7 @@ package de.schildbach.wallet.ui.username.request
 import android.app.Application
 import android.content.Intent
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.database.dao.UsernameRequestDao
@@ -35,6 +36,7 @@ import de.schildbach.wallet.service.platform.ContestedUsernameFees
 import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
+import de.schildbach.wallet.ui.username.CreateUsernameArgs
 import de.schildbach.wallet.ui.username.UsernameType
 import de.schildbach.wallet.util.viewModels.MainCoroutineRule
 import io.mockk.coEvery
@@ -61,11 +63,18 @@ import org.dashj.platform.dpp.voting.ContenderWithSerializedDocument
 import org.dashj.platform.dpp.voting.Contenders
 import org.dashj.platform.dpp.voting.ContestedDocumentVotePollWinnerInfo
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.After
 import org.bitcoinj.core.Coin
+import org.bitcoinj.core.ECKey
+import org.bitcoinj.core.TransactionOutput
+import org.bitcoinj.evolution.AssetLockTransaction
+import org.bitcoinj.script.ScriptBuilder
+import de.schildbach.wallet.data.InvitationLinkData
+import org.dashj.platform.sdk.platform.Names
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.cancel
 import org.junit.Rule
@@ -73,6 +82,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.io.IOException
 import java.util.Optional
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -99,6 +109,7 @@ class RequestUserNameViewModelTest {
     private lateinit var identityConfig: BlockchainIdentityConfig
     private lateinit var platformRepo: PlatformRepo
     private lateinit var walletApplication: WalletApplication
+    private lateinit var topUpRepository: TopUpRepository
     private lateinit var viewModel: RequestUserNameViewModel
     private val balance = MutableStateFlow(Coin.ZERO)
 
@@ -111,6 +122,7 @@ class RequestUserNameViewModelTest {
 
         platformRepo = mockk(relaxed = true)
         walletApplication = mockk(relaxed = true)
+        topUpRepository = mockk(relaxed = true)
 
         val coinJoinConfig = mockk<CoinJoinConfig>(relaxed = true)
         every { coinJoinConfig.observeMode() } returns flowOf(CoinJoinMode.NONE)
@@ -125,7 +137,7 @@ class RequestUserNameViewModelTest {
             mockk<UsernameRequestDao>(relaxed = true),
             coinJoinConfig,
             mockk<AnalyticsService>(relaxed = true),
-            mockk<TopUpRepository>(relaxed = true)
+            topUpRepository
         )
     }
 
@@ -157,6 +169,42 @@ class RequestUserNameViewModelTest {
         balance.value = Coin.parseCoin("0.10")
         withTimeout(5_000) { viewModel.uiState.first { !it.enoughBalance } }
         assertTrue(viewModel.hasAvailableResultFor(username))
+    }
+
+    // --- invite balance ---
+
+    @Test
+    fun inviteAtMinimum_canRequestNonContestedName() {
+        assertTrue(enoughInviteBalanceForNonContestedName(Constants.DASH_PAY_INVITE_MIN))
+    }
+
+    @Test
+    fun inviteBelowMinimum_cannotRequestNonContestedName() {
+        assertFalse(enoughInviteBalanceForNonContestedName(Constants.DASH_PAY_INVITE_MIN.subtract(Coin.SATOSHI)))
+    }
+
+    @Test
+    fun inviteLookup_failedRetry_keepsTheLoadedInvite() {
+        val args = CreateUsernameArgs(invite = mockk<InvitationLinkData>(relaxed = true))
+        coEvery { topUpRepository.getAssetLockTransaction(any()) } returns inviteAssetLock(Constants.DASH_PAY_INVITE_MIN)
+        viewModel.setCreateUsernameArgs(args)
+        runBlocking { withTimeout(5_000) { viewModel.inviteBalance.first { it == Constants.DASH_PAY_INVITE_MIN } } }
+
+        coEvery { topUpRepository.getAssetLockTransaction(any()) } throws IOException("DAPI unavailable")
+
+        assertNotNull(runBlocking { viewModel.getInviteAssetLockTransaction() })
+    }
+
+    @Test
+    fun inviteLookup_repeatedArgsAfterAFailure_loadsTheInvite() {
+        val args = CreateUsernameArgs(invite = mockk<InvitationLinkData>(relaxed = true))
+        coEvery { topUpRepository.getAssetLockTransaction(any()) } throws
+            IOException("DAPI unavailable") andThen inviteAssetLock(Constants.DASH_PAY_INVITE_MIN)
+
+        viewModel.setCreateUsernameArgs(args)
+        viewModel.setCreateUsernameArgs(args)
+
+        runBlocking { withTimeout(5_000) { viewModel.inviteBalance.first { it == Constants.DASH_PAY_INVITE_MIN } } }
     }
 
     @Test
@@ -447,6 +495,32 @@ class RequestUserNameViewModelTest {
     }
 
     // --- helpers ---
+
+    /** Claims an invite funded with [amount] and checks a name only an uncontested registration can use. */
+    private fun inviteAssetLock(amount: Coin): AssetLockTransaction {
+        val pubKeyHash = ByteArray(20) { 7 }
+        val creditOutput = mockk<TransactionOutput> {
+            every { scriptPubKey } returns ScriptBuilder.createP2PKHOutputScript(pubKeyHash)
+            every { value } returns amount
+        }
+        return mockk {
+            every { assetLockPayload.creditOutputs } returns listOf(creditOutput)
+            every { assetLockPublicKey } returns mockk<ECKey> { every { this@mockk.pubKeyHash } returns pubKeyHash }
+        }
+    }
+
+    private fun enoughInviteBalanceForNonContestedName(amount: Coin): Boolean {
+        coEvery { topUpRepository.getAssetLockTransaction(any()) } returns inviteAssetLock(amount)
+
+        viewModel.setCreateUsernameArgs(CreateUsernameArgs(invite = mockk<InvitationLinkData>(relaxed = true)))
+        // the invite is loaded on the IO dispatcher, so wait in real time
+        runBlocking { withTimeout(5_000) { viewModel.inviteBalance.first { it == amount } } }
+
+        val name = "dashuser2" // a digit other than 0 or 1 keeps it out of the contested set
+        assertFalse(Names.isUsernameContestable(name))
+        viewModel.checkUsernameValid(name, UsernameType.Primary)
+        return viewModel.uiState.value.enoughBalance
+    }
 
     /** Runs a check and waits for it to finish. checkingUsername is raised before the first suspension. */
     private fun checkUsername(name: String = username): RequestUserNameUIState {
