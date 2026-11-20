@@ -44,12 +44,11 @@ class SendContactRequestWorkerTest {
         unmockkStatic(WalletApplication::class)
     }
 
-    private fun worker(requireCredits: Boolean): SendContactRequestWorker {
+    private fun worker(): SendContactRequestWorker {
         val parameters = mockk<WorkerParameters>(relaxed = true) {
             every { inputData } returns workDataOf(
                 SendContactRequestWorker.KEY_PASSWORD to "password",
-                SendContactRequestWorker.KEY_TO_USER_ID to "them",
-                SendContactRequestWorker.KEY_REQUIRE_CREDITS to requireCredits
+                SendContactRequestWorker.KEY_TO_USER_ID to "them"
             )
         }
         return SendContactRequestWorker(
@@ -62,43 +61,34 @@ class SendContactRequestWorkerTest {
     }
 
     @Test
-    fun requireCredits_emptyBalance_doesNotSend() = runTest {
+    fun emptyBalance_doesNotSend() = runTest {
         coEvery { identityRepository.getIdentityBalance() } returns
             CreditBalanceInfo(CreditBalanceInfo.MAX_OPERATION_COST - 1)
 
-        val result = worker(requireCredits = true).doWorkWithBaseProgress()
+        val result = worker().doWorkWithBaseProgress()
 
         assertTrue(result is ListenableWorker.Result.Failure)
         coVerify(exactly = 0) { broadcastService.sendContactRequest(any(), any()) }
     }
 
     @Test
-    fun requireCredits_unknownBalance_doesNotSend() = runTest {
+    fun unknownBalance_doesNotSend() = runTest {
         coEvery { identityRepository.getIdentityBalance() } returns null
 
-        val result = worker(requireCredits = true).doWorkWithBaseProgress()
+        val result = worker().doWorkWithBaseProgress()
 
         assertTrue(result is ListenableWorker.Result.Failure)
         coVerify(exactly = 0) { broadcastService.sendContactRequest(any(), any()) }
     }
 
     @Test
-    fun requireCredits_enoughBalance_sends() = runTest {
+    fun enoughBalance_sends() = runTest {
         coEvery { identityRepository.getIdentityBalance() } returns
             CreditBalanceInfo(CreditBalanceInfo.MAX_OPERATION_COST)
 
-        val result = worker(requireCredits = true).doWorkWithBaseProgress()
+        val result = worker().doWorkWithBaseProgress()
 
         assertTrue(result is ListenableWorker.Result.Success)
-        coVerify(exactly = 1) { broadcastService.sendContactRequest("them", any()) }
-    }
-
-    @Test
-    fun withoutRequireCredits_sendsWithoutCheckingTheBalance() = runTest {
-        val result = worker(requireCredits = false).doWorkWithBaseProgress()
-
-        assertTrue(result is ListenableWorker.Result.Success)
-        coVerify(exactly = 0) { identityRepository.getIdentityBalance() }
         coVerify(exactly = 1) { broadcastService.sendContactRequest("them", any()) }
     }
 }

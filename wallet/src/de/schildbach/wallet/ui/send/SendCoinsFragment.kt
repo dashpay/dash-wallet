@@ -352,8 +352,7 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         val contactData = viewModel.contactData.value
 
         if (autoAcceptContactRequest && contactData != null) {
-            // the screen closes after the payment, so the worker checks the credits
-            dashPayViewModel.sendContactRequest(contactData.dashPayProfile.userId, requireCredits = true)
+            dashPayViewModel.sendContactRequest(contactData.dashPayProfile.userId)
         }
 
         val transactionResultIntent = TransactionResultActivity.createIntent(

@@ -151,14 +151,13 @@ class SendContactRequestOperation(val context: Context) {
     }
 
     @SuppressLint("EnqueueWork")
-    fun create(toUserId: String, requireCredits: Boolean = false): WorkContinuation {
+    fun create(toUserId: String): WorkContinuation {
 
         val password = SecurityGuard.getInstance().retrievePassword()
         val sendContactRequestWorker = OneTimeWorkRequestBuilder<SendContactRequestWorker>()
                 .setInputData(workDataOf(
                         SendContactRequestWorker.KEY_PASSWORD to password,
-                        SendContactRequestWorker.KEY_TO_USER_ID to toUserId,
-                        SendContactRequestWorker.KEY_REQUIRE_CREDITS to requireCredits))
+                        SendContactRequestWorker.KEY_TO_USER_ID to toUserId))
                 .addTag("toUserId:$toUserId")
                 .build()
 

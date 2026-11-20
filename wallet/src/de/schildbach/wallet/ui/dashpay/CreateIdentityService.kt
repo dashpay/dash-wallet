@@ -693,9 +693,8 @@ class CreateIdentityService : LifecycleService() {
             val results = identityRepository.getUser(user)
             if (results.isNotEmpty()) {
                 val inviterUserId = results[0].dashPayProfile.userId
-                // a small invite may leave too few credits for the contact request
                 SendContactRequestOperation(walletApplication)
-                        .create(inviterUserId, requireCredits = true)
+                        .create(inviterUserId)
                         .enqueue()
                 configuration.apply {
                     inviter = inviterUserId
