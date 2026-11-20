@@ -2835,13 +2835,14 @@ class L1ShadowSyncService internal constructor(
 
     /**
      * [DashPayConfig.SDK_L1_FIRST_SYNC_DONE_WALLET] as this process knows it: read when a
-     * session's progress monitor starts, set when the record is written, cleared with it.
+     * session starts, set when the record is written, cleared with it.
      */
     @Volatile private var firstSyncDoneWalletIdHex: String? = null
 
     /**
-     * Whether the running session may write the first-sync record. Set when a session's
-     * progress monitor starts, cleared by [forgetFirstSyncDone]: the monitor keeps running
+     * Whether the running session may write the first-sync record. Set when a session
+     * starts ([startIfEnabled], under [mutex]), cleared by [forgetFirstSyncDone]: the monitor
+     * keeps running
      * through a reset, and a caught-up sample of the scan being torn down must not put back
      * the record that was just removed for the rows about to be deleted (pre-review,
      * 2026-11-19). Read and written under [firstSyncRecordMutex], with the record itself.
@@ -3268,6 +3269,13 @@ class L1ShadowSyncService internal constructor(
                     lastProbeHeartbeatMs = nowMs()
                     logEngineDowntimeIfResuming()
                     startedAtMs = nowMs()
+                    // Here, under [mutex], and not in the monitor: a reset holds [mutex] from
+                    // the record's removal to the rows' deletion, so a monitor that only gets
+                    // to run then cannot switch recording back on (pre-review, 2026-11-19).
+                    firstSyncRecordMutex.withLock {
+                        firstSyncDoneWalletIdHex = readFirstSyncDone()
+                        firstSyncRecordingAllowed = true
+                    }
                     monitorJob = scope.launch { monitorProgress() }.logCompletion("progress monitor")
                     parityJob = scope.launch { parityLoop(walletIdHex) }.logCompletion("parity probe loop")
                     watchdogJob = scope.launch { watchdogLoop() }.logCompletion("probe watchdog")
@@ -3600,10 +3608,6 @@ class L1ShadowSyncService internal constructor(
      * observed going dark for an hour in the field — see [watchdogLoop]).
      */
     private suspend fun monitorProgress() {
-        firstSyncRecordMutex.withLock {
-            firstSyncDoneWalletIdHex = readFirstSyncDone()
-            firstSyncRecordingAllowed = true
-        }
         var lastLogMs = 0L
         var lastPhase = ShadowSyncPhase.IDLE
         var lastTelemetryMs = 0L

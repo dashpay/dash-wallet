@@ -315,8 +315,13 @@ class SdkWalletBinderTest {
         shieldedFlag: Boolean? = false,
         l1ShadowFlag: Boolean? = false
     ): DashPayConfig = mockk {
+        // As in production: get() answers a failed read with "nothing stored"; only
+        // getPreservingErrors() reports it.
         coEvery { get(DashPayConfig.SDK_L1_FIRST_SYNC_DONE_WALLET) } answers {
-            if (firstSyncRecordUnreadable) throw IllegalStateException("datastore unavailable")
+            if (firstSyncRecordUnreadable) null else firstSyncRecord
+        }
+        coEvery { getPreservingErrors(DashPayConfig.SDK_L1_FIRST_SYNC_DONE_WALLET) } answers {
+            if (firstSyncRecordUnreadable) throw java.io.IOException("datastore unavailable")
             firstSyncRecord
         }
         coEvery { remove(DashPayConfig.SDK_L1_FIRST_SYNC_DONE_WALLET) } answers {

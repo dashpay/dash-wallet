@@ -3333,6 +3333,30 @@ class ShieldedBalanceServiceTest {
         assertFalse(service.isWalletShieldingAvailable())
     }
 
+    /**
+     * Pre-review, 2026-11-19. After the wallet's first scan a catch-up lets a shield of a fixed
+     * amount through, but not the mixed-funds shield: it drains its whole account, and would
+     * take coins the catch-up finds after the user confirmed.
+     */
+    @Test
+    fun afterTheFirstScan_aCatchUp_opensTheWalletShield_butNotTheMixedFundsDrain() = runBlocking {
+        val source = readySource()
+        val catchingUp = caughtUpProgress().let {
+            it.copy(
+                filterHeight = it.filterHeight - 208,
+                walletSyncedHeight = it.walletSyncedHeight - 208,
+                firstSyncDone = true
+            )
+        }
+        val service = service(source, progress = { catchingUp })
+
+        assertTrue(service.isWalletShieldingAvailable())
+        assertFalse(service.isMixedFundsShieldingAvailable())
+        val mixed = service.shieldMixedFundsFromWallet(Dash.COIN, "m/9'/1'/4'/0'", "ab".repeat(32))
+        assertTrue("the drain is refused: $mixed", mixed is SdkWriteResult.NotBroadcast)
+        assertEquals(0, source.fundCalls)
+    }
+
     @Test
     fun shieldFromWallet_scanNotCaughtUp_isNotBroadcast() = runBlocking {
         val source = readySource()

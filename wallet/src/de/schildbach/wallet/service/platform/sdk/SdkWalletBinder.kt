@@ -1676,7 +1676,9 @@ class SdkWalletBinder internal constructor(
      * it could not be read or removed.
      */
     private suspend fun dropForeignFirstSyncRecord(currentWalletId: String): Boolean = try {
-        val recorded = dashPayConfig.get(DashPayConfig.SDK_L1_FIRST_SYNC_DONE_WALLET)
+        // Not get(): that answers a failed read with "nothing stored", and the orphan would then
+        // be deleted with its record left behind.
+        val recorded = dashPayConfig.getPreservingErrors(DashPayConfig.SDK_L1_FIRST_SYNC_DONE_WALLET)
         if (recorded != null && recorded != currentWalletId) {
             dashPayConfig.remove(DashPayConfig.SDK_L1_FIRST_SYNC_DONE_WALLET)
             log.info("first-sync record of another SDK wallet ({}…) removed", recorded.take(8))

@@ -2163,6 +2163,10 @@ class ShieldedBalanceServiceImpl internal constructor(
         isEnabled() && isL1FundingFlagOn() &&
             evaluateWalletFundingGate(safeProgress()).allowed
 
+    override suspend fun isMixedFundsShieldingAvailable(): Boolean =
+        isEnabled() && isL1FundingFlagOn() &&
+            evaluateWalletFundingGate(safeProgress().copy(firstSyncDone = false)).allowed
+
     override fun observeWalletShieldingAvailable(): Flow<Boolean> =
         l1ProgressFlow()
             .map { progress ->
@@ -2287,7 +2291,13 @@ class ShieldedBalanceServiceImpl internal constructor(
         // Funding gate: the SDK builds the lock from its OWN SPV wallet,
         // so require live evidence that its scan is caught up to the chain
         // tip (SDK-only preconditions — see evaluateWalletFundingGate).
-        val gate = evaluateWalletFundingGate(safeProgress())
+        // The mixed-funds shield drains its whole account: the amount is whatever the account
+        // holds when it runs, so it needs the scan at the tip even after the wallet's first
+        // scan, like a send-all (pre-review, 2026-11-19). A shield of a fixed amount follows
+        // the relaxed rule.
+        val gate = safeProgress().let { progress ->
+            evaluateWalletFundingGate(if (fundingPath != null) progress.copy(firstSyncDone = false) else progress)
+        }
         if (!gate.allowed) {
             return notBroadcast(operation, "L1 funding gate closed: ${gate.reason}", null)
         }
