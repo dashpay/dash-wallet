@@ -1492,8 +1492,7 @@ class ShieldedBalanceServiceImpl internal constructor(
      */
     private val _spendReconciling = MutableStateFlow(false)
 
-    /** [_spendReconciling], read-only — for host tests of the reconciliation machinery. */
-    internal val spendReconciling: StateFlow<Boolean> = _spendReconciling.asStateFlow()
+    override val shieldedSpendReconciling: StateFlow<Boolean> = _spendReconciling.asStateFlow()
 
     /** True while a local spend's SDK call is running ([spendsInFlight] > 0); the hold window waits for it. */
     private val _localSpendInFlight = MutableStateFlow(false)
@@ -2424,18 +2423,37 @@ class ShieldedBalanceServiceImpl internal constructor(
         }
     }
 
-    /** The bounded window of one display hold (see [startDisplayHold]); ends by publishing [ticket]. */
-    private suspend fun runDisplayHoldWindow(sessionGeneration: Int, ticket: Long, windowEnded: MutableStateFlow<Long>) {
+    /**
+     * The bounded window of one display hold (see [startDisplayHold]), run in the hold's own
+     * job ([this]); ends by publishing [ticket]. The end is a fixed deadline, the sum of
+     * [displayHoldKickDelaysMs] and [displayHoldGraceMs] from the window start (after the
+     * in-flight wait): the forced passes are launched as children at their offsets and never
+     * awaited, so a slow or stalled `syncShieldedNow()` cannot stretch the hold. At most one
+     * forced pass is in flight; a kick whose predecessor still runs is skipped. Cancelling the
+     * hold's job (release, teardown) cancels a running kick too.
+     */
+    private suspend fun CoroutineScope.runDisplayHoldWindow(
+        sessionGeneration: Int,
+        ticket: Long,
+        windowEnded: MutableStateFlow<Long>
+    ) {
         _localSpendInFlight.first { !it }
+        var kick: Job? = null
         for (delayMs in displayHoldKickDelaysMs) {
             delay(delayMs)
             if (!synchronized(readyMonitor) { isCurrentSessionLocked(sessionGeneration) }) return
-            try {
-                source.syncShieldedNow()
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                log.warn("display-hold shielded sync failed ({})", safeErrorSummary(e))
+            if (kick?.isActive == true) {
+                log.info("display-hold forced pass skipped: the previous one is still running")
+                continue
+            }
+            kick = launch {
+                try {
+                    source.syncShieldedNow()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    log.warn("display-hold shielded sync failed ({})", safeErrorSummary(e))
+                }
             }
         }
         delay(displayHoldGraceMs)
@@ -2567,8 +2585,12 @@ class ShieldedBalanceServiceImpl internal constructor(
         }.alsoResyncPlatform()
 
     /**
-     * A Platform-address side (shield from / unshield to a Platform address) that was
-     * submitted or may have been: force the Platform-address sync (iOS `schedulePlatformResync`).
+     * A Platform-address side that was submitted or may have been: force the Platform-address
+     * sync (iOS `schedulePlatformResync`). Only on the own-address writes ([shieldFromCredits],
+     * [unshieldToCredits]), whose callers (the invite overage top-up) bypass External Send. The
+     * address-taking [shieldFromCreditsToAddress] / [unshieldToPlatformAddress] are reached only
+     * through [ExternalSendServiceImpl] (External Send and the Advanced-mode transfers it serves),
+     * whose `send` schedules it, so each route schedules exactly once.
      */
     private fun <T> SdkWriteResult<T>.alsoResyncPlatform(): SdkWriteResult<T> = also {
         if (it is SdkWriteResult.NotBroadcast) return@also
@@ -3181,7 +3203,7 @@ class ShieldedBalanceServiceImpl internal constructor(
         }
         return runShieldedWrite("unshieldToPlatformAddress", amount, expectedWalletIdHex) { walletId, credits ->
             source.unshield(walletId, target, credits)
-        }.alsoResyncPlatform()
+        }
     }
 
     override suspend fun topUpIdentityFromShielded(
@@ -3207,7 +3229,7 @@ class ShieldedBalanceServiceImpl internal constructor(
             ?: return notBroadcast("shieldFromCreditsToAddress", "malformed or wrong-network shielded address", null)
         return runShieldedWrite("shieldFromCreditsToAddress", amount, expectedWalletIdHex) { walletId, credits ->
             source.shieldToRecipient(walletId, recipientRaw43, credits)
-        }.alsoResyncPlatform()
+        }
     }
 
     override suspend fun shieldFromIdentityToAddress(

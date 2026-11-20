@@ -22,6 +22,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -53,18 +54,6 @@ internal interface PlatformAddressSyncSource {
     /** Stop the loop of the live runtime; a no-op when no runtime is up. */
     suspend fun stop()
 
-    /**
-     * Run a pass now on the RUNNING loop. Called only while [isRunning] read true.
-     *
-     * The Kotlin SDK binds no `platform_address_sync_sync_now` (the C FFI iOS
-     * calls has one; `PlatformWalletManager` exposes only start / stop /
-     * isRunning / reset), so this restarts the loop: Rust's `stop()` is
-     * cancel-only (a pass in flight runs to completion) and `start()` runs its
-     * first pass immediately; that pass bails at once when another one still
-     * holds the `is_syncing` slot — the same no-op iOS gets from `sync_now`.
-     * Replace with the binding once the SDK exposes it.
-     */
-    suspend fun syncNow()
 }
 
 private class DashSdkPlatformAddressSyncSource(
@@ -90,12 +79,6 @@ private class DashSdkPlatformAddressSyncSource(
 
     override suspend fun stop() {
         liveManager()?.stopPlatformAddressSync()
-    }
-
-    override suspend fun syncNow() {
-        val manager = checkNotNull(liveManager()) { "SDK wallet manager not running" }
-        manager.stopPlatformAddressSync()
-        manager.startPlatformAddressSync()
     }
 }
 
@@ -207,9 +190,18 @@ class PlatformAddressSyncService internal constructor(
      * no-op (false) when a stop arrived since the call, the wallet is not ready,
      * the loop is not running (unlike iOS this never starts it: the loop runs
      * only while the blockchain service does, see the class KDoc), or any of
-     * that cannot be read (fail closed). A pass already in flight makes the
-     * forced one a no-op SDK-side (see [PlatformAddressSyncSource.syncNow]).
-     * Runs on [ioDispatcher]; never throws except [CancellationException].
+     * that cannot be read (fail closed).
+     *
+     * The Kotlin SDK binds no `platform_address_sync_sync_now` (the C FFI iOS
+     * calls has one; `PlatformWalletManager` exposes only start / stop /
+     * isRunning / reset), so this restarts the loop: Rust's `stop()` is
+     * cancel-only (a pass in flight runs to completion) and `start()` runs its
+     * first pass immediately; that pass bails at once when another one still
+     * holds the `is_syncing` slot, the same no-op iOS gets from `sync_now`.
+     * The stop and start run under [NonCancellable], so a cancelled caller (a
+     * newer [schedulePlatformResync]) never leaves the loop stopped, and a
+     * failed start is tried once more. Replace with the binding once the SDK
+     * exposes it. Runs on [ioDispatcher]; never throws except [CancellationException].
      */
     suspend fun syncNow(): Boolean {
         val expectedStopGeneration = generation.get()
@@ -220,7 +212,7 @@ class PlatformAddressSyncService internal constructor(
                     when {
                         superseded() || !source.ready() || !source.isRunning() -> false
                         else -> {
-                            source.syncNow()
+                            withContext(NonCancellable) { restartLoop() }
                             if (superseded()) {
                                 // A stop timed out on the lock meanwhile: it could not reach this loop.
                                 source.stop()
@@ -237,6 +229,19 @@ class PlatformAddressSyncService internal constructor(
         } catch (e: Exception) {
             log.warn("Platform address sync-now failed; the 15 s loop catches up ({})", safeErrorSummary(e))
             false
+        }
+    }
+
+    /** [syncNow]'s restart; the caller holds [mutex], under [NonCancellable]. A second start failure throws. */
+    private suspend fun restartLoop() {
+        source.stop()
+        try {
+            source.start()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("Platform address sync restart: start failed; trying once more ({})", safeErrorSummary(e))
+            source.start()
         }
     }
 

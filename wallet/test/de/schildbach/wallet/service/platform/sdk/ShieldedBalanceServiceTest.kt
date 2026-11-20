@@ -1706,7 +1706,7 @@ class ShieldedBalanceServiceTest {
         assertEquals(1, source.broadcastCalls)
         // The spend MAY have landed while its reserved notes still count as
         // unspent: reconcile like a broadcast spend, durably.
-        assertTrue(service.spendReconciling.value)
+        assertTrue(service.shieldedSpendReconciling.value)
         coVerify(exactly = 1) { cfg.markShieldedSpendReconcilePending(any()) }
     }
 
@@ -1735,7 +1735,7 @@ class ShieldedBalanceServiceTest {
             // propagated
         }
 
-        assertTrue(service.spendReconciling.value)
+        assertTrue(service.shieldedSpendReconciling.value)
         coVerify(exactly = 1) { cfg.markShieldedSpendReconcilePending(any()) }
     }
 
@@ -1755,7 +1755,7 @@ class ShieldedBalanceServiceTest {
         assertTrue(service.shieldFromCredits(Dash.COIN) is SdkWriteResult.NotBroadcast)
         // The reconciliation was recorded before the call (thepastaclaw,
         // 7ae06b9e7); a rejected spend just settles on the next stable passes.
-        assertTrue(service.spendReconciling.value)
+        assertTrue(service.shieldedSpendReconciling.value)
         coVerify(exactly = 1) { cfg.markShieldedSpendReconcilePending(any()) }
     }
 
@@ -1951,12 +1951,12 @@ class ShieldedBalanceServiceTest {
         val source = readySource()
         val service = service(source)
 
-        assertFalse(service.spendReconciling.value)
+        assertFalse(service.shieldedSpendReconciling.value)
         assertTrue(service.transferShielded(recipientAddress, Dash.COIN, null) is SdkWriteResult.Broadcast)
         // A successful local spend marks the last-known balance stale so the
         // card shows "Syncing…" rather than the now-stale amount until the
         // next completed pass (the poller, which runs only with a sweep scope).
-        assertTrue(service.spendReconciling.value)
+        assertTrue(service.shieldedSpendReconciling.value)
     }
 
     @Test
@@ -2006,7 +2006,7 @@ class ShieldedBalanceServiceTest {
                 sweepScope = sweepScope,
                 fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
             )
-            assertFalse(service.spendReconciling.value)
+            assertFalse(service.shieldedSpendReconciling.value)
             assertTrue(service.ensureShieldedReady())
             // READY needs a successful pass after bring-up
             withTimeout(5_000) { while (source.passResults.subscriptionCount.value == 0) delay(10) }
@@ -2015,7 +2015,7 @@ class ShieldedBalanceServiceTest {
             withTimeout(10_000) {
                 while (service.shieldedSyncStatus.value != ShieldedSyncStatus.READY) delay(50)
             }
-            assertTrue("first READY after restart is still reconciling", service.spendReconciling.value)
+            assertTrue("first READY after restart is still reconciling", service.shieldedSpendReconciling.value)
             coVerify(exactly = 0) { cfg.setLastShieldedBalanceDuffsUnlessReconciling(any()) }
             coVerify(exactly = 0) { cfg.clearShieldedSpendReconcilePending() }
         } finally {
@@ -2170,7 +2170,7 @@ class ShieldedBalanceServiceTest {
                 fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock()
             )
             assertTrue(service.ensureShieldedReady())
-            withTimeout(5_000) { while (!service.spendReconciling.value) delay(20) }
+            withTimeout(5_000) { while (!service.shieldedSpendReconciling.value) delay(20) }
 
             // Two successful completed passes with an unchanged balance: the
             // older settlement reaches its marker clear and pauses there.
@@ -2190,7 +2190,7 @@ class ShieldedBalanceServiceTest {
             clearGate.complete(Unit)
             assertTrue(withTimeout(5_000) { spend.await() } is SdkWriteResult.Broadcast)
 
-            assertTrue("the newer spend is still reconciling", service.spendReconciling.value)
+            assertTrue("the newer spend is still reconciling", service.shieldedSpendReconciling.value)
             coVerifyOrder {
                 cfg.clearShieldedSpendReconcilePending()
                 cfg.markShieldedSpendReconcilePending(any())
@@ -2228,7 +2228,7 @@ class ShieldedBalanceServiceTest {
         val service = scopedService(source, cfg, sweepScope, clock)
         assertTrue(service.ensureShieldedReady())
         withTimeout(5_000) {
-            while (!service.spendReconciling.value || source.passResults.subscriptionCount.value == 0) {
+            while (!service.shieldedSpendReconciling.value || source.passResults.subscriptionCount.value == 0) {
                 delay(10)
             }
         }
@@ -2259,7 +2259,7 @@ class ShieldedBalanceServiceTest {
         val service = scopedService(source, cfg, sweepScope)
         assertTrue(service.ensureShieldedReady())
         withTimeout(5_000) { while (source.passResults.subscriptionCount.value == 0) delay(10) }
-        assertFalse(service.spendReconciling.value)
+        assertFalse(service.shieldedSpendReconciling.value)
         return service
     }
 
@@ -2283,7 +2283,7 @@ class ShieldedBalanceServiceTest {
         source.passResults.emit(passOk(credits))
         delay(30)
         source.passResults.emit(passOk(credits))
-        withTimeout(5_000) { while (service.spendReconciling.value) delay(10) }
+        withTimeout(5_000) { while (service.shieldedSpendReconciling.value) delay(10) }
     }
 
     // Pool fixture: two notes before the spend; the spend consumes [inputNote]
@@ -2335,17 +2335,17 @@ class ShieldedBalanceServiceTest {
         try {
             val service = subscribedService(source, cfg, sweepScope)
             assertTrue(service.transferShielded(recipientAddress, Dash.COIN, null) is SdkWriteResult.Broadcast)
-            assertTrue(service.spendReconciling.value)
+            assertTrue(service.shieldedSpendReconciling.value)
 
             // Two identical pre-spend results, equal to the store, consumed only now.
             emitPasses(source, passOk(preSpendCredits), passOk(preSpendCredits))
-            assertTrue("pre-spend results must not settle", service.spendReconciling.value)
+            assertTrue("pre-spend results must not settle", service.shieldedSpendReconciling.value)
 
             // The input is spent in the store: the same stale results still
             // count it, so they can never equal the store again.
             source.markInputSpent()
             emitPasses(source, passOk(preSpendCredits), passOk(preSpendCredits))
-            assertTrue("stale results must not match the post-spend store", service.spendReconciling.value)
+            assertTrue("stale results must not match the post-spend store", service.shieldedSpendReconciling.value)
             coVerify(exactly = 0) { cfg.clearShieldedSpendReconcilePending() }
 
             // A scan stores the outputs; post-spend passes match the store.
@@ -2393,13 +2393,13 @@ class ShieldedBalanceServiceTest {
             val reservationExcluded = preSpendCredits - inputNote.value
             assertEquals("the fixture's store reads B0 − inputs", reservationExcluded, keptNote.value)
             emitPasses(source, passOk(reservationExcluded), passOk(reservationExcluded), passOk(reservationExcluded))
-            assertTrue("must not settle without the change note", service.spendReconciling.value)
+            assertTrue("must not settle without the change note", service.shieldedSpendReconciling.value)
             coVerify(exactly = 0) { cfg.clearShieldedSpendReconcilePending() }
 
             source.scanTheSpendsOutputs()
             // The same buffered value no longer equals the store.
             emitPasses(source, passOk(reservationExcluded), passOk(reservationExcluded))
-            assertTrue(service.spendReconciling.value)
+            assertTrue(service.shieldedSpendReconciling.value)
             settleWith(service, source, keptNote.value + changeNote.value)
         } finally {
             sweepScope.cancel()
@@ -2426,7 +2426,7 @@ class ShieldedBalanceServiceTest {
             val service = subscribedService(source, cfg, sweepScope)
             assertTrue(service.transferShielded(recipientAddress, Dash.COIN, null) is SdkWriteResult.Broadcast)
             emitPasses(source, passOk(keptNote.value), passOk(keptNote.value))
-            assertTrue("the send is not scanned yet", service.spendReconciling.value)
+            assertTrue("the send is not scanned yet", service.shieldedSpendReconciling.value)
 
             source.scanTheSpendsOutputs(withChange = false)
             settleWith(service, source, keptNote.value)
@@ -2460,7 +2460,7 @@ class ShieldedBalanceServiceTest {
             val service = subscribedService(source, cfg, sweepScope)
             assertTrue(service.shieldFromCredits(Dash.COIN) is SdkWriteResult.Broadcast)
             emitPasses(source, passOk(keptNote.value), passOk(keptNote.value), passOk(keptNote.value))
-            assertTrue("the new note is not stored yet", service.spendReconciling.value)
+            assertTrue("the new note is not stored yet", service.shieldedSpendReconciling.value)
 
             source.notesFlow.value = listOf(keptNote, newNote)
             settleWith(service, source, keptNote.value + newNote.value)
@@ -2488,15 +2488,15 @@ class ShieldedBalanceServiceTest {
         try {
             val service = subscribedService(source, cfg, sweepScope)
             assertTrue(service.transferShielded(recipientAddress, Dash.COIN, null) is SdkWriteResult.Ambiguous)
-            assertTrue(service.spendReconciling.value)
+            assertTrue(service.shieldedSpendReconciling.value)
 
             emitPasses(source, *Array(6) { passOk(preSpendCredits) })
-            assertTrue("an unresolved spend must keep the balance stale", service.spendReconciling.value)
+            assertTrue("an unresolved spend must keep the balance stale", service.shieldedSpendReconciling.value)
             coVerify(exactly = 0) { cfg.clearShieldedSpendReconcilePending() }
 
             source.activityFlow.value = listOf(row.copy(status = 2))
             source.passResults.emit(passOk(preSpendCredits))
-            withTimeout(5_000) { while (service.spendReconciling.value) delay(10) }
+            withTimeout(5_000) { while (service.shieldedSpendReconciling.value) delay(10) }
         } finally {
             sweepScope.cancel()
         }
@@ -2521,16 +2521,16 @@ class ShieldedBalanceServiceTest {
             val service = reconcilingService(source, cfg, sweepScope, sinceMs = start - 1_000L, clock = { now.get() })
             now.set(start + 365L * 24 * 60 * 60 * 1000)
             emitPasses(source, passOk(preSpendCredits), passOk(preSpendCredits), passOk(preSpendCredits))
-            assertTrue("an unresolved row blocks at any age", service.spendReconciling.value)
+            assertTrue("an unresolved row blocks at any age", service.shieldedSpendReconciling.value)
 
             // Unknown (an abandoned identity debit that may still execute) blocks too
             source.activityFlow.value = listOf(spendRow(status = 3, createdAtMs = start))
             emitPasses(source, passOk(preSpendCredits), passOk(preSpendCredits))
-            assertTrue("an Unknown row blocks", service.spendReconciling.value)
+            assertTrue("an Unknown row blocks", service.shieldedSpendReconciling.value)
 
             source.activityFlow.value = listOf(spendRow(status = 2, createdAtMs = start))
             source.passResults.emit(passOk(preSpendCredits))
-            withTimeout(5_000) { while (service.spendReconciling.value) delay(10) }
+            withTimeout(5_000) { while (service.shieldedSpendReconciling.value) delay(10) }
         } finally {
             sweepScope.cancel()
         }
@@ -2587,11 +2587,11 @@ class ShieldedBalanceServiceTest {
         try {
             val service = reconcilingService(source, cfg, sweepScope, sinceMs = now - 600_000L)
             emitPasses(source, passOk(preSpendCredits), passOk(preSpendCredits), passOk(preSpendCredits))
-            assertTrue("the restored spend is unresolved", service.spendReconciling.value)
+            assertTrue("the restored spend is unresolved", service.shieldedSpendReconciling.value)
 
             source.activityFlow.value = listOf(olderStuck, pendingSpend.copy(status = 2))
             source.passResults.emit(passOk(preSpendCredits))
-            withTimeout(5_000) { while (service.spendReconciling.value) delay(10) }
+            withTimeout(5_000) { while (service.shieldedSpendReconciling.value) delay(10) }
         } finally {
             sweepScope.cancel()
         }
@@ -2607,17 +2607,17 @@ class ShieldedBalanceServiceTest {
             source.activityFailure = IllegalStateException("room closed")
             val service = reconcilingService(source, cfg, sweepScope)
             emitPasses(source, passOk(), passOk(), passOk())
-            assertTrue(service.spendReconciling.value)
+            assertTrue(service.shieldedSpendReconciling.value)
 
             source.activityFailure = null
             source.outgoingFailure = IllegalStateException("room closed")
             emitPasses(source, passOk(), passOk(), passOk())
-            assertTrue(service.spendReconciling.value)
+            assertTrue(service.shieldedSpendReconciling.value)
             coVerify(exactly = 0) { cfg.clearShieldedSpendReconcilePending() }
 
             source.outgoingFailure = null
             source.passResults.emit(passOk())
-            withTimeout(5_000) { while (service.spendReconciling.value) delay(10) }
+            withTimeout(5_000) { while (service.shieldedSpendReconciling.value) delay(10) }
         } finally {
             sweepScope.cancel()
         }
@@ -2654,11 +2654,11 @@ class ShieldedBalanceServiceTest {
                 }
             }
             delay(100)
-            assertTrue("marker still set: must stay stale", service.spendReconciling.value)
+            assertTrue("marker still set: must stay stale", service.shieldedSpendReconciling.value)
 
             clearFails = false
             source.passResults.emit(passOk())
-            withTimeout(5_000) { while (service.spendReconciling.value) delay(10) }
+            withTimeout(5_000) { while (service.shieldedSpendReconciling.value) delay(10) }
         } finally {
             sweepScope.cancel()
         }
@@ -2734,10 +2734,10 @@ class ShieldedBalanceServiceTest {
             withTimeout(10_000) {
                 while (service.shieldedSyncStatus.value != ShieldedSyncStatus.READY) delay(50)
             }
-            assertTrue("an unknown marker must keep the balance stale", service.spendReconciling.value)
+            assertTrue("an unknown marker must keep the balance stale", service.shieldedSpendReconciling.value)
             withTimeout(5_000) { while (source.passResults.subscriptionCount.value == 0) delay(10) }
             emitPasses(source, passOk(inputNote.value), passOk(inputNote.value))
-            assertTrue("since = 0: every unresolved row gates", service.spendReconciling.value)
+            assertTrue("since = 0: every unresolved row gates", service.shieldedSpendReconciling.value)
         } finally {
             sweepScope.cancel()
         }
@@ -2799,11 +2799,11 @@ class ShieldedBalanceServiceTest {
 
             // The second spend's since alone would ignore the first spend's row.
             emitPasses(source, passOk(), passOk(), passOk())
-            assertTrue("the first spend's row is still gated", service.spendReconciling.value)
+            assertTrue("the first spend's row is still gated", service.shieldedSpendReconciling.value)
 
             source.activityFlow.value = listOf(firstSpendRow.copy(status = 2))
             withTimeout(5_000) {
-                while (service.spendReconciling.value) {
+                while (service.shieldedSpendReconciling.value) {
                     source.passResults.emit(passOk())
                     delay(30)
                 }
@@ -2829,7 +2829,7 @@ class ShieldedBalanceServiceTest {
                 delay(30)
             }
             delay(200)
-            assertTrue(service.spendReconciling.value)
+            assertTrue(service.shieldedSpendReconciling.value)
             coVerify(exactly = 0) { cfg.clearShieldedSpendReconcilePending() }
         } finally {
             sweepScope.cancel()
@@ -2853,11 +2853,11 @@ class ShieldedBalanceServiceTest {
             source.passResults.emit(passOk(credits = 1_000_000_000_000L)) // pass A
             source.passResults.emit(passOk(credits = 600_000_000_000L)) // pass B, queued right behind
             delay(300)
-            assertTrue("A != B: not two stable passes", service.spendReconciling.value)
+            assertTrue("A != B: not two stable passes", service.shieldedSpendReconciling.value)
             coVerify(exactly = 0) { cfg.clearShieldedSpendReconcilePending() }
 
             source.passResults.emit(passOk(credits = 600_000_000_000L)) // B again: now stable
-            withTimeout(5_000) { while (service.spendReconciling.value) delay(10) }
+            withTimeout(5_000) { while (service.shieldedSpendReconciling.value) delay(10) }
         } finally {
             sweepScope.cancel()
         }
@@ -2876,7 +2876,7 @@ class ShieldedBalanceServiceTest {
             source.passResults.emit(passSkipped())
             delay(30)
             source.passResults.emit(passOk())
-            withTimeout(5_000) { while (service.spendReconciling.value) delay(10) }
+            withTimeout(5_000) { while (service.shieldedSpendReconciling.value) delay(10) }
         } finally {
             sweepScope.cancel()
         }
@@ -2899,11 +2899,11 @@ class ShieldedBalanceServiceTest {
             delay(30)
             source.passResults.emit(passOk(credits = 500_000_000_003L))
             delay(300)
-            assertTrue("store not caught up", service.spendReconciling.value)
+            assertTrue("store not caught up", service.shieldedSpendReconciling.value)
 
             source.notesFlow.value = listOf(note(value = 500_000_000_003L))
             source.passResults.emit(passOk(credits = 500_000_000_003L))
-            withTimeout(5_000) { while (service.spendReconciling.value) delay(10) }
+            withTimeout(5_000) { while (service.shieldedSpendReconciling.value) delay(10) }
         } finally {
             sweepScope.cancel()
         }
@@ -2925,7 +2925,7 @@ class ShieldedBalanceServiceTest {
             source.passResults.emit(passOk())
             delay(30)
             source.passResults.emit(passOk())
-            withTimeout(5_000) { while (service.spendReconciling.value) delay(10) }
+            withTimeout(5_000) { while (service.shieldedSpendReconciling.value) delay(10) }
             coVerify(exactly = 1) { cfg.clearShieldedSpendReconcilePending() }
         } finally {
             sweepScope.cancel()
@@ -2946,10 +2946,10 @@ class ShieldedBalanceServiceTest {
             delay(30)
             source.passResults.emit(passOk())
             delay(200)
-            assertTrue(service.spendReconciling.value)
+            assertTrue(service.shieldedSpendReconciling.value)
 
             source.passResults.emit(passOk())
-            withTimeout(5_000) { while (service.spendReconciling.value) delay(10) }
+            withTimeout(5_000) { while (service.shieldedSpendReconciling.value) delay(10) }
         } finally {
             sweepScope.cancel()
         }
@@ -2969,7 +2969,7 @@ class ShieldedBalanceServiceTest {
                 delay(30)
             }
             delay(200)
-            assertTrue(service.spendReconciling.value)
+            assertTrue(service.shieldedSpendReconciling.value)
             coVerify(exactly = 0) { cfg.clearShieldedSpendReconcilePending() }
         } finally {
             sweepScope.cancel()
@@ -3000,7 +3000,7 @@ class ShieldedBalanceServiceTest {
             assertTrue(service.ensureShieldedReady())
             // returns although syncShieldedNow is blocked
             withTimeout(2_000) { service.externalSpend() }
-            assertTrue(service.spendReconciling.value)
+            assertTrue(service.shieldedSpendReconciling.value)
             // the since is the caller's start time less the skew allowance
             coVerify(exactly = 1) {
                 cfg.markShieldedSpendReconcilePending(
@@ -3032,7 +3032,7 @@ class ShieldedBalanceServiceTest {
         )
         assertTrue(service.transferShielded(recipientAddress, Dash.COIN, null) is SdkWriteResult.NotBroadcast)
         assertEquals(0, source.broadcastCalls)
-        assertFalse(service.spendReconciling.value)
+        assertFalse(service.shieldedSpendReconciling.value)
         assertNull(service.beginExternalShieldedSpend())
     }
 
@@ -3051,12 +3051,12 @@ class ShieldedBalanceServiceTest {
             val service = subscribedService(source, cfg, sweepScope)
             val start = service.beginExternalShieldedSpend()!!
             emitPasses(source, *Array(4) { passOk(preSpendCredits) })
-            assertTrue("in flight: no row yet, still stale", service.spendReconciling.value)
+            assertTrue("in flight: no row yet, still stale", service.shieldedSpendReconciling.value)
             coVerify(exactly = 0) { cfg.clearShieldedSpendReconcilePending() }
 
             service.endExternalShieldedSpend(start)
             emitPasses(source, passOk(preSpendCredits), passOk(preSpendCredits))
-            withTimeout(5_000) { while (service.spendReconciling.value) delay(10) }
+            withTimeout(5_000) { while (service.shieldedSpendReconciling.value) delay(10) }
         } finally {
             sweepScope.cancel()
         }
@@ -3069,7 +3069,7 @@ class ShieldedBalanceServiceTest {
         // Non-positive amount is rejected before any broadcast — nothing was
         // spent, so the cache is not stale.
         assertTrue(service.shieldFromCredits(Dash.ZERO) is SdkWriteResult.NotBroadcast)
-        assertFalse(service.spendReconciling.value)
+        assertFalse(service.shieldedSpendReconciling.value)
     }
 
     @Test
@@ -4574,12 +4574,12 @@ class ShieldedBalanceServiceTest {
             service.endExternalShieldedSpend(start)
             assertEquals(creditsToDash(inputNote.value), service.observeDisplayedShieldedBalance().first())
             assertEquals("the raw store is never held", Dash.ZERO, service.observeShieldedBalance().first())
-            assertTrue(service.spendReconciling.value)
+            assertTrue(service.shieldedSpendReconciling.value)
 
             source.notesFlow.value = listOf(changeNote)
             service.awaitDisplayed(creditsToDash(changeNote.value))
             assertFalse(service.shieldedBalanceHeld.value)
-            assertTrue("still reconciling: release did not wait for settlement", service.spendReconciling.value)
+            assertTrue("still reconciling: release did not wait for settlement", service.shieldedSpendReconciling.value)
         } finally {
             sweepScope.cancel()
         }
@@ -4693,7 +4693,7 @@ class ShieldedBalanceServiceTest {
             service.endExternalShieldedSpend(start)
             service.awaitDisplayed(Dash.ZERO)
             assertFalse(service.shieldedBalanceHeld.value)
-            assertTrue("the reconciliation itself is still pending", service.spendReconciling.value)
+            assertTrue("the reconciliation itself is still pending", service.shieldedSpendReconciling.value)
             // 1 settlement kick + the async post-spend sync + 3 window kicks, at least the window's 3
             assertTrue(source.syncNowCalls >= 3)
         } finally {
@@ -4885,8 +4885,10 @@ class ShieldedBalanceServiceTest {
     )
 
     /**
-     * Shield from / unshield to a Platform address (own or another's) schedules the
-     * Platform-address resync on Broadcast and Ambiguous, never on NotBroadcast, and a
+     * Shield from / unshield to the OWN Platform address (the invite overage top-up's writes,
+     * which bypass External Send) schedules the Platform-address resync on Broadcast and
+     * Ambiguous, never on NotBroadcast. The address-taking writes do not: they are reached only
+     * through External Send, whose `send` schedules it, so a route schedules exactly once. A
      * shielded-only write never does.
      */
     @Test
@@ -4900,25 +4902,55 @@ class ShieldedBalanceServiceTest {
         assertTrue(service.unshieldToCredits(Dash.COIN) is SdkWriteResult.Broadcast)
         assertEquals("Shielded → Platform (own)", 2, resyncs)
         assertTrue(service.shieldFromCreditsToAddress(recipientAddress, Dash(250), walletIdHex) is SdkWriteResult.Broadcast)
-        assertEquals("Platform → Shielded (address)", 3, resyncs)
         assertTrue(service.unshieldToPlatformAddress("tdash1someplatformaddress", Dash.COIN, walletIdHex) is SdkWriteResult.Broadcast)
-        assertEquals("Shielded → Platform (address)", 4, resyncs)
+        assertEquals("address-taking writes: External Send schedules, not this service", 2, resyncs)
 
         source.onUnshield = { throw DashSdkError.PlatformWallet.ShieldedSpendUnconfirmed("unconfirmed") }
         assertTrue(service.unshieldToCredits(Dash.COIN) is SdkWriteResult.Ambiguous)
-        assertEquals("ambiguous may have moved credits", 5, resyncs)
+        assertEquals("ambiguous may have moved credits", 3, resyncs)
 
         assertTrue(service.shieldFromCredits(Dash.ZERO) is SdkWriteResult.NotBroadcast)
-        assertTrue(service.unshieldToPlatformAddress(" ", Dash.COIN, walletIdHex) is SdkWriteResult.NotBroadcast)
-        assertEquals("not broadcast: no resync", 5, resyncs)
+        assertEquals("not broadcast: no resync", 3, resyncs)
 
         assertTrue(service.transferShielded(recipientAddress, Dash.COIN, null) is SdkWriteResult.Broadcast)
-        assertEquals("shielded → shielded has no Platform side", 5, resyncs)
+        assertEquals("shielded → shielded has no Platform side", 3, resyncs)
     }
 
     @Test
     fun platformLegWrites_aFailingResyncScheduler_neverChangesTheResult() = runBlocking {
         val service = resyncCountingService(readySource()) { throw IllegalStateException("scope gone") }
         assertTrue(service.unshieldToCredits(Dash.COIN) is SdkWriteResult.Broadcast)
+    }
+
+    /**
+     * pre-review (10e5841de): the window awaited each blocking forced pass, so a stalled
+     * `syncShieldedNow()` never ended the hold. The end is now a fixed deadline: with a
+     * source whose forced pass never returns, the window still ends on time, publishes the
+     * store reading, and never runs a second window pass beside the stalled one.
+     */
+    @Test
+    fun displayHold_aStalledForcedPass_doesNotStretchTheWindow() = runBlocking {
+        val source = readySource()
+        source.notesFlow.value = listOf(inputNote)
+        val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            val service = holdingService(source, config(true), sweepScope, kickDelaysMs = listOf(20L, 20L, 20L), graceMs = 20L)
+            service.readyAndShowing(source, inputNote.value)
+            source.onSyncNowSuspend = { kotlinx.coroutines.awaitCancellation() }
+
+            val start = checkNotNull(service.beginExternalShieldedSpend())
+            source.notesFlow.value = emptyList()
+            withTimeout(5_000) { while (!service.shieldedBalanceHeld.value) delay(10) }
+            service.endExternalShieldedSpend(start)
+
+            withTimeout(2_000) { service.observeDisplayedShieldedBalance().first { it == Dash.ZERO } }
+            assertFalse(service.shieldedBalanceHeld.value)
+            delay(100)
+            // Every forced pass parks: the settlement driver's first, the post-spend sync, and
+            // ONE window pass (its later kicks are skipped while it is still running).
+            assertEquals(3, source.syncNowCalls)
+        } finally {
+            sweepScope.cancel()
+        }
     }
 }

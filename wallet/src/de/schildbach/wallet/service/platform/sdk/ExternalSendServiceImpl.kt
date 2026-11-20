@@ -419,6 +419,15 @@ private val retryLog = LoggerFactory.getLogger("de.schildbach.wallet.service.pla
  * addresses it is an upper bound.
  */
 /**
+ * The shielded balance a send / Max may use: the raw note-store [balance] only while the
+ * runtime is READY and no shielded spend is [reconciling]; otherwise unknown (null). During a
+ * reconciliation the store can still count an ambiguous spend's reserved inputs as unspent, or
+ * read an intermediate balance, so neither is offered as spendable.
+ */
+internal fun sendableShieldedBalance(balance: Dash, status: ShieldedSyncStatus, reconciling: Boolean): Dash? =
+    if (status == ShieldedSyncStatus.READY && !reconciling) balance else null
+
+/**
  * Whether an External Send outcome may have changed a Platform-address balance, so the
  * Platform-address sync is forced (iOS `schedulePlatformResync`): a Platform source or a
  * Platform destination, and a submitted or may-have-gone-through outcome. A provably unsent
@@ -714,16 +723,15 @@ internal class DashSdkExternalSendSource(
                 if (enabled != true) {
                     flowOf(null)
                 } else {
-                    // The raw store balance (never the display form), READY-gated;
-                    // unknown while the display holds a pre-spend figure over a
-                    // transient post-spend zero, so Max never sends from either.
+                    // The raw store balance (never the display form), READY-gated, and
+                    // unknown while a shielded spend reconciles: until it settles the store
+                    // can count an ambiguous spend's reserved inputs as unspent, or read an
+                    // intermediate balance, so Max never offers either.
                     combine(
                         shieldedBalanceService.observeShieldedBalance(),
                         shieldedBalanceService.shieldedSyncStatus,
-                        shieldedBalanceService.shieldedBalanceHeld
-                    ) { balance, status, held ->
-                        if (status == ShieldedSyncStatus.READY && !held) balance else null
-                    }
+                        shieldedBalanceService.shieldedSpendReconciling
+                    ) { balance, status, reconciling -> sendableShieldedBalance(balance, status, reconciling) }
                 }
             }
             .retryReadErrors(null, onError = logReadRetry("shielded balance"))

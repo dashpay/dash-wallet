@@ -315,19 +315,31 @@ interface ShieldedBalanceService {
      * [ShieldedSyncStatus.READY] exactly like [observeShieldedBalance]; it
      * fails (throws) while the store is unreadable, so a consumer's retry
      * path shows its placeholder. Never use it on a send / Max path: that
-     * reads [observeShieldedBalance] and treats [shieldedBalanceHeld] as
-     * unknown.
+     * reads [observeShieldedBalance] and treats the balance as unknown while
+     * [shieldedSpendReconciling] is set.
      */
     fun observeDisplayedShieldedBalance(): Flow<Dash>
 
     /**
      * True while [observeDisplayedShieldedBalance] is holding a pre-spend
-     * figure over a transient post-spend zero (see there). A money path that
-     * reads the raw balance must treat the balance as UNKNOWN while this is
-     * set. In-memory and per runtime: false in a new process, after a stop,
+     * figure over a transient post-spend zero (see there). Display state only;
+     * money paths gate on [shieldedSpendReconciling], which covers every held
+     * moment. In-memory and per runtime: false in a new process, after a stop,
      * and while the flag is off.
      */
     val shieldedBalanceHeld: StateFlow<Boolean>
+
+    /**
+     * True from the start of a shielded spend from this app (or an external
+     * executor's, see [beginExternalShieldedSpend]) until its reconciliation
+     * settles (two stable passes with the spend reflected), and after a
+     * restart while the durable reconcile marker is pending. While set the
+     * note store can still count an ambiguous spend's reserved inputs as
+     * unspent or read an intermediate balance, so a send / Max path must
+     * treat the shielded balance as UNKNOWN (null). Display surfaces do not
+     * gate on it (they read [observeDisplayedShieldedBalance]).
+     */
+    val shieldedSpendReconciling: StateFlow<Boolean>
 
     /**
      * An EXTERNAL executor (username creation, invite creation — the
