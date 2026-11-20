@@ -597,12 +597,10 @@ class RequestUserNameViewModel @Inject constructor(
 
     suspend fun getInviteAssetLockTransaction(): AssetLockTransaction? = withContext(Dispatchers.IO) {
         if (isUsingInvite()) {
-            inviteAssetLockTx.value = try {
-                topUpRepository.getAssetLockTransaction(createUsernameArgs?.invite!!)
+            try {
+                inviteAssetLockTx.value = topUpRepository.getAssetLockTransaction(createUsernameArgs?.invite!!)
             } catch (e: Exception) {
                 log.error("error getting asset lock tx", e)
-                // a failed retry must not clear an invite that an earlier lookup loaded
-                inviteAssetLockTx.value
             }
             isInviteMixed()
         }
