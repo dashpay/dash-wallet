@@ -97,13 +97,20 @@ class RestoreWalletFromFileViewModel @Inject constructor(
             // UI events below are skipped once the ViewModel is cleared.
             val result = try {
                 withContext(NonCancellable + Dispatchers.IO) {
-                    walletApplication.installWallet(wallet, false).also {
-                        if (it == WalletInstallResult.INSTALLED) {
-                            completeRestoredWalletInstall(fromKeysFile)
-                        }
+                    // Only the install is inside this catch: once it returns INSTALLED the
+                    // wallet is live, and a later failure must not report a failed install.
+                    val installed = try {
+                        walletApplication.installWallet(wallet, false)
+                    } catch (e: IOException) {
+                        throw InstallFailure(e)
                     }
+                    if (installed == WalletInstallResult.INSTALLED) {
+                        completeRestoredWalletInstall(fromKeysFile)
+                    }
+                    installed
                 }
-            } catch (e: IOException) {
+            } catch (failure: InstallFailure) {
+                val e = failure.ioCause
                 // Nothing was installed (a storage failure before the install). Keep the
                 // keys-file bookkeeping so a retry of the same wallet still arms its backup.
                 log.error("restored wallet could not be installed", e)
@@ -145,8 +152,17 @@ class RestoreWalletFromFileViewModel @Inject constructor(
             configuration.armBackupReminder()
             configuration.armBackupSeedReminder()
         }
-        dashPayConfig.disableNotifications()
+        try {
+            dashPayConfig.disableNotifications()
+        } catch (e: IOException) {
+            // The wallet is installed: carry on to PIN setup. At worst, contact
+            // notifications from before the restore are shown once.
+            log.warn("could not disable the notifications from before the restore", e)
+        }
         log.info("successfully restored wallet from file")
         walletApplication.resetBlockchainState()
     }
 }
+
+/** An [IOException] from the install itself, kept apart from one in the bookkeeping after it. */
+private class InstallFailure(val ioCause: IOException) : Exception(ioCause)

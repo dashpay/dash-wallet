@@ -22,6 +22,8 @@ import android.os.Looper
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.WalletApplication.WalletInstallResult
 import de.schildbach.wallet.service.WalletFactory
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import androidx.lifecycle.viewModelScope
@@ -133,6 +135,28 @@ class RestoreWalletFromFileViewModelTest {
         }
         verify(exactly = 1) { configuration.armBackupReminder() }
         verify(exactly = 1) { configuration.armBackupSeedReminder() }
+    }
+
+    @Test
+    fun `a bookkeeping failure after the install still goes to PIN setup`() {
+        val app = mockk<WalletApplication>(relaxed = true) {
+            every { installWallet(any(), false) } returns WalletInstallResult.INSTALLED
+        }
+        val dashPayConfig = mockk<DashPayConfig>(relaxed = true) {
+            coEvery { disableNotifications() } throws IOException("disk full")
+        }
+        val viewModel = RestoreWalletFromFileViewModel(app, factory, configuration, dashPayConfig)
+        var failed = false
+        var navigated = false
+        viewModel.installFailed.observeForever { failed = true }
+        viewModel.startActivityAction.observeForever { navigated = true }
+
+        viewModel.restoreAndSettle(viewModel.restoreWalletFromUri(uri, ""))
+
+        assertFalse("an installed wallet is not reported as a failed install", failed)
+        assertTrue("the restore goes on to PIN setup", navigated)
+        verify(exactly = 1) { app.resetBlockchainState() }
+        verify(exactly = 1) { configuration.armBackupReminder() }
     }
 
     /** Restores, then pumps the main looper until the restore reports an outcome. */
