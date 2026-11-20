@@ -186,10 +186,11 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
                         // preview build error (eg insufficient funds)
                         displayRequest(viewModel.finalPaymentIntent!!)
                         binding.viewFlipper.displayedChild = VIEW_PAYMENT
-                        // Asked of the ViewModel: a retry's failure can arrive after a rotation.
-                        val retried = viewModel.consumeRetryResult()
-                        if ((userAuthorizedDuring || retried) && !viewModel.canSendPayment) {
+                        if (userAuthorizedDuring && !viewModel.canSendPayment) {
+                            viewModel.consumeRetryResult()
                             handleSendRequestException()
+                        } else {
+                            reportRetryFailureIfOwed()
                         }
                     }
                 }
@@ -244,6 +245,31 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
             )
             startActivity(transactionResultIntent)
             finish()
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        reportRetryFailureIfOwed()
+    }
+
+    /**
+     * Shows the failure of a build the user asked for again ([PaymentProtocolViewModel.retryPreview]),
+     * once. Only while resumed: the dialog is shown when the activity is resumed, so a failure
+     * taken while the screen was paused was lost if the screen was recreated before that. Left
+     * with the ViewModel, the screen that resumes shows it (thepastaclaw on #1714).
+     */
+    private fun reportRetryFailureIfOwed() {
+        if (!isResumed || viewModel.finalPaymentIntent == null) return
+        val result = viewModel.sendRequestLiveData.value ?: return
+        if (result.status != Status.ERROR ||
+            result.exception is PaymentSubmissionPendingException ||
+            result.exception is PaymentProtocolException.Expired
+        ) {
+            return
+        }
+        if (viewModel.consumeRetryResult() && !viewModel.canSendPayment) {
+            handleSendRequestException()
         }
     }
 

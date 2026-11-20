@@ -790,45 +790,6 @@ class SendCoinsTaskRunnerBIP70Test {
     }
 
     /**
-     * Pre-review, 2026-11-19. The build can wait for the sync gate, and expiry was last checked
-     * when the request was parsed. A request that expired meanwhile is released, not posted.
-     */
-    @Test
-    fun `directPay releases and refuses a request that expired while its payment was built`() = runTest {
-        val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
-        val paymentIntent = PaymentIntent(
-            PaymentIntent.Standard.BIP70,
-            "Test Merchant",
-            null,
-            arrayOf(
-                PaymentIntent.Output(
-                    Coin.parseCoin("1.0").toNeutralCoin(),
-                    org.bitcoinj.script.ScriptBuilder.createOutputScript(testAddress).program
-                )
-            ),
-            "Test payment",
-            mockWebServer.url("/payment").toString(),
-            null,
-            null,
-            null,
-            java.util.Date(System.currentTimeMillis() - 1_000),
-            null,
-            null
-        )
-        val payment = deferredPayment()
-        coEvery { sdkL1SendService.buildDeferredPayment(any(), any()) } returns payment
-
-        val failure = runCatching { sendCoinsTaskRunner.sendDirectPayment(paymentIntent, "TestService") }
-            .exceptionOrNull()
-
-        val expired = generateSequence(failure) { it.cause }.take(8)
-            .any { it is org.dash.wallet.common.payments.bip70.PaymentProtocolException.Expired }
-        assertTrue("an expired-request failure, got $failure", expired)
-        io.mockk.coVerify(exactly = 1) { sdkL1SendService.releaseDeferredPayment(payment) }
-        assertEquals("nothing posted", 0, mockWebServer.requestCount)
-    }
-
-    /**
      * review 4306185713: after the cutover, an acknowledged FIRST submission whose own SDK
      * broadcast did not go out. An ack proves no delivery (the test server acks without
      * broadcasting) and the bridge's dashj announcement cannot relay through the held peer

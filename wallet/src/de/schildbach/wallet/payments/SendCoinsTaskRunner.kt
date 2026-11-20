@@ -1306,16 +1306,6 @@ class SendCoinsTaskRunner @Inject constructor(
         // and a wipe that finishes meanwhile installs a replacement: build and submit both stay
         // bound to [wallet], and each refuses once it is no longer the installed one.
         val payment = buildDeferredBip70Payment(finalPaymentIntent, wallet)
-        // The build can wait for the sync gate (SdkL1SendService.awaitSendGate), and the request
-        // was checked for expiry when it was parsed, before that wait. This path has no confirm
-        // screen to check it again: an expired request is not paid (pre-review, 2026-11-19).
-        if (finalPaymentIntent.expired) {
-            releaseDeferredPayment(payment, wallet)
-            throw org.dash.wallet.common.payments.bip70.PaymentProtocolException.Expired(
-                "payment request expired while its payment was being built",
-                finalPaymentIntent.paymentRequestHash
-            )
-        }
         return sendPrebuiltDirectPayment(payment, finalPaymentIntent, wallet, serviceName, recovery, onTransactionCreated)
     }
 
@@ -1789,6 +1779,14 @@ class SendCoinsTaskRunner @Inject constructor(
             paymentIntent.orderIdentity(),
             paymentIntent.legacyOrderIdentity()
         )
+
+    /**
+     * For the preview of a scanned payment request, before [buildDeferredBip70Payment]: gives a
+     * wallet that is seconds from synced the time to get there
+     * ([de.schildbach.wallet.service.platform.sdk.SdkL1SendService.awaitSendReadiness]). Not for a
+     * path the user has already confirmed.
+     */
+    suspend fun awaitPreviewReadiness() = sdkL1SendService.awaitSendReadiness()
 
     /**
      * Best-effort fee of a stored transaction, for the confirm screen: Σ(inputs) − Σ(outputs),

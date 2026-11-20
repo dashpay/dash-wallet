@@ -159,7 +159,11 @@ class PaymentProtocolViewModel @Inject constructor(
      */
     private var retryResultPending = false
 
-    /** Whether the result now shown answers a [retryPreview]; true once per retry. */
+    /**
+     * Whether the result now shown answers a [retryPreview]; true once per retry. A failure is
+     * taken only by a screen that can show its dialog now (resumed): taken earlier, a rotation
+     * before the dialog appeared lost it (thepastaclaw on #1714).
+     */
     fun consumeRetryResult(): Boolean = retryResultPending.also { retryResultPending = false }
 
     private val _sendRequestLiveData = MutableLiveData<Resource<SendRequest?>>()
@@ -301,6 +305,9 @@ class PaymentProtocolViewModel @Inject constructor(
                 // Built on, and later submitted for, the wallet this screen was opened on
                 // ([wallet]): a wipe in between must not have the replacement adopt the payment.
                 val origin = wallet
+                // Nothing is confirmed or submitted yet, so a wallet that is seconds from synced
+                // is waited for here, and only here.
+                sendCoinsTaskRunner.awaitPreviewReadiness()
                 deferredPaymentRef.set(
                     DeferredPreview(sendCoinsTaskRunner.buildDeferredBip70Payment(paymentIntent, origin), origin)
                 )

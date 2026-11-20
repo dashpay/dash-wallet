@@ -2163,7 +2163,7 @@ class SdkL1SendServiceTest {
         }
     }
 
-    // --- buildDeferredPayment waits for the funding gate (Joel, 12.0.1-beta, 2026-11-17) --------
+    // --- awaitSendReadiness: the preview's wait for the funding gate (Joel, 12.0.1-beta, 2026-11-17)
 
     /** The scan [blocksShort] of the tip with the aggregate at 100%: the label reads synced, the gate does not. */
     private fun scanShortOfTip(blocksShort: Long) = caughtUpProgress().let {
@@ -2171,7 +2171,7 @@ class SdkL1SendServiceTest {
     }
 
     @Test
-    fun buildDeferredPayment_waitsForAScanThatReachesTheTip_thenBuilds() = runBlocking {
+    fun awaitSendReadiness_waitsForAScanThatReachesTheTip_andTheBuildThenPasses() = runBlocking {
         var probes = 0
         val source = FakeSource(boundWalletId = { walletId })
         // short of the tip for the first three probes, as right after a launch
@@ -2181,14 +2181,20 @@ class SdkL1SendServiceTest {
             sendGateWaitMs = SEND_GATE_WAIT_MS
         )
 
+        svc.awaitSendReadiness()
+        assertEquals("asked again until the gate opened", 4, probes)
         val payment = svc.buildDeferredPayment(listOf(validAddress to 10_000L), stillOwned = { true })
 
-        assertTrue("asked again until the gate opened, probes=$probes", probes >= 4)
         assertTrue("built once the gate opened", payment.txidHex.isNotEmpty())
     }
 
+    /**
+     * thepastaclaw on #1714. A send the user has confirmed never waits, whatever wait is
+     * configured: the wait sat between the confirmation and the submission, where a closed
+     * screen was taken for a payment that may have left.
+     */
     @Test
-    fun sendToAddress_waitsForAScanThatReachesTheTip_thenSends() = runBlocking {
+    fun sendToAddress_doesNotWaitForTheGate() = runBlocking {
         var probes = 0
         val source = readySource()
         val svc = service(
@@ -2199,7 +2205,9 @@ class SdkL1SendServiceTest {
 
         val result = svc.sendToAddress(validAddress, amount, emptyWallet = false)
 
-        assertTrue("sent once the gate opened: $result", result is SdkWriteResult.Broadcast)
+        assertTrue("refused: $result", result is SdkWriteResult.NotBroadcast)
+        assertTrue((result as SdkWriteResult.NotBroadcast).reason.contains(L1_FUNDING_GATE_CLOSED_REASON))
+        assertEquals("asked once, no wait", 1, probes)
     }
 
     @Test
@@ -2225,6 +2233,9 @@ class SdkL1SendServiceTest {
             sendGateWaitMs = 2 * SEND_GATE_POLL_MS
         )
 
+        svc.awaitSendReadiness()
+        assertEquals("one probe, then one per poll of the wait; it returns with the gate closed", 3, probes)
+
         val failure = runCatching {
             svc.buildDeferredPayment(listOf(validAddress to 10_000L), stillOwned = { true })
         }.exceptionOrNull()
@@ -2233,7 +2244,7 @@ class SdkL1SendServiceTest {
         val reason = failure?.message.orEmpty()
         assertTrue(reason, reason.contains(L1_FUNDING_GATE_CLOSED_REASON))
         assertTrue(reason, reason.contains("short of the chain tip"))
-        assertEquals("one probe, then one per poll of the wait", 3, probes)
+        assertEquals("the build asks once and does not wait", 4, probes)
     }
 
     /**
@@ -2262,20 +2273,28 @@ class SdkL1SendServiceTest {
 
     /** thepastaclaw on #1714: the wallet's bind can finish after a payment request was opened. */
     @Test
-    fun buildDeferredPayment_waitsForAWalletThatIsBoundMeanwhile_thenBuilds() = runBlocking {
+    fun awaitSendReadiness_waitsForAWalletThatIsBoundMeanwhile_andTheBuildThenPasses() = runBlocking {
         var asks = 0
         val source = FakeSource(boundWalletId = { if (asks++ < 2) null else walletId })
         val svc = service(source, sendGateWaitMs = SEND_GATE_WAIT_MS)
 
+        svc.awaitSendReadiness()
+        assertEquals("asked until the wallet was bound", 3, asks)
         val payment = svc.buildDeferredPayment(listOf(validAddress to 10_000L), stillOwned = { true })
 
         assertTrue("built once the wallet was bound", payment.txidHex.isNotEmpty())
     }
 
+    /**
+     * thepastaclaw on #1714. A wallet still unbound after the wait is not reported as "syncing":
+     * the bind can be waiting for the user (keystore, setup), which no retry of the build fixes.
+     */
     @Test
-    fun buildDeferredPayment_refusesAsAClosedGate_whenTheWalletStaysUnbound() = runBlocking {
+    fun buildDeferredPayment_refusesPlainly_whenTheWalletStaysUnbound() = runBlocking {
         val source = FakeSource(boundWalletId = { null })
         val svc = service(source, sendGateWaitMs = 2 * SEND_GATE_POLL_MS)
+
+        svc.awaitSendReadiness() // returns after its budget
 
         val failure = runCatching {
             svc.buildDeferredPayment(listOf(validAddress to 10_000L), stillOwned = { true })
@@ -2283,7 +2302,7 @@ class SdkL1SendServiceTest {
 
         assertTrue("an IllegalStateException, got $failure", failure is IllegalStateException)
         val reason = failure?.message.orEmpty()
-        assertTrue("typed as retryable by its prefix: $reason", reason.contains(L1_FUNDING_GATE_CLOSED_REASON))
+        assertFalse("not typed as a sync refusal: $reason", reason.contains(L1_FUNDING_GATE_CLOSED_REASON))
         assertTrue(reason, reason.contains("not bound"))
     }
 
