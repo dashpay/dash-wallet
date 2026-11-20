@@ -2299,10 +2299,70 @@ class ExternalSendServiceImplTest {
         assertEquals("Core → Core: no Platform leg", 3, resyncs)
     }
 
+    /**
+     * Shielded ↔ Platform: External Send is the one hook (ShieldedBalanceServiceImpl does not
+     * schedule for its address-taking writes), so each send schedules exactly once.
+     */
+    @Test
+    fun send_shieldedPlatformLegs_scheduleExactlyOnce() = runBlocking {
+        var resyncs = 0
+        val shieldedToPlatform = service(source(), onPlatformBalanceChanged = { resyncs++ })
+            .send(SendBalance.SHIELDED, platform, amount, false)
+        assertTrue(shieldedToPlatform is ExternalSendResult.Sent)
+        assertEquals("Shielded → Platform", 1, resyncs)
+
+        val platformToShielded = service(source(), onPlatformBalanceChanged = { resyncs++ })
+            .send(SendBalance.PLATFORM, shielded, amount, false)
+        assertTrue(platformToShielded is ExternalSendResult.Sent)
+        assertEquals("Platform → Shielded", 2, resyncs)
+    }
+
     @Test
     fun send_aFailingResyncScheduler_neverChangesTheResult() = runBlocking {
         val result = service(source(), onPlatformBalanceChanged = { throw IllegalStateException("scope gone") })
             .send(SendBalance.PLATFORM, platform, amount, false)
         assertEquals(ExternalSendResult.Sent(null), result)
+    }
+
+    // ── Send / Max shielded balance: unknown while a shielded spend reconciles ──
+
+    @Test
+    fun sendableShieldedBalance_isNull_whileReconciling_evenWithANonzeroStore() {
+        val store = Dash(150_000_000L)
+        assertEquals(store, sendableShieldedBalance(store, ShieldedSyncStatus.READY, reconciling = false))
+        assertNull(sendableShieldedBalance(store, ShieldedSyncStatus.READY, reconciling = true))
+        assertNull(sendableShieldedBalance(store, ShieldedSyncStatus.SYNCING, reconciling = false))
+        assertNull(sendableShieldedBalance(store, ShieldedSyncStatus.NOT_READY, reconciling = false))
+    }
+
+    /**
+     * Through the production source: a nonzero store with no display hold (an ambiguous
+     * spend's reserved inputs, or an intermediate balance) is still unknown while the spend
+     * reconciles, and becomes the store once it settles.
+     */
+    @Test
+    fun productionSource_shieldedBalance_isNullWhileReconciling_withoutAHold() = runBlocking {
+        val store = Dash(150_000_000L)
+        val reconciling = kotlinx.coroutines.flow.MutableStateFlow(true)
+        val shielded = io.mockk.mockk<ShieldedBalanceService> {
+            io.mockk.every { observeShieldedBalance() } returns flowOf(store)
+            io.mockk.every { shieldedSyncStatus } returns kotlinx.coroutines.flow.MutableStateFlow(ShieldedSyncStatus.READY)
+            io.mockk.every { shieldedSpendReconciling } returns reconciling
+            io.mockk.every { shieldedBalanceHeld } returns kotlinx.coroutines.flow.MutableStateFlow(false)
+        }
+        val config = io.mockk.mockk<de.schildbach.wallet.ui.dashpay.utils.DashPayConfig> {
+            io.mockk.every {
+                observePreservingErrors(de.schildbach.wallet.ui.dashpay.utils.DashPayConfig.USE_KOTLIN_SDK_SHIELDED)
+            } returns flowOf(true)
+        }
+        val source = DashSdkExternalSendSource(
+            io.mockk.mockk(relaxed = true), io.mockk.mockk(relaxed = true), io.mockk.mockk(relaxed = true),
+            io.mockk.mockk(relaxed = true), shielded, io.mockk.mockk(relaxed = true), io.mockk.mockk(relaxed = true),
+            config, io.mockk.mockk(relaxed = true), io.mockk.mockk(relaxed = true), io.mockk.mockk(relaxed = true)
+        )
+
+        assertNull(source.observeShieldedBalance().first())
+        reconciling.value = false
+        assertEquals(store, source.observeShieldedBalance().first())
     }
 }
