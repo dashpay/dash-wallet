@@ -92,7 +92,7 @@ class WalletDataAdapterSeamRoutingTest {
         )
     ) : CutoverUiSource {
         override suspend fun boundWalletIdOrNull(): String? = "cd".repeat(32)
-        override fun observeTotalDuffs(walletIdHex: String): Flow<Long> = emptyFlow()
+        override fun observeBalanceChanges(walletIdHex: String): Flow<Unit> = emptyFlow()
 
         override suspend fun currentTotalDuffs(walletIdHex: String): Long = 0L
         override suspend fun currentBalanceSplitDuffs(walletIdHex: String): SdkBalanceSplitDuffs =

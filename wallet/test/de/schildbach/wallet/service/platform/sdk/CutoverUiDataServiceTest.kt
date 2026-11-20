@@ -1096,16 +1096,16 @@ class CutoverUiDataServiceTest {
             return boundWalletId
         }
 
-        override fun observeTotalDuffs(walletIdHex: String): Flow<Long> {
+        override fun observeBalanceChanges(walletIdHex: String): Flow<Unit> {
             balanceSubscriptions++
-            return roomTotals ?: balanceDuffs
+            return roomChanges ?: balanceDuffs.map { }
         }
 
         /**
-         * The Room-triggered feed when a test needs it to REPEAT a total (a
-         * StateFlow cannot); null = [balanceDuffs] itself.
+         * The Room-change feed when a test needs a change WITHOUT a new total
+         * (a StateFlow cannot repeat one); null = every [balanceDuffs] change.
          */
-        var roomTotals: Flow<Long>? = null
+        var roomChanges: Flow<Unit>? = null
 
         /** How many of the next native balance reads throw. */
         var failingBalanceReads = 0
@@ -1658,12 +1658,11 @@ class CutoverUiDataServiceTest {
 
     @Test
     fun postCutover_roomChangeRetriesAfterAFailedReRead_evenWithAnUnchangedTotal() = runTest {
-        // The Room feed is a trigger only: its figure is dropped and the
-        // collector reads again. If that re-read fails, the next Room change
-        // must still trigger one, even though its total is the one the feed
-        // already carried. No tx event and no ticker tick help here.
-        val room = kotlinx.coroutines.flow.MutableSharedFlow<Long>(extraBufferCapacity = 4)
-        val source = FakeSource(balanceDuffs = MutableStateFlow(900_000L)).apply { roomTotals = room }
+        // The Room feed is a trigger only. If the read it triggers fails, the
+        // next Room change must still trigger one, even though the total has
+        // not changed since. No tx event and no ticker tick help here.
+        val room = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(extraBufferCapacity = 4)
+        val source = FakeSource(balanceDuffs = MutableStateFlow(900_000L)).apply { roomChanges = room }
         val service = buildService(source, configWithState("CUT_OVER"), backgroundScope, l1Synced = flowOf(true))
         service.start()
         runCurrent()
@@ -1671,11 +1670,11 @@ class CutoverUiDataServiceTest {
 
         source.balanceDuffs.value = 781L
         source.failingBalanceReads = 1
-        room.emit(781L)
+        room.emit(Unit)
         runCurrent()
         assertEquals("a failed re-read keeps the prior figure", Coin.valueOf(900_000), service.sdkBalanceOrNull())
 
-        room.emit(781L)
+        room.emit(Unit)
         runCurrent()
         assertEquals(Coin.valueOf(781), service.sdkBalanceOrNull())
     }
