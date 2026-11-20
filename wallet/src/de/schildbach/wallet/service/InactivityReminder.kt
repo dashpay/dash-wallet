@@ -25,7 +25,7 @@ import androidx.core.app.NotificationCompat
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.WalletData
-import de.schildbach.wallet.ownedOrNull
+import de.schildbach.wallet.ownedBalance
 import de.schildbach.wallet.ui.OnboardingActivity
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet_test.R
@@ -60,7 +60,7 @@ import javax.inject.Inject
  * other setting, and every wallet install clears them too (see `clearLastKnownBalances`),
  * so a wallet restored without a reset never inherits another wallet's amount. A value an
  * earlier version stored has no ownership flag and counts as unknown until the installed
- * wallet writes its own (see `ownedOrNull`).
+ * wallet writes its own (see `ownedBalance`).
  *
  * A part that cannot be known never makes the amount smaller: the reminder is shown without an amount
  * when the known parts are positive, and not shown at all when they are not. The amount is
@@ -116,12 +116,9 @@ class InactivityReminder @Inject constructor(
 
     /** Null when unknown: never written, written by an earlier version, or unreadable. */
     private fun readTransparentBalance(): Coin? = try {
-        runBlocking {
-            ownedOrNull(
-                walletUIConfig.getPreservingErrors(WalletUIConfig.LAST_TOTAL_BALANCE),
-                walletUIConfig.getPreservingErrors(WalletUIConfig.LAST_TOTAL_BALANCE_OWNED)
-            )
-        }?.let(Coin::valueOf)
+        runBlocking { walletUIConfig.snapshotPreservingErrors() }
+            .ownedBalance(WalletUIConfig.LAST_TOTAL_BALANCE, WalletUIConfig.LAST_TOTAL_BALANCE_OWNED)
+            ?.let(Coin::valueOf)
     } catch (e: Exception) {
         log.warn("cannot read the last known transparent balance", e)
         null
@@ -138,12 +135,9 @@ class InactivityReminder @Inject constructor(
         if (!enabled) {
             Coin.ZERO
         } else {
-            runBlocking {
-                ownedOrNull(
-                    dashPayConfig.getPreservingErrors(DashPayConfig.LAST_SHIELDED_BALANCE_DUFFS),
-                    dashPayConfig.getPreservingErrors(DashPayConfig.LAST_SHIELDED_BALANCE_OWNED)
-                )
-            }?.let(Coin::valueOf)
+            runBlocking { dashPayConfig.snapshotPreservingErrors() }
+                .ownedBalance(DashPayConfig.LAST_SHIELDED_BALANCE_DUFFS, DashPayConfig.LAST_SHIELDED_BALANCE_OWNED)
+                ?.let(Coin::valueOf)
         }
     } catch (e: Exception) {
         log.warn("cannot read the shielded balance, treating it as unknown", e)

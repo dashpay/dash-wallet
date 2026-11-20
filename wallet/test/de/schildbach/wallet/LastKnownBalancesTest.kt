@@ -17,6 +17,8 @@
 package de.schildbach.wallet
 
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+import androidx.datastore.preferences.core.mutablePreferencesOf
+import androidx.datastore.preferences.core.preferencesOf
 import io.mockk.coVerifyOrder
 import io.mockk.mockk
 import org.dash.wallet.common.data.WalletUIConfig
@@ -28,13 +30,29 @@ class LastKnownBalancesTest {
     private val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
     private val dashPayConfig = mockk<DashPayConfig>(relaxed = true)
 
+    private val value = WalletUIConfig.LAST_TOTAL_BALANCE
+    private val flag = WalletUIConfig.LAST_TOTAL_BALANCE_OWNED
+
     @Test
-    fun `a value counts only with its ownership flag`() {
-        assertEquals(5L, ownedOrNull(5L, true))
+    fun `a value counts only with its ownership flag in the same snapshot`() {
+        assertEquals(5L, preferencesOf(value to 5L, flag to true).ownedBalance(value, flag))
         // stored by an earlier version: may belong to a previous wallet
-        assertNull(ownedOrNull(5L, null))
-        assertNull(ownedOrNull(5L, false))
-        assertNull(ownedOrNull(null, true))
+        assertNull(preferencesOf(value to 5L).ownedBalance(value, flag))
+        assertNull(preferencesOf(value to 5L, flag to false).ownedBalance(value, flag))
+        assertNull(preferencesOf(flag to true).ownedBalance(value, flag))
+    }
+
+    @Test
+    fun `a flag written after the snapshot does not vouch for the value read in it`() {
+        // An earlier version's value is read; the installed wallet's writer then replaces
+        // it and sets the flag. The snapshot keeps the pair it was taken with.
+        val store = mutablePreferencesOf(value to 9L)
+        val snapshot = store.toPreferences()
+        store[value] = 5L
+        store[flag] = true
+
+        assertNull(snapshot.ownedBalance(value, flag))
+        assertEquals(5L, store.toPreferences().ownedBalance(value, flag))
     }
 
     @Test

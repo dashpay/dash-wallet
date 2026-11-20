@@ -19,6 +19,7 @@
 package de.schildbach.wallet
 
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+import androidx.datastore.preferences.core.Preferences
 import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.data.WalletUIConfig
 import java.io.IOException
@@ -33,7 +34,7 @@ import java.io.IOException
  *
  * Each writer sets the value's flag ([WalletUIConfig.LAST_TOTAL_BALANCE_OWNED],
  * [DashPayConfig.LAST_SHIELDED_BALANCE_OWNED]) with it. A value an earlier version stored has
- * no flag, so it may belong to a previous wallet: [ownedOrNull] keeps it out of the reminder
+ * no flag, so it may belong to a previous wallet: [ownedBalance] keeps it out of the reminder
  * until the installed wallet writes its own. Nothing is deleted for that.
  *
  * Each flag is removed before its value: a clear stopped part way leaves a value without a
@@ -50,5 +51,10 @@ fun clearLastKnownBalances(walletUIConfig: WalletUIConfig, dashPayConfig: DashPa
     dashPayConfig.remove(DashPayConfig.LAST_SHIELDED_BALANCE_DUFFS)
 }
 
-/** [value] when its ownership flag is set; null (unknown) otherwise. */
-fun ownedOrNull(value: Long?, owned: Boolean?): Long? = value.takeIf { owned == true }
+/**
+ * The stored [value] when its ownership [flag] is set; null (unknown) otherwise. Both from this
+ * one snapshot: two separate reads could pair an earlier version's value with a flag the
+ * installed wallet's writer set in between.
+ */
+fun Preferences.ownedBalance(value: Preferences.Key<Long>, flag: Preferences.Key<Boolean>): Long? =
+    this[value].takeIf { this[flag] == true }
