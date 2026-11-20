@@ -18,10 +18,14 @@
 package de.schildbach.wallet.service.platform.sdk
 
 import com.google.gson.JsonParser
+import de.schildbach.wallet.network.SakuraDevNetParams
+import de.schildbach.wallet.service.platform.SystemContractIds
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
+import org.bitcoinj.core.Address
+import org.bitcoinj.params.TestNet3Params
 import org.dashfoundation.dashsdk.errors.DashSdkError
 import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.sdk.platform.Names
@@ -48,8 +52,8 @@ class SdkIdentityVerifyWritesTest {
     private val ownUserId = "5DbLwAxGBzUzo81VewMUwn4b5P4bpv9FNFybi25XB5Bk"
 
     // The testnet identity-verify contract id (only used as an opaque
-    // 32-byte identifier fixture here; production resolves it at runtime
-    // from dashj's Platform.apps).
+    // 32-byte identifier fixture here; production resolves it per network
+    // from the wallet-owned SystemContractIds registry).
     private val contractIdBase58 = "Bhptm3yBDhLkRNt7ofjpwaBHhMUKjDrQoPufKzQaxmpK"
     private val contractId = Identifier.from(contractIdBase58)
     private val walletId = "ab".repeat(32)
@@ -204,6 +208,23 @@ class SdkIdentityVerifyWritesTest {
     fun missingContractId_isNotBroadcast_withoutSdkCalls() = runBlocking {
         val source = readySource()
         val result = writes(source, contract = null).createForDashDomain(ownUserId, username, url)
+
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertEquals(0, source.boundCalls + source.managedCalls + source.broadcastCalls)
+    }
+
+    @Test
+    fun registryWithoutIdentityVerifyOnSakura_isNotBroadcast_withoutSdkCalls() = runBlocking {
+        val sakura = SakuraDevNetParams.create(
+            Address.fromPubKeyHash(TestNet3Params.get(), ByteArray(20)).toBase58(),
+            20001
+        )
+        val registry = SystemContractIds(sakura)
+        val source = readySource()
+        val writes = SdkIdentityVerifyWrites(source, config(true)) {
+            registry.contractId(SdkIdentityVerifyMapping.APP_NAME)
+        }
+        val result = writes.createForDashDomain(ownUserId, username, url)
 
         assertTrue(result is SdkWriteResult.NotBroadcast)
         assertEquals(0, source.boundCalls + source.managedCalls + source.broadcastCalls)

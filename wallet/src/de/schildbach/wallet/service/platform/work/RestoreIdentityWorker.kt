@@ -186,9 +186,8 @@ class RestoreIdentityWorker @AssistedInject constructor(
                 )
             }
             updateNotification(applicationContext.getString(R.string.processing_home_title), applicationContext.getString(R.string.processing_home_step_1), 5, 1)
-            // Identity-cache CBOR tolerance for this read now lives in
-            // IdentityRepositoryImpl.getIdentityFromPublicKeyId, which every caller
-            // shares — see its KDoc.
+            // Discovery reads through the Kotlin SDK; see
+            // IdentityRepositoryImpl.getIdentityFromPublicKeyId for its null/failure contract.
             val existingIdentity = identityRepository.getIdentityFromPublicKeyId()
                 ?: throw IllegalArgumentException("identity $identity doesn't exist on the network")
 

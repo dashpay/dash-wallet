@@ -22,7 +22,7 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.google.gson.JsonPrimitive
-import de.schildbach.wallet.service.platform.PlatformService
+import de.schildbach.wallet.service.platform.SystemContractIds
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.CancellationException
 import org.dashj.platform.dpp.contract.DataContract
@@ -286,14 +286,16 @@ class SdkProfileQueries internal constructor(
     constructor(
         sdkService: DashSdkService,
         dashPayConfig: DashPayConfig,
-        platformService: PlatformService
+        systemContractIds: SystemContractIds
     ) : this(
+        // The SDK contract fetch and the legacy-model mapping read the same
+        // wallet-owned registry entry (no legacy Platform client).
         source = DashSdkProfileSource(
             sdkService,
-            { platformService.platform.apps["dashpay"]?.contractId }
+            { systemContractIds.contractId(SystemContractIds.DASHPAY) }
         ),
         dashPayConfig = dashPayConfig,
-        dashPayContractId = { platformService.platform.apps["dashpay"]?.contractId }
+        dashPayContractId = { systemContractIds.contractId(SystemContractIds.DASHPAY) }
     )
 
     /**

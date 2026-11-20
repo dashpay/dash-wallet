@@ -641,7 +641,7 @@ class ConnectionsViewModelTest {
         every { provider.wallet } returns wallet
         val owner = spyk(de.schildbach.wallet.service.platform.IdentityRepositoryImpl(mockk(relaxed = true),
             mockk(relaxed = true), storage, provider, mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true),
-            mockk(relaxed = true), mockk(relaxed = true)))
+            mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true)))
         val identity = mockk<org.dashj.platform.dashpay.BlockchainIdentity>(relaxed = true)
         val data = mockk<de.schildbach.wallet.database.entity.BlockchainIdentityData>(relaxed = true)
         every { owner.initBlockchainIdentity(data, wallet) } returns identity
@@ -678,7 +678,7 @@ class ConnectionsViewModelTest {
         every { provider.wallet } returns wallet
         val owner = spyk(de.schildbach.wallet.service.platform.IdentityRepositoryImpl(mockk(relaxed = true),
             mockk(relaxed = true), storage, provider, mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true),
-            mockk(relaxed = true), mockk(relaxed = true)))
+            mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true)))
         val partial = mockk<org.dashj.platform.dashpay.BlockchainIdentity>(relaxed = true)
         every { partial.uniqueIdentifier } throws UninitializedPropertyAccessException("uniqueId")
         val healthy = mockk<org.dashj.platform.dashpay.BlockchainIdentity>(relaxed = true)

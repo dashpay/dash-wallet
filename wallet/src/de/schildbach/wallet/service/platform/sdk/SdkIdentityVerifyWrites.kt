@@ -18,7 +18,7 @@
 package de.schildbach.wallet.service.platform.sdk
 
 import com.google.gson.JsonObject
-import de.schildbach.wallet.service.platform.PlatformService
+import de.schildbach.wallet.service.platform.SystemContractIds
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.CancellationException
 import org.dashj.platform.dpp.contract.DataContract
@@ -113,10 +113,12 @@ internal class DashSdkIdentityVerifyWriteSource(
  *
  * Shape recovered from the legacy writer (dash-sdk-kotlin 4.0.0-RC2
  * `org.dashj.platform.wallet.IdentityVerify`, verified from bytecode):
- * - contract: the `identity-verify` app of dashj's `Platform.apps`
- *   (testnet `Bhptm3yBDhLkRNt7ofjpwaBHhMUKjDrQoPufKzQaxmpK`, mainnet
- *   `EVKMFboB3QBUa9Jo7PP5bsLyohzUz8zvw5c2gJs1SfcX` — resolved at runtime
- *   from the same `apps` map, never hardcoded here);
+ * - contract: the `identity-verify` app (testnet
+ *   `Bhptm3yBDhLkRNt7ofjpwaBHhMUKjDrQoPufKzQaxmpK`, mainnet
+ *   `EVKMFboB3QBUa9Jo7PP5bsLyohzUz8zvw5c2gJs1SfcX` — resolved per network
+ *   from the wallet-owned
+ *   [de.schildbach.wallet.service.platform.SystemContractIds] registry,
+ *   never hardcoded here);
  * - document type: `identityVerify`;
  * - data (PLAINTEXT, no encryption/derivation): `normalizedLabel`
  *   (= `Names.normalizeString(username)`), `normalizedParentDomainName`
@@ -127,8 +129,8 @@ internal class DashSdkIdentityVerifyWriteSource(
  */
 object SdkIdentityVerifyMapping {
 
-    /** dashj `Platform.apps` key of the identity-verify contract. */
-    const val APP_NAME = "identity-verify"
+    /** App name of the identity-verify contract (the legacy `Platform.apps` key). */
+    const val APP_NAME = SystemContractIds.IDENTITY_VERIFY
 
     const val DOCUMENT_TYPE = "identityVerify"
 
@@ -257,13 +259,12 @@ class SdkIdentityVerifyWrites internal constructor(
     constructor(
         sdkService: DashSdkService,
         dashPayConfig: DashPayConfig,
-        platformService: PlatformService
+        systemContractIds: SystemContractIds
     ) : this(
         source = DashSdkIdentityVerifyWriteSource(sdkService),
         dashPayConfig = dashPayConfig,
-        contractId = {
-            platformService.platform.apps[SdkIdentityVerifyMapping.APP_NAME]?.contractId
-        }
+        // Null on a network without an identity-verify contract → NotBroadcast.
+        contractId = { systemContractIds.contractId(SdkIdentityVerifyMapping.APP_NAME) }
     )
 
     /**

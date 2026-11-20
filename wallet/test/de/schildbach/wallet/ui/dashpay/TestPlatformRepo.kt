@@ -18,10 +18,14 @@
 package de.schildbach.wallet.ui.dashpay
 
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.service.platform.sdk.SdkIdentityQueries
 import io.mockk.mockk
 
 /** A real [PlatformRepo] whose collaborators are all relaxed mocks; stub [walletApplication] as needed. */
-fun testPlatformRepo(walletApplication: WalletApplication = mockk(relaxed = true)) = PlatformRepo(
+fun testPlatformRepo(
+    walletApplication: WalletApplication = mockk(relaxed = true),
+    sdkIdentityQueries: SdkIdentityQueries = mockk(relaxed = true)
+) = PlatformRepo(
     walletApplication = walletApplication,
     appDatabase = mockk(relaxed = true),
     platform = mockk(relaxed = true),
@@ -29,5 +33,6 @@ fun testPlatformRepo(walletApplication: WalletApplication = mockk(relaxed = true
     sdkUsernameQueries = mockk(relaxed = true),
     sdkVotingQueries = mockk(relaxed = true),
     sdkProfileQueries = mockk(relaxed = true),
-    identityCreationStatus = mockk(relaxed = true)
+    identityCreationStatus = mockk(relaxed = true),
+    sdkIdentityQueries = sdkIdentityQueries
 )

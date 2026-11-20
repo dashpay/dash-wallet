@@ -17,14 +17,18 @@
 package de.schildbach.wallet.service.platform
 
 import de.schildbach.wallet.Constants
+import com.google.common.util.concurrent.SettableFuture
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
+import org.dashfoundation.dashsdk.errors.DashSdkError
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 
@@ -148,7 +152,7 @@ class IdentityDiscoveryLatchTest {
             val service = service(
                 identityDataDao = mockk(relaxed = true) { coEvery { load() } returns null },
                 identityRepo = mockk(relaxed = true) {
-                    every { getIdentityFromPublicKeyId() } returns null
+                    coEvery { getIdentityFromPublicKeyId() } returns null
                 }
             )
             var now = 1_000_000L
@@ -190,7 +194,7 @@ class IdentityDiscoveryLatchTest {
             val service = service(
                 identityDataDao = mockk(relaxed = true) { coEvery { load() } returns null },
                 identityRepo = mockk(relaxed = true) {
-                    every { getIdentityFromPublicKeyId() } returns null
+                    coEvery { getIdentityFromPublicKeyId() } returns null
                 }
             )
             var now = 1_000_000L
@@ -205,6 +209,58 @@ class IdentityDiscoveryLatchTest {
             // The takeover re-stamped the claim, so a second caller arriving
             // in the same instant is back inside the window.
             assertTrue(claimedAfterTakeover == 0L || claimedAfterTakeover == now)
+        } finally {
+            Constants.SUPPORTS_PLATFORM = wasSupported
+        }
+    }
+
+    /**
+     * Discovery throws for every failure, an unreached Platform included (it is never "no
+     * identity"). The latch is released so a later caller retries, and the failure reaches the
+     * caller.
+     */
+    @Test
+    fun aFailedDiscoveryReleasesTheLatchAndPropagates() {
+        val wasSupported = Constants.SUPPORTS_PLATFORM
+        Constants.SUPPORTS_PLATFORM = true
+        try {
+            val network = DashSdkError.NetworkError("all DAPI nodes failed")
+            val service = service(
+                identityDataDao = mockk(relaxed = true) { coEvery { load() } returns null },
+                identityRepo = mockk(relaxed = true) { coEvery { getIdentityFromPublicKeyId() } throws network }
+            )
+            val thrown = assertThrows(DashSdkError.NetworkError::class.java) {
+                runBlocking { service.discoverAndRecoverIdentity() }
+            }
+            assertTrue(thrown === network || thrown.cause === network)
+            assertFalse(service.discoveryLatch().get())
+        } finally {
+            Constants.SUPPORTS_PLATFORM = wasSupported
+        }
+    }
+
+    /**
+     * The pre-cutover `preBlockDownload` runs discovery on a scope without an exception handler:
+     * a discovery failure must not escape it (a process crash) and must still release dashj's
+     * pre-block future, as an unreached Platform did when discovery returned null for it.
+     */
+    @Test
+    fun preBlockDownloadSurvivesAFailedDiscoveryAndLetsBlockDownloadProceed() {
+        val wasSupported = Constants.SUPPORTS_PLATFORM
+        Constants.SUPPORTS_PLATFORM = true
+        try {
+            val service = service(
+                identityDataDao = mockk(relaxed = true) { coEvery { load() } returns null },
+                identityRepo = mockk(relaxed = true) {
+                    coEvery { getIdentityFromPublicKeyId() } throws DashSdkError.NetworkError("unreachable")
+                }
+            )
+            val future = SettableFuture.create<Boolean>()
+
+            service.preBlockDownload(future)
+
+            assertTrue(future.get(10, TimeUnit.SECONDS))
+            assertFalse(service.discoveryLatch().get())
         } finally {
             Constants.SUPPORTS_PLATFORM = wasSupported
         }

@@ -20,7 +20,7 @@ package de.schildbach.wallet.service.platform.sdk
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
-import de.schildbach.wallet.service.platform.PlatformService
+import de.schildbach.wallet.service.platform.SystemContractIds
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
@@ -270,11 +270,11 @@ class SdkVotingQueries internal constructor(
     constructor(
         sdkService: DashSdkService,
         dashPayConfig: DashPayConfig,
-        platformService: PlatformService
+        systemContractIds: SystemContractIds
     ) : this(
         source = DashSdkVotingSource(sdkService),
         dashPayConfig = dashPayConfig,
-        dpnsContractId = { platformService.platform.apps["dpns"]?.contractId }
+        dpnsContractId = { systemContractIds.contractId(SystemContractIds.DPNS) }
     )
 
     /**
