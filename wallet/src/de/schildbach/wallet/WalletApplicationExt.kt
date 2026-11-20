@@ -131,7 +131,15 @@ object WalletApplicationExt {
                     fundingBarrier = fundingSelectionLock,
                     detachWallet = { withContext(Dispatchers.Main) { detachWalletForWipe() } },
                     destroy = { destroyWalletData() },
-                    markComplete = { markWalletWipeComplete() }
+                    markComplete = {
+                        // Removed for certain before the marker goes: the earlier cancels
+                        // are only queued, and a process death after the marker is cleared
+                        // would leave the wiped wallet's reminder up with nothing to resume.
+                        // Not on the main thread here (the wipe scope or the service teardown).
+                        runCatching { InactivityReminder.cancel(this) }
+                            .onFailure { log.warn("could not cancel the inactivity reminder before completing the wipe", it) }
+                        markWalletWipeComplete()
+                    }
                 )
             }.onFailure {
                 rethrowCancellation(it)
