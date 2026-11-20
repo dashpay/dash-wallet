@@ -43,6 +43,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.toFormattedString
 import javax.inject.Inject
+import de.schildbach.wallet.service.InactivityReminder
 import de.schildbach.wallet.util.toDashjFiat
 import de.schildbach.wallet.util.toFormattedString
 
@@ -132,6 +133,11 @@ class SecurityViewModel @Inject constructor(
     fun setHideBalanceOnLaunch(hide: Boolean) {
         viewModelScope.launch {
             walletUIConfig.set(WalletUIConfig.AUTO_HIDE_BALANCE, hide)
+            if (hide) {
+                // A posted reminder may show the amount. After the write, so one being
+                // prepared either posts first and is removed, or reads the new setting.
+                InactivityReminder.cancelInBackground(walletApplication)
+            }
             analytics.logEvent(
                 if (hide) {
                     AnalyticsConstants.Security.AUTOHIDE_BALANCE_ON

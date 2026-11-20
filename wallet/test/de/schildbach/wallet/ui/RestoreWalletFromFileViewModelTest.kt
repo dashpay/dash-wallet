@@ -32,6 +32,7 @@ import org.dash.wallet.common.Configuration
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import java.io.IOException
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import org.junit.Test
@@ -103,11 +104,43 @@ class RestoreWalletFromFileViewModelTest {
         assertFalse("no navigation once the screen is gone", navigated)
     }
 
+    @Test
+    fun `a failed install reports a retryable failure and keeps the keys-file bookkeeping`() {
+        var attempts = 0
+        val app = mockk<WalletApplication>(relaxed = true) {
+            every { installWallet(any(), false) } answers {
+                if (++attempts == 1) throw IOException("disk full") else WalletInstallResult.INSTALLED
+            }
+        }
+        val viewModel = RestoreWalletFromFileViewModel(app, factory, configuration, mockk(relaxed = true))
+        var failed = false
+        viewModel.installFailed.observeForever { failed = true }
+        val restored = viewModel.restoreWalletFromUri(uri, "")
+
+        viewModel.restoreAndSettle(restored)
+        assertTrue("the failure is reported, not thrown", failed)
+        verify(exactly = 0) { configuration.armBackupReminder() }
+
+        // A retry of the same wallet is still recognised as the keys-file wallet.
+        var navigated = false
+        viewModel.startActivityAction.observeForever { navigated = true }
+        viewModel.restoreWallet(restored, null)
+        val deadline = System.currentTimeMillis() + 5_000
+        while (!navigated) {
+            check(System.currentTimeMillis() < deadline) { "the retry never installed" }
+            shadowOf(Looper.getMainLooper()).idle()
+            Thread.sleep(10)
+        }
+        verify(exactly = 1) { configuration.armBackupReminder() }
+        verify(exactly = 1) { configuration.armBackupSeedReminder() }
+    }
+
     /** Restores, then pumps the main looper until the restore reports an outcome. */
     private fun RestoreWalletFromFileViewModel.restoreAndSettle(restored: Wallet) {
         var settled = false
         walletReplacementRefused.observeForever { settled = true }
         walletAlreadyInstalled.observeForever { settled = true }
+        installFailed.observeForever { settled = true }
         startActivityAction.observeForever { settled = true }
         restoreWallet(restored, null)
         val deadline = System.currentTimeMillis() + 5_000

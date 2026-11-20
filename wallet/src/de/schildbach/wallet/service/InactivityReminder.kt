@@ -30,10 +30,13 @@ import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.runBlocking
 import org.bitcoinj.core.Coin
+import org.bitcoinj.utils.ContextPropagatingThreadFactory
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.WalletUIConfig
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.util.concurrent.Executor
+import java.util.concurrent.Executors
 import javax.inject.Inject
 
 /**
@@ -199,6 +202,27 @@ class InactivityReminder @Inject constructor(
             synchronized(postLock) {
                 context.getSystemService(NotificationManager::class.java)
                     .cancel(Constants.NOTIFICATION_ID_INACTIVITY)
+            }
+        }
+
+        private val cancelExecutor: Executor =
+            Executors.newSingleThreadExecutor(ContextPropagatingThreadFactory("inactivity-reminder-cancel"))
+
+        /**
+         * [cancel] on a background thread, for callers on the main thread: a reminder being
+         * prepared holds the lock across its preference reads. The caller must already have
+         * made the reminder ineligible (raised the wipe flag, written the setting), so one
+         * that posts before this runs is still removed by it, and none posts after.
+         */
+        @JvmStatic
+        fun cancelInBackground(context: Context) {
+            val appContext = context.applicationContext ?: context
+            cancelExecutor.execute {
+                try {
+                    cancel(appContext)
+                } catch (e: Exception) {
+                    log.warn("could not cancel the inactivity reminder", e)
+                }
             }
         }
 

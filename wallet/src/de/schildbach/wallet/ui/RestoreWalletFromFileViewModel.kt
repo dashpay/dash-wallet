@@ -65,6 +65,9 @@ class RestoreWalletFromFileViewModel @Inject constructor(
     /** Another onboarding screen installed a wallet first; this restore was dropped. */
     val walletAlreadyInstalled = SingleLiveEvent<Unit>()
 
+    /** The install failed with nothing installed (a storage error); the user may try again. */
+    val installFailed = SingleLiveEvent<Unit>()
+
     /**
      * The wallet last restored from a keys file, whose new recovery phrase
      * must be backed up once the wallet is accepted ([restoreWallet]).
@@ -92,12 +95,23 @@ class RestoreWalletFromFileViewModel @Inject constructor(
             // the blocking install still lands if the screen goes away, so the
             // bookkeeping an installed wallet needs must land with it. Only the
             // UI events below are skipped once the ViewModel is cleared.
-            val result = withContext(NonCancellable + Dispatchers.IO) {
-                walletApplication.installWallet(wallet, false).also {
-                    if (it == WalletInstallResult.INSTALLED) {
-                        completeRestoredWalletInstall(fromKeysFile)
+            val result = try {
+                withContext(NonCancellable + Dispatchers.IO) {
+                    walletApplication.installWallet(wallet, false).also {
+                        if (it == WalletInstallResult.INSTALLED) {
+                            completeRestoredWalletInstall(fromKeysFile)
+                        }
                     }
                 }
+            } catch (e: IOException) {
+                // Nothing was installed (a storage failure before the install). Keep the
+                // keys-file bookkeeping so a retry of the same wallet still arms its backup.
+                log.error("restored wallet could not be installed", e)
+                if (fromKeysFile) {
+                    keysFileWallet = wallet
+                }
+                installFailed.call(Unit)
+                return@launch
             }
             when (result) {
                 WalletInstallResult.ALREADY_INSTALLED -> {

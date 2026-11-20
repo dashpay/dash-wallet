@@ -87,7 +87,12 @@ class PackageReplacedReceiver : BroadcastReceiver() {
         application.awaitWalletReadyForMutation()
         maybeUpgradeWallet(walletData.wallet)
 
-        if (application.wallet != null) {
+        if (application.wallet != null && !application.mayActOnWalletInBackground()) {
+            // The same guard as the fallback start: a Reset Wallet confirmed while the upgrade
+            // ran (or one that stopped and needs recovery) must not get a sync service. An
+            // ineligible start schedules no fallback either.
+            log.info("not starting the blockchain service: wallet reset in progress, needs recovery or no wallet file")
+        } else if (application.wallet != null) {
             // An UPGRADE must actually start syncing. startBlockchainService() silently
             // no-ops here — this process runs at receiver importance, below the
             // IMPORTANCE_FOREGROUND its guard demands — so the 2026-09-16 emulator upgrade

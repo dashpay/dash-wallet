@@ -168,9 +168,14 @@ object WalletApplicationExt {
         }
     }
 
-    /** Removes the wiped wallet's inactivity reminder; a failure is logged, never thrown into the wipe. */
+    /**
+     * Removes the wiped wallet's inactivity reminder, after the wipe flag is up. In the
+     * background: the callers include the main thread, and a reminder being prepared holds
+     * the posting lock across its preference reads. A failure is logged, never thrown into
+     * the wipe.
+     */
     private fun WalletApplication.cancelInactivityReminderForWipe() {
-        runCatching { InactivityReminder.cancel(this) }
+        runCatching { InactivityReminder.cancelInBackground(this) }
             .onFailure { log.warn("could not cancel the inactivity reminder for the wallet wipe", it) }
     }
 
