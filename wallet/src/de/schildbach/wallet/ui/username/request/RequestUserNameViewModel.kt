@@ -145,7 +145,7 @@ class RequestUserNameViewModel @Inject constructor(
         get() = _isInviteMixed
 
     fun setCreateUsernameArgs(createUsernameArgs: CreateUsernameArgs?) {
-        createUsernameArgs?.let {
+        createUsernameArgs?.takeIf { it != this.createUsernameArgs }?.let {
             this.createUsernameArgs = it
             viewModelScope.launch {
                 getInviteAssetLockTransaction()
