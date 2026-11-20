@@ -17,7 +17,6 @@
 
 package de.schildbach.wallet.ui.payments
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Bundle
 import android.view.View
@@ -39,24 +38,24 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.viewModels
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
+import androidx.navigation.NavController
+import androidx.navigation.fragment.findNavController
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.Constants
+import de.schildbach.wallet.ui.main.MainActivity
+import de.schildbach.wallet.ui.main.MainActivityExt.setBottomNavigationVisible
 import de.schildbach.wallet.ui.payments.PaymentsFragment.Companion.ACTIVE_TAB_INTERNAL
 import de.schildbach.wallet.ui.payments.PaymentsFragment.Companion.ACTIVE_TAB_RECEIVE
 import de.schildbach.wallet.ui.payments.PaymentsFragment.Companion.ARG_ACTIVE_TAB
 import de.schildbach.wallet.ui.payments.PaymentsFragment.Companion.ARG_SOURCE
+import de.schildbach.wallet.ui.payments.internal.InternalTransferFragment
 import de.schildbach.wallet.ui.payments.send.AdvancedSendFragment
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentAdvancedPaymentsBinding
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.components.LocalDashColors
@@ -68,11 +67,13 @@ import org.dash.wallet.common.ui.viewBinding
 
 /**
  * The Advanced mode payments screen (MO-1123, Figma 6860:47472 / 7062:49303): a
- * Receive / Internal / Send picker right under the status bar, above the bottom
- * navigation (`ShowNavBar` on the destination), over the payments pages.
+ * Receive / Internal / Send picker right under the status bar, over the payments pages.
+ * MainActivity's bottom navigation shows on the Receive tab only ([showsBottomNavigation]):
+ * the destination has `ShowNavBar`, and this screen hides the bar on the other tabs.
  *
  * Receive is [AdvancedReceiveFragment] (the Compose [ReceivePage]), Send is
- * [AdvancedSendFragment] (MO-1121); Internal is the same child page as [PaymentsFragment]'s. The enter/exit transitions are on
+ * [AdvancedSendFragment] (MO-1121) and Internal is [InternalTransferFragment] (MO-1125), shown
+ * whatever the shielded flag (see [advancedPaymentsTabIds]). The enter/exit transitions are on
  * the NavOptions (see [paymentsRoute]). There is no close control: like the other
  * bottom-nav screens it is left through the bottom navigation or Back.
  *
@@ -87,25 +88,33 @@ class AdvancedPaymentsFragment : Fragment(R.layout.fragment_advanced_payments) {
         private const val PREFS_RECENT_TAB = "advanced_payments_recent_tab"
         private const val STATE_SELECTED_TAB = "selected_tab"
 
+        /** The tabs on show, in display order: fixed for the build ([advancedPaymentsTabIds]). */
+        private val TAB_IDS: List<Int> = advancedPaymentsTabIds(Constants.SUPPORTS_PLATFORM)
+
         /** The pager position of [tabId] in [tabIds]; the first page if it is not shown. */
         @VisibleForTesting
         fun positionOf(tabIds: List<Int>, tabId: Int): Int =
             tabIds.indexOf(tabId).takeIf { it >= 0 } ?: 0
+
+        /** MainActivity's bottom navigation shows on the Receive tab only. */
+        @VisibleForTesting
+        fun showsBottomNavigation(tabId: Int): Boolean = tabId == ACTIVE_TAB_RECEIVE
     }
 
     private val binding by viewBinding(FragmentAdvancedPaymentsBinding::bind)
-    private val viewModel by viewModels<AdvancedPaymentsViewModel>()
 
     /**
      * The logical tab the user is on, and the only selection state: the picker and the pager
-     * positions follow from it ([positionOf]). Kept across view recreation and tab-set changes.
+     * positions follow from it ([positionOf]). Set in [onCreate]; kept across view recreation.
      */
-    private var selectedTabId by mutableStateOf<Int?>(null)
+    private var selectedTabId by mutableStateOf(ACTIVE_TAB_RECEIVE)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (savedInstanceState?.containsKey(STATE_SELECTED_TAB) == true) {
-            selectedTabId = savedInstanceState.getInt(STATE_SELECTED_TAB)
+        selectedTabId = if (savedInstanceState?.containsKey(STATE_SELECTED_TAB) == true) {
+            savedInstanceState.getInt(STATE_SELECTED_TAB)
+        } else {
+            initialTabId()
         }
     }
 
@@ -133,16 +142,16 @@ class AdvancedPaymentsFragment : Fragment(R.layout.fragment_advanced_payments) {
             }
         }
 
-        // Attached by showTabs once the first tab set is in, not here: see there.
-        val adapter = TabsAdapter(this, source = arguments?.getString(ARG_SOURCE) ?: "")
+        val adapter = TabsAdapter(this, TAB_IDS, source = arguments?.getString(ARG_SOURCE) ?: "")
         // Only the top picker changes tabs: a sideways drag belongs to the page's own
         // content (the Receive balance switch scrolls sideways), never to the pager.
         binding.pager.isUserInputEnabled = false
         viewLifecycleOwner.observeOnDestroy { binding.pager.adapter = null }
         binding.pager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
             override fun onPageSelected(position: Int) {
-                val tabId = adapter.tabIds.getOrNull(position) ?: return
+                val tabId = TAB_IDS.getOrNull(position) ?: return
                 selectedTabId = tabId
+                applyBottomNavigation()
 
                 if (arguments?.containsKey(ARG_ACTIVE_TAB) != true) {
                     requireActivity().getPreferences(Context.MODE_PRIVATE)
@@ -151,38 +160,50 @@ class AdvancedPaymentsFragment : Fragment(R.layout.fragment_advanced_payments) {
             }
         })
 
-        viewLifecycleOwner.lifecycleScope.launch {
-            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.uiState
-                    .map { it.tabIds }
-                    .filterNotNull()
-                    .distinctUntilChanged()
-                    .collect { showTabs(adapter, it) }
+        // Decide the tab before attaching: attaching can report a page selection of its own.
+        val position = positionOf(TAB_IDS, selectedTabId)
+        // Attached populated (the tab set is fixed), as PaymentsFragment does: ViewPager2 hands
+        // the adapter its saved pages when it is attached, so after a rotation the retained
+        // Receive child and its ViewModel are reused and the selected balance is kept.
+        binding.pager.adapter = adapter
+        selectedTabId = TAB_IDS[position]
+        binding.pager.setCurrentItem(position, false)
+        // setCurrentItem reports no selection when the position is unchanged.
+        applyBottomNavigation()
+
+        // MainActivity's destination listener sets the bottom navigation from `ShowNavBar` (true
+        // here) whenever this destination becomes current: on a return from a pushed destination
+        // or a dialog destination. It can be registered after this one (setupBottomNavigation runs
+        // again once the wallet is set up), so the tab's visibility is applied after every
+        // listener has run, from the main queue. Registering dispatches the current
+        // destination, so a recreated view (back from a fragment destination) applies it too.
+        val navController = findNavController()
+        val destinationListener = NavController.OnDestinationChangedListener { _, destination, _ ->
+            if (destination.id == R.id.advancedPaymentsFragment) {
+                // Dispatchers.Main (not immediate) always posts; cancelled with the view.
+                viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) { applyBottomNavigation() }
             }
         }
+        navController.addOnDestinationChangedListener(destinationListener)
+        viewLifecycleOwner.observeOnDestroy { navController.removeOnDestinationChangedListener(destinationListener) }
+    }
+
+    /**
+     * Shows the bottom navigation for the selected tab, only while this destination is current:
+     * once another destination is, its `ShowNavBar` (set by the destination listener) owns the bar,
+     * and a page selection during this screen's exit must not override it.
+     */
+    private fun applyBottomNavigation() {
+        val tabId = selectedTabId
+        if (!isAdded) return
+        val mainActivity = activity as? MainActivity ?: return
+        if (findNavController().currentDestination?.id != R.id.advancedPaymentsFragment) return
+        mainActivity.setBottomNavigationVisible(showsBottomNavigation(tabId))
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
-        selectedTabId?.let { outState.putInt(STATE_SELECTED_TAB, it) }
-    }
-
-    private fun showTabs(adapter: TabsAdapter, newTabIds: List<Int>) {
-        // Decide the tab before the adapter changes: a data-set change can report a
-        // page selection of its own.
-        val wanted = selectedTabId ?: initialTabId()
-        val position = positionOf(newTabIds, wanted)
-        adapter.submit(newTabIds)
-        // Attach only once populated, as PaymentsFragment does. ViewPager2 hands the adapter
-        // its saved pages when it is attached (or, if already attached, when the view state is
-        // restored), and FragmentStateAdapter drops every restored page that containsItem()
-        // rejects. Attached empty, that is every page: after a rotation the retained Receive
-        // child and its ViewModel would be recreated and the selected balance reset to Core.
-        if (binding.pager.adapter == null) {
-            binding.pager.adapter = adapter
-        }
-        selectedTabId = newTabIds[position]
-        binding.pager.setCurrentItem(position, false)
+        outState.putInt(STATE_SELECTED_TAB, selectedTabId)
     }
 
     private fun initialTabId(): Int =
@@ -196,10 +217,8 @@ class AdvancedPaymentsFragment : Fragment(R.layout.fragment_advanced_payments) {
     @Composable
     private fun Header() {
         val colors = LocalDashColors.current
-        val ids = viewModel.uiState.collectAsStateWithLifecycle().value.tabIds
-        // Null until showTabs has picked a tab for this tab set.
+        val ids = TAB_IDS
         val selected = selectedTabId
-        if (ids.isNullOrEmpty() || selected == null) return
 
         val receiveLabel = stringResource(R.string.payments_tab_receive_label)
         val internalLabel = stringResource(R.string.shielded_tab_internal)
@@ -233,40 +252,30 @@ class AdvancedPaymentsFragment : Fragment(R.layout.fragment_advanced_payments) {
         ) { _, index ->
             val tabId = ids.getOrNull(index) ?: return@SegmentedPicker
             selectedTabId = tabId
-            val pagerTabIds = (binding.pager.adapter as? TabsAdapter)?.tabIds.orEmpty()
-            binding.pager.currentItem = positionOf(pagerTabIds, tabId)
+            applyBottomNavigation()
+            binding.pager.currentItem = positionOf(ids, tabId)
         }
     }
 
-    /**
-     * Pages keyed by logical tab id (stable ids), so a change of tab set — the
-     * shielded flag flipping — keeps the pages that remain and drops only the
-     * one that went away.
-     */
+    /** One page per tab of the fixed [tabIds] (default positional ids: the set never changes). */
     private class TabsAdapter(
         fragment: Fragment,
+        private val tabIds: List<Int>,
         private val source: String
     ) : FragmentStateAdapter(fragment) {
-        var tabIds: List<Int> = emptyList()
-            private set
-
-        @SuppressLint("NotifyDataSetChanged")
-        fun submit(newTabIds: List<Int>) {
-            if (newTabIds == tabIds) return
-            tabIds = newTabIds
-            notifyDataSetChanged()
-        }
-
         override fun getItemCount(): Int = tabIds.size
-
-        override fun getItemId(position: Int): Long = tabIds[position].toLong()
-
-        override fun containsItem(itemId: Long): Boolean = tabIds.any { it.toLong() == itemId }
 
         override fun createFragment(position: Int): Fragment = when (tabIds[position]) {
             ACTIVE_TAB_RECEIVE -> AdvancedReceiveFragment.newInstance()
-            ACTIVE_TAB_INTERNAL -> PaymentsInternalFragment.newInstance()
+            ACTIVE_TAB_INTERNAL -> InternalTransferFragment.newInstance()
             else -> AdvancedSendFragment.newInstance(source = source)
         }
     }
 }
+
+/**
+ * The tab set for the Advanced payments screen (MO-1125): the "Internal" tab is always shown
+ * where Platform is supported, whatever the shielded flag — with the flag off, the Internal
+ * transfer shows Shielded disabled. Basic mode ([PaymentsFragment]) keeps its own gating.
+ */
+internal fun advancedPaymentsTabIds(supportsPlatform: Boolean): List<Int> = PaymentsFragment.tabIdsFor(supportsPlatform)
