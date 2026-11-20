@@ -18,7 +18,9 @@
 package de.schildbach.wallet.service.platform.sdk
 
 import android.content.Context
+import android.os.SystemClock
 import dagger.hilt.android.qualifiers.ApplicationContext
+import de.schildbach.wallet.AppForegroundMonitor
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlin.coroutines.EmptyCoroutineContext
@@ -35,6 +37,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emitAll
@@ -44,6 +47,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -53,6 +57,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.Utils
 import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.util.readRetryDelayMs
 import org.dashfoundation.dashsdk.Network
 import org.dashfoundation.dashsdk.Sdk
 import org.dashfoundation.dashsdk.errors.DashSdkError
@@ -434,6 +439,125 @@ internal fun mapShieldedSyncStatus(
     !ready -> ShieldedSyncStatus.NOT_READY
     !firstPassCompleted -> ShieldedSyncStatus.SYNCING
     else -> ShieldedSyncStatus.READY
+}
+
+/**
+ * When to force a shielded pass on top of the SDK's own ~60-second loop — the
+ * iOS `ShieldedSyncFreshnessPolicy` (`PlatformAddressSyncCoordinator.swift`),
+ * pure and host-testable. Spends from another device on the same seed raise no
+ * local signal, and a stalled or failing loop would otherwise leave the
+ * balance old for minutes, so a watchdog checks the age of the last full scan.
+ *
+ * All times are MONOTONIC milliseconds (`SystemClock.elapsedRealtime`), never
+ * the wall clock: a clock step must not make a scan look fresh or ancient.
+ * The baseline is the last SUCCEEDED (not skipped) pass of the bound wallet,
+ * or, before the first one, when monitoring started. Nothing is forced while
+ * a pass is running or a forced refresh is already in flight.
+ */
+internal object ShieldedSyncFreshnessPolicy {
+    /** How often the foreground watchdog checks the scan age. */
+    const val WATCHDOG_INTERVAL_MS = 15_000L
+
+    /** The watchdog forces a pass once the last full scan is this old. */
+    const val MAXIMUM_FULL_SCAN_AGE_MS = 90_000L
+
+    /** Coming to the foreground forces a pass once the last full scan is this old. */
+    const val FOREGROUND_FRESHNESS_GRACE_MS = 30_000L
+
+    fun shouldRefreshForWatchdog(
+        nowMs: Long,
+        lastFullScanAtMs: Long?,
+        monitoringStartedAtMs: Long,
+        isSyncing: Boolean,
+        refreshInFlight: Boolean
+    ): Boolean = isOlderThan(
+        MAXIMUM_FULL_SCAN_AGE_MS, nowMs, lastFullScanAtMs, monitoringStartedAtMs, isSyncing, refreshInFlight
+    )
+
+    fun shouldRefreshOnForeground(
+        nowMs: Long,
+        lastFullScanAtMs: Long?,
+        monitoringStartedAtMs: Long,
+        isSyncing: Boolean,
+        refreshInFlight: Boolean
+    ): Boolean = isOlderThan(
+        FOREGROUND_FRESHNESS_GRACE_MS, nowMs, lastFullScanAtMs, monitoringStartedAtMs, isSyncing, refreshInFlight
+    )
+
+    private fun isOlderThan(
+        thresholdMs: Long,
+        nowMs: Long,
+        lastFullScanAtMs: Long?,
+        monitoringStartedAtMs: Long,
+        isSyncing: Boolean,
+        refreshInFlight: Boolean
+    ): Boolean {
+        if (isSyncing || refreshInFlight) return false
+        val baselineMs = lastFullScanAtMs ?: monitoringStartedAtMs
+        return nowMs - baselineMs >= thresholdMs
+    }
+}
+
+/** What [ShieldedBalanceServiceImpl.observeDisplayedShieldedBalance] currently shows. */
+internal sealed class ShieldedDisplayState {
+    data class Shown(val balance: Dash) : ShieldedDisplayState()
+
+    /** The note store can't be read: consumers fail closed. */
+    object Unreadable : ShieldedDisplayState()
+}
+
+/** What the display-hold state machine does with one reading (see [decideShieldedDisplay]). */
+internal enum class ShieldedDisplayDecision {
+    /** Show the store reading (and end any hold). */
+    PUBLISH,
+
+    /** Start holding the last published balance instead of the store's transient zero. */
+    START_HOLD,
+
+    /** Keep showing the held balance. */
+    KEEP_HOLDING
+}
+
+/**
+ * The display half of a local shielded spend — the iOS
+ * `handleShieldedBalanceResult` hold rule, pure and host-testable.
+ *
+ * A spend's spent nullifiers and its change note can land in the note store in
+ * different passes, so mid-spend the store can read ZERO for a wallet that
+ * still has funds. Showing that zero makes the funds look gone; showing
+ * "Syncing…" for the whole reconciliation (up to a minute on testnet) hides a
+ * balance the user just saw. So:
+ *
+ * - Not holding: start a hold only when a local spend is [reconciling] (which
+ *   includes one still in flight), the [storeReading] is zero, and the last
+ *   published balance was above zero — the Android analogue of iOS
+ *   `balance == 0 && newlySpent > 0 && previous > 0` (our pass results carry no
+ *   newly-spent count; the active local reconciliation is the signal). Every
+ *   other reading publishes at once, nonzero intermediate readings included,
+ *   and so does any zero outside a local reconciliation (a spend from another
+ *   device, a genuinely empty pool).
+ * - Holding: release (publish the reading) as soon as the store reads above
+ *   zero, the reconciliation settles, or the bounded window has ended
+ *   ([holdWindowEnded]) — a genuine spend of everything must end at zero.
+ *
+ * With no published balance yet ([lastPublished] null, e.g. a new process)
+ * nothing is held.
+ */
+internal fun decideShieldedDisplay(
+    storeReading: Dash,
+    reconciling: Boolean,
+    lastPublished: Dash?,
+    holding: Boolean,
+    holdWindowEnded: Boolean
+): ShieldedDisplayDecision = when {
+    holding -> if (storeReading.isPositive || !reconciling || holdWindowEnded) {
+        ShieldedDisplayDecision.PUBLISH
+    } else {
+        ShieldedDisplayDecision.KEEP_HOLDING
+    }
+    reconciling && storeReading.isZero && lastPublished != null && lastPublished.isPositive ->
+        ShieldedDisplayDecision.START_HOLD
+    else -> ShieldedDisplayDecision.PUBLISH
 }
 
 /**
@@ -1245,7 +1369,30 @@ class ShieldedBalanceServiceImpl internal constructor(
      * was read, before the readiness-coverage decision — where a stopped
      * session's collector can still be running. No-op in production.
      */
-    private val afterCoverageRead: suspend () -> Unit = {}
+    private val afterCoverageRead: suspend () -> Unit = {},
+    /**
+     * MONOTONIC clock (millis) for the freshness watchdog ([ShieldedSyncFreshnessPolicy]);
+     * prod wires `SystemClock.elapsedRealtime`. Distinct from [clock], the wall clock for
+     * spend rows. The host default is `System.nanoTime`, also monotonic.
+     */
+    private val elapsedRealtime: () -> Long = { System.nanoTime() / 1_000_000L },
+    /**
+     * Whether the app is visible; the freshness watchdog runs only while it is. Prod wires
+     * [AppForegroundMonitor.isForeground] (also the default, which stays false on the host
+     * JVM, so existing tests never see a forced pass).
+     */
+    private val foreground: () -> StateFlow<Boolean> = { AppForegroundMonitor.isForeground },
+    /** [ShieldedSyncFreshnessPolicy.WATCHDOG_INTERVAL_MS]; injectable so a test need not wait 15 s. */
+    private val watchdogIntervalMs: Long = ShieldedSyncFreshnessPolicy.WATCHDOG_INTERVAL_MS,
+    /** The display hold's forced-pass delays ([DISPLAY_HOLD_KICK_DELAYS_MS]); injectable for tests. */
+    private val displayHoldKickDelaysMs: List<Long> = DISPLAY_HOLD_KICK_DELAYS_MS,
+    /** The display hold's final grace ([DISPLAY_HOLD_GRACE_MS]); injectable for tests. */
+    private val displayHoldGraceMs: Long = DISPLAY_HOLD_GRACE_MS,
+    /**
+     * A shielded write that moves credits to or from a Platform address was submitted (or may
+     * have been): prod wires [PlatformAddressSyncService.schedulePlatformResync]. No-op default.
+     */
+    private val onPlatformBalanceChanged: () -> Unit = {}
 ) : ShieldedBalanceService {
 
     @Inject
@@ -1258,7 +1405,8 @@ class ShieldedBalanceServiceImpl internal constructor(
         assetLockKindResolver: AssetLockKindResolver,
         walletData: de.schildbach.wallet.data.WalletData,
         seamOutputLockRegistry: SeamOutputLockRegistry,
-        fundingGate: de.schildbach.wallet.payments.PendingPaymentFundingGate
+        fundingGate: de.schildbach.wallet.payments.PendingPaymentFundingGate,
+        platformAddressSyncService: dagger.Lazy<PlatformAddressSyncService>
     ) : this(
         source = DashSdkShieldedSource(sdkService),
         dashPayConfig = dashPayConfig,
@@ -1282,7 +1430,9 @@ class ShieldedBalanceServiceImpl internal constructor(
         sweepScope = applicationScope,
         seedAssetLockKind = { displayHex, kind -> assetLockKindResolver.seed(displayHex, kind) },
         freshFundingBlocked = { fundingGate.isFreshFundingBlocked() },
-        fundingSelection = fundingGate.selectionLock
+        fundingSelection = fundingGate.selectionLock,
+        elapsedRealtime = SystemClock::elapsedRealtime,
+        onPlatformBalanceChanged = { platformAddressSyncService.get().schedulePlatformResync() }
     )
 
     /** Serializes [ensureShieldedReady]/[stop] — the single-flight guarantee. */
@@ -1358,13 +1508,31 @@ class ShieldedBalanceServiceImpl internal constructor(
     }
 
     /**
-     * "The last-known balance is stale" latch — see [shieldedBalanceMaybeStale].
-     * Set the moment a successful local spend broadcasts (its note-store
-     * change has not landed yet), cleared once [onShieldedPassCompleted]
-     * sees the reconciliation settle.
+     * "A local spend is reconciling" latch: set by [beginLocalSpend] (before the
+     * SDK spend call, together with the durable reconcile marker), cleared once
+     * [onShieldedPassCompleted] sees the reconciliation settle. It gates
+     * PERSISTENCE ([startBalancePersistence] never caches a pre- or mid-spend
+     * balance) and arms the display hold ([decideShieldedDisplay]); it no longer
+     * turns display surfaces into "Syncing…". In-memory only: a new process
+     * restores it from the durable marker in [startSyncStatusPolling].
      */
-    private val _shieldedBalanceMaybeStale = MutableStateFlow(false)
-    override val shieldedBalanceMaybeStale: StateFlow<Boolean> = _shieldedBalanceMaybeStale.asStateFlow()
+    private val _spendReconciling = MutableStateFlow(false)
+
+    /** [_spendReconciling], read-only — for host tests of the reconciliation machinery. */
+    internal val spendReconciling: StateFlow<Boolean> = _spendReconciling.asStateFlow()
+
+    /** True while a local spend's SDK call is running ([spendsInFlight] > 0); the hold window waits for it. */
+    private val _localSpendInFlight = MutableStateFlow(false)
+
+    /**
+     * What [observeDisplayedShieldedBalance] shows, published only by this
+     * runtime's [startDisplayHold] collector; null while no collector runs (not
+     * ready, torn down, or no [sweepScope]), when the raw store passes through.
+     */
+    private val _displayState = MutableStateFlow<ShieldedDisplayState?>(null)
+
+    private val _shieldedBalanceHeld = MutableStateFlow(false)
+    override val shieldedBalanceHeld: StateFlow<Boolean> = _shieldedBalanceHeld.asStateFlow()
 
     /**
      * Background pending-shield completions — see [walletShieldResumed].
@@ -1386,6 +1554,23 @@ class ShieldedBalanceServiceImpl internal constructor(
      * Like the two jobs above, written and cancelled only under [readyMonitor].
      */
     private var sweepJob: Job? = null
+
+    /** The display-hold collector ([startDisplayHold]); written and cancelled only under [readyMonitor]. */
+    private var displayJob: Job? = null
+
+    /** The foreground freshness watchdog ([startFreshnessWatchdog]); written and cancelled only under [readyMonitor]. */
+    private var freshnessJob: Job? = null
+
+    /**
+     * [elapsedRealtime] of the bound runtime's last SUCCEEDED (not skipped) pass, or null
+     * before its first — the watchdog's baseline. Written under [readyMonitor] by the
+     * current session's collector only; reset by [tearDownReadyState].
+     */
+    @Volatile
+    private var lastFullScanAtMs: Long? = null
+
+    /** A watchdog-forced pass is running ([ShieldedSyncFreshnessPolicy]'s refreshInFlight). */
+    private val freshnessRefreshInFlight = java.util.concurrent.atomic.AtomicBoolean(false)
 
     override suspend fun lastKnownShieldedBalance(): Dash? = try {
         dashPayConfig.getLastShieldedBalanceDuffs()?.let { Dash(it) }
@@ -1450,6 +1635,11 @@ class ShieldedBalanceServiceImpl internal constructor(
         // last-known amount survives process death and the More card can
         // render it instantly on the next open (see [startBalancePersistence]).
         startBalancePersistence()
+        // Keep the balance visible through a spend's transient zero (the
+        // iOS hold rule), and force a pass when the last full scan is old
+        // while the app is visible (the iOS freshness watchdog).
+        startDisplayHold()
+        startFreshnessWatchdog()
         return true
     }
 
@@ -1901,8 +2091,17 @@ class ShieldedBalanceServiceImpl internal constructor(
         // bring-up restarts the driver; it must not force passes meanwhile.
         settlementKickJob?.cancel()
         settlementKickJob = null
+        // The display hold and the watchdog belong to this runtime: no held
+        // value or forced pass survives it (a wipe reaches here through stop()).
+        displayJob?.cancel()
+        displayJob = null
+        freshnessJob?.cancel()
+        freshnessJob = null
+        lastFullScanAtMs = null
+        _displayState.value = null
+        _shieldedBalanceHeld.value = false
         publishSyncStatus(ShieldedSyncStatus.NOT_READY)
-        _shieldedBalanceMaybeStale.value = false
+        _spendReconciling.value = false
     }
 
     /**
@@ -1963,6 +2162,7 @@ class ShieldedBalanceServiceImpl internal constructor(
             // completes and a later bring-up can start a fresh poller.
             val settlementJob = launch {
                 source.shieldedSyncResults().collect { result ->
+                    recordFullScan(result, sessionGeneration)
                     if (onShieldedPassCompleted(result)) ledgerCovered.set(true)
                 }
             }
@@ -2060,7 +2260,7 @@ class ShieldedBalanceServiceImpl internal constructor(
         if (!result.walletId.contentEquals(boundWalletId)) return false
         if (result.outcome == ShieldedPassResult.Outcome.SKIPPED) return false
         val (generation, sinceMs) = reconcileMutex.withLock {
-            reconcileGeneration to reconcileSinceMs.takeIf { _shieldedBalanceMaybeStale.value }
+            reconcileGeneration to reconcileSinceMs.takeIf { _spendReconciling.value }
         }
         val passCredits = result.balanceCredits.takeIf { result.outcome == ShieldedPassResult.Outcome.SUCCEEDED }
         // The displayed sum and the gate's unspent set / known cmxs come from
@@ -2113,14 +2313,14 @@ class ShieldedBalanceServiceImpl internal constructor(
                 // show a balance the persister then refuses to cache, and the
                 // next bring-up would restore the reconciliation anyway. The
                 // streak is kept, so the next stable pass retries the clear.
-                val markerCleared = !_shieldedBalanceMaybeStale.value ||
+                val markerCleared = !_spendReconciling.value ||
                     runCatching { dashPayConfig.clearShieldedSpendReconcilePending() }
                         .onFailure {
                             if (it is CancellationException) throw it
                             log.warn("failed to clear the pending shielded spend reconciliation", it)
                         }
                         .isSuccess
-                if (markerCleared) _shieldedBalanceMaybeStale.value = false
+                if (markerCleared) _spendReconciling.value = false
             }
             // A failed pass (null) resets the streak; a successful one seeds it
             // with the balance it observed.
@@ -2156,7 +2356,7 @@ class ShieldedBalanceServiceImpl internal constructor(
             combine(
                 observeShieldedBalance(),
                 _shieldedSyncStatus,
-                _shieldedBalanceMaybeStale
+                _spendReconciling
             ) { balance, status, stale ->
                 Triple(balance, status, stale)
             }.collect { (balance, status, stale) ->
@@ -2198,6 +2398,207 @@ class ShieldedBalanceServiceImpl internal constructor(
                     .map { notes -> creditsToDash(notes.sumOf { it.value }) }
             }
         }
+
+    /**
+     * The display form of [observeShieldedBalance] — see the interface. While
+     * this runtime's [startDisplayHold] collector runs it is that collector's
+     * published value (held or live); otherwise the raw store passes through
+     * (not ready: the `Dash.ZERO` placeholder consumers already gate on
+     * [shieldedSyncStatus]; no [sweepScope]: no hold). An unreadable store
+     * fails the flow, so consumers' retry paths show their fail-closed
+     * placeholder instead of the last value.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    override fun observeDisplayedShieldedBalance(): Flow<Dash> =
+        _displayState.flatMapLatest { state ->
+            when (state) {
+                null -> observeShieldedBalance()
+                is ShieldedDisplayState.Shown -> flowOf(state.balance)
+                ShieldedDisplayState.Unreadable -> flow<Dash> {
+                    throw java.io.IOException("the shielded note store is unreadable")
+                }
+            }
+        }
+
+    /** Whether [sessionGeneration] is still the published runtime. Caller holds [readyMonitor]. */
+    private fun isCurrentSessionLocked(sessionGeneration: Int): Boolean =
+        readyWalletIdHex.value != null && readyGeneration.get() == sessionGeneration
+
+    /** A SUCCEEDED pass of the bound wallet moves the watchdog baseline, for the current session only. */
+    private fun recordFullScan(result: ShieldedPassResult, sessionGeneration: Int) {
+        if (result.outcome != ShieldedPassResult.Outcome.SUCCEEDED) return
+        val bound = readyWalletIdHex.value?.let(::walletIdFromHex) ?: return
+        if (!result.walletId.contentEquals(bound)) return
+        val now = elapsedRealtime()
+        synchronized(readyMonitor) {
+            if (isCurrentSessionLocked(sessionGeneration)) lastFullScanAtMs = now
+        }
+    }
+
+    /**
+     * Run the display hold ([decideShieldedDisplay]) for the runtime just
+     * published, so a spend's transient zero does not blank a funded balance
+     * and a reconciliation no longer shows "Syncing…" for up to a minute.
+     * Idempotent (a live collector is reused) and scoped to [sweepScope]; with
+     * no scope (host tests) nothing starts and the raw store is displayed.
+     * Caller holds [readyMonitor] with this runtime published.
+     *
+     * The hold state (last published value, hold ticket, window job) is local to
+     * this collector — per runtime, in-memory only, never persisted ([startBalancePersistence]
+     * stays gated on [_spendReconciling]); [tearDownReadyState] cancels it and
+     * clears what it published. A new process has no published value, so it never
+     * holds: with a pending reconcile marker the cache is already dropped and the
+     * surfaces stay fail-closed until READY.
+     *
+     * The bounded window mirrors iOS `scheduleShieldedBalanceReconciliation`:
+     * forced passes after [displayHoldKickDelaysMs] (4 s, 12 s, 24 s apart), a
+     * short grace, then whatever the store reads is published — a genuine spend
+     * of everything ends at zero. Its clock starts once no local spend is in
+     * flight: iOS only ever sees the zero after the spend returned, and passes
+     * forced during the ~30 s proof would only compete with it.
+     */
+    private fun startDisplayHold() {
+        val scope = sweepScope ?: return
+        if (displayJob?.isActive == true) return
+        val sessionGeneration = readyGeneration.get()
+        displayJob = scope.launch {
+            // Tickets of holds whose window ended; a combine input so the end re-evaluates.
+            val windowEnded = MutableStateFlow(0L)
+            var tickets = 0L
+            var holdTicket = 0L
+            var holdWindow: Job? = null
+            var lastPublished: Dash? = null
+
+            fun publish(state: ShieldedDisplayState, held: Boolean): Boolean = synchronized(readyMonitor) {
+                if (!isCurrentSessionLocked(sessionGeneration)) return@synchronized false
+                _displayState.value = state
+                _shieldedBalanceHeld.value = held
+                true
+            }
+
+            fun endHold() {
+                holdWindow?.cancel()
+                holdWindow = null
+                holdTicket = 0L
+            }
+
+            combine(observeShieldedBalance(), _spendReconciling, windowEnded) { reading, reconciling, ended ->
+                Triple(reading, reconciling, ended)
+            }.retryWhen { e, attempt ->
+                if (e is CancellationException) return@retryWhen false
+                log.warn("shielded display balance unreadable; retrying ({})", safeErrorSummary(e))
+                // Fail closed: no held or old value stands in for an unreadable store.
+                endHold()
+                lastPublished = null
+                if (!publish(ShieldedDisplayState.Unreadable, held = false)) return@retryWhen false
+                delay(readRetryDelayMs(attempt))
+                true
+            }.collect { (reading, reconciling, ended) ->
+                val holding = holdTicket != 0L
+                when (
+                    decideShieldedDisplay(
+                        storeReading = reading,
+                        reconciling = reconciling,
+                        lastPublished = lastPublished,
+                        holding = holding,
+                        holdWindowEnded = holding && ended == holdTicket
+                    )
+                ) {
+                    ShieldedDisplayDecision.KEEP_HOLDING -> Unit
+                    ShieldedDisplayDecision.START_HOLD -> {
+                        val held = lastPublished ?: return@collect
+                        val ticket = ++tickets
+                        if (!publish(ShieldedDisplayState.Shown(held), held = true)) return@collect
+                        log.info("holding the shielded balance through a transient post-spend zero")
+                        holdTicket = ticket
+                        holdWindow = launch { runDisplayHoldWindow(sessionGeneration, ticket, windowEnded) }
+                    }
+                    ShieldedDisplayDecision.PUBLISH -> {
+                        if (holding) endHold()
+                        if (publish(ShieldedDisplayState.Shown(reading), held = false)) lastPublished = reading
+                    }
+                }
+            }
+        }
+    }
+
+    /** The bounded window of one display hold (see [startDisplayHold]); ends by publishing [ticket]. */
+    private suspend fun runDisplayHoldWindow(sessionGeneration: Int, ticket: Long, windowEnded: MutableStateFlow<Long>) {
+        _localSpendInFlight.first { !it }
+        for (delayMs in displayHoldKickDelaysMs) {
+            delay(delayMs)
+            if (!synchronized(readyMonitor) { isCurrentSessionLocked(sessionGeneration) }) return
+            try {
+                source.syncShieldedNow()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                log.warn("display-hold shielded sync failed ({})", safeErrorSummary(e))
+            }
+        }
+        delay(displayHoldGraceMs)
+        log.info("shielded display hold window ended; publishing the store reading")
+        windowEnded.value = ticket
+    }
+
+    /**
+     * The iOS freshness watchdog ([ShieldedSyncFreshnessPolicy]) for the runtime
+     * just published: while the app is in the foreground, force a pass on each
+     * entry when the last full scan is over 30 s old, then every
+     * [watchdogIntervalMs] when it is over 90 s old. In the background nothing
+     * runs ([collectLatest] cancels the loop on the foreground → background
+     * edge). Idempotent and scoped to [sweepScope]; [tearDownReadyState] (so
+     * [stop], and a wallet wipe through it) cancels it. Caller holds
+     * [readyMonitor] with this runtime published.
+     */
+    private fun startFreshnessWatchdog() {
+        val scope = sweepScope ?: return
+        if (freshnessJob?.isActive == true) return
+        val sessionGeneration = readyGeneration.get()
+        val monitoringStartedAtMs = elapsedRealtime()
+        freshnessJob = scope.launch {
+            foreground().collectLatest { visible ->
+                if (!visible) return@collectLatest
+                refreshShieldedIfStale(sessionGeneration, monitoringStartedAtMs, onForeground = true)
+                while (true) {
+                    delay(watchdogIntervalMs)
+                    refreshShieldedIfStale(sessionGeneration, monitoringStartedAtMs, onForeground = false)
+                }
+            }
+        }
+    }
+
+    /** One watchdog check; forces at most one pass at a time. An unreadable syncing flag forces nothing. */
+    private suspend fun refreshShieldedIfStale(sessionGeneration: Int, monitoringStartedAtMs: Long, onForeground: Boolean) {
+        if (!synchronized(readyMonitor) { isCurrentSessionLocked(sessionGeneration) }) return
+        val syncing = try {
+            source.isShieldedSyncing()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("shielded freshness check skipped: syncing state unreadable ({})", safeErrorSummary(e))
+            return
+        }
+        val now = elapsedRealtime()
+        val lastScan = lastFullScanAtMs
+        val inFlight = freshnessRefreshInFlight.get()
+        val stale = if (onForeground) {
+            ShieldedSyncFreshnessPolicy.shouldRefreshOnForeground(now, lastScan, monitoringStartedAtMs, syncing, inFlight)
+        } else {
+            ShieldedSyncFreshnessPolicy.shouldRefreshForWatchdog(now, lastScan, monitoringStartedAtMs, syncing, inFlight)
+        }
+        if (!stale || !freshnessRefreshInFlight.compareAndSet(false, true)) return
+        try {
+            log.info("shielded balance is stale ({}); forcing a pass", if (onForeground) "foreground" else "watchdog")
+            source.syncShieldedNow()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("forced shielded freshness pass failed ({})", safeErrorSummary(e))
+        } finally {
+            freshnessRefreshInFlight.set(false)
+        }
+    }
 
     override suspend fun isFundingNoteAnchoredForDenomination(denomination: Dash): Boolean {
         // Snapshot read only — never force a bring-up here (the gate is polled
@@ -2261,7 +2662,20 @@ class ShieldedBalanceServiceImpl internal constructor(
     override suspend fun shieldFromCredits(amount: Dash): SdkWriteResult<Unit> =
         runShieldedWrite("shieldFromCredits", amount) { walletId, credits ->
             source.shield(walletId, credits)
+        }.alsoResyncPlatform()
+
+    /**
+     * A Platform-address side (shield from / unshield to a Platform address) that was
+     * submitted or may have been: force the Platform-address sync (iOS `schedulePlatformResync`).
+     */
+    private fun <T> SdkWriteResult<T>.alsoResyncPlatform(): SdkWriteResult<T> = also {
+        if (it is SdkWriteResult.NotBroadcast) return@also
+        try {
+            onPlatformBalanceChanged()
+        } catch (e: Exception) {
+            log.warn("platform address resync not scheduled ({})", safeErrorSummary(e))
         }
+    }
 
     // ── Dash Wallet → Shielded (Type 18, staged) ──────────────────────
 
@@ -2875,7 +3289,7 @@ class ShieldedBalanceServiceImpl internal constructor(
         }
         return runShieldedWrite("unshieldToPlatformAddress", amount, expectedWalletIdHex) { walletId, credits ->
             source.unshield(walletId, target, credits)
-        }
+        }.alsoResyncPlatform()
     }
 
     override suspend fun topUpIdentityFromShielded(
@@ -2901,7 +3315,7 @@ class ShieldedBalanceServiceImpl internal constructor(
             ?: return notBroadcast("shieldFromCreditsToAddress", "malformed or wrong-network shielded address", null)
         return runShieldedWrite("shieldFromCreditsToAddress", amount, expectedWalletIdHex) { walletId, credits ->
             source.shieldToRecipient(walletId, recipientRaw43, credits)
-        }
+        }.alsoResyncPlatform()
     }
 
     override suspend fun shieldFromIdentityToAddress(
@@ -2987,7 +3401,7 @@ class ShieldedBalanceServiceImpl internal constructor(
                 throw PreBroadcastRejection("platform address lookup failed", t)
             } ?: throw PreBroadcastRejection("no platform receive address in the SDK store yet")
             source.unshield(walletId, target, credits)
-        }
+        }.alsoResyncPlatform()
 
     override suspend fun withdrawToCore(addressBase58: String, amount: Dash): SdkWriteResult<Unit> =
         withdrawToCoreInternal(addressBase58, amount, expectedWalletIdHex = null)
@@ -3183,8 +3597,8 @@ class ShieldedBalanceServiceImpl internal constructor(
     /**
      * Start a local spend, BEFORE its SDK call: durably record the pending
      * reconciliation (drop the last-known balance, set the marker and its
-     * since in one DataStore transaction), then mark the balance STALE (see
-     * [shieldedBalanceMaybeStale]) and hold settlement until [endLocalSpend].
+     * since in one DataStore transaction), then mark the spend RECONCILING (see
+     * [_spendReconciling]) and hold settlement until [endLocalSpend].
      *
      * Returns false — with nothing changed — when the durable record can't be
      * written. The caller must then NOT spend: a spend whose invalidation
@@ -3217,6 +3631,7 @@ class ShieldedBalanceServiceImpl internal constructor(
                     .isSuccess
                 if (recorded) {
                     spendsInFlight++
+                    _localSpendInFlight.value = true
                     restartReconciliation(sinceMs)
                 }
                 recorded
@@ -3235,6 +3650,7 @@ class ShieldedBalanceServiceImpl internal constructor(
         withContext(NonCancellable) {
             reconcileMutex.withLock {
                 spendsInFlight--
+                _localSpendInFlight.value = spendsInFlight > 0
                 restartReconciliation(sinceFor(spendStartedAtMs))
             }
         }
@@ -3247,12 +3663,12 @@ class ShieldedBalanceServiceImpl internal constructor(
         reconcileGeneration++
         // An unsettled earlier spend keeps its (earlier) since: its row
         // must still be reflected before anything settles.
-        reconcileSinceMs = if (_shieldedBalanceMaybeStale.value) {
+        reconcileSinceMs = if (_spendReconciling.value) {
             minOf(reconcileSinceMs, sinceMs)
         } else {
             sinceMs
         }
-        _shieldedBalanceMaybeStale.value = true
+        _spendReconciling.value = true
         // Restart the two-pass stability window: the flag must survive
         // at least two completed passes with an unchanged balance.
         lastPassBalanceCredits = null
@@ -3328,7 +3744,7 @@ class ShieldedBalanceServiceImpl internal constructor(
      * Wall-clock since (skew already subtracted) of the earliest spend in the
      * pending reconciliation — the settlement gate's activity-row cutoff (see
      * [onShieldedPassCompleted]). Guarded by [reconcileMutex]; meaningful only
-     * while [shieldedBalanceMaybeStale] is set.
+     * while [_spendReconciling] is set.
      */
     private var reconcileSinceMs = 0L
 
@@ -3446,6 +3862,16 @@ class ShieldedBalanceServiceImpl internal constructor(
         /** How often the sync-status poller samples the pass-in-flight signal. */
         internal const val SYNC_STATUS_POLL_INTERVAL_MS = 500L
 
+
+        /**
+         * The display hold's forced passes: slept in turn before each one, so at
+         * +4 s, +16 s and +40 s — iOS `scheduleShieldedBalanceReconciliation`'s
+         * 4/12/24 s sleeps, covering Platform's usual indexing window.
+         */
+        internal val DISPLAY_HOLD_KICK_DELAYS_MS = listOf(4_000L, 12_000L, 24_000L)
+
+        /** The display hold's last grace after its final forced pass (iOS: one delivery turn, 0.5 s). */
+        internal const val DISPLAY_HOLD_GRACE_MS = 500L
 
         /** Forced passes after a spend, so settlement evidence arrives promptly. */
         internal const val SETTLEMENT_EVIDENCE_PASSES = 2

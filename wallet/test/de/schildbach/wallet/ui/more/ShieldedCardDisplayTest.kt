@@ -65,7 +65,7 @@ class ShieldedCardDisplayTest {
             ShieldedCardDisplay.LIVE_AMOUNT,
             mapShieldedCardDisplay(
                 ShieldedSyncStatus.NOT_READY, hasShieldedContext = false,
-                cachedBalance = null, balanceMaybeStale = false
+                cachedBalance = null, balanceUnreadable = false
             )
         )
     }
@@ -78,7 +78,7 @@ class ShieldedCardDisplayTest {
             ShieldedCardDisplay.SYNCING,
             mapShieldedCardDisplay(
                 ShieldedSyncStatus.NOT_READY, hasShieldedContext = true,
-                cachedBalance = null, balanceMaybeStale = false
+                cachedBalance = null, balanceUnreadable = false
             )
         )
     }
@@ -92,30 +92,28 @@ class ShieldedCardDisplayTest {
                 ShieldedCardDisplay.CACHED_AMOUNT,
                 mapShieldedCardDisplay(
                     status, hasShieldedContext = true,
-                    cachedBalance = cached, balanceMaybeStale = false
+                    cachedBalance = cached, balanceUnreadable = false
                 )
             )
         }
     }
 
     @Test
-    fun `just-completed local spend forces the placeholder over a stale cache`() {
-        // Case (b): a shielded spend from this app just happened; the cached
-        // balance is known-stale until the runtime re-settles → "Syncing…".
+    fun `an unreadable live balance forces the placeholder over a cache`() {
+        // Fail closed: while the live flow is failing no amount is trustworthy.
         assertEquals(
             ShieldedCardDisplay.SYNCING,
             mapShieldedCardDisplay(
                 ShieldedSyncStatus.SYNCING, hasShieldedContext = true,
-                cachedBalance = cached, balanceMaybeStale = true
+                cachedBalance = cached, balanceUnreadable = true
             )
         )
-        // Even with no cache the stale signal keeps the placeholder (e.g. a
-        // first shield on an otherwise-fresh wallet).
+        // Even with no cache and no context (where the live zero would show).
         assertEquals(
             ShieldedCardDisplay.SYNCING,
             mapShieldedCardDisplay(
                 ShieldedSyncStatus.NOT_READY, hasShieldedContext = false,
-                cachedBalance = null, balanceMaybeStale = true
+                cachedBalance = null, balanceUnreadable = true
             )
         )
     }
@@ -128,22 +126,23 @@ class ShieldedCardDisplayTest {
                 ShieldedCardDisplay.LIVE_AMOUNT,
                 mapShieldedCardDisplay(
                     ShieldedSyncStatus.READY, hasShieldedContext = context,
-                    cachedBalance = cached, balanceMaybeStale = false
+                    cachedBalance = cached, balanceUnreadable = false
                 )
             )
         }
     }
 
     @Test
-    fun `a reconciling spend keeps the placeholder even while READY - like the home header`() {
-        // READY persists through post-spend passes, so the live note store can
-        // still read the pre-spend or mid-spend amount until the spend settles.
+    fun `an unreadable live balance keeps the placeholder even while READY`() {
+        // A post-spend reconciliation no longer reaches this input (the live
+        // amount is the service's display balance, which holds a transient
+        // zero itself); only a failing read does.
         for (context in listOf(true, false)) {
             assertEquals(
                 ShieldedCardDisplay.SYNCING,
                 mapShieldedCardDisplay(
                     ShieldedSyncStatus.READY, hasShieldedContext = context,
-                    cachedBalance = cached, balanceMaybeStale = true
+                    cachedBalance = cached, balanceUnreadable = true
                 )
             )
         }
@@ -153,27 +152,27 @@ class ShieldedCardDisplayTest {
     fun `MO-1107 - hideBalance shows the masked placeholder regardless of sync state`() {
         // Autohide Balance (hideBalance) outranks every other display-trust
         // state: READY with a live balance, a cached balance, and the
-        // reconciling/stale state all collapse to HIDDEN once the user has
+        // unreadable state all collapse to HIDDEN once the user has
         // asked for the amount not to be shown.
         assertEquals(
             ShieldedCardDisplay.HIDDEN,
             mapShieldedCardDisplay(
                 ShieldedSyncStatus.READY, hasShieldedContext = true,
-                cachedBalance = null, balanceMaybeStale = false, hideBalance = true
+                cachedBalance = null, balanceUnreadable = false, hideBalance = true
             )
         )
         assertEquals(
             ShieldedCardDisplay.HIDDEN,
             mapShieldedCardDisplay(
                 ShieldedSyncStatus.NOT_READY, hasShieldedContext = true,
-                cachedBalance = cached, balanceMaybeStale = false, hideBalance = true
+                cachedBalance = cached, balanceUnreadable = false, hideBalance = true
             )
         )
         assertEquals(
             ShieldedCardDisplay.HIDDEN,
             mapShieldedCardDisplay(
                 ShieldedSyncStatus.SYNCING, hasShieldedContext = true,
-                cachedBalance = cached, balanceMaybeStale = true, hideBalance = true
+                cachedBalance = cached, balanceUnreadable = true, hideBalance = true
             )
         )
     }
@@ -184,7 +183,7 @@ class ShieldedCardDisplayTest {
             ShieldedCardDisplay.LIVE_AMOUNT,
             mapShieldedCardDisplay(
                 ShieldedSyncStatus.READY, hasShieldedContext = true,
-                cachedBalance = null, balanceMaybeStale = false
+                cachedBalance = null, balanceUnreadable = false
             )
         )
     }
