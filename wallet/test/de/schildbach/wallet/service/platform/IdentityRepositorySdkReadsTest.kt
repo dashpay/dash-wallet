@@ -243,7 +243,7 @@ class IdentityRepositorySdkReadsTest {
     @Test
     fun discoveryPastItsBudgetIsAFailureWithoutTheLegacyClient() {
         coEvery { source.identityJsonByPublicKeyHash(hashHex) } answers { release.await(30, TimeUnit.SECONDS); null }
-        val repository = repository(queries = SdkIdentityQueries(source, timeoutMs = 50))
+        val repository = repository(queries = SdkIdentityQueries(source, discoveryTimeoutMs = 50))
         assertThrows(SdkIdentityQueryTimeoutException::class.java) {
             runBlocking { repository.getIdentityFromPublicKeyId() }
         }
@@ -440,7 +440,7 @@ class IdentityRepositorySdkReadsTest {
     @Test
     fun balancePastItsBudgetIsUnknownForTheRepositoryAndThrowsForPlatformRepo() = runBlocking {
         coEvery { source.creditBalance(idBase58) } answers { release.await(30, TimeUnit.SECONDS); 5L }
-        val queries = SdkIdentityQueries(source, timeoutMs = 50)
+        val queries = SdkIdentityQueries(source, balanceTimeoutMs = 50)
         val slow = testPlatformRepo(sdkIdentityQueries = queries)
 
         assertNull(repository(slow, walletIdentity, queries).getIdentityBalance())

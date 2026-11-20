@@ -117,8 +117,10 @@ internal class DashSdkIdentityReadSource(
  * model enums, so neither loads `libsdklib`; the caller converts a found [SdkIdentityRecord] to the
  * legacy model once that library is loaded. There is no legacy fallback on any network.
  *
- * Each SDK round trip runs under [boundedSdkPlatformQuery] ([timeoutMs], by default
- * [SDK_PLATFORM_QUERY_TIMEOUT_MS]). With no fallback behind these reads, a timeout is a failure:
+ * Each SDK round trip runs under [boundedSdkPlatformQuery]: discovery under [discoveryTimeoutMs]
+ * (by default [SDK_IDENTITY_DISCOVERY_TIMEOUT_MS], which covers the SDK's own failover), the
+ * balance under [balanceTimeoutMs] (by default [SDK_PLATFORM_QUERY_TIMEOUT_MS]). With no fallback
+ * behind these reads, a timeout is a failure:
  * it throws [SdkIdentityQueryTimeoutException] ("unknown"), and is never reported as the SDK's own
  * null (no identity / no balance). The abandoned native call finishes in the background.
  *
@@ -129,7 +131,8 @@ internal class DashSdkIdentityReadSource(
 @Singleton
 class SdkIdentityQueries internal constructor(
     private val source: SdkIdentityReadSource,
-    private val timeoutMs: Long = SDK_PLATFORM_QUERY_TIMEOUT_MS
+    private val discoveryTimeoutMs: Long = SDK_IDENTITY_DISCOVERY_TIMEOUT_MS,
+    private val balanceTimeoutMs: Long = SDK_PLATFORM_QUERY_TIMEOUT_MS
 ) {
     @Inject
     constructor(sdkService: DashSdkService) : this(DashSdkIdentityReadSource(sdkService))
@@ -142,7 +145,7 @@ class SdkIdentityQueries internal constructor(
      * (an `ECDSA_HASH160` key stores its hash there). The non-unique answer counts only when it
      * is exactly one identity; two or more throws [SdkAmbiguousIdentityException] (the legacy
      * lookup reported none, which now would read as a proved absence). Each of the (up to three)
-     * round trips is bounded separately.
+     * round trips is bounded separately by [discoveryTimeoutMs].
      *
      * @throws SdkIdentityJsonException when the SDK's identity JSON cannot be read
      * @throws SdkIdentityQueryTimeoutException when a round trip exceeds its budget
@@ -151,19 +154,19 @@ class SdkIdentityQueries internal constructor(
     suspend fun identityByPublicKeyHash(pubKeyHash: ByteArray): SdkIdentityRecord? {
         require(pubKeyHash.size == PUBLIC_KEY_HASH_SIZE) { "public key hash must be $PUBLIC_KEY_HASH_SIZE bytes" }
         val hashHex = Utils.HEX.encode(pubKeyHash)
-        bounded("identities.fetchByPublicKeyHash") { source.identityJsonByPublicKeyHash(hashHex) }
+        bounded("identities.fetchByPublicKeyHash", discoveryTimeoutMs) { source.identityJsonByPublicKeyHash(hashHex) }
             ?.let { return SdkIdentityJson.parseIdentity(it) }
         return singleNonUniqueIdentity(hashHex)
     }
 
     private suspend fun singleNonUniqueIdentity(hashHex: String): SdkIdentityRecord? {
-        val first = bounded("identities.fetchByNonUniquePublicKeyHash[first]") {
+        val first = bounded("identities.fetchByNonUniquePublicKeyHash[first]", discoveryTimeoutMs) {
             source.identitiesJsonByNonUniquePublicKeyHash(hashHex, null)
         }?.let { SdkIdentityJson.parseIdentityArray(it) }.orEmpty()
         if (first.isEmpty()) return null
         if (first.size > 1) throw SdkIdentityJsonException("non-unique key-hash page holds more than one identity")
         val found = first.single()
-        val next = bounded("identities.fetchByNonUniquePublicKeyHash[next]") {
+        val next = bounded("identities.fetchByNonUniquePublicKeyHash[next]", discoveryTimeoutMs) {
             source.identitiesJsonByNonUniquePublicKeyHash(hashHex, found.id.toString())
         }?.let { SdkIdentityJson.parseIdentityArray(it) }.orEmpty()
         if (next.isNotEmpty()) throw SdkAmbiguousIdentityException()
@@ -174,17 +177,17 @@ class SdkIdentityQueries internal constructor(
      * [identityId]'s credit balance (credits, not duffs) as the SDK returns it; see
      * [fetchIdentityCreditBalance] for when that is null.
      *
-     * @throws SdkIdentityQueryTimeoutException when the read exceeds its budget
+     * @throws SdkIdentityQueryTimeoutException when the read exceeds [balanceTimeoutMs]
      */
     suspend fun creditBalance(identityId: Identifier): Long? =
-        bounded("identities.fetchBalance") { source.creditBalance(identityId.toString()) }
+        bounded("identities.fetchBalance", balanceTimeoutMs) { source.creditBalance(identityId.toString()) }
 
     /**
      * One bounded round trip: the SDK's own result, null included, or a throw. The helper's null
      * return (budget expired) becomes [SdkIdentityQueryTimeoutException], so it cannot be confused
      * with the SDK's null.
      */
-    private suspend fun <T : Any> bounded(label: String, read: suspend () -> T?): T? {
+    private suspend fun <T : Any> bounded(label: String, timeoutMs: Long, read: suspend () -> T?): T? {
         val boxed = boundedSdkPlatformQuery(label, timeoutMs, read)
             ?: throw SdkIdentityQueryTimeoutException(label, timeoutMs)
         return boxed.orElse(null)

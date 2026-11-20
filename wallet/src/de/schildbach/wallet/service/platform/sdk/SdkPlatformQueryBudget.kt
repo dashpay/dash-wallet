@@ -62,7 +62,9 @@ import java.util.Optional
  *   this at int36.
  *
  * The bound therefore stays: as a routing choice for the adapters that still
- * have a legacy fallback, and as a hang bound for [SdkIdentityQueries].
+ * have a legacy fallback, and as a hang bound for the identity credit balance
+ * read in [SdkIdentityQueries]. Identity discovery uses
+ * [SDK_IDENTITY_DISCOVERY_TIMEOUT_MS] instead.
  *
  * ## Why 6 s
  *
@@ -79,19 +81,39 @@ import java.util.Optional
  *   batch wrappers apply it to each of their calls rather than to the batch,
  *   so a healthy 100-contact batch is never truncated.
  *
- * Exception: [SdkIdentityQueries] (identity discovery by first key hash, identity
- * credit balance) has NO legacy fallback. There the bound is a hang bound, not a
- * routing choice: a timeout throws [SdkIdentityQueryTimeoutException] and the
- * caller treats the answer as unknown (discovery fails, the repository balance is
- * null, the `PlatformRepo` balance throws), never as "no identity". At int36
- * the case where this bound fires is a silently dropping node, and the read then
- * throws [SdkIdentityQueryTimeoutException] (unknown, never absence).
+ * Exception: the identity credit balance read in [SdkIdentityQueries] has NO
+ * legacy fallback. There the bound is a hang bound, not a routing choice: a
+ * timeout throws [SdkIdentityQueryTimeoutException] and the caller treats the
+ * answer as unknown (the repository balance is null, the `PlatformRepo` balance
+ * throws). At int36 the case where this bound fires is a silently dropping node.
+ * It stays at 6 s because the balance sits behind contact and profile screens,
+ * where "unknown" is better than a long wait. Identity discovery, the other
+ * read there, uses [SDK_IDENTITY_DISCOVERY_TIMEOUT_MS].
  *
  * Deliberately NOT applied to anything on the L1 / send path: L1 is SDK-owned
  * with no second implementation to fall back to, so a timeout there would be a
  * failure rather than a routing choice.
  */
 internal const val SDK_PLATFORM_QUERY_TIMEOUT_MS = 6_000L
+
+/**
+ * Wall-clock ceiling for ONE Kotlin-SDK identity-discovery round trip
+ * ([SdkIdentityQueries.identityByPublicKeyHash]; each of its up to three round
+ * trips is bounded separately).
+ *
+ * Not [SDK_PLATFORM_QUERY_TIMEOUT_MS]: discovery has no legacy fallback, so the
+ * 6 s routing bound buys nothing there, and cutting at 6 s pre-empts the SDK's
+ * own failover. A first node that silently drops packets costs a full 10 s
+ * attempt, so a 6 s cut throws [SdkIdentityQueryTimeoutException] before the
+ * SDK can move to another node and discards an answer that would have come.
+ *
+ * 45 s covers the SDK's whole retry cycle at 5.1.0-int36 (read from
+ * dashpay/platform `0db63f1e21`, not measured through the SDK): at most 4
+ * attempts (3 retries) of at most 10 s each, about 40 s, plus a small margin.
+ * It is a hang bound for a blocking native call, not a latency target; a
+ * timeout is still unknown, never absence.
+ */
+internal const val SDK_IDENTITY_DISCOVERY_TIMEOUT_MS = 45_000L
 
 /**
  * Wall-clock ceiling for ONE LEGACY (`org.dashj.platform` / `DapiClient`)

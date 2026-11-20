@@ -146,7 +146,7 @@ class SdkIdentityQueriesTest {
 
     @Test
     fun aDiscoveryRoundTripPastTheBudgetIsAFailureNotAbsent() {
-        val bounded = SdkIdentityQueries(hangingSource(), timeoutMs = 50)
+        val bounded = SdkIdentityQueries(hangingSource(), discoveryTimeoutMs = 50)
         assertThrows(SdkIdentityQueryTimeoutException::class.java) {
             runBlocking { bounded.identityByPublicKeyHash(hash) }
         }
@@ -158,7 +158,7 @@ class SdkIdentityQueriesTest {
         coEvery { slowPages.identityJsonByPublicKeyHash(hashHex) } returns null
         coEvery { slowPages.identitiesJsonByNonUniquePublicKeyHash(hashHex, null) } answers { hang(); "[]" }
         assertThrows(SdkIdentityQueryTimeoutException::class.java) {
-            runBlocking { SdkIdentityQueries(slowPages, timeoutMs = 50).identityByPublicKeyHash(hash) }
+            runBlocking { SdkIdentityQueries(slowPages, discoveryTimeoutMs = 50).identityByPublicKeyHash(hash) }
         }
 
         val slowSecondPage = mockk<SdkIdentityReadSource>()
@@ -168,16 +168,56 @@ class SdkIdentityQueriesTest {
             hang(); "[]"
         }
         assertThrows(SdkIdentityQueryTimeoutException::class.java) {
-            runBlocking { SdkIdentityQueries(slowSecondPage, timeoutMs = 50).identityByPublicKeyHash(hash) }
+            runBlocking { SdkIdentityQueries(slowSecondPage, discoveryTimeoutMs = 50).identityByPublicKeyHash(hash) }
         }
     }
 
     @Test
     fun aBalanceReadPastTheBudgetIsAFailureNotNull() {
-        val bounded = SdkIdentityQueries(hangingSource(), timeoutMs = 50)
+        val bounded = SdkIdentityQueries(hangingSource(), balanceTimeoutMs = 50)
         assertThrows(SdkIdentityQueryTimeoutException::class.java) {
             runBlocking { bounded.creditBalance(Identifier.from(firstId)) }
         }
+    }
+
+    @Test
+    fun discoveryOutlastsTheBalanceBoundAndReturnsItsAnswer() = runBlocking {
+        // An answer that arrives after the balance bound (as after an SDK failover off a node that
+        // silently dropped packets) is still returned by discovery.
+        val slow = mockk<SdkIdentityReadSource>()
+        coEvery { slow.identityJsonByPublicKeyHash(hashHex) } answers { Thread.sleep(300); identityJson(firstId) }
+        val split = SdkIdentityQueries(slow, discoveryTimeoutMs = 10_000, balanceTimeoutMs = 50)
+
+        val found = split.identityByPublicKeyHash(hash)
+
+        assertEquals(Identifier.from(firstId), found?.id)
+    }
+
+    @Test
+    fun theBalanceKeepsItsOwnShorterBound() {
+        // Same delay as above: past the balance bound, so the balance read is unknown.
+        val slow = mockk<SdkIdentityReadSource>()
+        coEvery { slow.creditBalance(firstId) } answers { Thread.sleep(300); 7L }
+        val split = SdkIdentityQueries(slow, discoveryTimeoutMs = 10_000, balanceTimeoutMs = 50)
+
+        assertThrows(SdkIdentityQueryTimeoutException::class.java) {
+            runBlocking { split.creditBalance(Identifier.from(firstId)) }
+        }
+    }
+
+    @Test
+    fun discoveryStillTimesOutAtItsOwnBound() {
+        val split = SdkIdentityQueries(hangingSource(), discoveryTimeoutMs = 100, balanceTimeoutMs = 10_000)
+        val thrown = assertThrows(SdkIdentityQueryTimeoutException::class.java) {
+            runBlocking { split.identityByPublicKeyHash(hash) }
+        }
+        assertTrue(thrown.message.orEmpty().contains("within 100 ms"))
+    }
+
+    @Test
+    fun theProductionBoundsAreSplit() {
+        assertEquals(45_000L, SDK_IDENTITY_DISCOVERY_TIMEOUT_MS)
+        assertEquals(6_000L, SDK_PLATFORM_QUERY_TIMEOUT_MS)
     }
 
     @Test
