@@ -1475,8 +1475,8 @@ class SdkL1SendService internal constructor(
      * on a screen whose wallet was synced moments later (Joel, 12.0.1-beta, 2026-11-17: refused
      * 3 s before the scan reached the tip). Returns the last answer, open or still closed.
      *
-     * Used by [awaitSendReadiness] and, for now, [buildDeferredMayaDeposit]. Every other send,
-     * build, quote and background job asks [probeSendGate] once.
+     * Used by [awaitSendReadiness] only. Every send, build, quote and background job asks
+     * [probeSendGate] once.
      *
      * @param alreadyWaitedMs time the caller already spent in [awaitBoundWalletId], taken off
      *   this wait: one caller waits [sendGateWaitMs] in all.
@@ -2194,7 +2194,10 @@ class SdkL1SendService internal constructor(
         val walletIdHex = checkNotNull(source.boundWalletIdOrNull()) {
             "app wallet not bound to the SDK"
         }
-        val gate = awaitSendGate()
+        // Asked once. The vault address and memo were quoted before this build, and a wait here
+        // would age them: a deposit to a vault that has churned meanwhile can be lost
+        // (thepastaclaw on #1714).
+        val gate = probeSendGate()
         check(gate.allowed) { "$L1_FUNDING_GATE_CLOSED_REASON: ${gate.reason}" }
         // FAIL-CLOSED GUARD (funds-critical), max deposits only: a max deposit
         // selects (essentially) every spendable UTXO the pooled default reaches

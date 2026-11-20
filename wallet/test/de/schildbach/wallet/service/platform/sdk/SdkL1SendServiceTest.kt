@@ -2210,6 +2210,29 @@ class SdkL1SendServiceTest {
         assertEquals("asked once, no wait", 1, probes)
     }
 
+    /**
+     * thepastaclaw on #1714. The vault address and memo are quoted before the deposit is built,
+     * so the build never waits: a wait would age the quote.
+     */
+    @Test
+    fun buildDeferredMayaDeposit_doesNotWaitForTheGate() = runBlocking {
+        var probes = 0
+        val source = FakeSource(boundWalletId = { walletId })
+        val svc = service(
+            source,
+            progress = { if (probes++ < 2) scanShortOfTip(208) else caughtUpProgress() },
+            sendGateWaitMs = SEND_GATE_WAIT_MS
+        )
+
+        val failure = runCatching {
+            svc.buildDeferredMayaDeposit(validAddress, 50_000L, ByteArray(40), stillOwned = { true })
+        }.exceptionOrNull()
+
+        assertTrue("an IllegalStateException, got $failure", failure is IllegalStateException)
+        assertTrue(failure?.message.orEmpty().contains(L1_FUNDING_GATE_CLOSED_REASON))
+        assertEquals("asked once, no wait", 1, probes)
+    }
+
     @Test
     fun sendToAddress_withNoWaitConfigured_refusesAtOnce() = runBlocking {
         var probes = 0
