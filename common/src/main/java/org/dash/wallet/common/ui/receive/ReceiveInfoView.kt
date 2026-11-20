@@ -50,6 +50,9 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
     private var paymentRequestUri: String = ""
     private var username: String? = null
 
+    /** Set by [setPaymentRequest]: the QR content as given, never built by [PaymentURI]. */
+    private var presetPaymentRequest: String? = null
+
     init {
         binding = ReceiveInfoViewBinding.inflate(LayoutInflater.from(context), this)
         val attrsArray = context.obtainStyledAttributes(attrs, R.styleable.ReceiveInfoView)
@@ -92,6 +95,9 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
     }
 
     fun setInfo(address: String, amount: Dash?) {
+        if (presetPaymentRequest != null) {
+            leavePresetPaymentRequest()
+        }
         if (this.address != address) {
             this.address = address
             this.amount = amount
@@ -109,11 +115,43 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
      * already have been paid on it.
      */
     fun clearInfo() {
+        if (presetPaymentRequest != null) {
+            leavePresetPaymentRequest()
+            refresh()
+            return
+        }
         if (address != null || amount != null) {
             address = null
             amount = null
             refresh()
         }
+    }
+
+    /**
+     * Show [address] under [addressLabel] with a QR of [paymentRequest] exactly as given. For
+     * addresses [PaymentURI] cannot carry (bech32 shielded or Platform addresses, identity IDs):
+     * the caller builds the request. Copy copies [paymentRequest]; Share shares [address], as
+     * [setInfo] does. [setInfo] or [clearInfo] go back to the [PaymentURI] request.
+     */
+    fun setPaymentRequest(addressLabel: String, address: String, paymentRequest: String) {
+        presetPaymentRequest = paymentRequest
+        this.address = address
+        this.amount = null
+        binding.addressLabel.text = addressLabel
+        refresh()
+    }
+
+    /** The [setPaymentRequest] QR: shown as given, kept out of [refreshQr]'s [PaymentURI]. */
+    private fun showPresetQr(paymentRequest: String) {
+        paymentRequestUri = paymentRequest
+        binding.qrPreview.setImageDrawable(Qr.themeAwareDrawable(paymentRequest, resources))
+    }
+
+    private fun leavePresetPaymentRequest() {
+        presetPaymentRequest = null
+        address = null
+        amount = null
+        binding.addressLabel.setText(R.string.dash_address)
     }
 
     fun setProfile(username: String?, displayName: String?, avatar: String?, avatarHash: ByteArray?) {
@@ -160,7 +198,12 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
             binding.addressPreviewPane.isVisible = false
         }
 
-        refreshQr()
+        val presetPaymentRequest = this.presetPaymentRequest
+        if (presetPaymentRequest != null) {
+            showPresetQr(presetPaymentRequest)
+        } else {
+            refreshQr()
+        }
     }
 
     private fun refreshQr() {
@@ -186,26 +229,26 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
     private fun handleCopyAddress(address: String) {
         val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
 
-        if (amount != null && paymentRequestUri.isNotEmpty()) {
+        if ((amount != null || presetPaymentRequest != null) && paymentRequestUri.isNotEmpty()) {
             clipboardManager.setPrimaryClip(ClipData.newPlainText("Dash payment request", paymentRequestUri))
         } else {
             clipboardManager.setPrimaryClip(ClipData.newPlainText("Dash address", address))
         }
 
         Toast.makeText(context, R.string.copied, Toast.LENGTH_SHORT).show()
-        log.info("address copied to clipboard: {}", address)
+        log.info("address copied to clipboard")
     }
 
     private fun handleCopyUsername(username: String) {
         val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         clipboardManager.setPrimaryClip(ClipData.newPlainText("Dash Username", username))
         Toast.makeText(context, R.string.copied, Toast.LENGTH_SHORT).show()
-        log.info("username copied to clipboard: {}", username)
+        log.info("username copied to clipboard")
     }
 
     private fun handleShare(paymentRequestUri: String) {
         val title = resources.getString(R.string.request_coins_share_dialog_title)
         context.shareText(paymentRequestUri, title)
-        log.info("payment request shared via intent: {}", paymentRequestUri)
+        log.info("payment request shared via intent")
     }
 }
