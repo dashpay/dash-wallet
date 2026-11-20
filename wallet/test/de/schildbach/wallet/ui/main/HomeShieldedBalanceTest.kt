@@ -30,9 +30,9 @@ import org.junit.Test
 
 /**
  * The shielded amount the home header adds to the L1 total
- * ([homeShieldedBalance]): the live balance when READY and settled, otherwise
+ * ([homeShieldedBalance]): the service's display balance when READY, otherwise
  * unknown (null) — never the transient zero the pool reads while not READY,
- * never a known-stale amount after a local spend, and never the install-wide
+ * and never the install-wide
  * last-known balance (it can't be proven to belong to the loaded wallet).
  */
 class HomeShieldedBalanceTest {
@@ -41,31 +41,42 @@ class HomeShieldedBalanceTest {
 
     @Test
     fun `READY uses the live balance`() {
-        assertEquals(live, homeShieldedBalance(ShieldedSyncStatus.READY, live, false))
+        assertEquals(live, homeShieldedBalance(ShieldedSyncStatus.READY, live))
     }
 
     @Test
     fun `READY with nothing shielded is zero`() {
-        assertEquals(Dash.ZERO, homeShieldedBalance(ShieldedSyncStatus.READY, Dash.ZERO, false))
+        assertEquals(Dash.ZERO, homeShieldedBalance(ShieldedSyncStatus.READY, Dash.ZERO))
     }
 
     @Test
     fun `a funded READY wallet counts regardless of platform identity`() {
         // identity-free wallets bind when the shielded flag is on (fund → shield → create identity);
         // the selector has no identity input at all
-        assertEquals(live, homeShieldedBalance(ShieldedSyncStatus.READY, live, false))
+        assertEquals(live, homeShieldedBalance(ShieldedSyncStatus.READY, live))
     }
 
+    /**
+     * Post-spend reconciliation no longer makes the header pending: the live
+     * input is the service's display balance, which holds the transient zero
+     * itself, so READY shows it (the old selector returned null here).
+     */
     @Test
-    fun `READY during post-spend reconciliation is unknown`() {
-        // READY persists through later sync passes, so it does not mean the spend has settled
-        assertNull(homeShieldedBalance(ShieldedSyncStatus.READY, live, true))
+    fun `READY shows the display balance, also while a spend reconciles`() = runBlocking {
+        val result = homeShieldedBalanceFlow(
+            enabledFlag = flowOf(true),
+            live = { flowOf(live) },
+            status = { flowOf(ShieldedSyncStatus.READY) },
+            onError = { _, _ -> },
+            retryDelayMs = { 0L }
+        ).take(1).toList()
+        assertEquals(listOf(live), result)
     }
 
     @Test
     fun `not ready is unknown, never the transient zero`() {
-        assertNull(homeShieldedBalance(ShieldedSyncStatus.NOT_READY, Dash.ZERO, false))
-        assertNull(homeShieldedBalance(ShieldedSyncStatus.SYNCING, Dash.ZERO, false))
+        assertNull(homeShieldedBalance(ShieldedSyncStatus.NOT_READY, Dash.ZERO))
+        assertNull(homeShieldedBalance(ShieldedSyncStatus.SYNCING, Dash.ZERO))
     }
 
     // ── homeShieldedBalanceFlow: fail closed on read errors ──────────────
@@ -74,7 +85,6 @@ class HomeShieldedBalanceTest {
         enabledFlag = enabledFlag,
         live = { flowOf(Dash(500L)) },
         status = { flowOf(ShieldedSyncStatus.READY) },
-        maybeStale = { flowOf(false) },
         onError = { _, _ -> },
         retryDelayMs = { 0L }
     )
@@ -111,7 +121,6 @@ class HomeShieldedBalanceTest {
                 }
             },
             status = { flowOf(ShieldedSyncStatus.READY) },
-            maybeStale = { flowOf(false) },
             onError = { _, _ -> },
             retryDelayMs = { 0L }
         ).take(2).toList()

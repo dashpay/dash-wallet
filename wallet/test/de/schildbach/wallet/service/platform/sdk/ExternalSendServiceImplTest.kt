@@ -363,13 +363,15 @@ class ExternalSendServiceImplTest {
     private fun service(
         source: FakeSource,
         store: PlatformFundingStore = FakeStore(),
-        fundingSelection: FundingSelectionLock = FundingSelectionLock()
+        fundingSelection: FundingSelectionLock = FundingSelectionLock(),
+        onPlatformBalanceChanged: () -> Unit = {}
     ) = ExternalSendServiceImpl(
         source,
         AddressNetwork.DASH_TESTNET,
         store,
         ioDispatcher = Dispatchers.Unconfined,
-        fundingSelection = fundingSelection
+        fundingSelection = fundingSelection,
+        onPlatformBalanceChanged = onPlatformBalanceChanged
     )
 
     /** A send confirmed while [walletA] was bound (the ViewModel's capture). */
@@ -2244,5 +2246,63 @@ class ExternalSendServiceImplTest {
         const val SHIELD_LOCK_TXID = "aa23456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
         const val TOP_UP_LOCK_TXID = "bb23456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
         val remainderHash = ByteArray(20) { 7 }
+    }
+
+    // ── Platform-address resync after a Platform-balance change (iOS schedulePlatformResync) ──
+
+    @Test
+    fun changesPlatformBalance_everyPlatformLeg_onlyWhenSubmittedOrMaybe() {
+        val sent = ExternalSendResult.Sent(null)
+        val maybe = ExternalSendResult.MayHaveGoneThrough
+        val notSent = ExternalSendResult.NotSent(NotSentReason.GENERIC)
+        val platformLegs = listOf(
+            SendBalance.PLATFORM to core, // Platform → Core
+            SendBalance.PLATFORM to ownIdentity, // Platform → Identity
+            SendBalance.PLATFORM to platform, // Platform → Platform
+            SendBalance.PLATFORM to shielded, // Platform → Shielded
+            SendBalance.CORE to platform, // Core → Platform
+            SendBalance.SHIELDED to platform, // Shielded → Platform
+            SendBalance.IDENTITY to platform // Identity → Platform
+        )
+        for ((from, to) in platformLegs) {
+            assertTrue("$from → $to", changesPlatformBalance(from, to, sent))
+            assertTrue("$from → $to", changesPlatformBalance(from, to, maybe))
+            assertFalse("$from → $to", changesPlatformBalance(from, to, notSent))
+        }
+        for ((from, to) in listOf(SendBalance.CORE to core, SendBalance.SHIELDED to core, SendBalance.IDENTITY to otherIdentity)) {
+            assertFalse("$from → $to", changesPlatformBalance(from, to, sent))
+        }
+        assertFalse(changesPlatformBalance(SendBalance.CORE, shielded, ExternalSendResult.InterruptedFundsReturnToShielded))
+    }
+
+    @Test
+    fun send_schedulesThePlatformResync_afterASubmittedPlatformLeg_only() = runBlocking {
+        var resyncs = 0
+        fun svc(source: FakeSource) = service(source, onPlatformBalanceChanged = { resyncs++ })
+
+        assertEquals(ExternalSendResult.Sent(null), svc(source()).send(SendBalance.PLATFORM, platform, amount, false))
+        assertEquals("Platform → Platform", 1, resyncs)
+
+        val withdraw = source().apply { platformBalances = { listOf(address(1, 900_000_000L)) } }
+        assertEquals(ExternalSendResult.Sent(null), svc(withdraw).send(SendBalance.PLATFORM, core, amount, false))
+        assertEquals("Platform → Core", 2, resyncs)
+
+        withdraw.nativeWrite = { throw RuntimeException("connection reset") }
+        assertEquals(ExternalSendResult.MayHaveGoneThrough, svc(withdraw).send(SendBalance.PLATFORM, core, amount, false))
+        assertEquals("may have gone through", 3, resyncs)
+
+        withdraw.nativeWrite = { throw DashSdkError.InvalidParameter("bad address") }
+        assertEquals(ExternalSendResult.NotSent(NotSentReason.GENERIC), svc(withdraw).send(SendBalance.PLATFORM, core, amount, false))
+        assertEquals("not sent: no resync", 3, resyncs)
+
+        assertEquals(ExternalSendResult.Sent("txid"), svc(source()).send(SendBalance.CORE, core, amount, false))
+        assertEquals("Core → Core: no Platform leg", 3, resyncs)
+    }
+
+    @Test
+    fun send_aFailingResyncScheduler_neverChangesTheResult() = runBlocking {
+        val result = service(source(), onPlatformBalanceChanged = { throw IllegalStateException("scope gone") })
+            .send(SendBalance.PLATFORM, platform, amount, false)
+        assertEquals(ExternalSendResult.Sent(null), result)
     }
 }
