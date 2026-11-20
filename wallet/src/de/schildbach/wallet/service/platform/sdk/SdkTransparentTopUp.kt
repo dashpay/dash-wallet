@@ -33,6 +33,21 @@ import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Platform's minimum asset-lock value for an identity top-up from Core, in duffs (rs-dpp
+ * `IdentityTopUpTransition::calculate_min_required_fee_v1`):
+ * `fee_version.state_transition_min_fees.identity_topup_base_cost` (500 000 credits) +
+ * `dpp_versions.state_transitions.identities.asset_locks
+ * .required_asset_lock_duff_balance_for_processing_start_for_identity_top_up` (50 000 duffs)
+ * × [CREDITS_PER_DUFF] = 50 500 000 credits. Platform rejects a top-up below it only AFTER the
+ * lock is broadcast, so a NEW lock below it is refused before it is built; resuming an earlier,
+ * already built lock is never gated by it.
+ */
+internal const val CORE_MIN_IDENTITY_TOP_UP_DUFFS = 50_500L
+
+/** The [SdkWriteResult.NotBroadcast] reason of a new Core top-up lock below [CORE_MIN_IDENTITY_TOP_UP_DUFFS]. */
+internal const val BELOW_IDENTITY_TOP_UP_MINIMUM_REASON = "below the identity top-up minimum"
+
 // ── Source seam ───────────────────────────────────────────────────────
 
 /**
@@ -607,6 +622,12 @@ class SdkTransparentTopUp internal constructor(
             // FRESH build rather than risk a double-pay. Retry-safe: nothing
             // was spent.
             return notBroadcast("resume-gate recovery lookup failed", t)
+        }
+
+        // A fresh lock below Platform's minimum would be broadcast and then rejected: refuse it
+        // before it is built. Only a NEW lock: a resumed one is whatever was locked earlier.
+        if (existingLock == null && amountDuffs < CORE_MIN_IDENTITY_TOP_UP_DUFFS) {
+            return notBroadcast(BELOW_IDENTITY_TOP_UP_MINIMUM_REASON, null)
         }
 
         // A fresh build selects new inputs; refuse it while an uncertain payment's are exposed.
