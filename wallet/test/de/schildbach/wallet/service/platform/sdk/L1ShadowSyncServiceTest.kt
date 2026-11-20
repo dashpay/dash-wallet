@@ -1419,6 +1419,32 @@ class L1ShadowSyncServiceTest {
         assertTrue(evaluateWalletFundingGate(service.progress.value).allowed)
     }
 
+    /**
+     * Pre-review, 2026-11-19. A reset removes the record before it deletes the wallet's rows,
+     * with the progress monitor still running: a caught-up sample of the scan being torn down
+     * must not put the record back.
+     */
+    @Test
+    fun firstSync_removedByAReset_isNotWrittenAgainByTheRunningSession() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        source.walletSyncedHeight = 100
+        val service = service(source, cutoverState = "CUT_OVER")
+        assertTrue(service.startIfEnabled())
+        source.progressFlow.value = atTip()
+        withTimeout(5_000) { while (!service.progress.value.firstSyncDone) delay(5) }
+        // the reset's SPV stop: the old scan reports caught-up once more
+        source.onStop = {
+            source.progressFlow.value = atTip().copy(overallPercentage = 0.999)
+            delay(100) // the monitor takes the sample
+            source.progressFlow.value = behindTip() // the rebuilt wallet scans from the start
+        }
+
+        service.resetShadowState(hard = false)
+        delay(100)
+
+        assertNull("the record stays removed", firstSyncRecord)
+    }
+
     @Test
     fun firstSync_isNotSavedBeforeTheCutover() = runBlocking {
         val source = FakeSource(boundWalletId = walletIdHex)

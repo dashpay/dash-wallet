@@ -117,15 +117,18 @@ class EnterAmountToTransferViewModel @Inject constructor(
 
         blockchainStateProvider.observeState()
             .filterNotNull()
-            .onEach { state ->
-                updateSyncStatus(state)
+            .combine(blockchainStateProvider.observeFirstSyncDone()) { state, firstSyncDone ->
+                updateSyncStatus(state, firstSyncDone)
             }
             .launchIn(viewModelScope)
     }
 
-    private fun updateSyncStatus(state: BlockchainState) {
-        if (_isBlockchainSyncFailed.value != state.isSynced()) {
-            _isBlockchainSynced.postValue(state.isSynced())
+    private fun updateSyncStatus(state: BlockchainState, firstSyncDone: Boolean) {
+        // The same rule as the Send screen: once the wallet has finished its first scan, a
+        // catch-up does not block a transfer out of the wallet.
+        val synced = state.isSynced() || firstSyncDone
+        if (_isBlockchainSyncFailed.value != synced) {
+            _isBlockchainSynced.postValue(synced)
         }
 
         _isBlockchainSyncFailed.postValue(state.syncFailed())

@@ -2839,6 +2839,16 @@ class L1ShadowSyncService internal constructor(
      */
     @Volatile private var firstSyncDoneWalletIdHex: String? = null
 
+    /**
+     * Whether the running session may write the first-sync record. Set when a session's
+     * progress monitor starts, cleared by [forgetFirstSyncDone]: the monitor keeps running
+     * through a reset, and a caught-up sample of the scan being torn down must not put back
+     * the record that was just removed for the rows about to be deleted (pre-review,
+     * 2026-11-19). Read and written under [firstSyncRecordMutex], with the record itself.
+     */
+    private var firstSyncRecordingAllowed = false
+    private val firstSyncRecordMutex = Mutex()
+
     /** Live shadow SPV progress ([ShadowSyncProgress.IDLE] while stopped). */
     val progress: StateFlow<ShadowSyncProgress> = _progress.asStateFlow()
 
@@ -3538,16 +3548,18 @@ class L1ShadowSyncService internal constructor(
      * dashj, whose own replay still blocks the send screens).
      */
     private suspend fun recordFirstSyncDone(walletIdHex: String): Boolean = try {
-        if (!readCutoverCommitted()) {
-            false
-        } else {
-            dashPayConfig.set(DashPayConfig.SDK_L1_FIRST_SYNC_DONE_WALLET, walletIdHex)
-            firstSyncDoneWalletIdHex = walletIdHex
-            log.info(
-                "L1 first scan finished for SDK wallet {}…: a catch-up no longer blocks sending",
-                walletIdHex.take(8)
-            )
-            true
+        firstSyncRecordMutex.withLock {
+            if (!firstSyncRecordingAllowed || !readCutoverCommitted()) {
+                false
+            } else {
+                dashPayConfig.set(DashPayConfig.SDK_L1_FIRST_SYNC_DONE_WALLET, walletIdHex)
+                firstSyncDoneWalletIdHex = walletIdHex
+                log.info(
+                    "L1 first scan finished for SDK wallet {}…: a catch-up no longer blocks sending",
+                    walletIdHex.take(8)
+                )
+                true
+            }
         }
     } catch (e: CancellationException) {
         throw e
@@ -3559,11 +3571,16 @@ class L1ShadowSyncService internal constructor(
     /**
      * Removes the first-sync record before the SDK wallet's rows, or the wallet, are deleted:
      * the scan that rebuilds them is a first scan again. False when it could not be removed,
-     * in which case nothing may be deleted.
+     * in which case nothing may be deleted. The session running now does not write the record
+     * again ([firstSyncRecordingAllowed]); the next one may.
      */
     private suspend fun forgetFirstSyncDone(what: String): Boolean = try {
-        dashPayConfig.remove(DashPayConfig.SDK_L1_FIRST_SYNC_DONE_WALLET)
-        firstSyncDoneWalletIdHex = null
+        firstSyncRecordMutex.withLock {
+            // First, and kept even if the removal fails: only the next session writes it again.
+            firstSyncRecordingAllowed = false
+            dashPayConfig.remove(DashPayConfig.SDK_L1_FIRST_SYNC_DONE_WALLET)
+            firstSyncDoneWalletIdHex = null
+        }
         true
     } catch (e: CancellationException) {
         throw e
@@ -3583,7 +3600,10 @@ class L1ShadowSyncService internal constructor(
      * observed going dark for an hour in the field — see [watchdogLoop]).
      */
     private suspend fun monitorProgress() {
-        firstSyncDoneWalletIdHex = readFirstSyncDone()
+        firstSyncRecordMutex.withLock {
+            firstSyncDoneWalletIdHex = readFirstSyncDone()
+            firstSyncRecordingAllowed = true
+        }
         var lastLogMs = 0L
         var lastPhase = ShadowSyncPhase.IDLE
         var lastTelemetryMs = 0L

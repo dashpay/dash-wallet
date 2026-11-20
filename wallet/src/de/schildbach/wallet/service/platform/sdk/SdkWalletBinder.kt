@@ -1667,8 +1667,32 @@ class SdkWalletBinder internal constructor(
         false
     }
 
+    /**
+     * The first-sync record ([DashPayConfig.SDK_L1_FIRST_SYNC_DONE_WALLET]) names one wallet,
+     * the app's. One for any other wallet is removed at the bind: that wallet is about to be
+     * deleted as an orphan, and the same seed restored later gets the same id and would inherit
+     * the record of rows that are gone; the send screens, which only ask whether a record
+     * exists, would also read it for the wallet bound now (pre-review, 2026-11-19). False when
+     * it could not be read or removed.
+     */
+    private suspend fun dropForeignFirstSyncRecord(currentWalletId: String): Boolean = try {
+        val recorded = dashPayConfig.get(DashPayConfig.SDK_L1_FIRST_SYNC_DONE_WALLET)
+        if (recorded != null && recorded != currentWalletId) {
+            dashPayConfig.remove(DashPayConfig.SDK_L1_FIRST_SYNC_DONE_WALLET)
+            log.info("first-sync record of another SDK wallet ({}…) removed", recorded.take(8))
+        }
+        true
+    } catch (e: CancellationException) {
+        throw e
+    } catch (t: Throwable) {
+        log.warn("could not check the first-sync record against the bound wallet", t)
+        false
+    }
+
     /** See step 4b in [bindLocked]. Never throws. */
     private suspend fun pruneOrphanSdkWallets(currentWalletId: String) {
+        // Before any orphan is deleted; without it nothing is, and the next bind tries again.
+        if (!dropForeignFirstSyncRecord(currentWalletId)) return
         val orphans = try {
             sdkService.loadedWalletIds().filter { it != currentWalletId }
         } catch (t: Throwable) {
