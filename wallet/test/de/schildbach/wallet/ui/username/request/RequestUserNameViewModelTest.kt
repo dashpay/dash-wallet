@@ -63,6 +63,7 @@ import org.dashj.platform.dpp.voting.ContenderWithSerializedDocument
 import org.dashj.platform.dpp.voting.Contenders
 import org.dashj.platform.dpp.voting.ContestedDocumentVotePollWinnerInfo
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -81,6 +82,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.io.IOException
 import java.util.Optional
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -179,6 +181,30 @@ class RequestUserNameViewModelTest {
     @Test
     fun inviteBelowMinimum_cannotRequestNonContestedName() {
         assertFalse(enoughInviteBalanceForNonContestedName(Constants.DASH_PAY_INVITE_MIN.subtract(Coin.SATOSHI)))
+    }
+
+    @Test
+    fun inviteLookup_failedRetry_keepsTheLoadedInvite() {
+        val args = CreateUsernameArgs(invite = mockk<InvitationLinkData>(relaxed = true))
+        coEvery { topUpRepository.getAssetLockTransaction(any()) } returns inviteAssetLock(Constants.DASH_PAY_INVITE_MIN)
+        viewModel.setCreateUsernameArgs(args)
+        runBlocking { withTimeout(5_000) { viewModel.inviteBalance.first { it == Constants.DASH_PAY_INVITE_MIN } } }
+
+        coEvery { topUpRepository.getAssetLockTransaction(any()) } throws IOException("DAPI unavailable")
+
+        assertNotNull(runBlocking { viewModel.getInviteAssetLockTransaction() })
+    }
+
+    @Test
+    fun inviteLookup_repeatedArgsAfterAFailure_loadsTheInvite() {
+        val args = CreateUsernameArgs(invite = mockk<InvitationLinkData>(relaxed = true))
+        coEvery { topUpRepository.getAssetLockTransaction(any()) } throws
+            IOException("DAPI unavailable") andThen inviteAssetLock(Constants.DASH_PAY_INVITE_MIN)
+
+        viewModel.setCreateUsernameArgs(args)
+        viewModel.setCreateUsernameArgs(args)
+
+        runBlocking { withTimeout(5_000) { viewModel.inviteBalance.first { it == Constants.DASH_PAY_INVITE_MIN } } }
     }
 
     @Test
@@ -471,17 +497,20 @@ class RequestUserNameViewModelTest {
     // --- helpers ---
 
     /** Claims an invite funded with [amount] and checks a name only an uncontested registration can use. */
-    private fun enoughInviteBalanceForNonContestedName(amount: Coin): Boolean {
+    private fun inviteAssetLock(amount: Coin): AssetLockTransaction {
         val pubKeyHash = ByteArray(20) { 7 }
         val creditOutput = mockk<TransactionOutput> {
             every { scriptPubKey } returns ScriptBuilder.createP2PKHOutputScript(pubKeyHash)
             every { value } returns amount
         }
-        val assetLock = mockk<AssetLockTransaction> {
+        return mockk {
             every { assetLockPayload.creditOutputs } returns listOf(creditOutput)
             every { assetLockPublicKey } returns mockk<ECKey> { every { this@mockk.pubKeyHash } returns pubKeyHash }
         }
-        coEvery { topUpRepository.getAssetLockTransaction(any()) } returns assetLock
+    }
+
+    private fun enoughInviteBalanceForNonContestedName(amount: Coin): Boolean {
+        coEvery { topUpRepository.getAssetLockTransaction(any()) } returns inviteAssetLock(amount)
 
         viewModel.setCreateUsernameArgs(CreateUsernameArgs(invite = mockk<InvitationLinkData>(relaxed = true)))
         // the invite is loaded on the IO dispatcher, so wait in real time

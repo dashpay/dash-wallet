@@ -145,7 +145,7 @@ class RequestUserNameViewModel @Inject constructor(
         get() = _isInviteMixed
 
     fun setCreateUsernameArgs(createUsernameArgs: CreateUsernameArgs?) {
-        createUsernameArgs?.takeIf { it != this.createUsernameArgs }?.let {
+        createUsernameArgs?.let {
             this.createUsernameArgs = it
             viewModelScope.launch {
                 getInviteAssetLockTransaction()
@@ -601,7 +601,8 @@ class RequestUserNameViewModel @Inject constructor(
                 topUpRepository.getAssetLockTransaction(createUsernameArgs?.invite!!)
             } catch (e: Exception) {
                 log.error("error getting asset lock tx", e)
-                null
+                // a failed retry must not clear an invite that an earlier lookup loaded
+                inviteAssetLockTx.value
             }
             isInviteMixed()
         }
