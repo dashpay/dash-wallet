@@ -17,12 +17,16 @@
 package de.schildbach.wallet.service.platform
 
 import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
+import de.schildbach.wallet.service.platform.sdk.PlatformAddressSyncService
+import de.schildbach.wallet.service.platform.sdk.PlatformAddressSyncSource
 import de.schildbach.wallet.service.platform.sdk.SdkWalletBinder
 import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
 import de.schildbach.wallet.service.platform.sdk.WalletUnlock
+import de.schildbach.wallet.ui.payments.send.ExternalSendExecutor
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
@@ -65,6 +69,25 @@ class PlatformSyncEngineRestartTest {
     private val l1ShadowSyncService = mockk<L1ShadowSyncService>(relaxed = true)
     private val shieldedBalanceService = mockk<ShieldedBalanceService>(relaxed = true)
     private val identityRepository = mockk<IdentityRepository>(relaxed = true)
+    private val externalSendExecutor = mockk<ExternalSendExecutor>(relaxed = true)
+
+    /** The real start/stop fencing over a fake SDK seam (ready, not running). */
+    private class FakePlatformAddressSource : PlatformAddressSyncSource {
+        @Volatile var starts = 0
+        @Volatile var stops = 0
+        override suspend fun ready() = true
+        override suspend fun isRunning() = false
+        override suspend fun start() { starts++ }
+        override suspend fun stop() { stops++ }
+    }
+    private val platformAddressSource = FakePlatformAddressSource()
+    private val platformAddressSyncService = PlatformAddressSyncService(platformAddressSource)
+
+    private suspend fun awaitPlatformAddressStarts(expected: Int) {
+        val deadline = System.currentTimeMillis() + kickTimeoutMs
+        while (platformAddressSource.starts < expected && System.currentTimeMillis() < deadline) delay(20)
+        org.junit.Assert.assertEquals(expected, platformAddressSource.starts)
+    }
 
     /** The engine kick is asynchronous (`syncScope.launch { bindJob.join(); … }`). */
     private val kickTimeoutMs = 10_000L
@@ -100,10 +123,12 @@ class PlatformSyncEngineRestartTest {
         nonInteractiveWalletUnlock = mockk(relaxed = true),
         l1ShadowSyncService = l1ShadowSyncService,
         shieldedBalanceService = shieldedBalanceService,
+        platformAddressSyncService = platformAddressSyncService,
         cutoverUiDataService = mockk(relaxed = true),
         sdkBlockchainStateService = mockk(relaxed = true),
         cutoverTxSeamService = mockk(relaxed = true),
         shieldedTransferExecutor = mockk(relaxed = true),
+        externalSendExecutor = { externalSendExecutor },
         contactRequestNotificationService = mockk(relaxed = true),
         dashPaySyncStatus = de.schildbach.wallet.service.DashPaySyncStatus(),
         transparentUsernameCreation = javax.inject.Provider { mockk(relaxed = true) }
@@ -231,5 +256,110 @@ class PlatformSyncEngineRestartTest {
 
         coVerify(exactly = 0) { l1ShadowSyncService.startIfEnabled() }
         Unit
+    }
+
+    /**
+     * The pending Core → Platform External Send sweep runs at app start, not only when the
+     * External Send screen opens: every kick (init from WalletApplication, resume from the
+     * foreground service) starts it once its bind pass has finished — the trigger the pending
+     * wallet-shield sweep uses.
+     */
+    @Test
+    fun everyKick_startsThePendingExternalPlatformFundingSweep() = runBlocking {
+        val service = service()
+
+        service.init()
+        verify(timeout = kickTimeoutMs, exactly = 1) { externalSendExecutor.resumePendingPlatformFunding() }
+
+        service.resume()
+        verify(timeout = kickTimeoutMs, exactly = 2) { externalSendExecutor.resumePendingPlatformFunding() }
+        Unit
+    }
+
+    /** The sweep needs the bound wallet: nothing starts it before the kick's bind pass ends. */
+    @Test
+    fun pendingExternalPlatformFundingSweep_waitsForTheBindPass() = runBlocking {
+        val bind = CompletableDeferred<Unit>()
+        val binder = mockk<SdkWalletBinder>(relaxed = true)
+        every { binder.bindInBackground(any<suspend () -> WalletUnlock?>()) } returns bind
+        val service = service(sdkWalletBinder = binder)
+
+        service.init()
+        delay(500)
+        verify(exactly = 0) { externalSendExecutor.resumePendingPlatformFunding() }
+
+        bind.complete(Unit)
+        verify(timeout = kickTimeoutMs, exactly = 1) { externalSendExecutor.resumePendingPlatformFunding() }
+        Unit
+    }
+
+    /** A kick a stop cancelled while it waited on its bind starts no sweep either. */
+    @Test
+    fun stopSdkEngines_cancelsTheSweepOfAKickStillWaitingOnItsBind() = runBlocking {
+        val bind = CompletableDeferred<Unit>()
+        val binder = mockk<SdkWalletBinder>(relaxed = true)
+        every { binder.bindInBackground(any<suspend () -> WalletUnlock?>()) } returns bind
+        val service = service(sdkWalletBinder = binder)
+
+        service.resume()
+        service.stopSdkEngines()
+        bind.complete(Unit)
+        delay(500)
+
+        verify(exactly = 0) { externalSendExecutor.resumePendingPlatformFunding() }
+        Unit
+    }
+
+    /** A failure to reach the executor is logged; the rest of the kick still runs. */
+    @Test
+    fun aFailingExecutor_doesNotBreakTheKick() = runBlocking {
+        every { externalSendExecutor.resumePendingPlatformFunding() } throws IllegalStateException("boom")
+        val binder = mockk<SdkWalletBinder>(relaxed = true)
+        val service = service(sdkWalletBinder = binder)
+
+        service.resume()
+
+        // The step the kick runs after the sweep.
+        verify(timeout = kickTimeoutMs, exactly = 1) { binder.provisionContactAccountsInBackground(force = true) }
+        Unit
+    }
+
+    /**
+     * The Platform-address balance sync shares the L1 engine's lifetime: init() (a possibly
+     * background process) does not start it, resume() (the foreground service) does, after the
+     * bind pass, and every service restart starts it again.
+     */
+    @Test
+    fun platformAddressSync_startsFromResumeOnly_andRestartsAfterAnEngineStop() = runBlocking {
+        val service = service()
+
+        service.init()
+        delay(500)
+        org.junit.Assert.assertEquals(0, platformAddressSource.starts)
+
+        service.resume()
+        awaitPlatformAddressStarts(1)
+
+        service.stopSdkEngines()
+        org.junit.Assert.assertEquals(1, platformAddressSource.stops)
+
+        service.resume()
+        awaitPlatformAddressStarts(2)
+    }
+
+    /** A stop that lands while the kick waits on its bind leaves the Platform-address loop down. */
+    @Test
+    fun stopSdkEngines_beforeTheBindCompletes_startsNoPlatformAddressSync() = runBlocking {
+        val bind = CompletableDeferred<Unit>()
+        val binder = mockk<SdkWalletBinder>(relaxed = true)
+        every { binder.bindInBackground(any<suspend () -> WalletUnlock?>()) } returns bind
+        val service = service(sdkWalletBinder = binder)
+
+        service.resume()
+        service.stopSdkEngines()
+        bind.complete(Unit)
+        delay(500)
+
+        org.junit.Assert.assertEquals(0, platformAddressSource.starts)
     }
 }

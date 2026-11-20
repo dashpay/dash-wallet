@@ -81,6 +81,18 @@ enum class ShieldFromWalletOutcome {
 }
 
 /**
+ * Outcome payload of [ShieldedBalanceService.shieldFromWalletToAddress] on the
+ * [SdkWriteResult.Broadcast] arm: the staged [outcome] plus, best-effort, the txid of the L1
+ * asset lock the call built ([lockTxIdOrNull], DISPLAY-order hex, the `AssetLockEntity` key).
+ * It is only reported with [ShieldFromWalletOutcome.COMPLETED]; null when the lock could not be
+ * identified, which never changes [outcome].
+ */
+data class ShieldToAddressOutcome(
+    val outcome: ShieldFromWalletOutcome,
+    val lockTxIdOrNull: String? = null
+)
+
+/**
  * Readiness/sync state of the shielded runtime, for UI that must not show a
  * bare "0" while the pool is still catching up:
  *
@@ -96,6 +108,25 @@ enum class ShieldFromWalletOutcome {
  *   legitimately be zero for an empty pool).
  */
 enum class ShieldedSyncStatus { NOT_READY, SYNCING, READY }
+
+/**
+ * Which pool-paid shielded transition a fee estimate is for
+ * ([ShieldedBalanceService.estimateShieldedFeeCredits]); each maps to the SDK's
+ * `ShieldedProver.FeeKind` of the same name.
+ */
+enum class ShieldedFeeKind {
+    /** Type 16 shielded → shielded transfer (and Type 15/18 shield bundles). */
+    TRANSFER,
+
+    /** Type 17 shielded → Platform address. */
+    UNSHIELD,
+
+    /** Type 19 shielded → Core L1 withdrawal. */
+    WITHDRAWAL,
+
+    /** Type 22 shielded → existing identity top-up. */
+    IDENTITY_TOP_UP
+}
 
 /**
  * Phase 4 service layer (`docs/kotlin-sdk-migration-plan.md`): the wallet's
@@ -516,4 +547,110 @@ interface ShieldedBalanceService {
      * the ~30s proof.
      */
     suspend fun withdrawToCore(addressBase58: String, amount: Dash): SdkWriteResult<Unit>
+
+    // ── External sends (Advanced mode "External Send") ────────────────
+    //
+    // The same writes as above, to a destination the user typed, pinned to the
+    // SDK wallet [expectedWalletIdHex] the caller captured before its first
+    // suspension: a runtime bound to another wallet is a
+    // [SdkWriteResult.NotBroadcast] before anything is submitted.
+
+    /** [transferShielded] to an external Orchard address, no memo, pinned to [expectedWalletIdHex]. */
+    suspend fun transferShieldedExternal(
+        toAddress: String,
+        amount: Dash,
+        expectedWalletIdHex: String
+    ): SdkWriteResult<Unit>
+
+    /** [withdrawToCore] to an external Core address, pinned to [expectedWalletIdHex]. */
+    suspend fun withdrawToCoreExternal(
+        addressBase58: String,
+        amount: Dash,
+        expectedWalletIdHex: String
+    ): SdkWriteResult<Unit>
+
+    /**
+     * Unshield [amount] (Type 17) to the bech32m Platform address [toPlatformAddress]
+     * (`dash1k…`/`dash1s…`, `tdash1…` off mainnet). Rust re-validates the address and
+     * its network. Blocks for the ~30s proof.
+     */
+    suspend fun unshieldToPlatformAddress(
+        toPlatformAddress: String,
+        amount: Dash,
+        expectedWalletIdHex: String
+    ): SdkWriteResult<Unit>
+
+    /**
+     * Top up the existing identity [identityId] (32 bytes) with [amount] credits from
+     * the shielded pool (Type 22). The identity does not have to be one this wallet
+     * manages; the flat pool fee ([ShieldedFeeKind.IDENTITY_TOP_UP]) is spent on top of
+     * [amount]. Blocks for the ~30s proof.
+     */
+    suspend fun topUpIdentityFromShielded(
+        identityId: ByteArray,
+        amount: Dash,
+        expectedWalletIdHex: String
+    ): SdkWriteResult<Unit>
+
+    /**
+     * [shieldFromCredits] to an EXTERNAL Orchard recipient [toShieldedAddress] (Type 15,
+     * `shieldedShieldToRecipient`): [amount] credits from the wallet's own Platform payment
+     * addresses (account 0; the SDK selects the inputs, in ascending derivation order, and
+     * reserves the flat shield fee on top) become a note of the recipient. An address this
+     * wallet's own shielded account recognizes is refused by the SDK before anything is
+     * built ([SdkWriteResult.NotBroadcast]); malformed / wrong-network input is refused
+     * here. A spend that may have been submitted is [SdkWriteResult.Ambiguous] (never
+     * retried). Blocks for the ~30s proof.
+     */
+    suspend fun shieldFromCreditsToAddress(
+        toShieldedAddress: String,
+        amount: Dash,
+        expectedWalletIdHex: String
+    ): SdkWriteResult<Unit>
+
+    /**
+     * Shield [amount] credits from the wallet's managed identity [identityId] (32 bytes) to
+     * the EXTERNAL Orchard recipient [toShieldedAddress] (Type 21,
+     * `shieldedShieldFromIdentityToRecipient`). The identity pays [amount] plus the metered
+     * transition fee and the shielded compute fee. Same refusals as
+     * [shieldFromCreditsToAddress]; an earlier identity shield that is still unresolved is a
+     * [SdkWriteResult.NotBroadcast] (the SDK built nothing). Blocks for the ~30s proof.
+     */
+    suspend fun shieldFromIdentityToAddress(
+        identityId: ByteArray,
+        toShieldedAddress: String,
+        amount: Dash,
+        expectedWalletIdHex: String
+    ): SdkWriteResult<Unit>
+
+    /**
+     * [shieldFromWallet] to an EXTERNAL Orchard recipient [toShieldedAddress]: one fresh
+     * L1 asset lock + Type 18 paying that address.
+     *
+     * The staged contract differs from the self-shield in one place.
+     * [ShieldFromWalletOutcome.SHIELD_PENDING_RETRY] here means the lock is out and
+     * stage (b) PROVABLY did not submit (its failure is a definitive pre-broadcast one):
+     * the resume sweep ([resumePendingWalletShields]) re-derives the shield from the
+     * tracked lock and pays the SENDER's own default address, so the funds come back to
+     * the user's shielded balance, never to the external recipient. A stage (b) failure
+     * that may have submitted is [SdkWriteResult.Ambiguous]: the recipient may have been
+     * paid, and if not the same sweep returns the lock to the sender (the lock is
+     * single-use, so it is never paid twice).
+     *
+     * A [ShieldFromWalletOutcome.COMPLETED] result carries the new lock's display txid
+     * ([ShieldToAddressOutcome.lockTxIdOrNull]) when it could be identified.
+     */
+    suspend fun shieldFromWalletToAddress(
+        toShieldedAddress: String,
+        amount: Dash,
+        expectedWalletIdHex: String
+    ): SdkWriteResult<ShieldToAddressOutcome>
+
+    /**
+     * The consensus-pinned flat pool fee, in credits, of a single-note (2-action)
+     * transition of [kind]; a spend selecting more notes pays more, so this is an
+     * estimate, not the exact fee. Null when the flag is off or the SDK cannot tell.
+     * Never throws (except cancellation).
+     */
+    suspend fun estimateShieldedFeeCredits(kind: ShieldedFeeKind): Long?
 }

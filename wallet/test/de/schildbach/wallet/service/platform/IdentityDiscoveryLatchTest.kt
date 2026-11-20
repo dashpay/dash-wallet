@@ -88,10 +88,12 @@ class IdentityDiscoveryLatchTest {
         nonInteractiveWalletUnlock = mockk(relaxed = true),
         l1ShadowSyncService = mockk(relaxed = true),
         shieldedBalanceService = mockk(relaxed = true),
+        platformAddressSyncService = mockk(relaxed = true),
         cutoverUiDataService = mockk(relaxed = true),
         sdkBlockchainStateService = mockk(relaxed = true),
         cutoverTxSeamService = mockk(relaxed = true),
         shieldedTransferExecutor = mockk(relaxed = true),
+        externalSendExecutor = { mockk(relaxed = true) },
         contactRequestNotificationService = mockk(relaxed = true),
         dashPaySyncStatus = de.schildbach.wallet.service.DashPaySyncStatus(),
         transparentUsernameCreation = javax.inject.Provider { mockk(relaxed = true) }

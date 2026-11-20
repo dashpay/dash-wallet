@@ -185,6 +185,22 @@ class SdkTopUpRecoveryServiceTest {
     }
 
     @Test
+    fun drain_unconfirmedOutcome_quotingAlreadyUsed_isRetried_notTerminal() {
+        // dashpay/platform#5556: an unconfirmed submission embeds its unproven diagnostic.
+        val unconfirmed = DashSdkError.PlatformWallet.TransactionBroadcastUnconfirmed(
+            "state transition outcome is unconfirmed: output 0 already completely used"
+        )
+        val source = FakeSource(
+            boundWalletId = { walletId },
+            recoveryLocks = { listOf(lock(TrackedAssetLock.FundingType.IDENTITY_TOP_UP)) },
+            onResume = { throw unconfirmed }
+        )
+        val report = runBlocking { service(source).drainPendingTopUps() }
+        assertEquals(TopUpDrainReport(pending = 1, resumed = 0, alreadyConsumed = 0, failed = 1), report)
+        assertTrue(report.retryNeeded)
+    }
+
+    @Test
     fun drain_oneFailure_doesNotStopTheRest_andRequestsRetry() {
         val failing = lock(TrackedAssetLock.FundingType.IDENTITY_TOP_UP, firstByte = 2)
         val fine = lock(TrackedAssetLock.FundingType.IDENTITY_TOP_UP_NOT_BOUND, firstByte = 3)

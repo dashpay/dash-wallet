@@ -27,6 +27,8 @@ import de.schildbach.wallet.service.platform.sdk.DashPayBackfillGateImpl
 import de.schildbach.wallet.service.platform.sdk.DashSdkMessageSigner
 import de.schildbach.wallet.service.platform.sdk.DashSdkService
 import de.schildbach.wallet.service.platform.sdk.DashSdkServiceImpl
+import de.schildbach.wallet.service.platform.sdk.ExternalSendService
+import de.schildbach.wallet.service.platform.sdk.ExternalSendServiceImpl
 import de.schildbach.wallet.service.platform.sdk.PlatformMnemonicProvider
 import de.schildbach.wallet.service.platform.sdk.SdkMessageSigner
 import de.schildbach.wallet.service.platform.sdk.SecurityGuardMnemonicProvider
@@ -75,6 +77,11 @@ abstract class PlatformSdkModule {
     abstract fun bindShieldedBalanceService(
         service: ShieldedBalanceServiceImpl
     ): ShieldedBalanceService
+
+    /** Advanced-mode External Send (MO-1121): orchestration over the sibling send services. */
+    @Singleton
+    @Binds
+    abstract fun bindExternalSendService(service: ExternalSendServiceImpl): ExternalSendService
 
     /**
      * The SDK message-signing seam behind
