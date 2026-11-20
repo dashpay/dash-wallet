@@ -44,8 +44,9 @@ class SendContactRequestWorkerTest {
         unmockkStatic(WalletApplication::class)
     }
 
-    private fun worker(): SendContactRequestWorker {
+    private fun worker(attempt: Int = 0): SendContactRequestWorker {
         val parameters = mockk<WorkerParameters>(relaxed = true) {
+            every { runAttemptCount } returns attempt
             every { inputData } returns workDataOf(
                 SendContactRequestWorker.KEY_PASSWORD to "password",
                 SendContactRequestWorker.KEY_TO_USER_ID to "them"
@@ -72,13 +73,34 @@ class SendContactRequestWorkerTest {
     }
 
     @Test
-    fun unknownBalance_doesNotSend() = runTest {
+    fun unknownBalance_retriesWithoutSending() = runTest {
         coEvery { identityRepository.getIdentityBalance() } returns null
 
         val result = worker().doWorkWithBaseProgress()
 
+        assertTrue(result is ListenableWorker.Result.Retry)
+        coVerify(exactly = 0) { broadcastService.sendContactRequest(any(), any()) }
+    }
+
+    @Test
+    fun unknownBalance_onTheLastAttempt_failsWithoutSending() = runTest {
+        coEvery { identityRepository.getIdentityBalance() } returns null
+
+        val result = worker(SendContactRequestWorker.MAX_BALANCE_LOOKUP_ATTEMPTS - 1).doWorkWithBaseProgress()
+
         assertTrue(result is ListenableWorker.Result.Failure)
         coVerify(exactly = 0) { broadcastService.sendContactRequest(any(), any()) }
+    }
+
+    @Test
+    fun balanceRecoveredOnRetry_sends() = runTest {
+        coEvery { identityRepository.getIdentityBalance() } returns
+            CreditBalanceInfo(CreditBalanceInfo.MAX_OPERATION_COST)
+
+        val result = worker(1).doWorkWithBaseProgress()
+
+        assertTrue(result is ListenableWorker.Result.Success)
+        coVerify(exactly = 1) { broadcastService.sendContactRequest("them", any()) }
     }
 
     @Test

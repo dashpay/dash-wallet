@@ -44,6 +44,7 @@ class SendContactRequestWorker @AssistedInject constructor(
         const val KEY_PASSWORD = "SendContactRequestWorker.PASSWORD"
         const val KEY_TO_USER_ID = "SendContactRequestWorker.KEY_TO_USER_ID"
         const val KEY_USER_ID = "SendContactRequestWorker.KEY_USER_ID"
+        const val MAX_BALANCE_LOOKUP_ATTEMPTS = 5
 
         fun extractUserId(date: Data): String? {
             return date.getString(KEY_USER_ID)
@@ -60,8 +61,16 @@ class SendContactRequestWorker @AssistedInject constructor(
         val toUserId = inputData.getString(KEY_TO_USER_ID)
                 ?: return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "missing KEY_TO_USER_ID parameter"))
 
-        if (identityRepository.getIdentityBalance()?.isBalanceEmpty() != false) {
-            return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "credit balance is empty or unknown"))
+        val balance = identityRepository.getIdentityBalance()
+        if (balance == null) {
+            return if (runAttemptCount + 1 < MAX_BALANCE_LOOKUP_ATTEMPTS) {
+                Result.retry()
+            } else {
+                Result.failure(workDataOf(KEY_ERROR_MESSAGE to "credit balance is unknown"))
+            }
+        }
+        if (balance.isBalanceEmpty()) {
+            return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "credit balance is empty"))
         }
 
         val encryptionKey: KeyParameter
