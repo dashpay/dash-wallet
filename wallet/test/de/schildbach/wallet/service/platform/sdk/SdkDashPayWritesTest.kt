@@ -616,6 +616,38 @@ class SdkDashPayWritesTest {
         assertFalse(isSubmissionOutcomeUnconfirmed(RuntimeException("state transition outcome is unconfirmed")))
     }
 
+    @Test
+    fun classify_platformShieldCapacityExceeded_isNotBroadcast_directAndWrapped() {
+        val direct = DashSdkError.PlatformWallet.PlatformShieldCapacityExceeded("capacity exceeded")
+        val wrapped = RuntimeException("shield failed", direct)
+        for (error in listOf<Throwable>(direct, wrapped)) {
+            val result = classifyBroadcastFailure(error)
+            assertTrue("${error.javaClass.simpleName} must be NotBroadcast", result is SdkWriteResult.NotBroadcast)
+            result as SdkWriteResult.NotBroadcast
+            assertEquals(REASON_PLATFORM_SHIELD_CAPACITY_EXCEEDED, result.reason)
+            assertSame(error, result.cause)
+        }
+    }
+
+    @Test
+    fun classify_unconfirmedWrappingPlatformShieldCapacityExceeded_staysAmbiguous() {
+        val capacity = DashSdkError.PlatformWallet.PlatformShieldCapacityExceeded("capacity exceeded")
+        val errors = listOf<Throwable>(
+            DashSdkError.StateTransitionResultUnconfirmed("unproven", capacity),
+            DashSdkError.PlatformWallet.TransactionBroadcastUnconfirmed("unproven", capacity),
+            // The capacity error outermost, an unconfirmed outcome deeper in the chain.
+            DashSdkError.PlatformWallet.PlatformShieldCapacityExceeded(
+                "capacity exceeded",
+                DashSdkError.StateTransitionResultUnconfirmed("unproven")
+            )
+        )
+        for (error in errors) {
+            val result = classifyBroadcastFailure(error)
+            assertTrue("${error.javaClass.simpleName} must be Ambiguous", result is SdkWriteResult.Ambiguous)
+            assertSame(error, (result as SdkWriteResult.Ambiguous).cause)
+        }
+    }
+
     // ── Preflight: everything before the broadcast is NotBroadcast ───────
 
     @Test
