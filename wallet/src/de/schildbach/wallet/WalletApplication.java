@@ -398,8 +398,10 @@ public class WalletApplication extends MultiDexApplication
      * transaction-stripped key backup. The public {@link #walletFileExists()}
      * predicate intentionally keeps its old, strict meaning because onboarding
      * uses it to distinguish an already-loaded primary wallet from first run.
+     * Background work checks this one: a cold start with only the key backup
+     * still recovers the wallet (see the startup load).
      */
-    private boolean recoverableWalletFileExists() {
+    public boolean recoverableWalletFileExists() {
         return walletFileExists() || getFileStreamPath(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF).exists();
     }
 

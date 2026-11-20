@@ -25,7 +25,8 @@ import de.schildbach.wallet.WalletApplication
  * Not while Reset Wallet runs, not after a reset that stopped partway (it clears the wipe flag
  * but leaves the durable recovery-required state, and may leave the old wallet file behind),
  * and not without a wallet file. A file check rather than the loaded wallet, so a caller on
- * the main thread never waits for a deferred wallet load.
+ * the main thread never waits for a deferred wallet load. Either durable source counts: the
+ * primary, or the key backup that startup recovers the primary from when it is missing.
  */
 internal fun mayActOnWalletInBackground(
     wipeInProgress: Boolean,
@@ -36,5 +37,5 @@ internal fun mayActOnWalletInBackground(
 internal fun WalletApplication.mayActOnWalletInBackground(): Boolean = mayActOnWalletInBackground(
     wipeInProgress = isWipeInProgress,
     wipeRecoveryRequired = isWalletWipeRecoveryRequired,
-    walletFileExists = walletFileExists()
+    walletFileExists = recoverableWalletFileExists()
 )
