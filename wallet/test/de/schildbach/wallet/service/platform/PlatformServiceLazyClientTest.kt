@@ -18,18 +18,12 @@
 package de.schildbach.wallet.service.platform
 
 import io.mockk.every
-import io.mockk.just
 import io.mockk.mockk
-import io.mockk.runs
-import io.mockk.slot
 import io.mockk.verify
-import io.mockk.verifyOrder
 import org.bitcoinj.evolution.SimplifiedMasternodeListManager
 import org.dashj.platform.dapiclient.DapiClient
-import org.dashj.platform.sdk.callbacks.ContextProvider
 import org.dashj.platform.sdk.platform.Platform
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
@@ -42,21 +36,19 @@ import kotlin.concurrent.thread
 
 /**
  * [PlatformServiceImplementation] constructs the legacy `Platform` client (whose constructor
- * loads `libsdklib`) only on first use, exactly once under concurrency, and wires the context
- * provider and the latest masternode-list manager before the client is visible.
+ * loads `libsdklib`) only on first use, exactly once under concurrency, and applies the latest
+ * masternode-list manager before the client is visible.
  */
 class PlatformServiceLazyClientTest {
 
     private val created = AtomicInteger(0)
 
-    /** A fake legacy client whose DAPI client records the context provider it was given. */
+    /** A fake legacy client. */
     private class FakeClient {
         val dapi = mockk<DapiClient>(relaxed = true)
-        val provider = slot<ContextProvider>()
         val platform = mockk<Platform>(relaxed = true)
 
         init {
-            every { dapi.contextProvider = capture(provider) } just runs
             every { platform.client } returns dapi
         }
     }
@@ -88,12 +80,8 @@ class PlatformServiceLazyClientTest {
         assertEquals(0, created.get())
 
         val platform = svc.platform
-        val fake = clients.single()
-        verifyOrder {
-            fake.dapi.contextProvider = any()
-            platform.setMasternodeListManager(manager)
-        }
-        assertTrue(fake.provider.isCaptured)
+        assertSame(clients.single().platform, platform)
+        verify(exactly = 1) { platform.setMasternodeListManager(manager) }
     }
 
     @Test
@@ -171,15 +159,6 @@ class PlatformServiceLazyClientTest {
         assertEquals(2, calls)
         assertSame(clients.single().platform, platform)
         assertSame(platform, svc.platform)
-    }
-
-    @Test
-    fun theContextProviderReturnsNotFoundBeforeAnyManagerIsDelivered() {
-        val svc = service()
-        svc.platform
-        val provider = clients.single().provider.captured
-
-        assertNull(provider.getQuorumPublicKey(1, ByteArray(32), 100))
     }
 
     @Test

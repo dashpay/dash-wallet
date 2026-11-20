@@ -69,9 +69,9 @@ import javax.inject.Singleton
  *
  * `BlockchainServiceImpl` hands this manager to
  * `platformRepo.platform.setMasternodeListManager(...)` when the cutover
- * gate resolves to "hold the dashj engine", which wires all three layers
- * at once: the app's own quorum callback, `DapiClient`'s rust-registered
- * internal provider, and the DAPI address provider (whose empty
+ * gate resolves to "hold the dashj engine", which wires both layers at
+ * once: `DapiClient`'s rust-registered internal provider (the only quorum
+ * callback the rust stack calls) and the DAPI address provider (whose empty
  * masternode list makes it fall back to the network's default HP
  * masternode list — addresses stay available).
  *
