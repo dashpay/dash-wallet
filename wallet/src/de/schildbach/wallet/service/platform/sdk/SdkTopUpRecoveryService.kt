@@ -30,6 +30,42 @@ import javax.inject.Singleton
 /** Wire-order (little-endian) txid bytes → the display-order hex logs/UI use. */
 internal fun ByteArray.toTxidHex(): String = Utils.HEX.encode(reversedArray())
 
+/** `<display txid>:<vout>` of a tracked lock: its identity in a set. */
+internal fun TrackedAssetLock.outPointKey(): String = "${outpointTxid.toTxidHex()}:$outpointVout"
+
+/**
+ * Whether this is an unbound Core top-up lock whose row records [identityId] as the identity it
+ * pays — what `IdentityCredits.topUpExternalIdentityFromCore` (platform#5931) builds.
+ */
+internal fun TrackedAssetLock.recordsExternalTopUpTo(identityId: ByteArray): Boolean =
+    fundingType == TrackedAssetLock.FundingType.IDENTITY_TOP_UP_NOT_BOUND &&
+        identityRecipient?.contentEquals(identityId) == true
+
+/**
+ * Whether resuming this top-up lock must go to the identity its row records
+ * (`IdentityCredits.resumeTopUpToRecordedRecipient`) rather than to the wallet's own identity:
+ * an unbound lock recording an identity, such as an external Core top-up's. Resuming such a lock
+ * into the wallet's identity would pay the wrong one.
+ */
+internal fun TrackedAssetLock.hasRecordedTopUpRecipient(): Boolean =
+    fundingType == TrackedAssetLock.FundingType.IDENTITY_TOP_UP_NOT_BOUND && identityRecipient != null
+
+/**
+ * Whether this is an unbound top-up lock recording no identity to pay
+ * ([TrackedAssetLock.identityRecipientUnassigned]), as the SDK's restore scan rebuilds one from the
+ * chain: an External Send Core top-up of someone else's identity, or a pre-cutover dashj top-up
+ * (dashj funded top-ups from the unbound path m/9'/coin'/5'/2'). Its credit output names no
+ * identity, so it is never resumed into the wallet's own identity (the SDK refuses that with
+ * [DashSdkError.PlatformWallet.AssetLockRecipientUnknown] anyway) and never retried: it waits for
+ * the user to assign a recipient (`IdentityCredits.assignTopUpRecipient`, then
+ * `resumeTopUpToRecordedRecipient`). There is no UI for that yet. The wallet's own Core top-ups are
+ * bound (funding type IDENTITY_TOP_UP at the identity's registration index) and never land here.
+ * Fail closed: an unbound lock with no recipient counts even if the SDK flag is not set.
+ */
+internal fun TrackedAssetLock.awaitsTopUpRecipient(): Boolean =
+    identityRecipientUnassigned ||
+        (fundingType == TrackedAssetLock.FundingType.IDENTITY_TOP_UP_NOT_BOUND && identityRecipient == null)
+
 /**
  * Whether a failed resume proves the lock's credits ALREADY landed — a
  * terminal outcome that must never be retried (WorkManager would otherwise
@@ -88,6 +124,13 @@ interface SdkTopUpRecoverySource {
      * [DashSdkError.PlatformWallet.AssetLockAlreadyConsumed]).
      */
     suspend fun resumeTopUp(walletIdHex: String, identityId: ByteArray, lock: TrackedAssetLock): Long
+
+    /**
+     * Resume [lock] to the identity its row records
+     * (`IdentityCredits.resumeTopUpToRecordedRecipient`, platform#5931), in this wallet or not;
+     * never a new funding transaction. Returns the paid identity's new credit balance.
+     */
+    suspend fun resumeTopUpToRecordedRecipient(walletIdHex: String, lock: TrackedAssetLock): Long
 }
 
 /** Production [SdkTopUpRecoverySource]: boots the SDK on demand. */
@@ -122,6 +165,16 @@ internal class DashSdkTopUpRecoverySource(
             coreSignerHandle = manager.mnemonicResolverHandle
         )
     }
+
+    override suspend fun resumeTopUpToRecordedRecipient(walletIdHex: String, lock: TrackedAssetLock): Long {
+        val manager = manager()
+        val wallet = checkNotNull(manager.wallets.value[walletIdHex]) { "SDK wallet not loaded" }
+        return manager.identityCredits.resumeTopUpToRecordedRecipient(
+            walletHandle = wallet.handle,
+            lock = lock,
+            coreSignerHandle = manager.mnemonicResolverHandle
+        ).newBalance
+    }
 }
 
 // ── Drain report ──────────────────────────────────────────────────────
@@ -132,14 +185,17 @@ internal class DashSdkTopUpRecoverySource(
  * recovery surface offered; [resumed] completed their IdentityTopUp
  * transition this pass; [alreadyConsumed] were rejected as already
  * consumed Platform-side (terminal — retrying cannot help); [failed] hit
- * a retryable error; [surfaceUnavailable] means the locks could not even
- * be enumerated.
+ * a retryable error; [awaitingRecipient] record no identity to pay
+ * ([awaitsTopUpRecipient]) and were left alone — nothing a retry can
+ * advance; [surfaceUnavailable] means the locks could not even be
+ * enumerated.
  */
 data class TopUpDrainReport(
     val pending: Int,
     val resumed: Int,
     val alreadyConsumed: Int,
     val failed: Int,
+    val awaitingRecipient: Int = 0,
     val surfaceUnavailable: Boolean = false
 ) {
     /** Another pass can plausibly make progress — the worker should retry. */
@@ -197,7 +253,13 @@ class SdkTopUpRecoveryService internal constructor(
      * `trackedIdentityRecoveryAssetLocks`, filters to the resumable
      * top-up funding types (IDENTITY_TOP_UP / IDENTITY_TOP_UP_NOT_BOUND —
      * registration locks belong to the registration recovery flow), and
-     * resumes each from its exact persisted outpoint. Rust owns
+     * resumes each from its exact persisted outpoint: a lock recording its
+     * recipient ([hasRecordedTopUpRecipient], e.g. an External Send Core
+     * top-up of someone else's identity) to that identity, a bound one to the
+     * wallet's own identity. An unbound lock recording no recipient
+     * ([awaitsTopUpRecipient], e.g. rebuilt by a restore) is skipped and
+     * counted in [TopUpDrainReport.awaitingRecipient], never resumed into the
+     * own identity and never a reason to retry. Rust owns
      * rebroadcast/proof/consumption, and consumed locks vanish from the
      * surface, so the pass is idempotent — a crash mid-drain or a double
      * enqueue is harmless.
@@ -228,49 +290,92 @@ class SdkTopUpRecoveryService internal constructor(
         }
         if (locks.isEmpty()) return TopUpDrainReport.NOTHING_TO_DO
 
-        val identityId = try {
-            identityIdBytes()?.takeIf { it.size == 32 }
-        } catch (t: Throwable) {
-            if (t is CancellationException) throw t
-            null
+        var awaitingRecipient = 0
+        val resumable = locks.filter { lock ->
+            if (!lock.awaitsTopUpRecipient()) return@filter true
+            awaitingRecipient++
+            log.info("drain: top-up lock {}:{} records no recipient; it waits for one to be assigned", lock.outpointTxid.toTxidHex(), lock.outpointVout)
+            false
         }
-        if (identityId == null) {
-            // Locks exist but there is no identity to credit — an odd state
-            // (top-ups require an identity) worth retrying, not dropping.
-            log.warn("drain: {} pending top-up lock(s) but no 32-byte identity id", locks.size)
-            return TopUpDrainReport(pending = locks.size, resumed = 0, alreadyConsumed = 0, failed = locks.size)
+
+        // Only a bound lock is paid to the wallet's own identity.
+        val identityId = if (resumable.all { it.hasRecordedTopUpRecipient() }) {
+            null
+        } else {
+            try {
+                identityIdBytes()?.takeIf { it.size == 32 }
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                null
+            }
         }
 
         var resumed = 0
         var alreadyConsumed = 0
         var failed = 0
-        for (lock in locks) {
+        for (lock in resumable) {
+            val recorded = lock.hasRecordedTopUpRecipient()
+            if (!recorded && identityId == null) {
+                // A lock but no identity to credit — an odd state (top-ups
+                // require an identity) worth retrying, not dropping.
+                failed++
+                log.warn("drain: pending top-up lock {}:{} but no 32-byte identity id", lock.outpointTxid.toTxidHex(), lock.outpointVout)
+                continue
+            }
             try {
-                val balance = source.resumeTopUp(walletIdHex, identityId, lock)
+                if (recorded) {
+                    // Someone else's identity possibly: its balance is not logged.
+                    source.resumeTopUpToRecordedRecipient(walletIdHex, lock)
+                    log.info(
+                        "drain: resumed top-up lock {}:{} to its recorded identity",
+                        lock.outpointTxid.toTxidHex(), lock.outpointVout
+                    )
+                } else {
+                    val balance = source.resumeTopUp(
+                        walletIdHex,
+                        checkNotNull(identityId) { "no identity for an unrecorded lock" },
+                        lock
+                    )
+                    log.info(
+                        "drain: resumed top-up lock {}:{} — new credit balance {}",
+                        lock.outpointTxid.toTxidHex(), lock.outpointVout, balance
+                    )
+                }
                 resumed++
-                log.info(
-                    "drain: resumed top-up lock {}:{} — new credit balance {}",
-                    lock.outpointTxid.toTxidHex(), lock.outpointVout, balance
-                )
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
-                if (isAlreadyConsumed(t)) {
+                if (t is DashSdkError.PlatformWallet.AssetLockRecipientUnknown) {
+                    // The SDK holds no recipient for it after all: waits like the skipped ones.
+                    awaitingRecipient++
+                    log.info("drain: top-up lock {}:{} records no recipient; it waits for one to be assigned", lock.outpointTxid.toTxidHex(), lock.outpointVout)
+                } else if (isAlreadyConsumed(t)) {
                     // Terminal: the lock was burned by an earlier successful
                     // top-up; retrying can never help.
                     alreadyConsumed++
                     log.info("drain: lock {}:{} already consumed", lock.outpointTxid.toTxidHex(), lock.outpointVout)
                 } else {
                     failed++
-                    log.warn("drain: resume failed for lock {}:{}", lock.outpointTxid.toTxidHex(), lock.outpointVout, t)
+                    // Class names only: an SDK message can embed the recipient identity id.
+                    log.warn(
+                        "drain: resume failed for lock {}:{} ({})",
+                        lock.outpointTxid.toTxidHex(), lock.outpointVout, safeErrorSummary(t)
+                    )
                 }
             }
         }
-        return TopUpDrainReport(locks.size, resumed, alreadyConsumed, failed)
+        return TopUpDrainReport(
+            pending = locks.size,
+            resumed = resumed,
+            alreadyConsumed = alreadyConsumed,
+            failed = failed,
+            awaitingRecipient = awaitingRecipient
+        )
     }
 
     /**
      * Whether the SDK currently tracks any resumable top-up locks — the
-     * `checkTopUps` trigger predicate. Deliberately NO-BOOT: when the SDK
+     * `checkTopUps` trigger predicate. A lock waiting for a recipient
+     * ([awaitsTopUpRecipient]) is not one: a drain cannot advance it. Deliberately NO-BOOT: when the SDK
      * is not already running this returns false WITHOUT starting it
      * ([sdkIsStarted]) — a periodic sync sweep must never boot the SDK
      * stack for users who never used it. The DURABLE recovery path is the
@@ -283,7 +388,9 @@ class SdkTopUpRecoveryService internal constructor(
             false
         } else {
             val walletIdHex = source.boundWalletIdOrNull()
-            walletIdHex != null && source.trackedRecoveryLocks(walletIdHex).any { it.isResumableTopUp() }
+            walletIdHex != null && source.trackedRecoveryLocks(walletIdHex).any {
+                it.isResumableTopUp() && !it.awaitsTopUpRecipient()
+            }
         }
     } catch (t: Throwable) {
         if (t is CancellationException) throw t

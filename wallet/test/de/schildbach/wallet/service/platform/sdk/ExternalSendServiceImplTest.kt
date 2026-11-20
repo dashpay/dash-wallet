@@ -44,6 +44,7 @@ import org.dash.wallet.common.services.WalletSession
 import org.dash.wallet.common.util.retryReadErrors
 import org.dashfoundation.dashsdk.errors.DashSdkError
 import org.dashfoundation.dashsdk.credits.FundingInput
+import org.dashfoundation.dashsdk.wallet.TrackedAssetLock
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -178,6 +179,31 @@ class ExternalSendServiceImplTest {
             calls += "coreTopUpIdentity"
             lastDuffs = amountDuffs
             return coreTopUpResult()
+        }
+
+        // Core → external identity
+        var externalLocks: () -> List<TrackedAssetLock> = { emptyList() }
+        var externalTopUp: () -> Long = { 1L }
+        var resumeRecorded: (TrackedAssetLock) -> Unit = {}
+        val resumedLocks = mutableListOf<TrackedAssetLock>()
+        var lastLockQueryId: ByteArray? = null
+
+        override suspend fun unresolvedExternalTopUpLocks(walletIdHex: String, identityId: ByteArray): List<TrackedAssetLock> {
+            lastLockQueryId = identityId
+            return externalLocks()
+        }
+
+        override suspend fun coreTopUpExternalIdentity(walletIdHex: String, identityId: ByteArray, amountDuffs: Long): Long {
+            calls += "coreTopUpExternalIdentity"
+            lastToId = identityId
+            lastDuffs = amountDuffs
+            return externalTopUp()
+        }
+
+        override suspend fun resumeTopUpToRecordedRecipient(walletIdHex: String, lock: TrackedAssetLock) {
+            calls += "resumeTopUpToRecordedRecipient"
+            resumedLocks += lock
+            resumeRecorded(lock)
         }
 
         override suspend fun platformTransfer(walletIdHex: String, to: PlatformAddressBytes, amountCredits: Long) {
@@ -463,6 +489,221 @@ class ExternalSendServiceImplTest {
         assertEquals(
             ExternalSendResult.NotSent(NotSentReason.EARLIER_TOP_UP_COMPLETED),
             service(source).send(SendBalance.CORE, ownIdentity, amount, false)
+        )
+        assertEquals(listOf("coreTopUpIdentity"), source.calls)
+    }
+
+    // ── Core → someone else's identity ───────────────────────────────
+
+    private fun externalLock(firstByte: Byte, recipient: ByteArray = otherId) = TrackedAssetLock(
+        outpointTxid = ByteArray(32) { if (it == 0) firstByte else 0 },
+        outpointVout = 0,
+        fundingType = TrackedAssetLock.FundingType.IDENTITY_TOP_UP_NOT_BOUND,
+        status = TrackedAssetLock.Status.BROADCAST,
+        registrationIndex = 0,
+        instantLockPresent = false,
+        chainLockHeight = 0,
+        identityRecipient = recipient
+    )
+
+    @Test
+    fun coreToSomeoneElsesIdentity_usesTheExternalTopUp_inDuffs_neverTheManagedOne() = runBlocking {
+        val source = source()
+        assertEquals(ExternalSendResult.Sent(null), service(source).send(SendBalance.CORE, otherIdentity, amount, false))
+        assertEquals(listOf("coreTopUpExternalIdentity"), source.calls)
+        assertArrayEquals(otherId, source.lastToId)
+        assertArrayEquals(otherId, source.lastLockQueryId)
+        assertEquals(100_000L, source.lastDuffs)
+    }
+
+    @Test
+    fun coreToIdentity_theSdkWalletDoesNotManage_usesTheExternalTopUp() = runBlocking {
+        // No identity at all, or the user's identity record without the SDK wallet managing it.
+        for ((src, to) in listOf(
+            source(ownIdentity = null, managed = emptyList()) to otherIdentity,
+            source(managed = emptyList()) to ownIdentity
+        )) {
+            assertEquals("$to", ExternalSendResult.Sent(null), service(src).send(SendBalance.CORE, to, amount, false))
+            assertEquals("$to", listOf("coreTopUpExternalIdentity"), src.calls)
+        }
+    }
+
+    @Test
+    fun coreToIdentity_managedSetUnreadable_isNotSent_withNoCall() = runBlocking {
+        val source = source().apply { managedRead = { throw IllegalStateException("wallet not loaded") } }
+        for (to in listOf(ownIdentity, otherIdentity)) {
+            assertEquals(
+                "$to",
+                ExternalSendResult.NotSent(NotSentReason.GENERIC),
+                service(source).send(SendBalance.CORE, to, amount, false)
+            )
+        }
+        assertTrue(source.calls.isEmpty())
+    }
+
+    @Test
+    fun coreToSomeoneElsesIdentity_platformHasNoSuchIdentity_isNotSent() = runBlocking {
+        val source = source().apply {
+            externalTopUp = { throw DashSdkError.NotFound("Identity not found: $otherIdBase58", null) }
+        }
+        assertEquals(
+            ExternalSendResult.NotSent(NotSentReason.GENERIC),
+            service(source).send(SendBalance.CORE, otherIdentity, amount, false)
+        )
+        assertEquals(listOf("coreTopUpExternalIdentity"), source.calls)
+    }
+
+    @Test
+    fun coreToSomeoneElsesIdentity_aPreBroadcastFailureAfterTheLockWasBuilt_mayHaveGoneThrough() = runBlocking {
+        // The refusal reads as pre-broadcast, but a lock recording this identity now exists.
+        var built = false
+        val source = source().apply {
+            externalLocks = { if (built) listOf(externalLock(4)) else emptyList() }
+            externalTopUp = {
+                built = true
+                throw DashSdkError.InvalidState("proof", null)
+            }
+        }
+        assertEquals(
+            ExternalSendResult.MayHaveGoneThrough,
+            service(source).send(SendBalance.CORE, otherIdentity, amount, false)
+        )
+    }
+
+    @Test
+    fun coreToSomeoneElsesIdentity_lockListUnreadableAfterAFailure_mayHaveGoneThrough() = runBlocking {
+        var reads = 0
+        val source = source().apply {
+            externalLocks = { if (reads++ == 0) emptyList() else throw IllegalStateException("closed") }
+            externalTopUp = { throw DashSdkError.NotFound("Identity not found", null) }
+        }
+        assertEquals(
+            ExternalSendResult.MayHaveGoneThrough,
+            service(source).send(SendBalance.CORE, otherIdentity, amount, false)
+        )
+    }
+
+    @Test
+    fun coreToSomeoneElsesIdentity_unconfirmedOutcome_mayHaveGoneThrough() = runBlocking {
+        val source = source().apply {
+            externalTopUp = { throw DashSdkError.PlatformWallet.TransactionBroadcastUnconfirmed("unconfirmed") }
+        }
+        assertEquals(
+            ExternalSendResult.MayHaveGoneThrough,
+            service(source).send(SendBalance.CORE, otherIdentity, amount, false)
+        )
+    }
+
+    @Test
+    fun coreToSomeoneElsesIdentity_anInterruptedEarlierLock_isResumed_neverRebuilt() = runBlocking {
+        val earlier = externalLock(5)
+        val source = source().apply { externalLocks = { listOf(earlier) } }
+        assertEquals(
+            ExternalSendResult.NotSent(NotSentReason.EARLIER_TOP_UP_COMPLETED),
+            service(source).send(SendBalance.CORE, otherIdentity, amount, false)
+        )
+        assertEquals(listOf("resumeTopUpToRecordedRecipient"), source.calls)
+        assertEquals(listOf(earlier), source.resumedLocks)
+    }
+
+    @Test
+    fun coreToSomeoneElsesIdentity_resumeOfTheEarlierLockFails_neverBuildsANewOne() = runBlocking {
+        val source = source().apply {
+            externalLocks = { listOf(externalLock(5)) }
+            resumeRecorded = { throw DashSdkError.NetworkError("timeout") }
+        }
+        val result = service(source).send(SendBalance.CORE, otherIdentity, amount, false)
+        assertTrue(result is ExternalSendResult.NotSent || result == ExternalSendResult.MayHaveGoneThrough)
+        assertEquals(listOf("resumeTopUpToRecordedRecipient"), source.calls)
+    }
+
+    @Test
+    fun coreToSomeoneElsesIdentity_anAlreadyConsumedEarlierLock_isSkipped_andThisTopUpBuilt() = runBlocking {
+        val stale = externalLock(5)
+        val source = source().apply {
+            externalLocks = { listOf(stale) }
+            resumeRecorded = { throw DashSdkError.PlatformWallet.AssetLockAlreadyConsumed("consumed") }
+        }
+        assertEquals(ExternalSendResult.Sent(null), service(source).send(SendBalance.CORE, otherIdentity, amount, false))
+        assertEquals(listOf("resumeTopUpToRecordedRecipient", "coreTopUpExternalIdentity"), source.calls)
+    }
+
+    @Test
+    fun coreToSomeoneElsesIdentity_lockListUnreadable_isNotSent_withNoCall() = runBlocking {
+        val source = source().apply { externalLocks = { throw IllegalStateException("closed") } }
+        assertTrue(service(source).send(SendBalance.CORE, otherIdentity, amount, false) is ExternalSendResult.NotSent)
+        assertTrue(source.calls.isEmpty())
+    }
+
+    @Test
+    fun coreToSomeoneElsesIdentity_fundingGateClosed_orPendingPaymentExposed_isNotSent() = runBlocking {
+        val closed = source().apply { gateOpen = { false } }
+        assertEquals(
+            ExternalSendResult.NotSent(NotSentReason.NOT_SYNCED),
+            service(closed).send(SendBalance.CORE, otherIdentity, amount, false)
+        )
+        assertTrue(closed.calls.isEmpty())
+        val blocked = source().apply { freshFundingAllowed = false }
+        assertEquals(
+            ExternalSendResult.NotSent(NotSentReason.PAYMENT_STILL_CONFIRMING),
+            service(blocked).send(SendBalance.CORE, otherIdentity, amount, false)
+        )
+        assertTrue(blocked.calls.isEmpty())
+    }
+
+    // ── Core → Identity below Platform's top-up minimum (MO-1121) ─────
+
+    @Test
+    fun coreToSomeoneElsesIdentity_belowTheTopUpMinimum_isNotSent_withNoBuild() = runBlocking {
+        val source = source()
+        assertEquals(
+            ExternalSendResult.NotSent(NotSentReason.GENERIC),
+            service(source).send(SendBalance.CORE, otherIdentity, Dash(CORE_MIN_IDENTITY_TOP_UP_DUFFS - 1), false)
+        )
+        assertTrue(source.calls.isEmpty())
+    }
+
+    @Test
+    fun coreToSomeoneElsesIdentity_atTheTopUpMinimum_isBuilt() = runBlocking {
+        val source = source()
+        assertEquals(
+            ExternalSendResult.Sent(null),
+            service(source).send(SendBalance.CORE, otherIdentity, Dash(CORE_MIN_IDENTITY_TOP_UP_DUFFS), false)
+        )
+        assertEquals(listOf("coreTopUpExternalIdentity"), source.calls)
+        assertEquals(CORE_MIN_IDENTITY_TOP_UP_DUFFS, source.lastDuffs)
+    }
+
+    @Test
+    fun coreToSomeoneElsesIdentity_belowTheTopUpMinimum_stillResumesAnEarlierLock() = runBlocking {
+        val earlier = externalLock(5)
+        val source = source().apply { externalLocks = { listOf(earlier) } }
+        assertEquals(
+            ExternalSendResult.NotSent(NotSentReason.EARLIER_TOP_UP_COMPLETED),
+            service(source).send(SendBalance.CORE, otherIdentity, Dash(1_000L), false)
+        )
+        assertEquals(listOf("resumeTopUpToRecordedRecipient"), source.calls)
+    }
+
+    @Test
+    fun coreToSomeoneElsesIdentity_belowTheMinimum_afterAConsumedEarlierLock_isNotSent_withNoBuild() = runBlocking {
+        val source = source().apply {
+            externalLocks = { listOf(externalLock(5)) }
+            resumeRecorded = { throw DashSdkError.PlatformWallet.AssetLockAlreadyConsumed("consumed") }
+        }
+        assertEquals(
+            ExternalSendResult.NotSent(NotSentReason.GENERIC),
+            service(source).send(SendBalance.CORE, otherIdentity, Dash(1_000L), false)
+        )
+        assertEquals(listOf("resumeTopUpToRecordedRecipient"), source.calls)
+    }
+
+    @Test
+    fun coreToOwnIdentity_theTopUpRefusesBelowTheMinimum_isNotSent() = runBlocking {
+        val source = source().apply { coreTopUpResult = { SdkWriteResult.NotBroadcast(BELOW_IDENTITY_TOP_UP_MINIMUM_REASON) } }
+        assertEquals(
+            ExternalSendResult.NotSent(NotSentReason.GENERIC),
+            service(source).send(SendBalance.CORE, ownIdentity, Dash(CORE_MIN_IDENTITY_TOP_UP_DUFFS - 1), false)
         )
         assertEquals(listOf("coreTopUpIdentity"), source.calls)
     }
@@ -1186,9 +1427,7 @@ class ExternalSendServiceImplTest {
         val pairs = listOf(
             // The SDK funds P2PKH Platform addresses only.
             SendBalance.CORE to platformP2sh,
-            SendBalance.IDENTITY to ownIdentity,
-            // Someone else's identity from Core: the resume gate cannot protect it.
-            SendBalance.CORE to otherIdentity
+            SendBalance.IDENTITY to ownIdentity
         )
         for ((from, to) in pairs) {
             val source = source()

@@ -272,30 +272,20 @@ class ExternalSendViewModelTest {
     }
 
     @Test
-    fun initialSource_forAnIdentity_isCoreOnlyWhenTheIdentityIsOurOwn() {
+    fun initialSource_forAnIdentity_isCore_whoeverOwnsIt() {
+        // Core and Platform top up any identity (platform#5931, #5860); the send picks the call.
         service.hasIdentity.value = true
-        service.ownIdentity = false
-        val other = buildViewModel().apply { goToAmount(identityId) }
-        assertEquals(SendBalance.SHIELDED, other.uiState.value.source)
-        // Core tops up only a managed identity; Platform tops up anyone's (platform#5860).
-        assertEquals(SendSupport.NEEDS_OWN_IDENTITY, other.uiState.value.supportOf(SendBalance.CORE))
-        assertEquals(SendSupport.SUPPORTED, other.uiState.value.supportOf(SendBalance.PLATFORM))
-        other.onSourceSelected(SendBalance.CORE)
-        assertEquals(SendBalance.SHIELDED, other.uiState.value.source)
-        other.onSourceSelected(SendBalance.PLATFORM)
-        assertEquals(SendBalance.PLATFORM, other.uiState.value.source)
-
-        service.ownIdentity = true
-        val own = buildViewModel().apply { goToAmount(identityId) }
-        assertEquals(SendBalance.CORE, own.uiState.value.source)
-        assertEquals(SendSupport.SUPPORTED, own.uiState.value.supportOf(SendBalance.PLATFORM))
-
-        // Could not tell: Core fails closed; Platform does not depend on it (the send
-        // refuses when the managed set is unreadable).
-        service.ownIdentity = null
-        val unknown = buildViewModel().apply { goToAmount(identityId) }
-        assertEquals(SendSupport.NEEDS_OWN_IDENTITY, unknown.uiState.value.supportOf(SendBalance.CORE))
-        assertEquals(SendSupport.SUPPORTED, unknown.uiState.value.supportOf(SendBalance.PLATFORM))
+        for (own in listOf(false, true, null)) {
+            service.ownIdentity = own
+            val viewModel = buildViewModel().apply { goToAmount(identityId) }
+            assertEquals("$own", SendBalance.CORE, viewModel.uiState.value.source)
+            assertEquals("$own", SendSupport.SUPPORTED, viewModel.uiState.value.supportOf(SendBalance.CORE))
+            assertEquals("$own", SendSupport.SUPPORTED, viewModel.uiState.value.supportOf(SendBalance.PLATFORM))
+            viewModel.onSourceSelected(SendBalance.PLATFORM)
+            assertEquals("$own", SendBalance.PLATFORM, viewModel.uiState.value.source)
+            viewModel.onSourceSelected(SendBalance.CORE)
+            assertEquals("$own", SendBalance.CORE, viewModel.uiState.value.source)
+        }
     }
 
     @Test
@@ -471,6 +461,8 @@ class ExternalSendViewModelTest {
         service.resolution = IdentityResolution.NotFound
         val viewModel = buildViewModel()
         viewModel.goToAmount(identityId)
+        // Core (unfunded here) is now supported for any identity: pay from the funded Shielded.
+        viewModel.onSourceSelected(SendBalance.SHIELDED)
         viewModel.type("1")
         assertEquals(IdentityResolution.NotFound, viewModel.uiState.value.identityResolution)
         assertFalse(viewModel.uiState.value.canContinueAmount)
