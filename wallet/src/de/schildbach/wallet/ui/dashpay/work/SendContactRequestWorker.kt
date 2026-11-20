@@ -24,6 +24,7 @@ import androidx.work.workDataOf
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.PlatformBroadcastService
 import de.schildbach.wallet.service.work.BaseWorker
 import org.bitcoinj.crypto.KeyCrypterException
@@ -35,13 +36,15 @@ class SendContactRequestWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted parameters: WorkerParameters,
     val analytics: AnalyticsService,
-    val platformBroadcastService: PlatformBroadcastService
+    val platformBroadcastService: PlatformBroadcastService,
+    val identityRepository: IdentityRepository
 ) : BaseWorker(context, parameters) {
 
     companion object {
         const val KEY_PASSWORD = "SendContactRequestWorker.PASSWORD"
         const val KEY_TO_USER_ID = "SendContactRequestWorker.KEY_TO_USER_ID"
         const val KEY_USER_ID = "SendContactRequestWorker.KEY_USER_ID"
+        const val KEY_REQUIRE_CREDITS = "SendContactRequestWorker.REQUIRE_CREDITS"
 
         fun extractUserId(date: Data): String? {
             return date.getString(KEY_USER_ID)
@@ -57,6 +60,12 @@ class SendContactRequestWorker @AssistedInject constructor(
                 ?: return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "missing KEY_PASSWORD parameter"))
         val toUserId = inputData.getString(KEY_TO_USER_ID)
                 ?: return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "missing KEY_TO_USER_ID parameter"))
+
+        if (inputData.getBoolean(KEY_REQUIRE_CREDITS, false) &&
+            identityRepository.getIdentityBalance()?.isBalanceEmpty() != false
+        ) {
+            return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "credit balance is empty or unknown"))
+        }
 
         val encryptionKey: KeyParameter
         try {

@@ -32,7 +32,6 @@ import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.data.CreditBalanceInfo
 import de.schildbach.wallet.integration.android.BitcoinIntegration
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.LockScreenActivity
@@ -304,14 +303,6 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         val displayName = (dashPayProfile?.displayName ?: "").ifEmpty { username }
         val avatarUrl = dashPayProfile?.avatarUrl
 
-        // looked up while the dialog is open so the payment never waits on Platform
-        var credits: CreditBalanceInfo? = null
-        val creditLookup = if (isPendingContactRequest) {
-            viewLifecycleOwner.lifecycleScope.launch { credits = dashPayViewModel.hasEnoughCredits() }
-        } else {
-            null
-        }
-
         val dialog = ConfirmTransactionDialog()
         val confirmed = dialog.show(
             requireActivity(),
@@ -329,11 +320,8 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
             isPendingContactRequest
         )
 
-        creditLookup?.cancel()
-
         if (confirmed == true) {
-            // the screen closes after the payment; without a known, non-empty balance the request stays pending
-            handleGo(dialog.autoAcceptContactRequest && credits?.isBalanceEmpty() == false)
+            handleGo(dialog.autoAcceptContactRequest)
         }
     }
 
@@ -364,7 +352,8 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         val contactData = viewModel.contactData.value
 
         if (autoAcceptContactRequest && contactData != null) {
-            dashPayViewModel.sendContactRequest(contactData.dashPayProfile.userId)
+            // the screen closes after the payment, so the worker checks the credits
+            dashPayViewModel.sendContactRequest(contactData.dashPayProfile.userId, requireCredits = true)
         }
 
         val transactionResultIntent = TransactionResultActivity.createIntent(

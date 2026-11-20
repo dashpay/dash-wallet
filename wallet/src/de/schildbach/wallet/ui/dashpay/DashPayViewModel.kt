@@ -233,7 +233,7 @@ open class DashPayViewModel @Inject constructor(
 
     val sendContactRequestState = SendContactRequestOperation.allOperationsStatus(walletApplication)
 
-    fun sendContactRequest(toUserId: String) {
+    fun sendContactRequest(toUserId: String, requireCredits: Boolean = false) {
         var recentlyModifiedContacts = recentlyModifiedContactsLiveData.value
         if (recentlyModifiedContacts == null) {
             recentlyModifiedContacts = hashSetOf(toUserId)
@@ -242,7 +242,7 @@ open class DashPayViewModel @Inject constructor(
         }
         recentlyModifiedContactsLiveData.postValue(recentlyModifiedContacts!!)
         SendContactRequestOperation(walletApplication)
-            .create(toUserId)
+            .create(toUserId, requireCredits)
             .enqueue()
     }
 
