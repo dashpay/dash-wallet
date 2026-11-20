@@ -1781,14 +1781,6 @@ class SendCoinsTaskRunner @Inject constructor(
         )
 
     /**
-     * For the preview of a scanned payment request, before [buildDeferredBip70Payment]: gives a
-     * wallet that is seconds from synced the time to get there
-     * ([de.schildbach.wallet.service.platform.sdk.SdkL1SendService.awaitSendReadiness]). Not for a
-     * path the user has already confirmed.
-     */
-    suspend fun awaitPreviewReadiness() = sdkL1SendService.awaitSendReadiness()
-
-    /**
      * Best-effort fee of a stored transaction, for the confirm screen: Σ(inputs) − Σ(outputs),
      * with the input values from the dashj wallet or the SDK store. Null when any is unknown.
      */
