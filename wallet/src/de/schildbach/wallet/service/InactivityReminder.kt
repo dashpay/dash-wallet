@@ -25,6 +25,7 @@ import androidx.core.app.NotificationCompat
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.WalletData
+import de.schildbach.wallet.ensureLastKnownBalancesOwned
 import de.schildbach.wallet.ui.OnboardingActivity
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet_test.R
@@ -57,7 +58,9 @@ import javax.inject.Inject
  *
  * Both stored values belong to the installed wallet: Reset Wallet clears them with every
  * other setting, and every wallet install clears them too (see `clearLastKnownBalances`),
- * so a wallet restored without a reset never inherits another wallet's amount.
+ * so a wallet restored without a reset never inherits another wallet's amount. Values an
+ * earlier version stored are cleared once, before the first reminder reads them
+ * (see `ensureLastKnownBalancesOwned`).
  *
  * A part that cannot be known never makes the amount smaller: the reminder is shown without an amount
  * when the known parts are positive, and not shown at all when they are not. The amount is
@@ -92,11 +95,12 @@ class InactivityReminder @Inject constructor(
     }
 
     private fun show(walletExists: Boolean) {
+        val balancesOwned = balancesBelongToWallet()
         val content = decide(
             isTimeToRemind = config.isTimeToRemindBalance,
             walletExists = walletExists,
-            transparentBalance = readTransparentBalance(),
-            shieldedBalance = readShieldedBalance(),
+            transparentBalance = if (balancesOwned) readTransparentBalance() else null,
+            shieldedBalance = if (balancesOwned) readShieldedBalance() else null,
             hideBalance = readHideBalance()
         ) ?: return
 
@@ -109,6 +113,18 @@ class InactivityReminder @Inject constructor(
             Content.AmountHidden -> application.getString(R.string.notification_inactivity_message_hidden)
         }
         post(text)
+    }
+
+    /**
+     * Clears values an earlier version stored, once (see [ensureLastKnownBalancesOwned]).
+     * False when that cannot be done: both balances are then unknown.
+     */
+    private fun balancesBelongToWallet(): Boolean = try {
+        ensureLastKnownBalancesOwned(walletUIConfig, dashPayConfig)
+        true
+    } catch (e: Exception) {
+        log.warn("cannot check that the stored balances belong to this wallet, treating them as unknown", e)
+        false
     }
 
     /** Null when unknown: never written, or unreadable. */

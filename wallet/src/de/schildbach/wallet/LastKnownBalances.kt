@@ -36,6 +36,29 @@ import java.io.IOException
  */
 @Throws(IOException::class)
 fun clearLastKnownBalances(walletUIConfig: WalletUIConfig, dashPayConfig: DashPayConfig) = runBlocking {
+    clear(walletUIConfig, dashPayConfig)
+}
+
+/**
+ * Makes sure the stored balances belong to the installed wallet before they are used outside
+ * the app. Values an earlier version stored are not known to: before install-time clearing,
+ * a wallet restored from the recovery screen kept the previous wallet's values. So the first
+ * call clears them once, and the next writes come from the installed wallet. After that, and
+ * after any install-time clear, it does nothing.
+ *
+ * Blocks; for background threads. Throws when the store cannot be read or written: the
+ * caller must then treat both balances as unknown.
+ */
+@Throws(IOException::class)
+fun ensureLastKnownBalancesOwned(walletUIConfig: WalletUIConfig, dashPayConfig: DashPayConfig) = runBlocking {
+    if (walletUIConfig.getPreservingErrors(WalletUIConfig.LAST_BALANCES_OWNED) != true) {
+        clear(walletUIConfig, dashPayConfig)
+    }
+}
+
+/** The marker goes last: a clear stopped part way is done again next time. */
+private suspend fun clear(walletUIConfig: WalletUIConfig, dashPayConfig: DashPayConfig) {
     walletUIConfig.remove(WalletUIConfig.LAST_TOTAL_BALANCE)
     dashPayConfig.remove(DashPayConfig.LAST_SHIELDED_BALANCE_DUFFS)
+    walletUIConfig.set(WalletUIConfig.LAST_BALANCES_OWNED, true)
 }
