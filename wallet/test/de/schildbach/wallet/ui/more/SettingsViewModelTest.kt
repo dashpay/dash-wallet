@@ -18,17 +18,26 @@
 package de.schildbach.wallet.ui.more
 
 import android.os.PowerManager
+import androidx.lifecycle.viewModelScope
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
@@ -40,6 +49,7 @@ import org.dash.wallet.common.Configuration
 import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.BlockchainServiceConfig
 import org.dash.wallet.common.data.WalletUIConfig
+import org.dash.wallet.common.data.advancedModeFlow
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -66,8 +76,12 @@ class SettingsViewModelTest {
         every { getSystemService(PowerManager::class.java) } returns powerManager
         every { packageName } returns "hashengineering.darkcoin.wallet_test"
     }
+    // Stands in for the DataStore value behind WalletUIConfig.ADVANCED_MODE
+    private val savedAdvancedMode = MutableStateFlow(false)
     private val walletUIConfig = mockk<WalletUIConfig> {
         every { observe(WalletUIConfig.SELECTED_CURRENCY) } returns flowOf("USD")
+        every { observeAdvancedMode() } returns savedAdvancedMode
+        coEvery { setAdvancedMode(any()) } coAnswers { savedAdvancedMode.value = firstArg() }
     }
     private val dashPayConfig = mockk<DashPayConfig>()
     private val blockchainIdentityConfig = mockk<BlockchainIdentityConfig> {
@@ -167,6 +181,13 @@ class SettingsViewModelTest {
         return events
     }
 
+    /** Collects every "Advanced mode" save-failure event (the unsaved value) for the rest of the test. */
+    private fun TestScope.advancedModeFailuresOf(viewModel: SettingsViewModel): List<Boolean> {
+        val events = mutableListOf<Boolean>()
+        backgroundScope.launch { viewModel.advancedModeSaveFailures.toList(events) }
+        return events
+    }
+
     @Test
     fun setAnalyticsEnabled_false_updatesServiceAndState() = runTest(dispatcher) {
         val analytics = analyticsService(enabled = true, available = true)
@@ -239,5 +260,102 @@ class SettingsViewModelTest {
         assertFalse("the last toggle is what is saved", analytics.isEnabled)
         assertFalse(second.uiState.value.analyticsEnabled)
         assertEquals(emptyList<AnalyticsSaveFailure>(), firstFailures + secondFailures)
+    }
+
+    @Test
+    fun advancedMode_isOffByDefault() = runTest(dispatcher) {
+        assertFalse(viewModel().uiState.value.advancedModeEnabled)
+    }
+
+    @Test
+    fun advancedMode_reflectsTheSavedValue() = runTest(dispatcher) {
+        savedAdvancedMode.value = true
+
+        assertTrue(viewModel().uiState.value.advancedModeEnabled)
+    }
+
+    @Test
+    fun setAdvancedModeEnabled_savesAndUpdatesState() = runTest(dispatcher) {
+        val viewModel = viewModel()
+        val failures = advancedModeFailuresOf(viewModel)
+
+        viewModel.setAdvancedModeEnabled(true)
+
+        coVerify { walletUIConfig.setAdvancedMode(true) }
+        assertTrue(viewModel.uiState.value.advancedModeEnabled)
+        assertTrue("a reopened Settings screen shows the saved value", viewModel().uiState.value.advancedModeEnabled)
+
+        viewModel.setAdvancedModeEnabled(false)
+
+        coVerify { walletUIConfig.setAdvancedMode(false) }
+        assertFalse(viewModel.uiState.value.advancedModeEnabled)
+        assertEquals(emptyList<Boolean>(), failures)
+    }
+
+    @Test
+    fun setAdvancedModeEnabled_failedSave_keepsTheSavedValue() = runTest(dispatcher) {
+        coEvery { walletUIConfig.setAdvancedMode(any()) } throws java.io.IOException("disk full")
+        val viewModel = viewModel()
+        val failures = advancedModeFailuresOf(viewModel)
+
+        viewModel.setAdvancedModeEnabled(true)
+
+        assertFalse(viewModel.uiState.value.advancedModeEnabled)
+        assertEquals("the unsaved turn-on is reported once", listOf(true), failures)
+
+        savedAdvancedMode.value = true
+        viewModel.setAdvancedModeEnabled(false)
+
+        assertTrue("the switch shows the still-saved on", viewModel.uiState.value.advancedModeEnabled)
+        assertEquals("the unsaved turn-off is reported once", listOf(true, false), failures)
+    }
+
+    @Test
+    fun setAdvancedModeEnabled_cancelledSave_isNotReportedAsAFailure() = runTest(dispatcher) {
+        coEvery { walletUIConfig.setAdvancedMode(any()) } throws CancellationException("screen closed")
+        val viewModel = viewModel()
+        val failures = advancedModeFailuresOf(viewModel)
+
+        viewModel.setAdvancedModeEnabled(true)
+
+        assertFalse(viewModel.uiState.value.advancedModeEnabled)
+        assertEquals(emptyList<Boolean>(), failures)
+    }
+
+    @Test
+    fun setAdvancedModeEnabled_leavingSettingsMidSave_stillSaves() = runTest(dispatcher) {
+        // The DataStore update is still queued when the user leaves Settings
+        val writeReady = CompletableDeferred<Unit>()
+        coEvery { walletUIConfig.setAdvancedMode(any()) } coAnswers {
+            writeReady.await()
+            savedAdvancedMode.value = firstArg()
+        }
+        val viewModel = viewModel()
+        val failures = advancedModeFailuresOf(viewModel)
+
+        viewModel.setAdvancedModeEnabled(true)
+        viewModel.viewModelScope.cancel() // onCleared(): Settings was closed
+        writeReady.complete(Unit)
+
+        assertTrue("the toggle is saved after the ViewModel is cleared", savedAdvancedMode.value)
+        assertEquals(emptyList<Boolean>(), failures)
+    }
+
+    @Test
+    fun advancedModeFlow_failedRead_emitsOffThenRecoversToTheSavedValue() = runTest(dispatcher) {
+        var reads = 0
+        val source = flow<Boolean?> {
+            if (reads++ == 0) throw java.io.IOException("unreadable")
+            emit(true)
+        }
+
+        val values = advancedModeFlow(source, retryDelayMs = { 0L }).take(2).toList()
+
+        assertEquals(listOf(false, true), values)
+    }
+
+    @Test
+    fun advancedModeFlow_unsetKey_isOff() = runTest(dispatcher) {
+        assertEquals(listOf(false), advancedModeFlow(flowOf(null)).toList())
     }
 }

@@ -55,7 +55,8 @@ fun SettingsScreen(
     onTransactionMetadataClick: () -> Unit = {},
     onBatteryOptimizationClick: () -> Unit = {},
     onAnalyticsToggle: ((Boolean) -> Unit)? = null,
-    onAnalyticsInfoClick: () -> Unit = {}
+    onAnalyticsInfoClick: () -> Unit = {},
+    onAdvancedModeToggle: ((Boolean) -> Unit)? = null
 ) {
     val viewModel: SettingsViewModel = hiltViewModel()
 
@@ -69,7 +70,8 @@ fun SettingsScreen(
         onTransactionMetadataClick = onTransactionMetadataClick,
         onBatteryOptimizationClick = onBatteryOptimizationClick,
         onAnalyticsToggle = onAnalyticsToggle ?: { viewModel.setAnalyticsEnabled(it) },
-        onAnalyticsInfoClick = onAnalyticsInfoClick
+        onAnalyticsInfoClick = onAnalyticsInfoClick,
+        onAdvancedModeToggle = onAdvancedModeToggle ?: { viewModel.setAdvancedModeEnabled(it) }
     )
 }
 
@@ -84,7 +86,8 @@ fun SettingsScreen(
     onTransactionMetadataClick: () -> Unit = {},
     onBatteryOptimizationClick: () -> Unit = {},
     onAnalyticsToggle: (Boolean) -> Unit = {},
-    onAnalyticsInfoClick: () -> Unit = {}
+    onAnalyticsInfoClick: () -> Unit = {},
+    onAdvancedModeToggle: (Boolean) -> Unit = {}
 ) {
     val uiState by uiStateFlow.collectAsState()
 
@@ -98,7 +101,8 @@ fun SettingsScreen(
         onTransactionMetadataClick = onTransactionMetadataClick,
         onBatteryOptimizationClick = onBatteryOptimizationClick,
         onAnalyticsToggle = onAnalyticsToggle,
-        onAnalyticsInfoClick = onAnalyticsInfoClick
+        onAnalyticsInfoClick = onAnalyticsInfoClick,
+        onAdvancedModeToggle = onAdvancedModeToggle
     )
 }
 
@@ -113,7 +117,8 @@ private fun SettingsScreenContent(
     onTransactionMetadataClick: () -> Unit = {},
     onBatteryOptimizationClick: () -> Unit = {},
     onAnalyticsToggle: (Boolean) -> Unit = {},
-    onAnalyticsInfoClick: () -> Unit = {}
+    onAnalyticsInfoClick: () -> Unit = {},
+    onAdvancedModeToggle: (Boolean) -> Unit = {}
 ) {
     val colors = LocalDashColors.current
     Column(
@@ -210,6 +215,15 @@ private fun SettingsScreenContent(
                             onCheckedChange = onAnalyticsToggle
                         )
                     }
+
+                    // Advanced mode (MO-1123): always the last item in Settings.
+                    // Figma DashPay - iOS, node 3043:7234.
+                    MenuItem(
+                        title = stringResource(R.string.settings_advanced_mode_title),
+                        icon = R.drawable.ic_advanced_mode,
+                        checked = uiState.advancedModeEnabled,
+                        onCheckedChange = onAdvancedModeToggle
+                    )
                 }
             }
         }
@@ -233,7 +247,8 @@ fun MoreScreenPreviewPopulated() {
         ignoringBatteryOptimizations = true,
         transactionMetadataVisible = true,
         transactionMetadataSubtitle = "Last saved: Jan 15, 2024",
-        analyticsEnabled = true
+        analyticsEnabled = true,
+        advancedModeEnabled = true
     )
     DashWalletTheme {
         SettingsScreenContent(uiState = customState)
