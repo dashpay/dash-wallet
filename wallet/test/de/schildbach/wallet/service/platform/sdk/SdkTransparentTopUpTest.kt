@@ -232,6 +232,74 @@ class SdkTransparentTopUpTest {
         assertEquals(1, source.topUpFromCoreCalls)
     }
 
+    // ── Platform's identity top-up minimum (MO-1121) ──────────────────────
+
+    @Test
+    fun belowTopUpMinimum_noTrackedLock_refusedBeforeAnyBuild() {
+        val source = fakeSource()
+        source.unresolvedLock = { null }
+        source.onTopUpFromCore = { 55_000L }
+
+        val topUp = SdkTransparentTopUp(source = source, cutoverCommitted = { true }, fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock())
+        val result = runBlocking {
+            topUp.topUpReportingLockTxId(identityBase58, CORE_MIN_IDENTITY_TOP_UP_DUFFS - 1, newUserIntent = true)
+        }
+
+        assertTrue("expected NotBroadcast, got $result", result is SdkWriteResult.NotBroadcast)
+        assertEquals(BELOW_IDENTITY_TOP_UP_MINIMUM_REASON, (result as SdkWriteResult.NotBroadcast).reason)
+        assertEquals(0, source.topUpFromCoreCalls)
+        assertEquals(0, source.resumeCalls)
+    }
+
+    @Test
+    fun atTopUpMinimum_buildsFresh() {
+        val source = fakeSource()
+        source.unresolvedLock = { null }
+        source.onTopUpFromCore = { 55_000L }
+
+        val topUp = SdkTransparentTopUp(source = source, cutoverCommitted = { true }, fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock())
+        val result = runBlocking {
+            topUp.topUpTransparent(identityBase58, CORE_MIN_IDENTITY_TOP_UP_DUFFS, newUserIntent = true)
+        }
+
+        assertTrue("expected Broadcast, got $result", result is SdkWriteResult.Broadcast)
+        assertEquals(1, source.topUpFromCoreCalls)
+    }
+
+    @Test
+    fun belowTopUpMinimum_trackedLock_stillResumed() {
+        val source = fakeSource()
+        source.unresolvedLock = { trackedLock() }
+        source.onResume = { 42_000L }
+
+        val topUp = SdkTransparentTopUp(source = source, cutoverCommitted = { true }, fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock())
+        val result = runBlocking {
+            topUp.topUpReportingLockTxId(identityBase58, 1_000L, newUserIntent = true)
+        }
+
+        assertTrue("expected Broadcast, got $result", result is SdkWriteResult.Broadcast)
+        assertTrue((result as SdkWriteResult.Broadcast).value.resumedEarlier)
+        assertEquals(1, source.resumeCalls)
+        assertEquals(0, source.topUpFromCoreCalls)
+    }
+
+    @Test
+    fun belowTopUpMinimum_staleConsumedLock_refusedOnTheFreshBuildRetry() {
+        val source = fakeSource()
+        source.unresolvedLock = { trackedLock() }
+        source.onResume = { throw alreadyConsumedFailure() }
+        source.onTopUpFromCore = { 77_000L }
+
+        val topUp = SdkTransparentTopUp(source = source, cutoverCommitted = { true }, fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock())
+        val result = runBlocking {
+            topUp.topUpTransparent(identityBase58, 1_000L, newUserIntent = true)
+        }
+
+        assertTrue("expected NotBroadcast, got $result", result is SdkWriteResult.NotBroadcast)
+        assertEquals(1, source.resumeCalls)
+        assertEquals(0, source.topUpFromCoreCalls)
+    }
+
     // ── unprotected pending payment (review 1b15e950af15) ─────────────────
 
     @Test
