@@ -22,7 +22,6 @@ import org.dash.wallet.common.services.SendEngineNotSyncedException
 import de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment
 import io.mockk.coEvery
 import io.mockk.coVerify
-import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.emptyFlow
@@ -110,15 +109,6 @@ class PaymentProtocolViewModelRetryPreviewTest {
         assertTrue(viewModel.canSendPayment)
         assertFalse("nothing left to retry", viewModel.canRetryPreview)
         runBlocking { coVerify(exactly = 2) { runner.buildDeferredBip70Payment(any(), any()) } }
-        // the preview, and only the preview, waits for a wallet that is about to be synced
-        runBlocking {
-            coVerifyOrder {
-                runner.awaitPreviewReadiness()
-                runner.buildDeferredBip70Payment(any(), any())
-                runner.awaitPreviewReadiness()
-                runner.buildDeferredBip70Payment(any(), any())
-            }
-        }
     }
 
     /**

@@ -305,9 +305,6 @@ class PaymentProtocolViewModel @Inject constructor(
                 // Built on, and later submitted for, the wallet this screen was opened on
                 // ([wallet]): a wipe in between must not have the replacement adopt the payment.
                 val origin = wallet
-                // Nothing is confirmed or submitted yet, so a wallet that is seconds from synced
-                // is waited for here, and only here.
-                sendCoinsTaskRunner.awaitPreviewReadiness()
                 deferredPaymentRef.set(
                     DeferredPreview(sendCoinsTaskRunner.buildDeferredBip70Payment(paymentIntent, origin), origin)
                 )
