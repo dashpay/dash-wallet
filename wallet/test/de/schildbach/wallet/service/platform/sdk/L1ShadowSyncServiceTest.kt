@@ -154,6 +154,31 @@ class L1ShadowSyncServiceTest {
             onStop()
         }
 
+        override fun isSpvTeardownIncomplete(t: Throwable): Boolean = t is TeardownIncomplete
+
+        /**
+         * The SDK's model of a teardown that outlives `stopSpv`'s wait: while
+         * [teardownStopsRemaining] is above zero each stop consumes one and
+         * throws, and every start is refused until a stop has returned.
+         */
+        var teardownStopsRemaining = 0
+        var teardownPending = false
+
+        fun trackTeardown(stopsThatTimeOut: Int) {
+            teardownStopsRemaining = stopsThatTimeOut
+            onStop = {
+                if (teardownStopsRemaining > 0) {
+                    teardownStopsRemaining--
+                    teardownPending = true
+                    throw TeardownIncomplete("SPV teardown timed out; it is still tracked for a retry")
+                }
+                teardownPending = false
+            }
+            onStart = {
+                if (teardownPending) throw TeardownIncomplete("SPV teardown is still running")
+            }
+        }
+
         override fun spvProgress(): Flow<SpvSyncProgressData> = progressFlow
 
         /** [FAIL_TAP] on [eventStrings] makes the tap's collect throw, as a broken feed would. */
@@ -325,6 +350,8 @@ class L1ShadowSyncServiceTest {
         }
     }
 
+    private class TeardownIncomplete(message: String) : RuntimeException(message)
+
     private fun service(
         source: FakeSource,
         flag: Boolean? = true,
@@ -343,6 +370,8 @@ class L1ShadowSyncServiceTest {
         flagGate: () -> CompletableDeferred<Unit>? = { null },
         scanMayAdvance: suspend (String) -> Boolean = { true },
         scanGateRetryInitialMs: Long = L1ShadowSyncService.SCAN_GATE_RETRY_INITIAL_MS,
+        spvTeardownRetryRounds: Int = L1ShadowSyncService.SPV_TEARDOWN_RETRY_ROUNDS,
+        spvTeardownRetryDelayMs: Long = 1L,
         durableHeightRefreshMs: Long = L1ShadowSyncService.DURABLE_HEIGHT_REFRESH_MS,
         breakdownStore: ParityBreakdownStore? = null,
         contactPaidHistory: ContactPaidHistoryInvalidation = ContactPaidHistoryInvalidation.NONE
@@ -361,6 +390,8 @@ class L1ShadowSyncServiceTest {
         destructiveBringUpJoinMs = destructiveBringUpJoinMs,
         scanMayAdvance = scanMayAdvance,
         scanGateRetryInitialMs = scanGateRetryInitialMs,
+        spvTeardownRetryRounds = spvTeardownRetryRounds,
+        spvTeardownRetryDelayMs = spvTeardownRetryDelayMs,
         durableHeightRefreshMs = durableHeightRefreshMs,
         breakdownStore = breakdownStore,
         contactPaidHistory = contactPaidHistory
@@ -1563,6 +1594,70 @@ class L1ShadowSyncServiceTest {
         source.onStart = {}
         assertTrue(service.startIfEnabled())
         assertEquals(2, source.startCalls)
+    }
+
+    /**
+     * Field report, 2026-11-18: the filter-stall restart's stop timed out, the
+     * SDK kept the teardown tracked, and the start that followed was refused.
+     * The engine stayed down for the rest of the process.
+     */
+    @Test
+    fun stallRestart_whoseStopTimedOut_stopsAgainAndStarts() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val service = service(source)
+        assertTrue(service.startIfEnabled())
+        source.trackTeardown(stopsThatTimeOut = 1)
+
+        service.launchStallRestart(stuckAt = 2_498_000L).join()
+
+        assertEquals("the restart's own stop, then the one the refused start asked for", 2, source.stopCalls)
+        assertEquals("the first start, the refused one, and the retry", 3, source.startCalls)
+        assertTrue("the engine is up again", service.isEngineRunning())
+    }
+
+    @Test
+    fun startRefusedOverUnfinishedTeardown_waitsWhileTheStopStillReportsItRunning() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val service = service(source)
+        assertTrue(service.startIfEnabled())
+        // The restart's stop and the next two all time out; the fourth returns.
+        source.trackTeardown(stopsThatTimeOut = 3)
+
+        service.launchStallRestart(stuckAt = 2_498_000L).join()
+
+        assertEquals(4, source.stopCalls)
+        assertTrue(service.isEngineRunning())
+    }
+
+    @Test
+    fun startRefusedOverUnfinishedTeardown_givesUpAfterItsRounds_andTheNextStartRecovers() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val service = service(source, spvTeardownRetryRounds = 2)
+        assertTrue(service.startIfEnabled())
+        source.trackTeardown(stopsThatTimeOut = 4)
+
+        service.launchStallRestart(stuckAt = 2_498_000L).join()
+
+        assertFalse("still refused after two rounds", service.isEngineRunning())
+        assertEquals("the restart's stop and one per round", 3, source.stopCalls)
+        assertEquals("the first start, the refused one, and one per round", 4, source.startCalls)
+
+        // A later start (the service coming back up) finishes the teardown itself.
+        assertTrue(service.startIfEnabled())
+        assertTrue(service.isEngineRunning())
+    }
+
+    @Test
+    fun startRefusedOverUnfinishedTeardown_aStopThatFailsOtherwiseIsNotRetried() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val service = service(source)
+        source.onStart = { throw TeardownIncomplete("SPV teardown is still running") }
+        source.onStop = { throw IllegalStateException("native stop failed") }
+
+        assertFalse(service.startIfEnabled())
+
+        assertEquals(1, source.startCalls)
+        assertEquals(1, source.stopCalls)
     }
 
     @Test
