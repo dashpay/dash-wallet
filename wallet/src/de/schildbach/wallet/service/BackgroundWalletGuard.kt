@@ -19,8 +19,8 @@ package de.schildbach.wallet.service
 import de.schildbach.wallet.WalletApplication
 
 /**
- * Whether background work that starts the blockchain service after an app update (the direct
- * start and the delayed fallback start) may still act on the wallet.
+ * Whether background work that was scheduled earlier (the inactivity reminder, the delayed
+ * blockchain service start after an update) may still act on the wallet.
  *
  * Not while Reset Wallet runs, not after a reset that stopped partway (it clears the wipe flag
  * but leaves the durable recovery-required state, and may leave the old wallet file behind),

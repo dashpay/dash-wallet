@@ -65,6 +65,9 @@ class RestoreWalletFromFileViewModel @Inject constructor(
     /** Another onboarding screen installed a wallet first; this restore was dropped. */
     val walletAlreadyInstalled = SingleLiveEvent<Unit>()
 
+    /** The install failed with nothing installed (a storage error); the user may try again. */
+    val installFailed = SingleLiveEvent<Unit>()
+
     /**
      * The wallet last restored from a keys file, whose new recovery phrase
      * must be backed up once the wallet is accepted ([restoreWallet]).
@@ -92,12 +95,30 @@ class RestoreWalletFromFileViewModel @Inject constructor(
             // the blocking install still lands if the screen goes away, so the
             // bookkeeping an installed wallet needs must land with it. Only the
             // UI events below are skipped once the ViewModel is cleared.
-            val result = withContext(NonCancellable + Dispatchers.IO) {
-                walletApplication.installWallet(wallet, false).also {
-                    if (it == WalletInstallResult.INSTALLED) {
+            val result = try {
+                withContext(NonCancellable + Dispatchers.IO) {
+                    // Only the install is inside this catch: once it returns INSTALLED the
+                    // wallet is live, and a later failure must not report a failed install.
+                    val installed = try {
+                        walletApplication.installWallet(wallet, false)
+                    } catch (e: IOException) {
+                        throw InstallFailure(e)
+                    }
+                    if (installed == WalletInstallResult.INSTALLED) {
                         completeRestoredWalletInstall(fromKeysFile)
                     }
+                    installed
                 }
+            } catch (failure: InstallFailure) {
+                val e = failure.ioCause
+                // Nothing was installed (a storage failure before the install). Keep the
+                // keys-file bookkeeping so a retry of the same wallet still arms its backup.
+                log.error("restored wallet could not be installed", e)
+                if (fromKeysFile) {
+                    keysFileWallet = wallet
+                }
+                installFailed.call(Unit)
+                return@launch
             }
             when (result) {
                 WalletInstallResult.ALREADY_INSTALLED -> {
@@ -131,8 +152,17 @@ class RestoreWalletFromFileViewModel @Inject constructor(
             configuration.armBackupReminder()
             configuration.armBackupSeedReminder()
         }
-        dashPayConfig.disableNotifications()
+        try {
+            dashPayConfig.disableNotifications()
+        } catch (e: IOException) {
+            // The wallet is installed: carry on to PIN setup. At worst, contact
+            // notifications from before the restore are shown once.
+            log.warn("could not disable the notifications from before the restore", e)
+        }
         log.info("successfully restored wallet from file")
         walletApplication.resetBlockchainState()
     }
 }
+
+/** An [IOException] from the install itself, kept apart from one in the bookkeeping after it. */
+private class InstallFailure(val ioCause: IOException) : Exception(ioCause)

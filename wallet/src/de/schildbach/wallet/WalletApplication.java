@@ -105,6 +105,7 @@ import org.dash.wallet.integrations.coinbase.service.CoinBaseClientConstants;
 import ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy;
 import ch.qos.logback.core.util.FileSize;
 import de.schildbach.wallet.security.SecurityInitializer;
+import de.schildbach.wallet.service.InactivityReminder;
 import de.schildbach.wallet.service.PeriodicAlarmTier;
 import de.schildbach.wallet.service.BlockchainStateDataProvider;
 import de.schildbach.wallet.service.TxDisplayCacheService;
@@ -1171,6 +1172,24 @@ public class WalletApplication extends MultiDexApplication
         }
         // The deferred-load wait is the callers' (installWallet, setWallet),
         // before they take walletInstallLock: never while holding it.
+
+        // Before anything changes: the stored last-known balances belong to
+        // the wallet being replaced (a recovery-screen restore installs
+        // without a reset). A failed clear fails the install with nothing
+        // changed, as a failed save of the new wallet would: a value that
+        // survived it would be read as the new wallet's.
+        try {
+            LastKnownBalances.clearLastKnownBalances(walletUIConfig, dashPayConfig);
+        } catch (final IOException x) {
+            throw x;
+        } catch (final Exception x) {
+            throw new IOException("could not clear the last known balances before installing a wallet", x);
+        }
+        // A reminder posted for the replaced wallet names its funds: remove it.
+        // Under the reminder's posting lock, after the clear, so one being
+        // prepared either posts first and is removed here, or reads the
+        // cleared values.
+        InactivityReminder.cancel(this);
         EnumSet<AuthenticationKeyChain.KeyChainType> authKeyTypes = EnumSet.of(
                 AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER,
                 AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING,
@@ -1543,7 +1562,7 @@ public class WalletApplication extends MultiDexApplication
         }, "wallet-startup-maintenance").start();
 
         // setup WalletBalanceObserver
-        walletBalanceObserver = new WalletBalanceObserver(wallet, walletUIConfig);
+        walletBalanceObserver = new WalletBalanceObserver(wallet, walletUIConfig, dashPayConfig);
 
         // Parity-free cutover (QA directive): make the SDK L1-primary from the FIRST
         // launch for EVERY wallet — UPGRADES included, not just fresh create/restore

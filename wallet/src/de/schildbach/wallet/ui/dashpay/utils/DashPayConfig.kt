@@ -829,6 +829,14 @@ open class DashPayConfig @Inject constructor(
         val LAST_SHIELDED_BALANCE_DUFFS = longPreferencesKey("last_shielded_balance_duffs")
 
         /**
+         * True when [LAST_SHIELDED_BALANCE_DUFFS] was written by a version that clears it on
+         * every wallet install, so it belongs to the installed wallet: written in the same
+         * transaction as the value. A value an earlier version stored has no flag and is not
+         * shown outside the app.
+         */
+        val LAST_SHIELDED_BALANCE_OWNED = booleanPreferencesKey("last_shielded_balance_owned")
+
+        /**
          * A local shielded spend is still reconciling (its note settlement can
          * span several sync passes). Set together with removing
          * [LAST_SHIELDED_BALANCE_DUFFS]; cleared only once the balance has
@@ -942,6 +950,7 @@ open class DashPayConfig @Inject constructor(
         editPreferences { prefs ->
             if (prefs[SHIELDED_SPEND_RECONCILE_PENDING] != true) {
                 prefs[LAST_SHIELDED_BALANCE_DUFFS] = duffs
+                prefs[LAST_SHIELDED_BALANCE_OWNED] = true
                 written = true
             }
         }

@@ -40,6 +40,7 @@ import org.bitcoinj.wallet.DeterministicSeed
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.BlockchainServiceConfig
 import org.slf4j.LoggerFactory
+import java.io.IOException
 import java.util.*
 import javax.inject.Inject
 
@@ -53,7 +54,10 @@ enum class SeedRestoreResult {
     REFUSED,
 
     /** Another onboarding screen installed a wallet first; nothing was written. */
-    WALLET_ALREADY_INSTALLED
+    WALLET_ALREADY_INSTALLED,
+
+    /** The phrase was valid, but the wallet could not be saved on this device (a storage error); nothing was installed. */
+    INSTALL_FAILED
 }
 
 @HiltViewModel
@@ -216,7 +220,14 @@ class RestoreWalletFromSeedViewModel @Inject constructor(
             val wallet = walletFactory.restoreFromSeed(Constants.NETWORK_PARAMETERS, normalize(words))
             // Forgot-PIN recovery replaces the installed wallet on purpose; an
             // onboarding restore must not (see WalletApplication.installWallet).
-            when (walletApplication.installWallet(wallet, forgotPinRecovery)) {
+            val installed = try {
+                walletApplication.installWallet(wallet, forgotPinRecovery)
+            } catch (e: IOException) {
+                // Storage, not the phrase: nothing was installed and the user can try again.
+                log.error("restored wallet could not be installed", e)
+                return@withContext SeedRestoreResult.INSTALL_FAILED
+            }
+            when (installed) {
                 WalletInstallResult.ALREADY_INSTALLED -> {
                     log.warn("restored wallet dropped: another onboarding screen installed a wallet first")
                     return@withContext SeedRestoreResult.WALLET_ALREADY_INSTALLED
