@@ -1629,10 +1629,15 @@ class L1ShadowSyncServiceTest {
         assertTrue(service.isEngineRunning())
     }
 
+    /**
+     * A filter-stall restart has torn its loops down by the time its start
+     * is refused, so a refusal that outlasts every round has to schedule the
+     * next start itself.
+     */
     @Test
-    fun startRefusedOverUnfinishedTeardown_givesUpAfterItsRounds_andTheNextStartRecovers() = runBlocking {
+    fun startStillRefusedAfterItsRounds_retriesOnItsOwn_untilTheTeardownFinishes() = runBlocking {
         val source = FakeSource(boundWalletId = walletIdHex)
-        val service = service(source, spvTeardownRetryRounds = 2)
+        val service = service(source, spvTeardownRetryRounds = 2, scanGateRetryInitialMs = 20)
         assertTrue(service.startIfEnabled())
         source.trackTeardown(stopsThatTimeOut = 4)
 
@@ -1642,9 +1647,39 @@ class L1ShadowSyncServiceTest {
         assertEquals("the restart's stop and one per round", 3, source.stopCalls)
         assertEquals("the first start, the refused one, and one per round", 4, source.startCalls)
 
-        // A later start (the service coming back up) finishes the teardown itself.
+        withTimeout(5_000) { while (!service.isEngineRunning()) delay(10) }
+        service.stop()
+    }
+
+    @Test
+    fun startStillRefusedAfterItsRounds_doesNotRetry_afterAnExternalStop() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val service = service(source, spvTeardownRetryRounds = 1, scanGateRetryInitialMs = 20)
         assertTrue(service.startIfEnabled())
-        assertTrue(service.isEngineRunning())
+        source.trackTeardown(stopsThatTimeOut = 3)
+        service.launchStallRestart(stuckAt = 2_498_000L).join()
+        assertFalse(service.isEngineRunning())
+
+        service.stop()
+        val startsAtStop = source.startCalls
+        delay(200)
+
+        assertEquals("the scheduled retry was cancelled by the stop", startsAtStop, source.startCalls)
+        assertFalse(service.isEngineRunning())
+    }
+
+    /** A reset deletes the SPV state after its stop: it must not wait a teardown out and start on it. */
+    @Test
+    fun reset_whoseStopTimedOut_failsAtItsStart_withoutStoppingAgain() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val service = service(source)
+        assertTrue(service.startIfEnabled())
+        source.trackTeardown(stopsThatTimeOut = 1)
+
+        assertFalse(service.resetShadowState(hard = false))
+
+        assertEquals("only the reset's own stop", 1, source.stopCalls)
+        assertEquals("the first start and the refused one", 2, source.startCalls)
     }
 
     @Test
