@@ -19,7 +19,11 @@ package de.schildbach.wallet.transactions
 
 import com.google.common.base.Stopwatch
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.service.platform.sdk.CutoverState
+import de.schildbach.wallet.service.platform.sdk.dashjEngineMayStart
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -41,7 +45,8 @@ import java.util.concurrent.TimeUnit
 
 class WalletBalanceObserver(
     private val wallet: Wallet,
-    private val walletUIConfig: WalletUIConfig
+    private val walletUIConfig: WalletUIConfig,
+    private val dashPayConfig: DashPayConfig
 ) {
     companion object {
         private val log = LoggerFactory.getLogger(WalletBalanceObserver::class.java)
@@ -106,12 +111,29 @@ class WalletBalanceObserver(
             org.bitcoinj.core.Context.propagate(Constants.CONTEXT)
 
             val totalBalance = wallet.getBalance(BalanceType.ESTIMATED)
-            walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, totalBalance.value)
-            // After the value: a death between the two leaves it unflagged, so unknown.
-            walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE_OWNED, true)
+            // The stored balance is the L1 owner's. After the cutover the SDK writes it
+            // (CutoverUiDataService); a dashj estimate from the Tools sync diagnostic must
+            // not replace it, nor stand behind an ownership flag an SDK write already set.
+            if (dashjOwnsL1()) {
+                walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, totalBalance.value)
+                // After the value: a death between the two leaves it unflagged, so unknown.
+                walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE_OWNED, true)
+            }
             _totalBalance.emit(totalBalance)
             isSeeded = true
         }
+    }
+
+    /** Whether dashj still owns L1 (no committed cutover). Fails closed: unreadable is no. */
+    private suspend fun dashjOwnsL1(): Boolean = try {
+        dashjEngineMayStart(
+            CutoverState.fromStored(dashPayConfig.getPreservingErrors(DashPayConfig.CUTOVER_STATE))
+        )
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        log.warn("cannot read the cutover state; not storing the dashj balance", e)
+        false
     }
 
     /** custom observer */

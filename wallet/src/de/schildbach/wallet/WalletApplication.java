@@ -1562,7 +1562,7 @@ public class WalletApplication extends MultiDexApplication
         }, "wallet-startup-maintenance").start();
 
         // setup WalletBalanceObserver
-        walletBalanceObserver = new WalletBalanceObserver(wallet, walletUIConfig);
+        walletBalanceObserver = new WalletBalanceObserver(wallet, walletUIConfig, dashPayConfig);
 
         // Parity-free cutover (QA directive): make the SDK L1-primary from the FIRST
         // launch for EVERY wallet — UPGRADES included, not just fresh create/restore
