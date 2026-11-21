@@ -1127,6 +1127,24 @@ class ShieldedBalanceServiceImpl internal constructor(
     /**
      * Wall clock (Unix millis) for spend start times. Injectable for tests.
      */
+    /**
+     * The app wallet a balance read from SDK wallet `walletIdHex` is stored as
+     * ([SdkWalletBinder.appWalletIdFor]); null while that is not known, and the balance is
+     * then not persisted. Defaults to the SDK id itself for the tests.
+     */
+    private val appWalletIdFor: (String) -> String? = { it },
+    /**
+     * The loaded app wallet's id ([SdkWalletBinder.installedWalletId]):
+     * [lastKnownShieldedBalance] is read only as this wallet's. Default null for the tests,
+     * which stub the read itself.
+     */
+    private val installedWalletId: () -> String? = { null },
+    /**
+     * Ticks each time the binder confirms a bind ([SdkWalletBinder.walletBindConfirmations]):
+     * a balance withheld because [appWalletIdFor] was not known yet is persisted then, even
+     * if nothing else changed. A constant for the tests.
+     */
+    private val bindConfirmations: Flow<Long> = flowOf(0L),
     private val clock: () -> Long = System::currentTimeMillis,
     /**
      * Test seam: runs in [onShieldedPassCompleted] right after the note store
@@ -1146,7 +1164,8 @@ class ShieldedBalanceServiceImpl internal constructor(
         assetLockKindResolver: AssetLockKindResolver,
         walletData: de.schildbach.wallet.data.WalletData,
         seamOutputLockRegistry: SeamOutputLockRegistry,
-        fundingGate: de.schildbach.wallet.payments.PendingPaymentFundingGate
+        fundingGate: de.schildbach.wallet.payments.PendingPaymentFundingGate,
+        sdkWalletBinder: SdkWalletBinder
     ) : this(
         source = DashSdkShieldedSource(sdkService),
         dashPayConfig = dashPayConfig,
@@ -1170,7 +1189,10 @@ class ShieldedBalanceServiceImpl internal constructor(
         sweepScope = applicationScope,
         seedAssetLockKind = { displayHex, kind -> assetLockKindResolver.seed(displayHex, kind) },
         freshFundingBlocked = { fundingGate.isFreshFundingBlocked() },
-        fundingSelection = fundingGate.selectionLock
+        fundingSelection = fundingGate.selectionLock,
+        appWalletIdFor = sdkWalletBinder::appWalletIdFor,
+        installedWalletId = sdkWalletBinder::installedWalletId,
+        bindConfirmations = sdkWalletBinder.walletBindConfirmations
     )
 
     /** Serializes [ensureShieldedReady]/[stop] — the single-flight guarantee. */
@@ -1264,7 +1286,8 @@ class ShieldedBalanceServiceImpl internal constructor(
     private var sweepJob: Job? = null
 
     override suspend fun lastKnownShieldedBalance(): Dash? = try {
-        dashPayConfig.getLastShieldedBalanceDuffs()?.let { Dash(it) }
+        dashPayConfig.getLastShieldedBalanceDuffs(installedWalletId())
+            ?.let { Dash(it) }
     } catch (t: Throwable) {
         if (t is CancellationException) throw t
         log.warn("failed to read the last-known shielded balance; treating as absent", t)
@@ -2030,8 +2053,10 @@ class ShieldedBalanceServiceImpl internal constructor(
             combine(
                 observeShieldedBalance(),
                 _shieldedSyncStatus,
-                _shieldedBalanceMaybeStale
-            ) { balance, status, stale ->
+                _shieldedBalanceMaybeStale,
+                // Only to re-run a write withheld for an unconfirmed owner (below).
+                bindConfirmations
+            ) { balance, status, stale, _ ->
                 Triple(balance, status, stale)
             }.collect { (balance, status, stale) ->
                 // READY persists through post-spend sync passes, so READY
@@ -2051,7 +2076,10 @@ class ShieldedBalanceServiceImpl internal constructor(
                 // so the write itself is conditional on the durable reconcile
                 // marker, inside one DataStore transaction — a pre-spend
                 // snapshot can never resurrect the cache.
-                runCatching { dashPayConfig.setLastShieldedBalanceDuffsUnlessReconciling(duffs) }
+                // Stored as the app wallet the ready SDK wallet was bound from; while that is
+                // unknown it is not stored, and is retried on the next emission.
+                val owner = readyWalletIdHex.value?.let(appWalletIdFor) ?: return@collect
+                runCatching { dashPayConfig.setLastShieldedBalanceDuffsUnlessReconciling(duffs, owner) }
                     .onSuccess { written -> if (written) lastPersisted = duffs }
                     .onFailure {
                         if (it is CancellationException) throw it

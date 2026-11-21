@@ -20,7 +20,6 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.viewModels
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
@@ -30,7 +29,6 @@ import de.schildbach.wallet.ui.RestoreWalletFromFileViewModel
 import de.schildbach.wallet.ui.SET_PIN_REQUEST_CODE
 import de.schildbach.wallet.ui.redirectDegradedWallet
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog
-import de.schildbach.wallet_test.R
 import org.bitcoinj.wallet.Wallet
 import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.SecureActivity
@@ -78,10 +76,6 @@ open class RestoreFromFileActivity : SecureActivity(), AbstractPINDialogFragment
             redirectDegradedWallet(walletApplication)
         }
         viewModel.walletAlreadyInstalled.observe(this) { onWalletAlreadyInstalled() }
-        viewModel.installFailed.observe(this) {
-            Toast.makeText(this, R.string.wallet_install_failed, Toast.LENGTH_LONG).show()
-            RestoreWalletDialogFragment.showPick(supportFragmentManager)
-        }
         viewModel.retryRequest.observe(this) {
             RestoreWalletDialogFragment.showPick(supportFragmentManager)
         }

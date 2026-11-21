@@ -27,9 +27,11 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.bitcoinj.core.Coin
+import org.bitcoinj.crypto.HDKeyDerivation
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.data.WalletUIConfig
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -41,11 +43,14 @@ import java.io.IOException
 @Config(application = Application::class, sdk = [29], manifest = Config.NONE)
 class WalletBalanceObserverPersistTest {
     private val balance = Coin.valueOf(42_000L)
+    private val watchingKey = HDKeyDerivation.createMasterPrivateKey(ByteArray(32) { 1 }).dropPrivateBytes()
+    private val walletId = watchingKey.pubKeyHash.joinToString("") { "%02x".format(it) }
     private val wallet = mockk<Wallet>(relaxed = true).also {
         every { it.getBalance(any<Wallet.BalanceType>()) } returns balance
+        every { it.watchingKey } returns watchingKey
     }
     private val walletUIConfig = mockk<WalletUIConfig>(relaxed = true) {
-        coEvery { get(WalletUIConfig.LAST_TOTAL_BALANCE) } returns null
+        coEvery { getLastTotalBalance(any()) } returns null
     }
     private val dashPayConfig = mockk<DashPayConfig>(relaxed = true)
 
@@ -59,11 +64,33 @@ class WalletBalanceObserverPersistTest {
     }
 
     @Test
-    fun `before the cutover the dashj balance is stored with its flag`() {
+    fun `before the cutover the dashj balance is stored as this wallet's`() {
         emitWithState(CutoverState.DUAL_RUNNING.name)
 
-        coVerify(exactly = 1) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, balance.value) }
-        coVerify(exactly = 1) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE_OWNED, true) }
+        coVerify(exactly = 1) { walletUIConfig.setLastTotalBalance(balance.value, walletId) }
+    }
+
+    @Test
+    fun `the launch seed is read as this wallet's`() {
+        val seeded = Coin.valueOf(7_000L)
+        coEvery { walletUIConfig.getLastTotalBalance(walletId) } returns seeded.value
+        val observer = WalletBalanceObserver(wallet, walletUIConfig, dashPayConfig)
+
+        runBlocking { withTimeout(5_000) { observer.totalBalance.first { it == seeded } } }
+    }
+
+    /**
+     * An untagged value an earlier version stored (or none at all) is unknown, not zero: the
+     * observer stays unseeded so synchronous readers read the wallet itself.
+     */
+    @Test
+    fun `no value stored as this wallet's leaves the observer unseeded`() {
+        val observer = WalletBalanceObserver(wallet, walletUIConfig, dashPayConfig)
+
+        coVerify(timeout = 5_000) { walletUIConfig.getLastTotalBalance(walletId) }
+        Thread.sleep(100)
+        assertFalse(observer.isSeeded)
+        assertEquals(Coin.ZERO, observer.totalBalance.value)
     }
 
     @Test
@@ -71,8 +98,7 @@ class WalletBalanceObserverPersistTest {
         val observer = emitWithState(CutoverState.CUT_OVER.name)
 
         assertEquals("still shown live", balance, observer.totalBalance.value)
-        coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, any<Long>()) }
-        coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE_OWNED, any<Boolean>()) }
+        coVerify(exactly = 0) { walletUIConfig.setLastTotalBalance(any(), any()) }
     }
 
     @Test
@@ -82,6 +108,6 @@ class WalletBalanceObserverPersistTest {
         observer.emitBalances()
         runBlocking { withTimeout(5_000) { observer.totalBalance.first { it == balance } } }
 
-        coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, any<Long>()) }
+        coVerify(exactly = 0) { walletUIConfig.setLastTotalBalance(any(), any()) }
     }
 }

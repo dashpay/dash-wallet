@@ -41,6 +41,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.BaseConfig
+import org.dash.wallet.common.data.lastKnownBalance
 import org.dash.wallet.common.util.security.EncryptionProvider
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -829,12 +830,11 @@ open class DashPayConfig @Inject constructor(
         val LAST_SHIELDED_BALANCE_DUFFS = longPreferencesKey("last_shielded_balance_duffs")
 
         /**
-         * True when [LAST_SHIELDED_BALANCE_DUFFS] was written by a version that clears it on
-         * every wallet install, so it belongs to the installed wallet: written in the same
-         * transaction as the value. A value an earlier version stored has no flag and is not
-         * shown outside the app.
+         * The id of the wallet whose balance [LAST_SHIELDED_BALANCE_DUFFS] is, written with it
+         * in one transaction. Absent on a value an earlier version stored, which is then
+         * not read ([org.dash.wallet.common.data.lastKnownBalance]).
          */
-        val LAST_SHIELDED_BALANCE_OWNED = booleanPreferencesKey("last_shielded_balance_owned")
+        val LAST_SHIELDED_BALANCE_WALLET = stringPreferencesKey("last_shielded_balance_wallet")
 
         /**
          * A local shielded spend is still reconciling (its note settlement can
@@ -907,11 +907,12 @@ open class DashPayConfig @Inject constructor(
     }
 
     /**
-     * The last shielded balance persisted from a fully-synced runtime, in
-     * duffs, or null when none has ever been persisted. See
-     * [LAST_SHIELDED_BALANCE_DUFFS].
+     * Wallet [walletId]'s last shielded balance persisted from a fully-synced
+     * runtime, in duffs; null when none was persisted as that wallet's, or the
+     * store cannot be read. See [LAST_SHIELDED_BALANCE_DUFFS].
      */
-    suspend fun getLastShieldedBalanceDuffs(): Long? = get(LAST_SHIELDED_BALANCE_DUFFS)
+    open suspend fun getLastShieldedBalanceDuffs(walletId: String?): Long? =
+        data.first().lastKnownBalance(LAST_SHIELDED_BALANCE_DUFFS, LAST_SHIELDED_BALANCE_WALLET, walletId)
 
     /**
      * Durably record that a local shielded spend is reconciling: in ONE
@@ -926,6 +927,7 @@ open class DashPayConfig @Inject constructor(
      */
     suspend fun markShieldedSpendReconcilePending(sinceMs: Long) = editPreferences { prefs ->
         prefs.remove(LAST_SHIELDED_BALANCE_DUFFS)
+        prefs.remove(LAST_SHIELDED_BALANCE_WALLET)
         val alreadyPending = prefs[SHIELDED_SPEND_RECONCILE_PENDING] == true
         val existingSince = prefs[SHIELDED_SPEND_RECONCILE_SINCE_MS]
         prefs[SHIELDED_SPEND_RECONCILE_PENDING] = true
@@ -943,14 +945,14 @@ open class DashPayConfig @Inject constructor(
      * [markShieldedSpendReconcilePending] dropped it: transactions serialize,
      * and whichever lands second wins against the stale snapshot (the spend's
      * removes it; this one sees the marker and skips). Returns whether it was
-     * written.
+     * written. Stored as wallet [walletId]'s, value and id together.
      */
-    suspend fun setLastShieldedBalanceDuffsUnlessReconciling(duffs: Long): Boolean {
+    suspend fun setLastShieldedBalanceDuffsUnlessReconciling(duffs: Long, walletId: String): Boolean {
         var written = false
         editPreferences { prefs ->
             if (prefs[SHIELDED_SPEND_RECONCILE_PENDING] != true) {
                 prefs[LAST_SHIELDED_BALANCE_DUFFS] = duffs
-                prefs[LAST_SHIELDED_BALANCE_OWNED] = true
+                prefs[LAST_SHIELDED_BALANCE_WALLET] = walletId
                 written = true
             }
         }

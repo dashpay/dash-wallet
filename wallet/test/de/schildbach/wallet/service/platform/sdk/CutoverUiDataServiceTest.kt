@@ -1356,6 +1356,8 @@ class CutoverUiDataServiceTest {
         retryBind: suspend () -> Unit = {},
         /** [SdkWalletBinder.walletBindConfirmations]; default never advances. */
         walletBindConfirmations: kotlinx.coroutines.flow.StateFlow<Long> = MutableStateFlow(0L),
+        /** [SdkWalletBinder.appWalletIdFor]; default: every SDK wallet was bound from [APP_WALLET]. */
+        appWalletIdFor: (String) -> String? = { APP_WALLET },
         /**
          * The refresh's receive-address read. Under `runTest` it stays on the
          * test scheduler, so `runCurrent()` returns only once the refresh it
@@ -1392,6 +1394,8 @@ class CutoverUiDataServiceTest {
         resolveMetadata = { txids -> metadata.filterKeys { it in txids } },
         retryBind = retryBind,
         walletBindConfirmations = walletBindConfirmations,
+        appWalletIdFor = appWalletIdFor,
+        installedWalletId = { APP_WALLET },
         nowMs = { now },
         receiveRefreshDispatcher = receiveRefreshDispatcher
     )
@@ -1476,10 +1480,8 @@ class CutoverUiDataServiceTest {
             Coin.valueOf(123_456),
             service.overlayTotalBalance(flowOf(Coin.valueOf(999))).first()
         )
-        coVerifyOrder {
-            walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 123_456L)
-            walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE_OWNED, true)
-        }
+        // Stored as the app wallet the binder bound this SDK wallet from.
+        coVerify { walletUIConfig.setLastTotalBalance(123_456L, APP_WALLET) }
 
         // Live update: a new SDK balance lands without any dashj involvement.
         source.balanceDuffs.value = 200_000L
@@ -1488,12 +1490,34 @@ class CutoverUiDataServiceTest {
     }
 
     @Test
+    fun postCutover_balanceIsNotPersisted_untilTheBinderConfirmsItsAppWallet() = runTest {
+        val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
+        val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
+        var owner: String? = null
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            walletUIConfig = walletUIConfig, appWalletIdFor = { owner }
+        )
+        service.start()
+        runCurrent()
+
+        // Shown live, but not stored: it could be stored as the wrong wallet's.
+        assertEquals(Coin.valueOf(123_456), service.sdkBalanceOrNull())
+        coVerify(exactly = 0) { walletUIConfig.setLastTotalBalance(any(), any()) }
+
+        owner = APP_WALLET
+        source.balanceDuffs.value = 200_000L
+        runCurrent()
+        coVerify { walletUIConfig.setLastTotalBalance(200_000L, APP_WALLET) }
+    }
+
+    @Test
     fun postCutover_midScan_holdsLastKnownBalanceAndDoesNotPersist() = runTest {
         // The SDK's from-scratch filter scan has only found part of the wallet
         // so far; the last launch knew the real figure.
         val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
         val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
-        coEvery { walletUIConfig.get(WalletUIConfig.LAST_TOTAL_BALANCE) } returns 900_000L
+        coEvery { walletUIConfig.getLastTotalBalance(APP_WALLET) } returns 900_000L
 
         val service = buildService(
             source, configWithState("CUT_OVER"), backgroundScope,
@@ -1511,7 +1535,7 @@ class CutoverUiDataServiceTest {
         assertEquals(Coin.valueOf(123_456), service.sdkBalanceOrNull())
         // And the partial is NEVER written back over the seed (the
         // compounding bug: it would poison the next launch's last-known).
-        coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, any<Long>()) }
+        coVerify(exactly = 0) { walletUIConfig.setLastTotalBalance(any(), any()) }
     }
 
     @Test
@@ -1533,7 +1557,7 @@ class CutoverUiDataServiceTest {
         // The live figure still publishes for display…
         assertEquals(Coin.valueOf(123_456), service.sdkBalanceOrNull())
         // …but is never written back as the launch seed.
-        coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, any<Long>()) }
+        coVerify(exactly = 0) { walletUIConfig.setLastTotalBalance(any(), any()) }
     }
 
     @Test
@@ -1557,7 +1581,7 @@ class CutoverUiDataServiceTest {
         runCurrent()
 
         assertEquals(Coin.valueOf(4_886_000_000L), service.sdkBalanceOrNull())
-        coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, any<Long>()) }
+        coVerify(exactly = 0) { walletUIConfig.setLastTotalBalance(any(), any()) }
     }
 
     @Test
@@ -1578,7 +1602,7 @@ class CutoverUiDataServiceTest {
         assertEquals(Coin.valueOf(10_708_173_522L), service.sdkBalanceOrNull())
         // atLeast, not exactly: the refresh ticker republishes (and re-persists)
         // the same figure on every tick inside runCurrent().
-        coVerify(atLeast = 1) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 10_708_173_522L) }
+        coVerify(atLeast = 1) { walletUIConfig.setLastTotalBalance(10_708_173_522L, APP_WALLET) }
     }
 
     @Test
@@ -1603,7 +1627,7 @@ class CutoverUiDataServiceTest {
 
         // The live figure is still published — the header must not freeze.
         assertEquals(Coin.valueOf(123_456), service.sdkBalanceOrNull())
-        coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, any<Long>()) }
+        coVerify(exactly = 0) { walletUIConfig.setLastTotalBalance(any(), any()) }
     }
 
     @Test
@@ -1627,7 +1651,7 @@ class CutoverUiDataServiceTest {
 
         // Display is unaffected — only the durable seed is held.
         assertEquals(Coin.valueOf(43_841_654), service.sdkBalanceOrNull())
-        coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, any<Long>()) }
+        coVerify(exactly = 0) { walletUIConfig.setLastTotalBalance(any(), any()) }
     }
 
     @Test
@@ -1695,7 +1719,7 @@ class CutoverUiDataServiceTest {
         service.start()
         runCurrent()
 
-        coVerify { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 54_937_488L) }
+        coVerify { walletUIConfig.setLastTotalBalance(54_937_488L, APP_WALLET) }
     }
 
     @Test
@@ -1710,7 +1734,7 @@ class CutoverUiDataServiceTest {
         service.start()
         runCurrent()
 
-        coVerify { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 123_456L) }
+        coVerify { walletUIConfig.setLastTotalBalance(123_456L, APP_WALLET) }
     }
 
     @Test
@@ -1727,7 +1751,7 @@ class CutoverUiDataServiceTest {
         service.start()
         runCurrent()
 
-        coVerify { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 123_456L) }
+        coVerify { walletUIConfig.setLastTotalBalance(123_456L, APP_WALLET) }
     }
 
     @Test
@@ -1751,12 +1775,12 @@ class CutoverUiDataServiceTest {
         // The live figure publishes immediately; the pinned count has not yet
         // proven itself settled, so nothing is persisted.
         assertEquals(Coin.valueOf(123_456), service.sdkBalanceOrNull())
-        coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, any<Long>()) }
+        coVerify(exactly = 0) { walletUIConfig.setLastTotalBalance(any(), any()) }
 
         // Still within the settling window after one more refresh.
         testScheduler.advanceTimeBy(CutoverUiDataService.REFRESH_INTERVAL_MS + 1)
         runCurrent()
-        coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, any<Long>()) }
+        coVerify(exactly = 0) { walletUIConfig.setLastTotalBalance(any(), any()) }
 
         // Enough consecutive unchanged reads: the queue is settled (stuck, not
         // draining) and the balance persists again.
@@ -1764,7 +1788,7 @@ class CutoverUiDataServiceTest {
             testScheduler.advanceTimeBy(CutoverUiDataService.REFRESH_INTERVAL_MS + 1)
             runCurrent()
         }
-        coVerify { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 123_456L) }
+        coVerify { walletUIConfig.setLastTotalBalance(123_456L, APP_WALLET) }
     }
 
     @Test
@@ -1789,7 +1813,7 @@ class CutoverUiDataServiceTest {
             runCurrent()
         }
 
-        coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, any<Long>()) }
+        coVerify(exactly = 0) { walletUIConfig.setLastTotalBalance(any(), any()) }
     }
 
     // ── QA phone 2 (12.0.0-qa28, restore): builds that cannot drain ───
@@ -1820,7 +1844,7 @@ class CutoverUiDataServiceTest {
             runCurrent()
         }
 
-        coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, any<Long>()) }
+        coVerify(exactly = 0) { walletUIConfig.setLastTotalBalance(any(), any()) }
         assertEquals(
             "builds unsettled and held by the locked device",
             PublishedTerms(false, true, true, false),
@@ -1837,14 +1861,14 @@ class CutoverUiDataServiceTest {
             runCurrent()
         }
         assertEquals(PublishedTerms(false, true, false, false), published.last())
-        coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, any<Long>()) }
+        coVerify(exactly = 0) { walletUIConfig.setLastTotalBalance(any(), any()) }
 
         repeat(DEFERRED_BUILDS_SETTLED_READS + 1) {
             testScheduler.advanceTimeBy(CutoverUiDataService.REFRESH_INTERVAL_MS + 1)
             runCurrent()
         }
         assertEquals(PublishedTerms(true, true, false, false), published.last())
-        coVerify { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 3_554_481_263L) }
+        coVerify { walletUIConfig.setLastTotalBalance(3_554_481_263L, APP_WALLET) }
     }
 
     @Test
@@ -1867,7 +1891,7 @@ class CutoverUiDataServiceTest {
             runCurrent()
         }
 
-        coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, any<Long>()) }
+        coVerify(exactly = 0) { walletUIConfig.setLastTotalBalance(any(), any()) }
     }
 
     @Test
@@ -2010,7 +2034,7 @@ class CutoverUiDataServiceTest {
         // First ever run: there is nothing to hold, so the live figure wins.
         val source = FakeSource(balanceDuffs = MutableStateFlow(123_456L))
         val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
-        coEvery { walletUIConfig.get(WalletUIConfig.LAST_TOTAL_BALANCE) } returns null
+        coEvery { walletUIConfig.getLastTotalBalance(APP_WALLET) } returns null
 
         val service = buildService(
             source, configWithState("CUT_OVER"), backgroundScope,
@@ -5275,5 +5299,9 @@ class CutoverUiDataServiceTest {
         testScheduler.advanceTimeBy(1_000)
         runCurrent()
         assertEquals(2 * pages, source.recordNetsCalls)
+    }
+
+    private companion object {
+        const val APP_WALLET = "app-wallet"
     }
 }

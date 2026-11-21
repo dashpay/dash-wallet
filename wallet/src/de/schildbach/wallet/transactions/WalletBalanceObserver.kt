@@ -19,6 +19,7 @@ package de.schildbach.wallet.transactions
 
 import com.google.common.base.Stopwatch
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.balanceOwnerId
 import de.schildbach.wallet.service.platform.sdk.CutoverState
 import de.schildbach.wallet.service.platform.sdk.dashjEngineMayStart
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
@@ -51,6 +52,13 @@ class WalletBalanceObserver(
     companion object {
         private val log = LoggerFactory.getLogger(WalletBalanceObserver::class.java)
     }
+    /** What this wallet's stored balance is tagged with; null (nothing read or stored) if unreadable. */
+    private val ownerId: String? by lazy {
+        runCatching { wallet.balanceOwnerId() }
+            .onFailure { log.warn("cannot fingerprint the wallet; its last-known balance is not read or stored", it) }
+            .getOrNull()
+    }
+
     private val emitterJob = SupervisorJob()
     private val emitterScope = CoroutineScope(Dispatchers.IO + emitterJob)
 
@@ -101,8 +109,13 @@ class WalletBalanceObserver(
 
     private fun emitLastBalances() {
         emitterScope.launch {
-            _totalBalance.value = Coin.valueOf(walletUIConfig.get(WalletUIConfig.LAST_TOTAL_BALANCE) ?: 0L)
-            isSeeded = true
+            // Only a value stored as this wallet's: an untagged one may be a previous wallet's.
+            // None known: not seeded, so synchronous readers keep reading the wallet directly
+            // instead of a zero no one stored.
+            walletUIConfig.getLastTotalBalance(ownerId)?.let { stored ->
+                _totalBalance.value = Coin.valueOf(stored)
+                isSeeded = true
+            }
         }
     }
 
@@ -113,11 +126,10 @@ class WalletBalanceObserver(
             val totalBalance = wallet.getBalance(BalanceType.ESTIMATED)
             // The stored balance is the L1 owner's. After the cutover the SDK writes it
             // (CutoverUiDataService); a dashj estimate from the Tools sync diagnostic must
-            // not replace it, nor stand behind an ownership flag an SDK write already set.
-            if (dashjOwnsL1()) {
-                walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, totalBalance.value)
-                // After the value: a death between the two leaves it unflagged, so unknown.
-                walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE_OWNED, true)
+            // not replace it.
+            val owner = ownerId
+            if (owner != null && dashjOwnsL1()) {
+                walletUIConfig.setLastTotalBalance(totalBalance.value, owner)
             }
             _totalBalance.emit(totalBalance)
             isSeeded = true

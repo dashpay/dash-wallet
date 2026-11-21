@@ -1173,23 +1173,6 @@ public class WalletApplication extends MultiDexApplication
         // The deferred-load wait is the callers' (installWallet, setWallet),
         // before they take walletInstallLock: never while holding it.
 
-        // Before anything changes: the stored last-known balances belong to
-        // the wallet being replaced (a recovery-screen restore installs
-        // without a reset). A failed clear fails the install with nothing
-        // changed, as a failed save of the new wallet would: a value that
-        // survived it would be read as the new wallet's.
-        try {
-            LastKnownBalances.clearLastKnownBalances(walletUIConfig, dashPayConfig);
-        } catch (final IOException x) {
-            throw x;
-        } catch (final Exception x) {
-            throw new IOException("could not clear the last known balances before installing a wallet", x);
-        }
-        // A reminder posted for the replaced wallet names its funds: remove it.
-        // Under the reminder's posting lock, after the clear, so one being
-        // prepared either posts first and is removed here, or reads the
-        // cleared values.
-        InactivityReminder.cancel(this);
         EnumSet<AuthenticationKeyChain.KeyChainType> authKeyTypes = EnumSet.of(
                 AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER,
                 AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING,
@@ -1211,6 +1194,11 @@ public class WalletApplication extends MultiDexApplication
         // what the previous wallet file held durably is not in this one.
         reportWalletChangedToContactPayments();
         walletStateFlow.setValue(newWallet);
+        // A reminder posted for the replaced wallet names its funds: remove it.
+        // Under the reminder's posting lock, after the new wallet is published,
+        // so one being prepared for the old wallet either posts first and is
+        // removed here, or sees the new wallet and is not posted.
+        InactivityReminder.cancel(this);
         // TODO: move to a wallet creation class
         if (!wallet.hasKeyChain(Constants.BIP44_PATH)) {
             wallet.addKeyChain(Constants.BIP44_PATH);
@@ -1726,6 +1714,12 @@ public class WalletApplication extends MultiDexApplication
      */
     public boolean hasWallet() {
         return walletStateFlow.getValue() != null;
+    }
+
+    /** The loaded wallet as {@link #hasWallet} sees it: never waits for a deferred load. */
+    @Nullable
+    public Wallet loadedWalletOrNull() {
+        return walletStateFlow.getValue();
     }
 
     private final MutableStateFlow<Wallet> walletStateFlow = StateFlowKt.MutableStateFlow(null);

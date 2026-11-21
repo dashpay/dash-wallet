@@ -44,18 +44,19 @@ class InactivityReminderTest {
         assertEquals(InactivityReminder.Content.WithAmount(transparent), decide())
     }
 
+    /**
+     * Notification text reaches notification listeners and the lock screen: shielded funds
+     * are reminded about, but their amount stays out of it.
+     */
     @Test
-    fun `adds the shielded balance like the home header`() {
-        assertEquals(
-            InactivityReminder.Content.WithAmount(transparent.add(shielded)),
-            decide(shieldedBalance = shielded)
-        )
+    fun `leaves the amount out when shielded funds are part of it`() {
+        assertEquals(InactivityReminder.Content.AmountHidden, decide(shieldedBalance = shielded))
     }
 
     @Test
-    fun `reminds a wallet whose funds are all shielded`() {
+    fun `reminds a wallet whose funds are all shielded, without the amount`() {
         assertEquals(
-            InactivityReminder.Content.WithAmount(shielded),
+            InactivityReminder.Content.AmountHidden,
             decide(transparentBalance = Coin.ZERO, shieldedBalance = shielded)
         )
     }
