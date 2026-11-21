@@ -59,6 +59,27 @@ import de.schildbach.wallet.util.toTxId
 import de.schildbach.wallet.util.toSha256Hash
 import de.schildbach.wallet.util.toFormattedString
 
+internal enum class PayTapAction { SUBMIT, REBUILD, REPORT, IGNORE }
+
+/**
+ * What an authenticated tap on Pay does. A tap submits only the preview it was made on: a tap on
+ * a refused preview ([tappedOnPayable] false) can rebuild it, and the rebuilt payment, with its
+ * real fee, needs a tap of its own. Two taps on a refused preview each start an authentication;
+ * without this the second answer submitted what the first had rebuilt (thepastaclaw on #1714).
+ */
+internal fun payTapAction(
+    tappedOnPayable: Boolean,
+    canSendPayment: Boolean,
+    canRetryPreview: Boolean,
+    building: Boolean
+): PayTapAction = when {
+    canSendPayment -> if (tappedOnPayable) PayTapAction.SUBMIT else PayTapAction.IGNORE
+    canRetryPreview -> PayTapAction.REBUILD
+    // an earlier tap's rebuild is running: its result is shown when it ends
+    building -> PayTapAction.IGNORE
+    else -> PayTapAction.REPORT
+}
+
 @AndroidEntryPoint
 class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
 
@@ -102,18 +123,21 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
     }
 
     private fun authenticateOrConfirm() {
-        if (userAuthorizedDuring && (!config.spendingConfirmationEnabled || !viewModel.canSendPayment)) {
-            confirmWhenAuthorizedAndNoException()
+        // What this tap was on, read now: the authentication below answers later, and by then
+        // an earlier tap may have rebuilt a refused preview (thepastaclaw on #1714).
+        val tappedOnPayable = viewModel.canSendPayment
+        if (userAuthorizedDuring && (!config.spendingConfirmationEnabled || !tappedOnPayable)) {
+            confirmWhenAuthorizedAndNoException(tappedOnPayable)
         } else {
             val thresholdAmount = Coin.parseCoin(config.biometricLimit.toString())
             val amount = viewModel.finalPaymentIntent!!.amount
             authManager.authenticate(requireActivity(), !amount.toDashjCoin().isLessThan(thresholdAmount)) { pin ->
-                pin?.let { confirmWhenAuthorizedAndNoException() }
+                pin?.let { confirmWhenAuthorizedAndNoException(tappedOnPayable) }
             }
         }
     }
 
-    private fun confirmWhenAuthorizedAndNoException() {
+    private fun confirmWhenAuthorizedAndNoException(tappedOnPayable: Boolean) {
         if (viewModel.finalPaymentIntent!!.expired) {
             // Resending the earlier payment of an expired request is pointless; its outcome is
             // still unknown, and that is what the screen says.
@@ -121,17 +145,20 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
             return
         }
 
-        if (viewModel.canSendPayment) {
-            lifecycleScope.launch {
-                viewModel.sendPayment()
-            }
-        } else if (viewModel.canRetryPreview) {
+        val action = payTapAction(
+            tappedOnPayable = tappedOnPayable,
+            canSendPayment = viewModel.canSendPayment,
+            canRetryPreview = viewModel.canRetryPreview,
+            building = viewModel.sendRequestLiveData.value?.status == Status.LOADING
+        )
+        when (action) {
+            PayTapAction.SUBMIT -> lifecycleScope.launch { viewModel.sendPayment() }
             // Refused only because the wallet was still syncing when the screen opened: build
             // again. A success shows the payment with its real fee to confirm; a failure is
             // reported by the observer.
-            viewModel.retryPreview()
-        } else {
-            handleSendRequestException()
+            PayTapAction.REBUILD -> viewModel.retryPreview()
+            PayTapAction.REPORT -> handleSendRequestException()
+            PayTapAction.IGNORE -> log.info("pay tap ignored: the preview changed after it")
         }
     }
 
