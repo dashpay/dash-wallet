@@ -86,7 +86,8 @@ class ShieldedBalanceServiceTest {
         var boundWalletId: () -> String? = { null },
         var syncRunning: Boolean = false
     ) : ShieldedSource {
-        val events = mutableListOf<String>()
+        /** Recorded from the service's Dispatchers.Default jobs as well as the test thread. */
+        val events: MutableList<String> = java.util.Collections.synchronizedList(mutableListOf())
         var supportCalls = 0
         var configureCalls = 0
         var bindCalls = 0
@@ -224,14 +225,14 @@ class ShieldedBalanceServiceTest {
             nativeLoopRunning = false
         }
 
-        @Volatile
-        var syncNowCalls = 0
+        /** Incremented from the service's Dispatchers.Default jobs: atomic, not a volatile `++`. */
+        val syncNowCalls = java.util.concurrent.atomic.AtomicInteger()
 
         /** Suspending hook inside syncShieldedNow — the real one blocks for a whole network pass. */
         var onSyncNowSuspend: suspend () -> Unit = {}
 
         override suspend fun syncShieldedNow() {
-            syncNowCalls++
+            syncNowCalls.incrementAndGet()
             events += "syncNow"
             onSyncNowSuspend()
         }
@@ -2689,12 +2690,12 @@ class ShieldedBalanceServiceTest {
             // Every forced pass fails, so the driver would retry indefinitely.
             source.onSyncNowSuspend = { throw IllegalStateException("not ready") }
             withTimeout(2_000) { service.externalSpend() }
-            withTimeout(5_000) { while (source.syncNowCalls == 0) delay(10) }
+            withTimeout(5_000) { while (source.syncNowCalls.get() == 0) delay(10) }
 
             withTimeout(5_000) { service.stop() }
-            val callsAtStop = source.syncNowCalls
+            val callsAtStop = source.syncNowCalls.get()
             delay(ShieldedBalanceServiceImpl.SETTLEMENT_RETRY_BASE_MS * 4 + 200)
-            assertEquals("no forced pass after stop", callsAtStop, source.syncNowCalls)
+            assertEquals("no forced pass after stop", callsAtStop, source.syncNowCalls.get())
         } finally {
             sweepScope.cancel()
         }
@@ -4687,7 +4688,7 @@ class ShieldedBalanceServiceTest {
             withTimeout(5_000) { while (!service.shieldedBalanceHeld.value) delay(10) }
             // The window waits for the spend call to return.
             delay(300)
-            assertEquals("no forced pass while the spend is in flight", 0, source.syncNowCalls)
+            assertEquals("no forced pass while the spend is in flight", 0, source.syncNowCalls.get())
             assertTrue(service.shieldedBalanceHeld.value)
 
             service.endExternalShieldedSpend(start)
@@ -4695,7 +4696,7 @@ class ShieldedBalanceServiceTest {
             assertFalse(service.shieldedBalanceHeld.value)
             assertTrue("the reconciliation itself is still pending", service.shieldedSpendReconciling.value)
             // 1 settlement kick + the async post-spend sync + 3 window kicks, at least the window's 3
-            assertTrue(source.syncNowCalls >= 3)
+            assertTrue(source.syncNowCalls.get() >= 3)
         } finally {
             sweepScope.cancel()
         }
@@ -4719,9 +4720,9 @@ class ShieldedBalanceServiceTest {
 
             withTimeout(5_000) { service.stop() }
             assertFalse(service.shieldedBalanceHeld.value)
-            val callsAtStop = source.syncNowCalls
+            val callsAtStop = source.syncNowCalls.get()
             delay(600)
-            assertEquals("no window kick after stop", callsAtStop, source.syncNowCalls)
+            assertEquals("no window kick after stop", callsAtStop, source.syncNowCalls.get())
             assertFalse(service.shieldedBalanceHeld.value)
         } finally {
             sweepScope.cancel()
@@ -4786,21 +4787,21 @@ class ShieldedBalanceServiceTest {
             assertTrue(service.ensureShieldedReady())
             withTimeout(5_000) { while (source.passResults.subscriptionCount.value == 0) delay(10) }
             delay(100)
-            assertEquals("fresh: monitoring just started", 0, source.syncNowCalls)
+            assertEquals("fresh: monitoring just started", 0, source.syncNowCalls.get())
 
             now.addAndGet(ShieldedSyncFreshnessPolicy.MAXIMUM_FULL_SCAN_AGE_MS - 1)
             delay(100)
-            assertEquals("one millisecond short of the threshold", 0, source.syncNowCalls)
+            assertEquals("one millisecond short of the threshold", 0, source.syncNowCalls.get())
 
             now.addAndGet(1)
-            withTimeout(5_000) { while (source.syncNowCalls == 0) delay(5) }
+            withTimeout(5_000) { while (source.syncNowCalls.get() == 0) delay(5) }
 
             // A successful pass of the bound wallet is the new baseline.
             source.passResults.emit(passOk())
             delay(100)
-            val afterScan = source.syncNowCalls
+            val afterScan = source.syncNowCalls.get()
             delay(100)
-            assertEquals("a fresh scan stops the forcing", afterScan, source.syncNowCalls)
+            assertEquals("a fresh scan stops the forcing", afterScan, source.syncNowCalls.get())
         } finally {
             sweepScope.cancel()
         }
@@ -4821,15 +4822,15 @@ class ShieldedBalanceServiceTest {
             now.addAndGet(10 * ShieldedSyncFreshnessPolicy.MAXIMUM_FULL_SCAN_AGE_MS)
             source.syncing = true
             delay(150)
-            assertEquals(0, source.syncNowCalls)
+            assertEquals(0, source.syncNowCalls.get())
 
             source.syncing = false
             source.syncingFailure = IllegalStateException("manager closed")
             delay(150)
-            assertEquals(0, source.syncNowCalls)
+            assertEquals(0, source.syncNowCalls.get())
 
             source.syncingFailure = null
-            withTimeout(5_000) { while (source.syncNowCalls == 0) delay(5) }
+            withTimeout(5_000) { while (source.syncNowCalls.get() == 0) delay(5) }
         } finally {
             sweepScope.cancel()
         }
@@ -4853,21 +4854,21 @@ class ShieldedBalanceServiceTest {
             assertTrue(service.ensureShieldedReady())
             now.addAndGet(10 * ShieldedSyncFreshnessPolicy.MAXIMUM_FULL_SCAN_AGE_MS)
             delay(150)
-            assertEquals("background: no forced pass, however old the scan", 0, source.syncNowCalls)
+            assertEquals("background: no forced pass, however old the scan", 0, source.syncNowCalls.get())
 
             // Foreground at exactly the 30 s grace (below the 90 s watchdog age): the entry check forces.
             now.set(1_000_000L + ShieldedSyncFreshnessPolicy.FOREGROUND_FRESHNESS_GRACE_MS)
             foreground.value = true
-            withTimeout(5_000) { while (source.syncNowCalls == 0) delay(5) }
+            withTimeout(5_000) { while (source.syncNowCalls.get() == 0) delay(5) }
             delay(100)
-            assertEquals("only the entry check fires below 90 s", 1, source.syncNowCalls)
+            assertEquals("only the entry check fires below 90 s", 1, source.syncNowCalls.get())
 
             withTimeout(5_000) { service.stop() }
             now.addAndGet(10 * ShieldedSyncFreshnessPolicy.MAXIMUM_FULL_SCAN_AGE_MS)
             foreground.value = false
             foreground.value = true
             delay(150)
-            assertEquals("no forced pass after stop", 1, source.syncNowCalls)
+            assertEquals("no forced pass after stop", 1, source.syncNowCalls.get())
         } finally {
             sweepScope.cancel()
         }
@@ -4948,7 +4949,7 @@ class ShieldedBalanceServiceTest {
             delay(100)
             // Every forced pass parks: the settlement driver's first, the post-spend sync, and
             // ONE window pass (its later kicks are skipped while it is still running).
-            assertEquals(3, source.syncNowCalls)
+            assertEquals(3, source.syncNowCalls.get())
         } finally {
             sweepScope.cancel()
         }
