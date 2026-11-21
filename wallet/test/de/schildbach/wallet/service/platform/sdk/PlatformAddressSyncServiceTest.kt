@@ -32,7 +32,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** Start/stop fencing and forced passes of [PlatformAddressSyncService] over a fake SDK seam. */
+/** Start/stop fencing and sync-now requests of [PlatformAddressSyncService] over a fake SDK seam. */
 @OptIn(ExperimentalCoroutinesApi::class)
 class PlatformAddressSyncServiceTest {
 
@@ -51,36 +51,28 @@ class PlatformAddressSyncServiceTest {
             runningFailure?.let { throw it }
             return running
         }
-        /** Starts that fail before [startFailure] is consulted (a transient native failure). */
-        var startFailuresRemaining = 0
-
-        /** Virtual times ([clock]) of the successful starts: with a running loop, the forced passes. */
-        val startedAt = mutableListOf<Long>()
-        var clock: () -> Long = { 0L }
         var runningFailure: Exception? = null
 
-        /** Parks a stop (after it stopped the loop) until completed: the stop→start gap. */
-        var afterStopGate: CompletableDeferred<Unit>? = null
-        val stopEntered = CompletableDeferred<Unit>()
+        /** Virtual times ([clock]) of the sync-now requests. */
+        val syncNowAt = mutableListOf<Long>()
+        var clock: () -> Long = { 0L }
+        var syncNowFailure: Exception? = null
 
         override suspend fun start() {
             startEntered.complete(Unit)
             startGate?.await()
-            if (startFailuresRemaining > 0) {
-                startFailuresRemaining--
-                throw IllegalStateException("native start failed")
-            }
             startFailure?.let { throw it }
             starts++
-            startedAt += clock()
             running = true
         }
         override suspend fun stop() {
             stopFailure?.let { throw it }
             stops++
             running = false
-            stopEntered.complete(Unit)
-            afterStopGate?.await()
+        }
+        override suspend fun syncNow() {
+            syncNowFailure?.let { throw it }
+            syncNowAt += clock()
         }
     }
 
@@ -186,76 +178,17 @@ class PlatformAddressSyncServiceTest {
 
     // ── syncNow / schedulePlatformResync (iOS schedulePlatformResync) ──
 
+    /** The loop's lifecycle is the engine kick's: a sync-now never stops or starts it. */
     @Test
-    fun syncNow_forcesAPass_byRestartingARunningLoop() = runBlocking {
+    fun syncNow_asksTheRunningLoopForAPass_neverStoppingOrStartingIt() = runBlocking {
         source.running = true
         val service = PlatformAddressSyncService(source)
 
         assertTrue(service.syncNow())
-        assertEquals(1, source.stops)
-        assertEquals(1, source.starts)
+        assertEquals(1, source.syncNowAt.size)
+        assertEquals(0, source.stops)
+        assertEquals(0, source.starts)
         assertTrue(source.running)
-    }
-
-    /**
-     * A newer schedulePlatformResync cancels the older job; landing between the restart's stop
-     * and start, that cancellation must not leave the loop stopped (every later syncNow would
-     * then be a no-op at "not running").
-     */
-    @Test
-    fun syncNow_cancelledBetweenStopAndStart_stillRestartsTheLoop() = runBlocking {
-        source.running = true
-        source.afterStopGate = CompletableDeferred()
-        val service = PlatformAddressSyncService(source)
-
-        val call = async(Dispatchers.Default) { service.syncNow() }
-        withTimeout(5_000) { source.stopEntered.await() }
-        call.cancel()
-        source.afterStopGate?.complete(Unit)
-        call.join()
-
-        assertEquals(1, source.starts)
-        assertTrue("the loop runs again", source.running)
-        source.afterStopGate = null
-        assertTrue("a later forced pass still works", service.syncNow())
-    }
-
-    @Test
-    fun syncNow_aFailedStart_isRetriedOnce() = runBlocking {
-        source.running = true
-        source.startFailuresRemaining = 1
-        val service = PlatformAddressSyncService(source)
-
-        assertTrue(service.syncNow())
-        assertEquals(1, source.starts)
-        assertTrue(source.running)
-    }
-
-    @Test
-    fun syncNow_twoFailedStarts_giveUp_contained() = runBlocking {
-        source.running = true
-        source.startFailuresRemaining = 2
-        val service = PlatformAddressSyncService(source)
-
-        assertFalse(service.syncNow())
-        assertEquals(0, source.startFailuresRemaining)
-        assertFalse(source.running)
-    }
-
-    /** A stop that arrives during the restart still wins: the restarted loop is stopped again. */
-    @Test
-    fun syncNow_aStopDuringTheRestart_wins() = runBlocking {
-        source.running = true
-        source.afterStopGate = CompletableDeferred()
-        val service = PlatformAddressSyncService(source, stopLockTimeoutMs = 50)
-
-        val call = async(Dispatchers.Default) { service.syncNow() }
-        withTimeout(5_000) { source.stopEntered.await() }
-        service.stop() // times out on the lock the restart holds; bumps the generation
-        source.afterStopGate?.complete(Unit)
-
-        assertFalse(call.await())
-        assertFalse(source.running)
     }
 
     @Test
@@ -263,7 +196,7 @@ class PlatformAddressSyncServiceTest {
         val service = PlatformAddressSyncService(source)
 
         assertFalse(service.syncNow())
-        assertEquals(0, source.startedAt.size)
+        assertEquals(0, source.syncNowAt.size)
         assertEquals(0, source.starts)
     }
 
@@ -274,7 +207,7 @@ class PlatformAddressSyncServiceTest {
         val service = PlatformAddressSyncService(source)
 
         assertFalse(service.syncNow())
-        assertEquals(0, source.startedAt.size)
+        assertEquals(0, source.syncNowAt.size)
     }
 
     @Test
@@ -288,9 +221,9 @@ class PlatformAddressSyncServiceTest {
         source.runningFailure = IllegalStateException("manager closed")
         assertFalse(service.syncNow())
         source.runningFailure = null
-        source.stopFailure = IllegalStateException("native stop failed")
+        source.syncNowFailure = IllegalStateException("native sync-now failed")
         assertFalse(service.syncNow())
-        assertEquals(0, source.startedAt.size)
+        assertEquals(0, source.syncNowAt.size)
     }
 
     private fun TestScope.resyncService() = PlatformAddressSyncService(
@@ -300,23 +233,23 @@ class PlatformAddressSyncServiceTest {
     ).also { source.clock = { testScheduler.currentTime } }
 
     @Test
-    fun schedulePlatformResync_forcesPassesAt0_4And12Seconds() = runTest {
+    fun schedulePlatformResync_requestsPassesAt0_4And12Seconds() = runTest {
         source.running = true
         val service = resyncService()
 
         service.schedulePlatformResync()
         runCurrent()
-        assertEquals(listOf(0L), source.startedAt)
+        assertEquals(listOf(0L), source.syncNowAt)
         advanceTimeBy(3_999)
         runCurrent()
-        assertEquals(listOf(0L), source.startedAt)
+        assertEquals(listOf(0L), source.syncNowAt)
         advanceTimeBy(1)
         runCurrent()
-        assertEquals(listOf(0L, 4_000L), source.startedAt)
+        assertEquals(listOf(0L, 4_000L), source.syncNowAt)
         advanceTimeBy(20_000)
         runCurrent()
-        assertEquals(listOf(0L, 4_000L, 12_000L), source.startedAt)
-        assertEquals(PlatformAddressSyncService.RESYNC_OFFSETS_MS, source.startedAt)
+        assertEquals(listOf(0L, 4_000L, 12_000L), source.syncNowAt)
+        assertEquals(PlatformAddressSyncService.RESYNC_OFFSETS_MS, source.syncNowAt)
     }
 
     @Test
@@ -332,7 +265,7 @@ class PlatformAddressSyncServiceTest {
         advanceTimeBy(30_000)
         runCurrent()
         // old: 0; new: 2000, 6000, 14000 — the old one's 4 s and 12 s never fire
-        assertEquals(listOf(0L, 2_000L, 6_000L, 14_000L), source.startedAt)
+        assertEquals(listOf(0L, 2_000L, 6_000L, 14_000L), source.syncNowAt)
     }
 
     @Test
@@ -346,13 +279,13 @@ class PlatformAddressSyncServiceTest {
         source.running = true // even a loop someone restarted is not forced by the old schedule
         advanceTimeBy(30_000)
         runCurrent()
-        assertEquals(listOf(0L), source.startedAt)
+        assertEquals(listOf(0L), source.syncNowAt)
     }
 
     @Test
     fun schedulePlatformResync_withoutAScope_schedulesNothing() = runBlocking {
         source.running = true
         PlatformAddressSyncService(source).schedulePlatformResync()
-        assertEquals(0, source.startedAt.size)
+        assertEquals(0, source.syncNowAt.size)
     }
 }
