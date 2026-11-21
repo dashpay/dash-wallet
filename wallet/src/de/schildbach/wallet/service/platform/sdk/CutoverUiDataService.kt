@@ -1470,9 +1470,9 @@ interface CutoverUiSource {
      * this reflects a self-send's native debit IMMEDIATELY: on a spend the
      * SDK debits its native ledger at once, but the spent-TXO marks are not
      * written to Room until the block/IS-lock lands, so a Room re-read would
-     * return the STALE pre-send sum. Used by [balancePipeline]'s post-event /
-     * ticker re-read so the header reaches 0 after a max self-send regardless
-     * of Room `txos` timing.
+     * return the STALE pre-send sum. The balance pipeline reads
+     * [currentBalanceSplitDuffs] instead, so the displayed total and confirmed
+     * balance come from the same native snapshot.
      */
     suspend fun currentTotalDuffs(walletIdHex: String): Long
 
@@ -2963,8 +2963,8 @@ class CutoverUiDataService internal constructor(
      * actually delivers, gross of the drain fee; CoinJoin excluded), or
      * null while the cutover UI feed is inactive OR the account-level
      * snapshot is unavailable (in which case [overlayMaxSendableBalance]
-     * falls back to [sdkTotalBalance]). Refreshed with the native split
-     * ([refreshNativeSplit]: initial seed, engine tx events, ticker).
+     * falls back to [sdkTotalBalance]). Refreshed after each native split
+     * read ([refreshSpendFigures]).
      */
     val sdkMaxSendable: StateFlow<Coin?> = _sdkMaxSendable.asStateFlow()
 
@@ -3208,9 +3208,9 @@ class CutoverUiDataService internal constructor(
     /**
      * The SDK's live UNSPENT-output COUNT
      * ([CutoverUiSource.currentSpendableUtxoCount]), or null while the
-     * cutover UI feed is inactive / the read is unavailable. Refreshed on
-     * the same cadence as the native balance split ([refreshNativeSplit]),
-     * so the count and the balance always describe the same moment.
+     * cutover UI feed is inactive / the read is unavailable. Refreshed after
+     * each native balance split read ([refreshSpendFigures]), so the count
+     * follows the balance it is used with.
      */
     val sdkSpendableUtxoCount: StateFlow<Int?> = _sdkSpendableUtxoCount.asStateFlow()
 
@@ -4498,11 +4498,22 @@ class CutoverUiDataService internal constructor(
         // figure may be persisted as the next launch's last-known balance.
         refreshDeferredContactBuilds(walletIdHex)
 
+        // The max-sendable and UTXO-count reads follow every balance reading,
+        // in their OWN collector: the per-account snapshot can wait on the
+        // engine's wallet lock, and inside the balance collector that wait
+        // held up the next balance reading ([refreshSpendFigures]). Conflated:
+        // readings that arrive during a slow read are served by one re-read.
+        val spendFiguresDue = Channel<Unit>(Channel.CONFLATED)
+        launch {
+            for (due in spendFiguresDue) refreshSpendFigures(walletIdHex)
+        }
+
         // Seed the confirmed/total split once up front so the shielded screen's
         // Max (confirmed) and pending (total − confirmed) are populated before
         // the first tx event or ticker tick.
         try {
             refreshNativeSplit(walletIdHex)
+            spendFiguresDue.trySend(Unit)
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             log.warn("initial SDK balance split read failed", t)
@@ -4555,6 +4566,7 @@ class CutoverUiDataService internal constructor(
                     // the catch keeps the prior override values (never zeroes the
                     // header on a transient read failure).
                     refreshNativeSplit(walletIdHex)
+                    spendFiguresDue.trySend(Unit)
                 } catch (t: Throwable) {
                     if (t is CancellationException) throw t
                     log.warn("SDK balance snapshot re-read failed", t)
@@ -4646,9 +4658,15 @@ class CutoverUiDataService internal constructor(
         val split = source.currentBalanceSplitDuffs(walletIdHex)
         _sdkConfirmedBalance.value = Coin.valueOf(split.confirmed)
         updateSdkBalance(split.total)
-        // The max-sendable figure rides the same cadence (initial seed, tx
-        // events, ticker). Contained separately: a failed/unavailable
-        // account-level read must not undo the split above, and it drops
+    }
+
+    /**
+     * Re-read the max-sendable figure and the UTXO count. Runs after every
+     * successful [refreshNativeSplit], in its own collector
+     * ([balancePipeline]), so a slow read here cannot delay a balance reading.
+     */
+    private suspend fun refreshSpendFigures(walletIdHex: String) {
+        // Contained separately: a failed/unavailable account-level read drops
         // the override to null so overlayMaxSendableBalance falls back to
         // the wallet-wide total rather than freezing a stale max.
         try {
@@ -4658,9 +4676,9 @@ class CutoverUiDataService internal constructor(
             log.warn("SDK max-sendable read failed; falling back to the wallet-wide total", t)
             _sdkMaxSendable.value = null
         }
-        // The UTXO COUNT rides the same cadence so it always describes the
-        // same moment as the split above (the shielded max-fee reserve sizes
-        // itself from the count while shielding the balance). Contained the
+        // The UTXO COUNT is read after the split it follows (the shielded
+        // max-fee reserve sizes itself from the count while shielding the
+        // balance). Contained the
         // same way: a failed read drops to null so the overlay falls back to
         // dashj rather than freezing a stale count.
         try {

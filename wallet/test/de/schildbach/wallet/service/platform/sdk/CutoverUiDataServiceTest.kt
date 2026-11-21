@@ -1117,6 +1117,21 @@ class CutoverUiDataServiceTest {
 
         override suspend fun currentSpendableUtxoCount(walletIdHex: String): Int? = utxoCount
 
+        /** The SDK's max-sendable figure (null = read unavailable). */
+        var maxSendableDuffs: Long? = null
+
+        /** When set, the max-sendable read waits on it, modelling a read held on the engine's wallet lock. */
+        var maxSendableGate: kotlinx.coroutines.CompletableDeferred<Unit>? = null
+        var maxSendableReadsParked = 0
+
+        override suspend fun currentMaxSendableDuffs(walletIdHex: String): Long? {
+            maxSendableGate?.let { gate ->
+                maxSendableReadsParked++
+                gate.await()
+            }
+            return maxSendableDuffs
+        }
+
         /**
          * The ENGINE's next unused receive address (null = read unavailable),
          * and how many times it has been asked for — the refresh cadence is
@@ -1716,6 +1731,42 @@ class CutoverUiDataServiceTest {
         } finally {
             source.receiveAddressGate.countDown()
         }
+    }
+
+    @Test
+    fun postCutover_slowMaxSendableRead_doesNotHoldUpTheBalance() = runTest {
+        // The per-account snapshot behind the max-sendable figure can wait on
+        // the engine's wallet lock. A balance reading that arrives meanwhile
+        // must still be published and saved.
+        val source = FakeSource(balanceDuffs = MutableStateFlow(900_000L))
+        source.maxSendableDuffs = 850_000L
+        val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            walletUIConfig = walletUIConfig, l1Synced = flowOf(true)
+        )
+        service.start()
+        runCurrent()
+        assertEquals(Coin.valueOf(850_000), service.sdkMaxSendable.value)
+
+        val gate = kotlinx.coroutines.CompletableDeferred<Unit>()
+        source.maxSendableGate = gate
+        source.balanceDuffs.value = 800_000L
+        runCurrent()
+        assertEquals("the max-sendable read must be waiting", 1, source.maxSendableReadsParked)
+
+        // The spend lands while that read is still waiting.
+        source.balanceDuffs.value = 781L
+        runCurrent()
+        assertEquals(Coin.valueOf(781), service.sdkBalanceOrNull())
+        coVerify { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 781L) }
+
+        // Released: one more read serves the reading that arrived meanwhile.
+        source.maxSendableGate = null
+        source.maxSendableDuffs = 700L
+        gate.complete(Unit)
+        runCurrent()
+        assertEquals(Coin.valueOf(700), service.sdkMaxSendable.value)
     }
 
     @Test
