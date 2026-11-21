@@ -499,10 +499,14 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
             // this card is trustworthy, so it shows "Syncing…" until a retry
             // reads it again.
             var balanceUnreadable = false
+            // A local shielded spend is still reconciling (restored from the
+            // durable marker after a restart). The spend dropped the cache, so
+            // without this an identity-free wallet would show a bare zero.
+            var latestSpendReconciling = shieldedBalanceService.shieldedSpendReconciling.value
 
             fun render() = renderShieldedCardAmount(
                 latestStatus, latestBalance, latestHasShieldedContext, latestCachedBalance,
-                balanceUnreadable, latestHideBalance
+                balanceUnreadable, latestSpendReconciling, latestHideBalance
             )
 
             shieldedBalanceService.observeDisplayedShieldedBalance()
@@ -520,6 +524,10 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
                 }
             shieldedBalanceService.shieldedSyncStatus.observe(viewLifecycleOwner) { status ->
                 latestStatus = status
+                render()
+            }
+            shieldedBalanceService.shieldedSpendReconciling.observe(viewLifecycleOwner) { reconciling ->
+                latestSpendReconciling = reconciling
                 render()
             }
             mainActivityViewModel.blockchainIdentityDataDao.observeBase()
@@ -573,11 +581,14 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
         hasShieldedContext: Boolean,
         cachedBalance: Dash?,
         balanceUnreadable: Boolean,
+        spendReconciling: Boolean,
         hideBalance: Boolean
     ) {
         val amount = binding.shieldedBalanceCardAmount
         binding.shieldedBalanceCardSymbol.isVisible = false
-        val display = mapShieldedCardDisplay(status, hasShieldedContext, cachedBalance, balanceUnreadable, hideBalance)
+        val display = mapShieldedCardDisplay(
+            status, hasShieldedContext, cachedBalance, balanceUnreadable, spendReconciling, hideBalance
+        )
         val shown = when (display) {
             ShieldedCardDisplay.LIVE_AMOUNT -> balance
             ShieldedCardDisplay.CACHED_AMOUNT -> cachedBalance ?: balance
@@ -823,6 +834,12 @@ internal enum class ShieldedCardDisplay { LIVE_AMOUNT, CACHED_AMOUNT, HIDDEN, SY
  *   nonzero intermediate readings at once — a reconciliation no longer turns
  *   the card into "Syncing…" (same as the home header,
  *   [de.schildbach.wallet.ui.main.homeShieldedBalance]).
+ * - [spendReconciling] (a local shielded spend is still reconciling, also
+ *   restored from the durable marker after a process restart) and not READY
+ *   → "Syncing…": the spend dropped the cached balance, so on a restart
+ *   mid-reconcile there is no cache, and an identity-free wallet (no
+ *   shielded context) would otherwise fall through to a bare zero. No cache
+ *   can exist while reconciling, so this never hides a known balance.
  * - a persisted [cachedBalance] exists → the CACHED amount, no placeholder:
  *   the common relaunch case (durable notes, runtime re-binding in the
  *   background), and any not-yet-READY rebind where a known balance beats a
@@ -842,11 +859,13 @@ internal fun mapShieldedCardDisplay(
     hasShieldedContext: Boolean,
     cachedBalance: Dash?,
     balanceUnreadable: Boolean,
+    spendReconciling: Boolean,
     hideBalance: Boolean = false
 ): ShieldedCardDisplay = when {
     hideBalance -> ShieldedCardDisplay.HIDDEN
     balanceUnreadable -> ShieldedCardDisplay.SYNCING
     status == ShieldedSyncStatus.READY -> ShieldedCardDisplay.LIVE_AMOUNT
+    spendReconciling -> ShieldedCardDisplay.SYNCING
     cachedBalance != null -> ShieldedCardDisplay.CACHED_AMOUNT
     !hasShieldedContext -> ShieldedCardDisplay.LIVE_AMOUNT
     else -> ShieldedCardDisplay.SYNCING
