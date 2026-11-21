@@ -27,11 +27,13 @@ import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Coin
 import org.dash.wallet.common.Configuration
@@ -132,11 +134,17 @@ class SecurityViewModel @Inject constructor(
 
     fun setHideBalanceOnLaunch(hide: Boolean) {
         viewModelScope.launch {
-            walletUIConfig.set(WalletUIConfig.AUTO_HIDE_BALANCE, hide)
-            if (hide) {
-                // A posted reminder may show the amount. After the write, so one being
-                // prepared either posts first and is removed, or reads the new setting.
-                InactivityReminder.cancelInBackground(walletApplication)
+            // Not cancellable: leaving Settings must not stop the write half done.
+            withContext(NonCancellable + Dispatchers.IO) {
+                if (hide) {
+                    // A posted reminder may show the amount: removed before the setting is
+                    // saved, under the posting lock, so none with an amount posts after it.
+                    InactivityReminder.cancelThen(walletApplication) {
+                        runBlocking { walletUIConfig.set(WalletUIConfig.AUTO_HIDE_BALANCE, true) }
+                    }
+                } else {
+                    walletUIConfig.set(WalletUIConfig.AUTO_HIDE_BALANCE, false)
+                }
             }
             analytics.logEvent(
                 if (hide) {

@@ -210,6 +210,20 @@ class InactivityReminder @Inject constructor(
             }
         }
 
+        /**
+         * Removes a posted reminder, then runs [hideAmounts] (the Autohide Balance write),
+         * both under the posting lock: no reminder carrying an amount is posted between the
+         * two, and one being prepared reads the new setting. Removing first means a process
+         * death before the write leaves no amount on screen. Blocks; off the main thread.
+         */
+        @WorkerThread
+        @JvmStatic
+        fun <T> cancelThen(context: Context, hideAmounts: () -> T): T =
+            synchronized(postLock) {
+                cancel(context)
+                hideAmounts()
+            }
+
         private val cancelExecutor: Executor =
             Executors.newSingleThreadExecutor(ContextPropagatingThreadFactory("inactivity-reminder-cancel"))
 

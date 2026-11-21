@@ -16,6 +16,12 @@
  */
 package de.schildbach.wallet.service
 
+import android.app.NotificationManager
+import android.content.Context
+import de.schildbach.wallet.Constants
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
 import org.bitcoinj.core.Coin
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -89,5 +95,22 @@ class InactivityReminderTest {
     @Test
     fun `no reminder without a wallet`() {
         assertNull(decide(walletExists = false))
+    }
+
+    @Test
+    fun `autohide removes the reminder before its setting is saved`() {
+        val events = mutableListOf<String>()
+        val notifications = mockk<NotificationManager> {
+            every { cancel(Constants.NOTIFICATION_ID_INACTIVITY) } answers { events.add("cancel") }
+        }
+        val context = mockk<Context> {
+            every { getSystemService(NotificationManager::class.java) } returns notifications
+        }
+
+        val result = InactivityReminder.cancelThen(context) { events.add("save"); "saved" }
+
+        assertEquals("saved", result)
+        assertEquals(listOf("cancel", "save"), events)
+        verify(exactly = 1) { notifications.cancel(Constants.NOTIFICATION_ID_INACTIVITY) }
     }
 }
