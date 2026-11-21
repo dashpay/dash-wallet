@@ -59,9 +59,6 @@ class PackageReplacedReceiver : BroadcastReceiver() {
     @Inject
     lateinit var walletData: WalletData
 
-    @Inject
-    lateinit var inactivityReminder: InactivityReminder
-
     override fun onReceive(context: Context, intent: Intent) {
         log.info("got broadcast: {}", intent)
         if (intent.action != Intent.ACTION_MY_PACKAGE_REPLACED) {
@@ -106,7 +103,7 @@ class PackageReplacedReceiver : BroadcastReceiver() {
         }
 
         // if the app hasn't been used for a while and contains coins, maybe show reminder
-        inactivityReminder.maybeShow()
+        BootstrapReceiver.maybeShowInactivityNotification(application, config, walletData)
         application.myPackageReplaced = true
 
         // reset the notification explainer flag

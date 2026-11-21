@@ -17,7 +17,11 @@
 
 package de.schildbach.wallet.service;
 
+import org.bitcoinj.core.Coin;
 import org.bitcoinj.utils.ContextPropagatingThreadFactory;
+import org.dash.wallet.common.money.MonetaryFormat;
+import org.bitcoinj.wallet.Wallet;
+import de.schildbach.wallet.data.WalletData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,14 +29,20 @@ import org.dash.wallet.common.Configuration;
 
 import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.Constants;
+import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.ui.OnboardingActivity;
+import de.schildbach.wallet_test.R;
 
 import android.annotation.SuppressLint;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.text.format.DateUtils;
 
 import androidx.annotation.WorkerThread;
+import androidx.core.app.NotificationCompat;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -57,15 +67,16 @@ public class BootstrapReceiver extends BroadcastReceiver {
 
     private static final Logger log = LoggerFactory.getLogger(BootstrapReceiver.class);
 
-    // package-private: InactivityReminder builds the dismiss actions that target this receiver
-    static final String ACTION_DISMISS = BootstrapReceiver.class.getPackage().getName() + ".dismiss";
-    static final String ACTION_DISMISS_FOREVER = BootstrapReceiver.class.getPackage().getName() +
+    private static final String ACTION_DISMISS = BootstrapReceiver.class.getPackage().getName() + ".dismiss";
+    private static final String ACTION_DISMISS_FOREVER = BootstrapReceiver.class.getPackage().getName() +
             ".dismiss_forever";
 
     @Inject
     protected Configuration config;
     @Inject
-    protected InactivityReminder inactivityReminder;
+    protected WalletData walletDataProvider;
+    @Inject
+    protected WalletApplication application;
 
     @Override
     public void onReceive(final Context context, final Intent intent) {
@@ -100,7 +111,7 @@ public class BootstrapReceiver extends BroadcastReceiver {
                     + "BOOT_COMPLETED. Syncing resumes when the app is opened.");
 
             // if the app hasn't been used for a while and contains coins, maybe show reminder
-            inactivityReminder.maybeShow();
+            maybeShowInactivityNotification(application, config, walletDataProvider);
         } else if (ACTION_DISMISS.equals(action)) {
             dismissNotification(context);
         } else if (ACTION_DISMISS_FOREVER.equals(action)) {
@@ -110,12 +121,66 @@ public class BootstrapReceiver extends BroadcastReceiver {
         }
     }
 
+    /**
+     * Shared with {@link PackageReplacedReceiver}. Its dismiss actions are delivered to this
+     * receiver.
+     */
+    @WorkerThread
+    static void maybeShowInactivityNotification(final WalletApplication application,
+            final Configuration config, final WalletData walletDataProvider) {
+        if (!config.isTimeToRemindBalance())
+            return;
+
+        final Wallet wallet = walletDataProvider.getWallet();
+        if (wallet == null) {
+            // with version 7.0 and above it is possible to have the app installed without a wallet
+            log.info("wallet does not exist, not showing inactivity warning");
+            return;
+        }
+        final Coin estimatedBalance = wallet.getBalance(Wallet.BalanceType.ESTIMATED_SPENDABLE);
+        if (!estimatedBalance.isPositive())
+            return;
+
+        log.info("detected balance, showing inactivity notification");
+
+        final MonetaryFormat btcFormat = config.getFormat();
+        final String title = application.getString(R.string.notification_inactivity_title);
+        final StringBuilder text = new StringBuilder(application.getString(R.string.notification_inactivity_message,
+                btcFormat.format(org.dash.wallet.common.money.Coin.valueOf(estimatedBalance.getValue()))));
+
+        final NotificationCompat.Builder notification = new NotificationCompat.Builder(application,
+                Constants.NOTIFICATION_CHANNEL_ID_TRANSACTIONS);
+        notification.setStyle(new NotificationCompat.BigTextStyle().bigText(text));
+        notification.setColor(application.getColor(R.color.fg_network_significant));
+        notification.setSmallIcon(R.drawable.ic_dash_d_white);
+        notification.setContentTitle(title);
+        notification.setContentText(text);
+        notification.setContentIntent(PendingIntent.getActivity(application, 0,
+                OnboardingActivity.createIntent(application), PendingIntent.FLAG_IMMUTABLE));
+        notification.setAutoCancel(true);
+
+        final Intent dismissIntent = new Intent(application, BootstrapReceiver.class);
+        dismissIntent.setAction(ACTION_DISMISS);
+        notification.addAction(new NotificationCompat.Action.Builder(0,
+                application.getString(R.string.notification_inactivity_action_dismiss),
+                PendingIntent.getBroadcast(application, 0, dismissIntent, PendingIntent.FLAG_IMMUTABLE)).build());
+
+        final Intent dismissForeverIntent = new Intent(application, BootstrapReceiver.class);
+        dismissForeverIntent.setAction(ACTION_DISMISS_FOREVER);
+        notification.addAction(new NotificationCompat.Action.Builder(0,
+                application.getString(R.string.notification_inactivity_action_dismiss_forever),
+                PendingIntent.getBroadcast(application, 0, dismissForeverIntent, PendingIntent.FLAG_IMMUTABLE)).build());
+
+        final NotificationManager nm = application.getSystemService(NotificationManager.class);
+        nm.notify(Constants.NOTIFICATION_ID_INACTIVITY, notification.build());
+    }
+
     @WorkerThread
     private void dismissNotification(final Context context) {
         log.info("dismissing inactivity notification");
         config.setRemindBalanceTimeIn(DateUtils.DAY_IN_MILLIS);
-        // through the reminder's lock, so a reminder being prepared cannot post after this
-        InactivityReminder.cancel(context);
+        final NotificationManager nm = context.getSystemService(NotificationManager.class);
+        nm.cancel(Constants.NOTIFICATION_ID_INACTIVITY);
     }
 
     @WorkerThread
@@ -123,8 +188,8 @@ public class BootstrapReceiver extends BroadcastReceiver {
         log.info("dismissing inactivity notification forever");
         config.setRemindBalanceTimeIn(DateUtils.WEEK_IN_MILLIS * 52);
         config.setRemindBalance(false);
-        // through the reminder's lock, so a reminder being prepared cannot post after this
-        InactivityReminder.cancel(context);
+        final NotificationManager nm = context.getSystemService(NotificationManager.class);
+        nm.cancel(Constants.NOTIFICATION_ID_INACTIVITY);
     }
 
 }

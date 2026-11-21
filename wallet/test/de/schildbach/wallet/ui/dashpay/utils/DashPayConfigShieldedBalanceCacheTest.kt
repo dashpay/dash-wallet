@@ -53,9 +53,6 @@ class DashPayConfigShieldedBalanceCacheTest {
     @Before
     fun setUp() = runBlocking {
         cfg = DashPayConfig(RuntimeEnvironment.getApplication(), mockk<WalletDataProvider>(relaxed = true))
-        // The constructor seeds debug flags on Dispatchers.IO. Left running, that write can
-        // land mid-test (under full-suite load) and drop this test's keys.
-        cfg.initialSeeding.join()
         cfg.clearAll()
     }
 
@@ -63,8 +60,6 @@ class DashPayConfigShieldedBalanceCacheTest {
     fun noReconcile_persistsTheBalance() = runBlocking {
         assertTrue(cfg.setLastShieldedBalanceDuffsUnlessReconciling(1_000_000_000L))
         assertEquals(1_000_000_000L, cfg.getLastShieldedBalanceDuffs())
-        // Written with it: the value belongs to the installed wallet.
-        assertEquals(true, cfg.get(DashPayConfig.LAST_SHIELDED_BALANCE_OWNED))
     }
 
     @Test

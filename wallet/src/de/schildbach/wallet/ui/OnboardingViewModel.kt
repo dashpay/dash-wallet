@@ -27,7 +27,6 @@ import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.service.WalletFactory
 import de.schildbach.wallet.ui.util.SingleLiveEvent
-import de.schildbach.wallet_test.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -37,7 +36,6 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.Configuration
 import org.slf4j.LoggerFactory
-import java.io.IOException
 import javax.inject.Inject
 
 @HiltViewModel
@@ -66,20 +64,13 @@ class OnboardingViewModel @Inject constructor(
     fun createNewWallet(seedWordCount: Int) {
         analytics.logEvent(AnalyticsConstants.Onboarding.NEW_WALLET, mapOf())
         viewModelScope.launch {
-            val installed = try {
-                withContext(Dispatchers.IO) {
-                    walletApplication.initEnvironmentIfNeeded()
-                    val wallet = walletFactory.create(Constants.NETWORK_PARAMETERS, seedWordCount)
-                    log.info("successfully created new wallet")
-                    walletApplication.installWallet(wallet, false).also { result ->
-                        if (result == WalletInstallResult.INSTALLED) configuration.armBackupSeedReminder()
-                    }
+            val installed = withContext(Dispatchers.IO) {
+                walletApplication.initEnvironmentIfNeeded()
+                val wallet = walletFactory.create(Constants.NETWORK_PARAMETERS, seedWordCount)
+                log.info("successfully created new wallet")
+                walletApplication.installWallet(wallet, false).also { result ->
+                    if (result == WalletInstallResult.INSTALLED) configuration.armBackupSeedReminder()
                 }
-            } catch (e: IOException) {
-                // Nothing was installed (a storage failure before the install): the user can try again.
-                log.error("new wallet could not be installed", e)
-                showToastAction.call(walletApplication.getString(R.string.wallet_install_failed))
-                return@launch
             }
             if (installed == WalletInstallResult.ALREADY_INSTALLED) {
                 log.warn("new wallet dropped: another onboarding screen installed a wallet first")

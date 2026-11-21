@@ -41,7 +41,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.io.IOException
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
@@ -98,24 +97,6 @@ class RestoreWalletFromSeedViewModelTest {
         verify(exactly = 0) { configuration.isRestoringBackup = any() }
         // The refusal raced past the up-front check: the selected date must
         // still not overwrite the existing wallet's scan start.
-        assertEquals(existingDateSecs, blockchainServiceConfig.getWalletCreationDate())
-    }
-
-    @Test
-    fun `a storage failure during the install is reported as such, not as a bad phrase`() = runBlocking {
-        val app = mockk<WalletApplication>(relaxed = true)
-        every { app.isWalletReplacementRefused } returns false
-        every { app.installWallet(any(), any()) } throws IOException("disk full")
-        val factory = mockk<WalletFactory>()
-        coEvery { factory.restoreFromSeed(any(), any()) } returns mockk<Wallet>()
-        val configuration = mockk<Configuration>(relaxed = true)
-        val viewModel = viewModel(app, factory, configuration)
-
-        assertEquals(SeedRestoreResult.INSTALL_FAILED, viewModel.restoreWalletFromSeed(words))
-        // The forgot-PIN rescan path goes through the same install.
-        assertEquals(SeedRestoreResult.INSTALL_FAILED, viewModel.restoreWalletFromSeed(words, forgotPinRecovery = true))
-        verify(exactly = 0) { app.resetBlockchainState() }
-        verify(exactly = 0) { configuration.disarmBackupSeedReminder() }
         assertEquals(existingDateSecs, blockchainServiceConfig.getWalletCreationDate())
     }
 

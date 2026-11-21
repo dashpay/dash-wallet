@@ -163,15 +163,6 @@ abstract class BaseConfig(
         return observePreservingErrors(key).first()
     }
 
-    /**
-     * The whole store as one [getPreservingErrors]: every key read from it comes from the
-     * same stored state, for values that are only meaningful together. An unreadable store
-     * THROWS (IOException).
-     */
-    open suspend fun snapshotPreservingErrors(): Preferences {
-        return context.dataStore.data.first()
-    }
-
     open suspend fun <T> set(key: Preferences.Key<T>, value: T) {
         context.dataStore.edit { preferences ->
             preferences[key] = value
