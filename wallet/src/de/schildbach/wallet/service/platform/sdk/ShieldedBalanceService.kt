@@ -303,22 +303,52 @@ interface ShieldedBalanceService {
     suspend fun lastKnownShieldedBalance(): Dash?
 
     /**
-     * True after a successful shielded spend FROM THIS APP (shield /
-     * transfer / unshield / withdraw / wallet-shield) until the runtime next
-     * reaches [ShieldedSyncStatus.READY] with the post-spend balance — the
-     * window in which the last-known/cached balance is known-STALE and a
-     * balance surface must show a "Syncing…" placeholder instead of that
-     * stale amount. Starts false; inert (stays false) while the flag is off.
+     * The shielded balance as DISPLAY surfaces show it (home header, More
+     * card): [observeShieldedBalance], except that a transient post-spend
+     * zero is held — the iOS hold rule. While a spend from this app (or an
+     * external executor's, see [beginExternalShieldedSpend]) is reconciling,
+     * a store reading of zero after a published balance above zero keeps
+     * showing that balance until the store reads above zero, the
+     * reconciliation settles, or a bounded window of forced passes (about
+     * 40 s after the spend call returns) ends — then the reading is shown,
+     * zero included. Nonzero intermediate readings show at once. Gate it on
+     * [ShieldedSyncStatus.READY] exactly like [observeShieldedBalance]; it
+     * fails (throws) while the store is unreadable, so a consumer's retry
+     * path shows its placeholder. Never use it on a send / Max path: that
+     * reads [observeShieldedBalance] and treats the balance as unknown while
+     * [shieldedSpendReconciling] is set.
      */
-    val shieldedBalanceMaybeStale: StateFlow<Boolean>
+    fun observeDisplayedShieldedBalance(): Flow<Dash>
+
+    /**
+     * True while [observeDisplayedShieldedBalance] is holding a pre-spend
+     * figure over a transient post-spend zero (see there). Display state only;
+     * money paths gate on [shieldedSpendReconciling], which covers every held
+     * moment. In-memory and per runtime: false in a new process, after a stop,
+     * and while the flag is off.
+     */
+    val shieldedBalanceHeld: StateFlow<Boolean>
+
+    /**
+     * True from the start of a shielded spend from this app (or an external
+     * executor's, see [beginExternalShieldedSpend]) until its reconciliation
+     * settles (two stable passes with the spend reflected), and after a
+     * restart while the durable reconcile marker is pending. While set the
+     * note store can still count an ambiguous spend's reserved inputs as
+     * unspent or read an intermediate balance, so a send / Max path must
+     * treat the shielded balance as UNKNOWN (null). Display surfaces do not
+     * gate on it (they read [observeDisplayedShieldedBalance]).
+     */
+    val shieldedSpendReconciling: StateFlow<Boolean>
 
     /**
      * An EXTERNAL executor (username creation, invite creation — the
      * Type-20 family) is about to spend shielded pool notes outside this
      * service's own write paths: call BEFORE its SDK spend. Durably records
-     * the pending reconciliation (the cached balance is dropped) and marks
-     * the balance stale, so every surface shows "Syncing…" instead of the
-     * pre-spend amount — also after a process death mid-spend.
+     * the pending reconciliation (the cached balance is dropped, so nothing
+     * trusts the pre-spend amount after a process death mid-spend) and
+     * starts it in memory, which arms the display hold of
+     * [observeDisplayedShieldedBalance].
      *
      * Returns the spend's start time, to pass to [endExternalShieldedSpend];
      * or null when the record could not be written — the caller must then
