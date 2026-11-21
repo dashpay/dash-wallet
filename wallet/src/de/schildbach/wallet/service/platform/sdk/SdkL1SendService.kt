@@ -1974,7 +1974,7 @@ class SdkL1SendService internal constructor(
             "app wallet not bound to the SDK"
         }
         val gate = probeSendGate()
-        check(gate.allowed) { "L1 funding gate closed: ${gate.reason}" }
+        check(gate.allowed) { "$L1_FUNDING_GATE_CLOSED_REASON: ${gate.reason}" }
         val reservedAtHeight = reservationHeightLowerBound()
         // Re-asked under the shared selection lock, held through selection and the reservation
         // (review 4309551218).
@@ -2115,7 +2115,7 @@ class SdkL1SendService internal constructor(
             "app wallet not bound to the SDK"
         }
         val gate = probeSendGate()
-        check(gate.allowed) { "L1 funding gate closed: ${gate.reason}" }
+        check(gate.allowed) { "$L1_FUNDING_GATE_CLOSED_REASON: ${gate.reason}" }
         // FAIL-CLOSED GUARD (funds-critical), max deposits only: a max deposit
         // selects (essentially) every spendable UTXO the pooled default reaches
         // — BIP44 + BIP32 + every DashPay contact-receiving account — and the

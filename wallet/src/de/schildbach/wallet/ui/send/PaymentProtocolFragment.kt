@@ -29,6 +29,7 @@ import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.data.PaymentIntent
 import de.schildbach.wallet.livedata.Status
+import org.dash.wallet.common.services.SendEngineNotSyncedException
 import de.schildbach.wallet.ui.transactions.TransactionResultActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentPaymentProtocolBinding
@@ -124,6 +125,11 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
             lifecycleScope.launch {
                 viewModel.sendPayment()
             }
+        } else if (viewModel.canRetryPreview) {
+            // Refused only because the wallet was still syncing when the screen opened: build
+            // again. A success shows the payment with its real fee to confirm; a failure is
+            // reported by the observer.
+            viewModel.retryPreview()
         } else {
             handleSendRequestException()
         }
@@ -158,6 +164,7 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
                     binding.viewFlipper.displayedChild = VIEW_LOADING
                 }
                 Status.SUCCESS -> {
+                    viewModel.consumeRetryResult()
                     displayRequest(viewModel.finalPaymentIntent!!)
                     binding.viewFlipper.displayedChild = VIEW_PAYMENT
                 }
@@ -180,7 +187,10 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
                         displayRequest(viewModel.finalPaymentIntent!!)
                         binding.viewFlipper.displayedChild = VIEW_PAYMENT
                         if (userAuthorizedDuring && !viewModel.canSendPayment) {
+                            viewModel.consumeRetryResult()
                             handleSendRequestException()
+                        } else {
+                            reportRetryFailureIfOwed()
                         }
                     }
                 }
@@ -238,6 +248,31 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        reportRetryFailureIfOwed()
+    }
+
+    /**
+     * Shows the failure of a build the user asked for again ([PaymentProtocolViewModel.retryPreview]),
+     * once. Only while resumed: the dialog is shown when the activity is resumed, so a failure
+     * taken while the screen was paused was lost if the screen was recreated before that. Left
+     * with the ViewModel, the screen that resumes shows it (thepastaclaw on #1714).
+     */
+    private fun reportRetryFailureIfOwed() {
+        if (!isResumed || viewModel.finalPaymentIntent == null) return
+        val result = viewModel.sendRequestLiveData.value ?: return
+        if (result.status != Status.ERROR ||
+            result.exception is PaymentSubmissionPendingException ||
+            result.exception is PaymentProtocolException.Expired
+        ) {
+            return
+        }
+        if (viewModel.consumeRetryResult() && !viewModel.canSendPayment) {
+            handleSendRequestException()
+        }
+    }
+
     private fun handleSendRequestException() {
         val resource = viewModel.sendRequestLiveData.value!!
         log.error("unable to handle payment request ${resource.exception?.message ?: resource.message}")
@@ -249,6 +284,11 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
             // this one: nothing was built, and it lifts once that payment is confirmed.
             is PaymentStillConfirmingException -> {
                 showErrorDialog(getString(R.string.payment_still_confirming))
+            }
+            // The wallet has not caught up with the chain: the same copy as the send screen,
+            // never the engine's text.
+            is SendEngineNotSyncedException -> {
+                showErrorDialog(getString(R.string.send_coins_fragment_hint_replaying))
             }
             // The SDK build reports a shortfall as a native error whose
             // message carries key-wallet's "Insufficient funds" text
