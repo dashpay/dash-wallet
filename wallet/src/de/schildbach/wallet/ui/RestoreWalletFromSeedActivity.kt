@@ -231,6 +231,8 @@ class RestoreWalletFromSeedActivity : RestoreFromFileActivity() {
                     val result = viewModel.restoreWalletFromSeed(words, forgotPinRecovery = true)
                     if (result == SeedRestoreResult.REFUSED) {
                         redirectDegradedWallet(walletApplication)
+                    } else if (result == SeedRestoreResult.INSTALL_FAILED) {
+                        showErrorDialog(getString(R.string.wallet_install_failed))
                     } else if (result == SeedRestoreResult.RESTORED) {
                         startActivityForResult(
                             SetPinActivity.createIntent(
@@ -254,6 +256,8 @@ class RestoreWalletFromSeedActivity : RestoreFromFileActivity() {
             if (result == SeedRestoreResult.REFUSED) {
                 // The wipe guard latched: the degraded screen explains it.
                 redirectDegradedWallet(walletApplication)
+            } else if (result == SeedRestoreResult.INSTALL_FAILED) {
+                showErrorDialog(getString(R.string.wallet_install_failed))
             } else if (result == SeedRestoreResult.WALLET_ALREADY_INSTALLED) {
                 // Back to the onboarding screen, which routes to that wallet on resume.
                 setResult(RESULT_CANCELED)
