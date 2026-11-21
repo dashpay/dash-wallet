@@ -36,8 +36,8 @@ import org.junit.Test
  * identity, shielded never configured — the runtime can never come up) shows
  * its honest zero; a wallet WITH a shielded context and NO cache keeps the
  * placeholder until READY; a background re-scan on relaunch shows the cached
- * balance; and a just-completed local spend forces "Syncing…" over the now
- * stale cache. Display-only — the gating trust rule elsewhere is not
+ * balance; and a still-reconciling local spend (the cache already dropped)
+ * shows "Syncing…" until READY rather than a bare zero. Display-only — the gating trust rule elsewhere is not
  * exercised here.
  */
 class ShieldedCardDisplayTest {
@@ -65,7 +65,7 @@ class ShieldedCardDisplayTest {
             ShieldedCardDisplay.LIVE_AMOUNT,
             mapShieldedCardDisplay(
                 ShieldedSyncStatus.NOT_READY, hasShieldedContext = false,
-                cachedBalance = null, balanceUnreadable = false
+                cachedBalance = null, balanceUnreadable = false, spendReconciling = false
             )
         )
     }
@@ -78,7 +78,7 @@ class ShieldedCardDisplayTest {
             ShieldedCardDisplay.SYNCING,
             mapShieldedCardDisplay(
                 ShieldedSyncStatus.NOT_READY, hasShieldedContext = true,
-                cachedBalance = null, balanceUnreadable = false
+                cachedBalance = null, balanceUnreadable = false, spendReconciling = false
             )
         )
     }
@@ -92,7 +92,7 @@ class ShieldedCardDisplayTest {
                 ShieldedCardDisplay.CACHED_AMOUNT,
                 mapShieldedCardDisplay(
                     status, hasShieldedContext = true,
-                    cachedBalance = cached, balanceUnreadable = false
+                    cachedBalance = cached, balanceUnreadable = false, spendReconciling = false
                 )
             )
         }
@@ -105,7 +105,7 @@ class ShieldedCardDisplayTest {
             ShieldedCardDisplay.SYNCING,
             mapShieldedCardDisplay(
                 ShieldedSyncStatus.SYNCING, hasShieldedContext = true,
-                cachedBalance = cached, balanceUnreadable = true
+                cachedBalance = cached, balanceUnreadable = true, spendReconciling = false
             )
         )
         // Even with no cache and no context (where the live zero would show).
@@ -113,7 +113,7 @@ class ShieldedCardDisplayTest {
             ShieldedCardDisplay.SYNCING,
             mapShieldedCardDisplay(
                 ShieldedSyncStatus.NOT_READY, hasShieldedContext = false,
-                cachedBalance = null, balanceUnreadable = true
+                cachedBalance = null, balanceUnreadable = true, spendReconciling = false
             )
         )
     }
@@ -126,7 +126,7 @@ class ShieldedCardDisplayTest {
                 ShieldedCardDisplay.LIVE_AMOUNT,
                 mapShieldedCardDisplay(
                     ShieldedSyncStatus.READY, hasShieldedContext = context,
-                    cachedBalance = cached, balanceUnreadable = false
+                    cachedBalance = cached, balanceUnreadable = false, spendReconciling = false
                 )
             )
         }
@@ -142,7 +142,7 @@ class ShieldedCardDisplayTest {
                 ShieldedCardDisplay.SYNCING,
                 mapShieldedCardDisplay(
                     ShieldedSyncStatus.READY, hasShieldedContext = context,
-                    cachedBalance = cached, balanceUnreadable = true
+                    cachedBalance = cached, balanceUnreadable = true, spendReconciling = false
                 )
             )
         }
@@ -158,21 +158,21 @@ class ShieldedCardDisplayTest {
             ShieldedCardDisplay.HIDDEN,
             mapShieldedCardDisplay(
                 ShieldedSyncStatus.READY, hasShieldedContext = true,
-                cachedBalance = null, balanceUnreadable = false, hideBalance = true
+                cachedBalance = null, balanceUnreadable = false, spendReconciling = false, hideBalance = true
             )
         )
         assertEquals(
             ShieldedCardDisplay.HIDDEN,
             mapShieldedCardDisplay(
                 ShieldedSyncStatus.NOT_READY, hasShieldedContext = true,
-                cachedBalance = cached, balanceUnreadable = false, hideBalance = true
+                cachedBalance = cached, balanceUnreadable = false, spendReconciling = false, hideBalance = true
             )
         )
         assertEquals(
             ShieldedCardDisplay.HIDDEN,
             mapShieldedCardDisplay(
                 ShieldedSyncStatus.SYNCING, hasShieldedContext = true,
-                cachedBalance = cached, balanceUnreadable = true, hideBalance = true
+                cachedBalance = cached, balanceUnreadable = true, spendReconciling = false, hideBalance = true
             )
         )
     }
@@ -183,9 +183,49 @@ class ShieldedCardDisplayTest {
             ShieldedCardDisplay.LIVE_AMOUNT,
             mapShieldedCardDisplay(
                 ShieldedSyncStatus.READY, hasShieldedContext = true,
-                cachedBalance = null, balanceUnreadable = false
+                cachedBalance = null, balanceUnreadable = false, spendReconciling = false
             )
         )
+    }
+
+    @Test
+    fun `restart mid-reconcile - identity-free wallet with no cache shows the placeholder, not a bare zero`() {
+        // The spend dropped the cache; the restored reconciliation marker must
+        // keep the card on "Syncing…" for both pre-READY statuses.
+        for (status in listOf(ShieldedSyncStatus.NOT_READY, ShieldedSyncStatus.SYNCING)) {
+            assertEquals(
+                ShieldedCardDisplay.SYNCING,
+                mapShieldedCardDisplay(
+                    status, hasShieldedContext = false,
+                    cachedBalance = null, balanceUnreadable = false, spendReconciling = true
+                )
+            )
+        }
+    }
+
+    @Test
+    fun `READY while reconciling shows the live display balance`() {
+        // The display balance holds the pre-spend amount through the transient zero.
+        assertEquals(
+            ShieldedCardDisplay.LIVE_AMOUNT,
+            mapShieldedCardDisplay(
+                ShieldedSyncStatus.READY, hasShieldedContext = false,
+                cachedBalance = null, balanceUnreadable = false, spendReconciling = true
+            )
+        )
+    }
+
+    @Test
+    fun `not reconciling - identity-free wallet with no cache still shows the live zero`() {
+        for (status in listOf(ShieldedSyncStatus.NOT_READY, ShieldedSyncStatus.SYNCING)) {
+            assertEquals(
+                ShieldedCardDisplay.LIVE_AMOUNT,
+                mapShieldedCardDisplay(
+                    status, hasShieldedContext = false,
+                    cachedBalance = null, balanceUnreadable = false, spendReconciling = false
+                )
+            )
+        }
     }
 
     // ── hasShieldedContext (mirrors SdkWalletBinder's bind eligibility) ──
