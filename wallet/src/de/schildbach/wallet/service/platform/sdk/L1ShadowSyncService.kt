@@ -2694,8 +2694,15 @@ class L1ShadowSyncService internal constructor(
      * So a refused start stops the client again and retries, at most
      * [spvTeardownRetryRounds] times, waiting [spvTeardownRetryDelayMs] after
      * a stop that reports the teardown still running. Past that the refusal
-     * is thrown to the caller as before, and the next start repeats this.
-     * Any other failure, of the start or of the stop, is thrown at once.
+     * is thrown to the caller: [startIfEnabled] schedules another start, and
+     * [ensureSpvRunning]'s in-place restart reports the failure to its
+     * caller. Any other failure, of the start or of the stop, is thrown at
+     * once.
+     *
+     * [resetShadowState] does not use this. Its stop precedes the deletion
+     * of the SPV directory and the L1 rows, so waiting a teardown out after
+     * them would start a scan on state that teardown may still have been
+     * writing; a reset whose stop timed out keeps failing at its start.
      */
     private suspend fun startSpvFinishingTeardown(dataDirPath: String) {
         var round = 0
@@ -3291,7 +3298,28 @@ class L1ShadowSyncService internal constructor(
                                 }
                             }
                         }
-                        startSpvFinishingTeardown(dataDir.absolutePath)
+                        try {
+                            startSpvFinishingTeardown(dataDir.absolutePath)
+                        } catch (t: Throwable) {
+                            if (t is CancellationException) throw t
+                            if (!source.isSpvTeardownIncomplete(t)) throw t
+                            // Still refused after every round. A filter-stall
+                            // restart has already torn its loops down, so
+                            // nothing else would start the engine again: this
+                            // refusal carries its own retry, as the scan
+                            // gate's does.
+                            if (externalStopGeneration != startGeneration) {
+                                log.info("L1 shadow sync not started: an external stop() arrived during the start")
+                                return false
+                            }
+                            val retryInMs = scheduleScanGateRetry(startGeneration)
+                            log.warn(
+                                "L1 shadow sync not started: an earlier SPV teardown has still not finished; " +
+                                    "retrying in {}s",
+                                retryInMs / 1000
+                            )
+                            return false
+                        }
                     }
                     runningWalletIdHex.value = walletIdHex
                     // Seed the committed-cursor tracker from the durable
@@ -3359,7 +3387,8 @@ class L1ShadowSyncService internal constructor(
     }
 
     /**
-     * Schedule the start again after a scan-gate refusal, with backoff; one
+     * Schedule the start again after a scan-gate refusal, or a start still
+     * refused over an unfinished SPV teardown, with backoff; one
      * retry in flight at a time. Returns the delay. The retry carries the
      * ORIGINATING start's external-stop generation, so any stop after that
      * start began, including one that landed while it was inside the gate,
@@ -5149,7 +5178,8 @@ class L1ShadowSyncService internal constructor(
                 runCatching { dashPayConfig.set(DashPayConfig.L1_SHADOW_LAST_RESET, nowMs()) }
                     .onFailure { log.warn("shadow reset: failed to persist the reset marker", it) }
                 val dataDir = File(spvDataDirPath()).apply { mkdirs() }
-                holdingEngineStart { startSpvFinishingTeardown(dataDir.absolutePath) }
+                // Not startSpvFinishingTeardown: see its KDoc.
+                holdingEngineStart { source.startSpv(dataDir.absolutePath) }
                 log.info(
                     "L1 shadow SPV restarted after reset (dataDir={}, fresh full scan from the " +
                         "wallet's stored birth height)",
