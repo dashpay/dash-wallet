@@ -2699,10 +2699,9 @@ class L1ShadowSyncService internal constructor(
      * caller. Any other failure, of the start or of the stop, is thrown at
      * once.
      *
-     * [resetShadowState] does not use this. Its stop precedes the deletion
-     * of the SPV directory and the L1 rows, so waiting a teardown out after
-     * them would start a scan on state that teardown may still have been
-     * writing; a reset whose stop timed out keeps failing at its start.
+     * [resetShadowState] does not need this: it refuses, before deleting
+     * anything, when its own stop reports the teardown unfinished, so its
+     * start only runs after a stop that returned.
      */
     private suspend fun startSpvFinishingTeardown(dataDirPath: String) {
         var round = 0
@@ -3178,7 +3177,6 @@ class L1ShadowSyncService internal constructor(
                     )
                     return false
                 }
-                scanGateRefusals = 0
                 currentCoroutineContext()[Job].let { self -> scanGateRetryJob?.takeIf { it !== self }?.cancel() }
 
                 holdingEngineStart {
@@ -3322,6 +3320,9 @@ class L1ShadowSyncService internal constructor(
                         }
                     }
                     runningWalletIdHex.value = walletIdHex
+                    // Only now: a start still refused over an unfinished
+                    // teardown shares this backoff, and it gets past the gate.
+                    scanGateRefusals = 0
                     // Seed the committed-cursor tracker from the durable
                     // watermark so the drain predicate has evidence before the
                     // session's first SyncHeightAdvanced event; a failed read
@@ -5158,8 +5159,19 @@ class L1ShadowSyncService internal constructor(
                     if (!beginPaidHistoryInvalidation(walletIdHex, "shadow reset")) {
                         return false
                     }
-                    runCatching { source.stopSpv() }
-                        .onFailure { log.warn("shadow reset: SPV stop failed; continuing", it) }
+                    try {
+                        source.stopSpv()
+                    } catch (t: Throwable) {
+                        if (t is CancellationException) throw t
+                        // The native teardown is still running and may still
+                        // write what the steps below delete: refuse, with
+                        // nothing deleted yet. The next start finishes it.
+                        if (source.isSpvTeardownIncomplete(t)) {
+                            log.warn("shadow reset refused: the SPV teardown has not finished; nothing was deleted", t)
+                            return false
+                        }
+                        log.warn("shadow reset: SPV stop failed; continuing", t)
+                    }
                     _progress.value = ShadowSyncProgress.IDLE
                     sessionHeaderStart = 0L // the rescan is a new session's work
                     sessionFilterStart = 0L
@@ -5178,7 +5190,6 @@ class L1ShadowSyncService internal constructor(
                 runCatching { dashPayConfig.set(DashPayConfig.L1_SHADOW_LAST_RESET, nowMs()) }
                     .onFailure { log.warn("shadow reset: failed to persist the reset marker", it) }
                 val dataDir = File(spvDataDirPath()).apply { mkdirs() }
-                // Not startSpvFinishingTeardown: see its KDoc.
                 holdingEngineStart { source.startSpv(dataDir.absolutePath) }
                 log.info(
                     "L1 shadow SPV restarted after reset (dataDir={}, fresh full scan from the " +
