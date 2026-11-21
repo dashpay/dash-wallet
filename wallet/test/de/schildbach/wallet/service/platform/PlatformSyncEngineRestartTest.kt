@@ -79,6 +79,7 @@ class PlatformSyncEngineRestartTest {
         override suspend fun isRunning() = false
         override suspend fun start() { starts++ }
         override suspend fun stop() { stops++ }
+        override suspend fun syncNow() = Unit
     }
     private val platformAddressSource = FakePlatformAddressSource()
     private val platformAddressSyncService = PlatformAddressSyncService(platformAddressSource)

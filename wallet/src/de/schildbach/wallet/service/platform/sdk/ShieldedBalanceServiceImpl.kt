@@ -2683,8 +2683,8 @@ class ShieldedBalanceServiceImpl internal constructor(
         }.alsoResyncPlatform()
 
     /**
-     * A Platform-address side that was submitted or may have been: force the Platform-address
-     * sync (iOS `schedulePlatformResync`). Only on the own-address writes ([shieldFromCredits],
+     * A Platform-address side that was submitted or may have been: schedule the Platform-address
+     * resync (iOS `schedulePlatformResync`). Only on the own-address writes ([shieldFromCredits],
      * [unshieldToCredits]), whose callers (the invite overage top-up) bypass External Send. The
      * address-taking [shieldFromCreditsToAddress] / [unshieldToPlatformAddress] are reached only
      * through [ExternalSendServiceImpl] (External Send and the Advanced-mode transfers it serves),

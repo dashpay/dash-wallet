@@ -429,7 +429,7 @@ internal fun sendableShieldedBalance(balance: Dash, status: ShieldedSyncStatus, 
 
 /**
  * Whether an External Send outcome may have changed a Platform-address balance, so the
- * Platform-address sync is forced (iOS `schedulePlatformResync`): a Platform source or a
+ * Platform-address resync is scheduled (iOS `schedulePlatformResync`): a Platform source or a
  * Platform destination, and a submitted or may-have-gone-through outcome. A provably unsent
  * one changed nothing.
  */
@@ -1006,8 +1006,9 @@ class ExternalSendServiceImpl internal constructor(
     private val fundingSelection: FundingSelectionLock,
     /**
      * A send that may have changed a Platform-address balance was submitted (or may have
-     * been): prod wires [PlatformAddressSyncService.schedulePlatformResync] (0 / 4 / 12 s
-     * forced passes, iOS `schedulePlatformResync`). No-op default keeps host tests inert.
+     * been): prod wires [PlatformAddressSyncService.schedulePlatformResync] (sync-now requests at
+     * 0 / 4 / 12 s, iOS `schedulePlatformResync`; no-ops until the Kotlin SDK binds sync-now).
+     * No-op default keeps host tests inert.
      */
     private val onPlatformBalanceChanged: () -> Unit = {}
 ) : ExternalSendService {

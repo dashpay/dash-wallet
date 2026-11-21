@@ -22,7 +22,6 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -54,6 +53,11 @@ internal interface PlatformAddressSyncSource {
     /** Stop the loop of the live runtime; a no-op when no runtime is up. */
     suspend fun stop()
 
+    /**
+     * Run one pass on the RUNNING loop now, without stopping or starting it. Called only
+     * while [isRunning] read true. A pass already in flight makes it a no-op SDK-side.
+     */
+    suspend fun syncNow()
 }
 
 private class DashSdkPlatformAddressSyncSource(
@@ -79,6 +83,23 @@ private class DashSdkPlatformAddressSyncSource(
 
     override suspend fun stop() {
         liveManager()?.stopPlatformAddressSync()
+    }
+
+    /**
+     * A no-op until the Kotlin SDK exposes `PlatformWalletManager.syncPlatformAddressNow()`.
+     * Rust has it (`PlatformAddressSyncManager::sync_now`, the C FFI
+     * `platform_wallet_manager_platform_address_sync_sync_now` that iOS calls; it runs one pass
+     * on the live loop and never stops it), but the unified JNI does not bind it yet, and
+     * `PlatformWalletManager` offers only start / stop / isRunning / reset. Meanwhile the SDK's
+     * own 15 s loop picks up the change. Wiring the binding is a one-line change here:
+     * `liveManager()?.syncPlatformAddressNow()`.
+     */
+    override suspend fun syncNow() {
+        log.debug("Platform address sync-now: not bound in the Kotlin SDK yet; the 15 s loop covers it")
+    }
+
+    private companion object {
+        private val log = LoggerFactory.getLogger(DashSdkPlatformAddressSyncSource::class.java)
     }
 }
 
@@ -111,10 +132,12 @@ private class DashSdkPlatformAddressSyncSource(
  * was decided before it.
  *
  * After a send or transfer that changes a Platform-address balance,
- * [schedulePlatformResync] forces passes at 0, 4 and 12 s (iOS
- * `ShieldedTransferCoordinator.schedulePlatformResync`), so the new balance
- * shows within seconds instead of on a later tick. [syncNow] never starts a
- * loop that is not running (that is the engine kick's decision).
+ * [schedulePlatformResync] asks for a pass at 0, 4 and 12 s (iOS
+ * `ShieldedTransferCoordinator.schedulePlatformResync`). [syncNow] never stops
+ * or starts the loop. Today it forces nothing: the Kotlin SDK does not bind the
+ * SDK's sync-now yet (see `DashSdkPlatformAddressSyncSource.syncNow`), so the
+ * 15 s loop picks the change up; once bound, the new balance shows within
+ * seconds.
  */
 @Singleton
 class PlatformAddressSyncService internal constructor(
@@ -123,7 +146,7 @@ class PlatformAddressSyncService internal constructor(
     /** Where [schedulePlatformResync] runs; null (host tests' default) schedules nothing. */
     private val scope: CoroutineScope? = null,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
-    /** The forced passes' offsets from the trigger ([RESYNC_OFFSETS_MS]); ascending. */
+    /** The requested passes' offsets from the trigger ([RESYNC_OFFSETS_MS]); ascending. */
     private val resyncOffsetsMs: List<Long> = RESYNC_OFFSETS_MS
 ) {
     @Inject
@@ -186,41 +209,24 @@ class PlatformAddressSyncService internal constructor(
     }
 
     /**
-     * Force a pass now — iOS `PlatformAddressSyncCoordinator.syncNow()`. A
-     * no-op (false) when a stop arrived since the call, the wallet is not ready,
-     * the loop is not running (unlike iOS this never starts it: the loop runs
-     * only while the blockchain service does, see the class KDoc), or any of
-     * that cannot be read (fail closed).
-     *
-     * The Kotlin SDK binds no `platform_address_sync_sync_now` (the C FFI iOS
-     * calls has one; `PlatformWalletManager` exposes only start / stop /
-     * isRunning / reset), so this restarts the loop: Rust's `stop()` is
-     * cancel-only (a pass in flight runs to completion) and `start()` runs its
-     * first pass immediately; that pass bails at once when another one still
-     * holds the `is_syncing` slot, the same no-op iOS gets from `sync_now`.
-     * The stop and start run under [NonCancellable], so a cancelled caller (a
-     * newer [schedulePlatformResync]) never leaves the loop stopped, and a
-     * failed start is tried once more. Replace with the binding once the SDK
-     * exposes it. Runs on [ioDispatcher]; never throws except [CancellationException].
+     * Ask for one pass on the running loop now: iOS `PlatformAddressSyncCoordinator.syncNow()`
+     * through [PlatformAddressSyncSource.syncNow], which never stops or starts the loop (a no-op
+     * until the Kotlin SDK binds the SDK's sync-now). Returns false without asking when a stop
+     * arrived since the call, the wallet is not ready, the loop is not running (unlike iOS this
+     * never starts it: the loop runs only while the blockchain service does, see the class
+     * KDoc), or any of that cannot be read (fail closed). Runs on [ioDispatcher]; never throws
+     * except [CancellationException].
      */
     suspend fun syncNow(): Boolean {
         val expectedStopGeneration = generation.get()
         return try {
             withContext(ioDispatcher) {
                 mutex.withLock {
-                    fun superseded() = generation.get() != expectedStopGeneration
-                    when {
-                        superseded() || !source.ready() || !source.isRunning() -> false
-                        else -> {
-                            withContext(NonCancellable) { restartLoop() }
-                            if (superseded()) {
-                                // A stop timed out on the lock meanwhile: it could not reach this loop.
-                                source.stop()
-                                false
-                            } else {
-                                true
-                            }
-                        }
+                    if (generation.get() != expectedStopGeneration || !source.ready() || !source.isRunning()) {
+                        false
+                    } else {
+                        source.syncNow()
+                        true
                     }
                 }
             }
@@ -232,19 +238,6 @@ class PlatformAddressSyncService internal constructor(
         }
     }
 
-    /** [syncNow]'s restart; the caller holds [mutex], under [NonCancellable]. A second start failure throws. */
-    private suspend fun restartLoop() {
-        source.stop()
-        try {
-            source.start()
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            log.warn("Platform address sync restart: start failed; trying once more ({})", safeErrorSummary(e))
-            source.start()
-        }
-    }
-
     /** Guards [resyncJob]: one scheduled resync at a time, the newest wins. */
     private val resyncLock = Any()
     private var resyncJob: Job? = null
@@ -253,7 +246,8 @@ class PlatformAddressSyncService internal constructor(
      * After a send or transfer that changed a Platform-address balance (only a
      * submitted or may-have-gone-through outcome — never a provably unsent
      * one): [syncNow] at [resyncOffsetsMs] (0, 4, 12 s), spaced because a pass
-     * in flight makes a force a no-op and Platform needs a moment to index.
+     * in flight makes a sync-now a no-op and Platform needs a moment to index.
+     * Until the SDK binding exists each [syncNow] is a no-op (see there).
      * A newer call cancels and replaces the running schedule; [stop] (engine
      * teardown, and a wallet wipe through `stopSdkEngines`) cancels it, and a
      * schedule outlived by a stop ends at its next step.
@@ -302,7 +296,7 @@ class PlatformAddressSyncService internal constructor(
     internal companion object {
         const val STOP_LOCK_TIMEOUT_MS = 10_000L
 
-        /** [schedulePlatformResync]'s passes, from the trigger: iOS's 0 / 4 / 12 s. */
+        /** [schedulePlatformResync]'s requested passes, from the trigger: iOS's 0 / 4 / 12 s. */
         val RESYNC_OFFSETS_MS = listOf(0L, 4_000L, 12_000L)
     }
 }
