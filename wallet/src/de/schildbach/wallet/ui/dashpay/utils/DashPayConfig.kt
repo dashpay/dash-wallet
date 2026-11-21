@@ -759,6 +759,19 @@ open class DashPayConfig @Inject constructor(
         val SDK_RECOVERY_RESCAN_OWED = booleanPreferencesKey("sdk_recovery_rescan_owed")
 
         /**
+         * The SDK wallet (id, hex) whose FIRST scan has reached the chain tip: the strict
+         * send gate passed once for it
+         * ([de.schildbach.wallet.service.platform.sdk.evaluateWalletFundingGate]). From then
+         * on an ordinary catch-up no longer blocks sending, as on 11.9 and iOS; until then
+         * (a restore, the first scan after the upgrade) the strict gate applies. Absent
+         * means "not yet": a wipe clears it with the rest of this store, and the scanner
+         * removes it before it deletes the SDK wallet's rows or the wallet itself
+         * ([de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService]). Nothing has to
+         * be written before a restore or the cutover for the gate to be strict.
+         */
+        val SDK_L1_FIRST_SYNC_DONE_WALLET = stringPreferencesKey("sdk_l1_first_sync_done_wallet")
+
+        /**
          * An owed SPV rewind ([SDK_RECOVERY_RESCAN_OWED], [SDK_GAP_WIDEN_RESCAN_OWED])
          * that was ARMED but is not yet known to be durable. The SDK arm only
          * rewinds the in-memory checkpoint, so the debts stay set until the

@@ -49,4 +49,11 @@ interface BlockchainStateProvider {
 
     fun observeSyncStage(): Flow<SyncStage?>
     fun getSyncStage(): SyncStage
+
+    /**
+     * Whether the wallet has finished its first scan of the chain. Until then a payment waits
+     * for the wallet to be synced; afterwards an ordinary catch-up does not block one. False
+     * when not known.
+     */
+    fun observeFirstSyncDone(): Flow<Boolean> = kotlinx.coroutines.flow.flowOf(false)
 }

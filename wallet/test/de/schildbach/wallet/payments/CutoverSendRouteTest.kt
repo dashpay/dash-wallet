@@ -27,6 +27,7 @@ import org.bitcoinj.wallet.SendRequest
 import org.bitcoinj.wallet.ZeroConfCoinSelector
 import de.schildbach.wallet.service.platform.sdk.L1_FUNDING_GATE_CLOSED_REASON
 import de.schildbach.wallet.service.platform.sdk.L1_SIGNER_LOCKED_REASON
+import org.dash.wallet.common.services.SendEngineNotSyncedException
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull

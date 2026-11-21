@@ -2160,6 +2160,98 @@ class SdkL1SendServiceTest {
         }
     }
 
+    // --- a closed funding gate is refused at once, with the reason the screens type on
+
+    /** The scan [blocksShort] of the tip with the aggregate at 100%: the label reads synced, the gate does not. */
+    private fun scanShortOfTip(blocksShort: Long) = caughtUpProgress().let {
+        it.copy(filterHeight = it.filterHeight - blocksShort, walletSyncedHeight = it.walletSyncedHeight - blocksShort)
+    }
+
+    @Test
+    fun buildDeferredMayaDeposit_refusesAtOnceWithTheGateReason() = runBlocking {
+        var probes = 0
+        val source = FakeSource(boundWalletId = { walletId })
+        val svc = service(source, progress = { probes++; scanShortOfTip(208) })
+
+        val failure = runCatching {
+            svc.buildDeferredMayaDeposit(validAddress, 50_000L, ByteArray(40), stillOwned = { true })
+        }.exceptionOrNull()
+
+        assertTrue("an IllegalStateException, got $failure", failure is IllegalStateException)
+        assertTrue(failure?.message.orEmpty().contains(L1_FUNDING_GATE_CLOSED_REASON))
+        assertEquals("asked once, no wait", 1, probes)
+    }
+
+    @Test
+    fun sendToAddress_refusesAtOnceWithTheGateReason() = runBlocking {
+        var probes = 0
+        val source = readySource()
+        val svc = service(source, progress = { probes++; scanShortOfTip(208) })
+
+        val result = svc.sendToAddress(validAddress, amount, emptyWallet = false)
+
+        assertTrue("refused: $result", result is SdkWriteResult.NotBroadcast)
+        assertTrue((result as SdkWriteResult.NotBroadcast).reason.contains(L1_FUNDING_GATE_CLOSED_REASON))
+        assertEquals("asked once, no wait", 1, probes)
+    }
+
+    @Test
+    fun buildDeferredPayment_refusesWithTheGateReason_whenTheScanStaysShort() = runBlocking {
+        var probes = 0
+        val source = FakeSource(boundWalletId = { walletId })
+        val svc = service(source, progress = { probes++; scanShortOfTip(208) })
+
+        val failure = runCatching {
+            svc.buildDeferredPayment(listOf(validAddress to 10_000L), stillOwned = { true })
+        }.exceptionOrNull()
+
+        assertTrue("an IllegalStateException, got $failure", failure is IllegalStateException)
+        val reason = failure?.message.orEmpty()
+        assertTrue(reason, reason.contains(L1_FUNDING_GATE_CLOSED_REASON))
+        assertTrue(reason, reason.contains("short of the chain tip"))
+        assertEquals("asked once, no wait", 1, probes)
+    }
+
+    /**
+     * Pre-review, 2026-11-19. After the wallet's first scan a catch-up lets a payment of a
+     * fixed amount through, but not a send-all: it would take coins the catch-up finds after
+     * the user confirmed the amount.
+     */
+    @Test
+    fun afterTheFirstScan_aCatchUp_allowsAFixedAmount_butNotASendAll() = runBlocking {
+        val catchingUp = { scanShortOfTip(208).copy(firstSyncDone = true) }
+
+        val plain = service(readySource(), progress = catchingUp)
+            .sendToAddress(validAddress, amount, emptyWallet = false)
+        assertTrue("a fixed amount is sent: $plain", plain is SdkWriteResult.Broadcast)
+
+        val source = drainReadySource()
+        val all = service(source, enabled = false, cutoverState = "CUT_OVER", progress = catchingUp)
+            .sendToAddress(validAddress, amount, emptyWallet = true)
+        assertTrue("a send-all is refused: $all", all is SdkWriteResult.NotBroadcast)
+        assertTrue((all as SdkWriteResult.NotBroadcast).reason.contains(L1_FUNDING_GATE_CLOSED_REASON))
+        assertEquals(0, source.sendAllCalls)
+    }
+
+    /**
+     * thepastaclaw on #1714. An unbound wallet is not reported as "syncing": the bind can be
+     * waiting for the user (keystore, setup), which no retry of the build fixes.
+     */
+    @Test
+    fun buildDeferredPayment_refusesPlainly_whenTheWalletIsUnbound() = runBlocking {
+        val source = FakeSource(boundWalletId = { null })
+        val svc = service(source)
+
+        val failure = runCatching {
+            svc.buildDeferredPayment(listOf(validAddress to 10_000L), stillOwned = { true })
+        }.exceptionOrNull()
+
+        assertTrue("an IllegalStateException, got $failure", failure is IllegalStateException)
+        val reason = failure?.message.orEmpty()
+        assertFalse("not typed as a sync refusal: $reason", reason.contains(L1_FUNDING_GATE_CLOSED_REASON))
+        assertTrue(reason, reason.contains("not bound"))
+    }
+
     @Test
     fun deferredBroadcast_refusesWhenTheBoundWalletIsNotTheOneItWasBuiltOn() = runBlocking {
         var bound = walletId

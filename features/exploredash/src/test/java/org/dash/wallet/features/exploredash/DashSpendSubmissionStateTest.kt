@@ -102,6 +102,7 @@ class DashSpendSubmissionStateTest {
 
         val blockchainStateProvider = mockk<BlockchainStateProvider>(relaxed = true)
         every { blockchainStateProvider.observeState() } returns emptyFlow()
+        every { blockchainStateProvider.observeFirstSyncDone() } returns emptyFlow()
 
         return DashSpendViewModel(
             walletDataProvider,

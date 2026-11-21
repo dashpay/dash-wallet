@@ -69,6 +69,7 @@ import org.dash.wallet.common.services.DirectPayException
 import org.dash.wallet.common.services.InsufficientFundsException
 import org.dash.wallet.common.services.PaymentStillConfirmingException
 import org.dash.wallet.common.services.PaymentSubmissionPendingException
+import org.dash.wallet.common.services.SendEngineNotSyncedException
 import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.EnterAmount
 import org.dash.wallet.common.ui.components.LocalDashColors
@@ -543,6 +544,21 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
                     R.drawable.ic_warning,
                     getString(R.string.payment_submission_pending_title),
                     getString(R.string.payment_still_confirming),
+                    getString(R.string.button_close)
+                ).show(requireActivity())
+            }
+            null
+        } catch (ex: SendEngineNotSyncedException) {
+            // The wallet has not caught up with the chain. Nothing was sent, payAndRecordOrder
+            // discards the order rows, and the same purchase works once the sync finishes: say
+            // that, not "contact support".
+            log.warn("purchaseGiftCard refused, the wallet is not synced yet", ex)
+            hideLoading()
+            if (isAdded) {
+                AdaptiveDialog.create(
+                    R.drawable.ic_error,
+                    getString(R.string.send_coins_error_msg),
+                    getString(R.string.send_coins_fragment_hint_replaying),
                     getString(R.string.button_close)
                 ).show(requireActivity())
             }

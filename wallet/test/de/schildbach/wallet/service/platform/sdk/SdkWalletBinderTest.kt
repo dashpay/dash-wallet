@@ -303,12 +303,31 @@ class SdkWalletBinderTest {
     private fun identityConfig(base: BlockchainIdentityBaseData): BlockchainIdentityConfig =
         mockk { coEvery { loadBase() } returns base }
 
+    /** The saved first-sync record ([DashPayConfig.SDK_L1_FIRST_SYNC_DONE_WALLET]) of [dashPayConfig]. */
+    @Volatile private var firstSyncRecord: String? = null
+
+    /** Set to make the first-sync record unreadable. */
+    @Volatile private var firstSyncRecordUnreadable = false
+
     private fun dashPayConfig(
         readsFlag: Boolean?,
         writesFlag: Boolean? = false,
         shieldedFlag: Boolean? = false,
         l1ShadowFlag: Boolean? = false
     ): DashPayConfig = mockk {
+        // As in production: get() answers a failed read with "nothing stored"; only
+        // getPreservingErrors() reports it.
+        coEvery { get(DashPayConfig.SDK_L1_FIRST_SYNC_DONE_WALLET) } answers {
+            if (firstSyncRecordUnreadable) null else firstSyncRecord
+        }
+        coEvery { getPreservingErrors(DashPayConfig.SDK_L1_FIRST_SYNC_DONE_WALLET) } answers {
+            if (firstSyncRecordUnreadable) throw java.io.IOException("datastore unavailable")
+            firstSyncRecord
+        }
+        coEvery { remove(DashPayConfig.SDK_L1_FIRST_SYNC_DONE_WALLET) } answers {
+            firstSyncRecord = null
+            mockk(relaxed = true)
+        }
         if (readsFlag == null) {
             coEvery { get(DashPayConfig.USE_KOTLIN_SDK_DPNS_READS) } throws
                 IllegalStateException("datastore unavailable")
@@ -702,6 +721,47 @@ class SdkWalletBinderTest {
         binder.bindIfEnabled(unlock)
 
         assertEquals(listOf("deadbeef00112233"), sdk.removedWallets)
+    }
+
+    /**
+     * Pre-review, 2026-11-19. The orphan's first-sync record goes before the orphan does: the
+     * same seed restored later gets the same wallet id, and must not inherit it.
+     */
+    @Test
+    fun orphanSdkWallets_theFirstSyncRecordOfAnOrphan_isRemovedWithIt() = runBlocking {
+        val sdk = readySdk()
+        sdk.loadedWallets = setOf(walletId, "deadbeef00112233")
+        firstSyncRecord = "deadbeef00112233"
+        val binder = binder(sdk, scope = this)
+
+        binder.bindIfEnabled(unlock)
+
+        assertNull(firstSyncRecord)
+        assertEquals(listOf("deadbeef00112233"), sdk.removedWallets)
+    }
+
+    @Test
+    fun theFirstSyncRecordOfTheBoundWallet_isKept() = runBlocking {
+        val sdk = readySdk()
+        sdk.loadedWallets = setOf(walletId, "deadbeef00112233")
+        firstSyncRecord = walletId
+        val binder = binder(sdk, scope = this)
+
+        binder.bindIfEnabled(unlock)
+
+        assertEquals(walletId, firstSyncRecord)
+    }
+
+    @Test
+    fun orphanSdkWallets_areKept_whileTheFirstSyncRecordCannotBeRead() = runBlocking {
+        val sdk = readySdk()
+        sdk.loadedWallets = setOf(walletId, "deadbeef00112233")
+        firstSyncRecordUnreadable = true
+        val binder = binder(sdk, scope = this)
+
+        binder.bindIfEnabled(unlock)
+
+        assertTrue("nothing deleted: ${sdk.removedWallets}", sdk.removedWallets.isEmpty())
     }
 
     // ── The happy path: bind + discover + attach ─────────────────────────

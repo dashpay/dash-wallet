@@ -3078,7 +3078,7 @@ class CoinJoinConsolidationTest {
         val f = Fixture(this)
         // Post-cutover with a balance, but the send gate is shut and shielding unavailable.
         every { f.wallet.unadvertisedDestinationLive() } returns Address.fromBase58(params, regular)
-        coEvery { f.shield.isWalletShieldingAvailable() } returns false
+        coEvery { f.shield.isMixedFundsShieldingAvailable() } returns false
         coEvery { f.send.coinJoinConsolidationGateOpen() } returns false
         assertFalse(f.service.shouldOfferInTools())
         assertEquals(MixedFundsMigrationOutcome.NOT_ATTEMPTED, f.service.combineIntoUnmixedBalance())
@@ -3956,7 +3956,7 @@ class CoinJoinConsolidationTest {
     /** Route availability is per route: shielding alone never makes Combine operable. */
     @Test fun routeAvailabilityReportsEachRouteOnItsOwnGate() = runTest {
         val f = Fixture(this)
-        coEvery { f.shield.isWalletShieldingAvailable() } returns true
+        coEvery { f.shield.isMixedFundsShieldingAvailable() } returns true
         coEvery { f.send.coinJoinConsolidationGateOpen() } returns false
         // 101 coins must be consolidated first: with the send gate shut, Shield cannot run either.
         assertEquals(MixedFundsRoutes(shieldOperable = false, combineOperable = false), f.service.routeAvailability())
@@ -3971,7 +3971,7 @@ class CoinJoinConsolidationTest {
         coEvery { f.send.coinJoinConsolidationGateOpen() } returns true
         assertEquals(MixedFundsRoutes(shieldOperable = false, combineOperable = false), f.service.routeAvailability())
         f.engineBalance += 1
-        coEvery { f.shield.isWalletShieldingAvailable() } throws IllegalStateException("probe failed")
+        coEvery { f.shield.isMixedFundsShieldingAvailable() } throws IllegalStateException("probe failed")
         coEvery { f.send.coinJoinConsolidationGateOpen() } returns true
         assertEquals(MixedFundsRoutes(shieldOperable = false, combineOperable = true), f.service.routeAvailability())
         coEvery { f.send.cutoverCommitted() } returns false
@@ -3981,7 +3981,7 @@ class CoinJoinConsolidationTest {
     /** App-locked CoinJoin outputs make BOTH routes inoperable, and Combine refuses before recording anything. */
     @Test fun appLockedCoinJoinOutputClosesBothRoutesAndCombineRecordsNothing() = runTest {
         val f = Fixture(this)
-        coEvery { f.shield.isWalletShieldingAvailable() } returns true
+        coEvery { f.shield.isMixedFundsShieldingAvailable() } returns true
         every { f.send.coinJoinOutputsLocked() } returns true
         assertEquals(MixedFundsRoutes(shieldOperable = false, combineOperable = false), f.service.routeAvailability())
         assertFalse(f.service.shouldOfferInTools())

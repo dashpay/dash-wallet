@@ -25,6 +25,7 @@ import de.schildbach.wallet.WalletApplication
 import org.dash.wallet.common.data.PaymentIntent
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.payments.SendCoinsTaskRunner
+import org.dash.wallet.common.services.SendEngineNotSyncedException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -128,6 +129,42 @@ class PaymentProtocolViewModel @Inject constructor(
     /** True when a confirmed send can actually run (the preview is armed). */
     val canSendPayment: Boolean
         get() = deferredPayment != null || isResubmission
+
+    /**
+     * True when the preview could not be built only because the wallet had not caught up with the
+     * chain ([SendEngineNotSyncedException]): nothing was built or reserved, so building again is
+     * safe, and it succeeds once the scan reaches the tip. No other failure is retried here.
+     */
+    val canRetryPreview: Boolean
+        get() = !canSendPayment && finalPaymentIntent != null &&
+            _sendRequestLiveData.value?.exception is SendEngineNotSyncedException
+
+    /**
+     * Builds the preview again after [canRetryPreview]. The stored refusal was the answer when
+     * the screen opened; showing it again on every confirm kept a synced wallet from paying
+     * until the invoice was reopened (Joel, 12.0.1-beta, 2026-11-17).
+     */
+    fun retryPreview() {
+        val paymentIntent = finalPaymentIntent ?: return
+        if (!canRetryPreview) return
+        retryResultPending = true
+        _sendRequestLiveData.value = Resource.loading(null)
+        viewModelScope.launch(Dispatchers.IO) { createBaseSendRequest(paymentIntent) }
+    }
+
+    /**
+     * True from [retryPreview] until the screen has taken that build's result. Kept here and not
+     * in the fragment: the build outlives a rotation, and the fragment that receives its failure
+     * must still know the user asked for it (thepastaclaw on #1714). Main thread only.
+     */
+    private var retryResultPending = false
+
+    /**
+     * Whether the result now shown answers a [retryPreview]; true once per retry. A failure is
+     * taken only by a screen that can show its dialog now (resumed): taken earlier, a rotation
+     * before the dialog appeared lost it (thepastaclaw on #1714).
+     */
+    fun consumeRetryResult(): Boolean = retryResultPending.also { retryResultPending = false }
 
     private val _sendRequestLiveData = MutableLiveData<Resource<SendRequest?>>()
     val sendRequestLiveData: LiveData<Resource<SendRequest?>>

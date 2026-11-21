@@ -3182,6 +3182,26 @@ class ShieldedBalanceServiceTest {
 
     // ── shieldFromWallet: the L1 funding gate ─────────────────────────────
 
+    /**
+     * Once the wallet's first scan is over ([ShadowSyncProgress.firstSyncDone]) an ordinary
+     * catch-up does not close the gate; an engine that is not running, has no peers or reports
+     * an error still does.
+     */
+    @Test
+    fun fundingGate_afterTheFirstScan_aCatchUpDoesNotClose() {
+        val behind = caughtUpProgress().let {
+            it.copy(filterHeight = it.filterHeight - 208, walletSyncedHeight = it.walletSyncedHeight - 208)
+        }
+        assertFalse("strict during the first scan", evaluateWalletFundingGate(behind).allowed)
+
+        val later = behind.copy(firstSyncDone = true)
+        assertTrue("open during a catch-up after it", evaluateWalletFundingGate(later).allowed)
+
+        assertFalse(evaluateWalletFundingGate(later.copy(phase = ShadowSyncPhase.IDLE)).allowed)
+        assertFalse(evaluateWalletFundingGate(later.copy(phase = ShadowSyncPhase.CONNECTING)).allowed)
+        assertFalse(evaluateWalletFundingGate(later.copy(phase = ShadowSyncPhase.ERROR)).allowed)
+    }
+
     @Test
     fun fundingGate_pure_decisionTable() {
         // The fix: the gate OPENS on caught-up alone — phase is FILTERS,
@@ -3311,6 +3331,30 @@ class ShieldedBalanceServiceTest {
         assertTrue(result is SdkWriteResult.NotBroadcast)
         assertEquals(0, source.fundCalls)
         assertFalse(service.isWalletShieldingAvailable())
+    }
+
+    /**
+     * Pre-review, 2026-11-19. After the wallet's first scan a catch-up lets a shield of a fixed
+     * amount through, but not the mixed-funds shield: it drains its whole account, and would
+     * take coins the catch-up finds after the user confirmed.
+     */
+    @Test
+    fun afterTheFirstScan_aCatchUp_opensTheWalletShield_butNotTheMixedFundsDrain() = runBlocking {
+        val source = readySource()
+        val catchingUp = caughtUpProgress().let {
+            it.copy(
+                filterHeight = it.filterHeight - 208,
+                walletSyncedHeight = it.walletSyncedHeight - 208,
+                firstSyncDone = true
+            )
+        }
+        val service = service(source, progress = { catchingUp })
+
+        assertTrue(service.isWalletShieldingAvailable())
+        assertFalse(service.isMixedFundsShieldingAvailable())
+        val mixed = service.shieldMixedFundsFromWallet(Dash.COIN, "m/9'/1'/4'/0'", "ab".repeat(32))
+        assertTrue("the drain is refused: $mixed", mixed is SdkWriteResult.NotBroadcast)
+        assertEquals(0, source.fundCalls)
     }
 
     @Test

@@ -48,6 +48,15 @@ open class PaymentSubmissionPendingException(
 class PaymentStillConfirmingException(message: String) : IllegalStateException(message)
 
 /**
+ * Thrown instead of sending when the SDK engine refused because its L1 funding gate is closed:
+ * the engine is not running, or its filter scan has not caught up to the chain tip. This is the
+ * one send failure that means "not synced yet", and the only one a screen may present as such
+ * (`R.string.send_coins_fragment_hint_replaying`). Nothing was built, signed or sent, and the same
+ * payment works once the scan reaches the tip.
+ */
+class SendEngineNotSyncedException(message: String) : IllegalStateException(message)
+
+/**
  * Facts a caller wants kept with a payment so one recovered long afterwards looks like the
  * original. Only for payments whose submission result may be unknown; ordinary payments record
  * their metadata directly.

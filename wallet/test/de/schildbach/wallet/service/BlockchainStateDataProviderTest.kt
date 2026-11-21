@@ -66,7 +66,8 @@ class BlockchainStateDataProviderTest {
         dashSystemService = mockk(relaxed = true),
         blockchainStateDao = dao,
         walletDataProvider = mockk(relaxed = true),
-        configuration = configuration
+        configuration = configuration,
+        dashPayConfig = mockk(relaxed = true)
     )
 
     private fun sdkUpdate(

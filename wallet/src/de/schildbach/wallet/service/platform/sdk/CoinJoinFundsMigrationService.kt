@@ -802,7 +802,7 @@ class CoinJoinFundsMigrationService @Inject constructor(
             null
         } ?: return closed
         val shielding = try {
-            shieldedBalanceService.isWalletShieldingAvailable()
+            shieldedBalanceService.isMixedFundsShieldingAvailable()
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             log.warn("failed to probe the shield route; treating it as unavailable", t)
