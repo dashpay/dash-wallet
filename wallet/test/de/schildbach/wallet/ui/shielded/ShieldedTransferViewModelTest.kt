@@ -1203,6 +1203,12 @@ class ShieldedTransferViewModelTest {
         val fromShielded = catchingUp.copy(direction = ShieldedTransferDirection.FromShielded)
         assertFalse("the reverse direction waits for the chain", fromShielded.canSubmit)
         assertEquals(ShieldedBlockedReason.CHAIN_SYNCING, fromShielded.blockedReason)
+
+        // thepastaclaw on #1721: a stalled catch-up leaves the funding gate open, and a
+        // reported sync failure must still block.
+        val syncFailed = catchingUp.copy(chainSyncFailed = true)
+        assertFalse("a sync failure blocks it, gate open or not", syncFailed.canSubmit)
+        assertEquals(ShieldedBlockedReason.CHAIN_SYNCING, syncFailed.blockedReason)
     }
 
     // blockedReason is the pure priority mapping behind the blocked-state

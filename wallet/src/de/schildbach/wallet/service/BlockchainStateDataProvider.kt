@@ -23,19 +23,16 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.dao.BlockchainStateDao
-import de.schildbach.wallet.service.platform.sdk.SdkL1SendService
-import kotlinx.coroutines.CancellationException
+import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
+import de.schildbach.wallet.service.platform.sdk.evaluateWalletFundingGate
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asCoroutineDispatcher
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -82,7 +79,7 @@ class BlockchainStateDataProvider @Inject constructor(
     private val blockchainStateDao: BlockchainStateDao,
     private val walletDataProvider: WalletData,
     private val configuration: Configuration,
-    private val dashPayConfig: de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+    private val l1ShadowSyncService: javax.inject.Provider<L1ShadowSyncService>
 ) : BlockchainStateProvider {
     companion object {
         private val log = LoggerFactory.getLogger(BlockchainStateDataProvider::class.java)
@@ -129,41 +126,18 @@ class BlockchainStateDataProvider @Inject constructor(
     }
 
     /**
-     * See [de.schildbach.wallet.ui.dashpay.utils.DashPayConfig.SDK_L1_FIRST_SYNC_DONE_WALLET].
-     *
-     * Read with the store's errors kept: the plain `observe` turns a failed
-     * read into "no record" and then ENDS, so a screen would keep that `false`
-     * after the store recovers. A failed read answers `false` (the strict
-     * gate) and the observation is retried with the cutover observer's backoff
-     * ([SdkL1SendService.cutoverCommittedFlow] is the same pattern).
+     * The scanner's own answer, not the saved record
+     * ([de.schildbach.wallet.ui.dashpay.utils.DashPayConfig.SDK_L1_FIRST_SYNC_DONE_WALLET]):
+     * the first scan is finished for the wallet the scanner runs now, and the funding gate is
+     * open ([evaluateWalletFundingGate], the rule the send applies). So a screen does not open
+     * for a catch-up while the engine is stopped, waiting for peers or in error, or on a record
+     * that names another wallet (thepastaclaw on #1721).
      */
     override fun observeFirstSyncDone(): Flow<Boolean> = flow {
-        // Consecutive failed observations; reset by each successful read.
-        var failures = 0
-        emitAll(
-            // Asked for afresh on each (re)subscription.
-            flow {
-                emitAll(
-                    dashPayConfig.observePreservingErrors(
-                        de.schildbach.wallet.ui.dashpay.utils.DashPayConfig.SDK_L1_FIRST_SYNC_DONE_WALLET
-                    )
-                )
-            }
-                .map { it != null }
-                .onEach { failures = 0 }
-                .retryWhen { cause, _ ->
-                    if (cause is CancellationException || cause !is Exception) {
-                        false
-                    } else {
-                        val delayMs = SdkL1SendService.cutoverObserveRetryDelayMs(failures++)
-                        log.warn("failed to observe the first-sync record; not done, retrying in {} ms", delayMs, cause)
-                        emit(false)
-                        delay(delayMs)
-                        true
-                    }
-                }
-        )
-    }.distinctUntilChanged()
+        // Resolved on collection: the scanner is not needed to construct this provider.
+        emitAll(l1ShadowSyncService.get().progress)
+    }.map { it.firstSyncDone && evaluateWalletFundingGate(it).allowed }
+        .distinctUntilChanged()
 
     fun updateImpediments(impediments: Set<Impediment>) {
         coroutineScope.launch {

@@ -707,6 +707,13 @@ class SendCoinsViewModel @Inject constructor(
             // different dry runs. Without a successful one, nothing is sent.
             val outcome = dryRunOutcome
             val dryRun = outcome?.result ?: throw DryRunNotReadyException()
+            // A confirmation shown for a fixed amount can be answered after a balance change
+            // turned its dry run into a send-all. The screen does not offer one during a
+            // catch-up ([maxBlockedByCatchUp]), so it is not sent from here either.
+            if (dryRun.emptyWallet && fullScanPending) {
+                log.info("the payment became a send-all while the chain is still syncing; nothing was sent")
+                throw DryRunOutdatedException()
+            }
             val cutoverCommitted = sendCoinsTaskRunner.isCutoverCommitted()
             // Only a dry run of THIS send: this payee, this amount, the same
             // engine and — for a send-all — the same balance. One for the

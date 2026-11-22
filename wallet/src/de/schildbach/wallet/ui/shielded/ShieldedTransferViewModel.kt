@@ -250,6 +250,8 @@ data class ShieldedTransferUIState(
      * Conservative `false` default until the first state emission.
      */
     val chainSynced: Boolean = false,
+    /** The chain reports a sync failure (no network, engine error). See [chainBlocksDirection]. */
+    val chainSyncFailed: Boolean = false,
     /**
      * True while the "Transfers take different times" sheet is open. Auto
      * set once on the user's first visit ([DashPayConfig
@@ -382,10 +384,15 @@ data class ShieldedTransferUIState(
      * chain blocks this direction only when the funding gate is closed as well, which keeps the
      * "syncing" message for a first scan. Shielded → Dash Wallet keeps the chain requirement:
      * `replaying` and `isSynced` are unchanged, so it still waits out a catch-up.
+     *
+     * A reported sync failure ([chainSyncFailed]) blocks both directions whatever the funding
+     * gate says: a stalled catch-up leaves the gate open (thepastaclaw on #1721).
      */
     val chainBlocksDirection: Boolean
-        get() = !chainSynced &&
-            (direction == ShieldedTransferDirection.FromShielded || !walletShieldingAvailable)
+        get() = chainSyncFailed || (
+            !chainSynced &&
+                (direction == ShieldedTransferDirection.FromShielded || !walletShieldingAvailable)
+            )
 
     /**
      * True once the shielded pool has caught up ([ShieldedSyncStatus.READY]).
@@ -549,7 +556,8 @@ class ShieldedTransferViewModel @Inject constructor(
         blockchainStateProvider.observeState()
             .onEach { state ->
                 _uiState.value = _uiState.value.copy(
-                    chainSynced = state.isChainSyncedForTransfer()
+                    chainSynced = state.isChainSyncedForTransfer(),
+                    chainSyncFailed = state?.syncFailed() == true
                 )
             }
             .launchIn(viewModelScope)

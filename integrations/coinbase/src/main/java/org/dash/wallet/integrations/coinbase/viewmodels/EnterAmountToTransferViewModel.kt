@@ -95,6 +95,7 @@ class EnterAmountToTransferViewModel @Inject constructor(
         get() = _enteredConvertDashAmount
 
     private val _isBlockchainSynced = MutableLiveData<Boolean>()
+    private var lastPostedSynced: Boolean? = null
     val isBlockchainSynced: LiveData<Boolean>
         get() = _isBlockchainSynced
 
@@ -136,7 +137,10 @@ class EnterAmountToTransferViewModel @Inject constructor(
         // catch-up does not block a transfer out of the wallet; a sync failure still does.
         val synced = !state.blocksFixedPayment(firstSyncDone)
         isChainFullySynced = state.isSynced()
-        if (_isBlockchainSynced.value != synced) {
+        // Compared with the last value posted, not the last delivered: a second change made
+        // before the first post reaches the main thread was dropped (thepastaclaw on #1721).
+        if (lastPostedSynced != synced) {
+            lastPostedSynced = synced
             _isBlockchainSynced.postValue(synced)
         }
 

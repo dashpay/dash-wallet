@@ -1560,7 +1560,10 @@ class SdkWalletBinder internal constructor(
         // the S21). An orphan's seed no longer exists in this app, so it is
         // unusable by definition; removing it (removeWallet cascade) is the
         // self-heal. Best-effort: a prune failure must not fail the bind.
-        pruneOrphanSdkWallets(walletId)
+        // False when the first-sync record could not be checked, so no orphan was looked
+        // for: the pass is then not latched as completed below, and the next trigger
+        // runs the prune again (thepastaclaw on #1721).
+        val orphansChecked = pruneOrphanSdkWallets(walletId)
 
         // 4c. One-shot migration heal: widen the SDK's address-pool windows
         // to the Rust max (1000) and invalidate the recorded backfill coverage so
@@ -1596,7 +1599,7 @@ class SdkWalletBinder internal constructor(
             // window was expired, leaving zero stored private keys (the
             // "no private key stored" FFI signing failure seen live). Heal
             // before latching so a later pass retries a transient failure.
-            completed = healIdentityKeys(walletId, identityId)
+            completed = healIdentityKeys(walletId, identityId) && orphansChecked
             return
         }
 
@@ -1611,7 +1614,7 @@ class SdkWalletBinder internal constructor(
             // Discovery persists the PUBLIC keys; the private halves only
             // become signable once derived+stored (Phase 3f-b). Latch only
             // when nothing retryable is left.
-            completed = healIdentityKeys(walletId, identityId)
+            completed = healIdentityKeys(walletId, identityId) && orphansChecked
         } else {
             // Scan ran but our identity wasn't on the probed keys — e.g. a
             // dashj identity whose registered master key doesn't match the
@@ -1622,7 +1625,7 @@ class SdkWalletBinder internal constructor(
                     "({} other identity(ies) discovered); SDK writes will keep falling back to dashj",
                 userId.take(8), walletId.take(8), found.size
             )
-            completed = true
+            completed = orphansChecked
         }
     }
 
@@ -1671,9 +1674,8 @@ class SdkWalletBinder internal constructor(
      * The first-sync record ([DashPayConfig.SDK_L1_FIRST_SYNC_DONE_WALLET]) names one wallet,
      * the app's. One for any other wallet is removed at the bind: that wallet is about to be
      * deleted as an orphan, and the same seed restored later gets the same id and would inherit
-     * the record of rows that are gone; the send screens, which only ask whether a record
-     * exists, would also read it for the wallet bound now (pre-review, 2026-11-19). False when
-     * it could not be read or removed.
+     * the record of rows that are gone (pre-review, 2026-11-19). False when it could not be
+     * read or removed.
      */
     private suspend fun dropForeignFirstSyncRecord(currentWalletId: String): Boolean = try {
         // Not get(): that answers a failed read with "nothing stored", and the orphan would then
@@ -1691,16 +1693,19 @@ class SdkWalletBinder internal constructor(
         false
     }
 
-    /** See step 4b in [bindLocked]. Never throws. */
-    private suspend fun pruneOrphanSdkWallets(currentWalletId: String) {
+    /**
+     * See step 4b in [bindLocked]. Never throws. False when the first-sync record could not
+     * be checked and the orphans were therefore left alone.
+     */
+    private suspend fun pruneOrphanSdkWallets(currentWalletId: String): Boolean {
         // Before any orphan is deleted; without it nothing is, and the next bind tries again.
-        if (!dropForeignFirstSyncRecord(currentWalletId)) return
+        if (!dropForeignFirstSyncRecord(currentWalletId)) return false
         val orphans = try {
             sdkService.loadedWalletIds().filter { it != currentWalletId }
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             log.warn("orphan-wallet scan failed; skipping prune", t)
-            return
+            return true
         }
         for (orphan in orphans) {
             try {
@@ -1715,6 +1720,7 @@ class SdkWalletBinder internal constructor(
                 log.warn("failed to remove orphan SDK wallet {}…; will retry next bind pass", orphan.take(8), t)
             }
         }
+        return true
     }
 
     /**

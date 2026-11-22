@@ -764,6 +764,26 @@ class SdkWalletBinderTest {
         assertTrue("nothing deleted: ${sdk.removedWallets}", sdk.removedWallets.isEmpty())
     }
 
+    /**
+     * thepastaclaw on #1721. A wallet with an identity latches the bind as completed, and a
+     * completed bind skips the prune. A pass whose record check failed is therefore not latched:
+     * the next trigger removes the orphan once the record can be read.
+     */
+    @Test
+    fun orphanSdkWallets_areRemovedByTheNextBind_onceTheFirstSyncRecordCanBeRead() = runBlocking {
+        val sdk = readySdk()
+        sdk.loadedWallets = setOf(walletId, "deadbeef00112233")
+        firstSyncRecordUnreadable = true
+        val binder = binder(sdk, scope = this)
+        binder.bindIfEnabled(unlock)
+        assertTrue("nothing deleted: ${sdk.removedWallets}", sdk.removedWallets.isEmpty())
+
+        firstSyncRecordUnreadable = false
+        binder.bindIfEnabled(unlock)
+
+        assertEquals(listOf("deadbeef00112233"), sdk.removedWallets)
+    }
+
     // ── The happy path: bind + discover + attach ─────────────────────────
 
     @Test

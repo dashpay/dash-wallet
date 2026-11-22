@@ -3584,6 +3584,21 @@ class L1ShadowSyncService internal constructor(
     }
 
     /**
+     * The wallet cursor is not part of an SPV snapshot, so the snapshot that ends the first scan
+     * can arrive before the cursor event that completes it; with no later snapshot the monitor
+     * never looks again and the record would wait for the next block, or the next session if
+     * the scanner stops first (thepastaclaw on #1721). So a cursor move asks the same question
+     * of the latest snapshot. Only the record is written here; the monitor stays the one writer
+     * of [progress] and reads the record on its next snapshot.
+     */
+    private suspend fun recordFirstSyncDoneOnCursorMove(walletSyncedHeight: Long) {
+        val walletIdHex = runningWalletIdHex.value ?: return
+        if (firstSyncDoneWalletIdHex == walletIdHex) return
+        val latest = _progress.value.copy(walletSyncedHeight = walletSyncedHeight, firstSyncDone = false)
+        if (evaluateWalletFundingGate(latest).allowed) recordFirstSyncDone(walletIdHex)
+    }
+
+    /**
      * Removes the first-sync record before the SDK wallet's rows, or the wallet, are deleted:
      * the scan that rebuilds them is a first scan again. False when it could not be removed,
      * in which case nothing may be deleted. The session running now does not write the record
@@ -3805,6 +3820,7 @@ class L1ShadowSyncService internal constructor(
                     // the tracked value and must replace it.
                     parseL1SyncHeightAdvanced(debug)?.let { height ->
                         _engineWalletSyncedHeight.value = height
+                        recordFirstSyncDoneOnCursorMove(height)
                     }
                     // A block that stored or confirmed a wallet transaction, or
                     // a sweep that removed one, changes the history the

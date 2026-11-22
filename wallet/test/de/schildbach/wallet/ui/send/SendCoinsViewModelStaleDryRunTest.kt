@@ -275,6 +275,13 @@ class SendCoinsViewModelStaleDryRunTest {
         fireDebounce()
         awaitCondition("the fixed amount is checked") { viewModel.currentDryRun()?.amount == Coin.COIN }
         assertFalse("a fixed amount may be paid during a catch-up", viewModel.maxBlockedByCatchUp)
+
+        // A send-all that reaches the send anyway (a confirmation shown for a fixed amount,
+        // whose dry run a balance change turned into a send-all) sends nothing.
+        viewModel.setAmount(balance)
+        fireDebounce()
+        awaitCondition("the Max is checked again") { viewModel.currentDryRun()?.emptyWallet == true }
+        assertThrows(DryRunOutdatedException::class.java) { send(viewModel, balance) }
     }
 
     @Test
