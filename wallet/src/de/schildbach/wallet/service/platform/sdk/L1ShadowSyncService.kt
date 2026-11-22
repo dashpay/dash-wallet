@@ -2699,8 +2699,10 @@ class L1ShadowSyncService internal constructor(
      *
      * Only [startIfEnabled] uses this. The restart inside [resetShadowState]
      * and the in-place one in [ensureSpvRunning] start the client as they
-     * did before: both run with the engine still marked running, a state
-     * this does not reach, and the reset has deleted SPV state by then.
+     * did before, so a reset whose own stop times out is still refused at
+     * its start and leaves the engine stopped but marked running. That
+     * reset has deleted SPV state by then; waiting its teardown out there
+     * would start a scan on state the teardown may still be writing.
      */
     private suspend fun startSpvFinishingTeardown(dataDirPath: String) {
         var round = 0
