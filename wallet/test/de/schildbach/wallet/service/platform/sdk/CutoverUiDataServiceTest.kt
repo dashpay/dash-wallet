@@ -1700,6 +1700,46 @@ class CutoverUiDataServiceTest {
     }
 
     @Test
+    fun postCutover_parkedBalanceSave_doesNotDropTxEvents() = runTest {
+        // The balance lane subscribes to the same tx events as the history
+        // feed. While a Room-triggered reading is stuck mid-save it must keep
+        // taking them, or the engine drops a later event for every subscriber
+        // (an InstantSend lock the history feed cannot get back from Room).
+        val events = kotlinx.coroutines.flow.MutableSharedFlow<L1TxEvent>(extraBufferCapacity = 64)
+        val source = FakeSource(balanceDuffs = MutableStateFlow(1_103_225_474L))
+        val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
+        val writeParked = CompletableDeferred<Unit>()
+        val releaseWrite = CompletableDeferred<Unit>()
+        coEvery { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 900_000L) } coAnswers {
+            writeParked.complete(Unit)
+            releaseWrite.await()
+        }
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            walletUIConfig = walletUIConfig, txEvents = events, l1Synced = flowOf(true)
+        )
+        try {
+            service.start()
+            runCurrent()
+
+            // A Room-triggered reading parks mid-save.
+            source.balanceDuffs.value = 900_000L
+            assertTrue("the save must be parked", pumpUntil { writeParked.isCompleted })
+
+            // A burst far larger than the buffers, while the save stays parked.
+            val event = L1TxEvent.Detected(displayHex(7), 1_000L, null, contextCode = 0, directionCode = 0)
+            repeat(300) { i ->
+                assertTrue("tx event $i was dropped", pumpUntil(2_000) { events.tryEmit(event) })
+            }
+        } finally {
+            releaseWrite.complete(Unit)
+        }
+        // Released: the readings that were due are served.
+        source.balanceDuffs.value = 781L
+        assertTrue(pumpUntil { service.sdkBalanceOrNull() == Coin.valueOf(781) })
+    }
+
+    @Test
     fun postCutover_parkedReceiveAddressRead_doesNotHoldUpTheBalance() = runTest {
         // The receive-address read blocks in the FFI. While it is parked, a
         // later balance reading must still be published and saved: otherwise

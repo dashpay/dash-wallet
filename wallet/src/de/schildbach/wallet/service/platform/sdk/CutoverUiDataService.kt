@@ -4558,12 +4558,20 @@ class CutoverUiDataService internal constructor(
                 }
             }
         }
+        // The balance triggers take the same conflated handoff as the address
+        // lane, for the same reason: a reading stuck on the native read or the
+        // seed write must not stop [txEvents] being drained. A trigger that
+        // arrives during a reading is served by one more reading after it.
+        val balanceDue = Channel<Unit>(Channel.CONFLATED)
         launch {
             // NOT deduplicated: every Room change is a reason to read again,
             // including the retry after a failed read.
             val roomTrigger = source.observeBalanceChanges(walletIdHex)
                 .catch { e -> log.error("SDK balance flow failed; Room-triggered balance re-reads stop", e) }
-            merge(roomTrigger, txEvents.map { }, ticker()).collect {
+            merge(roomTrigger, txEvents.map { }, ticker()).collect { balanceDue.trySend(Unit) }
+        }
+        launch {
+            for (due in balanceDue) {
                 try {
                     // Re-read the SDK's NATIVE ledger split, NOT the Room txos sum:
                     // a self-send debits the native ledger at once but the spent-TXO
