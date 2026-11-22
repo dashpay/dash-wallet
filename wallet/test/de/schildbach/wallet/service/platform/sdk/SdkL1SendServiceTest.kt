@@ -240,6 +240,9 @@ class SdkL1SendServiceTest {
         // ── BIP70 deferred build / broadcast ──────────────────────────────
         val releasedOnWallets = mutableListOf<String>()
         var deferredBuildCalls = 0
+
+        /** Runs inside the faked native build; a blocking one stands in for a native call. */
+        var onDeferredBuild: () -> Unit = {}
         val broadcastOnWallets = mutableListOf<String>()
 
         override suspend fun buildDeferredPayment(
@@ -247,6 +250,7 @@ class SdkL1SendServiceTest {
             recipients: List<Pair<String, Long>>
         ): SdkDeferredPayment {
             deferredBuildCalls++
+            onDeferredBuild()
             return SdkDeferredPayment(txidHex = "dd".repeat(32), rawTxBytes = ByteArray(0), feeDuffs = 226L, native = null)
         }
 
@@ -2437,6 +2441,35 @@ class SdkL1SendServiceTest {
         svc.releaseDeferredPayment(payment)
 
         assertTrue("released on another wallet: ${source.releasedOnWallets}", source.releasedOnWallets.isEmpty())
+    }
+
+    /**
+     * thepastaclaw on #1714. The caller is cancelled while the native build runs (the screen
+     * closed). The build finishes and reserves its inputs, but the real funding hold exits
+     * cancelled, so the caller never gets the payment: the service releases it.
+     */
+    @Test
+    fun buildDeferredPayment_cancelledDuringTheNativeBuild_releasesTheReservation() = runBlocking {
+        val source = readySource()
+        val building = java.util.concurrent.CountDownLatch(1)
+        val finish = java.util.concurrent.CountDownLatch(1)
+        source.onDeferredBuild = {
+            building.countDown()
+            finish.await()
+        }
+        val svc = service(source)
+
+        val build = async(Dispatchers.IO) {
+            svc.buildDeferredPayment(listOf(validAddress to 10_000L), stillOwned = { true })
+        }
+        building.await()
+        build.cancel()
+        finish.countDown()
+        build.join()
+
+        assertTrue("the caller sees the cancellation", build.isCancelled)
+        assertEquals(1, source.deferredBuildCalls)
+        assertEquals("the finished reservation is released", listOf(walletId), source.releasedOnWallets)
     }
 
     // ── unprotected pending payment (review 4245734665) ────────────────────
