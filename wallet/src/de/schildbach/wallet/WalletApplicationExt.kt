@@ -26,6 +26,7 @@ import de.schildbach.wallet.service.platform.sdk.WalletSecretWriteFence
 import de.schildbach.wallet.service.platform.sdk.fencedSdkSecretsWipe
 import de.schildbach.wallet.service.platform.work.PublishTransactionMetadataOperation
 import de.schildbach.wallet.service.platform.work.TransactionMetadataSaveQueue
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.util.WalletWipeSequence
 import de.schildbach.wallet.util.WalletWipeState
 import kotlinx.coroutines.CancellationException
@@ -203,10 +204,16 @@ object WalletApplicationExt {
             // kept only if that cascade verifiably left no wallet secret in it.
             erase = { eraseSdkWalletSecrets() }
         )
+        // After the SDK is quiesced above, so the scanner cannot write the record again.
+        val firstSyncRecordGone = confirmFirstSyncRecordGone(
+            read = { dashPayConfig.getPreservingErrors(DashPayConfig.SDK_L1_FIRST_SYNC_DONE_WALLET) },
+            remove = { dashPayConfig.remove(DashPayConfig.SDK_L1_FIRST_SYNC_DONE_WALLET) }
+        )
         // Last, so every other step still runs: a surviving primary or key
-        // backup, or SDK wallet secrets that could not be erased, throw here,
-        // keeping the wipe marker for the next launch.
-        confirmWipeDestroyed(sdkSecrets) { confirmWalletSourcesDestroyed() }
+        // backup, SDK wallet secrets that could not be erased, or a first-sync
+        // record that is still there, throw here, keeping the wipe marker for
+        // the next launch.
+        confirmWipeDestroyed(sdkSecrets, firstSyncRecordGone) { confirmWalletSourcesDestroyed() }
     }
 
     private suspend fun WalletApplication.tearDownWalletData() {
@@ -269,16 +276,50 @@ object WalletApplicationExt {
 
     /**
      * The wipe's completion gate: both persistent dashj wallet sources gone
-     * ([confirmWalletSources] throws otherwise) AND the SDK's wallet secrets
-     * erased. Either failure throws, so [WalletWipeSequence.finish] keeps the
-     * marker and the next launch re-runs the wipe. [confirmWalletSources]
-     * always runs first, so its own deletes are attempted regardless.
+     * ([confirmWalletSources] throws otherwise), the SDK's wallet secrets
+     * erased AND the first-sync record gone ([confirmFirstSyncRecordGone]).
+     * Any failure throws, so [WalletWipeSequence.finish] keeps the marker and
+     * the next launch re-runs the wipe. [confirmWalletSources] always runs
+     * first, so its own deletes are attempted regardless.
      */
-    internal fun confirmWipeDestroyed(sdkSecrets: SdkSecretsWipeOutcome, confirmWalletSources: () -> Unit) {
+    internal fun confirmWipeDestroyed(
+        sdkSecrets: SdkSecretsWipeOutcome,
+        firstSyncRecordGone: Boolean = true,
+        confirmWalletSources: () -> Unit
+    ) {
         confirmWalletSources()
         if (!sdkSecrets.erased) {
             throw IOException("wipe could not confirm the SDK wallet secrets are erased ($sdkSecrets)")
         }
+        if (!firstSyncRecordGone) {
+            throw IOException("wipe could not confirm the first-sync record is removed")
+        }
+    }
+
+    /**
+     * Whether the first-sync record ([DashPayConfig.SDK_L1_FIRST_SYNC_DONE_WALLET]) is gone,
+     * removing it if it is still there. The config clear earlier in the wipe only logs a
+     * failed clear, and a file deleted under a live store leaves its cached values; the same
+     * seed restored later gets the same SDK wallet id, and a surviving record would let it
+     * skip the strict send gate during its first scan (thepastaclaw on #1721). False when
+     * the record cannot be read or removed. Never throws, except for cancellation.
+     */
+    internal suspend fun confirmFirstSyncRecordGone(
+        read: suspend () -> String?,
+        remove: suspend () -> Unit
+    ): Boolean = try {
+        if (read() == null) {
+            true
+        } else {
+            log.warn("the first-sync record survived the config clear; removing it")
+            remove()
+            read() == null
+        }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        log.warn("wipe could not confirm the first-sync record is removed", e)
+        false
     }
 
     /**
