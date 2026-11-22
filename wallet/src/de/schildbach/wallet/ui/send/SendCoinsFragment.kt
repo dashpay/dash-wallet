@@ -202,7 +202,7 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         val state = viewModel.state.value ?: SendCoinsViewModel.State.INPUT
         var errorMessage = ""
 
-        if (isReplaying == true) {
+        if (isReplaying == true || viewModel.maxBlockedByCatchUp) {
             errorMessage = getString(R.string.send_coins_fragment_hint_replaying)
         } else if (dryRunException != null) {
             log.info("dryRunException:", dryRunException)

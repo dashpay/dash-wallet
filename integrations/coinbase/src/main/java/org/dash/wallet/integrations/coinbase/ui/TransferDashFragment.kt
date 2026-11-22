@@ -16,6 +16,7 @@
  */
 package org.dash.wallet.integrations.coinbase.ui
 
+import android.widget.Toast
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.net.Uri
@@ -151,6 +152,15 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
 
                         val isEmptyWallet = enterAmountToTransferViewModel.isMaxAmountSelected &&
                                 binding.transferView.walletToCoinbase
+                        if (isEmptyWallet && !enterAmountToTransferViewModel.isChainFullySynced) {
+                            // A Max transfer is refused during a catch-up; say so before the PIN.
+                            Toast.makeText(
+                                requireContext(),
+                                org.dash.wallet.common.R.string.chain_syncing,
+                                Toast.LENGTH_LONG
+                            ).show()
+                            return@launch
+                        }
                         transferDashViewModel.estimateNetworkFee(dashValue, emptyWallet = isEmptyWallet)?.let {
                             securityFunctions.authenticate(requireActivity())?.let {
                                 transferDashViewModel.createAddressForAccount()

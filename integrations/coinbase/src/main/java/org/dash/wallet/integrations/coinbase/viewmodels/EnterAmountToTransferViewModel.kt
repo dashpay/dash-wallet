@@ -98,6 +98,14 @@ class EnterAmountToTransferViewModel @Inject constructor(
     val isBlockchainSynced: LiveData<Boolean>
         get() = _isBlockchainSynced
 
+    /**
+     * The chain is at the tip. A Max transfer out of the wallet needs this even after the
+     * wallet's first scan: it sends whatever the wallet holds when it runs, and the send
+     * refuses it during a catch-up.
+     */
+    var isChainFullySynced: Boolean = false
+        private set
+
     private val _isBlockchainSyncFailed = MutableLiveData<Boolean>()
     val isBlockchainSyncFailed: LiveData<Boolean>
         get() = _isBlockchainSyncFailed
@@ -127,6 +135,7 @@ class EnterAmountToTransferViewModel @Inject constructor(
         // The same rule as the Send screen: once the wallet has finished its first scan, a
         // catch-up does not block a transfer out of the wallet; a sync failure still does.
         val synced = !state.blocksFixedPayment(firstSyncDone)
+        isChainFullySynced = state.isSynced()
         if (_isBlockchainSynced.value != synced) {
             _isBlockchainSynced.postValue(synced)
         }

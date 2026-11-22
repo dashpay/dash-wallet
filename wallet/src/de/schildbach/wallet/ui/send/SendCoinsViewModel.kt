@@ -383,6 +383,22 @@ class SendCoinsViewModel @Inject constructor(
     val isBlockchainReplaying: LiveData<Boolean>
         get() = _isBlockchainReplaying
 
+    /**
+     * The chain is not fully synced, first scan done or not. False until a chain state has been
+     * read, as [isBlockchainReplaying] is unset until then; the send's own gate decides anyway.
+     */
+    @Volatile
+    private var fullScanPending = false
+
+    /**
+     * A Max payment stays blocked through a catch-up even after the wallet's first scan: it pays
+     * whatever the wallet holds when it runs, and the send refuses it until the scan is at the
+     * tip ([de.schildbach.wallet.service.platform.sdk.SdkL1SendService.probeFullScanGate]). The
+     * screen must not lead the user through confirmation to that refusal.
+     */
+    val maxBlockedByCatchUp: Boolean
+        get() = fullScanPending && currentDryRun()?.emptyWallet == true
+
     val isSpendingConfirmationEnabled: Boolean
         get() = configuration.spendingConfirmationEnabled
 
@@ -467,7 +483,9 @@ class SendCoinsViewModel @Inject constructor(
                 // the first scan after the upgrade). After that a wallet that is
                 // merely catching up may pay, as on 11.9 and iOS; the send gate
                 // (evaluateWalletFundingGate) applies the same rule.
-                // A sync failure keeps blocking either way.
+                // A sync failure keeps blocking either way. Set before the post: the screen
+                // reads [maxBlockedByCatchUp] when the post reaches it.
+                fullScanPending = state.replaying || !state.isSynced()
                 _isBlockchainReplaying.postValue(state.blocksFixedPayment(firstSyncDone))
             }
             .launchIn(viewModelScope)

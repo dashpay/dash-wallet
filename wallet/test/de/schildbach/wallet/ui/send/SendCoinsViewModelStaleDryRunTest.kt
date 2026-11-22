@@ -164,7 +164,9 @@ class SendCoinsViewModelStaleDryRunTest {
 
     private fun buildViewModel(
         runner: SendCoinsTaskRunner,
-        maxOutput: MutableStateFlow<Coin>
+        maxOutput: MutableStateFlow<Coin>,
+        chainState: kotlinx.coroutines.flow.Flow<org.dash.wallet.common.data.entity.BlockchainState?> = emptyFlow(),
+        firstSyncDone: Boolean = false
     ): SendCoinsViewModel {
         val wallet = mockk<Wallet>(relaxed = true) {
             every { currentReceiveAddress() } returns Address.fromKey(params, ECKey())
@@ -174,7 +176,7 @@ class SendCoinsViewModelStaleDryRunTest {
             every { observeMaxOutputBalance() } returns maxOutput
         }
         val blockchainStateDao = mockk<BlockchainStateDao> {
-            every { observeState() } returns emptyFlow()
+            every { observeState() } returns chainState
         }
         // No identity: a plain address payment, no contact lookup.
         val identityRepository = mockk<IdentityRepository>(relaxed = true) {
@@ -192,7 +194,7 @@ class SendCoinsViewModelStaleDryRunTest {
             mockk<WalletApplication>(relaxed = true),
             blockchainStateDao,
             mockk<org.dash.wallet.common.services.BlockchainStateProvider> {
-                every { observeFirstSyncDone() } returns kotlinx.coroutines.flow.flowOf(false)
+                every { observeFirstSyncDone() } returns kotlinx.coroutines.flow.flowOf(firstSyncDone)
             },
             mockk(relaxed = true),
             mockk(relaxed = true),
@@ -243,6 +245,36 @@ class SendCoinsViewModelStaleDryRunTest {
         idle()
         assertEquals(amount, viewModel.currentDryRun()?.amount)
         assertEquals(true, viewModel.dryRunSuccessful.value)
+    }
+
+    /**
+     * After the wallet's first scan a catch-up no longer blocks a fixed amount, but a Max payment
+     * is refused by the send until the scan is at the tip, so the screen keeps it blocked too.
+     */
+    @Test
+    fun duringACatchUp_afterTheFirstScan_maxStaysBlocked_aFixedAmountDoesNot() {
+        val catchingUp = org.dash.wallet.common.data.entity.BlockchainState(false).apply { percentageSync = 60 }
+        val chain = MutableStateFlow<org.dash.wallet.common.data.entity.BlockchainState?>(catchingUp)
+        val viewModel = buildViewModel(
+            runner(Sends(), DryRunGate(), cutover = true),
+            MutableStateFlow(balance),
+            chainState = chain,
+            firstSyncDone = true
+        )
+
+        open(viewModel, payee1, balance)
+        awaitCondition("the chain state is read") { viewModel.isBlockchainReplaying.value == false }
+        assertTrue("Max waits for the full scan", viewModel.maxBlockedByCatchUp)
+
+        chain.value = org.dash.wallet.common.data.entity.BlockchainState(false).apply { percentageSync = 100 }
+        awaitCondition("Max is free once synced") { !viewModel.maxBlockedByCatchUp }
+
+        chain.value = catchingUp
+        awaitCondition("blocked again when behind") { viewModel.maxBlockedByCatchUp }
+        viewModel.setAmount(Coin.COIN)
+        fireDebounce()
+        awaitCondition("the fixed amount is checked") { viewModel.currentDryRun()?.amount == Coin.COIN }
+        assertFalse("a fixed amount may be paid during a catch-up", viewModel.maxBlockedByCatchUp)
     }
 
     @Test
