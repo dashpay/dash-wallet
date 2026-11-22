@@ -467,7 +467,8 @@ class SendCoinsViewModel @Inject constructor(
                 // the first scan after the upgrade). After that a wallet that is
                 // merely catching up may pay, as on 11.9 and iOS; the send gate
                 // (evaluateWalletFundingGate) applies the same rule.
-                _isBlockchainReplaying.postValue(!firstSyncDone && (state.replaying || !state.isSynced()))
+                // A sync failure keeps blocking either way.
+                _isBlockchainReplaying.postValue(state.blocksFixedPayment(firstSyncDone))
             }
             .launchIn(viewModelScope)
 

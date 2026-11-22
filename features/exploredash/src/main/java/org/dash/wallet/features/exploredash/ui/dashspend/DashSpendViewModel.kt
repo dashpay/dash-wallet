@@ -280,8 +280,8 @@ class DashSpendViewModel @Inject constructor(
                 // the SDK path and surfacing raw exception text. The
                 // persisted `replaying` flag itself is untouched. Only until
                 // the wallet has finished its first scan: after that a
-                // catch-up does not block a purchase.
-                _isBlockchainReplaying.value = !firstSyncDone && (state.replaying || !state.isSynced())
+                // catch-up does not block a purchase; a sync failure still does.
+                _isBlockchainReplaying.value = state.blocksFixedPayment(firstSyncDone)
             }
             .launchIn(viewModelScope)
     }

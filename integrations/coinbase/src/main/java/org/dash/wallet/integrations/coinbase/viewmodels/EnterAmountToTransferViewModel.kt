@@ -125,8 +125,8 @@ class EnterAmountToTransferViewModel @Inject constructor(
 
     private fun updateSyncStatus(state: BlockchainState, firstSyncDone: Boolean) {
         // The same rule as the Send screen: once the wallet has finished its first scan, a
-        // catch-up does not block a transfer out of the wallet.
-        val synced = state.isSynced() || firstSyncDone
+        // catch-up does not block a transfer out of the wallet; a sync failure still does.
+        val synced = !state.blocksFixedPayment(firstSyncDone)
         if (_isBlockchainSynced.value != synced) {
             _isBlockchainSynced.postValue(synced)
         }

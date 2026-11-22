@@ -26,6 +26,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
@@ -47,6 +48,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.async
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.bitcoinj.wallet.Wallet.BalanceType
 import de.schildbach.wallet.data.WalletData
@@ -3272,11 +3274,16 @@ class L1ShadowSyncService internal constructor(
                     // Here, under [mutex], and not in the monitor: a reset holds [mutex] from
                     // the record's removal to the rows' deletion, so a monitor that only gets
                     // to run then cannot switch recording back on (pre-review, 2026-11-19).
-                    firstSyncRecordMutex.withLock {
-                        firstSyncDoneWalletIdHex = readFirstSyncDone()
-                        firstSyncRecordingAllowed = true
+                    // Not cancellable: the scanner is already published as running above, and
+                    // a cancellation in this read would leave it so without the jobs below, for
+                    // the next start to find "already running" (thepastaclaw on #1721).
+                    withContext(NonCancellable) {
+                        firstSyncRecordMutex.withLock {
+                            firstSyncDoneWalletIdHex = readFirstSyncDone()
+                            firstSyncRecordingAllowed = true
+                        }
                     }
-                    monitorJob = scope.launch { monitorProgress() }.logCompletion("progress monitor")
+                    monitorJob =scope.launch { monitorProgress() }.logCompletion("progress monitor")
                     parityJob = scope.launch { parityLoop(walletIdHex) }.logCompletion("parity probe loop")
                     watchdogJob = scope.launch { watchdogLoop() }.logCompletion("probe watchdog")
                     eventTapJob = scope.launch { tapWalletEvents() }.logCompletion("wallet-event tap")

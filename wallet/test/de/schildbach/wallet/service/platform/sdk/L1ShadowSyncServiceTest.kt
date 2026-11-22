@@ -265,7 +265,11 @@ class L1ShadowSyncServiceTest {
             markerWrites.add(secondArg())
             Unit
         }
-        coEvery { it.get(DashPayConfig.SDK_L1_FIRST_SYNC_DONE_WALLET) } answers { firstSyncRecord }
+        coEvery { it.get(DashPayConfig.SDK_L1_FIRST_SYNC_DONE_WALLET) } coAnswers {
+            firstSyncReadStarted.complete(Unit)
+            firstSyncReadGate?.await()
+            firstSyncRecord
+        }
         coEvery { it.set(DashPayConfig.SDK_L1_FIRST_SYNC_DONE_WALLET, any()) } answers {
             firstSyncRecord = secondArg()
             Unit
@@ -278,6 +282,11 @@ class L1ShadowSyncServiceTest {
 
     /** The saved first-sync record ([DashPayConfig.SDK_L1_FIRST_SYNC_DONE_WALLET]) of [config]. */
     @Volatile private var firstSyncRecord: String? = null
+
+    /** Completed when the record is first read; a read waits on [firstSyncReadGate] when it is set. */
+    private val firstSyncReadStarted = kotlinx.coroutines.CompletableDeferred<Unit>()
+
+    @Volatile private var firstSyncReadGate: kotlinx.coroutines.CompletableDeferred<Unit>? = null
 
     /**
      * [ShadowWalletRecreator] fake: records the recovery orchestration
@@ -1471,6 +1480,28 @@ class L1ShadowSyncServiceTest {
         withTimeout(5_000) { while (service.progress.value.filterHeight != 60L) delay(5) }
 
         assertTrue(service.progress.value.firstSyncDone)
+    }
+
+    /**
+     * thepastaclaw on #1721. The scanner is published as running before the record is read; a
+     * start cancelled during that read must still launch its jobs, or the next start would find
+     * "already running" with nothing feeding the funding gate.
+     */
+    @Test
+    fun firstSync_aStartCancelledDuringTheRecordRead_stillStartsTheMonitor() = runBlocking {
+        val readGate = kotlinx.coroutines.CompletableDeferred<Unit>()
+        firstSyncReadGate = readGate
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val service = service(source, cutoverState = "CUT_OVER")
+
+        val starter = launch(kotlinx.coroutines.Dispatchers.Default) { service.startIfEnabled() }
+        withTimeout(5_000) { firstSyncReadStarted.await() }
+        starter.cancel()
+        readGate.complete(Unit)
+        starter.join()
+
+        source.progressFlow.value = behindTip()
+        withTimeout(5_000) { while (service.progress.value.filterHeight != 60L) delay(5) }
     }
 
     @Test
