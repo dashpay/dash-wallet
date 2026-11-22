@@ -23,12 +23,19 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.dao.BlockchainStateDao
+import de.schildbach.wallet.service.platform.sdk.SdkL1SendService
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -48,6 +55,7 @@ import org.dash.wallet.common.data.NetworkStatus
 import org.dash.wallet.common.data.SyncStage
 import org.dash.wallet.common.data.entity.BlockchainState.Impediment
 import org.dash.wallet.common.services.BlockchainStateProvider
+import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.io.InputStream
 import java.math.BigInteger
@@ -77,6 +85,8 @@ class BlockchainStateDataProvider @Inject constructor(
     private val dashPayConfig: de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 ) : BlockchainStateProvider {
     companion object {
+        private val log = LoggerFactory.getLogger(BlockchainStateDataProvider::class.java)
+
         /**
          *  NetworkParameters.TARGET_SPACING is 2.5 min, but the DGW algorithm targets 2.625 min
          *  See [org.bitcoinj.params.AbstractBitcoinNetParams.DarkGravityWave]
@@ -118,11 +128,42 @@ class BlockchainStateDataProvider @Inject constructor(
         return blockchainStateDao.observeState().distinctUntilChanged()
     }
 
-    /** See [de.schildbach.wallet.ui.dashpay.utils.DashPayConfig.SDK_L1_FIRST_SYNC_DONE_WALLET]. */
-    override fun observeFirstSyncDone(): Flow<Boolean> =
-        dashPayConfig.observe(de.schildbach.wallet.ui.dashpay.utils.DashPayConfig.SDK_L1_FIRST_SYNC_DONE_WALLET)
-            .map { it != null }
-            .distinctUntilChanged()
+    /**
+     * See [de.schildbach.wallet.ui.dashpay.utils.DashPayConfig.SDK_L1_FIRST_SYNC_DONE_WALLET].
+     *
+     * Read with the store's errors kept: the plain `observe` turns a failed
+     * read into "no record" and then ENDS, so a screen would keep that `false`
+     * after the store recovers. A failed read answers `false` (the strict
+     * gate) and the observation is retried with the cutover observer's backoff
+     * ([SdkL1SendService.cutoverCommittedFlow] is the same pattern).
+     */
+    override fun observeFirstSyncDone(): Flow<Boolean> = flow {
+        // Consecutive failed observations; reset by each successful read.
+        var failures = 0
+        emitAll(
+            // Asked for afresh on each (re)subscription.
+            flow {
+                emitAll(
+                    dashPayConfig.observePreservingErrors(
+                        de.schildbach.wallet.ui.dashpay.utils.DashPayConfig.SDK_L1_FIRST_SYNC_DONE_WALLET
+                    )
+                )
+            }
+                .map { it != null }
+                .onEach { failures = 0 }
+                .retryWhen { cause, _ ->
+                    if (cause is CancellationException || cause !is Exception) {
+                        false
+                    } else {
+                        val delayMs = SdkL1SendService.cutoverObserveRetryDelayMs(failures++)
+                        log.warn("failed to observe the first-sync record; not done, retrying in {} ms", delayMs, cause)
+                        emit(false)
+                        delay(delayMs)
+                        true
+                    }
+                }
+        )
+    }.distinctUntilChanged()
 
     fun updateImpediments(impediments: Set<Impediment>) {
         coroutineScope.launch {
