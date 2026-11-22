@@ -73,6 +73,31 @@ object Bip39 {
     @JvmStatic
     @Throws(Bip39Exception::class)
     fun toEntropy(words: List<String>, wordlist: Bip39Wordlist = Bip39Wordlist.ENGLISH): ByteArray {
+        // Collator-based lookup, like dashj's search().
+        return toEntropy(words, wordlist::indexOf)
+    }
+
+    /**
+     * Validates the mnemonic against [wordlist] as [check] does, but matching each word exactly
+     * ([Bip39Wordlist.exactIndexOf]), and returns the words as the wordlist spells them: the text
+     * the BIP39 seed of this phrase is derived from.
+     *
+     * This is the check for a phrase the user types. [check] accepts "medaille" for "médaille",
+     * and a wallet built from the typed text is then a different wallet from the phrase's own.
+     *
+     * @throws Bip39Exception.LengthException word count is zero or not a multiple of 3
+     * @throws Bip39Exception.WordException a word is not exactly an entry of the wordlist
+     * @throws Bip39Exception.ChecksumException the checksum bits do not match
+     */
+    @JvmStatic
+    @Throws(Bip39Exception::class)
+    fun checkExact(words: List<String>, wordlist: Bip39Wordlist = Bip39Wordlist.ENGLISH): List<String> {
+        toEntropy(words, wordlist::exactIndexOf)
+        return words.map { wordlist.wordAt(wordlist.exactIndexOf(it)) }
+    }
+
+    @Throws(Bip39Exception::class)
+    private fun toEntropy(words: List<String>, indexOf: (String) -> Int): ByteArray {
         if (words.size % 3 > 0) {
             throw Bip39Exception.LengthException("Word list size must be multiple of three words.")
         }
@@ -85,8 +110,8 @@ object Bip39 {
         val concatBits = BooleanArray(concatLenBits)
         var wordindex = 0
         for (word in words) {
-            // Find the word's index in the wordlist (collator-based, like dashj's search()).
-            val ndx = wordlist.indexOf(word)
+            // Find the word's index in the wordlist.
+            val ndx = indexOf(word)
             if (ndx < 0) {
                 throw Bip39Exception.WordException(word)
             }

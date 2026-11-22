@@ -95,7 +95,7 @@ class RestoreWalletFromSeedActivity : RestoreFromFileActivity() {
                     dstart: Int,
                     dend: Int
                 ): CharSequence {
-                    return source.toString().lowercase(Locale.getDefault())
+                    return source.toString().lowercase(Locale.ROOT)
                 }
             }
         )
@@ -110,7 +110,9 @@ class RestoreWalletFromSeedActivity : RestoreFromFileActivity() {
         })
         binding.submit.setOnClickListener {
             walletApplication.initEnvironmentIfNeeded()
-            val seed = binding.input.text.trim().replace(Regex(" +"), " ")
+            // Any whitespace separates words: the field is multi-line, and a pasted phrase can
+            // carry tabs or line breaks.
+            val seed = binding.input.text.trim().replace(Regex("\\s+"), " ")
             if (seed.isNotEmpty()) {
                 val words = ArrayList(mutableListOf(*seed.split(' ').toTypedArray()))
                 lifecycleScope.launch {

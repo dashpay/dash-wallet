@@ -191,16 +191,26 @@ class RestoreWalletFromSeedViewModel @Inject constructor(
         selectedCreationDate.value = null
     }
 
+    /**
+     * Restores the wallet from the recovery phrase the user typed.
+     *
+     * A new restore accepts only a phrase that is exactly valid in one wordlist and builds the
+     * wallet from the wordlist's spelling of it; anything else throws, naming the reason.
+     * Forgot-PIN recovery replaces the installed wallet with itself, so it rebuilds from the
+     * spelling that wallet holds and refuses ([SeedRestoreResult.INVALID_SEED]) when the phrase
+     * no longer matches the installed wallet in any spelling.
+     *
+     * @throws MnemonicException a new restore's phrase is not exactly valid
+     */
+    @Throws(MnemonicException::class)
     suspend fun restoreWalletFromSeed(
         words: List<String>,
         forgotPinRecovery: Boolean = false
     ): SeedRestoreResult = withContext(Dispatchers.IO) {
-        // Forgot-PIN recovery replaces the installed wallet with itself, so it rebuilds from the
-        // spelling that wallet holds: any other spelling is a different wallet.
         val restoreWords = if (forgotPinRecovery) {
-            spellings(words).firstOrNull(::verifyMnemonicMatchesWallet) ?: canonicalWordsOrNull(words)
+            spellings(words).firstOrNull(::verifyMnemonicMatchesWallet)
         } else {
-            canonicalWordsOrNull(words)
+            MnemonicCodeExt.getInstance().checkExact(walletApplication, words)
         }
         if (restoreWords != null) {
             // Before any restore work: a wipe marker refuses the replacement.
@@ -252,25 +262,15 @@ class RestoreWalletFromSeedViewModel @Inject constructor(
     /**
      * The spellings an installed wallet may hold for the phrase the user typed: the wordlist's,
      * which a restore stores, then the words as typed (lowercased), which restores stored before
-     * that — including a phrase no wordlist validates, which an earlier language search let through.
+     * the phrase had to match a wordlist exactly — a missing accent, a different Unicode form, or
+     * a phrase no wordlist validates.
      */
     private fun spellings(words: List<String>): List<List<String>> {
-        return listOfNotNull(canonicalWordsOrNull(words), words.map { it.lowercase(Locale.getDefault()) }).distinct()
-    }
-
-    /**
-     * The words in the spelling of the BIP39 wordlist that validates them, or null when no
-     * wordlist does. Validation is not case sensitive, nor does it depend on accent marks or other
-     * diacritics, but the seed is derived from the text of the words: "medaille" for "médaille",
-     * or an autocorrected "thème" for "theme", is a different wallet to dashj and no phrase at all
-     * to the SDK. Everything built from the phrase takes the words this returns.
-     */
-    private fun canonicalWordsOrNull(words: List<String>): List<String>? {
-        return try {
-            MnemonicCodeExt.getInstance().canonicalize(walletApplication, words)
+        val exactWords = try {
+            MnemonicCodeExt.getInstance().checkExact(walletApplication, words)
         } catch (x: MnemonicException) {
-            log.info("problem restoring wallet from seed: ", x)
             null
         }
+        return listOfNotNull(exactWords, words.map { it.lowercase(Locale.getDefault()) }).distinct()
     }
 }

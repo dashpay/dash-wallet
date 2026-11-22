@@ -24,6 +24,7 @@ import java.io.InputStreamReader
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.text.Collator
+import java.text.Normalizer
 import java.util.Locale
 
 /**
@@ -73,26 +74,30 @@ class Bip39Wordlist private constructor(private val wordList: List<String>) {
     /** True when [word] is in this wordlist under the same matching rules as dashj's lookup. */
     fun contains(word: String): Boolean = indexOf(word) >= 0
 
-    /**
-     * The wordlist's own spelling of each of [words], matched as [indexOf] does: "Abandon"
-     * becomes "abandon", "medaille" becomes "médaille", "thème" becomes "theme" in English.
-     *
-     * [indexOf] accepts a word that differs from its entry by case or diacritics, but the BIP39
-     * seed is derived from the text of the words, so only this spelling yields the phrase's seed —
-     * and it is the only one a strict BIP39 parser accepts.
-     *
-     * @throws Bip39Exception.WordException a word is not in this wordlist
-     */
-    @Throws(Bip39Exception::class)
-    fun canonicalize(words: List<String>): List<String> = words.map { word ->
-        val index = indexOf(word)
-        if (index < 0) {
-            throw Bip39Exception.WordException(word)
-        }
-        wordList[index]
+    /** Index of every entry, keyed by its [normalize]d spelling, for [exactIndexOf]. */
+    private val exactIndex: Map<String, Int> by lazy {
+        wordList.withIndex().associate { (index, word) -> normalize(word) to index }
     }
 
+    /**
+     * Index of [word] in this wordlist, or -1, matching it exactly: no letter may differ from the
+     * entry, an accent included. Only the Unicode form and the case of [word] are normalized
+     * first (see [normalize]), as iOS and the Dash SDK do, so "médaille" typed with a one-character
+     * "é" matches the entry and "medaille" does not.
+     *
+     * [indexOf] also matches "medaille", and the BIP39 seed is derived from the text of the
+     * words, so a phrase accepted through it is a different wallet from the one it names.
+     */
+    fun exactIndexOf(word: String): Int = exactIndex[normalize(word)] ?: -1
+
     companion object {
+        /**
+         * The form BIP39 wordlists and seeds use (NFKD), lowercased. A change of encoding and of
+         * case only: it never adds or removes an accent.
+         */
+        @JvmStatic
+        fun normalize(word: String): String = Normalizer.normalize(word, Normalizer.Form.NFKD).lowercase(Locale.ROOT)
+
         /**
          * SHA-256 (lowercase hex) of the concatenated English words — the exact digest constant
          * dashj's `MnemonicCode` uses (`BIP39_ENGLISH_SHA256`).

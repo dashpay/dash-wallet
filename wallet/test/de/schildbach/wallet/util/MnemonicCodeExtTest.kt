@@ -39,12 +39,12 @@ import java.io.File
 import java.text.Normalizer
 
 /**
- * [MnemonicCodeExt.canonicalize] over the wordlists the app ships.
+ * [MnemonicCodeExt.checkExact] over the wordlists the app ships.
  *
- * A restore accepted "medaille" for "médaille" (and a French keyboard's "thème" for the English
- * "theme") and built the wallet from the words as typed: a different seed to dashj, and to the SDK
- * a phrase that "does not match any supported BIP-39 wordlist", so the wallet never bound and
- * stayed empty.
+ * The restore screen used to accept "medaille" for "médaille" and build the wallet from the words
+ * as typed: a different seed to dashj, and to the SDK a phrase that "does not match any supported
+ * BIP-39 wordlist", so the wallet never bound and stayed empty. A phrase now has to be exactly
+ * valid in one wordlist, as on iOS and in the SDK.
  */
 class MnemonicCodeExtTest {
     private val wordlistDir = File("assets/bip39-wordlists")
@@ -94,72 +94,102 @@ class MnemonicCodeExtTest {
             .first { words -> words.any { it != withoutAccents(it) } }
     }
 
+    private fun nfc(words: List<String>) = words.map { Normalizer.normalize(it, Normalizer.Form.NFC) }
+
     @Test
-    fun `an English phrase typed with capitals and an autocorrected accent comes back as the wordlist spells it`() {
-        // "theme" is an English word; a French keyboard turns it into the French word "thème".
+    fun `an English phrase is accepted in any case, and an added accent is rejected`() {
         val prefix = List(11) { "theme" }
         val words = prefix + Bip39Wordlist.ENGLISH.words.first { Bip39.isValid(prefix + it) }
-        val typed = listOf("Thème", "THEME", "thème") + words.drop(3)
+        val english = MnemonicCodeExt.getInstance()
 
-        assertEquals(words, MnemonicCodeExt.getInstance().canonicalize(context, typed))
+        assertEquals(words, english.checkExact(context, words))
+        assertEquals(words, english.checkExact(context, listOf("Theme", "THEME") + words.drop(2)))
+        assertSame(english, MnemonicCodeExt.getInstance())
+
+        // "thème" is a French word and "théme" is no word: neither is the English "theme".
+        assertThrows(MnemonicException.MnemonicChecksumException::class.java) {
+            english.checkExact(context, listOf("th\u00e8me") + words.drop(1))
+        }
+        val thrown = assertThrows(MnemonicException.MnemonicWordException::class.java) {
+            english.checkExact(context, listOf("th\u00e9me") + words.drop(1))
+        }
+        assertEquals("th\u00e9me", thrown.badWord)
         assertEquals(ENGLISH_PATH, storedWordlistPath)
     }
 
     @Test
-    fun `a French phrase typed without its accents comes back with them, and only then has the phrase's seed`() {
+    fun `a French phrase is accepted with its accents in either Unicode form, and has one seed`() {
         val words = accentedPhrase("french.txt")
-        val typed = words.map(::withoutAccents)
+        val typed = nfc(words)
         assertNotEquals(words, typed)
-
         val english = MnemonicCodeExt.getInstance()
-        val canonical = english.canonicalize(context, typed)
 
-        assertEquals(words, canonical)
-        assertTrue(Bip39.toSeed(canonical).contentEquals(Bip39.toSeed(words)))
-        assertFalse(Bip39.toSeed(typed).contentEquals(Bip39.toSeed(words)))
-        // The language that validated the phrase becomes the app's wordlist, as check() does.
+        assertEquals(words, english.checkExact(context, typed))
+        // The language that validated the phrase becomes the app's wordlist.
         assertEquals("bip39-wordlists/french.txt", storedWordlistPath)
         assertNotEquals(english, MnemonicCodeExt.getInstance())
+        assertEquals(words, MnemonicCodeExt.getInstance().checkExact(context, words))
+        // dashj derives the seed from the text: the keyboard's form is a different wallet, which
+        // is why the wallet is built from what this returns.
+        assertFalse(Bip39.toSeed(typed).contentEquals(Bip39.toSeed(words)))
     }
 
     @Test
-    fun `a phrase in the current wordlist does not replace the instance`() {
-        val english = MnemonicCodeExt.getInstance()
-        val words = "abandon ".repeat(11).plus("about").split(" ")
+    fun `a French phrase typed without its accents is rejected, naming a word`() {
+        val words = accentedPhrase("french.txt")
+        val typed = words.map(::withoutAccents)
+        val unknownWords = typed.filter { word -> wordlistFiles.none { wordlist(it).exactIndexOf(word) >= 0 } }
+        assertTrue(unknownWords.isNotEmpty())
 
-        assertEquals(words, english.canonicalize(context, words))
-        assertSame(english, MnemonicCodeExt.getInstance())
+        val thrown = assertThrows(MnemonicException.MnemonicWordException::class.java) {
+            MnemonicCodeExt.getInstance().checkExact(context, typed)
+        }
+        assertEquals(unknownWords.first(), thrown.badWord)
+        assertEquals(ENGLISH_PATH, storedWordlistPath)
+    }
+
+    /** Eleven "caméra" and "ozone" is valid French; read loosely it is also valid English. */
+    @Test
+    fun `a phrase is taken in the language it is exactly valid in`() {
+        val french = List(11) { "came\u0301ra" } + "ozone"
+        val english = List(11) { "camera" } + "ozone"
+        assertTrue(Bip39.isValid(french, wordlist("french.txt")))
+        assertTrue(Bip39.isValid(french, Bip39Wordlist.ENGLISH))
+
+        assertEquals(english, MnemonicCodeExt.getInstance().checkExact(context, english))
+        assertEquals(ENGLISH_PATH, storedWordlistPath)
+        assertEquals(french, MnemonicCodeExt.getInstance().checkExact(context, nfc(french)))
+        assertEquals("bip39-wordlists/french.txt", storedWordlistPath)
+        // And back, from the French instance.
+        assertEquals(english, MnemonicCodeExt.getInstance().checkExact(context, english))
+        assertEquals(ENGLISH_PATH, storedWordlistPath)
     }
 
     @Test
     fun `a phrase no wordlist validates is rejected whichever wordlist is current`() {
         val badChecksum = "abandon ".repeat(12).trim().split(" ")
-        // The last wordlist being the current one used to end the search without an error.
         for (current in listOf("english.txt", wordlistFiles.last())) {
             storedWordlistPath = "bip39-wordlists/$current"
             MnemonicCode.INSTANCE = mnemonicCode(current)
-            assertThrows(MnemonicException::class.java) {
-                MnemonicCodeExt.getInstance().canonicalize(context, badChecksum)
-            }
-            assertThrows(MnemonicException::class.java) {
-                MnemonicCodeExt.getInstance().check(context, badChecksum)
+            assertThrows(MnemonicException.MnemonicChecksumException::class.java) {
+                MnemonicCodeExt.getInstance().checkExact(context, badChecksum)
             }
         }
         assertThrows(MnemonicException.MnemonicLengthException::class.java) {
-            MnemonicCodeExt.getInstance().canonicalize(context, badChecksum.take(11))
+            MnemonicCodeExt.getInstance().checkExact(context, badChecksum.take(11))
         }
     }
 
     /**
      * The SDK matches a phrase against its wordlists after NFKD normalization, so the spelling
-     * [MnemonicCodeExt.canonicalize] returns has to be NFKD already for dashj, which does not
+     * [MnemonicCodeExt.checkExact] returns has to be NFKD already for dashj, which does not
      * normalize, to derive the same seed from it.
      */
     @Test
     fun `every shipped wordlist spells its words in NFKD`() {
         for (fileName in wordlistFiles) {
             for (word in wordlist(fileName).words) {
-                assertTrue("$fileName: $word", Normalizer.isNormalized(word, Normalizer.Form.NFKD))
+                assertEquals(fileName, word, Bip39Wordlist.normalize(word))
             }
         }
     }
