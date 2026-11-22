@@ -26,6 +26,9 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.awaitCancellation
@@ -90,6 +93,8 @@ class L1ShadowSyncServiceTest {
         var stopCalls = 0
         var lastDataDir: String? = null
         var onStart: () -> Unit = {}
+        /** Runs after [onStart] let the start through: a start parked inside the native `startSpv`. */
+        var onStartSuspending: suspend () -> Unit = {}
         /** The DashPay bring-up: how long it takes, and how many times it ran. */
         var bringUpDelayMs: Long = 0L
         var bringUpCalls = 0
@@ -135,6 +140,7 @@ class L1ShadowSyncServiceTest {
             lastDataDir = dataDir
             callOrder += "startSpv"
             onStart()
+            onStartSuspending()
         }
         override suspend fun startWalletSubsystems(walletIdHex: String): String? {
             subsystemsCalls++
@@ -1501,6 +1507,59 @@ class L1ShadowSyncServiceTest {
         delay(200)
 
         assertEquals("the scheduled retry was cancelled by the stop", startsAtStop, source.startCalls)
+        assertFalse(service.isEngineRunning())
+    }
+
+    @Test
+    fun scheduledRetry_cancelledInsideTheNativeStart_isStillTornDownByThatStop() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val service = service(source, spvTeardownRetryRounds = 1, scanGateRetryInitialMs = 20)
+        assertTrue(service.startIfEnabled())
+        source.trackTeardown(stopsThatTimeOut = 2)
+        val insideStart = CompletableDeferred<Unit>()
+        val nativeStarted = CompletableDeferred<Unit>()
+        source.onStartSuspending = {
+            insideStart.complete(Unit)
+            nativeStarted.await()
+            // The SDK returns from its own dispatcher: a caller cancelled
+            // meanwhile loses the result, though native SPV is running.
+            currentCoroutineContext().ensureActive()
+        }
+        service.launchStallRestart(stuckAt = 2_498_000L).join()
+        assertFalse("refused after its round; the retry is scheduled", service.isEngineRunning())
+
+        withTimeout(5_000) { insideStart.await() }
+        val stopsBefore = source.stopCalls
+        // Runs up to the mutex: the generation has moved and the retry is cancelled.
+        val stopping = async(start = CoroutineStart.UNDISPATCHED) { service.stop() }
+        nativeStarted.complete(Unit)
+        withTimeout(5_000) { stopping.await() }
+
+        assertEquals("the stop tore down the SPV the cancelled retry started", stopsBefore + 1, source.stopCalls)
+        assertFalse(service.isEngineRunning())
+    }
+
+    @Test
+    fun startRefusedOverUnfinishedTeardown_startsNothingMore_afterAnExternalStop() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val service = service(source)
+        val insideStop = CompletableDeferred<Unit>()
+        val stopReturns = CompletableDeferred<Unit>()
+        source.onStart = { throw TeardownIncomplete("SPV teardown is still running") }
+        source.onStop = {
+            insideStop.complete(Unit)
+            stopReturns.await()
+        }
+
+        val starting = async { service.startIfEnabled() }
+        withTimeout(5_000) { insideStop.await() }
+        val stopping = async(start = CoroutineStart.UNDISPATCHED) { service.stop() }
+        stopReturns.complete(Unit)
+
+        assertFalse(withTimeout(5_000) { starting.await() })
+        withTimeout(5_000) { stopping.await() }
+        assertEquals("no start after the stop arrived", 1, source.startCalls)
+        assertEquals("only the round's own stop", 1, source.stopCalls)
         assertFalse(service.isEngineRunning())
     }
 
