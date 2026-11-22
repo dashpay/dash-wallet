@@ -18,6 +18,7 @@ package de.schildbach.wallet.ui
 
 import android.app.Application
 import androidx.test.core.app.ApplicationProvider
+import com.google.common.collect.ImmutableList
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.WalletApplication.WalletInstallResult
 import de.schildbach.wallet.security.SecurityFunctions
@@ -35,8 +36,8 @@ import io.mockk.unmockkStatic
 import io.mockk.verify
 import kotlinx.coroutines.runBlocking
 import org.bitcoinj.crypto.ChildNumber
-import org.bitcoinj.crypto.HDKeyDerivation
 import org.bitcoinj.crypto.MnemonicException
+import org.bitcoinj.wallet.DeterministicKeyChain
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.Configuration
@@ -92,7 +93,7 @@ class RestoreWalletFromSeedViewModelTest {
         every { SecurityGuard.getInstance() } returns mockk(relaxed = true)
         mockkObject(MnemonicCodeExt.Companion)
         every { MnemonicCodeExt.getInstance() } returns mnemonicCode
-        every { mnemonicCode.checkExact(any(), any()) } returns words
+        every { mnemonicCode.checkExact(any(), any(), any()) } returns words
     }
 
     @After
@@ -188,7 +189,7 @@ class RestoreWalletFromSeedViewModelTest {
 
     @Test
     fun `a phrase that is not exactly valid builds no wallet and says why`() = runBlocking {
-        every { mnemonicCode.checkExact(any(), any()) } throws MnemonicException.MnemonicWordException("ábandon")
+        every { mnemonicCode.checkExact(any(), any(), any()) } throws MnemonicException.MnemonicWordException("ábandon")
         val app = mockk<WalletApplication>(relaxed = true)
         val factory = mockk<WalletFactory>()
         val viewModel = viewModel(app, factory)
@@ -225,18 +226,35 @@ class RestoreWalletFromSeedViewModelTest {
         assertNull(viewModel.recoverPin(words))
     }
 
-    /** An installed wallet whose keys come from [storedWords], as the forgot-PIN key check sees it. */
-    private fun appWithWalletOf(storedWords: List<String>): WalletApplication {
-        var key = HDKeyDerivation.createMasterPrivateKey(DeterministicSeed(storedWords, null, "", 0L).seedBytes)
-        for (child in listOf(ChildNumber(44, true), ChildNumber(5, true), ChildNumber.ZERO_HARDENED)) {
-            key = HDKeyDerivation.deriveChildKey(key, child)
-        }
-        key = HDKeyDerivation.deriveChildKey(HDKeyDerivation.deriveChildKey(key, ChildNumber.ZERO), ChildNumber.ZERO)
+    /** An installed wallet whose keys come from [storedWords], on a real key chain at [accountPath]. */
+    private fun appWithWalletOf(
+        storedWords: List<String>,
+        accountPath: List<ChildNumber> = DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH
+    ): WalletApplication {
+        val keyChain = DeterministicKeyChain.builder()
+            .seed(DeterministicSeed(storedWords, null, "", 0L))
+            .accountPath(ImmutableList.copyOf(accountPath))
+            .build()
         val app = mockk<WalletApplication>(relaxed = true)
         every { app.isWalletReplacementRefused } returns false
         every { app.installWallet(any(), true) } returns WalletInstallResult.INSTALLED
-        every { app.wallet!!.activeKeyChain.getKeyByPath(any(), false) } returns key
+        every { app.wallet!!.activeKeyChain } returns keyChain
         return app
+    }
+
+    /** The account path differs by network: the key check follows the installed chain's. */
+    @Test
+    fun `the forgot-PIN key check works at the testnet account path`() = runBlocking {
+        val factory = mockk<WalletFactory>()
+        coEvery { factory.restoreFromSeed(any(), any()) } returns mockk<Wallet>()
+        val testnetPath = DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH_TESTNET
+
+        val matching = viewModel(appWithWalletOf(words, testnetPath), factory)
+        assertEquals(SeedRestoreResult.RESTORED, matching.restoreWalletFromSeed(words, forgotPinRecovery = true))
+
+        val otherWallet = "zoo ".repeat(11).plus("wrong").split(" ")
+        val other = viewModel(appWithWalletOf(otherWallet, testnetPath), factory)
+        assertEquals(SeedRestoreResult.INVALID_SEED, other.restoreWalletFromSeed(words, forgotPinRecovery = true))
     }
 
     /**
@@ -272,12 +290,14 @@ class RestoreWalletFromSeedViewModelTest {
         assertEquals(SeedRestoreResult.INVALID_SEED, result)
         coVerify(exactly = 0) { factory.restoreFromSeed(any(), any()) }
         verify(exactly = 0) { app.installWallet(any(), any()) }
+        // A phrase the wallet did not authenticate must not switch the app's wordlist.
+        verify(exactly = 0) { mnemonicCode.checkExact(any(), any(), true) }
     }
 
     /** An earlier language search could accept, and so a wallet can hold, a phrase no wordlist validates. */
     @Test
     fun `forgot-PIN still recovers a wallet whose phrase no wordlist validates`() = runBlocking {
-        every { mnemonicCode.checkExact(any(), any()) } throws MnemonicException.MnemonicChecksumException()
+        every { mnemonicCode.checkExact(any(), any(), any()) } throws MnemonicException.MnemonicChecksumException()
         val storedWords = typedWords.map { it.lowercase() }
         val securityFunctions = mockk<SecurityFunctions>()
         coEvery { securityFunctions.decryptSeed(any()) } returns DeterministicSeed(storedWords, null, "", 0L)

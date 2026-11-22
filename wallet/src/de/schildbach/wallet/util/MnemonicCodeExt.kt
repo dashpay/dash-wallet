@@ -19,7 +19,12 @@ import java.io.InputStream
  * this class still extends dashj's [MnemonicCode] because the global [MnemonicCode.INSTANCE]
  * feeds dashj-internal seed handling (actual wallet restore) until kill-list Step D removes it.
  */
-class MnemonicCodeExt(wordstream: InputStream, wordListDigest: String?) : MnemonicCode(wordstream, wordListDigest) {
+class MnemonicCodeExt(
+    wordstream: InputStream,
+    wordListDigest: String?,
+    /** The asset this instance's words were loaded from. */
+    private val wordlistPath: String
+) : MnemonicCode(wordstream, wordListDigest) {
 
     /** The same words dashj loaded, wrapped for Bip39 validation. */
     private val bip39Wordlist: Bip39Wordlist by lazy { Bip39Wordlist.of(wordList) }
@@ -42,7 +47,7 @@ class MnemonicCodeExt(wordstream: InputStream, wordListDigest: String?) : Mnemon
             try {
                 val watch = Stopwatch.createStarted()
                 val wordlistPath = getWordlistPath(context)
-                INSTANCE = MnemonicCodeExt(context.assets.open(wordlistPath), null)
+                INSTANCE = MnemonicCodeExt(context.assets.open(wordlistPath), null, wordlistPath)
                 watch.stop()
                 log.info("BIP39 wordlist loaded from: '{}', took {}", wordlistPath, watch)
             } catch (x: IOException) {
@@ -72,7 +77,8 @@ class MnemonicCodeExt(wordstream: InputStream, wordListDigest: String?) : Mnemon
      * Validates a recovery phrase the user typed and returns its words as the wordlist spells
      * them. Every word must be exactly an entry of one wordlist, this instance's or another
      * language's, and the checksum must hold in that wordlist: the same rule as iOS and the SDK.
-     * The language that validates the phrase becomes the app's wordlist.
+     * The language that validates the phrase becomes the app's wordlist, unless [selectWordlist]
+     * is false: then nothing is changed, for a phrase that is not authenticated yet.
      *
      * dashj's own lookup ignores case and accents, but it derives the seed from the text it is
      * given and the SDK accepts only exact entries. A phrase accepted loosely ("medaille" for
@@ -84,23 +90,32 @@ class MnemonicCodeExt(wordstream: InputStream, wordListDigest: String?) : Mnemon
      *   validates the phrase
      */
     @Throws(MnemonicException::class)
-    fun checkExact(context: Context, words: List<String>): List<String> {
+    @JvmOverloads
+    fun checkExact(context: Context, words: List<String>, selectWordlist: Boolean = true): List<String> {
         if (words.size != 12 && words.size != 24) {
             throw MnemonicException.MnemonicLengthException("Word list size must be 12 or 24")
         }
         val known = BooleanArray(words.size)
-        exactWordsOrNull(words, known)?.let { return it }
+        exactWordsOrNull(words, known)?.let { exactWords ->
+            // A reset clears the saved path without reloading this instance.
+            if (selectWordlist && getWordlistPath(context) != wordlistPath) {
+                saveWordlistPath(context, wordlistPath)
+            }
+            return exactWords
+        }
 
-        val currentWordlistPath = getWordlistPath(context)
         for (wordlistFileName in context.assets.list(ASSETS_PATH).orEmpty()) {
-            val wordlistPath = "$ASSETS_PATH/$wordlistFileName"
-            if (wordlistPath == currentWordlistPath) {
+            val otherPath = "$ASSETS_PATH/$wordlistFileName"
+            // Skip the list this instance holds, which is not always the saved one.
+            if (otherPath == wordlistPath) {
                 continue
             }
-            val mnemonicCode = MnemonicCodeExt(context.assets.open(wordlistPath), null)
+            val mnemonicCode = MnemonicCodeExt(context.assets.open(otherPath), null, otherPath)
             val exactWords = mnemonicCode.exactWordsOrNull(words, known) ?: continue
-            saveWordlistPath(context, wordlistPath)
-            INSTANCE = mnemonicCode
+            if (selectWordlist) {
+                saveWordlistPath(context, otherPath)
+                INSTANCE = mnemonicCode
+            }
             return exactWords
         }
         val unknownWord = known.indexOfFirst { !it }

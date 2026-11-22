@@ -78,7 +78,8 @@ class MnemonicCodeExtTest {
         MnemonicCode.INSTANCE = previousInstance
     }
 
-    private fun mnemonicCode(fileName: String) = MnemonicCodeExt(File(wordlistDir, fileName).inputStream(), null)
+    private fun mnemonicCode(fileName: String) =
+        MnemonicCodeExt(File(wordlistDir, fileName).inputStream(), null, "bip39-wordlists/$fileName")
 
     private fun wordlist(fileName: String) = File(wordlistDir, fileName).inputStream().use { Bip39Wordlist.load(it) }
 
@@ -178,6 +179,39 @@ class MnemonicCodeExtTest {
         assertThrows(MnemonicException.MnemonicLengthException::class.java) {
             MnemonicCodeExt.getInstance().checkExact(context, badChecksum.take(11))
         }
+    }
+
+    /** A reset clears the saved wordlist, back to English, without reloading the instance in memory. */
+    @Test
+    fun `after a reset in the same process, the saved wordlist does not hide a language`() {
+        val english = List(11) { "camera" } + "ozone"
+        MnemonicCode.INSTANCE = mnemonicCode("french.txt")
+        storedWordlistPath = ENGLISH_PATH
+
+        assertEquals(english, MnemonicCodeExt.getInstance().checkExact(context, english))
+        assertEquals(ENGLISH_PATH, storedWordlistPath)
+
+        // And a phrase the loaded instance validates saves that instance's language again.
+        val french = accentedPhrase("french.txt")
+        MnemonicCode.INSTANCE = mnemonicCode("french.txt")
+        storedWordlistPath = ENGLISH_PATH
+        assertEquals(french, MnemonicCodeExt.getInstance().checkExact(context, french))
+        assertEquals("bip39-wordlists/french.txt", storedWordlistPath)
+    }
+
+    /** Forgot-PIN looks a phrase up before the wallet has authenticated it. */
+    @Test
+    fun `a read-only lookup changes neither the saved wordlist nor the instance`() {
+        val french = accentedPhrase("french.txt")
+        val english = MnemonicCodeExt.getInstance()
+
+        assertEquals(french, english.checkExact(context, nfc(french), selectWordlist = false))
+        assertEquals(ENGLISH_PATH, storedWordlistPath)
+        assertSame(english, MnemonicCodeExt.getInstance())
+
+        MnemonicCode.INSTANCE = mnemonicCode("french.txt")
+        assertEquals(french, MnemonicCodeExt.getInstance().checkExact(context, french, selectWordlist = false))
+        assertEquals(ENGLISH_PATH, storedWordlistPath)
     }
 
     /**

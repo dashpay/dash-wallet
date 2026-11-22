@@ -32,7 +32,6 @@ import de.schildbach.wallet.util.MnemonicCodeExt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.bitcoinj.crypto.ChildNumber
 import org.bitcoinj.crypto.DeterministicKey
 import org.bitcoinj.crypto.HDKeyDerivation
 import org.bitcoinj.crypto.MnemonicException
@@ -86,35 +85,19 @@ class RestoreWalletFromSeedViewModel @Inject constructor(
             // Derive the master key from the provided mnemonic
             val providedMasterKey = HDKeyDerivation.createMasterPrivateKey(providedSeed.seedBytes)
 
-            // Derive a key at m/44'/5'/0'/0/0 (first receiving address in BIP44 path for Dash)
-            // This is a standard path that should exist in any Dash wallet
-            val derivationPath = listOf(
-                ChildNumber(44, true),  // BIP44
-                ChildNumber(5, true),   // Dash coin type
-                ChildNumber(0, true),   // Account 0
-                ChildNumber(0, false),  // External chain (receiving)
-                ChildNumber(0, false)   // First address
-            )
-
-            var providedKey: DeterministicKey = providedMasterKey
-            for (childNumber in derivationPath) {
-                providedKey = HDKeyDerivation.deriveChildKey(providedKey, childNumber)
-            }
-
-            // Get the same key from the wallet's key chain
+            // Compare the account key at the installed chain's own account path: the path
+            // differs by network (m/44'/5'/0' on mainnet, m/44'/1'/0' on testnet), and the
+            // account key is always present, even in a wallet that has derived no address.
             val walletKeyChain = wallet.activeKeyChain
             if (walletKeyChain != null) {
-                // Get the key at the same path from the wallet
-                val walletKey = walletKeyChain.getKeyByPath(derivationPath, false)
-
-                if (walletKey != null) {
-                    // Compare the public keys (more reliable than comparing seeds directly)
-                    val match = providedKey.pubKey.contentEquals(walletKey.pubKey)
-                    log.info("Mnemonic verification: public keys match = $match")
-                    return match
-                } else {
-                    log.warn("Could not get key from wallet at derivation path")
+                var providedKey: DeterministicKey = providedMasterKey
+                for (childNumber in walletKeyChain.accountPath) {
+                    providedKey = HDKeyDerivation.deriveChildKey(providedKey, childNumber)
                 }
+                // Compare the public keys (more reliable than comparing seeds directly)
+                val match = providedKey.pubKey.contentEquals(walletKeyChain.watchingKey.pubKey)
+                log.info("Mnemonic verification: public keys match = $match")
+                return match
             } else {
                 log.warn("Wallet active key chain is null")
             }
@@ -267,7 +250,9 @@ class RestoreWalletFromSeedViewModel @Inject constructor(
      */
     private fun spellings(words: List<String>): List<List<String>> {
         val exactWords = try {
-            MnemonicCodeExt.getInstance().checkExact(walletApplication, words)
+            // Read-only: this phrase is not authenticated yet, and the installed wallet's
+            // mnemonic-based fallbacks validate against the app's current wordlist.
+            MnemonicCodeExt.getInstance().checkExact(walletApplication, words, selectWordlist = false)
         } catch (x: MnemonicException) {
             null
         }
