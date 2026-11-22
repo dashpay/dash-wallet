@@ -24,8 +24,11 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.PaymentIntent
@@ -147,5 +150,43 @@ class PaymentProtocolViewModelRetryPreviewTest {
 
         assertTrue("the stored failure stays", viewModel.sendRequestLiveData.value?.exception is IllegalStateException)
         runBlocking { coVerify(exactly = 1) { runner.buildDeferredBip70Payment(any(), any()) } }
+    }
+
+    /**
+     * thepastaclaw on #1714. Backing out while the rebuild runs: the screen's teardown finds no
+     * preview to release yet, so the build that finishes afterwards must release its own.
+     */
+    @Test
+    fun `a rebuilt preview that finishes after the screen closed is released, not kept`() {
+        val runner = mockk<SendCoinsTaskRunner>(relaxed = true)
+        val buildStarted = CompletableDeferred<Unit>()
+        val finishBuild = CompletableDeferred<Unit>()
+        var builds = 0
+        coEvery { runner.buildDeferredBip70Payment(any(), any()) } coAnswers {
+            if (builds++ == 0) {
+                throw SendEngineNotSyncedException("L1 funding gate closed: scan short of the chain tip")
+            }
+            buildStarted.complete(Unit)
+            // The real build has no cancellation point once the inputs are reserved.
+            withContext(NonCancellable) { finishBuild.await() }
+            payment
+        }
+        val viewModel = buildViewModel(runner)
+        val store = androidx.lifecycle.ViewModelStore().apply { put("invoice", viewModel) }
+
+        openInvoice(viewModel)
+        awaitCondition("the refusal is stored") { viewModel.sendRequestLiveData.value?.exception != null }
+        viewModel.retryPreview()
+        runBlocking { buildStarted.await() }
+
+        store.clear()
+        finishBuild.complete(Unit)
+
+        awaitCondition("the late preview is released") {
+            runCatching {
+                runBlocking { coVerify(exactly = 1) { runner.releaseDeferredPayment(payment, any()) } }
+            }.isSuccess
+        }
+        assertEquals("nothing stays armed on a closed screen", null, viewModel.deferredPayment)
     }
 }
