@@ -157,6 +157,69 @@ class SdkQuorumKeyCacheTest {
     }
 
     @Test
+    fun lookupBeforeSourceIsReadyIsNotStampedSoTheNextLookupFetches() {
+        var sdkStarted = false
+        var fetches = 0
+        val cache = SdkQuorumKeyCache(
+            fetchQuorumsJson = {
+                if (!sdkStarted) throw QuorumSourceNotReadyException()
+                fetches++
+                quorumsJson(hashHex(0x11) to keyHex(0x21))
+            },
+            clock = clock
+        )
+        // The first lookups of a launch arrive before the SDK has started.
+        assertTrue(cache.snapshot().isEmpty())
+        assertTrue(cache.snapshot().isEmpty())
+        // Right after it starts, with no time passed, the next lookup has keys.
+        sdkStarted = true
+        assertEquals(setOf(hashHex(0x11)), cache.snapshot().keys)
+        assertEquals(1, fetches)
+    }
+
+    @Test
+    fun failedFetchStillWaitsTheRetryInterval() {
+        var fetches = 0
+        val cache = SdkQuorumKeyCache(
+            fetchQuorumsJson = {
+                fetches++
+                if (fetches == 1) throw IllegalStateException("boom")
+                quorumsJson(hashHex(0x11) to keyHex(0x21))
+            },
+            clock = clock
+        )
+        assertTrue(cache.snapshot().isEmpty())
+        assertEquals(1, fetches)
+        // A real failed fetch is rate-limited: no refetch inside the interval.
+        now += 29_999L
+        assertTrue(cache.snapshot().isEmpty())
+        assertEquals(1, fetches)
+        now += 1L
+        assertEquals(setOf(hashHex(0x11)), cache.snapshot().keys)
+        assertEquals(2, fetches)
+    }
+
+    @Test
+    fun sourceNotReadyAtRefreshKeepsKeysAndRefetchesOnceReady() {
+        var sdkStarted = true
+        var fetches = 0
+        val harness = SdkQuorumKeyCacheUnderTest {
+            if (!sdkStarted) throw QuorumSourceNotReadyException()
+            fetches++
+            if (fetches == 1) quorumsJson(hashHex(0x11) to keyHex(0x21))
+            else quorumsJson(hashHex(0x12) to keyHex(0x22))
+        }
+        assertEquals(setOf(hashHex(0x11)), harness.cache.snapshot().keys)
+        harness.now += 5 * 60_000L // refresh is due, but the SDK has stopped
+        sdkStarted = false
+        assertEquals(setOf(hashHex(0x11)), harness.cache.snapshot().keys)
+        // Back up: the due refresh runs on the very next lookup.
+        sdkStarted = true
+        assertEquals(setOf(hashHex(0x11), hashHex(0x12)), harness.cache.snapshot().keys)
+        assertEquals(2, fetches)
+    }
+
+    @Test
     fun fetchFailureKeepsPreviousKeys() {
         var call = 0
         val cache = SdkQuorumKeyCacheUnderTest {

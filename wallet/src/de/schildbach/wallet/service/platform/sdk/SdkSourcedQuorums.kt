@@ -146,10 +146,22 @@ private fun ByteArray.toHexLower(): String = joinToString("") { "%02x".format(it
  *   [retryIntervalMs]; a populated one refreshes after
  *   [refreshIntervalMs]. Failures keep the previous keys and stamp the
  *   attempt so the DAPI callback can never hammer the fetcher.
+ * - A fetcher that throws [QuorumSourceNotReadyException] asked nobody (the
+ *   SDK is not running yet), so that lookup is NOT stamped as an attempt:
+ *   the next lookup asks again. Stamping it made the first lookups of a
+ *   launch, which arrive seconds before the SDK starts, lock the cache
+ *   empty for a full [retryIntervalMs] while every DAPI proof failed and
+ *   healthy nodes were banned.
  * - [snapshot] may block (single-flight) on the SDK query; callers are
  *   rust DAPI worker threads that are blocking on the quorum callback
  *   anyway.
  */
+/**
+ * Thrown by a quorum fetcher that could not ask at all because its source
+ * (the Kotlin SDK) is not running. See [SdkQuorumKeyCache].
+ */
+internal class QuorumSourceNotReadyException : Exception("quorum source not ready")
+
 internal class SdkQuorumKeyCache(
     private val fetchQuorumsJson: suspend () -> String?,
     private val clock: () -> Long = System::currentTimeMillis,
@@ -162,6 +174,9 @@ internal class SdkQuorumKeyCache(
     @Volatile
     private var state: State? = null
     private val fetchLock = Any()
+
+    /** Guarded by [fetchLock]: log the not-ready skip once per streak, not per lookup. */
+    private var sourceNotReadyLogged = false
 
     private fun isDue(current: State?, now: Long): Boolean = when {
         current == null -> true
@@ -181,11 +196,20 @@ internal class SdkQuorumKeyCache(
             val fetched = try {
                 runBlocking { fetchQuorumsJson() }?.let { parseQuorumThresholdKeys(it) }
                     ?: emptyMap()
+            } catch (e: QuorumSourceNotReadyException) {
+                // Nobody was asked, so there is no attempt to rate-limit:
+                // leave the state unstamped and let the next lookup ask again.
+                if (!sourceNotReadyLogged) {
+                    sourceNotReadyLogged = true
+                    log.info("SDK quorum fetch skipped: SDK not started yet")
+                }
+                return current?.keys ?: emptyMap()
             } catch (e: Exception) {
                 log.warn("SDK quorum fetch failed (keeping {} cached key(s)): {}",
                     current?.keys?.size ?: 0, e.toString())
                 emptyMap()
             }
+            sourceNotReadyLogged = false
             val merged = (current?.keys ?: emptyMap()) + fetched
             // A runaway merge means something is off (rotation churn far
             // beyond expectations) — reset to the latest fetch.
@@ -318,12 +342,12 @@ class SdkQuorumDataSource @Inject constructor(
             // Only serve from an already-running SDK: post-cutover the SDK
             // owns L1 and is brought up by the platform-sync bootstrap, so
             // triggering a full native bootstrap from a rust DAPI callback
-            // thread here would be both surprising and unnecessary.
-            dashSdkService.sdkOrNull()?.system?.currentQuorumsInfo().also {
-                if (it == null && !dashSdkService.isStarted) {
-                    log.info("SDK quorum fetch skipped: SDK not started yet")
-                }
-            }
+            // thread here would be both surprising and unnecessary. Not
+            // running is reported as "not ready" rather than as an empty
+            // answer, so the cache asks again on the next lookup instead of
+            // waiting out its retry interval.
+            val sdk = dashSdkService.sdkOrNull() ?: throw QuorumSourceNotReadyException()
+            sdk.system.currentQuorumsInfo()
         }
     )
 
