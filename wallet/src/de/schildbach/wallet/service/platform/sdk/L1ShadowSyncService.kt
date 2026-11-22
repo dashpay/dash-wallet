@@ -2706,6 +2706,18 @@ class L1ShadowSyncService internal constructor(
      * is thrown to [startIfEnabled], which schedules another start. Any
      * other failure, of the start or of the stop, is thrown at once.
      *
+     * Returns false, having started nothing more, once an external stop has
+     * moved [externalStopGeneration] past [startGeneration]: that stop is
+     * queued on [mutex] behind this start and must not wait through further
+     * rounds for an engine it will tear down.
+     *
+     * The native start is not cancellable. The SDK runs it on another
+     * dispatcher, and a caller cancelled meanwhile (the scheduled retry is
+     * cancelled by [stop]) would lose the result of a start that succeeded:
+     * [runningWalletIdHex] would stay null and the queued stop would skip
+     * `stopSpv`, leaving native SPV running. A true return is followed by
+     * the caller setting that latch with no suspension point in between.
+     *
      * Only [startIfEnabled] uses this. The restart inside [resetShadowState]
      * and the in-place one in [ensureSpvRunning] start the client as they
      * did before, so a reset whose own stop times out is still refused at
@@ -2713,15 +2725,16 @@ class L1ShadowSyncService internal constructor(
      * reset has deleted SPV state by then; waiting its teardown out there
      * would start a scan on state the teardown may still be writing.
      */
-    private suspend fun startSpvFinishingTeardown(dataDirPath: String) {
+    private suspend fun startSpvFinishingTeardown(dataDirPath: String, startGeneration: Long): Boolean {
         var round = 0
         while (true) {
+            if (externalStopGeneration != startGeneration) return false
             try {
-                source.startSpv(dataDirPath)
+                withContext(NonCancellable) { source.startSpv(dataDirPath) }
                 if (round > 0) {
                     log.info("L1 shadow SPV started once the earlier teardown finished (stop retries: {})", round)
                 }
-                return
+                return true
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
                 if (!source.isSpvTeardownIncomplete(t) || round >= spvTeardownRetryRounds) throw t
@@ -3330,7 +3343,10 @@ class L1ShadowSyncService internal constructor(
                             }
                         }
                         try {
-                            startSpvFinishingTeardown(dataDir.absolutePath)
+                            if (!startSpvFinishingTeardown(dataDir.absolutePath, startGeneration)) {
+                                log.info("L1 shadow sync not started: an external stop() arrived during the start")
+                                return false
+                            }
                         } catch (t: Throwable) {
                             if (t is CancellationException) throw t
                             if (!source.isSpvTeardownIncomplete(t)) throw t
