@@ -34,6 +34,8 @@ import io.mockk.unmockkObject
 import io.mockk.unmockkStatic
 import io.mockk.verify
 import kotlinx.coroutines.runBlocking
+import org.bitcoinj.crypto.ChildNumber
+import org.bitcoinj.crypto.HDKeyDerivation
 import org.bitcoinj.crypto.MnemonicException
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
@@ -217,5 +219,59 @@ class RestoreWalletFromSeedViewModelTest {
         assertEquals(false, viewModel.recoverPin(typedWords)?.requiresReset)
         // The paper phrase is not what that wallet holds.
         assertNull(viewModel.recoverPin(words))
+    }
+
+    /** An installed wallet whose keys come from [storedWords], as the forgot-PIN key check sees it. */
+    private fun appWithWalletOf(storedWords: List<String>): WalletApplication {
+        var key = HDKeyDerivation.createMasterPrivateKey(DeterministicSeed(storedWords, null, "", 0L).seedBytes)
+        for (child in listOf(ChildNumber(44, true), ChildNumber(5, true), ChildNumber.ZERO_HARDENED)) {
+            key = HDKeyDerivation.deriveChildKey(key, child)
+        }
+        key = HDKeyDerivation.deriveChildKey(HDKeyDerivation.deriveChildKey(key, ChildNumber.ZERO), ChildNumber.ZERO)
+        val app = mockk<WalletApplication>(relaxed = true)
+        every { app.isWalletReplacementRefused } returns false
+        every { app.installWallet(any(), true) } returns WalletInstallResult.INSTALLED
+        every { app.wallet!!.activeKeyChain.getKeyByPath(any(), false) } returns key
+        return app
+    }
+
+    /**
+     * Forgot-PIN recovery that cannot recover the PIN verifies the phrase against the wallet's
+     * keys and then replaces the wallet with itself: from the spelling it verified, or the
+     * replacement is a different wallet saved over the user's.
+     */
+    @Test
+    fun `a forgot-PIN replacement rebuilds the wallet from the spelling the installed wallet holds`() = runBlocking {
+        val storedWords = typedWords.map { it.lowercase() }
+        val factory = mockk<WalletFactory>()
+        coEvery { factory.restoreFromSeed(any(), any()) } returns mockk<Wallet>()
+
+        val legacy = viewModel(appWithWalletOf(storedWords), factory)
+        assertEquals(SeedRestoreResult.RESTORED, legacy.restoreWalletFromSeed(typedWords, forgotPinRecovery = true))
+        coVerify(exactly = 1) { factory.restoreFromSeed(any(), storedWords) }
+        coVerify(exactly = 0) { factory.restoreFromSeed(any(), words) }
+
+        val current = viewModel(appWithWalletOf(words), factory)
+        assertEquals(SeedRestoreResult.RESTORED, current.restoreWalletFromSeed(typedWords, forgotPinRecovery = true))
+        coVerify(exactly = 1) { factory.restoreFromSeed(any(), words) }
+    }
+
+    /** An earlier language search could accept, and so a wallet can hold, a phrase no wordlist validates. */
+    @Test
+    fun `forgot-PIN still recovers a wallet whose phrase no wordlist validates`() = runBlocking {
+        every { mnemonicCode.canonicalize(any(), any()) } throws MnemonicException.MnemonicChecksumException()
+        val storedWords = typedWords.map { it.lowercase() }
+        val securityFunctions = mockk<SecurityFunctions>()
+        coEvery { securityFunctions.decryptSeed(any()) } returns DeterministicSeed(storedWords, null, "", 0L)
+        val factory = mockk<WalletFactory>()
+        coEvery { factory.restoreFromSeed(any(), any()) } returns mockk<Wallet>()
+        val viewModel = viewModel(appWithWalletOf(storedWords), factory, securityFunctions = securityFunctions)
+
+        assertEquals(false, viewModel.recoverPin(typedWords)?.requiresReset)
+        assertNull(viewModel.recoverPin(words))
+        assertEquals(SeedRestoreResult.RESTORED, viewModel.restoreWalletFromSeed(typedWords, forgotPinRecovery = true))
+        coVerify(exactly = 1) { factory.restoreFromSeed(any(), storedWords) }
+        // A new restore stays strict.
+        assertEquals(SeedRestoreResult.INVALID_SEED, viewModel.restoreWalletFromSeed(typedWords))
     }
 }

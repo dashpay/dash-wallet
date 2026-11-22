@@ -195,15 +195,21 @@ class RestoreWalletFromSeedViewModel @Inject constructor(
         words: List<String>,
         forgotPinRecovery: Boolean = false
     ): SeedRestoreResult = withContext(Dispatchers.IO) {
-        val canonicalWords = canonicalWordsOrNull(words)
-        if (canonicalWords != null) {
+        // Forgot-PIN recovery replaces the installed wallet with itself, so it rebuilds from the
+        // spelling that wallet holds: any other spelling is a different wallet.
+        val restoreWords = if (forgotPinRecovery) {
+            spellings(words).firstOrNull(::verifyMnemonicMatchesWallet) ?: canonicalWordsOrNull(words)
+        } else {
+            canonicalWordsOrNull(words)
+        }
+        if (restoreWords != null) {
             // Before any restore work: a wipe marker refuses the replacement.
             if (walletApplication.isWalletReplacementRefused) {
                 log.warn("seed restore refused before it began: a wallet reset is unfinished or unverified")
                 return@withContext SeedRestoreResult.REFUSED
             }
             val creationTime = selectedCreationDate.value
-            val wallet = walletFactory.restoreFromSeed(Constants.NETWORK_PARAMETERS, canonicalWords)
+            val wallet = walletFactory.restoreFromSeed(Constants.NETWORK_PARAMETERS, restoreWords)
             // Forgot-PIN recovery replaces the installed wallet on purpose; an
             // onboarding restore must not (see WalletApplication.installWallet).
             when (walletApplication.installWallet(wallet, forgotPinRecovery)) {
@@ -232,17 +238,24 @@ class RestoreWalletFromSeedViewModel @Inject constructor(
     }
 
     /**
-     * Looks for the wallet's PIN with the recovery phrase the user typed.
-     *
-     * The wallet holds the wordlist's spelling of its phrase, so that is tried first. A wallet
-     * restored before the restore screen stored that spelling holds the words as they were typed
-     * (lowercased), and its mnemonic-based fallbacks are keyed on them, so those are tried next.
+     * Looks for the wallet's PIN with the recovery phrase the user typed, in each of the
+     * [spellings] the wallet may hold. What authenticates the phrase is the wallet itself (its
+     * decrypted seed, its mnemonic-based fallbacks or its keys), not a wordlist.
      */
     suspend fun recoverPin(words: List<String>): RecoveryData? {
-        val canonicalWords = canonicalWordsOrNull(words) ?: return null
-        recover(canonicalWords)?.let { return it }
-        val typedWords = words.map { it.lowercase(Locale.getDefault()) }
-        return if (typedWords != canonicalWords) recover(typedWords) else null
+        for (spelling in spellings(words)) {
+            recover(spelling)?.let { return it }
+        }
+        return null
+    }
+
+    /**
+     * The spellings an installed wallet may hold for the phrase the user typed: the wordlist's,
+     * which a restore stores, then the words as typed (lowercased), which restores stored before
+     * that — including a phrase no wordlist validates, which an earlier language search let through.
+     */
+    private fun spellings(words: List<String>): List<List<String>> {
+        return listOfNotNull(canonicalWordsOrNull(words), words.map { it.lowercase(Locale.getDefault()) }).distinct()
     }
 
     /**
