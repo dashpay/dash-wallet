@@ -110,12 +110,16 @@ class WalletBalanceObserver(
     private fun emitLastBalances() {
         emitterScope.launch {
             // Only a value stored as this wallet's: an untagged one may be a previous wallet's.
-            // None known: not seeded, so synchronous readers keep reading the wallet directly
-            // instead of a zero no one stored.
-            walletUIConfig.getLastTotalBalance(ownerId)?.let { stored ->
+            val stored = walletUIConfig.getLastTotalBalance(ownerId)
+            if (stored != null) {
                 _totalBalance.value = Coin.valueOf(stored)
-                isSeeded = true
+            } else if (!isSeeded) {
+                // None known (the first launch after the update): this wallet's own estimate,
+                // not a zero, until a live figure arrives. Not stored: emitBalances decides that.
+                org.bitcoinj.core.Context.propagate(Constants.CONTEXT)
+                _totalBalance.value = wallet.getBalance(BalanceType.ESTIMATED)
             }
+            isSeeded = true
         }
     }
 

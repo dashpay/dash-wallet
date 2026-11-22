@@ -31,7 +31,7 @@ import org.bitcoinj.crypto.HDKeyDerivation
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.data.WalletUIConfig
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -80,17 +80,16 @@ class WalletBalanceObserverPersistTest {
     }
 
     /**
-     * An untagged value an earlier version stored (or none at all) is unknown, not zero: the
-     * observer stays unseeded so synchronous readers read the wallet itself.
+     * An untagged value an earlier version stored (or none at all) is not this wallet's: the
+     * observer starts from the wallet's own estimate instead of a zero, and stores nothing.
      */
     @Test
-    fun `no value stored as this wallet's leaves the observer unseeded`() {
+    fun `with no value stored as this wallet's the launch seed is the wallet's own estimate`() {
         val observer = WalletBalanceObserver(wallet, walletUIConfig, dashPayConfig)
 
-        coVerify(timeout = 5_000) { walletUIConfig.getLastTotalBalance(walletId) }
-        Thread.sleep(100)
-        assertFalse(observer.isSeeded)
-        assertEquals(Coin.ZERO, observer.totalBalance.value)
+        runBlocking { withTimeout(5_000) { observer.totalBalance.first { it == balance } } }
+        assertTrue(observer.isSeeded)
+        coVerify(exactly = 0) { walletUIConfig.setLastTotalBalance(any(), any()) }
     }
 
     @Test

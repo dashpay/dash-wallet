@@ -22,6 +22,7 @@ import android.content.Context
 import android.content.Intent
 import androidx.annotation.WorkerThread
 import androidx.core.app.NotificationCompat
+import de.schildbach.wallet.AppForegroundMonitor
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.WalletData
@@ -29,7 +30,16 @@ import de.schildbach.wallet.balanceOwnerId
 import de.schildbach.wallet.ui.OnboardingActivity
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet_test.R
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.takeWhile
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ContextPropagatingThreadFactory
 import org.dash.wallet.common.Configuration
@@ -39,6 +49,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 
 /**
@@ -73,7 +84,8 @@ class InactivityReminder @Inject constructor(
     private val config: Configuration,
     private val walletData: WalletData,
     private val walletUIConfig: WalletUIConfig,
-    private val dashPayConfig: DashPayConfig
+    private val dashPayConfig: DashPayConfig,
+    private val applicationScope: CoroutineScope
 ) {
     /** What the reminder should show. */
     sealed class Content {
@@ -81,8 +93,50 @@ class InactivityReminder @Inject constructor(
         object AmountHidden : Content()
     }
 
+    /** Why [maybeShow] did not post, when the reason may pass. */
+    private enum class Outcome { DONE, BALANCES_UNKNOWN }
+
+    /**
+     * Shows the reminder when it is due. When it is due but no part of the balance is known
+     * to be funded and a part is unknown (the first update: the stored balances an earlier
+     * version wrote carry no wallet id), it tries again as each balance is stored as this
+     * wallet's, for up to [RETRY_WINDOW_MS] and only while the app is in the background.
+     */
     @WorkerThread
     fun maybeShow() {
+        if (showIfDue() == Outcome.BALANCES_UNKNOWN) retryWhenBalancesStored()
+    }
+
+    private fun retryWhenBalancesStored() {
+        if (!retrying.compareAndSet(false, true)) return
+        applicationScope.launch(Dispatchers.IO) {
+            try {
+                withTimeoutOrNull(RETRY_WINDOW_MS) {
+                    combine(
+                        walletUIConfig.observe(WalletUIConfig.LAST_TOTAL_BALANCE_WALLET),
+                        dashPayConfig.observe(DashPayConfig.LAST_SHIELDED_BALANCE_WALLET),
+                        AppForegroundMonitor.isForeground
+                    ) { transparentOwner, shieldedOwner, foreground ->
+                        Triple(transparentOwner, shieldedOwner, foreground)
+                    }
+                        .distinctUntilChanged()
+                        // Opened: the user is back in the app, so no reminder is due.
+                        .takeWhile { (_, _, foreground) -> !foreground }
+                        // The first check also covers a balance stored since the skipped one.
+                        .firstOrNull { showIfDue() != Outcome.BALANCES_UNKNOWN }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                log.warn("inactivity reminder retry failed", e)
+            } finally {
+                retrying.set(false)
+            }
+        }
+    }
+
+    @WorkerThread
+    private fun showIfDue(): Outcome {
         // Outside the lock: it may wait for a deferred wallet load.
         val wallet = walletData.wallet
         val walletId = try {
@@ -96,26 +150,34 @@ class InactivityReminder @Inject constructor(
         synchronized(postLock) {
             if (!application.mayActOnWalletInBackground()) {
                 log.info("wallet reset in progress, needs recovery or no wallet file: not showing inactivity reminder")
-                return
+                return Outcome.DONE
             }
             // Replaced since it was read (an install publishes the new wallet, then cancels
             // under this lock): its stored balances are not the installed wallet's.
             if (wallet != null && application.loadedWalletOrNull() !== wallet) {
                 log.info("wallet replaced while preparing the inactivity reminder: not showing it")
-                return
+                return Outcome.DONE
             }
-            show(walletExists = wallet != null, walletId = walletId)
+            return show(walletExists = wallet != null, walletId = walletId)
         }
     }
 
-    private fun show(walletExists: Boolean, walletId: String?) {
+    private fun show(walletExists: Boolean, walletId: String?): Outcome {
+        val isTimeToRemind = config.isTimeToRemindBalance
+        val transparent = readTransparentBalance(walletId)
+        val shielded = readShieldedBalance(walletId)
         val content = decide(
-            isTimeToRemind = config.isTimeToRemindBalance,
+            isTimeToRemind = isTimeToRemind,
             walletExists = walletExists,
-            transparentBalance = readTransparentBalance(walletId),
-            shieldedBalance = readShieldedBalance(walletId),
+            transparentBalance = transparent,
+            shieldedBalance = shielded,
             hideBalance = readHideBalance()
-        ) ?: return
+        ) ?: return if (mayBecomeKnown(isTimeToRemind, walletId, transparent, shielded)) {
+            log.info("inactivity reminder due, but its balances are not known yet: waiting for them")
+            Outcome.BALANCES_UNKNOWN
+        } else {
+            Outcome.DONE
+        }
 
         log.info("detected balance, showing inactivity notification")
         val text = when (content) {
@@ -126,6 +188,7 @@ class InactivityReminder @Inject constructor(
             Content.AmountHidden -> application.getString(R.string.notification_inactivity_message_hidden)
         }
         post(text)
+        return Outcome.DONE
     }
 
     /** Null when unknown: never written, another wallet's or an earlier version's, or unreadable. */
@@ -217,6 +280,19 @@ class InactivityReminder @Inject constructor(
     companion object {
         private val log: Logger = LoggerFactory.getLogger(InactivityReminder::class.java)
         private val postLock = Any()
+
+        /** How long a due reminder waits for its balances to be stored as this wallet's. */
+        internal const val RETRY_WINDOW_MS = 60 * 60_000L
+
+        /** One wait at a time, process-wide. */
+        private val retrying = AtomicBoolean(false)
+
+        /**
+         * Whether a reminder [decide] skipped may be shown once a balance is stored: it is
+         * due, the wallet is identified, and a part of its balance is still unknown.
+         */
+        fun mayBecomeKnown(isTimeToRemind: Boolean, walletId: String?, transparent: Coin?, shielded: Coin?): Boolean =
+            isTimeToRemind && walletId != null && (transparent == null || shielded == null)
 
         /**
          * Removes the reminder, under the same lock as posting. Called by Reset Wallet after

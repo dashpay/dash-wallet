@@ -24,7 +24,9 @@ import io.mockk.mockk
 import io.mockk.verify
 import org.bitcoinj.core.Coin
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class InactivityReminderTest {
@@ -86,6 +88,20 @@ class InactivityReminderTest {
     fun `no reminder when the last known balance is zero`() {
         assertNull(decide(transparentBalance = Coin.ZERO))
         assertNull(decide(transparentBalance = Coin.ZERO, hideBalance = true))
+    }
+
+    /** The first update: untagged balances are unknown, so a due reminder waits for them. */
+    @Test
+    fun `a due reminder whose balance is not known yet may be shown once it is stored`() {
+        assertTrue(InactivityReminder.mayBecomeKnown(true, "wallet", null, Coin.ZERO))
+        assertTrue(InactivityReminder.mayBecomeKnown(true, "wallet", Coin.ZERO, null))
+    }
+
+    @Test
+    fun `nothing to wait for when the balance is known, not due, or the wallet unknown`() {
+        assertFalse(InactivityReminder.mayBecomeKnown(true, "wallet", Coin.ZERO, Coin.ZERO))
+        assertFalse(InactivityReminder.mayBecomeKnown(false, "wallet", null, null))
+        assertFalse(InactivityReminder.mayBecomeKnown(true, null, null, null))
     }
 
     @Test
