@@ -23,6 +23,7 @@ import de.schildbach.wallet.service.platform.ContestedUsernameFees
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.CoinJoinConfig
+import de.schildbach.wallet.data.CreditBalanceInfo
 import de.schildbach.wallet.database.dao.UsernameRequestDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.CREATION_STATE
@@ -112,6 +113,7 @@ class RequestUserNameViewModel @Inject constructor(
         private val CONTEST_DOCUMENT_FEE: Long
             get() = ContestedUsernameFees.nameFee.value * 1000
         private val NON_CONTEST_DOCUMENT_FEE = Coin.valueOf(1000000).value * 1000
+        private const val NAME_REGISTRATION_CREDITS = CreditBalanceInfo.MAX_OPERATION_COST * 2
     }
 
     private val workerJob = SupervisorJob()
@@ -195,7 +197,7 @@ class RequestUserNameViewModel @Inject constructor(
 
             identity?.userId != null -> {
                 val credits = _identityBalance.value
-                credits > Constants.DASH_PAY_FEE.value / 10 * 1000
+                credits > Constants.DASH_PAY_FEE.value / 10 * 1000 || canRetryNameWithInviteIdentityCredits()
             }
 
             else -> {
@@ -298,8 +300,9 @@ class RequestUserNameViewModel @Inject constructor(
         val username = requestedUserName!!
         val usernameSecondary = requestedUsernameSecondary
         val isUsingInvite = isUsingInvite()
+        val reuseInviteIdentity = reuseTransaction && !isUsernameContestable() && canRetryNameWithInviteIdentityCredits()
         when {
-            isUsingInvite && reuseTransaction -> {
+            (isUsingInvite && reuseTransaction) || reuseInviteIdentity -> {
                 walletApplication.startService(
                     CreateIdentityService.createIntentFromInviteForNewUsername(
                         walletApplication,
@@ -562,6 +565,7 @@ class RequestUserNameViewModel @Inject constructor(
         return when {
             isUsingInvite() && contestable -> inviteBalance >= ContestedUsernameFees.fee
             isUsingInvite() -> inviteBalance >= Constants.DASH_PAY_INVITE_MIN
+            !contestable && canRetryNameWithInviteIdentityCredits() -> true
             identityBalance > 0L -> (Coin.valueOf(identityBalance / 1000) + walletBalance) > Coin.valueOf(
                 (if (contestable) CONTEST_DOCUMENT_FEE else NON_CONTEST_DOCUMENT_FEE) / 1000)
             identityBalance == 0L -> walletBalance >= if (contestable) ContestedUsernameFees.fee else Constants.DASH_PAY_FEE
@@ -594,6 +598,17 @@ class RequestUserNameViewModel @Inject constructor(
     }
 
     fun isUsingInvite(): Boolean = createUsernameArgs?.invite != null
+
+    // The invite was spent on the identity, so a name rejected after registration is paid from its credits.
+    private fun canRetryNameWithInviteIdentityCredits(): Boolean {
+        val identity = identity ?: return false
+        return identity.usingInvite &&
+            identity.creationStateErrorMessage != null &&
+            identity.creationState >= IdentityCreationState.IDENTITY_REGISTERED &&
+            identity.usernameSecondary == null &&
+            requestedUsernameSecondary == null &&
+            _identityBalance.value >= NAME_REGISTRATION_CREDITS
+    }
 
     suspend fun getInviteAssetLockTransaction(): AssetLockTransaction? = withContext(Dispatchers.IO) {
         if (isUsingInvite()) {

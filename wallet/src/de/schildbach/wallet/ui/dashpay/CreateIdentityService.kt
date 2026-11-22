@@ -241,13 +241,17 @@ class CreateIdentityService : LifecycleService() {
                     val retryWithNewUserName = intent.action == ACTION_RETRY_WITH_NEW_USERNAME
                     handleCreateIdentityAction(username, usernameSecondary, retryWithNewUserName)
                 }
-                ACTION_CREATE_IDENTITY_FROM_INVITATION,
-                ACTION_RETRY_INVITE_WITH_NEW_USERNAME -> {
+                ACTION_CREATE_IDENTITY_FROM_INVITATION -> {
                     val username = intent.getStringExtra(EXTRA_USERNAME)
                     val usernameSecondary = intent.getStringExtra(EXTRA_USERNAME_SECONDARY)
                     val invitation = intent.getParcelableExtra<InvitationLinkData>(EXTRA_INVITE)
 
                     handleCreateIdentityFromInvitationAction(username, usernameSecondary, invitation)
+                }
+                ACTION_RETRY_INVITE_WITH_NEW_USERNAME -> {
+                    val username = intent.getStringExtra(EXTRA_USERNAME)!!
+                    val usernameSecondary = intent.getStringExtra(EXTRA_USERNAME_SECONDARY)
+                    handleRetryInviteWithNewUsernameAction(username, usernameSecondary)
                 }
                 ACTION_RETRY_AFTER_INTERRUPTION -> {
                     val startForegroundPromised = intent.getBooleanExtra(EXTRA_START_FOREGROUND_PROMISED, false)
@@ -518,6 +522,40 @@ class CreateIdentityService : LifecycleService() {
             workInProgress = false
             stopSelf()
         }
+    }
+
+    private fun handleRetryInviteWithNewUsernameAction(username: String, usernameSecondary: String?) {
+        workInProgress = true
+        serviceScope.launch(createIdentityExceptionHandler) {
+            retryInviteWithNewUsername(username, usernameSecondary)
+            workInProgress = false
+            stopSelf()
+        }
+    }
+
+    // The invite was spent registering the identity, so the replacement name is paid from its credits.
+    private suspend fun retryInviteWithNewUsername(username: String, usernameSecondary: String?) {
+        log.info("username registration with the invite-funded identity starting($username)")
+        val wallet = walletApplication.wallet!!
+        org.bitcoinj.core.Context.propagate(wallet.context)
+
+        blockchainIdentityData = identityRepository.loadBlockchainIdentityData()
+            ?: throw IllegalStateException("there is no identity to register $username for")
+        checkState(
+            blockchainIdentityData.usingInvite &&
+                blockchainIdentityData.creationStateErrorMessage != null &&
+                blockchainIdentityData.creationState >= IdentityCreationState.IDENTITY_REGISTERED,
+            "there is no failed username step of an invite-funded identity to retry"
+        )
+        blockchainIdentityData.username = username
+        blockchainIdentityData.usernameSecondary = usernameSecondary
+        blockchainIdentityData.creationState = IdentityCreationState.IDENTITY_REGISTERED
+        blockchainIdentityData.creationStateErrorMessage = null
+        identityRepository.updateBlockchainIdentityData(blockchainIdentityData)
+
+        val encryptionKey = platformRepo.getWalletEncryptionKey() ?: throw IllegalStateException("cannot obtain wallet encryption key")
+        val blockchainIdentity = identityRepository.initBlockchainIdentity(blockchainIdentityData, wallet)
+        finishRegistration(blockchainIdentity, encryptionKey, usernameSecondary)
     }
 
     private suspend fun createIdentityFromInvitation(username: String?, usernameSecondary: String?, invite: InvitationLinkData?, retryWithNewUserName: Boolean = false) {
