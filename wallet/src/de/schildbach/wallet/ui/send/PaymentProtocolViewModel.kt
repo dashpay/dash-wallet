@@ -33,6 +33,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapConcat
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Coin
@@ -308,6 +309,14 @@ class PaymentProtocolViewModel @Inject constructor(
                 deferredPaymentRef.set(
                     DeferredPreview(sendCoinsTaskRunner.buildDeferredBip70Payment(paymentIntent, origin), origin)
                 )
+                // The screen can close while the build runs. The scope is cancelled before
+                // onCleared() empties the reference, so a build that stores its result after
+                // that sees the cancellation here and releases what onCleared() could not
+                // (thepastaclaw on #1714). getAndSet: whichever of the two takes it, releases it.
+                if (!isActive) {
+                    deferredPaymentRef.getAndSet(null)?.let { withContext(NonCancellable) { release(it) } }
+                    return@withContext
+                }
                 _sendRequestLiveData.postValue(Resource.success(null))
             } catch (x: Exception) {
                 deferredPaymentRef.set(null)
