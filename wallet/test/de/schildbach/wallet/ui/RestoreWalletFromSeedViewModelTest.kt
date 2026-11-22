@@ -34,6 +34,7 @@ import io.mockk.mockkStatic
 import io.mockk.unmockkObject
 import io.mockk.unmockkStatic
 import io.mockk.verify
+import io.mockk.verifyOrder
 import kotlinx.coroutines.runBlocking
 import org.bitcoinj.crypto.ChildNumber
 import org.bitcoinj.crypto.MnemonicException
@@ -165,6 +166,8 @@ class RestoreWalletFromSeedViewModelTest {
 
         assertEquals(SeedRestoreResult.WALLET_ALREADY_INSTALLED, viewModel(app, factory).restoreWalletFromSeed(words))
         verify(exactly = 0) { app.installWallet(any(), true) }
+        // A dropped restore leaves the installed wallet's wordlist alone.
+        verify(exactly = 0) { mnemonicCode.checkExact(any(), any(), true) }
         assertEquals(existingDateSecs, blockchainServiceConfig.getWalletCreationDate())
 
         assertEquals(
@@ -183,7 +186,12 @@ class RestoreWalletFromSeedViewModelTest {
         coEvery { factory.restoreFromSeed(any(), any()) } returns mockk<Wallet>()
 
         assertEquals(SeedRestoreResult.RESTORED, viewModel(app, factory).restoreWalletFromSeed(typedWords))
-        verify { mnemonicCode.checkExact(any(), typedWords) }
+        // Looked up read-only; the language is selected once the wallet is installed.
+        verifyOrder {
+            mnemonicCode.checkExact(any(), typedWords, false)
+            app.installWallet(any(), false)
+            mnemonicCode.checkExact(any(), words, true)
+        }
         coVerify(exactly = 1) { factory.restoreFromSeed(any(), words) }
     }
 

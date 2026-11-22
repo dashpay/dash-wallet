@@ -193,7 +193,8 @@ class RestoreWalletFromSeedViewModel @Inject constructor(
         val restoreWords = if (forgotPinRecovery) {
             spellings(words).firstOrNull(::verifyMnemonicMatchesWallet)
         } else {
-            MnemonicCodeExt.getInstance().checkExact(walletApplication, words)
+            // Read-only until the install is accepted: see the selection below.
+            MnemonicCodeExt.getInstance().checkExact(walletApplication, words, selectWordlist = false)
         }
         if (restoreWords != null) {
             // Before any restore work: a wipe marker refuses the replacement.
@@ -215,6 +216,11 @@ class RestoreWalletFromSeedViewModel @Inject constructor(
                     return@withContext SeedRestoreResult.REFUSED
                 }
                 WalletInstallResult.INSTALLED -> Unit
+            }
+            // The phrase's language becomes the app's wordlist only with its wallet: a refused
+            // or dropped restore must not leave the installed wallet with another language.
+            if (!forgotPinRecovery) {
+                MnemonicCodeExt.getInstance().checkExact(walletApplication, restoreWords)
             }
             // Only once the replacement is accepted: a refused wallet must not
             // overwrite the existing wallet's persisted scan-start date.
