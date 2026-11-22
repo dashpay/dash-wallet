@@ -4540,9 +4540,16 @@ class CutoverUiDataService internal constructor(
         // The receive-address read blocks in the FFI, so it gets its own
         // collector: parked, it must not hold up a balance reading
         // ([refreshReceiveAddress]). The ticker emits at once, which is the
-        // initial read.
+        // initial read. Its triggers go through a conflated channel: while a
+        // read is parked [txEvents] must still be drained, because its
+        // producer drops an event for EVERY subscriber once one of them stops
+        // taking them. One re-read serves whatever arrived meanwhile.
+        val receiveAddressDue = Channel<Unit>(Channel.CONFLATED)
         launch {
-            merge(txEvents.map { }, ticker()).collect {
+            merge(txEvents.map { }, ticker()).collect { receiveAddressDue.trySend(Unit) }
+        }
+        launch {
+            for (due in receiveAddressDue) {
                 try {
                     refreshReceiveAddress()
                 } catch (t: Throwable) {

@@ -1123,13 +1123,18 @@ class CutoverUiDataServiceTest {
         /** When set, the max-sendable read waits on it, modelling a read held on the engine's wallet lock. */
         var maxSendableGate: kotlinx.coroutines.CompletableDeferred<Unit>? = null
         var maxSendableReadsParked = 0
+        var maxSendableReads = 0
 
         override suspend fun currentMaxSendableDuffs(walletIdHex: String): Long? {
+            maxSendableReads++
+            // Captured BEFORE parking, so a parked read returns what it read
+            // and not whatever the test set meanwhile.
+            val answer = maxSendableDuffs
             maxSendableGate?.let { gate ->
                 maxSendableReadsParked++
                 gate.await()
             }
-            return maxSendableDuffs
+            return answer
         }
 
         /**
@@ -1734,6 +1739,52 @@ class CutoverUiDataServiceTest {
     }
 
     @Test
+    fun postCutover_parkedReceiveAddressRead_doesNotDropTxEvents() = runTest {
+        // The engine publishes tx events with tryEmit into ONE shared buffer:
+        // a subscriber that stops draining makes a later event be dropped for
+        // every subscriber. The address lane must keep draining while its
+        // read is parked, or an event-only spend loses its balance re-read.
+        val events = kotlinx.coroutines.flow.MutableSharedFlow<L1TxEvent>(extraBufferCapacity = 64)
+        val source = FakeSource(balanceDuffs = MutableStateFlow(900_000L))
+        // Room stays silent: only a tx event can trigger the balance re-read.
+        source.roomChanges = kotlinx.coroutines.flow.emptyFlow()
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            txEvents = events, l1Synced = flowOf(true),
+            receiveRefreshDispatcher = Dispatchers.IO
+        )
+        try {
+            service.start()
+            assertTrue(pumpUntil { service.sdkReceiveAddressOrNull() == "yENGINEnextUnusedAddress" })
+            assertEquals(Coin.valueOf(900_000), service.sdkBalanceOrNull())
+
+            source.gatedReadThreadName = "DefaultDispatcher"
+            source.gateByThreadNamePrefix = true
+            source.receiveAddressReadParked = false
+            val event = L1TxEvent.Detected(displayHex(5), 1_000L, null, contextCode = 0, directionCode = 0)
+            events.emit(event)
+            assertTrue("the address read must be parked", pumpUntil { source.receiveAddressReadParked })
+
+            // A burst far larger than the buffers, while the read stays parked.
+            // Each emit may wait for the lanes that are merely busy; a lane
+            // that has stopped draining never frees the buffer.
+            repeat(300) { i ->
+                assertTrue("tx event $i was dropped", pumpUntil(2_000) { events.tryEmit(event) })
+            }
+
+            // The spend arrives as an event only.
+            source.balanceDuffs.value = 781L
+            assertTrue("the spend's tx event was dropped", events.tryEmit(event))
+            assertTrue(
+                "the event-only spend must refresh the balance",
+                pumpUntil(5_000) { service.sdkBalanceOrNull() == Coin.valueOf(781) }
+            )
+        } finally {
+            source.receiveAddressGate.countDown()
+        }
+    }
+
+    @Test
     fun postCutover_slowMaxSendableRead_doesNotHoldUpTheBalance() = runTest {
         // The per-account snapshot behind the max-sendable figure can wait on
         // the engine's wallet lock. A balance reading that arrives meanwhile
@@ -1764,8 +1815,10 @@ class CutoverUiDataServiceTest {
         // Released: one more read serves the reading that arrived meanwhile.
         source.maxSendableGate = null
         source.maxSendableDuffs = 700L
+        val readsBeforeRelease = source.maxSendableReads
         gate.complete(Unit)
         runCurrent()
+        assertEquals("exactly one re-read after the release", readsBeforeRelease + 1, source.maxSendableReads)
         assertEquals(Coin.valueOf(700), service.sdkMaxSendable.value)
     }
 
