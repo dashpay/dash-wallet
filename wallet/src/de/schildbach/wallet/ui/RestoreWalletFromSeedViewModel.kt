@@ -191,29 +191,19 @@ class RestoreWalletFromSeedViewModel @Inject constructor(
         selectedCreationDate.value = null
     }
 
-    /**
-     * Normalize - converts all letter to lowercase and to words matching those of a BIP39 word list.
-     * Examples:
-     *   Satoshi -> satoshi (all letters become lowercase)
-     *   TODO: also handle this: medaille -> médaille
-     * @param words - the recovery phrase word list
-     */
-    private fun normalize(words: List<String>): List<String> {
-        return words.map { it.lowercase(Locale.getDefault()) }
-    }
-
     suspend fun restoreWalletFromSeed(
         words: List<String>,
         forgotPinRecovery: Boolean = false
     ): SeedRestoreResult = withContext(Dispatchers.IO) {
-        if (isSeedValid(words)) {
+        val canonicalWords = canonicalWordsOrNull(words)
+        if (canonicalWords != null) {
             // Before any restore work: a wipe marker refuses the replacement.
             if (walletApplication.isWalletReplacementRefused) {
                 log.warn("seed restore refused before it began: a wallet reset is unfinished or unverified")
                 return@withContext SeedRestoreResult.REFUSED
             }
             val creationTime = selectedCreationDate.value
-            val wallet = walletFactory.restoreFromSeed(Constants.NETWORK_PARAMETERS, normalize(words))
+            val wallet = walletFactory.restoreFromSeed(Constants.NETWORK_PARAMETERS, canonicalWords)
             // Forgot-PIN recovery replaces the installed wallet on purpose; an
             // onboarding restore must not (see WalletApplication.installWallet).
             when (walletApplication.installWallet(wallet, forgotPinRecovery)) {
@@ -241,28 +231,33 @@ class RestoreWalletFromSeedViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Looks for the wallet's PIN with the recovery phrase the user typed.
+     *
+     * The wallet holds the wordlist's spelling of its phrase, so that is tried first. A wallet
+     * restored before the restore screen stored that spelling holds the words as they were typed
+     * (lowercased), and its mnemonic-based fallbacks are keyed on them, so those are tried next.
+     */
     suspend fun recoverPin(words: List<String>): RecoveryData? {
-        return if (isSeedValid(words)) {
-            recover(normalize(words))
-        } else {
-            null
-        }
+        val canonicalWords = canonicalWordsOrNull(words) ?: return null
+        recover(canonicalWords)?.let { return it }
+        val typedWords = words.map { it.lowercase(Locale.getDefault()) }
+        return if (typedWords != canonicalWords) recover(typedWords) else null
     }
 
     /**
-     * Checks to see if this seed is valid.  The validation is not case sensitive, nor does it
-     * depend on accent marks or other diacritics.
-     *
-     * @param words
-     * @return
+     * The words in the spelling of the BIP39 wordlist that validates them, or null when no
+     * wordlist does. Validation is not case sensitive, nor does it depend on accent marks or other
+     * diacritics, but the seed is derived from the text of the words: "medaille" for "médaille",
+     * or an autocorrected "thème" for "theme", is a different wallet to dashj and no phrase at all
+     * to the SDK. Everything built from the phrase takes the words this returns.
      */
-    private fun isSeedValid(words: List<String>): Boolean {
+    private fun canonicalWordsOrNull(words: List<String>): List<String>? {
         return try {
-            MnemonicCodeExt.getInstance().check(walletApplication, words)
-            true
+            MnemonicCodeExt.getInstance().canonicalize(walletApplication, words)
         } catch (x: MnemonicException) {
             log.info("problem restoring wallet from seed: ", x)
-            false
+            null
         }
     }
 }

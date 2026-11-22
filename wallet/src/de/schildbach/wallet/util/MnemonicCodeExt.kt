@@ -70,11 +70,29 @@ class MnemonicCodeExt(wordstream: InputStream, wordListDigest: String?) : Mnemon
 
     @Throws(MnemonicException::class)
     fun check(context: Context, words: List<String>) {
+        validatingInstance(context, words)
+    }
+
+    /**
+     * Validates [words] like [check] and returns them in the spelling of the wordlist that
+     * validated them. [check] matches case- and diacritics-insensitively, but dashj derives the
+     * seed from the text it is given and the SDK accepts only exact wordlist entries, so a restore
+     * must build the wallet from these words and not from the words as typed.
+     */
+    @Throws(MnemonicException::class)
+    fun canonicalize(context: Context, words: List<String>): List<String> {
+        return validatingInstance(context, words).bip39Wordlist.canonicalize(words)
+    }
+
+    /** The instance whose wordlist validates [words]: this one, or another language's. */
+    @Throws(MnemonicException::class)
+    private fun validatingInstance(context: Context, words: List<String>): MnemonicCodeExt {
         if (words.size != 12 && words.size != 24) {
             throw MnemonicException.MnemonicLengthException("Word list size must be 12 or 24")
         }
-        try {
+        return try {
             checkWords(words)
+            this
         } catch (x: MnemonicException) {
             checkNonEnglish(context, words, x)
         }
@@ -98,10 +116,13 @@ class MnemonicCodeExt(wordstream: InputStream, wordListDigest: String?) : Mnemon
         }
     }
 
-    private fun checkNonEnglish(context: Context, words: List<String>, initialException: MnemonicException) {
+    private fun checkNonEnglish(
+        context: Context,
+        words: List<String>,
+        initialException: MnemonicException
+    ): MnemonicCodeExt {
         val currentWordlistPath = getWordlistPath(context)
-        val wordlistFiles = context.assets.list(ASSETS_PATH)
-        for (wordlistFileName in wordlistFiles!!) {
+        for (wordlistFileName in context.assets.list(ASSETS_PATH).orEmpty()) {
             val wordlistPath = "$ASSETS_PATH/$wordlistFileName"
             if (wordlistPath == currentWordlistPath) {
                 continue
@@ -109,15 +130,14 @@ class MnemonicCodeExt(wordstream: InputStream, wordListDigest: String?) : Mnemon
             val mnemonicCode = MnemonicCodeExt(context.assets.open(wordlistPath), null)
             try {
                 mnemonicCode.checkWords(words)
-                saveWordlistPath(context, wordlistPath)
-                INSTANCE = mnemonicCode
-                break
             } catch (x: MnemonicException) {
-                if (wordlistFileName == wordlistFiles.last()) {
-                    // re-throw the original exception if checking failed for wordlists in all languages
-                    throw initialException
-                }
+                continue
             }
+            saveWordlistPath(context, wordlistPath)
+            INSTANCE = mnemonicCode
+            return mnemonicCode
         }
+        // No language validates the words: report the failure against the current wordlist.
+        throw initialException
     }
 }

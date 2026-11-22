@@ -61,6 +61,20 @@ class Bip39Test {
     }
 
     @Test
+    fun canonicalize_returnsTheWordlistSpelling() {
+        val wordlist = Bip39Wordlist.ENGLISH
+        assertEquals(
+            listOf("abandon", "theme", "zoo", "hotel"),
+            wordlist.canonicalize(listOf("Abandon", "thème", "ZOO", "hôtel"))
+        )
+        assertEquals(emptyList<String>(), wordlist.canonicalize(emptyList()))
+        val thrown = assertThrows(Bip39Exception.WordException::class.java) {
+            wordlist.canonicalize(listOf("abandon", "yello"))
+        }
+        assertEquals("yello", thrown.badWord)
+    }
+
+    @Test
     fun load_rejectsWrongWordCount() {
         assertThrows(IllegalArgumentException::class.java) {
             Bip39Wordlist.load("one\ntwo\nthree".byteInputStream())

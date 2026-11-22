@@ -73,6 +73,25 @@ class Bip39Wordlist private constructor(private val wordList: List<String>) {
     /** True when [word] is in this wordlist under the same matching rules as dashj's lookup. */
     fun contains(word: String): Boolean = indexOf(word) >= 0
 
+    /**
+     * The wordlist's own spelling of each of [words], matched as [indexOf] does: "Abandon"
+     * becomes "abandon", "medaille" becomes "médaille", "thème" becomes "theme" in English.
+     *
+     * [indexOf] accepts a word that differs from its entry by case or diacritics, but the BIP39
+     * seed is derived from the text of the words, so only this spelling yields the phrase's seed —
+     * and it is the only one a strict BIP39 parser accepts.
+     *
+     * @throws Bip39Exception.WordException a word is not in this wordlist
+     */
+    @Throws(Bip39Exception::class)
+    fun canonicalize(words: List<String>): List<String> = words.map { word ->
+        val index = indexOf(word)
+        if (index < 0) {
+            throw Bip39Exception.WordException(word)
+        }
+        wordList[index]
+    }
+
     companion object {
         /**
          * SHA-256 (lowercase hex) of the concatenated English words — the exact digest constant

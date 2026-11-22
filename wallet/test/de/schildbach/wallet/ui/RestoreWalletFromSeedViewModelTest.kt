@@ -20,6 +20,7 @@ import android.app.Application
 import androidx.test.core.app.ApplicationProvider
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.WalletApplication.WalletInstallResult
+import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.WalletFactory
 import de.schildbach.wallet.util.MnemonicCodeExt
@@ -33,11 +34,14 @@ import io.mockk.unmockkObject
 import io.mockk.unmockkStatic
 import io.mockk.verify
 import kotlinx.coroutines.runBlocking
+import org.bitcoinj.crypto.MnemonicException
+import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.BlockchainServiceConfig
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -60,19 +64,29 @@ class RestoreWalletFromSeedViewModelTest {
         }
     }
 
-    private fun viewModel(app: WalletApplication, factory: WalletFactory, configuration: Configuration = mockk(relaxed = true)) =
-        RestoreWalletFromSeedViewModel(
-            app, factory, configuration, mockk(relaxed = true), mockk(relaxed = true), blockchainServiceConfig
-        ).apply { setWalletCreationDate(selectedDateSecs * 1000) }
+    private fun viewModel(
+        app: WalletApplication,
+        factory: WalletFactory,
+        configuration: Configuration = mockk(relaxed = true),
+        securityFunctions: SecurityFunctions = mockk(relaxed = true)
+    ) = RestoreWalletFromSeedViewModel(
+        app, factory, configuration, securityFunctions, mockk(relaxed = true), blockchainServiceConfig
+    ).apply { setWalletCreationDate(selectedDateSecs * 1000) }
 
     private val words = "abandon ".repeat(11).plus("about").split(" ")
+
+    /** What the user typed for [words]: capitals, and an accent the wordlist does not have. */
+    private val typedWords = listOf("Abandon", "ábandon") + words.drop(2)
+
+    private val mnemonicCode = mockk<MnemonicCodeExt>()
 
     @Before
     fun setUp() {
         mockkStatic(SecurityGuard::class)
         every { SecurityGuard.getInstance() } returns mockk(relaxed = true)
         mockkObject(MnemonicCodeExt.Companion)
-        every { MnemonicCodeExt.getInstance() } returns mockk(relaxed = true)
+        every { MnemonicCodeExt.getInstance() } returns mnemonicCode
+        every { mnemonicCode.canonicalize(any(), any()) } returns words
     }
 
     @After
@@ -153,5 +167,55 @@ class RestoreWalletFromSeedViewModelTest {
             viewModel(app, factory).restoreWalletFromSeed(words, forgotPinRecovery = true)
         )
         verify(exactly = 1) { app.installWallet(any(), true) }
+    }
+
+    @Test
+    fun `the wallet is built from the wordlist's spelling of the phrase, not from the words as typed`() = runBlocking {
+        val app = mockk<WalletApplication>(relaxed = true)
+        every { app.isWalletReplacementRefused } returns false
+        every { app.installWallet(any(), false) } returns WalletInstallResult.INSTALLED
+        val factory = mockk<WalletFactory>()
+        coEvery { factory.restoreFromSeed(any(), any()) } returns mockk<Wallet>()
+
+        assertEquals(SeedRestoreResult.RESTORED, viewModel(app, factory).restoreWalletFromSeed(typedWords))
+        verify { mnemonicCode.canonicalize(any(), typedWords) }
+        coVerify(exactly = 1) { factory.restoreFromSeed(any(), words) }
+    }
+
+    @Test
+    fun `a phrase no wordlist validates builds no wallet`() = runBlocking {
+        every { mnemonicCode.canonicalize(any(), any()) } throws MnemonicException.MnemonicChecksumException()
+        val app = mockk<WalletApplication>(relaxed = true)
+        val factory = mockk<WalletFactory>()
+        val viewModel = viewModel(app, factory)
+
+        assertEquals(SeedRestoreResult.INVALID_SEED, viewModel.restoreWalletFromSeed(typedWords))
+        assertNull(viewModel.recoverPin(typedWords))
+        coVerify(exactly = 0) { factory.restoreFromSeed(any(), any()) }
+    }
+
+    @Test
+    fun `forgot-PIN matches the wordlist's spelling against the wallet's phrase`() = runBlocking {
+        val securityFunctions = mockk<SecurityFunctions>()
+        coEvery { securityFunctions.decryptSeed(any()) } returns DeterministicSeed(words, null, "", 0L)
+
+        val recovered = viewModel(mockk(relaxed = true), mockk(), securityFunctions = securityFunctions)
+            .recoverPin(typedWords)
+
+        assertEquals(false, recovered?.requiresReset)
+        coVerify(exactly = 1) { securityFunctions.decryptSeed(any()) }
+    }
+
+    /** A wallet restored before the restore screen stored the wordlist's spelling. */
+    @Test
+    fun `forgot-PIN still matches a wallet that holds the words as they were typed`() = runBlocking {
+        val storedWords = typedWords.map { it.lowercase() }
+        val securityFunctions = mockk<SecurityFunctions>()
+        coEvery { securityFunctions.decryptSeed(any()) } returns DeterministicSeed(storedWords, null, "", 0L)
+        val viewModel = viewModel(mockk(relaxed = true), mockk(), securityFunctions = securityFunctions)
+
+        assertEquals(false, viewModel.recoverPin(typedWords)?.requiresReset)
+        // The paper phrase is not what that wallet holds.
+        assertNull(viewModel.recoverPin(words))
     }
 }
