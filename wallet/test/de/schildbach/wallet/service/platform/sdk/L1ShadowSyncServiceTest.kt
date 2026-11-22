@@ -1504,27 +1504,6 @@ class L1ShadowSyncServiceTest {
         assertFalse(service.isEngineRunning())
     }
 
-    /** A reset deletes the SPV state after its stop, so a stop that left the teardown running deletes nothing. */
-    @Test
-    fun reset_whoseStopTimedOut_refusesBeforeDeleting_andTheNextStartRecovers() = runBlocking {
-        val source = FakeSource(boundWalletId = walletIdHex)
-        val service = service(source)
-        assertTrue(service.startIfEnabled())
-        source.trackTeardown(stopsThatTimeOut = 1)
-
-        assertFalse(service.resetShadowState(hard = false))
-
-        assertEquals("only the reset's own stop", 1, source.stopCalls)
-        assertEquals("no start was attempted", 1, source.startCalls)
-        assertEquals("nothing was deleted", 0, source.clearL1RowsCalls)
-        assertEquals(0, source.clearSpvStorageCalls)
-
-        // The shield guard's in-place restart finishes the teardown.
-        assertTrue(service.ensureSpvRunning())
-        assertEquals(2, source.stopCalls)
-        assertEquals("the first start, the refused one, and the retry", 3, source.startCalls)
-    }
-
     @Test
     fun startRefusedOverUnfinishedTeardown_aStopThatFailsOtherwiseIsNotRetried() = runBlocking {
         val source = FakeSource(boundWalletId = walletIdHex)

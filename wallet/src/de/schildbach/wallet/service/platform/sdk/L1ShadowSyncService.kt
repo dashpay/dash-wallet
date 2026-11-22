@@ -2694,14 +2694,13 @@ class L1ShadowSyncService internal constructor(
      * So a refused start stops the client again and retries, at most
      * [spvTeardownRetryRounds] times, waiting [spvTeardownRetryDelayMs] after
      * a stop that reports the teardown still running. Past that the refusal
-     * is thrown to the caller: [startIfEnabled] schedules another start, and
-     * [ensureSpvRunning]'s in-place restart reports the failure to its
-     * caller. Any other failure, of the start or of the stop, is thrown at
-     * once.
+     * is thrown to [startIfEnabled], which schedules another start. Any
+     * other failure, of the start or of the stop, is thrown at once.
      *
-     * [resetShadowState] does not need this: it refuses, before deleting
-     * anything, when its own stop reports the teardown unfinished, so its
-     * start only runs after a stop that returned.
+     * Only [startIfEnabled] uses this. The restart inside [resetShadowState]
+     * and the in-place one in [ensureSpvRunning] start the client as they
+     * did before: both run with the engine still marked running, a state
+     * this does not reach, and the reset has deleted SPV state by then.
      */
     private suspend fun startSpvFinishingTeardown(dataDirPath: String) {
         var round = 0
@@ -3594,7 +3593,7 @@ class L1ShadowSyncService internal constructor(
                 if (runningWalletIdHex.value == null) return@withLock false
                 if (source.isSpvRunning()) return@withLock true
                 val dataDir = File(spvDataDirPath()).apply { mkdirs() }
-                holdingEngineStart { startSpvFinishingTeardown(dataDir.absolutePath) }
+                holdingEngineStart { source.startSpv(dataDir.absolutePath) }
                 log.info("ensureSpvRunning: restarted the shadow SPV client for a shield-from-wallet broadcast")
                 true
             }
@@ -5159,19 +5158,8 @@ class L1ShadowSyncService internal constructor(
                     if (!beginPaidHistoryInvalidation(walletIdHex, "shadow reset")) {
                         return false
                     }
-                    try {
-                        source.stopSpv()
-                    } catch (t: Throwable) {
-                        if (t is CancellationException) throw t
-                        // The native teardown is still running and may still
-                        // write what the steps below delete: refuse, with
-                        // nothing deleted yet. The next start finishes it.
-                        if (source.isSpvTeardownIncomplete(t)) {
-                            log.warn("shadow reset refused: the SPV teardown has not finished; nothing was deleted", t)
-                            return false
-                        }
-                        log.warn("shadow reset: SPV stop failed; continuing", t)
-                    }
+                    runCatching { source.stopSpv() }
+                        .onFailure { log.warn("shadow reset: SPV stop failed; continuing", it) }
                     _progress.value = ShadowSyncProgress.IDLE
                     sessionHeaderStart = 0L // the rescan is a new session's work
                     sessionFilterStart = 0L
