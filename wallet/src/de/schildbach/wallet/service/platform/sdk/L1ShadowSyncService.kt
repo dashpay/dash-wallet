@@ -2685,8 +2685,32 @@ class L1ShadowSyncService internal constructor(
     @Volatile
     private var engineStartingSinceMs: Long = 0L
 
-    /** See [engineStartingSinceMs]. */
-    fun engineStartingSinceMs(): Long = engineStartingSinceMs
+    /**
+     * When the start that is waiting out an unfinished SPV teardown was first
+     * refused, on [nowMs]'s clock; 0 when none is. Set when [startIfEnabled]
+     * schedules its retry over that refusal, kept across the retries that
+     * are refused again, and cleared once the engine starts, on [stop], and
+     * when the next refusal is the scan gate's.
+     *
+     * Between two attempts nothing else says a start is pending: the engine
+     * is not running, progress is idle and [engineStartingSinceMs] is back
+     * at 0. The idle rule would stop the service, and that stop cancels the
+     * retry. So [engineStartingSinceMs] reports this instant while the retry
+     * job is alive, and the service's existing cap on a start in flight
+     * bounds the whole wait from the first refusal.
+     */
+    @Volatile
+    private var teardownRetryPendingSinceMs: Long = 0L
+
+    /**
+     * See [engineStartingSinceMs]; a start waiting out an unfinished SPV
+     * teardown counts from its first refusal ([teardownRetryPendingSinceMs]).
+     */
+    fun engineStartingSinceMs(): Long {
+        val pendingSince = teardownRetryPendingSinceMs
+        if (pendingSince != 0L && scanGateRetryJob?.isActive == true) return pendingSince
+        return engineStartingSinceMs
+    }
 
     /**
      * Start the SPV client, first finishing an earlier teardown the SDK is
@@ -3215,6 +3239,7 @@ class L1ShadowSyncService internal constructor(
                         log.info("L1 shadow sync not started: an external stop() arrived during the scan gate")
                         return false
                     }
+                    teardownRetryPendingSinceMs = 0L // this wait is the gate's, which holds nothing
                     val retryInMs = scheduleScanGateRetry(startGeneration)
                     log.warn(
                         "L1 shadow sync not started: the address windows are narrow and their rescan " +
@@ -3359,6 +3384,7 @@ class L1ShadowSyncService internal constructor(
                                 log.info("L1 shadow sync not started: an external stop() arrived during the start")
                                 return false
                             }
+                            if (teardownRetryPendingSinceMs == 0L) teardownRetryPendingSinceMs = nowMs()
                             val retryInMs = scheduleScanGateRetry(startGeneration)
                             log.warn(
                                 "L1 shadow sync not started: an earlier SPV teardown has still not finished; " +
@@ -3372,6 +3398,7 @@ class L1ShadowSyncService internal constructor(
                     // Only now: a start still refused over an unfinished
                     // teardown shares this backoff, and it gets past the gate.
                     scanGateRefusals = 0
+                    teardownRetryPendingSinceMs = 0L
                     // Seed the committed-cursor tracker from the durable
                     // watermark so the drain predicate has evidence before the
                     // session's first SyncHeightAdvanced event; a failed read
@@ -3445,6 +3472,7 @@ class L1ShadowSyncService internal constructor(
         scanGateRetryJob?.cancel()
         scanGateRetryJob = null
         scanGateRefusals = 0
+        teardownRetryPendingSinceMs = 0L
         stopInternal()
     }
 
