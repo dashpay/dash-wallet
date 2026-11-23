@@ -3013,7 +3013,8 @@ class L1ShadowSyncServiceTest {
         assertTrue(service.recoverByRecreatingWallet())
 
         // 1. shadow SPV + shielded stopped BEFORE the destructive steps…
-        assertEquals(1, spvStoppedWhenRemoved)
+        //    (the stop, and the second one that confirms its teardown is through)
+        assertEquals(2, spvStoppedWhenRemoved)
         assertEquals(
             listOf("stopShielded", "removeWallet", "resetBinderLatch", "rebind"),
             recreator.events
@@ -3252,7 +3253,9 @@ class L1ShadowSyncServiceTest {
             listOf("stopShielded", "removeWallet", "resetBinderLatch", "rebind"),
             recreator.events
         )
-        assertEquals(0, source.stopCalls) // nothing was running to stop
+        // Nothing was running to stop, but a teardown left by an earlier stop
+        // is not visible from here: the one stop is the check for it.
+        assertEquals(1, source.stopCalls)
         // Bind job is completed by default → restart attempt happens and
         // succeeds (the fake still reports a bound wallet).
         assertEquals(1, source.startCalls)
@@ -3276,6 +3279,77 @@ class L1ShadowSyncServiceTest {
         assertTrue(service.startIfEnabled())
         assertFalse(service.recoverByRecreatingWallet())
         assertEquals(0, source.stopCalls) // nothing torn down
+    }
+
+    @Test
+    fun recoverByRecreatingWallet_refusesWhileTheSpvTeardownIsStillRunning() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val recreator = FakeRecreator()
+        val service = service(source, recreator = recreator, spvTeardownRetryRounds = 2)
+        assertTrue(service.startIfEnabled())
+        val spvDir = dataDir.resolve("spv").apply { mkdirs() }
+        spvDir.resolve("headers.dat").writeText("chain data")
+        // The re-creation's own stop and every stop of its two rounds time out.
+        source.trackTeardown(stopsThatTimeOut = 4)
+
+        assertFalse(
+            "nothing may be deleted under a teardown that is still running",
+            service.recoverByRecreatingWallet()
+        )
+        assertFalse(recreator.events.contains("removeWallet"))
+        assertTrue("the dataDir is untouched", spvDir.resolve("headers.dat").exists())
+
+        // With the teardown through, the same re-runnable path succeeds.
+        recreator.bindJob = kotlinx.coroutines.Job()
+        assertTrue(service.recoverByRecreatingWallet())
+        assertEquals(listOf(walletIdHex), recreator.removedWalletIds)
+        assertFalse("the dataDir went with the wallet", spvDir.exists())
+    }
+
+    @Test
+    fun recoverByRecreatingWallet_deletesOnlyAfterTheTeardownIsThrough() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val recreator = FakeRecreator()
+        val service = service(source, recreator = recreator)
+        assertTrue(service.startIfEnabled())
+        val spvDir = dataDir.resolve("spv")
+        val stale = spvDir.resolve("headers.stale")
+        var stops = 0
+        source.onStop = {
+            if (stops++ == 0) throw TeardownIncomplete("SPV teardown timed out; it is still tracked for a retry")
+            // The old client's last persist lands before this stop sees its teardown through.
+            spvDir.mkdirs()
+            stale.writeText("written back by the old client")
+        }
+        recreator.bindJob = kotlinx.coroutines.Job() // no restart: the dataDir is inspected as the re-creation left it
+
+        assertTrue(service.recoverByRecreatingWallet())
+
+        assertEquals(listOf(walletIdHex), recreator.removedWalletIds)
+        assertFalse("what the old teardown wrote back went with the dataDir", stale.exists())
+    }
+
+    @Test
+    fun clearForWalletWipe_waitsForTheSpvTeardown_beforeRemovingTheWallet() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val recreator = FakeRecreator()
+        val service = service(source, recreator = recreator, spvTeardownRetryRounds = 1)
+        assertTrue(service.startIfEnabled())
+        var timedOut = 0
+        var removedWhilePending = false
+        source.onStop = {
+            if (timedOut < 5) {
+                timedOut++
+                throw TeardownIncomplete("SPV teardown timed out; it is still tracked for a retry")
+            }
+        }
+        recreator.onRemove = { removedWhilePending = timedOut < 5 }
+
+        withTimeout(5_000) { service.clearForWalletWipe() }
+
+        assertEquals("the wipe outwaits more stops than a start's rounds", 5, timedOut)
+        assertFalse(removedWhilePending)
+        assertEquals(listOf(walletIdHex), recreator.removedWalletIds)
     }
 
     @Test
@@ -3349,7 +3423,7 @@ class L1ShadowSyncServiceTest {
         // The teardown ran, but neither the binder latch nor the rebind may
         // fire against a wallet whose removal state is unknown.
         assertEquals(listOf("stopShielded", "removeWallet"), recreator.events)
-        assertEquals(1, source.stopCalls)
+        assertEquals("the stop, and the one confirming its teardown", 2, source.stopCalls)
         assertEquals(1, source.startCalls) // no restart launched
     }
 
