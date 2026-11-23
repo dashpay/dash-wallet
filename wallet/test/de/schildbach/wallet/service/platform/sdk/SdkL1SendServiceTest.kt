@@ -2441,7 +2441,11 @@ class SdkL1SendServiceTest {
         val build = async(Dispatchers.IO) {
             svc.buildDeferredPayment(listOf(validAddress to 10_000L), stillOwned = { true })
         }
-        building.await()
+        // Bounded: a build refused before it reaches the SDK fails here instead of hanging.
+        assertTrue(
+            "the build never reached the SDK",
+            building.await(10, java.util.concurrent.TimeUnit.SECONDS)
+        )
         build.cancel()
         finish.countDown()
         build.join()
