@@ -146,16 +146,9 @@ class ContactSupportDialogFragment : OffsetDialogFragment(R.layout.dialog_contac
                 collectApplicationLog,
                 collectWalletDump
             )
-            val launched = startSend(viewModel.subject(), reportText, attachments)
+            startSend(viewModel.subject(), reportText, attachments)
             binding.reportGenerationProgressContainer.isVisible = false
-            if (launched) {
-                dismiss()
-            } else {
-                // Android refused the chooser (startSend showed why): keep the
-                // sheet and the draft, so the user can untick a section and
-                // send again. Auto-logout comes back as dismiss() would do it.
-                (requireActivity() as? SecureActivity)?.turnOnAutoLogout()
-            }
+            dismiss()
         }
     }
 
@@ -165,8 +158,7 @@ class ContactSupportDialogFragment : OffsetDialogFragment(R.layout.dialog_contac
         super.dismiss()
     }
 
-    /** Opens the share chooser for the report; false when Android refused to launch it. */
-    private fun startSend(subject: CharSequence?, text: CharSequence, attachments: ArrayList<Uri>): Boolean {
+    private fun startSend(subject: CharSequence?, text: CharSequence, attachments: ArrayList<Uri>) {
         val intent: Intent
         if (attachments.isEmpty()) {
             intent = Intent(Intent.ACTION_SEND)
@@ -192,13 +184,11 @@ class ContactSupportDialogFragment : OffsetDialogFragment(R.layout.dialog_contac
                 )
             )
             log.info("invoked chooser for sending issue report")
-            return true
         } catch (x: Exception) {
             Toast.makeText(context, R.string.report_issue_dialog_mail_intent_failed, Toast.LENGTH_LONG).show()
             // The class only: the report text is in this intent, and its
             // message can carry it (wallet.log is attached to the next report).
             log.error("report issue failed: {}", x.javaClass.simpleName)
-            return false
         }
     }
 }
