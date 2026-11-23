@@ -325,6 +325,29 @@ class L1ShadowSyncServiceTest {
      * exposes a controllable bind [Job] so tests can verify the shadow
      * restart WAITS for the rebind pass.
      */
+    /**
+     * Parks the scheduled start retry in its enablement read (the first thing
+     * `startIfEnabled` does) until [gate] completes, so a test decides when
+     * the retry runs instead of racing its delay. Armed from the next
+     * `startSpv`, which the start under test reaches after its own read.
+     */
+    private class ParkedRetry {
+        val gate = CompletableDeferred<Unit>()
+        val parked = java.util.concurrent.atomic.AtomicInteger()
+        private val armed = java.util.concurrent.atomic.AtomicBoolean()
+        val flagGate: () -> CompletableDeferred<Unit>? = {
+            if (armed.get()) gate.also { parked.incrementAndGet() } else null
+        }
+
+        fun armOnTheNextStart(source: FakeSource) {
+            val onStart = source.onStart
+            source.onStart = {
+                armed.set(true)
+                onStart()
+            }
+        }
+    }
+
     private class FakeRecreator : ShadowWalletRecreator {
         val events = mutableListOf<String>()
         val removedWalletIds = mutableListOf<String>()
@@ -1643,16 +1666,22 @@ class L1ShadowSyncServiceTest {
     @Test
     fun startStillRefusedAfterItsRounds_retriesOnItsOwn_untilTheTeardownFinishes() = runBlocking {
         val source = FakeSource(boundWalletId = walletIdHex)
-        val service = service(source, spvTeardownRetryRounds = 2, scanGateRetryInitialMs = 20)
+        val retry = ParkedRetry()
+        val service = service(
+            source, spvTeardownRetryRounds = 2, scanGateRetryInitialMs = 20, flagGate = retry.flagGate
+        )
         assertTrue(service.startIfEnabled())
         source.trackTeardown(stopsThatTimeOut = 4)
+        retry.armOnTheNextStart(source)
 
         service.launchStallRestart(stuckAt = 2_498_000L).join()
 
+        // The scheduled retry cannot get past its enablement read yet.
         assertFalse("still refused after two rounds", service.isEngineRunning())
         assertEquals("the restart's stop and one per round", 3, source.stopCalls)
         assertEquals("the first start, the refused one, and one per round", 4, source.startCalls)
 
+        retry.gate.complete(Unit)
         withTimeout(5_000) { while (!service.isEngineRunning()) delay(10) }
         service.stop()
     }
@@ -1660,17 +1689,25 @@ class L1ShadowSyncServiceTest {
     @Test
     fun startStillRefusedAfterItsRounds_doesNotRetry_afterAnExternalStop() = runBlocking {
         val source = FakeSource(boundWalletId = walletIdHex)
-        val service = service(source, spvTeardownRetryRounds = 1, scanGateRetryInitialMs = 20)
+        val retry = ParkedRetry()
+        val service = service(
+            source, spvTeardownRetryRounds = 1, scanGateRetryInitialMs = 20, flagGate = retry.flagGate
+        )
         assertTrue(service.startIfEnabled())
         source.trackTeardown(stopsThatTimeOut = 3)
+        retry.armOnTheNextStart(source)
         service.launchStallRestart(stuckAt = 2_498_000L).join()
         assertFalse(service.isEngineRunning())
+        // The retry has woken and is parked in its enablement read, before the mutex.
+        withTimeout(5_000) { while (retry.parked.get() == 0) delay(5) }
+        val startsBeforeStop = source.startCalls
+        val stopsBeforeStop = source.stopCalls
 
         service.stop()
-        val startsAtStop = source.startCalls
-        delay(200)
+        retry.gate.complete(Unit)
 
-        assertEquals("the scheduled retry was cancelled by the stop", startsAtStop, source.startCalls)
+        assertEquals("the retry did not start after the stop", startsBeforeStop, source.startCalls)
+        assertEquals("and stopped nothing again either", stopsBeforeStop, source.stopCalls)
         assertFalse(service.isEngineRunning())
     }
 
