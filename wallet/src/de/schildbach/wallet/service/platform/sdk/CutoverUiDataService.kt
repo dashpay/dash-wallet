@@ -37,6 +37,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
@@ -4508,11 +4509,23 @@ class CutoverUiDataService internal constructor(
             for (due in spendFiguresDue) refreshSpendFigures(walletIdHex)
         }
 
+        // Saving the balance gets ONE writer of its own ([saveBalance]).
+        // A reading is judged fit to save when it is taken ([updateSdkBalance])
+        // and only the storage write waits here, so a slow write no longer
+        // keeps the next reading from being taken and judged while the engine
+        // is still synced. One writer keeps the writes in order; conflated,
+        // because a newer figure fit to save replaces an older one not yet
+        // written.
+        val balanceSaves = Channel<Long>(Channel.CONFLATED)
+        launch {
+            for (duffs in balanceSaves) saveBalance(duffs)
+        }
+
         // Seed the confirmed/total split once up front so the shielded screen's
         // Max (confirmed) and pending (total − confirmed) are populated before
         // the first tx event or ticker tick.
         try {
-            refreshNativeSplit(walletIdHex)
+            refreshNativeSplit(walletIdHex, balanceSaves)
             spendFiguresDue.trySend(Unit)
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
@@ -4535,8 +4548,8 @@ class CutoverUiDataService internal constructor(
         // published strictly one after another. The Room-triggered source is
         // used as a trigger only (its figure is the same native read): with
         // its own collector, two publications could interleave and an older
-        // reading be saved as the launch seed, or become the header's
-        // fallback, after a newer one ([updateSdkBalance]).
+        // reading be saved as the last-known balance, or become the header's
+        // fallback, after a newer one ([updateSdkBalance], [saveBalance]).
         // The receive-address read blocks in the FFI, so it gets its own
         // collector: parked, it must not hold up a balance reading
         // ([refreshReceiveAddress]). The ticker emits at once, which is the
@@ -4560,7 +4573,7 @@ class CutoverUiDataService internal constructor(
         }
         // The balance triggers take the same conflated handoff as the address
         // lane, for the same reason: a reading stuck on the native read or the
-        // seed write must not stop [txEvents] being drained. A trigger that
+        // balance save must not stop [txEvents] being drained. A trigger that
         // arrives during a reading is served by one more reading after it.
         val balanceDue = Channel<Unit>(Channel.CONFLATED)
         launch {
@@ -4580,7 +4593,7 @@ class CutoverUiDataService internal constructor(
                     // reaches 0 immediately after a max send. On error this throws and
                     // the catch keeps the prior override values (never zeroes the
                     // header on a transient read failure).
-                    refreshNativeSplit(walletIdHex)
+                    refreshNativeSplit(walletIdHex, balanceSaves)
                     spendFiguresDue.trySend(Unit)
                 } catch (t: Throwable) {
                     if (t is CancellationException) throw t
@@ -4669,10 +4682,10 @@ class CutoverUiDataService internal constructor(
      * confirmed-only feed ([sdkConfirmedBalance], the shielded Max). One
      * `balance()` read keeps the two in lockstep.
      */
-    private suspend fun refreshNativeSplit(walletIdHex: String) {
+    private suspend fun refreshNativeSplit(walletIdHex: String, balanceSaves: SendChannel<Long>) {
         val split = source.currentBalanceSplitDuffs(walletIdHex)
         _sdkConfirmedBalance.value = Coin.valueOf(split.confirmed)
-        updateSdkBalance(split.total)
+        updateSdkBalance(split.total, balanceSaves)
     }
 
     /**
@@ -4748,7 +4761,7 @@ class CutoverUiDataService internal constructor(
         }
     }
 
-    private suspend fun updateSdkBalance(duffs: Long) {
+    private suspend fun updateSdkBalance(duffs: Long, balanceSaves: SendChannel<Long>) {
         val previous = _sdkTotalBalance.value
         val synced = _l1Synced.value
         val backfillStatus = dashPayBackfillStatus()
@@ -4865,9 +4878,20 @@ class CutoverUiDataService internal constructor(
             )
         }
         if (!persist) return
-        // Single caller at a time ([balancePipeline]'s one collector), so the
-        // write and the fallback update below cannot interleave with another
-        // publication.
+        // Judged fit to save NOW, on the conditions read above; the storage
+        // write itself is the balance writer's ([saveBalance]), so this collector
+        // can take the next reading without waiting for it.
+        balanceSaves.trySend(duffs)
+    }
+
+    /**
+     * Write a figure [updateSdkBalance] judged fit to save as the last-known balance,
+     * then make it the header's fallback. Only [balancePipeline]'s one balance
+     * writer calls this, so the writes land in the order they were handed
+     * over and the write and the fallback update below cannot interleave with
+     * another one.
+     */
+    private suspend fun saveBalance(duffs: Long) {
         try {
             walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, duffs)
         } catch (t: Throwable) {
@@ -4875,7 +4899,7 @@ class CutoverUiDataService internal constructor(
             log.warn("failed to persist LAST_TOTAL_BALANCE", t)
             return
         }
-        // The figure just accepted as the launch seed is also what the
+        // The figure just saved as the last-known balance is also what the
         // header must fall back to for the rest of THIS process; see
         // [_lastKnownTotalBalance]. Only after the write succeeded, so the
         // two never disagree. A zero lands here too: the overlay ignores a
@@ -4883,17 +4907,15 @@ class CutoverUiDataService internal constructor(
         val previousLastKnown = _lastKnownTotalBalance.value
         _lastKnownTotalBalance.value = Coin.valueOf(duffs)
         // EDGE LOG: once per distinct value written, not per tick. The
-        // publication line above is gated on the DISPLAYED figure changing,
-        // and the ticker re-runs this write every interval, so a seed that
+        // publication line in [updateSdkBalance] is gated on the DISPLAYED figure changing,
+        // and the ticker re-runs this write every interval, so a save that
         // lands only after the pipeline drains — with the figure long
         // settled — used to leave no trace at all.
         if (lastPersistedDuffs != duffs) {
             lastPersistedDuffs = duffs
             log.info(
-                "SDK balance PERSISTED as the launch seed: {} duffs (was {}) | l1Synced={} " +
-                    "pipelineLagging={} rescanArmedHold={} backfillSettled={} buildsSettled={}",
-                duffs, previousLastKnown?.value ?: "none", synced, lagging,
-                armedRescanHold, backfillStatus.settled, buildsSettled
+                "SDK balance PERSISTED as the launch seed: {} duffs (was {})",
+                duffs, previousLastKnown?.value ?: "none"
             )
         }
     }

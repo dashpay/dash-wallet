@@ -1546,7 +1546,7 @@ class CutoverUiDataServiceTest {
     @Test
     fun postCutover_engineStopAfterASpend_holdsThePersistedFigureNotTheLaunchOne() = runTest {
         // 12.0.1-beta field report: the wallet opened on 11.03225474 DASH, was
-        // shielded down to 781 duffs (persisted as the launch seed), and at
+        // shielded down to 781 duffs (saved as the last-known balance), and at
         // the next engine stop the header went back to the launch figure.
         val source = FakeSource(balanceDuffs = MutableStateFlow(1_103_225_474L))
         val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
@@ -1559,7 +1559,7 @@ class CutoverUiDataServiceTest {
         service.start()
         runCurrent()
 
-        // The spend settles while synced and is accepted as the launch seed.
+        // The spend settles while synced and is saved as the last-known balance.
         source.balanceDuffs.value = 781L
         runCurrent()
         coVerify { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 781L) }
@@ -1604,7 +1604,7 @@ class CutoverUiDataServiceTest {
     }
 
     @Test
-    fun postCutover_failedSeedWrite_leavesTheHeldFigureAlone() = runTest {
+    fun postCutover_failedBalanceSave_leavesTheHeldFigureAlone() = runTest {
         // The in-memory figure follows the PERSISTED one, so a write that
         // failed must not move it: memory and disk never disagree.
         val source = FakeSource(balanceDuffs = MutableStateFlow(900_000L))
@@ -1628,11 +1628,13 @@ class CutoverUiDataServiceTest {
     }
 
     @Test
-    fun postCutover_balanceReadingsArePublishedOneAtATime() = runTest {
+    fun postCutover_balanceSavesLandInOrder_withoutHoldingUpTheNextReading() = runTest {
         // Every balance trigger (Room change, tx event, ticker) goes through
-        // ONE collector. With two, a newer reading could be published and
-        // saved while an older one was still mid-save, and the older one then
-        // landed last — as the launch seed and as the header's fallback.
+        // ONE collector, and every save through ONE writer. With two writers
+        // an older save could land after a newer one, as the last-known balance and
+        // as the header's fallback. And a slow save must not keep the next
+        // reading from being taken: it is judged fit to save when it is read,
+        // so an engine stop during the slow save cannot lose it.
         val events = kotlinx.coroutines.flow.MutableSharedFlow<L1TxEvent>(extraBufferCapacity = 4)
         val source = FakeSource(balanceDuffs = MutableStateFlow(1_103_225_474L))
         val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
@@ -1657,22 +1659,28 @@ class CutoverUiDataServiceTest {
             assertTrue("the older write must be parked", pumpUntil { olderWriteParked.isCompleted })
 
             // The spend lands while that save is still in flight. Its reading
-            // must wait its turn, not overtake.
+            // is published at once; its save must wait its turn, not overtake.
             source.balanceDuffs.value = 781L
             events.emit(L1TxEvent.Detected(displayHex(3), -899_219L, null, contextCode = 0, directionCode = 0))
             runCurrent()
-            assertEquals(Coin.valueOf(900_000), service.sdkBalanceOrNull())
+            assertEquals(Coin.valueOf(781), service.sdkBalanceOrNull())
+            coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 781L) }
+
+            // The engine stops BEFORE the older save is released. The 781
+            // reading was taken while synced, so it is still saved.
+            synced.value = false
+            runCurrent()
             coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 781L) }
         } finally {
             releaseOlderWrite.complete(Unit)
         }
 
-        // Once the older save finishes, the newer reading follows it.
-        assertTrue(pumpUntil { service.sdkBalanceOrNull() == Coin.valueOf(781) })
+        // Once the older save finishes, the newer one follows it, in order.
         runCurrent()
-        coVerify { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 781L) }
-        synced.value = false
-        runCurrent()
+        io.mockk.coVerifyOrder {
+            walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 900_000L)
+            walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 781L)
+        }
         assertEquals(Coin.valueOf(781), service.overlayTotalBalance(flowOf(Coin.valueOf(999))).first())
     }
 
