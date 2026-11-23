@@ -193,6 +193,9 @@ class SdkBlockchainStateService internal constructor(
         // Equality gate state: the last PROPAGATED snapshot, plus the last
         // OBSERVED progress and when it changed (the stall clock's input).
         var lastPropagated: SdkChainSnapshot? = null
+        // The last update handed to the writer: a snapshot can differ in a field the row does
+        // not store (the wallet cursor, published on every advance) and derive the same update.
+        var lastApplied: SdkBlockchainStateUpdate? = null
         var lastProgress: ShadowSyncProgress? = null
         var lastProgressChangeMs = nowMs()
         // One log line per static spell that the aggregate exempts from the
@@ -262,7 +265,13 @@ class SdkBlockchainStateService internal constructor(
                 // Room write, no flow churn (see class KDoc).
                 if (snapshot == lastPropagated) return@collect
                 lastPropagated = snapshot
-                applyUpdate(deriveBlockchainStateUpdate(snapshot, now))
+                // The second gate: a different snapshot that derives the same update (a wallet
+                // cursor advance during a catch-up) costs no Room read, write or observer
+                // invalidation (thepastaclaw on #1721).
+                val update = deriveBlockchainStateUpdate(snapshot, now)
+                if (update == lastApplied) return@collect
+                lastApplied = update
+                applyUpdate(update)
             }
     }
 
