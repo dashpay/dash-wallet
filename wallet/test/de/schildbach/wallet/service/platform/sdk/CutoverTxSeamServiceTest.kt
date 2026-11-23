@@ -85,7 +85,7 @@ class CutoverTxSeamServiceTest {
             return boundWalletId
         }
 
-        override fun observeTotalDuffs(walletIdHex: String): Flow<Long> = emptyFlow()
+        override fun observeBalanceChanges(walletIdHex: String): Flow<Unit> = emptyFlow()
 
         override suspend fun currentTotalDuffs(walletIdHex: String): Long = 0L
 

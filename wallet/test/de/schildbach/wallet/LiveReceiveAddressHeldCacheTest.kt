@@ -78,7 +78,7 @@ class LiveReceiveAddressHeldCacheTest {
     ) : CutoverUiSource {
         override suspend fun boundWalletIdOrNull(): String? = "cd".repeat(32)
 
-        override fun observeTotalDuffs(walletIdHex: String): Flow<Long> = MutableStateFlow(123_456L)
+        override fun observeBalanceChanges(walletIdHex: String): Flow<Unit> = MutableStateFlow(Unit)
 
         override suspend fun currentTotalDuffs(walletIdHex: String): Long = 123_456L
 
