@@ -2852,6 +2852,12 @@ class L1ShadowSyncService internal constructor(
     private var firstSyncRecordingAllowed = false
     private val firstSyncRecordMutex = Mutex()
 
+    /** Serializes [publishProgress]; taken before [firstSyncRecordMutex], never after it. */
+    private val progressPublishMutex = Mutex()
+
+    /** This session's latest SPV snapshot, as received; under [progressPublishMutex]. */
+    private var latestSpvSnapshot: ShadowSyncProgress? = null
+
     /** Live shadow SPV progress ([ShadowSyncProgress.IDLE] while stopped). */
     val progress: StateFlow<ShadowSyncProgress> = _progress.asStateFlow()
 
@@ -3404,9 +3410,7 @@ class L1ShadowSyncService internal constructor(
             runCatching { source.stopSpv() }
                 .onFailure { log.warn("failed to stop the shadow SPV client", it) }
             logWatermarkAtStop(walletIdHex, committedAtStop, filterAtStop)
-            _progress.value = ShadowSyncProgress.IDLE
-            sessionHeaderStart = 0L // the next session measures its own work
-            sessionFilterStart = 0L
+            clearPublishedProgress() // the next session measures its own work
             _engineWalletSyncedHeight.value = 0L // re-seeded on the next start
             synchronized(durableHeightLock) {
                 durableHeightGeneration++
@@ -3584,18 +3588,59 @@ class L1ShadowSyncService internal constructor(
     }
 
     /**
-     * The wallet cursor is not part of an SPV snapshot, so the snapshot that ends the first scan
-     * can arrive before the cursor event that completes it; with no later snapshot the monitor
-     * never looks again and the record would wait for the next block, or the next session if
-     * the scanner stops first (thepastaclaw on #1721). So a cursor move asks the same question
-     * of the latest snapshot. Only the record is written here; the monitor stays the one writer
-     * of [progress] and reads the record on its next snapshot.
+     * The one place [progress] is written while the scanner runs. Its two inputs arrive on
+     * different feeds: the SPV snapshot from the monitor, the wallet cursor from the event tap.
+     * Each used to act on its own copy of the other, so a snapshot and a cursor event that
+     * overlapped could both see the other's old value, and a cursor that caught up after the last
+     * snapshot never reached the funding gate (thepastaclaw on #1721). Under
+     * [progressPublishMutex] the latest of both is combined, the first-sync record is written
+     * the first time the strict gate passes, and the result is published.
+     *
+     * [snapshot] is a new SPV snapshot, or null for a cursor move, which republishes the latest
+     * one. Null back when there is no snapshot of this session yet.
      */
-    private suspend fun recordFirstSyncDoneOnCursorMove(walletSyncedHeight: Long) {
-        val walletIdHex = runningWalletIdHex.value ?: return
-        if (firstSyncDoneWalletIdHex == walletIdHex) return
-        val latest = _progress.value.copy(walletSyncedHeight = walletSyncedHeight, firstSyncDone = false)
-        if (evaluateWalletFundingGate(latest).allowed) recordFirstSyncDone(walletIdHex)
+    private suspend fun publishProgress(snapshot: ShadowSyncProgress?): ShadowSyncProgress? =
+        progressPublishMutex.withLock {
+            val raw = snapshot ?: latestSpvSnapshot ?: return@withLock null
+            latestSpvSnapshot = raw
+            // The session's work floor: a running MINIMUM, because
+            // the first snapshot reads the wallet's stored height and
+            // the DashPay backfill rewinds the filter cursor below it
+            // a few seconds later (§38.2). Zeros carry no position.
+            if (raw.headerHeight > 0 && (sessionHeaderStart == 0L || raw.headerHeight < sessionHeaderStart)) {
+                sessionHeaderStart = raw.headerHeight
+            }
+            if (raw.filterHeight > 0 && (sessionFilterStart == 0L || raw.filterHeight < sessionFilterStart)) {
+                sessionFilterStart = raw.filterHeight
+            }
+            val sessionWalletIdHex = runningWalletIdHex.value
+            var mapped = raw.copy(
+                walletSyncedHeight = _engineWalletSyncedHeight.value,
+                sessionHeaderStart = sessionHeaderStart,
+                sessionFilterStart = sessionFilterStart,
+                firstSyncDone = sessionWalletIdHex != null && firstSyncDoneWalletIdHex == sessionWalletIdHex
+            )
+            // The first time the strict gate passes for this wallet, its first scan
+            // is over: saved, so later catch-ups do not block sending.
+            if (!mapped.firstSyncDone && sessionWalletIdHex != null &&
+                evaluateWalletFundingGate(mapped).allowed &&
+                recordFirstSyncDone(sessionWalletIdHex)
+            ) {
+                mapped = mapped.copy(firstSyncDone = true)
+            }
+            _progress.value = mapped
+            mapped
+        }
+
+    /**
+     * Back to [ShadowSyncProgress.IDLE] for a stop or a reset, and the latest snapshot forgotten,
+     * so a cursor event that arrives afterwards cannot publish the ended scan again.
+     */
+    private suspend fun clearPublishedProgress() = progressPublishMutex.withLock {
+        latestSpvSnapshot = null
+        _progress.value = ShadowSyncProgress.IDLE
+        sessionHeaderStart = 0L
+        sessionFilterStart = 0L
     }
 
     /**
@@ -3643,33 +3688,7 @@ class L1ShadowSyncService internal constructor(
                     // caught-up predicate can see block/tx-pipeline churn
                     // the typed SPV progress hides (fed at ≤1s staleness —
                     // this feed ticks at 1 Hz while SPV runs).
-                    val raw = toShadowSyncProgress(data)
-                    // The session's work floor: a running MINIMUM, because
-                    // the first snapshot reads the wallet's stored height and
-                    // the DashPay backfill rewinds the filter cursor below it
-                    // a few seconds later (§38.2). Zeros carry no position.
-                    if (raw.headerHeight > 0 && (sessionHeaderStart == 0L || raw.headerHeight < sessionHeaderStart)) {
-                        sessionHeaderStart = raw.headerHeight
-                    }
-                    if (raw.filterHeight > 0 && (sessionFilterStart == 0L || raw.filterHeight < sessionFilterStart)) {
-                        sessionFilterStart = raw.filterHeight
-                    }
-                    val sessionWalletIdHex = runningWalletIdHex.value
-                    var mapped = raw.copy(
-                        walletSyncedHeight = _engineWalletSyncedHeight.value,
-                        sessionHeaderStart = sessionHeaderStart,
-                        sessionFilterStart = sessionFilterStart,
-                        firstSyncDone = sessionWalletIdHex != null && firstSyncDoneWalletIdHex == sessionWalletIdHex
-                    )
-                    // The first time the strict gate passes for this wallet, its first scan
-                    // is over: saved, so later catch-ups do not block sending.
-                    if (!mapped.firstSyncDone && sessionWalletIdHex != null &&
-                        evaluateWalletFundingGate(mapped).allowed &&
-                        recordFirstSyncDone(sessionWalletIdHex)
-                    ) {
-                        mapped = mapped.copy(firstSyncDone = true)
-                    }
-                    _progress.value = mapped
+                    val mapped = checkNotNull(publishProgress(toShadowSyncProgress(data)))
                     filterStallDecider.onFilterProgress(mapped.filterHeight)
                     // Verification verdict from the chain state: still
                     // scanning until SYNCED, then "probing" until a parity
@@ -3820,7 +3839,7 @@ class L1ShadowSyncService internal constructor(
                     // the tracked value and must replace it.
                     parseL1SyncHeightAdvanced(debug)?.let { height ->
                         _engineWalletSyncedHeight.value = height
-                        recordFirstSyncDoneOnCursorMove(height)
+                        publishProgress(snapshot = null)
                     }
                     // A block that stored or confirmed a wallet transaction, or
                     // a sweep that removed one, changes the history the
@@ -5187,9 +5206,7 @@ class L1ShadowSyncService internal constructor(
                     if (!forgetFirstSyncDone("shadow reset")) return false
                     runCatching { source.stopSpv() }
                         .onFailure { log.warn("shadow reset: SPV stop failed; continuing", it) }
-                    _progress.value = ShadowSyncProgress.IDLE
-                    sessionHeaderStart = 0L // the rescan is a new session's work
-                    sessionFilterStart = 0L
+                    clearPublishedProgress() // the rescan is a new session's work
                     // Pre-reset parity evidence must never count toward a cutover.
                     parityStreakRecorder.clear()
                     if (hard) {

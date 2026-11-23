@@ -1430,10 +1430,11 @@ class L1ShadowSyncServiceTest {
 
     /**
      * thepastaclaw on #1721. The snapshot that ends the scan can arrive before the wallet cursor
-     * catches up, and no further snapshot follows: the cursor event alone must save the record.
+     * catches up, and no further snapshot follows: the cursor event alone must save the record
+     * and open the live funding gate.
      */
     @Test
-    fun firstSync_isSavedWhenTheCursorCatchesUp_withNoFurtherSnapshot() = runBlocking {
+    fun firstSync_isSavedAndPublishedWhenTheCursorCatchesUp_withNoFurtherSnapshot() = runBlocking {
         val source = FakeSource(boundWalletId = walletIdHex)
         source.walletSyncedHeight = 10
         val service = service(source, cutoverState = "CUT_OVER")
@@ -1442,11 +1443,14 @@ class L1ShadowSyncServiceTest {
         source.progressFlow.value = atTip()
         withTimeout(5_000) { while (service.progress.value.phase != ShadowSyncPhase.SYNCED) delay(5) }
         assertNull("the cursor is still behind the tip", firstSyncRecord)
+        assertFalse(evaluateWalletFundingGate(service.progress.value).allowed)
 
         source.eventStrings.emit("SyncHeightAdvanced { wallet_id: WalletId([205]), height: 100 }")
 
-        withTimeout(5_000) { while (firstSyncRecord == null) delay(5) }
+        withTimeout(5_000) { while (!service.progress.value.firstSyncDone) delay(5) }
         assertEquals(walletIdHex, firstSyncRecord)
+        assertEquals("the cursor reached the live progress", 100L, service.progress.value.walletSyncedHeight)
+        assertTrue("the live gate is open", evaluateWalletFundingGate(service.progress.value).allowed)
     }
 
     /**
