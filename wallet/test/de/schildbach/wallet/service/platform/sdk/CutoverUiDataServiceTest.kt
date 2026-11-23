@@ -1685,6 +1685,48 @@ class CutoverUiDataServiceTest {
     }
 
     @Test
+    fun stopForWalletWipe_dropsABalanceWaitingBehindASlowSave() = runTest {
+        // Reset Wallet stops the pipeline before it clears wallet_ui. A balance
+        // still waiting behind a slow save must be dropped by that stop, or it
+        // would be written after the clear and shown by the next wallet.
+        val events = kotlinx.coroutines.flow.MutableSharedFlow<L1TxEvent>(extraBufferCapacity = 4)
+        val source = FakeSource(balanceDuffs = MutableStateFlow(1_103_225_474L))
+        val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
+        coEvery { walletUIConfig.get(WalletUIConfig.LAST_TOTAL_BALANCE) } returns 1_103_225_474L
+        val olderWriteParked = CompletableDeferred<Unit>()
+        val releaseOlderWrite = CompletableDeferred<Unit>()
+        coEvery { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 900_000L) } coAnswers {
+            olderWriteParked.complete(Unit)
+            releaseOlderWrite.await()
+        }
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            walletUIConfig = walletUIConfig, txEvents = events, l1Synced = flowOf(true)
+        )
+        try {
+            service.start()
+            runCurrent()
+
+            source.balanceDuffs.value = 900_000L
+            assertTrue("the older write must be parked", pumpUntil { olderWriteParked.isCompleted })
+
+            // A second balance is read and judged fit to save while the first
+            // save is still in flight, so it waits for the writer.
+            source.balanceDuffs.value = 781L
+            events.emit(L1TxEvent.Detected(displayHex(3), -899_219L, null, contextCode = 0, directionCode = 0))
+            runCurrent()
+            assertEquals(Coin.valueOf(781), service.sdkBalanceOrNull())
+
+            service.stopForWalletWipe()
+        } finally {
+            releaseOlderWrite.complete(Unit)
+        }
+
+        runCurrent()
+        coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 781L) }
+    }
+
+    @Test
     fun postCutover_roomChangeRetriesAfterAFailedReRead_evenWithAnUnchangedTotal() = runTest {
         // The Room feed is a trigger only. If the read it triggers fails, the
         // next Room change must still trigger one, even though the total has
