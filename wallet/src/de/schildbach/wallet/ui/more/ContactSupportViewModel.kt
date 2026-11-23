@@ -61,7 +61,6 @@ import java.io.FileOutputStream
 import java.io.FileWriter
 import java.io.IOException
 import java.io.OutputStreamWriter
-import java.io.Writer
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -97,6 +96,53 @@ internal fun shouldAttachParityLog(
     hasParityHistory: Boolean,
     breakdown: ReportParityBreakdown
 ): Boolean = diagnosticEnabled || hasParityHistory || breakdown.applicable
+
+/**
+ * Runs one section of the support report, and keeps a failure inside it.
+ *
+ * The report is what support asks for when something is already wrong, so no
+ * section may take it down. The sections used to catch only [IOException]:
+ * anything else (a runtime exception from the dashj wallet walk in the
+ * application info, a [FileProvider] refusal, an [OutOfMemoryError] on a large
+ * wallet) escaped the dialog's coroutine and crashed the app, which relaunched
+ * to the home screen with no chooser and no report.
+ *
+ * On failure the section's result is [onFailure] of the throwable, so it can
+ * say in the report text that it is missing. [OutOfMemoryError] is kept too:
+ * the section that ran out is dropped, and the rest of the report is small.
+ * Cancellation is rethrown. Pure — host-testable.
+ */
+internal inline fun <T> reportSection(name: String, onFailure: (Throwable) -> T, block: () -> T): T =
+    try {
+        block()
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        reportSectionLog.warn("support report: the {} section failed; the report goes on without it", name, e)
+        onFailure(e)
+    } catch (e: OutOfMemoryError) {
+        reportSectionLog.warn("support report: the {} section ran out of memory; the report goes on without it", name)
+        onFailure(e)
+    }
+
+internal val reportSectionLog = LoggerFactory.getLogger("ContactSupportReport")
+
+/**
+ * The line a failed section leaves in the report text: the section and the
+ * exception's class, never its message (messages can carry paths, addresses
+ * or amounts).
+ */
+internal fun reportSectionFailureLine(name: String, failure: Throwable): String =
+    "\n[$name not collected: ${failure.javaClass.simpleName}]\n"
+
+/**
+ * The report sent when generating the full one failed outright: the user's
+ * description, why the rest is missing, and nothing attached. A report that
+ * says "generation failed" still reaches support; no report at all does not.
+ */
+internal fun fallbackReportText(userIssueDescription: String, failure: Throwable): String =
+    userIssueDescription + "\n\n\n=== report generation failed ===\n\n" +
+        reportSectionFailureLine("report", failure)
 
 @HiltViewModel
 class ContactSupportViewModel @Inject constructor(
@@ -218,6 +264,30 @@ class ContactSupportViewModel @Inject constructor(
         )
     }
 
+    /**
+     * [createReport], or — should it fail outright despite the per-section
+     * guards — [fallbackReportText] with no attachments. Never throws except
+     * cancellation, so the dialog always reaches the chooser.
+     */
+    suspend fun createReportOrFallback(
+        userIssueDescription: String,
+        collectDeviceInfo: Boolean,
+        collectInstalledPackages: Boolean,
+        collectApplicationLog: Boolean,
+        collectWalletDump: Boolean
+    ): Pair<String, ArrayList<Uri>> = reportSection(
+        "report",
+        onFailure = { e -> fallbackReportText(userIssueDescription, e) to ArrayList() }
+    ) {
+        createReport(
+            userIssueDescription,
+            collectDeviceInfo,
+            collectInstalledPackages,
+            collectApplicationLog,
+            collectWalletDump
+        )
+    }
+
     private suspend fun generateReport(
         userIssueDescription: String,
         collectDeviceInfo: Boolean,
@@ -234,56 +304,50 @@ class ContactSupportViewModel @Inject constructor(
         val watch = Stopwatch.createStarted()
         text.append(userIssueDescription).append('\n')
 
-        try {
+        // Every section runs under reportSection: a failure costs that section,
+        // never the report (see its KDoc).
+        val noteFailure = { name: String -> { e: Throwable -> text.append(reportSectionFailureLine(name, e)); Unit } }
+        val ignoreFailure = { _: Throwable -> }
+
+        reportSection("contextual data", noteFailure("contextual data")) {
             _status.value = ReportGenerationStatus.ContextualInfo
             val contextualData: CharSequence? = collectContextualData()
             if (contextualData != null) {
                 text.append("\n\n\n=== contextual data ===\n\n")
                 text.append(contextualData)
             }
-        } catch (x: IOException) {
-            text.append(x.toString()).append('\n')
         }
 
-        try {
+        reportSection("application info", noteFailure("application info")) {
             _status.value = ReportGenerationStatus.ApplicationInfo
             text.append("\n\n\n=== application info ===\n\n")
             val applicationInfo: CharSequence = collectApplicationInfo()
             text.append(applicationInfo)
-        } catch (x: IOException) {
-            text.append(x.toString()).append('\n')
         }
 
-        try {
+        reportSection("stack trace", noteFailure("stack trace")) {
             _status.value = ReportGenerationStatus.StackTrace
             val stackTrace: CharSequence? = collectStackTrace()
             if (stackTrace != null) {
                 text.append("\n\n\n=== stack trace ===\n\n")
                 text.append(stackTrace)
             }
-        } catch (x: IOException) {
-            text.append("\n\n\n=== stack trace ===\n\n")
-            text.append(x.toString()).append('\n')
         }
 
         if (collectDeviceInfo) {
             _status.value = ReportGenerationStatus.DeviceInfo
-            try {
+            reportSection("device info", noteFailure("device info")) {
                 text.append("\n\n\n=== device info ===\n\n")
                 val deviceInfo: CharSequence = collectDeviceInfo()
                 text.append(deviceInfo)
-            } catch (x: IOException) {
-                text.append(x.toString()).append('\n')
             }
         }
 
         if (collectInstalledPackages) {
             _status.value = ReportGenerationStatus.Packages
-            try {
+            reportSection("installed packages", noteFailure("installed packages")) {
                 text.append("\n\n\n=== installed packages ===\n\n")
                 CrashReporter.appendInstalledPackages(text, application)
-            } catch (x: IOException) {
-                text.append(x.toString()).append('\n')
             }
         }
 
@@ -300,48 +364,50 @@ class ContactSupportViewModel @Inject constructor(
             // the bridge's last poll, so the attached log includes the tail of
             // the session and not just up-to-one-interval-old native output.
             // Blocking is fine here (Dispatchers.IO) and it never throws.
-            NativeLogBridge.drainNow()
-            val logDir = File(application.filesDir, "log")
-            var totalLogsSize = 0L
-            if (logDir.exists()) {
-                val sortedLogFiles = logDir.listFiles()
-                sortedLogFiles?.let { it ->
-                    it.sortByDescending { file -> file.lastModified() }
-                    for (logFile in sortedLogFiles) {
-                        if (logFile.isFile() && logFile.length() > 0 && totalLogsSize < MAX_LOGS_SIZE) {
-                            // Check if it's wallet.log and larger than 4 MB
-                            if (logFile.name == "wallet.log" && logFile.length() > MAX_WALLET_LOG_SIZE) {
-                                // Compress the wallet.log file
-                                val compressedFile = File(reportDir, "wallet.log.gz")
-                                try {
-                                    FileInputStream(logFile).use { fis ->
-                                        GZIPOutputStream(FileOutputStream(compressedFile)).use { gzipOS ->
-                                            val buffer = ByteArray(4096)
-                                            var len: Int
-                                            while (fis.read(buffer).also { count -> len = count } != -1) {
-                                                gzipOS.write(buffer, 0, len)
-                                            }
-                                            log.info("wallet.log compressed successfully to $compressedFile")
-                                            attachments.add(
-                                                FileProvider.getUriForFile(
-                                                    application,
-                                                    application.packageName + ".file_attachment", compressedFile
+            reportSection("application logs", noteFailure("application logs")) {
+                NativeLogBridge.drainNow()
+                val logDir = File(application.filesDir, "log")
+                var totalLogsSize = 0L
+                if (logDir.exists()) {
+                    val sortedLogFiles = logDir.listFiles()
+                    sortedLogFiles?.let { it ->
+                        it.sortByDescending { file -> file.lastModified() }
+                        for (logFile in sortedLogFiles) {
+                            if (logFile.isFile() && logFile.length() > 0 && totalLogsSize < MAX_LOGS_SIZE) {
+                                // Check if it's wallet.log and larger than 4 MB
+                                if (logFile.name == "wallet.log" && logFile.length() > MAX_WALLET_LOG_SIZE) {
+                                    // Compress the wallet.log file
+                                    val compressedFile = File(reportDir, "wallet.log.gz")
+                                    try {
+                                        FileInputStream(logFile).use { fis ->
+                                            GZIPOutputStream(FileOutputStream(compressedFile)).use { gzipOS ->
+                                                val buffer = ByteArray(4096)
+                                                var len: Int
+                                                while (fis.read(buffer).also { count -> len = count } != -1) {
+                                                    gzipOS.write(buffer, 0, len)
+                                                }
+                                                log.info("wallet.log compressed successfully to $compressedFile")
+                                                attachments.add(
+                                                    FileProvider.getUriForFile(
+                                                        application,
+                                                        application.packageName + ".file_attachment", compressedFile
+                                                    )
                                                 )
-                                            )
-                                            totalLogsSize += compressedFile.length()
+                                                totalLogsSize += compressedFile.length()
+                                            }
                                         }
+                                    } catch (e: IOException) {
+                                        log.error("Failed to compress wallet.log", e)
                                     }
-                                } catch (e: IOException) {
-                                    log.error("Failed to compress wallet.log", e)
-                                }
-                            } else {
-                                attachments.add(
-                                    FileProvider.getUriForFile(
-                                        application,
-                                        application.packageName + ".file_attachment", logFile
+                                } else {
+                                    attachments.add(
+                                        FileProvider.getUriForFile(
+                                            application,
+                                            application.packageName + ".file_attachment", logFile
+                                        )
                                     )
-                                )
-                                totalLogsSize += logFile.length()
+                                    totalLogsSize += logFile.length()
+                                }
                             }
                         }
                     }
@@ -425,12 +491,12 @@ class ContactSupportViewModel @Inject constructor(
         if (collectWalletDump) {
             _status.value = ReportGenerationStatus.WalletDump
             log.info("createReport - collecting wallet dump")
-            try {
+            reportSection("wallet dump", noteFailure("wallet dump")) {
                 val walletDump: CharSequence = collectWalletDump()
                 val file = File.createTempFile("wallet-dump.", ".txt", reportDir)
-                val writer: Writer = OutputStreamWriter(FileOutputStream(file), Charsets.UTF_8)
-                writer.write(walletDump.toString())
-                writer.close()
+                OutputStreamWriter(FileOutputStream(file), Charsets.UTF_8).use { writer ->
+                    writer.write(walletDump.toString())
+                }
                 if(file.length() > MAX_WALLET_DUMP_SIZE) {
                     // compress the wallet dump
                     val compressedFile = File(file.absolutePath + ".gz")
@@ -456,12 +522,10 @@ class ContactSupportViewModel @Inject constructor(
                         FileProvider.getUriForFile(application, application.packageName + ".file_attachment", file)
                     )
                 }
-            } catch (x: IOException) {
-                log.info("problem writing attachment", x)
             }
         }
 
-        try {
+        reportSection("background traces", noteFailure("background traces")) {
             _status.value = ReportGenerationStatus.BackgroundTraces
             val savedBackgroundTraces = File.createTempFile("background-traces.", ".txt", reportDir)
             if (CrashReporter.collectSavedBackgroundTraces(savedBackgroundTraces)) {
@@ -473,12 +537,10 @@ class ContactSupportViewModel @Inject constructor(
                 )
             }
             savedBackgroundTraces.deleteOnExit()
-        } catch (x: IOException) {
-            log.info("problem writing attachment", x)
         }
         // only for development
         if (BuildConfig.DEBUG) {
-            try {
+            reportSection("transaction metadata", ignoreFailure) {
                 val txMetadataEntries = File.createTempFile("tx-metadata-documents.", ".txt", reportDir)
                 val listDocs = transactionMetadataDocumentDao.load()
                 try {
@@ -501,8 +563,6 @@ class ContactSupportViewModel @Inject constructor(
                     )
                 }
                 txMetadataEntries.deleteOnExit()
-            } catch (x: IOException) {
-                log.info("problem writing attachment", x)
             }
         }
 
@@ -743,6 +803,10 @@ class ContactSupportViewModel @Inject constructor(
     @Throws(IOException::class)
     private fun collectApplicationInfo(): CharSequence {
         val applicationInfo = java.lang.StringBuilder()
+        // The application info walks the dashj wallet's transactions on this
+        // IO thread; give it the wallet's Context, as [collectWalletDump] does.
+        val wallet = wallet
+        wallet?.let { org.bitcoinj.core.Context.propagate(it.context) }
         CrashReporter.appendApplicationInfo(
             applicationInfo,
             packageInfoProvider,

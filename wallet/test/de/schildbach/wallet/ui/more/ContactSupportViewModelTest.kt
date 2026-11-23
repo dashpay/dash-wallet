@@ -18,6 +18,7 @@
 package de.schildbach.wallet.ui.more
 
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.service.PackageInfoProvider
 import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
 import de.schildbach.wallet.service.platform.sdk.ReportParityBreakdown
 import de.schildbach.wallet.service.platform.sdk.StoredParityBreakdown
@@ -27,6 +28,7 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.asCoroutineDispatcher
@@ -39,7 +41,10 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import java.util.Collections
 import java.util.concurrent.Executors
 
@@ -52,11 +57,12 @@ class ContactSupportViewModelTest {
 
     private fun viewModel(
         application: WalletApplication,
-        l1ShadowSyncService: L1ShadowSyncService = mockk(relaxed = true)
+        l1ShadowSyncService: L1ShadowSyncService = mockk(relaxed = true),
+        packageInfoProvider: PackageInfoProvider = mockk(relaxed = true)
     ) = ContactSupportViewModel(
         configuration = mockk(relaxed = true),
         application = application,
-        packageInfoProvider = mockk(relaxed = true),
+        packageInfoProvider = packageInfoProvider,
         transactionMetadataDocumentDao = mockk(relaxed = true),
         dashPayConfig = mockk(relaxed = true),
         dashjDiagnosticSyncState = mockk(relaxed = true),
@@ -196,5 +202,130 @@ class ContactSupportViewModelTest {
         assertEquals(applicable, shared)
         coVerify(exactly = 1) { l1.parityBreakdownForReport(any()) }
         assertTrue(shouldAttachParityLog(diagnosticEnabled = false, hasParityHistory = false, breakdown = shared))
+    }
+
+    // ── The report never takes the app down ──────────────────────────────
+
+    @get:Rule
+    val tmp = TemporaryFolder()
+
+    @Test
+    fun reportSection_keepsARuntimeFailure_andReturnsTheFallback() {
+        val failures = ArrayList<Throwable>()
+        val result = reportSection("application info", { e -> failures.add(e); "fallback" }) {
+            throw IllegalStateException("wallet walk failed")
+        }
+        assertEquals("fallback", result)
+        assertEquals(IllegalStateException::class.java, failures.single().javaClass)
+    }
+
+    @Test
+    fun reportSection_keepsAnOutOfMemoryError() {
+        val result = reportSection("wallet dump", { "dropped" }) { throw OutOfMemoryError() }
+        assertEquals("dropped", result)
+    }
+
+    @Test
+    fun reportSection_rethrowsCancellation() {
+        try {
+            reportSection("logs", { fail("cancellation must not be kept") }) {
+                throw CancellationException("dialog closed")
+            }
+            fail("cancellation was swallowed")
+        } catch (expected: CancellationException) {
+            // rethrown
+        }
+    }
+
+    @Test
+    fun reportSection_passesTheResultThrough() {
+        assertEquals(42, reportSection("x", { -1 }) { 42 })
+    }
+
+    @Test
+    fun failureLines_nameTheSectionAndClass_butNotTheMessage() {
+        val failure = IllegalArgumentException("/data/user/0/secret/path")
+        assertEquals("\n[device info not collected: IllegalArgumentException]\n", reportSectionFailureLine("device info", failure))
+        val fallback = fallbackReportText("Sends fail", failure)
+        assertTrue(fallback.startsWith("Sends fail"))
+        assertTrue(fallback.contains("report generation failed"))
+        assertFalse(fallback.contains("secret"))
+    }
+
+    /**
+     * Regression: a runtime exception in a section (here the application info,
+     * which walks the dashj wallet) escaped createReport, and with it the
+     * dialog's coroutine — the app crashed and relaunched to the home screen
+     * with no chooser. Now the section is dropped with a note and the report
+     * still comes back.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun aFailingSection_stillProducesTheReport() {
+        Dispatchers.setMain(Dispatchers.Unconfined)
+        try {
+            val application = mockk<WalletApplication>(relaxed = true) {
+                every { isSafeModeRetryInProgress } returns false
+                every { isWalletLoadDegraded } returns false
+                every { wallet } returns null
+                every { cacheDir } returns tmp.root
+            }
+            val packageInfoProvider = mockk<PackageInfoProvider>(relaxed = true) {
+                every { packageInfo } throws IllegalStateException("package manager died")
+            }
+            val viewModel = viewModel(application, packageInfoProvider = packageInfoProvider)
+            viewModel.stackTrace = "the stack"
+
+            val (text, attachments) = runBlocking {
+                viewModel.createReportOrFallback(
+                    "Sends fail",
+                    collectDeviceInfo = false,
+                    collectInstalledPackages = false,
+                    collectApplicationLog = false,
+                    collectWalletDump = false
+                )
+            }
+
+            assertTrue(text.startsWith("Sends fail"))
+            assertTrue(text.contains("[application info not collected: "))
+            // The sections after the failing one still ran.
+            assertTrue(text.contains("=== stack trace ===\n\nthe stack"))
+            assertFalse(text.contains("report generation failed"))
+            assertTrue(attachments.isEmpty())
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    /** The backstop: createReport failing outright still yields a report to send. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun anOutrightFailure_sendsTheDescriptionWithTheReason() {
+        Dispatchers.setMain(Dispatchers.Unconfined)
+        try {
+            val application = mockk<WalletApplication>(relaxed = true) {
+                every { isSafeModeRetryInProgress } returns false
+                every { isWalletLoadDegraded } returns false
+                every { wallet } returns null
+                every { cacheDir } throws SecurityException("no cache dir")
+            }
+            val viewModel = viewModel(application)
+
+            val (text, attachments) = runBlocking {
+                viewModel.createReportOrFallback(
+                    "Sends fail",
+                    collectDeviceInfo = false,
+                    collectInstalledPackages = false,
+                    collectApplicationLog = false,
+                    collectWalletDump = false
+                )
+            }
+
+            assertTrue(text.startsWith("Sends fail"))
+            assertTrue(text.contains("[report not collected: SecurityException]"))
+            assertTrue(attachments.isEmpty())
+        } finally {
+            Dispatchers.resetMain()
+        }
     }
 }
