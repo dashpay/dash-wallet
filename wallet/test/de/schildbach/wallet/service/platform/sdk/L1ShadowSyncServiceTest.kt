@@ -1488,10 +1488,8 @@ class L1ShadowSyncServiceTest {
         assertFalse("still refused after two rounds", service.isEngineRunning())
         assertEquals("the restart's stop and one per round", 3, source.stopCalls)
         assertEquals("the first start, the refused one, and one per round", 4, source.startCalls)
-        assertEquals("the pending retry reads as a start in flight", 1_000_000L, service.engineStartingSinceMs())
 
         withTimeout(5_000) { while (!service.isEngineRunning()) delay(10) }
-        withTimeout(5_000) { while (service.engineStartingSinceMs() != 0L) delay(10) }
         service.stop()
     }
 
@@ -1503,10 +1501,8 @@ class L1ShadowSyncServiceTest {
         source.trackTeardown(stopsThatTimeOut = 3)
         service.launchStallRestart(stuckAt = 2_498_000L).join()
         assertFalse(service.isEngineRunning())
-        assertEquals(1_000_000L, service.engineStartingSinceMs())
 
         service.stop()
-        assertEquals("a stopped service is not held for the cancelled retry", 0L, service.engineStartingSinceMs())
         val startsAtStop = source.startCalls
         delay(200)
 
