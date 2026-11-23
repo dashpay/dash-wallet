@@ -202,7 +202,7 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         val state = viewModel.state.value ?: SendCoinsViewModel.State.INPUT
         var errorMessage = ""
 
-        if (isReplaying == true) {
+        if (isReplaying == true || viewModel.maxBlockedByCatchUp) {
             errorMessage = getString(R.string.send_coins_fragment_hint_replaying)
         } else if (dryRunException != null) {
             log.info("dryRunException:", dryRunException)
@@ -262,7 +262,7 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         updateView()
     }
 
-    private fun handleGo(autoAcceptContactRequest: Boolean) {
+    private fun handleGo(autoAcceptContactRequest: Boolean, confirmed: SendCoinsViewModel.DryRunResult) {
         if (viewModel.currentDryRun() == null) {
             log.error("illegal state: no dry run of the current payment")
             return
@@ -275,7 +275,14 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         // The view model runs the send, so a recreation of this screen cannot cancel it once it
         // may be on the network; its outcome is handled in onSendOutcome, by this screen or the
         // recreated one.
-        if (viewModel.submitPayment(editedAmount.toDashjCoin(), exchangeRate, autoAcceptContactRequest)) {
+        // Only the payment the dialog showed is submitted.
+        val started = viewModel.submitPayment(
+            editedAmount.toDashjCoin(),
+            exchangeRate,
+            autoAcceptContactRequest,
+            confirmed
+        )
+        if (started) {
             viewModel.logSend()
 
             if (enterAmountFragment?.maxSelected == true) {
@@ -324,7 +331,7 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         // Post-cutover the dry-run does not complete the tx (no inputs attached),
         // so tx.fee is null; fall back to the deterministic display-only estimate.
         // Pre-cutover tx.fee is set by completeTx and the fallback is never used.
-        val txFee = dryRun.request.tx.fee ?: dryRun.feeEstimate
+        val txFee = dryRun.shownFee
         val amount: Coin?
         val total: String?
 
@@ -372,7 +379,7 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         )
 
         if (confirmed == true) {
-            handleGo(dialog.autoAcceptContactRequest)
+            handleGo(dialog.autoAcceptContactRequest, dryRun)
         }
     }
 

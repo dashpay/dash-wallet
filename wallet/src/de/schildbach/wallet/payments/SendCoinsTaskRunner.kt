@@ -65,6 +65,7 @@ import org.dash.wallet.common.payments.parsers.Scripts
 import org.dash.wallet.common.services.DirectPayException
 import org.dash.wallet.common.services.PaymentRecoveryMetadata
 import org.dash.wallet.common.services.PaymentSubmissionPendingException
+import org.dash.wallet.common.services.SendEngineNotSyncedException
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.WalletSession
@@ -129,16 +130,6 @@ enum class CutoverSendRoute { DASHJ, SDK_BRIDGED, FAIL_CLOSED }
  * for logs only and must never be shown verbatim to a user.
  */
 class SendNotSdkRoutableException(message: String) : IllegalStateException(message)
-
-/**
- * Phase 5d fail-closed error: the cutover is committed but the SDK engine
- * refused to attempt the send because its L1 funding gate is closed — the
- * engine is not running or its compact-filter scan has not caught up to the
- * chain tip ([de.schildbach.wallet.service.platform.sdk.L1_FUNDING_GATE_CLOSED_REASON]).
- * This is the ONE send failure that genuinely means "not synced yet", and the
- * only one the UI may present as such. Nothing was broadcast.
- */
-class SendEngineNotSyncedException(message: String) : IllegalStateException(message)
 
 /**
  * The SDK engine assembled the transaction but could not SIGN it — the
@@ -1210,7 +1201,20 @@ class SendCoinsTaskRunner @Inject constructor(
 
         // Ownership asked again under the SDK's funding hold, right before it selects: the
         // check after the build below remains, for a wipe that lands once the hold is gone.
-        val payment = sdkL1SendService.buildDeferredPayment(recipients) { pendingPaymentVerifier.stillOwnedBy(wallet) }
+        val payment = try {
+            sdkL1SendService.buildDeferredPayment(recipients) { pendingPaymentVerifier.stillOwnedBy(wallet) }
+        } catch (e: IllegalStateException) {
+            // The build reports a closed funding gate as a plain check failure. Type it, so the
+            // screens can say "still syncing" and offer the build again instead of showing the
+            // engine's text.
+            val reason = e.message
+            if (e is SendEngineNotSyncedException || reason == null ||
+                !reason.contains(de.schildbach.wallet.service.platform.sdk.L1_FUNDING_GATE_CLOSED_REASON)
+            ) {
+                throw e
+            }
+            throw sdkSendNotAttemptedException(reason)
+        }
         if (!pendingPaymentVerifier.stillOwnedBy(wallet)) {
             // The build may have selected the replacement wallet's funds. Nothing has been sent:
             // give the reservation back and refuse.

@@ -273,6 +273,37 @@ class SdkWalletSecretsWipeTest {
         assertEquals(setOf("masterkeylockdefect"), store.entries.keys)
     }
 
+    /**
+     * thepastaclaw on #1721. The config clear only logs a failure, so the wipe checks the
+     * first-sync record itself: a restore of the same seed must not inherit it.
+     */
+    @Test
+    fun `a first-sync record that cannot be removed fails the wipe`() {
+        var record: String? = "wallet-id"
+        runBlocking {
+            assertTrue("absent", WalletApplicationExt.confirmFirstSyncRecordGone({ null }, { fail("no removal") }))
+            assertTrue(
+                "a survivor is removed",
+                WalletApplicationExt.confirmFirstSyncRecordGone({ record }, { record = null })
+            )
+            assertFalse(
+                "still there after the removal",
+                WalletApplicationExt.confirmFirstSyncRecordGone({ "wallet-id" }, { })
+            )
+            assertFalse(
+                "unreadable",
+                WalletApplicationExt.confirmFirstSyncRecordGone({ throw IOException("store unreadable") }, { })
+            )
+        }
+        try {
+            val erased = SdkSecretsWipeOutcome.DELETED_ALL
+            WalletApplicationExt.confirmWipeDestroyed(erased, sdkWalletCleared = true, firstSyncRecordGone = false) { }
+            fail("a surviving first-sync record must fail the wipe")
+        } catch (expected: IOException) {
+            // the marker stays
+        }
+    }
+
     @Test
     fun `a surviving dashj source still fails the wipe when the SDK secrets were erased`() {
         try {

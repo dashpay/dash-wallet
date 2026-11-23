@@ -17,7 +17,7 @@
 package de.schildbach.wallet.ui.send
 
 import de.schildbach.wallet.payments.SdkSendOutcomeUnknownException
-import de.schildbach.wallet.payments.SendEngineNotSyncedException
+import org.dash.wallet.common.services.SendEngineNotSyncedException
 import de.schildbach.wallet.payments.SendNotSdkRoutableException
 import de.schildbach.wallet.payments.SendSignerLockedException
 import de.schildbach.wallet.service.platform.sdk.ContactAddressSource

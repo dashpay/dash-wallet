@@ -1459,6 +1459,18 @@ class SdkL1SendService internal constructor(
     internal fun probeSendGate(): WalletFundingGate = evaluateWalletFundingGate(safeProgress())
 
     /**
+     * [probeSendGate] without the first-scan relaxation: the scan must be at the chain tip now,
+     * whether or not the wallet has finished its first scan
+     * ([ShadowSyncProgress.firstSyncDone]). For everything that takes or quotes ALL of the
+     * wallet's funds: a send-all, the CoinJoin drain and consolidation, the Maya max quote.
+     * Their amount is whatever the wallet holds when they run, so coins a catch-up finds
+     * between the user's confirmation and the build would go out with it, above the amount
+     * confirmed (pre-review, 2026-11-19). A payment of a fixed amount cannot grow that way.
+     */
+    internal fun probeFullScanGate(): WalletFundingGate =
+        evaluateWalletFundingGate(safeProgress().copy(firstSyncDone = false))
+
+    /**
      * Attempt the SDK L1 send. One broadcast attempt, classified by
      * [classifyCoreSendFailure]; every preflight failure is
      * [SdkWriteResult.NotBroadcast] by construction.
@@ -1531,7 +1543,10 @@ class SdkL1SendService internal constructor(
         // helper: engine running + filter scan caught up to the chain tip
         // (SDK-only preconditions — see evaluateWalletFundingGate).
         // Shared with the debug settings status line via probeSendGate.
-        val gate = probeSendGate()
+        // A send-all pays whatever the wallet holds when it runs, so coins a catch-up finds
+        // after the user confirmed would go out with it, above that amount. It needs the scan
+        // at the tip even after the wallet's first scan ([probeFullScanGate]).
+        val gate = if (emptyWallet) probeFullScanGate() else probeSendGate()
         if (!gate.allowed) {
             return notBroadcast(operation, "$L1_FUNDING_GATE_CLOSED_REASON: ${gate.reason}", null)
         }
@@ -1731,7 +1746,7 @@ class SdkL1SendService internal constructor(
             return notBroadcast(operation, "SDK bootstrap/bind lookup failed", t)
         }
 
-        val gate = probeSendGate()
+        val gate = probeFullScanGate()
         if (!gate.allowed) {
             return notBroadcast(operation, "$L1_FUNDING_GATE_CLOSED_REASON: ${gate.reason}", null)
         }
@@ -1797,7 +1812,7 @@ class SdkL1SendService internal constructor(
         seamOutputLockRegistry.outputsAppLocked("SDK coinJoinDrain", hasAppLockedCoinJoinOutputs)
 
     /** The gate [consolidateCoinJoin] enforces; shared so the migration never offers a refused route. Never throws. */
-    internal suspend fun coinJoinConsolidationGateOpen(): Boolean = isEnabled() && probeSendGate().allowed
+    internal suspend fun coinJoinConsolidationGateOpen(): Boolean = isEnabled() && probeFullScanGate().allowed
 
     /**
      * @param expectedWalletIdHex the wallet [destination] came from; any other bound wallet refuses,
@@ -1886,7 +1901,7 @@ class SdkL1SendService internal constructor(
         rawTx: ByteArray,
         expectedTxid: String
     ): ConsolidationReplay {
-        if (!isEnabled() || !probeSendGate().allowed) return ConsolidationReplay.FAILED
+        if (!isEnabled() || !probeFullScanGate().allowed) return ConsolidationReplay.FAILED
         val walletId = try {
             source.boundWalletIdOrNull() ?: return ConsolidationReplay.FAILED
         } catch (t: Throwable) {
@@ -1974,11 +1989,11 @@ class SdkL1SendService internal constructor(
             "app wallet not bound to the SDK"
         }
         val gate = probeSendGate()
-        check(gate.allowed) { "L1 funding gate closed: ${gate.reason}" }
+        check(gate.allowed) { "$L1_FUNDING_GATE_CLOSED_REASON: ${gate.reason}" }
         val reservedAtHeight = reservationHeightLowerBound()
         // Re-asked under the shared selection lock, held through selection and the reservation
         // (review 4309551218).
-        val payment = fundingSelection.withShared {
+        val payment = reserveUnderFundingHold {
             if (pendingPaymentInputsExposed()) throw paymentStillConfirming("l1DeferredBuild")
             check(stillOwned()) { "the wallet this payment was confirmed on has been wiped; not building it" }
             boundWalletRefusal(walletIdHex)?.let { throw IllegalStateException(it) }
@@ -1989,6 +2004,27 @@ class SdkL1SendService internal constructor(
             payment.txidHex, trimmed.size, payment.feeDuffs
         )
         return payment
+    }
+
+    /**
+     * [build], which reserves inputs, under the shared funding hold. A caller cancelled while
+     * the native build runs never receives the result: the hold exits cancelled even though
+     * [build] finished ([de.schildbach.wallet.payments.FundingSelectionLock.withShared]), and
+     * nobody else knows the reservation. So it is released here, and the cancellation goes
+     * on (thepastaclaw on #1714). Without this the inputs stay reserved until the engine's
+     * TTL sweep.
+     */
+    private suspend fun reserveUnderFundingHold(build: suspend () -> SdkDeferredPayment): SdkDeferredPayment {
+        var built: SdkDeferredPayment? = null
+        try {
+            return fundingSelection.withShared { build().also { built = it } }
+        } catch (e: CancellationException) {
+            built?.let { abandoned ->
+                log.info("SDK deferred build of {} finished after its caller was cancelled", abandoned.txidHex)
+                withContext(NonCancellable) { releaseDeferredPayment(abandoned) }
+            }
+            throw e
+        }
     }
 
     /**
@@ -2045,7 +2081,7 @@ class SdkL1SendService internal constructor(
         val walletIdHex = checkNotNull(source.boundWalletIdOrNull()) {
             "app wallet not bound to the SDK"
         }
-        val gate = probeSendGate()
+        val gate = probeFullScanGate()
         check(gate.allowed) { "L1 funding gate closed: ${gate.reason}" }
         // FAIL-CLOSED (funds-critical): a max deposit selects (essentially)
         // every spendable UTXO, so coin selection reaches app-locked outputs
@@ -2115,7 +2151,7 @@ class SdkL1SendService internal constructor(
             "app wallet not bound to the SDK"
         }
         val gate = probeSendGate()
-        check(gate.allowed) { "L1 funding gate closed: ${gate.reason}" }
+        check(gate.allowed) { "$L1_FUNDING_GATE_CLOSED_REASON: ${gate.reason}" }
         // FAIL-CLOSED GUARD (funds-critical), max deposits only: a max deposit
         // selects (essentially) every spendable UTXO the pooled default reaches
         // — BIP44 + BIP32 + every DashPay contact-receiving account — and the
@@ -2141,13 +2177,13 @@ class SdkL1SendService internal constructor(
         val reservedAtHeight = reservationHeightLowerBound()
         // Re-asked under the shared selection lock, held through selection and the reservation
         // (review 4309551218).
-        val payment = fundingSelection.withShared {
+        val payment = reserveUnderFundingHold {
             if (pendingPaymentInputsExposed()) throw paymentStillConfirming("mayaDepositBuild")
             check(stillOwned()) { "the wallet this deposit was confirmed on has been wiped; not building it" }
             boundWalletRefusal(walletIdHex)?.let { throw IllegalStateException(it) }
             source.buildDeferredMayaDeposit(walletIdHex, vault, vaultDuffs, memo)
+                .stamped(walletIdHex, reservedAtHeight)
         }
-            .stamped(walletIdHex, reservedAtHeight)
         log.info(
             "SDK l1DeferredMayaBuild: built {} ({} duffs to the vault{}, {}-byte memo, fee {} duffs), inputs reserved",
             payment.txidHex,

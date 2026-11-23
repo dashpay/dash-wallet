@@ -29,6 +29,7 @@ import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.data.PaymentIntent
 import de.schildbach.wallet.livedata.Status
+import org.dash.wallet.common.services.SendEngineNotSyncedException
 import de.schildbach.wallet.ui.transactions.TransactionResultActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentPaymentProtocolBinding
@@ -57,6 +58,27 @@ import de.schildbach.wallet.util.toNeutralFiat
 import de.schildbach.wallet.util.toTxId
 import de.schildbach.wallet.util.toSha256Hash
 import de.schildbach.wallet.util.toFormattedString
+
+internal enum class PayTapAction { SUBMIT, REBUILD, REPORT, IGNORE }
+
+/**
+ * What an authenticated tap on Pay does. A tap submits only the preview it was made on: a tap on
+ * a refused preview ([tappedOnPayable] false) can rebuild it, and the rebuilt payment, with its
+ * real fee, needs a tap of its own. Two taps on a refused preview each start an authentication;
+ * without this the second answer submitted what the first had rebuilt (thepastaclaw on #1714).
+ */
+internal fun payTapAction(
+    tappedOnPayable: Boolean,
+    canSendPayment: Boolean,
+    canRetryPreview: Boolean,
+    building: Boolean
+): PayTapAction = when {
+    canSendPayment -> if (tappedOnPayable) PayTapAction.SUBMIT else PayTapAction.IGNORE
+    canRetryPreview -> PayTapAction.REBUILD
+    // an earlier tap's rebuild is running: its result is shown when it ends
+    building -> PayTapAction.IGNORE
+    else -> PayTapAction.REPORT
+}
 
 @AndroidEntryPoint
 class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
@@ -101,18 +123,21 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
     }
 
     private fun authenticateOrConfirm() {
-        if (userAuthorizedDuring && (!config.spendingConfirmationEnabled || !viewModel.canSendPayment)) {
-            confirmWhenAuthorizedAndNoException()
+        // What this tap was on, read now: the authentication below answers later, and by then
+        // an earlier tap may have rebuilt a refused preview (thepastaclaw on #1714).
+        val tappedOnPayable = viewModel.canSendPayment
+        if (userAuthorizedDuring && (!config.spendingConfirmationEnabled || !tappedOnPayable)) {
+            confirmWhenAuthorizedAndNoException(tappedOnPayable)
         } else {
             val thresholdAmount = Coin.parseCoin(config.biometricLimit.toString())
             val amount = viewModel.finalPaymentIntent!!.amount
             authManager.authenticate(requireActivity(), !amount.toDashjCoin().isLessThan(thresholdAmount)) { pin ->
-                pin?.let { confirmWhenAuthorizedAndNoException() }
+                pin?.let { confirmWhenAuthorizedAndNoException(tappedOnPayable) }
             }
         }
     }
 
-    private fun confirmWhenAuthorizedAndNoException() {
+    private fun confirmWhenAuthorizedAndNoException(tappedOnPayable: Boolean) {
         if (viewModel.finalPaymentIntent!!.expired) {
             // Resending the earlier payment of an expired request is pointless; its outcome is
             // still unknown, and that is what the screen says.
@@ -120,12 +145,20 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
             return
         }
 
-        if (viewModel.canSendPayment) {
-            lifecycleScope.launch {
-                viewModel.sendPayment()
-            }
-        } else {
-            handleSendRequestException()
+        val action = payTapAction(
+            tappedOnPayable = tappedOnPayable,
+            canSendPayment = viewModel.canSendPayment,
+            canRetryPreview = viewModel.canRetryPreview,
+            building = viewModel.sendRequestLiveData.value?.status == Status.LOADING
+        )
+        when (action) {
+            PayTapAction.SUBMIT -> lifecycleScope.launch { viewModel.sendPayment() }
+            // Refused only because the wallet was still syncing when the screen opened: build
+            // again. A success shows the payment with its real fee to confirm; a failure is
+            // reported by the observer.
+            PayTapAction.REBUILD -> viewModel.retryPreview()
+            PayTapAction.REPORT -> handleSendRequestException()
+            PayTapAction.IGNORE -> log.info("pay tap ignored: the preview changed after it")
         }
     }
 
@@ -158,6 +191,7 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
                     binding.viewFlipper.displayedChild = VIEW_LOADING
                 }
                 Status.SUCCESS -> {
+                    viewModel.consumeRetryResult()
                     displayRequest(viewModel.finalPaymentIntent!!)
                     binding.viewFlipper.displayedChild = VIEW_PAYMENT
                 }
@@ -180,7 +214,10 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
                         displayRequest(viewModel.finalPaymentIntent!!)
                         binding.viewFlipper.displayedChild = VIEW_PAYMENT
                         if (userAuthorizedDuring && !viewModel.canSendPayment) {
+                            viewModel.consumeRetryResult()
                             handleSendRequestException()
+                        } else {
+                            reportRetryFailureIfOwed()
                         }
                     }
                 }
@@ -238,6 +275,31 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        reportRetryFailureIfOwed()
+    }
+
+    /**
+     * Shows the failure of a build the user asked for again ([PaymentProtocolViewModel.retryPreview]),
+     * once. Only while resumed: the dialog is shown when the activity is resumed, so a failure
+     * taken while the screen was paused was lost if the screen was recreated before that. Left
+     * with the ViewModel, the screen that resumes shows it (thepastaclaw on #1714).
+     */
+    private fun reportRetryFailureIfOwed() {
+        if (!isResumed || viewModel.finalPaymentIntent == null) return
+        val result = viewModel.sendRequestLiveData.value ?: return
+        if (result.status != Status.ERROR ||
+            result.exception is PaymentSubmissionPendingException ||
+            result.exception is PaymentProtocolException.Expired
+        ) {
+            return
+        }
+        if (viewModel.consumeRetryResult() && !viewModel.canSendPayment) {
+            handleSendRequestException()
+        }
+    }
+
     private fun handleSendRequestException() {
         val resource = viewModel.sendRequestLiveData.value!!
         log.error("unable to handle payment request ${resource.exception?.message ?: resource.message}")
@@ -249,6 +311,11 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
             // this one: nothing was built, and it lifts once that payment is confirmed.
             is PaymentStillConfirmingException -> {
                 showErrorDialog(getString(R.string.payment_still_confirming))
+            }
+            // The wallet has not caught up with the chain: the same copy as the send screen,
+            // never the engine's text.
+            is SendEngineNotSyncedException -> {
+                showErrorDialog(getString(R.string.send_coins_fragment_hint_replaying))
             }
             // The SDK build reports a shortfall as a native error whose
             // message carries key-wallet's "Insufficient funds" text

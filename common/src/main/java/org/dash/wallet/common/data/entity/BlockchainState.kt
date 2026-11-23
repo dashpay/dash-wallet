@@ -59,4 +59,14 @@ data class BlockchainState(var bestChainDate: Date?,
     fun isSynced(): Boolean {
         return !replaying && percentageSync == 100 && !syncFailed()
     }
+
+    /**
+     * Whether a screen must keep a fixed-amount payment blocked. Until the wallet's first scan
+     * has finished ([firstSyncDone] false) anything short of synced blocks. After it, a wallet
+     * that is only catching up may pay, but a sync failure (engine error, no network) still
+     * blocks: the send itself would be refused (thepastaclaw on #1721).
+     */
+    fun blocksFixedPayment(firstSyncDone: Boolean): Boolean {
+        return syncFailed() || (!firstSyncDone && (replaying || !isSynced()))
+    }
 }
