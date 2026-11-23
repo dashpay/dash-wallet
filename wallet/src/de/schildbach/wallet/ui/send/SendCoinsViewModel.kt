@@ -283,18 +283,21 @@ class SendCoinsViewModel @Inject constructor(
         val amount: Coin,
         val request: SendRequest,
         val emptyWallet: Boolean,
-        val feeEstimate: Coin?
+        val feeEstimate: Coin?,
+        /** The resolved payee this dry run was built for; compared by identity only. */
+        private val payee: Any
     ) {
         /** The fee the confirmation dialog shows: the completed transaction's, else the estimate. */
         val shownFee: Coin?
             get() = request.tx?.fee ?: feeEstimate
 
         /**
-         * Whether a confirmation shown for this dry run also covers [other]: the same amount,
-         * the same send-all decision and the same fee, which is all the dialog shows.
+         * Whether a confirmation shown for this dry run also covers [other]: the same resolved
+         * payee, amount, send-all decision and fee, which is all the dialog shows.
          */
         fun showsTheSamePaymentAs(other: DryRunResult): Boolean =
-            amount == other.amount && emptyWallet == other.emptyWallet && shownFee == other.shownFee
+            payee === other.payee && amount == other.amount &&
+                emptyWallet == other.emptyWallet && shownFee == other.shownFee
     }
 
     /**
@@ -1291,7 +1294,13 @@ class SendCoinsViewModel @Inject constructor(
                         generation,
                         outcome(
                             // feeEstimate: display-only floor; the drain pays the smaller real fee
-                            DryRunResult(amount, sendRequest, emptyWallet = true, feeEstimate = feeReserve),
+                            DryRunResult(
+                                amount,
+                                sendRequest,
+                                emptyWallet = true,
+                                feeEstimate = feeReserve,
+                                payee = resolved
+                            ),
                             exception = null,
                             cutoverCommitted = true,
                             // The send-all holds only while the balance is still this.
@@ -1313,7 +1322,13 @@ class SendCoinsViewModel @Inject constructor(
                     generation,
                     outcome(
                         // UNSIGNED, not completed — never broadcast
-                        DryRunResult(amount, sendRequest, sendRequest.emptyWallet, feeEstimate = feeReserve),
+                        DryRunResult(
+                            amount,
+                            sendRequest,
+                            sendRequest.emptyWallet,
+                            feeEstimate = feeReserve,
+                            payee = resolved
+                        ),
                         exception = null,
                         cutoverCommitted = true
                     )
@@ -1329,7 +1344,7 @@ class SendCoinsViewModel @Inject constructor(
             publishDryRun(
                 generation,
                 outcome(
-                    DryRunResult(amount, sendRequest, sendRequest.emptyWallet, feeEstimate = null),
+                    DryRunResult(amount, sendRequest, sendRequest.emptyWallet, feeEstimate = null, payee = resolved),
                     exception = null,
                     cutoverCommitted = false
                 )

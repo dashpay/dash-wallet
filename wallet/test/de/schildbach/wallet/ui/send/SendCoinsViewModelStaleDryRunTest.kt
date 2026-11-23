@@ -522,6 +522,13 @@ class SendCoinsViewModelStaleDryRunTest {
         awaitCondition("payee 2's dry run") { !reinit.isAlive && viewModel.currentDryRun() != null }
         assertNotEquals(previousDryRun?.request, viewModel.currentDryRun()?.request)
 
+        // thepastaclaw on #1721: a confirmation shown for payee 1 does not cover payee 2's
+        // payment, though the amount, the send-all decision and the fee are the same.
+        assertThrows(DryRunOutdatedException::class.java) {
+            runBlocking { viewModel.signAndSendPayment(Coin.COIN, null, previousDryRun) }
+        }
+        assertTrue(sends.sent.isEmpty())
+
         send(viewModel, Coin.COIN)
         assertEquals(listOf<Address?>(payee2), sends.recipients)
     }
