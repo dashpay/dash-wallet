@@ -137,6 +137,12 @@ internal fun parseQuorumThresholdKeys(json: String): Map<String, ByteArray> {
 private fun ByteArray.toHexLower(): String = joinToString("") { "%02x".format(it) }
 
 /**
+ * Thrown by a quorum fetcher that could not ask at all because its source
+ * (the Kotlin SDK) is not running. See [SdkQuorumKeyCache].
+ */
+internal class QuorumSourceNotReadyException : Exception("quorum source not ready")
+
+/**
  * Merge-on-fetch cache for SDK-sourced quorum threshold keys.
  *
  * - A quorum's public key is immutable for its hash, so every successful
@@ -156,12 +162,6 @@ private fun ByteArray.toHexLower(): String = joinToString("") { "%02x".format(it
  *   rust DAPI worker threads that are blocking on the quorum callback
  *   anyway.
  */
-/**
- * Thrown by a quorum fetcher that could not ask at all because its source
- * (the Kotlin SDK) is not running. See [SdkQuorumKeyCache].
- */
-internal class QuorumSourceNotReadyException : Exception("quorum source not ready")
-
 internal class SdkQuorumKeyCache(
     private val fetchQuorumsJson: suspend () -> String?,
     private val clock: () -> Long = System::currentTimeMillis,
