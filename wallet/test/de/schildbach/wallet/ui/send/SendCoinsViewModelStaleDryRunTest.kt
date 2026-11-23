@@ -284,6 +284,35 @@ class SendCoinsViewModelStaleDryRunTest {
         assertThrows(DryRunOutdatedException::class.java) { send(viewModel, balance) }
     }
 
+    /**
+     * thepastaclaw on #1721. The dialog shows a fixed 1 DASH payment. A spend seen meanwhile
+     * leaves exactly 1 DASH, so the payment is checked again and is now a send-all, with the
+     * chain synced. Confirming the dialog must not send that: it is not the payment shown.
+     */
+    @Test
+    fun aFixedPaymentThatBecameASendAll_whileItsConfirmationWasOpen_isNotSent() {
+        val sends = Sends()
+        val maxOutput = MutableStateFlow(balance)
+        val viewModel = buildViewModel(runner(sends, DryRunGate(), cutover = true), maxOutput)
+        open(viewModel, payee1, Coin.COIN)
+        val shown = viewModel.currentDryRun()!!
+        assertFalse("a fixed amount", shown.emptyWallet)
+
+        maxOutput.value = Coin.COIN
+        idle()
+        viewModel.resetState() // the screen checks the payment again
+        awaitCondition("the payment is now a send-all") { viewModel.currentDryRun()?.emptyWallet == true }
+
+        assertThrows(DryRunOutdatedException::class.java) {
+            runBlocking { viewModel.signAndSendPayment(Coin.COIN, null, shown) }
+        }
+        assertTrue("nothing was sent", sends.sent.isEmpty())
+
+        // confirmed again on the dialog of the new dry run, it is sent
+        runBlocking { viewModel.signAndSendPayment(Coin.COIN, null, viewModel.currentDryRun()) }
+        assertEquals(1, sends.sent.size)
+    }
+
     @Test
     fun maxAmount_isSentAsSendAll() {
         // The baseline the fix must keep: an unedited Max is a send-all.

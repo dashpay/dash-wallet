@@ -179,11 +179,14 @@ class SendCoinsViewModel @Inject constructor(
      * the network. Its result arrives in [sendOutcome], after which the screen goes back to
      * INPUT ([resetState], a no-op once the outcome is unknown). False, with nothing started,
      * when a send is already in progress or an earlier one's outcome is unknown.
+     *
+     * [confirmed] is the dry run the confirmation dialog showed; see [signAndSendPayment].
      */
     fun submitPayment(
         editedAmount: Coin,
         exchangeRate: ExchangeRate?,
-        autoAcceptContactRequest: Boolean
+        autoAcceptContactRequest: Boolean,
+        confirmed: DryRunResult? = null
     ): Boolean {
         if (paymentOutcomeUnknown.value || sentUndelivered() || sendInFlight.get()) {
             return false
@@ -191,7 +194,10 @@ class SendCoinsViewModel @Inject constructor(
         // Undispatched: signAndSendPayment claims the send before this returns.
         viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
             val outcome = try {
-                SendOutcome.Sent(signAndSendPayment(editedAmount, exchangeRate), autoAcceptContactRequest)
+                SendOutcome.Sent(
+                    signAndSendPayment(editedAmount, exchangeRate, confirmed),
+                    autoAcceptContactRequest
+                )
             } catch (ex: SendRefusedException) {
                 log.info("send refused: {}", ex.message)
                 return@launch
@@ -278,7 +284,18 @@ class SendCoinsViewModel @Inject constructor(
         val request: SendRequest,
         val emptyWallet: Boolean,
         val feeEstimate: Coin?
-    )
+    ) {
+        /** The fee the confirmation dialog shows: the completed transaction's, else the estimate. */
+        val shownFee: Coin?
+            get() = request.tx?.fee ?: feeEstimate
+
+        /**
+         * Whether a confirmation shown for this dry run also covers [other]: the same amount,
+         * the same send-all decision and the same fee, which is all the dialog shows.
+         */
+        fun showsTheSamePaymentAs(other: DryRunResult): Boolean =
+            amount == other.amount && emptyWallet == other.emptyWallet && shownFee == other.shownFee
+    }
 
     /**
      * What one [executeDryrun] concluded and the inputs it concluded it FOR —
@@ -639,10 +656,17 @@ class SendCoinsViewModel @Inject constructor(
      * while another send is in progress (claimed before the first suspension, so two confirms
      * cannot both send) or once an earlier send's outcome is unknown ([paymentOutcomeUnknown],
      * set here when this send's outcome is unknown).
+     *
+     * [confirmed] is the dry run the user confirmed. The dry run of the same amount can be
+     * replaced while the dialog is open (a balance change checks the payment again), and the
+     * replacement may be a different payment: a fixed amount that now equals the balance is
+     * a send-all. One the dialog did not show is refused with [DryRunOutdatedException]
+     * (thepastaclaw on #1721).
      */
     suspend fun signAndSendPayment(
         editedAmount: Coin,
-        exchangeRate: ExchangeRate?
+        exchangeRate: ExchangeRate?,
+        confirmed: DryRunResult? = null
     ): Transaction {
         if (paymentOutcomeUnknown.value) {
             throw SendRefusedException("an earlier send's outcome is unknown; nothing was sent")
@@ -658,7 +682,7 @@ class SendCoinsViewModel @Inject constructor(
         savedStateHandle[KEY_SEND_IN_PROGRESS] = true
         val submitted = AtomicBoolean(false)
         try {
-            return sendPayment(editedAmount, exchangeRate, submitted)
+            return sendPayment(editedAmount, exchangeRate, submitted, confirmed)
         } catch (ex: Exception) {
             // Cancelled once the submission had started: the broadcast may have gone out, and
             // nobody is left to learn whether it did.
@@ -677,7 +701,8 @@ class SendCoinsViewModel @Inject constructor(
     private suspend fun sendPayment(
         editedAmount: Coin,
         exchangeRate: ExchangeRate?,
-        submitted: AtomicBoolean
+        submitted: AtomicBoolean,
+        confirmed: DryRunResult?
     ): Transaction = withContext(Dispatchers.IO) {
         Context.propagate(wallet.context)
         _state.postValue(State.SENDING)
@@ -707,6 +732,10 @@ class SendCoinsViewModel @Inject constructor(
             // different dry runs. Without a successful one, nothing is sent.
             val outcome = dryRunOutcome
             val dryRun = outcome?.result ?: throw DryRunNotReadyException()
+            if (confirmed != null && !confirmed.showsTheSamePaymentAs(dryRun)) {
+                log.info("the payment was checked again after it was confirmed, and changed; nothing was sent")
+                throw DryRunOutdatedException()
+            }
             // A confirmation shown for a fixed amount can be answered after a balance change
             // turned its dry run into a send-all. The screen does not offer one during a
             // catch-up ([maxBlockedByCatchUp]), so it is not sent from here either.
