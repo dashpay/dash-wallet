@@ -5050,6 +5050,49 @@ class L1ShadowSyncService internal constructor(
         }
 
     /**
+     * Under [mutex], after the caller's stop. That stop only logs a
+     * `stopSpv` whose native teardown outlived its wait, and the teardown's
+     * last persist can write the old client's files back into an SPV dataDir
+     * deleted meanwhile; the next start, which waits such a teardown out
+     * ([startSpvFinishingTeardown]), would then open them. So the callers
+     * that delete stop the client again here until the SDK reports the
+     * teardown through, and delete only after that.
+     *
+     * @param rounds how many more stops to try, [spvTeardownRetryDelayMs]
+     *   apart; null keeps trying for as long as it takes.
+     * @return whether the caller may delete. False means the teardown is
+     *   still running after [rounds]: the caller must leave the SDK wallet
+     *   and the dataDir alone. A stop that fails for any other reason is
+     *   logged and does not hold the caller back, as before.
+     */
+    private suspend fun confirmSpvTeardownForDestruction(what: String, rounds: Int?): Boolean {
+        var round = 0
+        while (true) {
+            try {
+                source.stopSpv()
+                return true
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                if (!source.isSpvTeardownIncomplete(t)) {
+                    log.warn("{}: SPV stop failed; continuing", what, t)
+                    return true
+                }
+            }
+            if (rounds != null && round >= rounds) {
+                log.error(
+                    "{}: the SPV teardown is still running after {} more stops — refusing to remove the " +
+                        "SDK wallet or the SPV dataDir underneath it; nothing was touched",
+                    what, round
+                )
+                return false
+            }
+            round++
+            log.warn("{}: the SPV teardown has not finished — waiting before stopping again (round {})", what, round)
+            delay(spvTeardownRetryDelayMs)
+        }
+    }
+
+    /**
      * Under [mutex]. A bring-up that [stopInternal] cancelled but could not
      * join is still INSIDE `startWalletSubsystems` — still using the SDK
      * wallet and the SPV dataDir the caller is about to remove. A stop may
@@ -5405,6 +5448,10 @@ class L1ShadowSyncService internal constructor(
                     if (!quiesceBringUpForDestruction("wallet re-creation", destructiveBringUpJoinMs)) {
                         return false
                     }
+                    // …and the same for an SPV teardown that outlived the stop.
+                    if (!confirmSpvTeardownForDestruction("wallet re-creation", spvTeardownRetryRounds)) {
+                        return false
+                    }
                     // The re-created wallet has the same id, so a paid-history
                     // marker would vouch for the empty store that replaces this
                     // one. Dropped first, and not recorded again until the
@@ -5532,6 +5579,8 @@ class L1ShadowSyncService internal constructor(
                     // returns is the process's problem, not a reason to delete
                     // underneath it.
                     quiesceBringUpForDestruction("wallet-wipe SDK cleanup", budgetMs = null)
+                    // The same holds for an SPV teardown that outlived the stop.
+                    confirmSpvTeardownForDestruction("wallet-wipe SDK cleanup", rounds = null)
                     if (walletIdHex != null) {
                         runCatching { recreator.removeSdkWallet(walletIdHex) }
                             .onFailure { log.warn("wipe cleanup: removeSdkWallet failed; continuing", it) }
