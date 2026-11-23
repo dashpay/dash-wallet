@@ -2475,6 +2475,8 @@ class L1ShadowSyncService internal constructor(
      */
     private val spvTeardownRetryRounds: Int = SPV_TEARDOWN_RETRY_ROUNDS,
     private val spvTeardownRetryDelayMs: Long = SPV_TEARDOWN_RETRY_DELAY_MS,
+    /** The wallet wipe's own, longer budget of such stops — see [clearForWalletWipe]. */
+    private val spvTeardownWipeRetryRounds: Int = SPV_TEARDOWN_WIPE_RETRY_ROUNDS,
     /**
      * Where the latest [ParityBreakdown] is kept across restarts, for a report
      * to fall back on; null (tests' default) keeps it in memory only. See
@@ -5058,14 +5060,17 @@ class L1ShadowSyncService internal constructor(
      * that delete stop the client again here until the SDK reports the
      * teardown through, and delete only after that.
      *
+     * Only a stop that returns is that report. One that fails for any other
+     * reason proves nothing about the client's writers — after a native
+     * panic the SDK answers every stop with `SpvProcessRestartRequired` for
+     * the rest of the process — so it is not retried and refuses the caller.
+     *
      * @param rounds how many more stops to try, [spvTeardownRetryDelayMs]
-     *   apart; null keeps trying for as long as it takes.
-     * @return whether the caller may delete. False means the teardown is
-     *   still running after [rounds]: the caller must leave the SDK wallet
-     *   and the dataDir alone. A stop that fails for any other reason is
-     *   logged and does not hold the caller back, as before.
+     *   apart, while the SDK reports the teardown still running.
+     * @return whether the caller may delete. False means no stop succeeded:
+     *   the caller must leave the SDK wallet and the dataDir alone.
      */
-    private suspend fun confirmSpvTeardownForDestruction(what: String, rounds: Int?): Boolean {
+    private suspend fun confirmSpvTeardownForDestruction(what: String, rounds: Int): Boolean {
         var round = 0
         while (true) {
             try {
@@ -5074,11 +5079,15 @@ class L1ShadowSyncService internal constructor(
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
                 if (!source.isSpvTeardownIncomplete(t)) {
-                    log.warn("{}: SPV stop failed; continuing", what, t)
-                    return true
+                    log.error(
+                        "{}: the SPV stop failed, so its teardown is unconfirmed — refusing to remove the " +
+                            "SDK wallet or the SPV dataDir underneath it; nothing was touched",
+                        what, t
+                    )
+                    return false
                 }
             }
-            if (rounds != null && round >= rounds) {
+            if (round >= rounds) {
                 log.error(
                     "{}: the SPV teardown is still running after {} more stops — refusing to remove the " +
                         "SDK wallet or the SPV dataDir underneath it; nothing was touched",
@@ -5532,28 +5541,34 @@ class L1ShadowSyncService internal constructor(
      * dashj wallet, which the wipe removes separately). Never throws;
      * every step is failure-contained so one failure cannot abort the
      * rest (a partial clear is exactly the resurrection bug).
+     *
+     * @return false only when the SPV client's stop could not be confirmed
+     *   ([confirmSpvTeardownForDestruction]): the SDK wallet, the SPV
+     *   dataDir and the binder latch were then left in place, and the
+     *   caller must keep the wipe pending so a fresh process finishes it.
+     *   A cleanup that fails before reaching the stop still returns true.
      */
-    suspend fun clearForWalletWipe() {
+    suspend fun clearForWalletWipe(): Boolean {
         // Closed until the SDK wallet is gone, or a run started before the
         // stop() below could keep this wallet's txids after the discard.
         closeParityBreakdown()
-        try {
+        return try {
             clearForWalletWipeWithBreakdownClosed()
         } finally {
             reopenParityBreakdown()
         }
     }
 
-    private suspend fun clearForWalletWipeWithBreakdownClosed() {
+    private suspend fun clearForWalletWipeWithBreakdownClosed(): Boolean {
         // First and unconditionally: the stored parity breakdown carries this
         // wallet's txids and amounts, and must never reach the next wallet's
         // support report.
         discardParityBreakdown("the wallet wipe")
         val recreator = this.recreator ?: run {
             log.info("wallet-wipe SDK cleanup skipped: no recreator wired (test construction?)")
-            return
+            return true
         }
-        try {
+        return try {
             recoveryMutex.withLock {
                 val walletIdHex = runningWalletIdHex.value ?: source.boundWalletIdOrNull()
                 log.warn(
@@ -5579,8 +5594,16 @@ class L1ShadowSyncService internal constructor(
                     // returns is the process's problem, not a reason to delete
                     // underneath it.
                     quiesceBringUpForDestruction("wallet-wipe SDK cleanup", budgetMs = null)
-                    // The same holds for an SPV teardown that outlived the stop.
-                    confirmSpvTeardownForDestruction("wallet-wipe SDK cleanup", rounds = null)
+                    // An SPV teardown that outlived the stop gets a budget
+                    // instead: the SDK bounds one stop, not the teardown, and
+                    // the reset screen is waiting on this call. Unconfirmed,
+                    // nothing below runs and the caller keeps the wipe marker,
+                    // so the next launch finishes the wipe in a process whose
+                    // SPV client never started.
+                    val wipeWhat = "wallet-wipe SDK cleanup"
+                    if (!confirmSpvTeardownForDestruction(wipeWhat, spvTeardownWipeRetryRounds)) {
+                        return false
+                    }
                     if (walletIdHex != null) {
                         runCatching { recreator.removeSdkWallet(walletIdHex) }
                             .onFailure { log.warn("wipe cleanup: removeSdkWallet failed; continuing", it) }
@@ -5594,6 +5617,7 @@ class L1ShadowSyncService internal constructor(
                     "wallet-wipe SDK cleanup complete for wallet {}: the next wallet binds fresh",
                     walletIdHex?.take(8) ?: "none"
                 )
+                true
             }
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
@@ -5603,6 +5627,12 @@ class L1ShadowSyncService internal constructor(
                     "identity could linger until then",
                 t
             )
+            // Not a reason to keep the wipe pending, as before: this is
+            // thrown ahead of the stop (every later step contains its own
+            // failure), typically by an SDK that cannot load its database,
+            // and a relaunch would fail the same way with no wallet to
+            // create or restore into.
+            true
         }
     }
 
@@ -5802,6 +5832,14 @@ class L1ShadowSyncService internal constructor(
          */
         internal const val SPV_TEARDOWN_RETRY_ROUNDS = 4
         internal const val SPV_TEARDOWN_RETRY_DELAY_MS = 5_000L
+
+        /**
+         * The wallet wipe's budget for the same wait. Longer than a start's,
+         * because the wipe is the user's one request to erase and the next
+         * chance is the next launch; bounded, because the reset screen waits
+         * on it and a teardown that never ends must not hold it for ever.
+         */
+        internal const val SPV_TEARDOWN_WIPE_RETRY_ROUNDS = 12
 
         /**
          * How long a refusable destructive step waits for that bring-up to

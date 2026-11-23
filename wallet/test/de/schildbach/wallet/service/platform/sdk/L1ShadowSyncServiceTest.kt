@@ -125,8 +125,11 @@ class L1ShadowSyncServiceTest {
 
         fun interactions() = boundCalls + isRunningCalls + startCalls + stopCalls
 
+        var onBoundWalletId: () -> Unit = {}
+
         override suspend fun boundWalletIdOrNull(): String? {
             boundCalls++
+            onBoundWalletId()
             return boundWalletId
         }
 
@@ -380,6 +383,7 @@ class L1ShadowSyncServiceTest {
         scanGateRetryInitialMs: Long = L1ShadowSyncService.SCAN_GATE_RETRY_INITIAL_MS,
         spvTeardownRetryRounds: Int = L1ShadowSyncService.SPV_TEARDOWN_RETRY_ROUNDS,
         spvTeardownRetryDelayMs: Long = 1L,
+        spvTeardownWipeRetryRounds: Int = L1ShadowSyncService.SPV_TEARDOWN_WIPE_RETRY_ROUNDS,
         durableHeightRefreshMs: Long = L1ShadowSyncService.DURABLE_HEIGHT_REFRESH_MS,
         breakdownStore: ParityBreakdownStore? = null,
         contactPaidHistory: ContactPaidHistoryInvalidation = ContactPaidHistoryInvalidation.NONE
@@ -400,6 +404,7 @@ class L1ShadowSyncServiceTest {
         scanGateRetryInitialMs = scanGateRetryInitialMs,
         spvTeardownRetryRounds = spvTeardownRetryRounds,
         spvTeardownRetryDelayMs = spvTeardownRetryDelayMs,
+        spvTeardownWipeRetryRounds = spvTeardownWipeRetryRounds,
         durableHeightRefreshMs = durableHeightRefreshMs,
         breakdownStore = breakdownStore,
         contactPaidHistory = contactPaidHistory
@@ -3209,20 +3214,95 @@ class L1ShadowSyncServiceTest {
         val service = service(source, recreator = recreator, spvTeardownRetryRounds = 1)
         assertTrue(service.startIfEnabled())
         var timedOut = 0
+        var teardownThrough = false
         var removedWhilePending = false
         source.onStop = {
             if (timedOut < 5) {
                 timedOut++
                 throw TeardownIncomplete("SPV teardown timed out; it is still tracked for a retry")
             }
+            teardownThrough = true
         }
-        recreator.onRemove = { removedWhilePending = timedOut < 5 }
+        recreator.onRemove = { removedWhilePending = !teardownThrough }
 
-        withTimeout(5_000) { service.clearForWalletWipe() }
+        assertTrue(withTimeout(5_000) { service.clearForWalletWipe() })
 
         assertEquals("the wipe outwaits more stops than a start's rounds", 5, timedOut)
         assertFalse(removedWhilePending)
         assertEquals(listOf(walletIdHex), recreator.removedWalletIds)
+    }
+
+    @Test
+    fun clearForWalletWipe_leavesTheSdkWalletInPlace_whenTheTeardownOutlastsItsBudget() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val recreator = FakeRecreator()
+        val service = service(source, recreator = recreator, spvTeardownWipeRetryRounds = 3)
+        assertTrue(service.startIfEnabled())
+        val spvDir = dataDir.resolve("spv").apply { mkdirs() }
+        spvDir.resolve("headers.dat").writeText("chain data")
+        source.onStop = { throw TeardownIncomplete("SPV teardown timed out; it is still tracked for a retry") }
+
+        assertFalse("the caller must keep the wipe pending", withTimeout(5_000) { service.clearForWalletWipe() })
+
+        assertEquals("the wipe's stop, the confirming one, and its three rounds", 5, source.stopCalls)
+        assertEquals("nothing of the SDK wallet was touched", listOf("stopShielded"), recreator.events)
+        assertTrue("the dataDir is untouched", spvDir.resolve("headers.dat").exists())
+    }
+
+    @Test
+    fun clearForWalletWipe_leavesTheSdkWalletInPlace_whenTheStopFailsOutright() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val recreator = FakeRecreator()
+        val service = service(source, recreator = recreator)
+        assertTrue(service.startIfEnabled())
+        val spvDir = dataDir.resolve("spv").apply { mkdirs() }
+        spvDir.resolve("headers.dat").writeText("chain data")
+        // What the SDK answers every stop with after a native panic.
+        source.onStop = { throw IllegalStateException("SPV process restart required") }
+
+        assertFalse("a failed stop confirms nothing", service.clearForWalletWipe())
+
+        assertEquals("not retried: only a fresh process can stop it", 2, source.stopCalls)
+        assertEquals(listOf("stopShielded"), recreator.events)
+        assertTrue("the dataDir is untouched", spvDir.resolve("headers.dat").exists())
+
+        // The next launch: a process whose client never started stops cleanly.
+        source.onStop = {}
+        assertTrue(service.clearForWalletWipe())
+        assertEquals(listOf(walletIdHex), recreator.removedWalletIds)
+        assertFalse(spvDir.exists())
+    }
+
+    @Test
+    fun clearForWalletWipe_doesNotHoldTheWipe_whenItFailsBeforeTheStop() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val recreator = FakeRecreator()
+        val service = service(source, recreator = recreator)
+        // A wipe resumed at launch: nothing is running, so the wallet is looked up.
+        source.onBoundWalletId = { throw IllegalStateException("SDK database unavailable") }
+
+        // Only an unconfirmed stop keeps the wipe pending; a relaunch would fail this lookup again.
+        assertTrue(service.clearForWalletWipe())
+
+        assertEquals(0, source.stopCalls)
+        assertTrue(recreator.events.isEmpty())
+    }
+
+    @Test
+    fun recoverByRecreatingWallet_refusesWhenTheStopFailsOutright() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val recreator = FakeRecreator()
+        val service = service(source, recreator = recreator)
+        assertTrue(service.startIfEnabled())
+        val spvDir = dataDir.resolve("spv").apply { mkdirs() }
+        spvDir.resolve("headers.dat").writeText("chain data")
+        source.onStop = { throw IllegalStateException("SPV process restart required") }
+
+        assertFalse("a failed stop confirms nothing", service.recoverByRecreatingWallet())
+
+        assertEquals("not retried", 2, source.stopCalls)
+        assertFalse(recreator.events.contains("removeWallet"))
+        assertTrue("the dataDir is untouched", spvDir.resolve("headers.dat").exists())
     }
 
     @Test

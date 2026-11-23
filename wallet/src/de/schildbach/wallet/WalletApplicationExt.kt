@@ -185,10 +185,12 @@ object WalletApplicationExt {
         // erase below — the SDK's removal cascade cannot be relied on to have
         // tombstoned the wallet. If the fence cannot be established within its
         // budget the erase outcome counts as FAILED and the marker stays.
+        // Fails closed: only a teardown that ran and reported it counts.
+        var sdkWalletCleared = false
         val sdkSecrets = fencedSdkSecretsWipe(
             fence = walletSecretWriteFence,
             quiesceTimeoutMs = WalletSecretWriteFence.WIPE_QUIESCE_TIMEOUT_MS,
-            teardown = { tearDownWalletData() },
+            teardown = { sdkWalletCleared = tearDownWalletData() },
             // AFTER the cascade, BEFORE the erase: the SDK's own persistence
             // deriver (a wallet the cascade failed to remove, loaded or not)
             // writes keys outside the fence's permits. Tombstones the wallet
@@ -204,12 +206,14 @@ object WalletApplicationExt {
             erase = { eraseSdkWalletSecrets() }
         )
         // Last, so every other step still runs: a surviving primary or key
-        // backup, or SDK wallet secrets that could not be erased, throw here,
+        // backup, SDK wallet secrets that could not be erased, or an SDK
+        // wallet left in place under an unconfirmed SPV stop, throw here,
         // keeping the wipe marker for the next launch.
-        confirmWipeDestroyed(sdkSecrets) { confirmWalletSourcesDestroyed() }
+        confirmWipeDestroyed(sdkSecrets, sdkWalletCleared) { confirmWalletSourcesDestroyed() }
     }
 
-    private suspend fun WalletApplication.tearDownWalletData() {
+    /** @return [DatabasesCleared.sdkWalletCleared] of the wipe's database clear. */
+    private suspend fun WalletApplication.tearDownWalletData(): Boolean {
         // A queued transaction-metadata save holds this wallet's consent and
         // field choices. Left to run after the clears below it would write
         // them into the next wallet and enqueue a publish, so stop it and wait.
@@ -235,7 +239,7 @@ object WalletApplicationExt {
         clearDatastorePrefFiles(apiCleared)
         notifyWalletWipeListeners()
         destroyWalletSecrets()
-        clearDatabasesInner(isWalletWipe = true)
+        return clearDatabasesInner(isWalletWipe = true).sdkWalletCleared
     }
 
     /**
@@ -269,13 +273,24 @@ object WalletApplicationExt {
 
     /**
      * The wipe's completion gate: both persistent dashj wallet sources gone
-     * ([confirmWalletSources] throws otherwise) AND the SDK's wallet secrets
-     * erased. Either failure throws, so [WalletWipeSequence.finish] keeps the
-     * marker and the next launch re-runs the wipe. [confirmWalletSources]
-     * always runs first, so its own deletes are attempted regardless.
+     * ([confirmWalletSources] throws otherwise), the SDK's wallet secrets
+     * erased, AND the SDK wallet cleanup not held back by an SPV stop it
+     * could not confirm ([sdkWalletCleared], see
+     * [de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService.clearForWalletWipe]).
+     * Any failure throws, so [WalletWipeSequence.finish] keeps the marker and
+     * the next launch re-runs the wipe — in a process whose SPV client never
+     * started. [confirmWalletSources] always runs first, so its own deletes
+     * are attempted regardless.
      */
-    internal fun confirmWipeDestroyed(sdkSecrets: SdkSecretsWipeOutcome, confirmWalletSources: () -> Unit) {
+    internal fun confirmWipeDestroyed(
+        sdkSecrets: SdkSecretsWipeOutcome,
+        sdkWalletCleared: Boolean,
+        confirmWalletSources: () -> Unit
+    ) {
         confirmWalletSources()
+        if (!sdkWalletCleared) {
+            throw IOException("wipe left the SDK wallet in place: the SPV client's stop was not confirmed")
+        }
         if (!sdkSecrets.erased) {
             throw IOException("wipe could not confirm the SDK wallet secrets are erased ($sdkSecrets)")
         }
@@ -314,7 +329,14 @@ object WalletApplicationExt {
      * the next launch resets again.
      */
     suspend fun WalletApplication.clearDatabasesForRecoveryReset(): Boolean =
-        clearDatabasesInner(isWalletWipe = false)
+        clearDatabasesInner(isWalletWipe = false).allSteps
+
+    /**
+     * @property allSteps every clear ran without a failure.
+     * @property sdkWalletCleared a wipe's SDK wallet cleanup was not refused
+     *   over an unconfirmed SPV stop; always false outside a wipe.
+     */
+    private class DatabasesCleared(val allSteps: Boolean, val sdkWalletCleared: Boolean)
 
     /**
      * Every step is failure-contained: one failing store (most notably
@@ -322,8 +344,9 @@ object WalletApplicationExt {
      * must never abort the remaining clears — that partial-clear mode is
      * exactly the resurrected-DashPay-UI bug.
      */
-    private suspend fun WalletApplication.clearDatabasesInner(isWalletWipe: Boolean): Boolean {
+    private suspend fun WalletApplication.clearDatabasesInner(isWalletWipe: Boolean): DatabasesCleared {
         var cleared = true
+        var sdkWalletCleared = false
         // Stop the platform sync machinery BEFORE any clear: "Reset Wallet"
         // does not restart the process, and shutdown() gates its cancel on an
         // identity still being present — so an in-flight sync iteration
@@ -342,8 +365,10 @@ object WalletApplicationExt {
             // discovered identity — observed as the DashPay "Join" entry points
             // staying hidden after a "Reset this wallet". Wipe only: the restore
             // path re-binds to the restored seed instead of destroying it.
-            runCatching { l1ShadowSyncService.clearForWalletWipe() }
-                .onFailure { rethrowCancellation(it); cleared = false; log.warn("SDK wallet clear failed during wipe", it) }
+            sdkWalletCleared = runCatching { l1ShadowSyncService.clearForWalletWipe() }
+                .onFailure { rethrowCancellation(it); log.warn("SDK wallet clear failed during wipe", it) }
+                .getOrDefault(false)
+            if (!sdkWalletCleared) cleared = false
             runCatching { transactionMetadataProvider.clear() }
                 .onFailure { rethrowCancellation(it); cleared = false; log.warn("tx-metadata clear failed during wipe", it) }
             // Phase 5d PER-WALLET cutover reset: the cutover state is
@@ -396,7 +421,7 @@ object WalletApplicationExt {
         runCatching { dashPayConfig.seedDebugDefaultsIfUnset() }
             .onFailure { rethrowCancellation(it); log.warn("debug-flag re-seed failed after reset", it) }
         log.info("databases cleared (isWalletWipe = {}, all steps succeeded = {})", isWalletWipe, cleared)
-        return cleared
+        return DatabasesCleared(allSteps = cleared, sdkWalletCleared = sdkWalletCleared)
     }
 
     /**
