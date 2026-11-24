@@ -60,6 +60,7 @@ class PaymentProtocolViewModelRetryPreviewTest {
 
     private fun buildViewModel(runner: SendCoinsTaskRunner): PaymentProtocolViewModel {
         coEvery { runner.findUnresolvedSubmission(any<PaymentIntent>()) } returns null
+        coEvery { runner.findUnresolvedSubmissionOfInvoice(any()) } returns null
         coEvery { runner.fetchPaymentRequest(any()) } returns mockk(relaxed = true)
         coEvery { runner.findAbandonedSubmission(any(), any()) } returns null
         val wallet = mockk<Wallet>(relaxed = true)
@@ -149,7 +150,7 @@ class PaymentProtocolViewModelRetryPreviewTest {
             SendEngineNotSyncedException("L1 funding gate closed: scan short of the chain tip") andThen payment
         val viewModel = buildViewModel(runner)
         val earlier = org.bitcoinj.core.Sha256Hash.wrap("cc".repeat(32))
-        coEvery { runner.findUnresolvedSubmission(any<PaymentIntent>()) } returns earlier andThen null
+        coEvery { runner.findUnresolvedSubmissionOfInvoice(any()) } returns earlier andThen null
 
         openInvoice(viewModel)
         awaitCondition("the refusal is stored") { viewModel.sendRequestLiveData.value?.exception != null }
@@ -165,6 +166,22 @@ class PaymentProtocolViewModelRetryPreviewTest {
         runBlocking { coVerify(exactly = 1) { runner.buildDeferredBip70Payment(any(), any()) } }
     }
 
+    /** A payment store that cannot be read is not taken as "no earlier payment". */
+    @Test
+    fun `a preview is not built when the earlier-payment lookup fails`() {
+        val runner = mockk<SendCoinsTaskRunner>(relaxed = true)
+        coEvery { runner.buildDeferredBip70Payment(any(), any()) } returns payment
+        val viewModel = buildViewModel(runner)
+        coEvery { runner.findUnresolvedSubmissionOfInvoice(any()) } throws IllegalStateException("store unreadable")
+
+        openInvoice(viewModel)
+        awaitCondition("the failure is stored") { viewModel.sendRequestLiveData.value?.exception != null }
+
+        assertFalse(viewModel.canSendPayment)
+        assertFalse("only a syncing refusal is retried", viewModel.canRetryPreview)
+        runBlocking { coVerify(exactly = 0) { runner.buildDeferredBip70Payment(any(), any()) } }
+    }
+
     /**
      * The same payment settling while the built preview waits for the confirm: the confirm
      * finds no record any more and still refuses.
@@ -175,7 +192,7 @@ class PaymentProtocolViewModelRetryPreviewTest {
         coEvery { runner.buildDeferredBip70Payment(any(), any()) } returns payment
         val viewModel = buildViewModel(runner)
         val earlier = org.bitcoinj.core.Sha256Hash.wrap("cc".repeat(32))
-        coEvery { runner.findUnresolvedSubmission(any<PaymentIntent>()) } returns earlier andThen null
+        coEvery { runner.findUnresolvedSubmissionOfInvoice(any()) } returns earlier andThen null
 
         openInvoice(viewModel)
         awaitCondition("the preview is armed") { viewModel.deferredPayment != null }
