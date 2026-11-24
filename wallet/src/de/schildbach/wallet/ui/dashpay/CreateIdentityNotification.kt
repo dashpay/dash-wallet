@@ -13,6 +13,7 @@ import androidx.lifecycle.lifecycleScope
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.IdentityCreationState
+import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -57,34 +58,45 @@ class CreateIdentityNotification(
 
     @SuppressLint("WrongConstant")
     fun displayErrorAndStopService(isInvite: Boolean) {
-        val messageResId = if (isInvite) R.string.processing_error_title_from_invite else R.string.processing_error_title
-        val notification: Notification = createNotification(R.string.processing_home_title, messageResId, 0, 0).run {
-//            setAutoCancel(true)
-//            val startAppIntent = OnboardingActivity.createIntent(service)
-//            val contentIntent = PendingIntent.getActivity(service, 0, startAppIntent, PendingIntent.FLAG_UPDATE_CURRENT)
-//            setContentIntent(contentIntent)
-            val actionIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                val serviceRetryIntent = if (isInvite) {
-                    CreateIdentityService.createIntentForRetryFromInvite(service, true)
-                } else {
-                    CreateIdentityService.createIntentForRetry(service, true)
-                }
-                PendingIntent.getForegroundService(service, 0, serviceRetryIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-            } else {
-                val serviceRetryIntent = if (isInvite) {
-                    CreateIdentityService.createIntentForRetryFromInvite(service)
-                } else {
-                    CreateIdentityService.createIntentForRetry(service)
-                }
-                PendingIntent.getService(service, 0, serviceRetryIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-            }
-            addAction(R.drawable.ic_retry, service.getString(R.string.button_retry), actionIntent)
-            build()
-        }
-        notificationManager.notify(Constants.NOTIFICATION_ID_DASHPAY_CREATE_IDENTITY_ERROR, notification)
+        displayError(isInvite)
         service.stopForeground(true)
         service.stopSelf()
     }
+
+    fun displayError(isInvite: Boolean, retryable: Boolean = true) {
+        val messageResId = if (isInvite) R.string.processing_error_title_from_invite else R.string.processing_error_title
+        val builder = createNotification(R.string.processing_home_title, messageResId, 0, 0)
+        if (retryable) {
+            builder.addAction(R.drawable.ic_retry, service.getString(R.string.button_retry), retryIntent(isInvite))
+        } else {
+            builder.setAutoCancel(true)
+            builder.setContentIntent(
+                PendingIntent.getActivity(service, 0, MainActivity.createIntent(service), PendingIntent.FLAG_IMMUTABLE)
+            )
+        }
+        notificationManager.notify(Constants.NOTIFICATION_ID_DASHPAY_CREATE_IDENTITY_ERROR, builder.build())
+    }
+
+    private fun retryIntent(isInvite: Boolean): PendingIntent =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val serviceRetryIntent = if (isInvite) {
+                CreateIdentityService.createIntentForRetryFromInvite(service, true)
+            } else {
+                CreateIdentityService.createIntentForRetry(service, true)
+            }
+            PendingIntent.getForegroundService(
+                service, 0, serviceRetryIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+        } else {
+            val serviceRetryIntent = if (isInvite) {
+                CreateIdentityService.createIntentForRetryFromInvite(service)
+            } else {
+                CreateIdentityService.createIntentForRetry(service)
+            }
+            PendingIntent.getService(
+                service, 0, serviceRetryIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+        }
 
     private fun updateNotification(@StringRes titleResId: Int, @StringRes messageResId: Int,
                                    progressMax: Int, progress: Int) {

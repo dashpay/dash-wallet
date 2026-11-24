@@ -119,6 +119,8 @@ class CreateUsernameActivity : LockScreenActivity() {
                 userName = username,
                 invite = invite
             )
+            // the welcome screen's balance gate must know about the invite before it is shown
+            requestUserNameViewModel.setCreateUsernameArgs(dashPayViewModel.createUsernameArgs)
 
             if (requestUserNameViewModel.isUserNameRequested() &&
                 !requestUserNameViewModel.isUsernameLocked() &&

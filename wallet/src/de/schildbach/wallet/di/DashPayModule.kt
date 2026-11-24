@@ -24,6 +24,8 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
+import de.schildbach.wallet.database.entity.NameReplacementStore
 import de.schildbach.wallet.service.CoinJoinMixingService
 import de.schildbach.wallet.service.CoinJoinService
 import de.schildbach.wallet.service.platform.IdentityRepository
@@ -80,6 +82,9 @@ abstract class DashPayModule {
     @Singleton // only want one of PlatformSyncService created
     @Binds
     abstract fun bindsIdentityRepository(identityRepository: IdentityRepositoryImpl): IdentityRepository
+
+    @Binds
+    abstract fun bindsNameReplacementStore(blockchainIdentityConfig: BlockchainIdentityConfig): NameReplacementStore
 
     //@Binds
     //@Singleton

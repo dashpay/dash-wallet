@@ -275,14 +275,15 @@ class IdentityRepositoryImpl @Inject constructor(
         // Syncing complete
         log.info("loading identity ${blockchainIdentityData.userId}: {}", watch)
         return blockchainIdentity.apply {
-            primaryUsername = blockchainIdentityData.username
-            secondaryUsername = blockchainIdentityData.usernameSecondary
             blockchainIdentityData.username?.let {
                 addUsername(it)
             }
             blockchainIdentityData.usernameSecondary?.let {
                 addUsername(it)
             }
+            // addUsername() fills the secondary slot with the primary name when it is added second
+            primaryUsername = blockchainIdentityData.username
+            secondaryUsername = blockchainIdentityData.usernameSecondary
 
             registrationStatus = blockchainIdentityData.registrationStatus ?: IdentityStatus.NOT_REGISTERED
             // usernameStatus, usernameSalts are not set if preorder hasn't started
@@ -296,6 +297,7 @@ class IdentityRepositoryImpl @Inject constructor(
                 )
                 currentUsername ?.let {
                     usernameStatuses[it] = usernameStatus
+                    blockchainIdentityData.preorderSalt?.let { salt -> usernameSalts[it] = salt }
                 }
             }
 
@@ -309,6 +311,7 @@ class IdentityRepositoryImpl @Inject constructor(
                 )
                 secondaryUsername ?.let {
                     usernameStatuses[it] = usernameStatus
+                    blockchainIdentityData.preorderSaltSecondary?.let { salt -> usernameSalts[it] = salt }
                 }
             }
 

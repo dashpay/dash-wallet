@@ -46,14 +46,15 @@ class ConfirmUsernameRequestDialogFragment: OffsetDialogFragment(R.layout.dialog
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         viewModel.isContestableUsername = requestUserNameViewModel.isUsernameContestable()
-        viewModel.hasIdentity = requestUserNameViewModel.identity != null
+        viewModel.hasIdentity = requestUserNameViewModel.identity?.usingInvite == false
+        viewModel.inviteNameReplacementTopUp = requestUserNameViewModel.inviteNameReplacementTopUp()
         val usernameType = args.usernameType
         viewModel.usernameType = usernameType
         binding.confirmBtn.setOnClickListener {
             viewLifecycleOwner.lifecycleScope.launch {
                 requestUserNameViewModel.logEvent(AnalyticsConstants.UsersContacts.CREATE_USERNAME_CONFIRM)
                 if (usernameType == UsernameType.Primary && viewModel.isContestableUsername &&
-                    !requestUserNameViewModel.hasSecondaryName()) {
+                    viewModel.inviteNameReplacementTopUp == null && !requestUserNameViewModel.hasSecondaryName()) {
                     createInstantUsernameDialog(
                         onCreateInstantUsername = {
                             // Navigate to the instant username fragment
@@ -65,12 +66,12 @@ class ConfirmUsernameRequestDialogFragment: OffsetDialogFragment(R.layout.dialog
                             dismiss()
                         },
                         onCancel = {
-                            requestUserNameViewModel.submit()
+                            requestUserNameViewModel.submit(viewModel.inviteNameReplacementTopUp)
                             dismiss()
                         }
                     ).show(requireActivity())
                 } else {
-                    requestUserNameViewModel.submit()
+                    requestUserNameViewModel.submit(viewModel.inviteNameReplacementTopUp)
                     dismiss()
                 }
             }

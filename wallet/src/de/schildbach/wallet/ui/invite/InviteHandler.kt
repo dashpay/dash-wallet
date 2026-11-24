@@ -21,6 +21,7 @@ import android.app.ActivityManager
 import androidx.fragment.app.FragmentActivity
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.entity.BlockchainIdentityBaseData
+import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Resource.Companion.error
@@ -208,6 +209,9 @@ class InviteHandler(val activity: FragmentActivity, private val analytics: Analy
         blockchainIdentityData: BlockchainIdentityBaseData,
         identityRepository: IdentityRepository
     ): Boolean {
+        if (blockchainIdentityData.creationState >= IdentityCreationState.IDENTITY_REGISTERED) {
+            return false
+        }
         // handle errors
         var exception: ConcensusException
         if (blockchainIdentityData.creationStateErrorMessage.also {

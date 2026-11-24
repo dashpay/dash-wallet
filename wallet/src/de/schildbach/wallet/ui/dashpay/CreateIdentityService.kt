@@ -17,22 +17,29 @@ import de.schildbach.wallet.database.dao.UsernameRequestDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.database.entity.IdentityCreationState
+import de.schildbach.wallet.database.entity.NameReplacementAttempt
+import de.schildbach.wallet.database.entity.NameReplacementFailure
+import de.schildbach.wallet.database.entity.NameReplacementState
+import de.schildbach.wallet.database.entity.NameReplacementStore
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.database.entity.UsernameRequest
+import de.schildbach.wallet.payments.PendingDirectPaymentVerifier
 import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.platform.IdentityRepository
+import de.schildbach.wallet.service.platform.NameReplacementFunding
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.service.platform.TopUpRepository
 import de.schildbach.wallet.ui.dashpay.UserAlert.Companion.INVITATION_NOTIFICATION_ICON
 import de.schildbach.wallet.ui.dashpay.UserAlert.Companion.INVITATION_NOTIFICATION_TEXT
 import de.schildbach.wallet.ui.dashpay.work.GetUsernameVotingResultOperation
-import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
+import de.schildbach.wallet.ui.dashpay.work.InviterContactRequestOperation
 import de.schildbach.wallet.ui.username.UsernameType
 import io.grpc.Status
 import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.*
+import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.core.TransactionConfidence
 import org.bitcoinj.evolution.AssetLockTransaction
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
@@ -52,6 +59,7 @@ import org.dashj.platform.dpp.errors.ConcensusErrorMetadata
 import org.dashj.platform.dpp.errors.concensus.ConcensusException
 import org.dashj.platform.dpp.errors.concensus.basic.identity.IdentityAssetLockTransactionOutPointAlreadyExistsException
 import org.dashj.platform.dpp.errors.concensus.basic.identity.InvalidInstantAssetLockProofSignatureException
+import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.dpp.identity.Identity
 import org.dashj.platform.sdk.platform.DomainDocument
 import org.dashj.platform.sdk.platform.Names
@@ -71,7 +79,7 @@ class CreateIdentityService : LifecycleService() {
         private const val ACTION_RETRY_WITH_NEW_USERNAME = "org.dash.dashpay.action.ACTION_RETRY_WITH_NEW_USERNAME"
         private const val ACTION_RETRY_AFTER_INTERRUPTION = "org.dash.dashpay.action.ACTION_RETRY_AFTER_INTERRUPTION"
 
-        private const val ACTION_RETRY_INVITE_WITH_NEW_USERNAME = "org.dash.dashpay.action.ACTION_RETRY_INVITE_WITH_NEW_USERNAME"
+        private const val ACTION_RUN_NAME_REPLACEMENT = "org.dash.dashpay.action.RUN_NAME_REPLACEMENT"
         private const val ACTION_RETRY_INVITE_AFTER_INTERRUPTION = "org.dash.dashpay.action.ACTION_RETRY_INVITE_AFTER_INTERRUPTION"
 
         private const val EXTRA_USERNAME = "org.dash.dashpay.extra.USERNAME"
@@ -115,13 +123,9 @@ class CreateIdentityService : LifecycleService() {
         }
 
         @JvmStatic
-        fun createIntentFromInviteForNewUsername(context: Context, username: String, usernameSecondary: String?): Intent {
+        fun createIntentForNameReplacement(context: Context): Intent {
             return Intent(context, CreateIdentityService::class.java).apply {
-                action = ACTION_RETRY_INVITE_WITH_NEW_USERNAME
-                putExtra(EXTRA_USERNAME, username)
-                usernameSecondary?.let {
-                    putExtra(EXTRA_USERNAME_SECONDARY, it)
-                }
+                action = ACTION_RUN_NAME_REPLACEMENT
             }
         }
 
@@ -154,6 +158,9 @@ class CreateIdentityService : LifecycleService() {
     @Inject lateinit var coinJoinConfig: CoinJoinConfig
     @Inject lateinit var usernameRequestDao: UsernameRequestDao
     @Inject lateinit var walletDataProvider: WalletDataProvider
+    @Inject lateinit var replacementStore: NameReplacementStore
+    @Inject lateinit var pendingPaymentVerifier: PendingDirectPaymentVerifier
+    internal var replacementTopUps = NameReplacementTopUps()
     private lateinit var securityGuard: SecurityGuard
     
     private val walletWipeListener: suspend () -> Unit = {
@@ -180,7 +187,12 @@ class CreateIdentityService : LifecycleService() {
     @Inject
     lateinit var analytics: AnalyticsService
 
+    @Volatile
     private var workInProgress = false
+    private var pickupRequested = false
+    private var runToken = 0L
+    private var latestStartId = 0
+    private val runLock = Any()
 
     private val createIdentityExceptionHandler = CoroutineExceptionHandler { _, exception ->
         log.error(exception.message, exception)
@@ -188,18 +200,18 @@ class CreateIdentityService : LifecycleService() {
         analytics.logEvent(AnalyticsConstants.UsersContacts.CREATE_USERNAME_ERROR, mapOf())
 
         GlobalScope.launch {
-            var isInvite = false
-            if (this@CreateIdentityService::blockchainIdentityData.isInitialized) {
+            val replacementExists = runCatching { replacementStore.loadReplacement() != null }.getOrDefault(true)
+            if (this@CreateIdentityService::blockchainIdentityData.isInitialized && !replacementExists) {
                 log.error("[${blockchainIdentityData.creationState}(error)]", exception)
                 identityRepository.updateIdentityCreationState(blockchainIdentityData, blockchainIdentityData.creationState, exception)
                 if (this@CreateIdentityService::blockchainIdentity.isInitialized) {
                     identityRepository.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
                 }
-                isInvite = blockchainIdentityData.usingInvite
             }
+            val isInvite = runCatching { identityRepository.loadBlockchainIdentityBaseData().usingInvite }
+                .getOrDefault(this@CreateIdentityService::blockchainIdentityData.isInitialized && blockchainIdentityData.usingInvite)
             createIdentityNotification.displayErrorAndStopService(isInvite)
         }
-        workInProgress = false
     }
 
     override fun onCreate() {
@@ -221,17 +233,32 @@ class CreateIdentityService : LifecycleService() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
+        synchronized(runLock) { latestStartId = startId }
 
         if (intent == null) {
             // the service has been restarted by the system
             val blockchainIdentityData = runBlocking {
                 identityRepository.loadBlockchainIdentityBaseData()
             }
-            if (blockchainIdentityData != null && blockchainIdentityData.creationState != IdentityCreationState.DONE && !blockchainIdentityData.restoring) {
-                handleCreateIdentityAction(null, null)
+            val replacement = runBlocking { runCatching { replacementStore.loadReplacement() } }
+            val attempt = replacement.getOrNull()
+            when {
+                replacement.isFailure -> log.error("cannot read the name replacement", replacement.exceptionOrNull())
+                attempt != null -> if (attempt.failure == null) {
+                    handleResumeInviteAction(explicitRetry = false)
+                }
+                blockchainIdentityData == null || blockchainIdentityData.creationState == IdentityCreationState.DONE ||
+                    blockchainIdentityData.restoring -> Unit
+                !blockchainIdentityData.usingInvite -> handleCreateIdentityAction(null, null)
+                blockchainIdentityData.creationState < IdentityCreationState.VOTING ->
+                    handleResumeInviteAction(explicitRetry = false)
+            }
+            if (!workInProgress) {
+                stopSelf(startId)
+                return Service.START_NOT_STICKY
             }
 
-        } else if (!workInProgress) {
+        } else if (!deferIfBusy()) {
 
             when (intent.action) {
                 ACTION_CREATE_IDENTITY,
@@ -241,14 +268,14 @@ class CreateIdentityService : LifecycleService() {
                     val retryWithNewUserName = intent.action == ACTION_RETRY_WITH_NEW_USERNAME
                     handleCreateIdentityAction(username, usernameSecondary, retryWithNewUserName)
                 }
-                ACTION_CREATE_IDENTITY_FROM_INVITATION,
-                ACTION_RETRY_INVITE_WITH_NEW_USERNAME -> {
+                ACTION_CREATE_IDENTITY_FROM_INVITATION -> {
                     val username = intent.getStringExtra(EXTRA_USERNAME)
                     val usernameSecondary = intent.getStringExtra(EXTRA_USERNAME_SECONDARY)
                     val invitation = intent.getParcelableExtra<InvitationLinkData>(EXTRA_INVITE)
 
                     handleCreateIdentityFromInvitationAction(username, usernameSecondary, invitation)
                 }
+                ACTION_RUN_NAME_REPLACEMENT -> launchRun { }
                 ACTION_RETRY_AFTER_INTERRUPTION -> {
                     val startForegroundPromised = intent.getBooleanExtra(EXTRA_START_FOREGROUND_PROMISED, false)
                     if (startForegroundPromised) {
@@ -261,7 +288,7 @@ class CreateIdentityService : LifecycleService() {
                     if (startForegroundPromised) {
                         createIdentityNotification.startServiceForeground()
                     }
-                    handleCreateIdentityFromInvitationAction(null, null, null)
+                    handleResumeInviteAction(explicitRetry = true)
                 }
             }
         } else {
@@ -272,11 +299,47 @@ class CreateIdentityService : LifecycleService() {
     }
 
     private fun handleCreateIdentityAction(username: String?, usernameSecondary: String?, retryWithNewUserName: Boolean = false) {
-        workInProgress = true
+        launchRun { createIdentity(username, usernameSecondary, retryWithNewUserName) }
+    }
+
+    private fun deferIfBusy(): Boolean = synchronized(runLock) {
+        if (workInProgress) {
+            pickupRequested = true
+        }
+        workInProgress
+    }
+
+    private fun launchRun(block: suspend () -> Unit) {
+        val token = synchronized(runLock) {
+            workInProgress = true
+            pickupRequested = false
+            ++runToken
+        }
         serviceScope.launch(createIdentityExceptionHandler) {
-            createIdentity(username, usernameSecondary, retryWithNewUserName)
-            workInProgress = false
-            stopSelf()
+            var stopId: Int? = null
+            try {
+                block()
+                while (true) {
+                    pendingReplacement()?.let { runReplacement(it) }
+                    val more = synchronized(runLock) {
+                        pickupRequested.also { requested ->
+                            pickupRequested = false
+                            if (!requested) {
+                                workInProgress = false
+                                stopId = latestStartId
+                            }
+                        }
+                    }
+                    if (!more) break
+                }
+            } finally {
+                synchronized(runLock) {
+                    if (runToken == token) {
+                        workInProgress = false
+                    }
+                }
+            }
+            stopId?.let { stopSelfResult(it) }
         }
     }
 
@@ -512,15 +575,170 @@ class CreateIdentityService : LifecycleService() {
     }
 
     private fun handleCreateIdentityFromInvitationAction(username: String?, usernameSecondary: String?, invite: InvitationLinkData?) {
-        workInProgress = true
-        serviceScope.launch(createIdentityExceptionHandler) {
-            createIdentityFromInvitation(username, usernameSecondary, invite)
-            workInProgress = false
-            stopSelf()
+        launchRun { createIdentityFromInvitation(username, usernameSecondary, invite) }
+    }
+
+    private fun handleResumeInviteAction(explicitRetry: Boolean) {
+        launchRun { resumeInvite(explicitRetry) }
+    }
+
+    private suspend fun resumeInvite(explicitRetry: Boolean) {
+        val attempt = replacementStore.loadReplacement()
+        if (attempt != null) {
+            if (explicitRetry && attempt.failure == NameReplacementFailure.RETRYABLE) {
+                replacementStore.clearReplacementFailure(attempt.id)
+            }
+            return
+        }
+        try {
+            createIdentityFromInvitation(null, null, null)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            if (pendingReplacement() == null) {
+                throw e
+            }
+            log.warn("the previous name failed while a replacement name was approved", e)
         }
     }
 
-    private suspend fun createIdentityFromInvitation(username: String?, usernameSecondary: String?, invite: InvitationLinkData?, retryWithNewUserName: Boolean = false) {
+    private suspend fun pendingReplacement(): NameReplacementAttempt? = try {
+        replacementStore.loadReplacement()?.takeIf { it.failure == null }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        log.error("cannot read the name replacement", e)
+        null
+    }
+
+    internal suspend fun runReplacement(pending: NameReplacementAttempt) {
+        log.info("name replacement {} running from {}", pending.id, pending.state)
+        org.bitcoinj.core.Context.propagate(walletApplication.wallet!!.context)
+        var attempt = pending
+        try {
+            while (true) {
+                attempt = when (attempt.state) {
+                    NameReplacementState.APPROVED -> fundReplacement(attempt)
+                    NameReplacementState.DISPATCHING -> adoptReplacementTopUp(attempt)
+                    NameReplacementState.DISPATCHED -> creditReplacementTopUp(attempt)
+                    NameReplacementState.NAME_SAVED -> return registerReplacementName(attempt)
+                } ?: return
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            val message = errorMessage(e)
+            val failure = if (e is NameReplacementStop ||
+                (attempt.state == NameReplacementState.NAME_SAVED && isNameRejection(message))
+            ) {
+                NameReplacementFailure.FINAL
+            } else {
+                NameReplacementFailure.RETRYABLE
+            }
+            log.error("name replacement {} failed at {} ({})", attempt.id, attempt.state, failure, e)
+            analytics.logError(e, "invite: name replacement failed at ${attempt.state}")
+            replacementStore.failReplacement(attempt.id, failure, message)
+            createIdentityNotification.displayError(true, retryable = failure == NameReplacementFailure.RETRYABLE)
+        }
+    }
+
+    private suspend fun fundReplacement(attempt: NameReplacementAttempt): NameReplacementAttempt? {
+        val identityData = identityRepository.loadBlockchainIdentityData()
+        if (identityData != null && identityData.creationState > IdentityCreationState.USERNAME_REGISTERING) {
+            log.info("name replacement {} is moot: the identity is at {}", attempt.id, identityData.creationState)
+            replacementStore.completeReplacement(attempt.id)
+            return null
+        }
+        checkNotNull(identityData) { "the identity record cannot be read" }
+        if (identityData.userId != attempt.identityId || !identityData.usingInvite ||
+            identityData.usernameSecondary != null
+        ) {
+            throw NameReplacementStop("the identity no longer matches the approved name replacement")
+        }
+        if (attempt.paidFromCredits) {
+            val credits = platformRepo.getIdentityBalance(Identifier.from(attempt.identityId)).balance
+            val contestable = Names.isUsernameContestable(attempt.username)
+            val protocolVersion = maxOf(attempt.protocolVersion, ContestedUsernameFees.currentProtocolVersion)
+            if (!NameReplacementFunding.creditsCover(credits, contestable, protocolVersion)) {
+                throw NameReplacementStop("$credits credits no longer pay for ${attempt.username}")
+            }
+            return saveReplacementName(attempt, NameReplacementState.APPROVED)
+        }
+        val identity = replacementIdentity(attempt)
+        val encryptionKey = platformRepo.getWalletEncryptionKey()
+            ?: throw IllegalStateException("cannot obtain wallet encryption key")
+        val keyHash = replacementTopUps.currentKeyHash(walletApplication.wallet!!)
+        replacementStore.markReplacementDispatching(attempt.id, keyHash) ?: return null
+        val topUpTx = try {
+            val useCoinJoin = coinJoinConfig.getMode() != CoinJoinMode.NONE
+            topUpRepository.createTopupTransaction(identity, attempt.approvedTopUp, encryptionKey, useCoinJoin)
+        } catch (e: InsufficientMoneyException) {
+            throw NameReplacementStop("the wallet cannot pay the approved ${attempt.approvedTopUp.toFriendlyString()}", e)
+        }
+        walletApplication.saveWallet()
+        return replacementStore.markReplacementDispatched(attempt.id, topUpTx.unsafeBitcoinSerialize())
+    }
+
+    private suspend fun adoptReplacementTopUp(attempt: NameReplacementAttempt): NameReplacementAttempt? {
+        val topUpTx = replacementTopUps.findByKey(walletApplication.wallet!!, attempt.topUpKeyHash!!)
+            ?: throw NameReplacementStop("the wallet holds no top-up for the approved name replacement")
+        return replacementStore.markReplacementDispatched(attempt.id, topUpTx.unsafeBitcoinSerialize())
+    }
+
+    private suspend fun creditReplacementTopUp(attempt: NameReplacementAttempt): NameReplacementAttempt? {
+        pendingPaymentVerifier.awaitRestored()
+        val wallet = walletApplication.wallet!!
+        val topUpTx = when (val resolution = replacementTopUps.resolve(wallet, attempt.topUpTx!!)) {
+            is NameReplacementTopUps.Resolution.Ready -> resolution.tx
+            is NameReplacementTopUps.Resolution.Pending -> throw IllegalStateException(resolution.reason)
+            NameReplacementTopUps.Resolution.Dead ->
+                throw NameReplacementStop("the top-up of the name replacement was double-spent")
+        }
+        walletApplication.saveWallet()
+        replacementIdentity(attempt)
+        topUpRepository.topUpIdentity(topUpTx, platformRepo.getWalletEncryptionKey())
+        return saveReplacementName(attempt, NameReplacementState.DISPATCHED)
+    }
+
+    private suspend fun saveReplacementName(attempt: NameReplacementAttempt, from: NameReplacementState) =
+        replacementStore.saveReplacementName(attempt.id, from)?.also { identityRepository.init() }
+
+    private suspend fun registerReplacementName(attempt: NameReplacementAttempt) {
+        identityRepository.init()
+        val identityData = identityRepository.loadBlockchainIdentityData()
+        if (identityData == null || identityData.creationState < IdentityCreationState.VOTING) {
+            createIdentityFromInvitation(null, null, null)
+        }
+        replacementStore.completeReplacement(attempt.id)
+    }
+
+    private suspend fun replacementIdentity(attempt: NameReplacementAttempt): BlockchainIdentity {
+        if (identityRepository.blockchainIdentity == null) {
+            identityRepository.init()
+        }
+        val identity = identityRepository.blockchainIdentity
+            ?: throw IllegalStateException("there is no identity to top up")
+        if (identity.uniqueIdString != attempt.identityId) {
+            throw NameReplacementStop("the wallet identity is not the one the name replacement was approved for")
+        }
+        return identity
+    }
+
+    private fun errorMessage(e: Exception): String {
+        var message = "${e.javaClass.simpleName}: ${e.message}"
+        if (e is StatusRuntimeException) {
+            message += GrpcExceptionInfo(e).exception
+        }
+        return message
+    }
+
+    private fun isNameRejection(message: String) = message.contains("DuplicateUniqueIndexError") ||
+        message.contains("Document transitions with duplicate unique properties") ||
+        message.contains("missing domain document for")
+
+    private class NameReplacementStop(message: String, cause: Throwable? = null) : Exception(message, cause)
+
+    internal suspend fun createIdentityFromInvitation(username: String?, usernameSecondary: String?, invite: InvitationLinkData?, retryWithNewUserName: Boolean = false) {
         log.info("username registration starting from invitation")
         val timerInviteProcess = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_INVITATION_CLAIM)
 
@@ -625,14 +843,10 @@ class CreateIdentityService : LifecycleService() {
         val blockchainIdentity = identityRepository.initBlockchainIdentity(blockchainIdentityData, wallet)
 
 
-        if (blockchainIdentityData.creationState <= IdentityCreationState.CREDIT_FUNDING_TX_CREATING) {
-            identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.CREDIT_FUNDING_TX_CREATING)
-            //
-            // Step 2: Create and send the credit funding transaction
-            //
-            topUpRepository.obtainAssetLockTransaction(blockchainIdentity, blockchainIdentityData.invite!!)
-        } else {
-            // if we are retrying, then we need to initialize the credit funding tx
+        if (blockchainIdentityData.creationState < IdentityCreationState.IDENTITY_REGISTERED) {
+            if (blockchainIdentityData.creationState <= IdentityCreationState.CREDIT_FUNDING_TX_CREATING) {
+                identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.CREDIT_FUNDING_TX_CREATING)
+            }
             topUpRepository.obtainAssetLockTransaction(blockchainIdentity, blockchainIdentityData.invite!!)
         }
 
@@ -688,20 +902,6 @@ class CreateIdentityService : LifecycleService() {
         topUpRepository.clearInvitation()
 
         finishRegistration(blockchainIdentity, encryptionKey, usernameSecondary)
-
-        invite?.apply {
-            val results = identityRepository.getUser(user)
-            if (results.isNotEmpty()) {
-                val inviterUserId = results[0].dashPayProfile.userId
-                SendContactRequestOperation(walletApplication)
-                        .create(inviterUserId)
-                        .enqueue()
-                configuration.apply {
-                    inviter = inviterUserId
-                    inviterContactRequestSentInfoShown = false
-                }
-            }
-        }
         timerInviteProcess.logTiming()
         log.info("username registration with invite complete")
     }
@@ -723,6 +923,10 @@ class CreateIdentityService : LifecycleService() {
             registerUsername(blockchainIdentity, encryptionKey, UsernameType.Secondary)
         }
         registerUsername(blockchainIdentity, encryptionKey, UsernameType.Primary)
+
+        if (blockchainIdentityData.usingInvite) {
+            queueInviterContactRequest()
+        }
 
         addInviteUserAlert()
 
@@ -886,6 +1090,8 @@ class CreateIdentityService : LifecycleService() {
         }
 
         if (blockchainIdentityData.creationState <= preorderRegistering) {
+            // save the salt before the preorder, so a restart reveals the name with the salt that was preordered
+            identityRepository.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
             identityRepository.updateIdentityCreationState(blockchainIdentityData, preorderRegistering)
             //
             // Step 4: Preorder the username
@@ -923,6 +1129,18 @@ class CreateIdentityService : LifecycleService() {
                 UsernameType.Primary -> analytics.logEvent(AnalyticsConstants.UsersContacts.CREATE_USERNAME, mapOf())
                 UsernameType.Secondary -> analytics.logEvent(AnalyticsConstants.UsersContacts.CREATE_USERNAME_INSTANT, mapOf())
             }
+        }
+    }
+
+    private suspend fun queueInviterContactRequest() {
+        val inviterUsername = blockchainIdentityData.invite?.user ?: return
+        val identityId = blockchainIdentityData.userId ?: return
+        try {
+            InviterContactRequestOperation(walletApplication).enqueue(inviterUsername, identityId)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            analytics.logError(e, "invite: failed to queue the contact request to the inviter")
         }
     }
 

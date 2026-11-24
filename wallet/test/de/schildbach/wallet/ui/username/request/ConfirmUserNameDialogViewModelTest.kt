@@ -8,12 +8,14 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
+import org.bitcoinj.core.Coin
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -50,6 +52,48 @@ class ConfirmUserNameDialogViewModelTest {
         } finally {
             viewModel.viewModelScope.cancel()
             ContestedUsernameFees.reset()
+        }
+    }
+
+    @Test
+    fun replacementOfARejectedInviteName_showsTheApprovedTopUp() = runTest {
+        val config = mockk<WalletUIConfig>()
+        every { config.observe(WalletUIConfig.SELECTED_CURRENCY) } returns flowOf("USD")
+        val rates = mockk<ExchangeRatesProvider>()
+        every { rates.observeExchangeRate("USD") } returns flowOf(ExchangeRate("USD", "100"))
+        val viewModel = ConfirmUserNameDialogViewModel(mockk(relaxed = true), rates, config)
+        try {
+            viewModel.hasIdentity = true
+            runCurrent()
+            assertEquals("0.03", viewModel.uiState.value.amountStr)
+
+            viewModel.inviteNameReplacementTopUp = Coin.ZERO
+            assertEquals("0.00", viewModel.uiState.value.amountStr)
+
+            viewModel.isContestableUsername = true
+            viewModel.inviteNameReplacementTopUp = Coin.parseCoin("0.10")
+            assertEquals("0.10", viewModel.uiState.value.amountStr)
+        } finally {
+            viewModel.viewModelScope.cancel()
+        }
+    }
+
+    @Test
+    fun replacementWithoutAnExchangeRate_stillShowsTheDashAmount() = runTest {
+        val config = mockk<WalletUIConfig>()
+        every { config.observe(WalletUIConfig.SELECTED_CURRENCY) } returns flowOf("USD")
+        val rates = mockk<ExchangeRatesProvider>()
+        every { rates.observeExchangeRate("USD") } returns emptyFlow()
+        val viewModel = ConfirmUserNameDialogViewModel(mockk(relaxed = true), rates, config)
+        try {
+            viewModel.hasIdentity = true
+            viewModel.inviteNameReplacementTopUp = Coin.parseCoin("0.03")
+            runCurrent()
+
+            assertEquals("0.03", viewModel.uiState.value.amountStr)
+            assertEquals("", viewModel.uiState.value.fiatAmountStr)
+        } finally {
+            viewModel.viewModelScope.cancel()
         }
     }
 }

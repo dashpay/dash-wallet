@@ -31,9 +31,11 @@ import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.U
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.USERNAME_REQUESTED
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.database.entity.IdentityCreationState
+import de.schildbach.wallet.database.entity.NameReplacementAttempt
 import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.service.CoinJoinMode
+import de.schildbach.wallet.service.platform.NameReplacementFunding
 import de.schildbach.wallet.service.platform.TopUpRepository
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
@@ -44,6 +46,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -69,6 +72,7 @@ import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.sdk.platform.DomainDocument
 import org.dashj.platform.sdk.platform.Names
 import org.slf4j.LoggerFactory
+import java.util.UUID
 import javax.inject.Inject
 import kotlin.math.max
 
@@ -114,6 +118,11 @@ class RequestUserNameViewModel @Inject constructor(
         private val NON_CONTEST_DOCUMENT_FEE = Coin.valueOf(1000000).value * 1000
     }
 
+    private var approvedInviteNameReplacementTopUp: Coin? = null
+    private var loadedCredits: Pair<String, Long>? = null
+    private var replacementVerification: Pair<String, String>? = null
+    private var approvedReplacement: NameReplacementAttempt? = null
+    private var replacementSubmission: Job? = null
     private val workerJob = SupervisorJob()
     private val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
     private val _uiState = MutableStateFlow(RequestUserNameUIState())
@@ -195,7 +204,7 @@ class RequestUserNameViewModel @Inject constructor(
 
             identity?.userId != null -> {
                 val credits = _identityBalance.value
-                credits > Constants.DASH_PAY_FEE.value / 10 * 1000
+                credits > Constants.DASH_PAY_FEE.value / 10 * 1000 || inviteNameReplacementTopUp(false) != null
             }
 
             else -> {
@@ -207,7 +216,7 @@ class RequestUserNameViewModel @Inject constructor(
     fun canAffordContestedUsername(): Boolean {
         return if (identity?.userId != null) {
             val credits = _identityBalance.value
-            credits > CONTEST_DOCUMENT_FEE
+            credits > CONTEST_DOCUMENT_FEE || inviteNameReplacementTopUp(true) != null
         } else {
             _walletBalance.value >= ContestedUsernameFees.fee
         }
@@ -237,7 +246,7 @@ class RequestUserNameViewModel @Inject constructor(
             .filterNotNull()
             .onEach {
                 identity = identityConfig.load()
-                _identityBalance.value = identity?.let { identity ->
+                val balance = identity?.let { identity ->
                     try {
                         platformRepo.getIdentityBalance(Identifier.from(identity.userId)).balance
                     } catch (e: Exception) {
@@ -245,6 +254,9 @@ class RequestUserNameViewModel @Inject constructor(
                         -1
                     }
                 } ?: 0
+                loadedCredits = identity?.userId?.takeIf { balance >= 0L }?.let { it to balance }
+                _identityBalance.value = balance
+                _uiState.update { it.copy(enoughBalance = hasEnoughBalance(it.usernameContestable)) }
                 log.info("identity balance: {}", identityBalance)
                 if (requestedUserName == null) {
                     requestedUserName = identityConfig.get(USERNAME)
@@ -299,15 +311,6 @@ class RequestUserNameViewModel @Inject constructor(
         val usernameSecondary = requestedUsernameSecondary
         val isUsingInvite = isUsingInvite()
         when {
-            isUsingInvite && reuseTransaction -> {
-                walletApplication.startService(
-                    CreateIdentityService.createIntentFromInviteForNewUsername(
-                        walletApplication,
-                        username,
-                        usernameSecondary
-                    )
-                )
-            }
             isUsingInvite -> {
                 walletApplication.startService(
                     CreateIdentityService.createIntentFromInvite(
@@ -339,9 +342,13 @@ class RequestUserNameViewModel @Inject constructor(
         }
     }
 
-    fun submit() {
-        // Reset ui state for retry if needed
+    fun submit(inviteNameReplacementTopUp: Coin? = approvedInviteNameReplacementTopUp) {
+        approvedInviteNameReplacementTopUp = inviteNameReplacementTopUp
         resetUiForRetrySubmit()
+        if (inviteNameReplacementTopUp != null || isInviteNameReplacement()) {
+            submitInviteNameReplacement(inviteNameReplacementTopUp)
+            return
+        }
         viewModelScope.launch {
             withContext(Dispatchers.IO) { updateConfig() }
             // send the request / create username, assume not retry
@@ -352,9 +359,63 @@ class RequestUserNameViewModel @Inject constructor(
                     it.usernameRequested == UsernameRequestStatus.LOST_VOTE ||
                     (it.creationStateErrorMessage != null && it.creationState >= IdentityCreationState.IDENTITY_REGISTERED)
             } ?: false
+            if (!reuseTransaction && identity?.let {
+                    it.usingInvite && it.creationState >= IdentityCreationState.IDENTITY_REGISTERED
+                } == true
+            ) {
+                _uiState.update { it.copy(usernameSubmittedError = true) }
+                return@launch
+            }
             triggerIdentityCreation(reuseTransaction)
         }
     }
+
+    private fun submitInviteNameReplacement(approvedTopUp: Coin?) {
+        val username = requestedUserName
+        val identityId = identity?.userId
+        val protocolVersion = ContestedUsernameFees.currentProtocolVersion
+        if (username == null || identityId == null || approvedTopUp == null ||
+            inviteNameReplacementTopUp(protocolVersion) != approvedTopUp
+        ) {
+            _uiState.update { it.copy(usernameSubmittedError = true) }
+            return
+        }
+        if (replacementSubmission?.isActive == true) {
+            return
+        }
+        val link = replacementVerification?.takeIf { it.first == username }?.second
+        replacementSubmission = viewModelScope.launch(NonCancellable) {
+            val attempt = approvedReplacement?.takeIf {
+                it.identityId == identityId && it.username == username && it.approvedTopUp == approvedTopUp &&
+                    it.verificationLink == link
+            } ?: approveReplacement(
+                NameReplacementAttempt(
+                    id = UUID.randomUUID().toString(),
+                    identityId = identityId,
+                    username = username,
+                    verificationLink = link,
+                    approvedTopUp = approvedTopUp,
+                    protocolVersion = protocolVersion
+                )
+            )
+            if (attempt == null) {
+                _uiState.update { it.copy(usernameSubmittedError = true) }
+                return@launch
+            }
+            approvedReplacement = attempt
+            walletApplication.startService(CreateIdentityService.createIntentForNameReplacement(walletApplication))
+        }
+    }
+
+    private suspend fun approveReplacement(attempt: NameReplacementAttempt) =
+        attempt.takeIf {
+            try {
+                withContext(Dispatchers.IO) { identityConfig.approveReplacement(attempt) }
+            } catch (e: Exception) {
+                log.error("cannot save the approved name replacement", e)
+                false
+            }
+        }
 
     fun reset() {
         checkUsernameJob?.cancel()
@@ -461,7 +522,18 @@ class RequestUserNameViewModel @Inject constructor(
         }
     }
 
+    fun skipVerification() {
+        replacementVerification = null
+    }
+
     fun verify() {
+        if (isInviteNameReplacement()) {
+            val username = requestedUserName
+            val link = _requestedUserNameLink.value
+            replacementVerification = if (username != null && !link.isNullOrEmpty()) username to link else null
+            _uiState.update { it.copy(usernameVerified = true) }
+            return
+        }
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
                 identityConfig.set(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK, _requestedUserNameLink.value ?: "")
@@ -561,7 +633,10 @@ class RequestUserNameViewModel @Inject constructor(
         val inviteBalance = _inviteBalance.value
         return when {
             isUsingInvite() && contestable -> inviteBalance >= ContestedUsernameFees.fee
-            isUsingInvite() -> inviteBalance >= Constants.DASH_PAY_FEE
+            isUsingInvite() -> inviteBalance >= Constants.DASH_PAY_INVITE_MIN
+            isInviteNameReplacement() -> inviteNameReplacementTopUp(contestable) != null
+            identity?.usingInvite == true -> identityBalance >= 0L &&
+                walletBalance >= if (contestable) ContestedUsernameFees.fee else Constants.DASH_PAY_FEE
             identityBalance > 0L -> (Coin.valueOf(identityBalance / 1000) + walletBalance) > Coin.valueOf(
                 (if (contestable) CONTEST_DOCUMENT_FEE else NON_CONTEST_DOCUMENT_FEE) / 1000)
             identityBalance == 0L -> walletBalance >= if (contestable) ContestedUsernameFees.fee else Constants.DASH_PAY_FEE
@@ -595,13 +670,43 @@ class RequestUserNameViewModel @Inject constructor(
 
     fun isUsingInvite(): Boolean = createUsernameArgs?.invite != null
 
+    fun inviteNameReplacementTopUp(protocolVersion: Int = ContestedUsernameFees.currentProtocolVersion): Coin? =
+        requestedUserName?.let { inviteNameReplacementTopUp(Names.isUsernameContestable(it), protocolVersion) }
+
+    private fun inviteNameReplacementTopUp(
+        contestable: Boolean,
+        protocolVersion: Int = ContestedUsernameFees.currentProtocolVersion
+    ): Coin? {
+        val identityId = identity?.userId ?: return null
+        val credits = loadedCredits?.takeIf { it.first == identityId }?.second ?: return null
+        if (!isInviteNameReplacement()) {
+            return null
+        }
+        val topUp = NameReplacementFunding.topUp(credits, contestable, protocolVersion)
+        return topUp.takeIf { _walletBalance.value >= it }
+    }
+
+    /** The submitted request has taken over: a saved rejection still waiting for confirmation does not count. */
+    fun isRequestUnderway(identity: BlockchainIdentityData?): Boolean =
+        identity != null && identity.creationStateErrorMessage == null &&
+            identity.creationState > IdentityCreationState.NONE
+
+    fun isInviteNameReplacement(): Boolean {
+        val identity = identity ?: return false
+        return identity.usingInvite &&
+            identity.creationStateErrorMessage != null &&
+            identity.creationState >= IdentityCreationState.IDENTITY_REGISTERED &&
+            identity.creationState <= IdentityCreationState.USERNAME_REGISTERING &&
+            identity.usernameSecondary == null &&
+            requestedUsernameSecondary == null
+    }
+
     suspend fun getInviteAssetLockTransaction(): AssetLockTransaction? = withContext(Dispatchers.IO) {
         if (isUsingInvite()) {
-            inviteAssetLockTx.value = try {
-                topUpRepository.getAssetLockTransaction(createUsernameArgs?.invite!!)
+            try {
+                inviteAssetLockTx.value = topUpRepository.getAssetLockTransaction(createUsernameArgs?.invite!!)
             } catch (e: Exception) {
                 log.error("error getting asset lock tx", e)
-                null
             }
             isInviteMixed()
         }
