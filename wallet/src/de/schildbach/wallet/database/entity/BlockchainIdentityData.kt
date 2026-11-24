@@ -441,7 +441,7 @@ open class BlockchainIdentityConfig @Inject constructor(
                     attempt.rejectedState?.let { prefs[CREATION_STATE] = it.name }
                     prefs[CREATION_STATE_ERROR_MESSAGE] = attempt.rejectedError ?: message
                 }
-                !restoresRejection && ownsIdentity(prefs, attempt.identityId) ->
+                ownsIdentity(prefs, attempt.identityId) && creationState(prefs) < IdentityCreationState.VOTING ->
                     prefs[CREATION_STATE_ERROR_MESSAGE] = message
             }
             true

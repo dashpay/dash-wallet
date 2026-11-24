@@ -46,6 +46,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -381,7 +382,7 @@ class RequestUserNameViewModel @Inject constructor(
         if (replacementSubmission?.isActive == true) {
             return
         }
-        replacementSubmission = viewModelScope.launch {
+        replacementSubmission = viewModelScope.launch(NonCancellable) {
             val attempt = approvedReplacement?.takeIf {
                 it.identityId == identityId && it.username == username && it.approvedTopUp == approvedTopUp
             } ?: approveReplacement(identityId, username, approvedTopUp)

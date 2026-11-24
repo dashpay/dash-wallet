@@ -57,6 +57,12 @@ class CreateIdentityNotification(
 
     @SuppressLint("WrongConstant")
     fun displayErrorAndStopService(isInvite: Boolean) {
+        displayError(isInvite)
+        service.stopForeground(true)
+        service.stopSelf()
+    }
+
+    fun displayError(isInvite: Boolean) {
         val messageResId = if (isInvite) R.string.processing_error_title_from_invite else R.string.processing_error_title
         val notification: Notification = createNotification(R.string.processing_home_title, messageResId, 0, 0).run {
 //            setAutoCancel(true)
@@ -82,8 +88,6 @@ class CreateIdentityNotification(
             build()
         }
         notificationManager.notify(Constants.NOTIFICATION_ID_DASHPAY_CREATE_IDENTITY_ERROR, notification)
-        service.stopForeground(true)
-        service.stopSelf()
     }
 
     private fun updateNotification(@StringRes titleResId: Int, @StringRes messageResId: Int,

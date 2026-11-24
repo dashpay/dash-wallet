@@ -188,6 +188,8 @@ class CreateIdentityService : LifecycleService() {
     @Volatile
     private var workInProgress = false
     private var pickupRequested = false
+    private var runToken = 0L
+    private var latestStartId = 0
     private val runLock = Any()
 
     private val createIdentityExceptionHandler = CoroutineExceptionHandler { _, exception ->
@@ -208,7 +210,6 @@ class CreateIdentityService : LifecycleService() {
                 .getOrDefault(this@CreateIdentityService::blockchainIdentityData.isInitialized && blockchainIdentityData.usingInvite)
             createIdentityNotification.displayErrorAndStopService(isInvite)
         }
-        workInProgress = false
     }
 
     override fun onCreate() {
@@ -230,6 +231,7 @@ class CreateIdentityService : LifecycleService() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
+        synchronized(runLock) { latestStartId = startId }
 
         if (intent == null) {
             // the service has been restarted by the system
@@ -306,26 +308,36 @@ class CreateIdentityService : LifecycleService() {
     }
 
     private fun launchRun(block: suspend () -> Unit) {
-        workInProgress = true
+        val token = synchronized(runLock) {
+            workInProgress = true
+            pickupRequested = false
+            ++runToken
+        }
         serviceScope.launch(createIdentityExceptionHandler) {
+            var stopId: Int? = null
             try {
                 block()
                 while (true) {
                     pendingReplacement()?.let { runReplacement(it) }
                     val more = synchronized(runLock) {
-                        pickupRequested.also {
+                        pickupRequested.also { requested ->
                             pickupRequested = false
-                            if (!it) {
+                            if (!requested) {
                                 workInProgress = false
+                                stopId = latestStartId
                             }
                         }
                     }
                     if (!more) break
                 }
             } finally {
-                synchronized(runLock) { workInProgress = false }
+                synchronized(runLock) {
+                    if (runToken == token) {
+                        workInProgress = false
+                    }
+                }
             }
-            stopSelf()
+            stopId?.let { stopSelfResult(it) }
         }
     }
 
@@ -624,7 +636,7 @@ class CreateIdentityService : LifecycleService() {
             log.error("name replacement {} failed at {} ({})", attempt.id, attempt.state, failure, e)
             analytics.logError(e, "invite: name replacement failed at ${attempt.state}")
             replacementStore.failReplacement(attempt.id, failure, message)
-            createIdentityNotification.displayErrorAndStopService(true)
+            createIdentityNotification.displayError(true)
         }
     }
 
