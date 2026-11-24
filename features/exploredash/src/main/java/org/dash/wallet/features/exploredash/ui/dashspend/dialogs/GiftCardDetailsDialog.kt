@@ -604,9 +604,9 @@ private fun BarcodeSection(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 20.dp)
+            .padding(vertical = 12.dp)
             .then(panelModifier)
-            .padding(8.dp)
+            .padding(vertical = 8.dp)
             .onGloballyPositioned { containerWidthPx = it.size.width },
         contentAlignment = Alignment.Center
     ) {
