@@ -2260,6 +2260,47 @@ class SendCoinsTaskRunnerBIP70Test {
         assertEquals(0, mockWebServer.requestCount)
     }
 
+    /**
+     * thepastaclaw on #1714. The invoice screen keeps this answer after the record is gone, so
+     * it must be this invoice's payment: a record with no order identity is known only by its
+     * url, and another order of the same merchant is left to the lookup that is not kept.
+     */
+    @Test
+    fun `the invoice's own lookup matches a legacy record by url and leaves out the merchant's other orders`() = runBlocking {
+        val stored = storeBackedPendingPayments()
+        val address = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
+        val url = mockWebServer.url("/payment").toString()
+        val original = bip70PaymentIntent(address, Coin.parseCoin("1.0"), url, ByteArray(32) { 9 })
+        val refreshed = bip70PaymentIntent(address, Coin.parseCoin("1.0"), url, ByteArray(32) { 10 })
+        val otherOrder =
+            bip70PaymentIntent(address, Coin.parseCoin("1.1"), mockWebServer.url("/payment/v2").toString(), ByteArray(32) { 11 })
+        val t1 = deferredTx
+        val walletId = Sha256Hash.of(wallet.watchingKey.pubKey).toString()
+
+        // a record from before order identities were stored, for a different refresh of the request
+        stored.add(
+            de.schildbach.wallet.data.PendingDirectPayment(
+                t1.txId, t1.bitcoinSerialize(), url, "Merchant", System.currentTimeMillis(),
+                paymentRequestId = original.paymentRequestId, walletId = walletId
+            )
+        )
+        assertEquals("known by its url", t1.txId, sendCoinsTaskRunner.findUnresolvedSubmissionOfInvoice(refreshed))
+
+        // the same payment recorded with its order: another order of that merchant
+        stored.clear()
+        stored.add(
+            de.schildbach.wallet.data.PendingDirectPayment(
+                t1.txId, t1.bitcoinSerialize(), url, "Merchant", System.currentTimeMillis(),
+                paymentRequestId = original.paymentRequestId,
+                orderId = original.orderIdentity(), walletId = walletId
+            )
+        )
+        assertNotEquals(original.orderIdentity(), otherOrder.orderIdentity())
+        assertEquals("blocked while T1 is unresolved", t1.txId, sendCoinsTaskRunner.findUnresolvedSubmission(otherOrder))
+        assertNull("but not this invoice's payment", sendCoinsTaskRunner.findUnresolvedSubmissionOfInvoice(otherOrder))
+        assertEquals(t1.txId, sendCoinsTaskRunner.findUnresolvedSubmissionOfInvoice(refreshed))
+    }
+
     @Test
     fun `a new payment to a merchant with an unresolved payment is refused even when its order identity changed`() = runBlocking {
         // After an ambiguous POST the merchant re-serves the unpaid order with changed fields

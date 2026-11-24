@@ -111,6 +111,20 @@ class PaymentProtocolViewModel @Inject constructor(
         java.util.concurrent.atomic.AtomicReference<de.schildbach.wallet.data.PendingDirectPayment?>(null)
     private var resubmissionFee: Coin? = null
 
+    /**
+     * An earlier submission for this invoice that a preview of this screen found unresolved.
+     * Kept for as long as the screen lives: the stored record goes when that payment settles,
+     * and a retry or a confirm after that would find nothing and pay the invoice a second
+     * time (thepastaclaw on #1714). Only a match on the invoice itself is kept (a record
+     * with no order identity counts by its url): a payment of another order of the same
+     * merchant blocks this one only while it is unresolved. A kept
+     * payment that a conflicting spend later invalidated still refuses here, until the
+     * invoice is reopened. In memory only; reopening starts again from the payee's own
+     * answer to the fetch.
+     */
+    @Volatile
+    private var earlierSubmissionSeen: org.bitcoinj.core.Sha256Hash? = null
+
     /** True when confirming resends the earlier payment for this invoice. */
     val isResubmission: Boolean
         get() = resubmissionRef.get() != null
@@ -303,6 +317,13 @@ class PaymentProtocolViewModel @Inject constructor(
                     _sendRequestLiveData.postValue(Resource.success(null))
                     return@withContext
                 }
+                // A build after one that saw an unresolved payment for this invoice (the retry
+                // of a refused preview) builds nothing: that payment's record may be gone by
+                // now. The first build goes on as before and the confirm refuses. A store that
+                // cannot be read fails the preview: read as "none", a payment that settles
+                // before the confirm would leave nothing to refuse on.
+                earlierSubmissionSeen?.let { throw PaymentSubmissionPendingException(it.toString(), null) }
+                earlierSubmissionSeen = sendCoinsTaskRunner.findUnresolvedSubmissionOfInvoice(paymentIntent)
                 // Built on, and later submitted for, the wallet this screen was opened on
                 // ([wallet]): a wipe in between must not have the replacement adopt the payment.
                 val origin = wallet
@@ -368,7 +389,12 @@ class PaymentProtocolViewModel @Inject constructor(
                 // so its inputs and their mirrored wallet locks are not stranded.
                 var handedOff = false
                 val transaction = try {
-                    sendCoinsTaskRunner.findUnresolvedSubmission(finalPaymentIntent!!)?.let { txId ->
+                    // ... or had one out when this screen built its preview: settled since, its
+                    // record is gone, and this payment would be the second for the invoice.
+                    (
+                        sendCoinsTaskRunner.findUnresolvedSubmission(finalPaymentIntent!!)
+                            ?: earlierSubmissionSeen
+                        )?.let { txId ->
                         log.info("not submitting again, {} is still unresolved for this payment request", txId)
                         throw PaymentSubmissionPendingException(txId.toString(), null)
                     }
