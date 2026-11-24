@@ -18,6 +18,19 @@ No DashJ release or key-derivation changes are required.
   devnet's address is substituted. Missing values fail the devnet build; malformed
   addresses are also rejected when constructing the network parameters.
 - Core port defaults to `20001` by assumption; override with `-PsakuraCorePort=...`.
+- Set `devnetQuorumUrl` in `local.properties` or with
+  `-PdevnetQuorumUrl=https://<your-quorum-service>`. The Kotlin SDK reads
+  active DAPI and SPV nodes from that service's `/masternodes` endpoint and
+  quorum keys from `/quorums`. The URL belongs to whichever devnet the wallet
+  selects; the wallet does not infer a Sakura hostname. An absent, invalid, or
+  unreachable endpoint makes SDK startup fail with an unknown result for
+  identity discovery and credit balances. A resumed registration therefore
+  stops before another identity write until discovery can answer.
+- The SDK's SPV runtime receives the short devnet name from the selected
+  `DevNetParams` and peers from the active-node feed. If Core uses custom
+  `-llmqdevnetparams` for `LLMQ_DEVNET`, supply both `devnetLlmqSize` and
+  `devnetLlmqThreshold` as Gradle properties (or in `local.properties`).
+  Both default to zero, which tells the SDK to use its own devnet defaults.
 
 Build with `./gradlew :wallet:assembleDevnetDebug`.
 The local, Git-ignored `wallet/google-services.json` must contain

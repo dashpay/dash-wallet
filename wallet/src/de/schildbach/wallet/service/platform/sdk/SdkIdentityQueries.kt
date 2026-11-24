@@ -124,9 +124,8 @@ internal class DashSdkIdentityReadSource(
  * it throws [SdkIdentityQueryTimeoutException] ("unknown"), and is never reported as the SDK's own
  * null (no identity / no balance). The abandoned native call finishes in the background.
  *
- * Every failure propagates, including the SDK runtime failing to start (on devnet it cannot: the
- * wallet gives the SDK no devnet quorum URL), network failures and timeouts; each caller applies
- * its own contract.
+ * Every failure propagates, including missing or unreachable devnet configuration, network
+ * failures and timeouts; each caller applies its own contract.
  */
 @Singleton
 class SdkIdentityQueries internal constructor(

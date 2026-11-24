@@ -252,6 +252,14 @@ if (file("../local.properties").exists()) {
 def sakuraSporkAddress = providers.gradleProperty("sakuraSporkAddress")
         .getOrElse(localProps.getProperty("sakuraSporkAddress", ""))
 def sakuraCorePort = providers.gradleProperty("sakuraCorePort").getOrElse("20001").toInteger()
+// The SDK uses this service for verified quorums and active DAPI/SPV nodes.
+// It is supplied by the operator of the selected devnet, never inferred from its name.
+def devnetQuorumUrl = providers.gradleProperty("devnetQuorumUrl")
+        .getOrElse(localProps.getProperty("devnetQuorumUrl", ""))
+def devnetLlmqSize = providers.gradleProperty("devnetLlmqSize")
+        .getOrElse(localProps.getProperty("devnetLlmqSize", "0")).toInteger()
+def devnetLlmqThreshold = providers.gradleProperty("devnetLlmqThreshold")
+        .getOrElse(localProps.getProperty("devnetLlmqThreshold", "0")).toInteger()
 def validateSakuraConfiguration = tasks.register("validateSakuraConfiguration") {
     doLast {
         if (sakuraSporkAddress.trim().isEmpty()) {
@@ -346,6 +354,9 @@ android {
         buildConfigField("String", "GIT_COMMIT", "\"$gitCommit\"")
         buildConfigField("String", "SAKURA_SPORK_ADDRESS", groovy.json.JsonOutput.toJson(sakuraSporkAddress))
         buildConfigField("int", "SAKURA_CORE_PORT", sakuraCorePort.toString())
+        buildConfigField("String", "DEVNET_QUORUM_URL", groovy.json.JsonOutput.toJson(devnetQuorumUrl))
+        buildConfigField("int", "DEVNET_LLMQ_SIZE", devnetLlmqSize.toString())
+        buildConfigField("int", "DEVNET_LLMQ_THRESHOLD", devnetLlmqThreshold.toString())
     }
 
     buildTypes {
