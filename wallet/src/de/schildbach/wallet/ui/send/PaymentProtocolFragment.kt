@@ -130,7 +130,7 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
             confirmWhenAuthorizedAndNoException(tappedOnPayable)
         } else {
             val thresholdAmount = Coin.parseCoin(config.biometricLimit.toString())
-            val amount = viewModel.finalPaymentIntent!!.amount
+            val amount = viewModel.finalPaymentIntent?.amount ?: return
             authManager.authenticate(requireActivity(), !amount.toDashjCoin().isLessThan(thresholdAmount)) { pin ->
                 pin?.let { confirmWhenAuthorizedAndNoException(tappedOnPayable) }
             }
@@ -138,7 +138,13 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
     }
 
     private fun confirmWhenAuthorizedAndNoException(tappedOnPayable: Boolean) {
-        if (viewModel.finalPaymentIntent!!.expired) {
+        // An authentication answers later. A retry started by an earlier tap may have failed
+        // its fetch by then, which drops the request: there is nothing left to pay or rebuild.
+        val request = viewModel.finalPaymentIntent ?: run {
+            log.info("pay tap ignored: the payment request is gone")
+            return
+        }
+        if (request.expired) {
             // Resending the earlier payment of an expired request is pointless; its outcome is
             // still unknown, and that is what the screen says.
             if (viewModel.isResubmission) showSubmissionPending() else showRequestExpiredMessage()
