@@ -673,6 +673,11 @@ class RequestUserNameViewModel @Inject constructor(
         return topUp.takeIf { _walletBalance.value >= it }
     }
 
+    /** The submitted request has taken over: a saved rejection still waiting for confirmation does not count. */
+    fun isRequestUnderway(identity: BlockchainIdentityData?): Boolean =
+        identity != null && identity.creationStateErrorMessage == null &&
+            identity.creationState > IdentityCreationState.NONE
+
     fun isInviteNameReplacement(): Boolean {
         val identity = identity ?: return false
         return identity.usingInvite &&

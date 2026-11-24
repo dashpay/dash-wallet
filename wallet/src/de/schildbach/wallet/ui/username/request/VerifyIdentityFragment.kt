@@ -69,9 +69,7 @@ class VerifyIdentityFragment : Fragment(R.layout.fragment_verfiy_identity) {
                 if (creationState.ordinal < IdentityCreationState.VOTING.ordinal) {
                     checkViewConfirmDialog()
                     dashPayViewModel.blockchainIdentity.observe(viewLifecycleOwner) {
-                        if (it != null && it.creationStateErrorMessage == null &&
-                            it.creationState > IdentityCreationState.NONE
-                        ) {
+                        if (requestUserNameViewModel.isRequestUnderway(it)) {
                             requireActivity().finish()
                         }
                     }

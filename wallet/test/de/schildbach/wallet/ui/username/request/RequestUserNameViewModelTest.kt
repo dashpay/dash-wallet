@@ -711,6 +711,23 @@ class RequestUserNameViewModelTest {
     }
 
     @Test
+    fun verifyingAReplacement_keepsTheFormOpenUntilTheApprovalClearsTheRejection() {
+        givenInviteFundedIdentityWithNameRejected(credits = CreditBalanceInfo.MAX_OPERATION_COST * 2)
+        val rejected = viewModel.identity!!
+        viewModel.requestedUserName = nonContestedName
+        viewModel.setRequestedUserNameLink("https://example.com/new")
+
+        viewModel.verify()
+
+        assertFalse("the saved rejection must not close the form", viewModel.isRequestUnderway(rejected))
+        assertTrue(viewModel.isInviteNameReplacement())
+        submitAndCaptureIntent(nonContestedName, Coin.ZERO)
+        assertApproved(nonContestedName, Coin.ZERO, "https://example.com/new")
+        val approved = identity(IdentityCreationState.USERNAME_REGISTERING, errorMessage = null)
+        assertTrue(viewModel.isRequestUnderway(approved))
+    }
+
+    @Test
     fun inviteIdentityNameRegistered_isNotAReplacement() {
         givenInviteFundedIdentityWithNameRejected(credits = CreditBalanceInfo.MAX_OPERATION_COST * 2) {
             creationState = IdentityCreationState.USERNAME_REGISTERED
