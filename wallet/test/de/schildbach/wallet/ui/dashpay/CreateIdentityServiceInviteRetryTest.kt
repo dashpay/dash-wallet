@@ -19,12 +19,17 @@ package de.schildbach.wallet.ui.dashpay
 import android.app.Application
 import android.app.Service
 import android.net.Uri
+import androidx.test.core.app.ApplicationProvider
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.CreditBalanceInfo
 import de.schildbach.wallet.data.InvitationLinkData
-import de.schildbach.wallet.database.entity.BlockchainIdentityBaseData
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.database.entity.IdentityCreationState
+import de.schildbach.wallet.database.entity.NameReplacementAttempt
+import de.schildbach.wallet.database.entity.NameReplacementFailure
+import de.schildbach.wallet.database.entity.NameReplacementState
 import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.TopUpRepository
 import de.schildbach.wallet.ui.dashpay.work.InviterContactRequestOperation
@@ -39,36 +44,57 @@ import io.mockk.mockkConstructor
 import io.mockk.unmockkAll
 import io.mockk.verify
 import kotlinx.coroutines.runBlocking
+import org.bitcoinj.core.Base58
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Context
+import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.evolution.AssetLockTransaction
 import org.bitcoinj.wallet.Wallet
 import org.dashj.platform.dashpay.BlockchainIdentity
 import org.dashj.platform.dashpay.IdentityStatus
 import org.junit.After
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
-import org.junit.Assert.assertThrows
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
-/** A replacement name for an invite-funded identity is paid from its credits and never touches the spent invite. */
+/**
+ * A replacement name for an invite-funded identity runs as one persisted attempt in the identity's own store:
+ * APPROVED -> DISPATCHING -> DISPATCHED -> NAME_SAVED -> completed, stopping for the user on anything unknown.
+ */
 @RunWith(RobolectricTestRunner::class)
 @Config(application = Application::class, sdk = [28], manifest = Config.NONE)
 class CreateIdentityServiceInviteRetryTest {
+    companion object {
+        private const val REJECTED = "StateTransitionBroadcastException: DuplicateUniqueIndexError"
+        private val IDENTITY_ID: String = Base58.encode(ByteArray(32) { 1 })
+        private val KEY = ByteArray(20) { 7 }
+        private val TX = ByteArray(40) { 9 }
+        private val TOP_UP = Coin.parseCoin("0.03")
+        private const val ENOUGH_CREDITS = 300_000_000L
+    }
+
+    private val config = BlockchainIdentityConfig(
+        ApplicationProvider.getApplicationContext<Application>(),
+        mockk(relaxed = true),
+        mockk(relaxed = true)
+    )
     private val identityRepository = mockk<IdentityRepository>(relaxed = true)
     private val platformRepo = mockk<PlatformRepo>(relaxed = true)
     private val topUpRepository = mockk<TopUpRepository>(relaxed = true)
     private val configuration = mockk<org.dash.wallet.common.Configuration>(relaxed = true)
     private val blockchainIdentity = mockk<BlockchainIdentity>(relaxed = true)
+    private val topUps = mockk<NameReplacementTopUps>()
     private val invite = InvitationLinkData(Uri.parse("dashpay://invite?du=inviter&assetlocktx=00&pk=00"), true)
     private val topUpTx = mockk<AssetLockTransaction>(relaxed = true)
-    private lateinit var identityData: BlockchainIdentityData
+    private val walletApplication = mockk<WalletApplication>(relaxed = true)
     private lateinit var service: CreateIdentityService
 
     @Before
@@ -76,28 +102,33 @@ class CreateIdentityServiceInviteRetryTest {
         mockkConstructor(InviterContactRequestOperation::class)
         coEvery { anyConstructed<InviterContactRequestOperation>().enqueue(any(), any()) } just Runs
         every { blockchainIdentity.getUsernames() } returns emptyList()
+        every { blockchainIdentity.uniqueIdString } returns IDENTITY_ID
         every { identityRepository.blockchainIdentity } returns blockchainIdentity
+        every { topUpTx.unsafeBitcoinSerialize() } returns TX
         coEvery { topUpRepository.createTopupTransaction(any(), any(), any(), any()) } returns topUpTx
+        coEvery { platformRepo.getIdentityBalance(any()) } returns CreditBalanceInfo(ENOUGH_CREDITS)
+        every { topUps.currentKeyHash(any()) } returns KEY
+        every { topUps.resolve(any(), any()) } returns NameReplacementTopUps.Resolution.Ready(topUpTx)
 
-        coEvery { identityRepository.loadBlockchainIdentityData() } answers { identityData }
-        coEvery { identityRepository.loadBlockchainIdentityBaseData() } answers { identityData }
+        coEvery { identityRepository.loadBlockchainIdentityData() } coAnswers { config.load() }
+        coEvery { identityRepository.loadBlockchainIdentityBaseData() } coAnswers { config.loadBase() }
         coEvery { identityRepository.initBlockchainIdentity(any(), any()) } returns blockchainIdentity
-        coEvery { identityRepository.updateIdentityCreationState(any(), any(), any()) } answers {
+        coEvery { identityRepository.updateIdentityCreationState(any(), any(), any()) } coAnswers {
+            val message = thirdArg<Throwable?>()?.let { "${it.javaClass.simpleName}: ${it.message}" }
             firstArg<BlockchainIdentityData>().creationState = secondArg()
-            firstArg<BlockchainIdentityData>().creationStateErrorMessage = thirdArg<Throwable?>()?.message
+            firstArg<BlockchainIdentityData>().creationStateErrorMessage = message
+            config.updateCreationState(secondArg(), message)
         }
-        coEvery { identityRepository.resetIdentityCreationStateError(any()) } answers {
+        coEvery { identityRepository.resetIdentityCreationStateError(any()) } coAnswers {
             firstArg<BlockchainIdentityData>().creationStateErrorMessage = null
+            config.updateCreationState(firstArg<BlockchainIdentityData>().creationState, null)
         }
-        coEvery { identityRepository.replaceUsername(any(), any()) } answers {
-            firstArg<BlockchainIdentityData>().apply {
-                username = secondArg()
-                creationState = IdentityCreationState.IDENTITY_REGISTERED
-                creationStateErrorMessage = null
-            }
+        coEvery { identityRepository.updateBlockchainIdentityData(any()) } coAnswers { config.insert(firstArg()) }
+        coEvery { identityRepository.updateBlockchainIdentityData(any(), any()) } coAnswers {
+            config.insert(firstArg<BlockchainIdentityData>())
         }
 
-        service = CreateIdentityService().also {
+        service = Robolectric.buildService(CreateIdentityService::class.java).get().also {
             it.identityRepository = identityRepository
             it.platformRepo = platformRepo
             it.topUpRepository = topUpRepository
@@ -107,13 +138,17 @@ class CreateIdentityServiceInviteRetryTest {
             it.usernameRequestDao = mockk(relaxed = true)
             it.coinJoinConfig = mockk(relaxed = true)
             it.analytics = mockk(relaxed = true)
+            it.blockchainIdentityDataDao = config
+            it.replacementStore = config
+            it.replacementTopUps = topUps
         }
+        val wallet = mockk<Wallet>(relaxed = true) {
+            every { context } returns Context.getOrCreate(Constants.NETWORK_PARAMETERS)
+        }
+        every { walletApplication.wallet } returns wallet
         CreateIdentityService::class.java.getDeclaredField("walletApplication\$delegate").apply {
             isAccessible = true
-            val wallet = mockk<Wallet>(relaxed = true) {
-                every { context } returns Context.getOrCreate(Constants.NETWORK_PARAMETERS)
-            }
-            set(service, lazyOf(mockk<WalletApplication>(relaxed = true) { every { this@mockk.wallet } returns wallet }))
+            set(service, lazyOf(walletApplication))
         }
     }
 
@@ -123,147 +158,381 @@ class CreateIdentityServiceInviteRetryTest {
     }
 
     @Test
-    fun rejectedName_registersOneReplacementNameFromTheIdentityCredits() = runBlocking {
-        identityData = inviteIdentity(IdentityCreationState.USERNAME_REGISTERING, "dashuser", rejected = true)
+    fun creditsCoverTheName_registersOneReplacementWithoutTheWallet() = runBlocking {
+        givenRejectedName()
 
-        service.retryInviteWithNewUsername("dashuser2")
+        service.runReplacement(approve(Coin.ZERO))
 
-        coVerify(exactly = 1) { identityRepository.replaceUsername(identityData, "dashuser2") }
         verify(exactly = 1) { platformRepo.preorderName(blockchainIdentity, any(), "dashuser2") }
         verify(exactly = 1) { platformRepo.registerName(blockchainIdentity, any(), "dashuser2") }
         verify(exactly = 1) { platformRepo.preorderName(any(), any(), any()) }
-        verify(exactly = 1) { platformRepo.registerName(any(), any(), any()) }
-        assertEquals(IdentityCreationState.DONE, identityData.creationState)
-        assertNull(identityData.creationStateErrorMessage)
+        assertEquals(IdentityCreationState.DONE, stored().creationState)
+        assertNull(stored().creationStateErrorMessage)
+        assertEquals("dashuser2", stored().username)
+        assertNull(config.loadReplacement())
+        verifyTheSpentInviteIsNotUsed()
+        verifyNoTopUp()
+    }
+
+    @Test
+    fun creditsCoverTheName_queuesTheContactRequestToTheInviterOnce() = runBlocking {
+        givenRejectedName()
+
+        service.runReplacement(approve(Coin.ZERO))
+
+        coVerify(exactly = 1) { anyConstructed<InviterContactRequestOperation>().enqueue("inviter", IDENTITY_ID) }
+    }
+
+    @Test
+    fun savedName_reloadsTheIdentityBeforeAnythingElseCanWriteTheOldName() = runBlocking {
+        givenRejectedName()
+        coEvery { identityRepository.init() } coAnswers {
+            assertEquals("dashuser2", config.load()!!.username)
+        }
+
+        service.runReplacement(approve(Coin.ZERO))
+
+        coVerifyOrder {
+            identityRepository.init()
+            platformRepo.preorderName(any(), any(), "dashuser2")
+        }
+    }
+
+    @Test
+    fun creditsNoLongerCoverTheName_stopsAndReopensTheForm() = runBlocking {
+        givenRejectedName()
+        coEvery { platformRepo.getIdentityBalance(any()) } returns CreditBalanceInfo(100_000_000L)
+
+        service.runReplacement(approve(Coin.ZERO))
+
+        assertEquals(NameReplacementFailure.FINAL, config.loadReplacement()!!.failure)
+        assertRejectedNameRestored()
+        verify(exactly = 0) { platformRepo.preorderName(any(), any(), any()) }
+        verifyNoTopUp()
+    }
+
+    @Test
+    fun creditReadFails_isRetryableAndNeverFallsBackToTheWallet() = runBlocking {
+        givenRejectedName()
+        coEvery { platformRepo.getIdentityBalance(any()) } throws IllegalStateException("offline")
+
+        service.runReplacement(approve(Coin.ZERO))
+
+        val attempt = config.loadReplacement()!!
+        assertEquals(NameReplacementFailure.RETRYABLE, attempt.failure)
+        assertEquals(NameReplacementState.APPROVED, attempt.state)
+        assertEquals(REJECTED, attempt.rejectedError)
+        assertEquals("IllegalStateException: offline", stored().creationStateErrorMessage)
+        assertEquals("dashuser", stored().username)
+        verify(exactly = 0) { platformRepo.preorderName(any(), any(), any()) }
+        verifyNoTopUp()
+    }
+
+    @Test
+    fun walletTopUp_savesTheDispatchBeforeBuildingAndTheTransactionBeforeSending() = runBlocking {
+        givenRejectedName()
+        coEvery { topUpRepository.createTopupTransaction(any(), any(), any(), any()) } coAnswers {
+            assertEquals(NameReplacementState.DISPATCHING, config.loadReplacement()!!.state)
+            assertArrayEquals(KEY, config.loadReplacement()!!.topUpKeyHash)
+            topUpTx
+        }
+        coEvery { topUpRepository.topUpIdentity(any(), any()) } coAnswers {
+            assertEquals(NameReplacementState.DISPATCHED, config.loadReplacement()!!.state)
+            assertArrayEquals(TX, config.loadReplacement()!!.topUpTx)
+            assertEquals("dashuser", config.load()!!.username)
+        }
+
+        service.runReplacement(approve(TOP_UP))
+
+        coVerifyOrder {
+            topUpRepository.createTopupTransaction(blockchainIdentity, TOP_UP, any(), any())
+            walletApplication.saveWallet()
+            topUpRepository.topUpIdentity(topUpTx, any())
+            platformRepo.preorderName(blockchainIdentity, any(), "dashuser2")
+        }
+        coVerify(exactly = 1) { topUpRepository.createTopupTransaction(any(), any(), any(), any()) }
+        assertEquals(IdentityCreationState.DONE, stored().creationState)
+        assertNull(config.loadReplacement())
         verifyTheSpentInviteIsNotUsed()
     }
 
     @Test
-    fun rejectedName_withAnApprovedTopUp_topsUpTheIdentityBeforeRegistering() = runBlocking {
-        identityData = inviteIdentity(IdentityCreationState.USERNAME_REGISTERING, "dashuser", rejected = true)
+    fun walletCannotPay_stopsAndReopensTheForm() = runBlocking {
+        givenRejectedName()
+        coEvery { topUpRepository.createTopupTransaction(any(), any(), any(), any()) } throws
+            InsufficientMoneyException(TOP_UP)
 
-        service.retryInviteWithNewUsername("dashuser2", Coin.parseCoin("0.03"))
+        service.runReplacement(approve(TOP_UP))
 
-        coVerifyOrder {
-            topUpRepository.createTopupTransaction(blockchainIdentity, Coin.parseCoin("0.03"), any(), any())
-            topUpRepository.topUpIdentity(topUpTx, any())
-            identityRepository.replaceUsername(identityData, "dashuser2")
-            platformRepo.preorderName(blockchainIdentity, any(), "dashuser2")
-        }
-        verify(exactly = 1) { platformRepo.registerName(any(), any(), any()) }
-        assertEquals(IdentityCreationState.DONE, identityData.creationState)
-        verify(exactly = 0) { topUpRepository.obtainAssetLockTransaction(any(), any()) }
-        coVerify(exactly = 0) { topUpRepository.createAssetLockTransaction(any(), any(), any(), any()) }
-        coVerify(exactly = 0) { platformRepo.registerIdentity(any(), any()) }
+        assertEquals(NameReplacementFailure.FINAL, config.loadReplacement()!!.failure)
+        assertRejectedNameRestored()
+        coVerify(exactly = 0) { topUpRepository.topUpIdentity(any(), any()) }
     }
 
     @Test
-    fun failedTopUp_keepsTheRejectedNameToRetry() {
-        identityData = inviteIdentity(IdentityCreationState.USERNAME_REGISTERING, "dashuser", rejected = true)
-        coEvery { topUpRepository.topUpIdentity(any(), any()) } throws IllegalStateException("top-up failed")
+    fun crashAfterDispatching_withTheTopUpInTheWallet_adoptsItInsteadOfBuildingAnother() = runBlocking {
+        givenRejectedName()
+        every { topUps.findByKey(any(), KEY) } returns topUpTx
 
-        assertThrows(IllegalStateException::class.java) {
-            runBlocking { service.retryInviteWithNewUsername("dashuser2", Coin.parseCoin("0.03")) }
-        }
+        service.runReplacement(dispatching())
 
-        coVerify(exactly = 0) { identityRepository.replaceUsername(any(), any()) }
+        coVerify(exactly = 0) { topUpRepository.createTopupTransaction(any(), any(), any(), any()) }
+        coVerify(exactly = 1) { topUpRepository.topUpIdentity(topUpTx, any()) }
+        verify(exactly = 1) { platformRepo.registerName(blockchainIdentity, any(), "dashuser2") }
+        assertNull(config.loadReplacement())
+    }
+
+    @Test
+    fun crashAfterDispatching_withoutATopUp_stopsWithoutBuildingOne() = runBlocking {
+        givenRejectedName()
+        every { topUps.findByKey(any(), KEY) } returns null
+
+        service.runReplacement(dispatching())
+
+        assertEquals(NameReplacementFailure.FINAL, config.loadReplacement()!!.failure)
+        assertRejectedNameRestored()
+        verifyNoTopUp()
         verify(exactly = 0) { platformRepo.preorderName(any(), any(), any()) }
-        assertEquals("dashuser", identityData.username)
-        val recorded = CreateIdentityService::class.java.getDeclaredField("blockchainIdentityData")
-            .apply { isAccessible = true }
-        assertEquals(identityData, recorded.get(service))
     }
 
     @Test
-    fun rejectedName_queuesTheContactRequestToTheInviter() = runBlocking {
-        identityData = inviteIdentity(IdentityCreationState.USERNAME_REGISTERING, "dashuser", rejected = true)
+    fun crashAfterDispatched_sendsTheSavedTransaction() = runBlocking {
+        givenRejectedName()
 
-        service.retryInviteWithNewUsername("dashuser2")
+        service.runReplacement(dispatched())
 
-        coVerify(exactly = 1) { anyConstructed<InviterContactRequestOperation>().enqueue("inviter", "userId") }
-        coVerify(exactly = 0) { identityRepository.getUser(any()) }
+        verify(exactly = 1) { topUps.resolve(any(), TX) }
+        coVerify(exactly = 0) { topUpRepository.createTopupTransaction(any(), any(), any(), any()) }
+        coVerify(exactly = 1) { topUpRepository.topUpIdentity(topUpTx, any()) }
+        verify(exactly = 1) { platformRepo.registerName(blockchainIdentity, any(), "dashuser2") }
+    }
+
+    @Test
+    fun doubleSpentTopUp_stopsAndReopensTheForm() = runBlocking {
+        givenRejectedName()
+        every { topUps.resolve(any(), any()) } returns NameReplacementTopUps.Resolution.Dead
+
+        service.runReplacement(dispatched())
+
+        assertEquals(NameReplacementFailure.FINAL, config.loadReplacement()!!.failure)
+        assertRejectedNameRestored()
+        coVerify(exactly = 0) { topUpRepository.topUpIdentity(any(), any()) }
+    }
+
+    @Test
+    fun topUpWithUnresolvedInputs_waitsForARetry() = runBlocking {
+        givenRejectedName()
+        every { topUps.resolve(any(), any()) } returns NameReplacementTopUps.Resolution.Pending("unknown input")
+
+        service.runReplacement(dispatched())
+
+        assertEquals(NameReplacementFailure.RETRYABLE, config.loadReplacement()!!.failure)
+        assertEquals(NameReplacementState.DISPATCHED, config.loadReplacement()!!.state)
+        coVerify(exactly = 0) { topUpRepository.topUpIdentity(any(), any()) }
+    }
+
+    @Test
+    fun failedTopUp_keepsTheRejectionAndRetryReusesTheSameTransaction() {
+        givenRejectedName()
+        var calls = 0
+        coEvery { topUpRepository.topUpIdentity(any(), any()) } answers {
+            if (calls++ == 0) throw IllegalStateException("top-up failed")
+        }
+        runBlocking { service.runReplacement(approve(TOP_UP)) }
+
+        val failed = runBlocking { config.loadReplacement()!! }
+        assertEquals(NameReplacementFailure.RETRYABLE, failed.failure)
+        assertEquals(REJECTED, failed.rejectedError)
+        assertEquals("IllegalStateException: top-up failed", stored().creationStateErrorMessage)
+        assertEquals("dashuser", stored().username)
+
+        service.onStartCommand(CreateIdentityService.createIntentForRetryFromInvite(service), 0, 2)
+
+        verify(timeout = 10_000, exactly = 1) { platformRepo.registerName(blockchainIdentity, any(), "dashuser2") }
+        awaitIdle()
+        coVerify(exactly = 1) { topUpRepository.createTopupTransaction(any(), any(), any(), any()) }
+        coVerify(exactly = 2) { topUpRepository.topUpIdentity(topUpTx, any()) }
+        verify(exactly = 0) { platformRepo.registerName(any(), any(), "dashuser") }
+    }
+
+    @Test
+    fun doubleTap_runsOneAttemptOnce() {
+        givenRejectedName()
+        runBlocking { approve(TOP_UP) }
+
+        service.onStartCommand(CreateIdentityService.createIntentForNameReplacement(service), 0, 1)
+        service.onStartCommand(CreateIdentityService.createIntentForNameReplacement(service), 0, 2)
+
+        verify(timeout = 10_000, exactly = 1) { platformRepo.registerName(blockchainIdentity, any(), "dashuser2") }
+        awaitIdle()
+        assertNull(runBlocking { config.loadReplacement() })
+        coVerify(exactly = 1) { topUpRepository.createTopupTransaction(any(), any(), any(), any()) }
+        verify(exactly = 1) { platformRepo.registerName(any(), any(), any()) }
+    }
+
+    @Test
+    fun retryWithAFailedAttempt_resumesTheAttemptNotTheRejectedName() {
+        givenRejectedName()
+        runBlocking {
+            val attempt = dispatched()
+            config.failReplacement(attempt.id, NameReplacementFailure.RETRYABLE, "offline")
+        }
+
+        service.onStartCommand(CreateIdentityService.createIntentForRetryFromInvite(service), 0, 1)
+
+        verify(timeout = 10_000, exactly = 1) { platformRepo.registerName(blockchainIdentity, any(), "dashuser2") }
+        awaitIdle()
+        verify(exactly = 0) { platformRepo.preorderName(any(), any(), "dashuser") }
+        coVerify(exactly = 0) { topUpRepository.createTopupTransaction(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun restartWithAFailedAttempt_waitsForTheUser() {
+        givenRejectedName()
+        runBlocking {
+            val attempt = dispatched()
+            config.failReplacement(attempt.id, NameReplacementFailure.RETRYABLE, "offline")
+        }
+
+        assertEquals(Service.START_NOT_STICKY, service.onStartCommand(null, 0, 1))
+
+        assertTrue(shadowOf(service).isStoppedBySelf)
+        assertEquals(NameReplacementFailure.RETRYABLE, runBlocking { config.loadReplacement()!!.failure })
+        verify(exactly = 0) { platformRepo.preorderName(any(), any(), any()) }
+        coVerify(exactly = 0) { topUpRepository.topUpIdentity(any(), any()) }
+    }
+
+    @Test
+    fun restartWithAnUnfinishedAttempt_resumesTheAttempt() {
+        givenRejectedName()
+        runBlocking { dispatched() }
+
+        service.onStartCommand(null, 0, 1)
+
+        verify(timeout = 10_000, exactly = 1) { platformRepo.registerName(blockchainIdentity, any(), "dashuser2") }
+        awaitIdle()
+        verify(exactly = 0) { platformRepo.preorderName(any(), any(), "dashuser") }
+        coVerify(exactly = 0) { topUpRepository.createTopupTransaction(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun stoppedAttempt_neitherRestartNorRetryRunsAnything() {
+        givenRejectedName()
+        runBlocking {
+            val attempt = approve(TOP_UP)
+            config.failReplacement(attempt.id, NameReplacementFailure.FINAL, "stop")
+        }
+
+        assertEquals(Service.START_NOT_STICKY, service.onStartCommand(null, 0, 1))
+        service.onStartCommand(CreateIdentityService.createIntentForRetryFromInvite(service), 0, 2)
+
+        awaitIdle()
+        verify(exactly = 0) { platformRepo.preorderName(any(), any(), any()) }
+        verifyNoTopUp()
+    }
+
+    @Test
+    fun identityMovedOnWhileTheTopUpWaited_dropsTheAttemptWithoutTouchingTheIdentity() = runBlocking {
+        givenRejectedName()
+        val attempt = dispatched()
+        config.updateCreationState(IdentityCreationState.DONE, null)
+
+        service.runReplacement(attempt)
+
+        assertNull(config.loadReplacement())
+        assertEquals(IdentityCreationState.DONE, stored().creationState)
+        assertEquals("dashuser", stored().username)
+        verify(exactly = 0) { platformRepo.registerName(any(), any(), any()) }
+    }
+
+    @Test
+    fun savedNameRejected_stopsWithTheNewRejectionForTheForm() = runBlocking {
+        givenRejectedName()
+        every { platformRepo.registerName(any(), any(), "dashuser2") } throws IllegalStateException(REJECTED)
+
+        service.runReplacement(approve(Coin.ZERO))
+
+        assertEquals(NameReplacementFailure.FINAL, config.loadReplacement()!!.failure)
+        assertEquals(NameReplacementState.NAME_SAVED, config.loadReplacement()!!.state)
+        assertEquals(IdentityCreationState.USERNAME_REGISTERING, stored().creationState)
+        assertTrue(stored().creationStateErrorMessage!!.contains("DuplicateUniqueIndexError"))
+        assertEquals("dashuser2", stored().username)
+    }
+
+    @Test
+    fun savedNameFailsOtherwise_canStillBeReplaced() = runBlocking {
+        givenRejectedName()
+        every { platformRepo.registerName(any(), any(), "dashuser2") } throws IllegalStateException("BalanceIsNotEnough")
+
+        service.runReplacement(approve(Coin.ZERO))
+
+        assertEquals(NameReplacementFailure.RETRYABLE, config.loadReplacement()!!.failure)
+        assertTrue(config.approveReplacement(NameReplacementAttempt("next", IDENTITY_ID, "dashuser4", null, Coin.ZERO)))
+    }
+
+    @Test
+    fun identityAlreadyPastTheName_dropsTheAttemptWithoutPaying() = runBlocking {
+        givenRejectedName()
+        val attempt = approve(TOP_UP)
+        config.updateCreationState(IdentityCreationState.DONE, null)
+
+        service.runReplacement(attempt)
+
+        assertNull(config.loadReplacement())
+        verifyNoTopUp()
+        verify(exactly = 0) { platformRepo.preorderName(any(), any(), any()) }
     }
 
     @Test
     fun inviterContactRequestNotQueued_stillCompletesTheName() = runBlocking {
-        identityData = inviteIdentity(IdentityCreationState.IDENTITY_REGISTERED, "dashuser2", rejected = false)
+        givenIdentity(inviteIdentity(IdentityCreationState.IDENTITY_REGISTERED, "dashuser2", rejected = false))
         coEvery { anyConstructed<InviterContactRequestOperation>().enqueue(any(), any()) } throws IllegalStateException("db")
 
         service.createIdentityFromInvitation(null, null, null)
 
-        assertEquals(IdentityCreationState.DONE, identityData.creationState)
-        assertNull(identityData.creationStateErrorMessage)
+        assertEquals(IdentityCreationState.DONE, stored().creationState)
+        assertNull(stored().creationStateErrorMessage)
     }
 
     @Test
     fun interruptedReplacement_resumesWithoutTheSpentInvite() = runBlocking {
-        identityData = inviteIdentity(IdentityCreationState.PREORDER_REGISTERING, "dashuser2", rejected = false)
+        givenIdentity(inviteIdentity(IdentityCreationState.PREORDER_REGISTERING, "dashuser2", rejected = false))
 
         service.createIdentityFromInvitation(null, null, null)
 
         verify(exactly = 1) { platformRepo.preorderName(blockchainIdentity, any(), "dashuser2") }
         verify(exactly = 1) { platformRepo.registerName(blockchainIdentity, any(), "dashuser2") }
-        assertEquals(IdentityCreationState.DONE, identityData.creationState)
+        assertEquals(IdentityCreationState.DONE, stored().creationState)
         verifyTheSpentInviteIsNotUsed()
+        verifyNoTopUp()
     }
 
     @Test
     fun interruptedRegistration_resumesAfterTheDomainWithoutRegisteringAgain() = runBlocking {
-        identityData = inviteIdentity(IdentityCreationState.USERNAME_REGISTERED, "dashuser2", rejected = false)
+        givenIdentity(inviteIdentity(IdentityCreationState.USERNAME_REGISTERED, "dashuser2", rejected = false))
 
         service.createIdentityFromInvitation(null, null, null)
 
         verify(exactly = 0) { platformRepo.preorderName(any(), any(), any()) }
         verify(exactly = 0) { platformRepo.registerName(any(), any(), any()) }
         verifyTheSpentInviteIsNotUsed()
-    }
-
-    @Test
-    fun walletFundedIdentity_isNotRetriedFromCredits() {
-        identityData = inviteIdentity(IdentityCreationState.USERNAME_REGISTERING, "dashuser", rejected = true)
-            .apply { usingInvite = false }
-
-        assertThrows(IllegalStateException::class.java) {
-            runBlocking { service.retryInviteWithNewUsername("dashuser2") }
-        }
-        coVerify(exactly = 0) { identityRepository.replaceUsername(any(), any()) }
-        verify(exactly = 0) { platformRepo.preorderName(any(), any(), any()) }
-    }
-
-    @Test
-    fun identityWithASecondaryName_isNotRetriedFromCredits() {
-        identityData = inviteIdentity(IdentityCreationState.USERNAME_REGISTERING, "Dashuser", rejected = true)
-            .apply { usernameSecondary = "dashuser3" }
-
-        assertThrows(IllegalStateException::class.java) {
-            runBlocking { service.retryInviteWithNewUsername("dashuser2") }
-        }
-        coVerify(exactly = 0) { identityRepository.replaceUsername(any(), any()) }
-    }
-
-    @Test
-    fun registeredName_isNotReplaced() {
-        identityData = inviteIdentity(IdentityCreationState.USERNAME_REGISTERED, "dashuser", rejected = true)
-
-        assertThrows(IllegalStateException::class.java) {
-            runBlocking { service.retryInviteWithNewUsername("dashuser2") }
-        }
-        coVerify(exactly = 0) { identityRepository.replaceUsername(any(), any()) }
+        verifyNoTopUp()
     }
 
     @Test
     fun restartedService_resumesAnInviteIdentityWithTheInviteFlow() {
-        identityData = inviteIdentity(IdentityCreationState.PREORDER_REGISTERING, "dashuser2", rejected = false)
+        givenIdentity(inviteIdentity(IdentityCreationState.PREORDER_REGISTERING, "dashuser2", rejected = false))
 
         service.onStartCommand(null, 0, 1)
 
         verify(timeout = 10_000, exactly = 1) { platformRepo.registerName(blockchainIdentity, any(), "dashuser2") }
         verifyTheSpentInviteIsNotUsed()
+        verifyNoTopUp()
     }
 
     @Test
     fun restartedService_leavesAFinishedInviteIdentityAlone() {
-        identityData = inviteIdentity(IdentityCreationState.VOTING, "Dashuser", rejected = false)
+        givenIdentity(inviteIdentity(IdentityCreationState.VOTING, "Dashuser", rejected = false))
 
         assertEquals(Service.START_NOT_STICKY, service.onStartCommand(null, 0, 1))
 
@@ -274,18 +543,62 @@ class CreateIdentityServiceInviteRetryTest {
     private fun verifyTheSpentInviteIsNotUsed() {
         verify(exactly = 0) { topUpRepository.obtainAssetLockTransaction(any(), any()) }
         coVerify(exactly = 0) { topUpRepository.createAssetLockTransaction(any(), any(), any(), any()) }
-        coVerify(exactly = 0) { topUpRepository.createTopupTransaction(any(), any(), any(), any()) }
-        coVerify(exactly = 0) { topUpRepository.topUpIdentity(any(), any()) }
         coVerify(exactly = 0) { platformRepo.registerIdentity(any(), any()) }
     }
+
+    private fun verifyNoTopUp() {
+        coVerify(exactly = 0) { topUpRepository.createTopupTransaction(any(), any(), any(), any()) }
+        coVerify(exactly = 0) { topUpRepository.topUpIdentity(any(), any()) }
+    }
+
+    private fun assertRejectedNameRestored() {
+        assertEquals(IdentityCreationState.USERNAME_REGISTERING, stored().creationState)
+        assertEquals(REJECTED, stored().creationStateErrorMessage)
+        assertEquals("dashuser", stored().username)
+    }
+
+    private fun awaitIdle() {
+        val workInProgress = CreateIdentityService::class.java.getDeclaredField("workInProgress")
+            .apply { isAccessible = true }
+        val deadline = System.currentTimeMillis() + 10_000
+        while ((workInProgress.getBoolean(service) || !shadowOf(service).isStoppedBySelf) &&
+            System.currentTimeMillis() < deadline
+        ) {
+            Thread.sleep(10)
+        }
+        assertTrue("the service is still running", !workInProgress.getBoolean(service))
+    }
+
+    private fun stored(): BlockchainIdentityData = runBlocking { config.load()!! }
+
+    private suspend fun approve(topUp: Coin): NameReplacementAttempt {
+        assertTrue(config.approveReplacement(NameReplacementAttempt("attempt", IDENTITY_ID, "dashuser2", null, topUp)))
+        return config.loadReplacement()!!
+    }
+
+    private suspend fun dispatching(): NameReplacementAttempt {
+        approve(TOP_UP)
+        return config.markReplacementDispatching("attempt", KEY)!!
+    }
+
+    private suspend fun dispatched(): NameReplacementAttempt {
+        dispatching()
+        return config.markReplacementDispatched("attempt", TX)!!
+    }
+
+    private fun givenRejectedName() = givenIdentity(rejectedIdentity())
+
+    private fun givenIdentity(identity: BlockchainIdentityData) = runBlocking { config.insert(identity) }
+
+    private fun rejectedIdentity() = inviteIdentity(IdentityCreationState.USERNAME_REGISTERING, "dashuser", rejected = true)
 
     private fun inviteIdentity(state: IdentityCreationState, username: String, rejected: Boolean) =
         BlockchainIdentityData(
             state,
-            if (rejected) "StateTransitionBroadcastException: DuplicateUniqueIndexError" else null,
+            if (rejected) REJECTED else null,
             username,
             null,
-            "userId",
+            IDENTITY_ID,
             false,
             usingInvite = true,
             invite = invite

@@ -209,6 +209,9 @@ class InviteHandler(val activity: FragmentActivity, private val analytics: Analy
         blockchainIdentityData: BlockchainIdentityBaseData,
         identityRepository: IdentityRepository
     ): Boolean {
+        if (blockchainIdentityData.creationState >= IdentityCreationState.IDENTITY_REGISTERED) {
+            return false
+        }
         // handle errors
         var exception: ConcensusException
         if (blockchainIdentityData.creationStateErrorMessage.also {
@@ -231,8 +234,7 @@ class InviteHandler(val activity: FragmentActivity, private val analytics: Analy
                     identityRepository.clearBlockchainIdentityData()
                     return true
                 }
-                exception is BalanceIsNotEnoughException &&
-                    blockchainIdentityData.creationState < IdentityCreationState.IDENTITY_REGISTERED -> {
+                exception is BalanceIsNotEnoughException -> {
                     showInsufficientFundsDialog()
                     // now erase the blockchain data
                     identityRepository.clearBlockchainIdentityData()

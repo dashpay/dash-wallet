@@ -46,7 +46,9 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -516,10 +518,8 @@ class RequestUserNameViewModelTest {
 
         assertTrue("an empty wallet must not block the identity's own credits", enoughBalanceForNonContestedName())
         assertEquals(Coin.ZERO, replacementTopUp(nonContestedName))
-        assertSameIntent(
-            CreateIdentityService.createIntentFromInviteForNewUsername(walletApplication, nonContestedName, Coin.ZERO),
-            submitAndCaptureIntent(nonContestedName, Coin.ZERO)
-        )
+        assertReplacementStarted(submitAndCaptureIntent(nonContestedName, Coin.ZERO))
+        assertApproved(nonContestedName, Coin.ZERO)
     }
 
     @Test
@@ -529,12 +529,8 @@ class RequestUserNameViewModelTest {
         setWalletBalance(Constants.DASH_PAY_FEE)
         assertTrue(enoughBalanceForNonContestedName())
         assertEquals(Constants.DASH_PAY_FEE, replacementTopUp(nonContestedName))
-        assertSameIntent(
-            CreateIdentityService.createIntentFromInviteForNewUsername(
-                walletApplication, nonContestedName, Constants.DASH_PAY_FEE
-            ),
-            submitAndCaptureIntent(nonContestedName, Constants.DASH_PAY_FEE)
-        )
+        assertReplacementStarted(submitAndCaptureIntent(nonContestedName, Constants.DASH_PAY_FEE))
+        assertApproved(nonContestedName, Constants.DASH_PAY_FEE)
     }
 
     @Test
@@ -552,12 +548,8 @@ class RequestUserNameViewModelTest {
         setWalletBalance(ContestedUsernameFees.nameFee)
 
         assertEquals(ContestedUsernameFees.nameFee, replacementTopUp(username))
-        assertSameIntent(
-            CreateIdentityService.createIntentFromInviteForNewUsername(
-                walletApplication, username, ContestedUsernameFees.nameFee
-            ),
-            submitAndCaptureIntent(username, ContestedUsernameFees.nameFee)
-        )
+        assertReplacementStarted(submitAndCaptureIntent(username, ContestedUsernameFees.nameFee))
+        assertApproved(username, ContestedUsernameFees.nameFee)
     }
 
     @Test
@@ -627,6 +619,98 @@ class RequestUserNameViewModelTest {
     }
 
     @Test
+    fun pendingCreditLookup_quotesNoReplacement() {
+        val credits = CompletableDeferred<CreditBalanceInfo>()
+        givenInviteFundedIdentityWithNameRejected(credits = null, pending = credits)
+        setWalletBalance(Coin.COIN)
+
+        assertNull("a balance that has not loaded is not a zero balance", replacementTopUp(nonContestedName))
+        assertFalse(enoughBalanceForNonContestedName())
+        assertSubmitFails(nonContestedName, Constants.DASH_PAY_FEE)
+
+        credits.complete(CreditBalanceInfo(CreditBalanceInfo.MAX_OPERATION_COST * 2))
+        runBlocking { withTimeout(5_000) { viewModel.identityBalance.first { it > 0L } } }
+        assertEquals(Coin.ZERO, replacementTopUp(nonContestedName))
+    }
+
+    @Test
+    fun replacementDoubleTap_approvesOneAttempt() {
+        givenInviteFundedIdentityWithNameRejected(credits = CreditBalanceInfo.MAX_OPERATION_COST * 2)
+        viewModel.requestedUserName = nonContestedName
+
+        viewModel.submit(Coin.ZERO)
+        viewModel.submit(Coin.ZERO)
+        verify(timeout = 5_000, exactly = 1) { walletApplication.startService(any()) }
+        awaitSubmission()
+        viewModel.submit(Coin.ZERO)
+        verify(timeout = 5_000, exactly = 2) { walletApplication.startService(any()) }
+
+        coVerify(exactly = 1) { identityConfig.approveReplacement(any()) }
+    }
+
+    @Test
+    fun replacementRefusedByTheStore_showsAnErrorWithoutStartingTheService() {
+        givenInviteFundedIdentityWithNameRejected(credits = CreditBalanceInfo.MAX_OPERATION_COST * 2)
+        coEvery { identityConfig.approveReplacement(any()) } returns false
+        viewModel.requestedUserName = nonContestedName
+
+        viewModel.submit(Coin.ZERO)
+
+        runBlocking { withTimeout(5_000) { viewModel.uiState.first { it.usernameSubmittedError } } }
+        verify(exactly = 0) { walletApplication.startService(any()) }
+    }
+
+    @Test
+    fun replacementVerified_carriesTheLinkWithoutSavingIt() {
+        givenInviteFundedIdentityWithNameRejected(credits = CreditBalanceInfo.MAX_OPERATION_COST * 2)
+        viewModel.requestedUserName = nonContestedName
+        viewModel.setRequestedUserNameLink("https://example.com/new")
+
+        viewModel.verify()
+        submitAndCaptureIntent(nonContestedName, Coin.ZERO)
+
+        assertApproved(nonContestedName, Coin.ZERO, "https://example.com/new")
+        coVerify(exactly = 0) { identityConfig.set(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK, any()) }
+    }
+
+    @Test
+    fun replacementSkipped_carriesNoLinkEvenWithAnOldOneSaved() {
+        coEvery { identityConfig.get(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK) } returns "https://example.com/old"
+        givenInviteFundedIdentityWithNameRejected(credits = CreditBalanceInfo.MAX_OPERATION_COST * 2)
+        runBlocking { withTimeout(5_000) { viewModel.requestedUserNameLink.first { it != null } } }
+
+        submitAndCaptureIntent(nonContestedName, Coin.ZERO)
+
+        assertApproved(nonContestedName, Coin.ZERO, null)
+    }
+
+    @Test
+    fun replacementVerifiedForAnotherName_carriesNoLink() {
+        givenInviteFundedIdentityWithNameRejected(credits = CreditBalanceInfo.MAX_OPERATION_COST * 2)
+        viewModel.requestedUserName = "dashuser3"
+        viewModel.setRequestedUserNameLink("https://example.com/new")
+        viewModel.verify()
+
+        submitAndCaptureIntent(nonContestedName, Coin.ZERO)
+
+        assertApproved(nonContestedName, Coin.ZERO, null)
+    }
+
+    @Test
+    fun registeredInviteIdentity_isNeverSentToCreateANewIdentity() {
+        givenInviteFundedIdentityWithNameRejected(credits = CreditBalanceInfo.MAX_OPERATION_COST * 2) {
+            creationState = IdentityCreationState.IDENTITY_REGISTERED
+            creationStateErrorMessage = null
+        }
+        viewModel.requestedUserName = nonContestedName
+
+        viewModel.submit()
+
+        runBlocking { withTimeout(5_000) { viewModel.uiState.first { it.usernameSubmittedError } } }
+        verify(exactly = 0) { walletApplication.startService(any()) }
+    }
+
+    @Test
     fun inviteIdentityNameRegistered_isNotAReplacement() {
         givenInviteFundedIdentityWithNameRejected(credits = CreditBalanceInfo.MAX_OPERATION_COST * 2) {
             creationState = IdentityCreationState.USERNAME_REGISTERED
@@ -663,6 +747,7 @@ class RequestUserNameViewModelTest {
 
     private fun givenInviteFundedIdentityWithNameRejected(
         credits: Long?,
+        pending: CompletableDeferred<CreditBalanceInfo>? = null,
         configure: BlockchainIdentityData.() -> Unit = {}
     ) {
         viewModel.viewModelScope.cancel()
@@ -677,19 +762,44 @@ class RequestUserNameViewModelTest {
         every { identityConfig.observe(IDENTITY_ID) } returns identityIds
         coEvery { identityConfig.load() } returns identity
         coEvery { identityConfig.get(USERNAME) } returns identity.username
-        if (credits != null) {
-            coEvery { platformRepo.getIdentityBalance(any()) } returns CreditBalanceInfo(credits)
-        } else {
-            coEvery { platformRepo.getIdentityBalance(any()) } throws IOException("offline")
+        coEvery { identityConfig.approveReplacement(any()) } returns true
+        when {
+            pending != null -> coEvery { platformRepo.getIdentityBalance(any()) } coAnswers { pending.await() }
+            credits != null -> coEvery { platformRepo.getIdentityBalance(any()) } returns CreditBalanceInfo(credits)
+            else -> coEvery { platformRepo.getIdentityBalance(any()) } throws IOException("offline")
         }
 
         viewModel = createViewModel()
-        val expected = credits ?: -1L
         runBlocking {
             withTimeout(5_000) {
-                viewModel.identityBalance.first { it == expected }
-                while (viewModel.requestedUserName == null) delay(10)
+                if (pending != null) {
+                    while (viewModel.identity == null) delay(10)
+                } else {
+                    viewModel.identityBalance.first { it == (credits ?: -1L) }
+                    while (viewModel.requestedUserName == null) delay(10)
+                }
             }
+        }
+    }
+
+    private fun awaitSubmission() {
+        val field = RequestUserNameViewModel::class.java.getDeclaredField("replacementSubmission")
+            .apply { isAccessible = true }
+        runBlocking { withTimeout(5_000) { (field.get(viewModel) as Job).join() } }
+    }
+
+    private fun assertReplacementStarted(intent: Intent) {
+        assertEquals(CreateIdentityService.createIntentForNameReplacement(walletApplication).action, intent.action)
+    }
+
+    private fun assertApproved(name: String, topUp: Coin, link: String? = null) {
+        coVerify(exactly = 1) {
+            identityConfig.approveReplacement(
+                match {
+                    it.username == name && it.approvedTopUp == topUp && it.verificationLink == link &&
+                        it.identityId == otherIdentity.toString()
+                }
+            )
         }
     }
 
@@ -704,13 +814,6 @@ class RequestUserNameViewModelTest {
 
         assertTrue(viewModel.uiState.value.usernameSubmittedError)
         verify(exactly = 0) { walletApplication.startService(any()) }
-    }
-
-    private fun assertSameIntent(expected: Intent, actual: Intent) {
-        assertEquals(expected.action, actual.action)
-        val extras = expected.extras!!
-        assertEquals(extras.keySet(), actual.extras!!.keySet())
-        extras.keySet().forEach { key -> assertEquals(key, extras.get(key), actual.extras!!.get(key)) }
     }
 
     private fun setWalletBalance(amount: Coin) {

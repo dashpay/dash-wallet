@@ -412,7 +412,9 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
 
     private suspend fun checkViewConfirmDialog() {
         // TODO: Can we cancel the request?
-        if (requestUserNameViewModel.hasUserCancelledVerification()) {
+        if (requestUserNameViewModel.hasUserCancelledVerification() &&
+            !requestUserNameViewModel.isInviteNameReplacement()
+        ) {
             requestUserNameViewModel.submit()
         } else {
             when (usernameType) {

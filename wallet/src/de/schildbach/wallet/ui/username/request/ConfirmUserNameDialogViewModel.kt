@@ -26,7 +26,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
@@ -62,22 +61,22 @@ class ConfirmUserNameDialogViewModel @Inject constructor(
     var usernameType: UsernameType = UsernameType.Primary
         set(value) {
             field = value
-            latestExchangeRate?.let(::updateFees)
+            updateFees()
         }
     var isContestableUsername: Boolean = false
         set(value) {
             field = value
-            latestExchangeRate?.let(::updateFees)
+            updateFees()
         }
     var hasIdentity: Boolean = false
         set(value) {
             field = value
-            latestExchangeRate?.let(::updateFees)
+            updateFees()
         }
     var inviteNameReplacementTopUp: Coin? = null
         set(value) {
             field = value
-            latestExchangeRate?.let(::updateFees)
+            updateFees()
         }
     private val _uiState = MutableStateFlow(ConfirmUserNameUIState())
     val uiState: StateFlow<ConfirmUserNameUIState> = _uiState.asStateFlow()
@@ -92,30 +91,28 @@ class ConfirmUserNameDialogViewModel @Inject constructor(
             }
         }
     init {
-
+        updateFees()
         walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
             .filterNotNull()
             .flatMapLatest { code ->
                 exchangeRatesProvider.observeExchangeRate(code)
                     .filterNotNull()
             }
-            .combine(ContestedUsernameFees.protocolVersions) { rate, _ -> rate }
             .onEach {
-                updateFees(it)
+                latestExchangeRate = it
+                updateFees()
             }
+            .launchIn(viewModelScope)
+        ContestedUsernameFees.protocolVersions
+            .onEach { updateFees() }
             .launchIn(viewModelScope)
     }
 
-
-    private fun updateFees(exchangeRateData: ExchangeRate) {
-        latestExchangeRate = exchangeRateData
+    private fun updateFees() {
         val amountStr = MonetaryFormat.BTC.noCode().format(amount).toString()
-
-        val exchangeRate = exchangeRateData.run {
-            org.bitcoinj.utils.ExchangeRate(Coin.COIN, fiat)
+        val fiatAmount = latestExchangeRate?.let {
+            org.bitcoinj.utils.ExchangeRate(Coin.COIN, it.fiat).coinToFiat(amount)
         }
-        val fiatAmount = exchangeRate.coinToFiat(amount)
-
         val fiatAmountStr = if (fiatAmount != null) Constants.LOCAL_FORMAT.format(fiatAmount).toString() else ""
         val fiatSymbol = if (fiatAmount != null) GenericUtils.currencySymbol(fiatAmount.currencyCode) else ""
         _uiState.update {

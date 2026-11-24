@@ -69,14 +69,10 @@ class VerifyIdentityFragment : Fragment(R.layout.fragment_verfiy_identity) {
                 if (creationState.ordinal < IdentityCreationState.VOTING.ordinal) {
                     checkViewConfirmDialog()
                     dashPayViewModel.blockchainIdentity.observe(viewLifecycleOwner) {
-                        if (it?.creationStateErrorMessage != null) {
+                        if (it != null && it.creationStateErrorMessage == null &&
+                            it.creationState > IdentityCreationState.NONE
+                        ) {
                             requireActivity().finish()
-                        } else {
-                            val creationState = it?.creationState ?: IdentityCreationState.NONE
-                            if (creationState.ordinal > IdentityCreationState.NONE.ordinal) {
-                                // Navigate to MoreFragment instead of UsernameRegistrationFragment  
-                                requireActivity().finish()
-                            }
                         }
                     }
                 } else {
@@ -112,7 +108,9 @@ class VerifyIdentityFragment : Fragment(R.layout.fragment_verfiy_identity) {
 
     private suspend fun checkViewConfirmDialog() {
         // TODO: Can we cancel the request?
-        if (requestUserNameViewModel.hasUserCancelledVerification()) {
+        if (requestUserNameViewModel.hasUserCancelledVerification() &&
+            !requestUserNameViewModel.isInviteNameReplacement()
+        ) {
             requestUserNameViewModel.submit()
         } else {
             safeNavigate(

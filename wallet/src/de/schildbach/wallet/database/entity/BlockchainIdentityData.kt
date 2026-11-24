@@ -20,6 +20,7 @@ package de.schildbach.wallet.database.entity
 import android.content.Context
 import android.net.Uri
 import androidx.datastore.core.DataMigration
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
@@ -201,7 +202,7 @@ open class BlockchainIdentityConfig @Inject constructor(
     PREFERENCES_NAME,
     walletDataProvider,
     migrations = listOf(DuplicateSecondaryUsernameMigration)
-) {
+), NameReplacementStore {
     companion object {
         const val PREFERENCES_NAME = "platform-identity"
 
@@ -228,6 +229,24 @@ open class BlockchainIdentityConfig @Inject constructor(
         val CANCELED_REQUESTED_USERNAME_LINK = booleanPreferencesKey("cancelled_requested_username_link")
         val USERNAME_REQUESTED = stringPreferencesKey("username_requested")
         val VOTING_PERIOD_START = longPreferencesKey("voting_period_start")
+
+        val REPLACEMENT_ID = stringPreferencesKey("replacement_id")
+        val REPLACEMENT_IDENTITY_ID = stringPreferencesKey("replacement_identity_id")
+        val REPLACEMENT_USERNAME = stringPreferencesKey("replacement_username")
+        val REPLACEMENT_LINK = stringPreferencesKey("replacement_link")
+        val REPLACEMENT_TOP_UP = longPreferencesKey("replacement_top_up")
+        val REPLACEMENT_STATE = stringPreferencesKey("replacement_state")
+        val REPLACEMENT_FAILURE = stringPreferencesKey("replacement_failure")
+        val REPLACEMENT_FAILURE_MESSAGE = stringPreferencesKey("replacement_failure_message")
+        val REPLACEMENT_TOP_UP_KEY = stringPreferencesKey("replacement_top_up_key")
+        val REPLACEMENT_TOP_UP_TX = stringPreferencesKey("replacement_top_up_tx")
+        val REPLACEMENT_REJECTED_STATE = stringPreferencesKey("replacement_rejected_state")
+        val REPLACEMENT_REJECTED_ERROR = stringPreferencesKey("replacement_rejected_error")
+        private val REPLACEMENT_KEYS = listOf(
+            REPLACEMENT_ID, REPLACEMENT_IDENTITY_ID, REPLACEMENT_USERNAME, REPLACEMENT_LINK, REPLACEMENT_TOP_UP,
+            REPLACEMENT_STATE, REPLACEMENT_FAILURE, REPLACEMENT_FAILURE_MESSAGE, REPLACEMENT_TOP_UP_KEY,
+            REPLACEMENT_TOP_UP_TX, REPLACEMENT_REJECTED_STATE, REPLACEMENT_REJECTED_ERROR
+        )
         private val log = LoggerFactory.getLogger(BlockchainIdentityConfig::class.java)
     }
 
@@ -353,19 +372,162 @@ open class BlockchainIdentityConfig @Inject constructor(
         saveIdentityBasePrefs(blockchainIdentityBaseData)
     }
 
-    suspend fun replaceUsername(username: String) {
-        context.dataStore.edit { prefs ->
-            prefs[USERNAME] = username
-            prefs.remove(USERNAME_SECONDARY)
-            prefs.remove(PREORDER_SALT)
-            prefs.remove(PREORDER_SALT_SECONDARY)
-            prefs.remove(USERNAME_REGISTRATION_STATUS)
-            prefs.remove(USERNAME_SECONDARY_REGISTRATION_STATUS)
-            prefs.remove(USERNAME_REQUESTED)
-            prefs.remove(VOTING_PERIOD_START)
+    override suspend fun loadReplacement(): NameReplacementAttempt? = readReplacement(context.dataStore.data.first())
+
+    override suspend fun approveReplacement(attempt: NameReplacementAttempt): Boolean = editReplacement { prefs ->
+        val current = readReplacement(prefs)
+        val inherited = current?.takeIf { it.state != NameReplacementState.NAME_SAVED }
+        val rejectedError = inherited?.rejectedError ?: prefs[CREATION_STATE_ERROR_MESSAGE]
+        if ((current != null && !current.canBeReplaced) || rejectedError == null ||
+            !replacementApplies(prefs, attempt.identityId)
+        ) {
+            return@editReplacement false
+        }
+        writeReplacement(
+            prefs,
+            attempt.copy(
+                state = NameReplacementState.APPROVED,
+                failure = null,
+                failureMessage = null,
+                topUpKeyHash = null,
+                topUpTx = null,
+                rejectedState = inherited?.rejectedState ?: creationState(prefs),
+                rejectedError = rejectedError
+            )
+        )
+        prefs.remove(CREATION_STATE_ERROR_MESSAGE)
+        true
+    }
+
+    override suspend fun markReplacementDispatching(id: String, topUpKeyHash: ByteArray) =
+        transitionReplacement(id, NameReplacementState.APPROVED) { _, attempt ->
+            attempt.copy(state = NameReplacementState.DISPATCHING, topUpKeyHash = topUpKeyHash)
+        }
+
+    override suspend fun markReplacementDispatched(id: String, topUpTx: ByteArray) =
+        transitionReplacement(id, NameReplacementState.DISPATCHING) { _, attempt ->
+            attempt.copy(state = NameReplacementState.DISPATCHED, topUpTx = topUpTx)
+        }
+
+    override suspend fun saveReplacementName(id: String, from: NameReplacementState) =
+        transitionReplacement(id, from) { prefs, attempt ->
+            if (!replacementApplies(prefs, attempt.identityId)) {
+                clearReplacement(prefs)
+                return@transitionReplacement null
+            }
+            prefs[USERNAME] = attempt.username
+            listOf(
+                USERNAME_SECONDARY, PREORDER_SALT, PREORDER_SALT_SECONDARY, USERNAME_REGISTRATION_STATUS,
+                USERNAME_SECONDARY_REGISTRATION_STATUS, USERNAME_REQUESTED, VOTING_PERIOD_START,
+                CANCELED_REQUESTED_USERNAME_LINK, CREATION_STATE_ERROR_MESSAGE
+            ).forEach { prefs.remove(it) }
+            if (attempt.verificationLink != null) {
+                prefs[REQUESTED_USERNAME_LINK] = attempt.verificationLink
+            } else {
+                prefs.remove(REQUESTED_USERNAME_LINK)
+            }
             prefs[CREATION_STATE] = IdentityCreationState.IDENTITY_REGISTERED.name
+            attempt.copy(state = NameReplacementState.NAME_SAVED)
+        }
+
+    override suspend fun failReplacement(id: String, failure: NameReplacementFailure, message: String): Boolean =
+        editReplacement { prefs ->
+            val attempt = readReplacement(prefs)?.takeIf { it.id == id } ?: return@editReplacement false
+            writeReplacement(prefs, attempt.copy(failure = failure, failureMessage = message))
+            val restoresRejection = failure == NameReplacementFailure.FINAL &&
+                attempt.state != NameReplacementState.NAME_SAVED
+            when {
+                restoresRejection && replacementApplies(prefs, attempt.identityId) -> {
+                    attempt.rejectedState?.let { prefs[CREATION_STATE] = it.name }
+                    prefs[CREATION_STATE_ERROR_MESSAGE] = attempt.rejectedError ?: message
+                }
+                !restoresRejection && ownsIdentity(prefs, attempt.identityId) ->
+                    prefs[CREATION_STATE_ERROR_MESSAGE] = message
+            }
+            true
+        }
+
+    override suspend fun clearReplacementFailure(id: String): NameReplacementAttempt? = editReplacement { prefs ->
+        val attempt = readReplacement(prefs)
+            ?.takeIf { it.id == id && it.failure == NameReplacementFailure.RETRYABLE }
+            ?: return@editReplacement null
+        if (ownsIdentity(prefs, attempt.identityId)) {
             prefs.remove(CREATION_STATE_ERROR_MESSAGE)
         }
+        attempt.copy(failure = null, failureMessage = null).also { writeReplacement(prefs, it) }
+    }
+
+    override suspend fun completeReplacement(id: String) {
+        context.dataStore.edit { prefs ->
+            if (prefs[REPLACEMENT_ID] == id) {
+                clearReplacement(prefs)
+            }
+        }
+    }
+
+    private suspend fun transitionReplacement(
+        id: String,
+        from: NameReplacementState,
+        transform: (MutablePreferences, NameReplacementAttempt) -> NameReplacementAttempt?
+    ): NameReplacementAttempt? = editReplacement { prefs ->
+        val attempt = readReplacement(prefs)
+            ?.takeIf { it.id == id && it.state == from && it.failure == null }
+            ?: return@editReplacement null
+        transform(prefs, attempt)?.also { writeReplacement(prefs, it) }
+    }
+
+    private suspend fun <T> editReplacement(block: (MutablePreferences) -> T): T {
+        var result: T? = null
+        context.dataStore.edit { prefs -> result = block(prefs) }
+        @Suppress("UNCHECKED_CAST")
+        return result as T
+    }
+
+    private fun creationState(prefs: Preferences) =
+        IdentityCreationState.valueOf(prefs[CREATION_STATE] ?: IdentityCreationState.NONE.name)
+
+    private fun ownsIdentity(prefs: Preferences, identityId: String) =
+        prefs[IDENTITY_ID] == identityId && prefs[USING_INVITE] == true
+
+    private fun replacementApplies(prefs: Preferences, identityId: String) =
+        ownsIdentity(prefs, identityId) &&
+            prefs[USERNAME_SECONDARY]?.takeIf { it != prefs[USERNAME] } == null &&
+            creationState(prefs) in IdentityCreationState.IDENTITY_REGISTERED..IdentityCreationState.USERNAME_REGISTERING
+
+    private fun clearReplacement(prefs: MutablePreferences) = REPLACEMENT_KEYS.forEach { prefs.remove(it) }
+
+    private fun readReplacement(prefs: Preferences): NameReplacementAttempt? {
+        val id = prefs[REPLACEMENT_ID] ?: return null
+        return NameReplacementAttempt(
+            id = id,
+            identityId = prefs[REPLACEMENT_IDENTITY_ID] ?: return null,
+            username = prefs[REPLACEMENT_USERNAME] ?: return null,
+            verificationLink = prefs[REPLACEMENT_LINK],
+            approvedTopUp = Coin.valueOf(prefs[REPLACEMENT_TOP_UP] ?: return null),
+            state = NameReplacementState.valueOf(prefs[REPLACEMENT_STATE] ?: return null),
+            failure = prefs[REPLACEMENT_FAILURE]?.let { NameReplacementFailure.valueOf(it) },
+            failureMessage = prefs[REPLACEMENT_FAILURE_MESSAGE],
+            topUpKeyHash = prefs[REPLACEMENT_TOP_UP_KEY]?.let { Converters.fromHex(it) },
+            topUpTx = prefs[REPLACEMENT_TOP_UP_TX]?.let { Converters.fromHex(it) },
+            rejectedState = prefs[REPLACEMENT_REJECTED_STATE]?.let { IdentityCreationState.valueOf(it) },
+            rejectedError = prefs[REPLACEMENT_REJECTED_ERROR]
+        )
+    }
+
+    private fun writeReplacement(prefs: MutablePreferences, attempt: NameReplacementAttempt) {
+        clearReplacement(prefs)
+        prefs[REPLACEMENT_ID] = attempt.id
+        prefs[REPLACEMENT_IDENTITY_ID] = attempt.identityId
+        prefs[REPLACEMENT_USERNAME] = attempt.username
+        attempt.verificationLink?.let { prefs[REPLACEMENT_LINK] = it }
+        prefs[REPLACEMENT_TOP_UP] = attempt.approvedTopUp.value
+        prefs[REPLACEMENT_STATE] = attempt.state.name
+        attempt.failure?.let { prefs[REPLACEMENT_FAILURE] = it.name }
+        attempt.failureMessage?.let { prefs[REPLACEMENT_FAILURE_MESSAGE] = it }
+        attempt.topUpKeyHash?.let { prefs[REPLACEMENT_TOP_UP_KEY] = it.toHex() }
+        attempt.topUpTx?.let { prefs[REPLACEMENT_TOP_UP_TX] = it.toHex() }
+        attempt.rejectedState?.let { prefs[REPLACEMENT_REJECTED_STATE] = it.name }
+        attempt.rejectedError?.let { prefs[REPLACEMENT_REJECTED_ERROR] = it }
     }
 
     suspend fun updateCreationState(state: IdentityCreationState, creationStateErrorMessage: String?) {
