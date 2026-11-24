@@ -250,6 +250,7 @@ class ContactSupportViewModelTest {
         assertTrue(fallback.startsWith("Sends fail"))
         assertTrue(fallback.contains("report generation failed"))
         assertFalse(fallback.contains("secret"))
+        assertEquals(fallback, fallbackReportText("Sends fail", "IllegalArgumentException"))
     }
 
     /**
@@ -323,6 +324,37 @@ class ContactSupportViewModelTest {
 
             assertTrue(text.startsWith("Sends fail"))
             assertTrue(text.contains("[report not collected: SecurityException]"))
+            assertTrue(attachments.isEmpty())
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    /** Out of memory outright: the fallback built before the collectors ran comes back. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun anOutrightOutOfMemory_sendsThePrebuiltFallback() {
+        Dispatchers.setMain(Dispatchers.Unconfined)
+        try {
+            val application = mockk<WalletApplication>(relaxed = true) {
+                every { isSafeModeRetryInProgress } returns false
+                every { isWalletLoadDegraded } returns false
+                every { wallet } returns null
+                every { cacheDir } throws OutOfMemoryError("heap")
+            }
+            val viewModel = viewModel(application)
+
+            val (text, attachments) = runBlocking {
+                viewModel.createReportOrFallback(
+                    "Sends fail",
+                    collectDeviceInfo = false,
+                    collectInstalledPackages = false,
+                    collectApplicationLog = false,
+                    collectWalletDump = false
+                )
+            }
+
+            assertEquals(fallbackReportText("Sends fail", "OutOfMemoryError"), text)
             assertTrue(attachments.isEmpty())
         } finally {
             Dispatchers.resetMain()

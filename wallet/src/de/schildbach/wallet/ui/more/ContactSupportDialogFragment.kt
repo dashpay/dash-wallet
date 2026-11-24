@@ -126,6 +126,10 @@ class ContactSupportDialogFragment : OffsetDialogFragment(R.layout.dialog_contac
     }
 
     private fun sendReport() {
+        // One report per sheet: the sheet always closes once it is generated,
+        // and a second tap would race the first over the same files in the
+        // report directory (a failed collection deletes its partial output).
+        binding.submitReport.isEnabled = false
         lifecycleScope.launch {
             binding.reportGenerationProgressContainer.isVisible = true
             (requireActivity() as? SecureActivity)?.turnOffAutoLogout()

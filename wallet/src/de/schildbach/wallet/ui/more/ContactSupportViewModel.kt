@@ -143,7 +143,10 @@ internal val reportSectionLog = LoggerFactory.getLogger("ContactSupportReport")
  * or amounts).
  */
 internal fun reportSectionFailureLine(name: String, failure: Throwable): String =
-    "\n[$name not collected: ${failure.javaClass.simpleName}]\n"
+    reportSectionFailureLine(name, failure.javaClass.simpleName)
+
+internal fun reportSectionFailureLine(name: String, failureClass: String): String =
+    "\n[$name not collected: $failureClass]\n"
 
 /**
  * The report sent when generating the full one failed outright: the user's
@@ -151,8 +154,11 @@ internal fun reportSectionFailureLine(name: String, failure: Throwable): String 
  * says "generation failed" still reaches support; no report at all does not.
  */
 internal fun fallbackReportText(userIssueDescription: String, failure: Throwable): String =
+    fallbackReportText(userIssueDescription, failure.javaClass.simpleName)
+
+internal fun fallbackReportText(userIssueDescription: String, failureClass: String): String =
     userIssueDescription + "\n\n\n=== report generation failed ===\n\n" +
-        reportSectionFailureLine("report", failure)
+        reportSectionFailureLine("report", failureClass)
 
 @HiltViewModel
 class ContactSupportViewModel @Inject constructor(
@@ -278,6 +284,11 @@ class ContactSupportViewModel @Inject constructor(
      * [createReport], or — should it fail outright despite the per-section
      * guards — [fallbackReportText] with no attachments. Never throws except
      * cancellation, so the dialog always reaches the chooser.
+     *
+     * The out-of-memory fallback is built before any collector runs, so that
+     * path returns it without allocating (building it in the catch would copy
+     * the description on an exhausted heap). Still best effort: the chooser
+     * itself needs memory.
      */
     suspend fun createReportOrFallback(
         userIssueDescription: String,
@@ -285,17 +296,27 @@ class ContactSupportViewModel @Inject constructor(
         collectInstalledPackages: Boolean,
         collectApplicationLog: Boolean,
         collectWalletDump: Boolean
-    ): Pair<String, ArrayList<Uri>> = reportSection(
-        "report",
-        onFailure = { e -> fallbackReportText(userIssueDescription, e) to ArrayList() }
-    ) {
-        createReport(
-            userIssueDescription,
-            collectDeviceInfo,
-            collectInstalledPackages,
-            collectApplicationLog,
-            collectWalletDump
-        )
+    ): Pair<String, ArrayList<Uri>> {
+        val outOfMemoryFallback =
+            fallbackReportText(userIssueDescription, OutOfMemoryError::class.java.simpleName) to ArrayList<Uri>()
+        return reportSection(
+            "report",
+            onFailure = { e ->
+                if (e is OutOfMemoryError) {
+                    outOfMemoryFallback
+                } else {
+                    fallbackReportText(userIssueDescription, e) to ArrayList()
+                }
+            }
+        ) {
+            createReport(
+                userIssueDescription,
+                collectDeviceInfo,
+                collectInstalledPackages,
+                collectApplicationLog,
+                collectWalletDump
+            )
+        }
     }
 
     private suspend fun generateReport(
@@ -789,8 +810,10 @@ class ContactSupportViewModel @Inject constructor(
         } catch (x: CancellationException) {
             throw x
         } catch (x: Exception) {
-            log.info("problem computing the parity breakdown for the report", x)
-            ReportParityBreakdown(stored = null, notRefreshedReason = "failed (${x.javaClass.simpleName}: ${x.message})")
+            // The class only: the reason is written into the parity log
+            // attachment, and wallet.log is attached too.
+            log.info("problem computing the parity breakdown for the report: {}", x.javaClass.simpleName)
+            ReportParityBreakdown(stored = null, notRefreshedReason = "failed (${x.javaClass.simpleName})")
         }
     }
 
