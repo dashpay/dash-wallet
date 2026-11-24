@@ -240,6 +240,9 @@ class SdkL1SendServiceTest {
         // ── BIP70 deferred build / broadcast ──────────────────────────────
         val releasedOnWallets = mutableListOf<String>()
         var deferredBuildCalls = 0
+
+        /** Runs inside the faked native build; a blocking one stands in for a native call. */
+        var onDeferredBuild: () -> Unit = {}
         val broadcastOnWallets = mutableListOf<String>()
 
         override suspend fun buildDeferredPayment(
@@ -247,6 +250,7 @@ class SdkL1SendServiceTest {
             recipients: List<Pair<String, Long>>
         ): SdkDeferredPayment {
             deferredBuildCalls++
+            onDeferredBuild()
             return SdkDeferredPayment(txidHex = "dd".repeat(32), rawTxBytes = ByteArray(0), feeDuffs = 226L, native = null)
         }
 
@@ -2160,6 +2164,77 @@ class SdkL1SendServiceTest {
         }
     }
 
+    // --- a closed funding gate is refused at once, with the reason the screens type on
+
+    /** The scan [blocksShort] of the tip with the aggregate at 100%: the label reads synced, the gate does not. */
+    private fun scanShortOfTip(blocksShort: Long) = caughtUpProgress().let {
+        it.copy(filterHeight = it.filterHeight - blocksShort, walletSyncedHeight = it.walletSyncedHeight - blocksShort)
+    }
+
+    @Test
+    fun buildDeferredMayaDeposit_refusesAtOnceWithTheGateReason() = runBlocking {
+        var probes = 0
+        val source = FakeSource(boundWalletId = { walletId })
+        val svc = service(source, progress = { probes++; scanShortOfTip(208) })
+
+        val failure = runCatching {
+            svc.buildDeferredMayaDeposit(validAddress, 50_000L, ByteArray(40), stillOwned = { true })
+        }.exceptionOrNull()
+
+        assertTrue("an IllegalStateException, got $failure", failure is IllegalStateException)
+        assertTrue(failure?.message.orEmpty().contains(L1_FUNDING_GATE_CLOSED_REASON))
+        assertEquals("asked once, no wait", 1, probes)
+    }
+
+    @Test
+    fun sendToAddress_refusesAtOnceWithTheGateReason() = runBlocking {
+        var probes = 0
+        val source = readySource()
+        val svc = service(source, progress = { probes++; scanShortOfTip(208) })
+
+        val result = svc.sendToAddress(validAddress, amount, emptyWallet = false)
+
+        assertTrue("refused: $result", result is SdkWriteResult.NotBroadcast)
+        assertTrue((result as SdkWriteResult.NotBroadcast).reason.contains(L1_FUNDING_GATE_CLOSED_REASON))
+        assertEquals("asked once, no wait", 1, probes)
+    }
+
+    @Test
+    fun buildDeferredPayment_refusesWithTheGateReason_whenTheScanStaysShort() = runBlocking {
+        var probes = 0
+        val source = FakeSource(boundWalletId = { walletId })
+        val svc = service(source, progress = { probes++; scanShortOfTip(208) })
+
+        val failure = runCatching {
+            svc.buildDeferredPayment(listOf(validAddress to 10_000L), stillOwned = { true })
+        }.exceptionOrNull()
+
+        assertTrue("an IllegalStateException, got $failure", failure is IllegalStateException)
+        val reason = failure?.message.orEmpty()
+        assertTrue(reason, reason.contains(L1_FUNDING_GATE_CLOSED_REASON))
+        assertTrue(reason, reason.contains("short of the chain tip"))
+        assertEquals("asked once, no wait", 1, probes)
+    }
+
+    /**
+     * thepastaclaw on #1714. An unbound wallet is not reported as "syncing": the bind can be
+     * waiting for the user (keystore, setup), which no retry of the build fixes.
+     */
+    @Test
+    fun buildDeferredPayment_refusesPlainly_whenTheWalletIsUnbound() = runBlocking {
+        val source = FakeSource(boundWalletId = { null })
+        val svc = service(source)
+
+        val failure = runCatching {
+            svc.buildDeferredPayment(listOf(validAddress to 10_000L), stillOwned = { true })
+        }.exceptionOrNull()
+
+        assertTrue("an IllegalStateException, got $failure", failure is IllegalStateException)
+        val reason = failure?.message.orEmpty()
+        assertFalse("not typed as a sync refusal: $reason", reason.contains(L1_FUNDING_GATE_CLOSED_REASON))
+        assertTrue(reason, reason.contains("not bound"))
+    }
+
     @Test
     fun deferredBroadcast_refusesWhenTheBoundWalletIsNotTheOneItWasBuiltOn() = runBlocking {
         var bound = walletId
@@ -2345,6 +2420,45 @@ class SdkL1SendServiceTest {
         svc.releaseDeferredPayment(payment)
 
         assertTrue("released on another wallet: ${source.releasedOnWallets}", source.releasedOnWallets.isEmpty())
+    }
+
+    /**
+     * thepastaclaw on #1714. The caller is cancelled while the native build runs (the screen
+     * closed). The build finishes and reserves its inputs, but the real funding hold exits
+     * cancelled, so the caller never gets the payment: the service releases it.
+     */
+    @Test
+    fun buildDeferredPayment_cancelledDuringTheNativeBuild_releasesTheReservation() = runBlocking {
+        val source = readySource()
+        val building = java.util.concurrent.CountDownLatch(1)
+        val finish = java.util.concurrent.CountDownLatch(1)
+        source.onDeferredBuild = {
+            building.countDown()
+            finish.await()
+        }
+        val svc = service(source)
+
+        val build = async(Dispatchers.IO) {
+            svc.buildDeferredPayment(listOf(validAddress to 10_000L), stillOwned = { true })
+        }
+        try {
+            // Bounded: a build refused before it reaches the SDK fails here instead of hanging.
+            assertTrue(
+                "the build never reached the SDK",
+                building.await(10, java.util.concurrent.TimeUnit.SECONDS)
+            )
+            build.cancel()
+        } finally {
+            // Always: a failed assertion must not leave the fake build parked, which this
+            // runBlocking would then wait for.
+            finish.countDown()
+            build.cancel()
+        }
+        build.join()
+
+        assertTrue("the caller sees the cancellation", build.isCancelled)
+        assertEquals(1, source.deferredBuildCalls)
+        assertEquals("the finished reservation is released", listOf(walletId), source.releasedOnWallets)
     }
 
     // ── unprotected pending payment (review 4245734665) ────────────────────

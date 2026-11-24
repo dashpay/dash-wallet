@@ -1974,11 +1974,11 @@ class SdkL1SendService internal constructor(
             "app wallet not bound to the SDK"
         }
         val gate = probeSendGate()
-        check(gate.allowed) { "L1 funding gate closed: ${gate.reason}" }
+        check(gate.allowed) { "$L1_FUNDING_GATE_CLOSED_REASON: ${gate.reason}" }
         val reservedAtHeight = reservationHeightLowerBound()
         // Re-asked under the shared selection lock, held through selection and the reservation
         // (review 4309551218).
-        val payment = fundingSelection.withShared {
+        val payment = reserveUnderFundingHold {
             if (pendingPaymentInputsExposed()) throw paymentStillConfirming("l1DeferredBuild")
             check(stillOwned()) { "the wallet this payment was confirmed on has been wiped; not building it" }
             boundWalletRefusal(walletIdHex)?.let { throw IllegalStateException(it) }
@@ -1989,6 +1989,27 @@ class SdkL1SendService internal constructor(
             payment.txidHex, trimmed.size, payment.feeDuffs
         )
         return payment
+    }
+
+    /**
+     * [build], which reserves inputs, under the shared funding hold. A caller cancelled while
+     * the native build runs never receives the result: the hold exits cancelled even though
+     * [build] finished ([de.schildbach.wallet.payments.FundingSelectionLock.withShared]), and
+     * nobody else knows the reservation. So it is released here, and the cancellation goes
+     * on (thepastaclaw on #1714). Without this the inputs stay reserved until the engine's
+     * TTL sweep.
+     */
+    private suspend fun reserveUnderFundingHold(build: suspend () -> SdkDeferredPayment): SdkDeferredPayment {
+        var built: SdkDeferredPayment? = null
+        try {
+            return fundingSelection.withShared { build().also { built = it } }
+        } catch (e: CancellationException) {
+            built?.let { abandoned ->
+                log.info("SDK deferred build of {} finished after its caller was cancelled", abandoned.txidHex)
+                withContext(NonCancellable) { releaseDeferredPayment(abandoned) }
+            }
+            throw e
+        }
     }
 
     /**
@@ -2115,7 +2136,7 @@ class SdkL1SendService internal constructor(
             "app wallet not bound to the SDK"
         }
         val gate = probeSendGate()
-        check(gate.allowed) { "L1 funding gate closed: ${gate.reason}" }
+        check(gate.allowed) { "$L1_FUNDING_GATE_CLOSED_REASON: ${gate.reason}" }
         // FAIL-CLOSED GUARD (funds-critical), max deposits only: a max deposit
         // selects (essentially) every spendable UTXO the pooled default reaches
         // — BIP44 + BIP32 + every DashPay contact-receiving account — and the
@@ -2141,13 +2162,13 @@ class SdkL1SendService internal constructor(
         val reservedAtHeight = reservationHeightLowerBound()
         // Re-asked under the shared selection lock, held through selection and the reservation
         // (review 4309551218).
-        val payment = fundingSelection.withShared {
+        val payment = reserveUnderFundingHold {
             if (pendingPaymentInputsExposed()) throw paymentStillConfirming("mayaDepositBuild")
             check(stillOwned()) { "the wallet this deposit was confirmed on has been wiped; not building it" }
             boundWalletRefusal(walletIdHex)?.let { throw IllegalStateException(it) }
             source.buildDeferredMayaDeposit(walletIdHex, vault, vaultDuffs, memo)
+                .stamped(walletIdHex, reservedAtHeight)
         }
-            .stamped(walletIdHex, reservedAtHeight)
         log.info(
             "SDK l1DeferredMayaBuild: built {} ({} duffs to the vault{}, {}-byte memo, fee {} duffs), inputs reserved",
             payment.txidHex,

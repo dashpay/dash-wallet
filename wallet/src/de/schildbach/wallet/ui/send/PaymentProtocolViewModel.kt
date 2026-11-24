@@ -25,6 +25,7 @@ import de.schildbach.wallet.WalletApplication
 import org.dash.wallet.common.data.PaymentIntent
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.payments.SendCoinsTaskRunner
+import org.dash.wallet.common.services.SendEngineNotSyncedException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -32,6 +33,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapConcat
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Coin
@@ -128,6 +130,45 @@ class PaymentProtocolViewModel @Inject constructor(
     /** True when a confirmed send can actually run (the preview is armed). */
     val canSendPayment: Boolean
         get() = deferredPayment != null || isResubmission
+
+    /**
+     * True when the preview could not be built only because the wallet had not caught up with the
+     * chain ([SendEngineNotSyncedException]): nothing was built or reserved, so asking again is
+     * safe, and it succeeds once the scan reaches the tip. No other failure is retried here.
+     */
+    val canRetryPreview: Boolean
+        get() = !canSendPayment && finalPaymentIntent != null &&
+            _sendRequestLiveData.value?.exception is SendEngineNotSyncedException
+
+    /**
+     * Asks for the preview again after [canRetryPreview]. The stored refusal was the answer when
+     * the screen opened; showing it again on every confirm kept a synced wallet from paying
+     * until the invoice was reopened (Joel, 12.0.1-beta, 2026-11-17).
+     *
+     * It does what reopening the invoice does, [requestPaymentRequest]: the request is fetched
+     * from the payee again and the preview is built from that answer, never from the request
+     * this screen already holds. Time has passed since that one was fetched, and only the
+     * payee knows whether it was paid, retired or changed meanwhile (thepastaclaw on #1714).
+     */
+    fun retryPreview() {
+        if (!canRetryPreview || !isInitialized) return
+        retryResultPending = true
+        requestPaymentRequest(basePaymentIntent)
+    }
+
+    /**
+     * True from [retryPreview] until the screen has taken that build's result. Kept here and not
+     * in the fragment: the build outlives a rotation, and the fragment that receives its failure
+     * must still know the user asked for it (thepastaclaw on #1714). Main thread only.
+     */
+    private var retryResultPending = false
+
+    /**
+     * Whether the result now shown answers a [retryPreview]; true once per retry. A failure is
+     * taken only by a screen that can show its dialog now (resumed): taken earlier, a rotation
+     * before the dialog appeared lost it (thepastaclaw on #1714).
+     */
+    fun consumeRetryResult(): Boolean = retryResultPending.also { retryResultPending = false }
 
     private val _sendRequestLiveData = MutableLiveData<Resource<SendRequest?>>()
     val sendRequestLiveData: LiveData<Resource<SendRequest?>>
@@ -271,6 +312,14 @@ class PaymentProtocolViewModel @Inject constructor(
                 deferredPaymentRef.set(
                     DeferredPreview(sendCoinsTaskRunner.buildDeferredBip70Payment(paymentIntent, origin), origin)
                 )
+                // The screen can close while the build runs. The scope is cancelled before
+                // onCleared() empties the reference, so a build that stores its result after
+                // that sees the cancellation here and releases what onCleared() could not
+                // (thepastaclaw on #1714). getAndSet: whichever of the two takes it, releases it.
+                if (!isActive) {
+                    deferredPaymentRef.getAndSet(null)?.let { withContext(NonCancellable) { release(it) } }
+                    return@withContext
+                }
                 _sendRequestLiveData.postValue(Resource.success(null))
             } catch (x: Exception) {
                 deferredPaymentRef.set(null)
