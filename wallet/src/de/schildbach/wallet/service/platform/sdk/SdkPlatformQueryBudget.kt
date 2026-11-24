@@ -32,13 +32,39 @@ import java.util.Optional
  *
  * ## Why a bound is needed at all
  *
- * Mainnet DAPI nodes serve EXPIRED TLS CERTIFICATES. Against such a node the
- * SDK's query does not fail fast: it spends ~1.8 minutes in handshake failure
- * and retry before returning an error, at which point the wrapper's existing
- * `catch` runs and the legacy Platform client answers the SAME question in
- * ~0.5 s. The fallback already works; the only defect is how long the SDK
- * attempt is allowed to cost first. We have no control over which mainnet
- * nodes are healthy, so this has to be survivable indefinitely.
+ * On 2026-08-13, against SDK `0.1.0-v42int4` (commit `aec189faa`), a mainnet
+ * SDK query was measured spending ~1.8 minutes before returning an error; the
+ * cause was then attributed to mainnet DAPI nodes serving expired TLS
+ * certificates, but what produced the delay was never identified. The
+ * wrapper's existing `catch` then ran and the legacy Platform client answered
+ * the same question in ~0.5 s. The fallback worked; the defect was how long
+ * the SDK attempt was allowed to cost first. We have no control over which
+ * mainnet nodes are healthy, so this has to be survivable indefinitely.
+ *
+ * At 5.1.0-int36 (dashpay/platform `0db63f1e21`; read from source and checked
+ * by probing mainnet TLS handshakes on 2026-11-18, not measured through the
+ * SDK):
+ * - The SDK's mainnet address list is baked in at build time and omits seeds
+ *   whose TLS probe failed (dashpay/platform#4418): 282 addresses, none of
+ *   which served an expired certificate on 2026-11-18.
+ * - Each query makes at most 4 attempts (3 retries), each bounded at 10 s for
+ *   the whole attempt including the response body (#4973). A failed node is
+ *   banned and the next attempt goes to another address (sticky 5-node
+ *   rotation, #4545). A failed TLS handshake costs roughly 0.3–0.5 s, so a
+ *   query that first hits a bad-certificate node is expected to finish in
+ *   about a second.
+ * - What can still exceed this bound is a node that silently drops packets:
+ *   it costs the full 10 s attempt (3 of 282 on 2026-11-18, about 1% of first
+ *   picks). The ceiling for one query is about 40 s.
+ * - `SdkConfig.requestTimeoutMs` and `requestRetryCount` exist in the Kotlin
+ *   API, but the native `dash_sdk_create_trusted` does not read them, and
+ *   there is no connect-timeout or ban setting, so the wallet cannot tune
+ *   this at int36.
+ *
+ * The bound therefore stays: as a routing choice for the adapters that still
+ * have a legacy fallback, and as a hang bound for the identity credit balance
+ * read in [SdkIdentityQueries]. Identity discovery uses
+ * [SDK_IDENTITY_DISCOVERY_TIMEOUT_MS] instead.
  *
  * ## Why 6 s
  *
@@ -46,19 +72,48 @@ import java.util.Optional
  *   the measured legacy-client answer for the same query is ~0.5 s. 6 s is
  *   roughly a 12x margin over that, so a slow-but-working node is never
  *   abandoned in favour of the fallback.
- * - It is ~3% of the ~1.8 min a TLS-broken node costs, which is the whole
- *   point: a bad node now costs seconds, not minutes.
+ * - It was ~3% of the ~1.8 min measured in August 2026, so a bad node cost
+ *   seconds, not minutes; at int36 it also cuts short the ~10 s a silently
+ *   dropping node costs per attempt.
  * - Worst case per query becomes ~6 s (abandoned SDK attempt) + ~0.5 s
  *   (legacy answer) ≈ 6.5 s, which is tolerable on the background sync and
  *   identity paths these wrappers serve, and is bounded per ROUND TRIP — the
  *   batch wrappers apply it to each of their calls rather than to the batch,
  *   so a healthy 100-contact batch is never truncated.
  *
+ * Exception: the identity credit balance read in [SdkIdentityQueries] has NO
+ * legacy fallback. There the bound is a hang bound, not a routing choice: a
+ * timeout throws [SdkIdentityQueryTimeoutException] and the caller treats the
+ * answer as unknown (the repository balance is null, the `PlatformRepo` balance
+ * throws). At int36 the case where this bound fires is a silently dropping node.
+ * It stays at 6 s because the balance sits behind contact and profile screens,
+ * where "unknown" is better than a long wait. Identity discovery, the other
+ * read there, uses [SDK_IDENTITY_DISCOVERY_TIMEOUT_MS].
+ *
  * Deliberately NOT applied to anything on the L1 / send path: L1 is SDK-owned
  * with no second implementation to fall back to, so a timeout there would be a
  * failure rather than a routing choice.
  */
 internal const val SDK_PLATFORM_QUERY_TIMEOUT_MS = 6_000L
+
+/**
+ * Wall-clock ceiling for ONE Kotlin-SDK identity-discovery round trip
+ * ([SdkIdentityQueries.identityByPublicKeyHash]; each of its up to three round
+ * trips is bounded separately).
+ *
+ * Not [SDK_PLATFORM_QUERY_TIMEOUT_MS]: discovery has no legacy fallback, so the
+ * 6 s routing bound buys nothing there, and cutting at 6 s pre-empts the SDK's
+ * own failover. A first node that silently drops packets costs a full 10 s
+ * attempt, so a 6 s cut throws [SdkIdentityQueryTimeoutException] before the
+ * SDK can move to another node and discards an answer that would have come.
+ *
+ * 45 s covers the SDK's whole retry cycle at 5.1.0-int36 (read from
+ * dashpay/platform `0db63f1e21`, not measured through the SDK): at most 4
+ * attempts (3 retries) of at most 10 s each, about 40 s, plus a small margin.
+ * It is a hang bound for a blocking native call, not a latency target; a
+ * timeout is still unknown, never absence.
+ */
+internal const val SDK_IDENTITY_DISCOVERY_TIMEOUT_MS = 45_000L
 
 /**
  * Wall-clock ceiling for ONE LEGACY (`org.dashj.platform` / `DapiClient`)
@@ -99,7 +154,8 @@ private val log = LoggerFactory.getLogger("SdkPlatformQueryBudget")
  * `TeardownGate.op { }` = `withContext(Dispatchers.IO)`), and a blocking native
  * frame has no suspension point at which cancellation could be observed. A
  * plain `withTimeoutOrNull { source.query() }` would therefore fire its timeout
- * but still not return until the native call finished ~1.8 min later — the
+ * but still not return until the native call finished (~1.8 min later in the
+ * August 2026 measurement, up to about 40 s at int36) — the
  * cancellation would be delivered to a coroutine that cannot act on it, and the
  * caller would wait exactly as long as before.
  *
@@ -117,7 +173,8 @@ private val abandonedQueryScope = CoroutineScope(SupervisorJob() + Dispatchers.I
 
 /**
  * Runs [block] — ONE Kotlin-SDK Platform round trip — under a hard wall-clock
- * budget, so a TLS-broken DAPI node costs [timeoutMs] instead of ~1.8 min.
+ * budget, so a bad DAPI node costs [timeoutMs] instead of the whole SDK retry
+ * cycle (~1.8 min in the August 2026 measurement, up to about 40 s at int36).
  *
  * @return `Optional` wrapping [block]'s own result (INCLUDING its nulls, which
  *   every caller uses to mean "the SDK definitively reported nothing"), or

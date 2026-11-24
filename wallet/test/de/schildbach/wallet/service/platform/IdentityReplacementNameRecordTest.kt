@@ -63,7 +63,8 @@ class IdentityReplacementNameRecordTest {
             dashPayConfig = mockk<DashPayConfig>(relaxed = true),
             dashSystemService = mockk<DashSystemService>(relaxed = true),
             sdkUsernameQueries = mockk<SdkUsernameQueries>(relaxed = true),
-            sdkProfileQueries = mockk<SdkProfileQueries>(relaxed = true)
+            sdkProfileQueries = mockk<SdkProfileQueries>(relaxed = true),
+            sdkIdentityQueries = mockk(relaxed = true)
         )
     }
 
@@ -169,7 +170,8 @@ class IdentityReplacementNameRecordTest {
             dashPayConfig = mockk<DashPayConfig>(relaxed = true),
             dashSystemService = mockk<DashSystemService>(relaxed = true),
             sdkUsernameQueries = mockk<SdkUsernameQueries>(relaxed = true),
-            sdkProfileQueries = mockk<SdkProfileQueries>(relaxed = true)
+            sdkProfileQueries = mockk<SdkProfileQueries>(relaxed = true),
+            sdkIdentityQueries = mockk(relaxed = true)
         )
         val data = record(primary = "bobby", secondary = "bobby2")
 
@@ -194,7 +196,8 @@ class IdentityReplacementNameRecordTest {
             dashPayConfig = mockk<DashPayConfig>(relaxed = true),
             dashSystemService = mockk<DashSystemService>(relaxed = true),
             sdkUsernameQueries = mockk<SdkUsernameQueries>(relaxed = true),
-            sdkProfileQueries = mockk<SdkProfileQueries>(relaxed = true)
+            sdkProfileQueries = mockk<SdkProfileQueries>(relaxed = true),
+            sdkIdentityQueries = mockk(relaxed = true)
         )
         val data = record(primary = "bobby", secondary = "bobby2")
 
@@ -293,7 +296,8 @@ class IdentityReplacementNameRecordTest {
             dashPayConfig = mockk<DashPayConfig>(relaxed = true),
             dashSystemService = mockk<DashSystemService>(relaxed = true),
             sdkUsernameQueries = mockk<SdkUsernameQueries>(relaxed = true),
-            sdkProfileQueries = mockk<SdkProfileQueries>(relaxed = true)
+            sdkProfileQueries = mockk<SdkProfileQueries>(relaxed = true),
+            sdkIdentityQueries = mockk(relaxed = true)
         )
         val identity = recovered(primary = "brimoztest3", secondary = "replacement22").apply {
             every { statusOfUsername(Names.normalizeString("replacement22")) } returns UsernameStatus.CONFIRMED

@@ -22,7 +22,7 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.google.gson.JsonPrimitive
-import de.schildbach.wallet.service.platform.PlatformService
+import de.schildbach.wallet.service.platform.SystemContractIds
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.CancellationException
 import org.dashj.platform.dpp.identifier.Identifier
@@ -195,11 +195,13 @@ class SdkIdentityVerifyQueries internal constructor(
     constructor(
         sdkService: DashSdkService,
         dashPayConfig: DashPayConfig,
-        platformService: PlatformService
+        systemContractIds: SystemContractIds
     ) : this(
         source = DashSdkIdentityVerifySearchSource(
             sdkService,
-            { platformService.platform.apps[SdkIdentityVerifyMapping.APP_NAME]?.contractId }
+            // Null on a network without an identity-verify contract: the
+            // source then fails and the read falls back to dashj.
+            { systemContractIds.contractId(SdkIdentityVerifyMapping.APP_NAME) }
         ),
         dashPayConfig = dashPayConfig
     )

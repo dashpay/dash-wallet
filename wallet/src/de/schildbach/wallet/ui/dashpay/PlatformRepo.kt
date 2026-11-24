@@ -43,6 +43,7 @@ import de.schildbach.wallet.security.SecurityGuardException
 import de.schildbach.wallet.service.platform.IdentityKeyChainBackfill
 import de.schildbach.wallet.service.platform.IdentityKeyChainBackfillException
 import de.schildbach.wallet.service.platform.PlatformService
+import de.schildbach.wallet.service.platform.sdk.SdkIdentityQueries
 import de.schildbach.wallet.service.platform.sdk.SdkProfileQueries
 import de.schildbach.wallet.service.platform.sdk.SdkUsernameQueries
 import de.schildbach.wallet.service.platform.sdk.SdkVotingQueries
@@ -96,7 +97,8 @@ class PlatformRepo @Inject constructor(
     private val sdkUsernameQueries: SdkUsernameQueries,
     private val sdkVotingQueries: SdkVotingQueries,
     private val sdkProfileQueries: SdkProfileQueries,
-    private val identityCreationStatus: IdentityCreationStatusHolder
+    private val identityCreationStatus: IdentityCreationStatusHolder,
+    private val sdkIdentityQueries: SdkIdentityQueries
 ) {
 
     @EntryPoint
@@ -786,10 +788,20 @@ class PlatformRepo @Inject constructor(
         }
     }
 
+    /**
+     * [identifier]'s credit balance, read through the Kotlin SDK ([SdkIdentityQueries.creditBalance]).
+     * Throws on any failure, including the SDK runtime failing to start, its native library failing
+     * to load ([de.schildbach.wallet.service.platform.sdk.SdkNativeLibraryUnavailableException], an
+     * ordinary exception), the read exceeding its budget
+     * ([de.schildbach.wallet.service.platform.sdk.SdkIdentityQueryTimeoutException]), and when the
+     * SDK reports no balance: the legacy client this replaces threw for an identity that does not exist too
+     * (dashj-platform 5.0.1 `fetch_identity_balance_with_sdk` returns an "Identity not found" error).
+     * The legacy client is never constructed here.
+     */
     suspend fun getIdentityBalance(identifier: Identifier): CreditBalanceInfo {
-        return withContext(Dispatchers.IO) {
-            CreditBalanceInfo(platform.client.getIdentityBalance(identifier))
-        }
+        val credits = withContext(Dispatchers.IO) { sdkIdentityQueries.creditBalance(identifier) }
+            ?: throw IllegalStateException("Platform returned no credit balance for identity $identifier")
+        return CreditBalanceInfo(credits)
     }
 
 

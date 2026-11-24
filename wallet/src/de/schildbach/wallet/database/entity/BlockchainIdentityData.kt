@@ -102,7 +102,7 @@ class BlockchainIdentityData(
     usernameRequested: UsernameRequestStatus? = null,
     votingPeriodStart: Long? = null,
     // Extended properties specific to full identity data
-    var identity: Identity? = null,
+    identity: Identity? = null,
     var preorderSalt: ByteArray? = null,
     var preorderSaltSecondary: ByteArray? = null,
     var registrationStatus: IdentityStatus? = null,
@@ -136,6 +136,57 @@ class BlockchainIdentityData(
     }
 
     private var creditFundingTransactionCache: AssetLockTransaction? = null
+
+    private val identityLock = Any()
+    private var identityValue: Identity? = identity
+
+    /** The stored blob of a loaded record until [identity] is first read or assigned; see [deferStoredIdentity]. */
+    private var storedIdentityHex: String? = null
+    private var storedIdentityDecoder: ((String) -> Identity)? = null
+
+    /**
+     * The legacy identity. On a loaded record the stored blob is decoded on the first read, once:
+     * decoding needs the legacy Platform client, which most readers of the record never use. A
+     * failed decode throws to the reader and is retried on the next read. Assigning replaces the
+     * stored blob, as before.
+     */
+    var identity: Identity?
+        get() = synchronized(identityLock) {
+            val hex = storedIdentityHex
+            val decoder = storedIdentityDecoder
+            if (hex != null && decoder != null) {
+                identityValue = decoder(hex)
+                storedIdentityHex = null
+                storedIdentityDecoder = null
+            }
+            identityValue
+        }
+        set(value) = synchronized(identityLock) {
+            identityValue = value
+            storedIdentityHex = null
+            storedIdentityDecoder = null
+        }
+
+    /** Sets the stored [hex] blob that [identity] decodes with [decoder] when first read. */
+    internal fun deferStoredIdentity(hex: String, decoder: (String) -> Identity) = synchronized(identityLock) {
+        identityValue = null
+        storedIdentityHex = hex
+        storedIdentityDecoder = decoder
+    }
+
+    /**
+     * The identity blob to store: the loaded blob unchanged while [identity] was never read or
+     * assigned (no decode), otherwise [identity] serialized tolerantly; null writes nothing.
+     */
+    internal fun identityHexToStore(): String? = synchronized(identityLock) {
+        // Serialize tolerantly: the wallet's own 6-key identities carry
+        // contract bounds on keys 4/5 that the legacy dashj CBOR encoder
+        // cannot serialize (`No converter for SingleContractDocumentType`).
+        // A faithful toBuffer() throws here and stalls identity creation at
+        // IDENTITY_REGISTERING. This strips the bounds from the LOCAL cache
+        // blob only; the on-chain registration (SDK path) keeps them.
+        storedIdentityHex ?: identityValue?.let { serializeIdentityToleratingContractBounds(it).toHex() }
+    }
 
     init {
         // debug only
@@ -326,7 +377,6 @@ open class BlockchainIdentityConfig @Inject constructor(
             userId = prefs[IDENTITY_ID],
             restoring = prefs[RESTORING] ?: false,
             creditFundingTxId = prefs[ASSET_LOCK_TXID]?.let { Sha256Hash.wrap(it) },
-            identity = prefs[IDENTITY]?.let { platformService.dpp.identity.createFromBuffer(Converters.fromHex(it)) },
             usingInvite = prefs[USING_INVITE] ?: false,
             invite = prefs[INVITE_LINK]?.let { InvitationLinkData(Uri.parse(it), false) },
             preorderSalt = prefs[PREORDER_SALT]?.let { Converters.fromHex(it) },
@@ -339,7 +389,12 @@ open class BlockchainIdentityConfig @Inject constructor(
             cancelledVerificationLink = prefs[CANCELED_REQUESTED_USERNAME_LINK],
             usernameRequested = prefs[USERNAME_REQUESTED]?.let { UsernameRequestStatus.valueOf(it) },
             votingPeriodStart = prefs[VOTING_PERIOD_START]
-        )
+        ).apply {
+            // decoded only when read: decoding constructs the legacy Platform client
+            prefs[IDENTITY]?.let { hex ->
+                deferStoredIdentity(hex) { platformService.dpp.identity.createFromBuffer(Converters.fromHex(it)) }
+            }
+        }
 
     private val identityBaseData: Flow<BlockchainIdentityBaseData> = data
         .map { prefs ->
@@ -419,15 +474,8 @@ open class BlockchainIdentityConfig @Inject constructor(
         blockchainIdentityData.userId?.let { prefs[IDENTITY_ID] = it }
         prefs[RESTORING] = blockchainIdentityData.restoring
         blockchainIdentityData.creditFundingTxId?.let { prefs[ASSET_LOCK_TXID] = it.toString() }
-        // Serialize tolerantly: the wallet's own 6-key identities carry
-        // contract bounds on keys 4/5 that the legacy dashj CBOR encoder
-        // cannot serialize (`No converter for SingleContractDocumentType`).
-        // A faithful toBuffer() throws here and stalls identity creation at
-        // IDENTITY_REGISTERING. This strips the bounds from the LOCAL cache
-        // blob only; the on-chain registration (SDK path) keeps them.
-        blockchainIdentityData.identity?.let {
-            prefs[IDENTITY] = serializeIdentityToleratingContractBounds(it).toHex()
-        }
+        // the loaded blob unchanged unless the identity was read or assigned; see identityHexToStore
+        blockchainIdentityData.identityHexToStore()?.let { prefs[IDENTITY] = it }
         prefs[USING_INVITE] = blockchainIdentityData.usingInvite
         blockchainIdentityData.invite?.let { prefs[INVITE_LINK] = it.link.toString() }
         blockchainIdentityData.registrationStatus?.let { prefs[IDENTITY_REGISTRATION_STATUS] = it.name }

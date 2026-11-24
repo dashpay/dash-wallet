@@ -92,7 +92,8 @@ class IdentityNoResurrectionGuardTest {
             dashPayConfig = mockk<DashPayConfig>(relaxed = true),
             dashSystemService = mockk<DashSystemService>(relaxed = true),
             sdkUsernameQueries = mockk<SdkUsernameQueries>(relaxed = true),
-            sdkProfileQueries = mockk<SdkProfileQueries>(relaxed = true)
+            sdkProfileQueries = mockk<SdkProfileQueries>(relaxed = true),
+            sdkIdentityQueries = mockk(relaxed = true)
         )
     }
 

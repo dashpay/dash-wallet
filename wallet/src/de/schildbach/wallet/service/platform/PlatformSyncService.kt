@@ -510,7 +510,6 @@ class PlatformSynchronizationService @Inject constructor(
     override fun init() {
         syncScope.launch {
             identityRepository.init()
-            initializeStateRepository()
         }
         // Phase 3f (docs/kotlin-sdk-migration-plan.md): bind the app wallet
         // into the Kotlin SDK and attach its identity — fire-and-forget so
@@ -1231,7 +1230,6 @@ class PlatformSynchronizationService @Inject constructor(
                 val dashPayContactRequest = DashPayContactRequest.fromDocument(it)
                 val contactRequest = ContactRequest(it)
                 log.info("found received request: ${dashPayContactRequest.userId}")
-                platform.stateRepository.addValidIdentity(dashPayContactRequest.userIdentifier)
                 if (!dashPayContactRequestDao.exists(
                         dashPayContactRequest.userId,
                         dashPayContactRequest.toUserId,
@@ -2843,7 +2841,18 @@ class PlatformSynchronizationService @Inject constructor(
             // post-cutover synced hook (FIX 1). When it enqueues a recovery, the
             // RestoreIdentityWorker drives the rest — do NOT resume/finish here,
             // matching the original early-return.
-            val recoveryEnqueued = discoverAndRecoverIdentity()
+            // Discovery throws on every failure, an unreached Platform included. syncScope has
+            // no exception handler, so an escape would crash the process and leave dashj's
+            // pre-block future unset; a failed discovery lets block download proceed, as an
+            // unreached Platform always did, and the next preBlockDownload tries again.
+            val recoveryEnqueued = try {
+                discoverAndRecoverIdentity()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                log.warn("preBlockDownload: identity discovery failed; continuing without it", e)
+                false
+            }
             if (recoveryEnqueued) {
                 return@launch
             }
@@ -3245,34 +3254,6 @@ class PlatformSynchronizationService @Inject constructor(
         if (!hasCheckedTopups) {
             topUpRepository.checkTopUps(myEncryptionKey)
             hasCheckedTopups = true
-        }
-    }
-
-    /**
-     * This method looks at all items in the database tables
-     * that have existing identites and saves them for future use.
-     *
-     * Sometimes Platform Nodes return IdentityNotFound Errors and
-     * this list is used to determine if that node should be banned
-     */
-    private suspend fun initializeStateRepository() {
-        // load our id
-        val blockchainIdentity = identityRepository.blockchainIdentity
-        if (blockchainIdentity != null && blockchainIdentity.isRegistered()) {
-            val identityId = blockchainIdentity.uniqueIdString
-            platform.stateRepository.addValidIdentity(Identifier.from(identityId))
-
-            // load all id's of users who have sent us a contact request
-            dashPayContactRequestDao.loadFromOthers(identityId).forEach {
-                platform.stateRepository.addValidIdentity(it.userIdentifier)
-            }
-
-            // load all id's of users for whom we have profiles
-            dashPayProfileDao.loadAll().forEach {
-                platform.stateRepository.addValidIdentity(it.userIdentifier)
-            }
-
-            platform.stateRepository.storeIdentity(blockchainIdentity.identity!!)
         }
     }
 }

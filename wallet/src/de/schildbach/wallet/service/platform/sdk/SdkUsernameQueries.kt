@@ -21,7 +21,7 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import de.schildbach.wallet.livedata.Resource
-import de.schildbach.wallet.service.platform.PlatformService
+import de.schildbach.wallet.service.platform.SystemContractIds
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
@@ -279,14 +279,13 @@ class SdkUsernameQueries internal constructor(
     constructor(
         sdkService: DashSdkService,
         dashPayConfig: DashPayConfig,
-        platformService: PlatformService
+        systemContractIds: SystemContractIds
     ) : this(
         source = DashSdkDpnsSource(sdkService),
         dashPayConfig = dashPayConfig,
-        // The dashj Platform object knows the per-network DPNS contract id
-        // statically (no network I/O); evaluated lazily and only on the
-        // flag-on path.
-        dpnsContractId = { platformService.platform.apps["dpns"]?.contractId }
+        // Static wallet-owned registry: no network I/O and no legacy
+        // Platform client construction.
+        dpnsContractId = { systemContractIds.contractId(SystemContractIds.DPNS) }
     )
 
     /**

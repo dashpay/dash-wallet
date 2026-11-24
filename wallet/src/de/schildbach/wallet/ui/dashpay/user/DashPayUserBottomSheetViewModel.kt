@@ -227,8 +227,6 @@ class DashPayUserBottomSheetViewModel @Inject constructor(
                 log.error("Failed to load Profile", ex)
             }
 
-            platformRepo.platform.stateRepository.addValidIdentity(userData.dashPayProfile.userIdentifier)
-
             if (SendContactRequestOperation.hasActiveOperation(context, userData.dashPayProfile.userId)) {
                 initContactRequestStatusObservation(userData.dashPayProfile.userId)
             }

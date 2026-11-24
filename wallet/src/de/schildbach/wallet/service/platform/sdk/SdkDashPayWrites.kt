@@ -457,8 +457,9 @@ interface SdkDashPayWriteSource {
     )
 
     /**
-     * FEE-LEDGER read: [identityIdBase58]'s current Platform credit balance,
-     * or null when the identity is not found. Diagnostics only — callers
+     * FEE-LEDGER read: [identityIdBase58]'s current Platform credit balance
+     * ([fetchIdentityCreditBalance]: an unknown identity throws, null only when
+     * the SDK returns no number). Diagnostics only — callers
      * bound it and ignore failures (see [IdentityFeeLedger]).
      */
     suspend fun identityCreditBalance(identityIdBase58: String): Long?
@@ -527,11 +528,8 @@ internal class DashSdkDashPayWriteSource(
         )
     }
 
-    override suspend fun identityCreditBalance(identityIdBase58: String): Long? {
-        service.ensureStarted()
-        val sdk = checkNotNull(service.sdkOrNull()) { "SDK runtime missing after ensureStarted()" }
-        return sdk.identities.fetchBalance(identityIdBase58)
-    }
+    override suspend fun identityCreditBalance(identityIdBase58: String): Long? =
+        fetchIdentityCreditBalance(service, identityIdBase58)
 }
 
 /**
