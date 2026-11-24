@@ -24,7 +24,6 @@ import androidx.work.workDataOf
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.PlatformBroadcastService
 import de.schildbach.wallet.service.work.BaseWorker
 import org.bitcoinj.crypto.KeyCrypterException
@@ -36,15 +35,13 @@ class SendContactRequestWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted parameters: WorkerParameters,
     val analytics: AnalyticsService,
-    val platformBroadcastService: PlatformBroadcastService,
-    val identityRepository: IdentityRepository
+    val platformBroadcastService: PlatformBroadcastService
 ) : BaseWorker(context, parameters) {
 
     companion object {
         const val KEY_PASSWORD = "SendContactRequestWorker.PASSWORD"
         const val KEY_TO_USER_ID = "SendContactRequestWorker.KEY_TO_USER_ID"
         const val KEY_USER_ID = "SendContactRequestWorker.KEY_USER_ID"
-        const val MAX_BALANCE_LOOKUP_ATTEMPTS = 5
 
         fun extractUserId(date: Data): String? {
             return date.getString(KEY_USER_ID)
@@ -60,18 +57,6 @@ class SendContactRequestWorker @AssistedInject constructor(
                 ?: return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "missing KEY_PASSWORD parameter"))
         val toUserId = inputData.getString(KEY_TO_USER_ID)
                 ?: return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "missing KEY_TO_USER_ID parameter"))
-
-        val balance = identityRepository.getIdentityBalance()
-        if (balance == null) {
-            return if (runAttemptCount + 1 < MAX_BALANCE_LOOKUP_ATTEMPTS) {
-                Result.retry()
-            } else {
-                Result.failure(workDataOf(KEY_ERROR_MESSAGE to "credit balance is unknown"))
-            }
-        }
-        if (balance.isBalanceEmpty()) {
-            return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "credit balance is empty"))
-        }
 
         val encryptionKey: KeyParameter
         try {

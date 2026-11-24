@@ -296,7 +296,7 @@ class NotificationsFragment : Fragment(R.layout.fragment_notifications) {
                     if (answer == true) {
                         SendCoinsActivity.startBuyCredits(requireActivity())
                     } else {
-                        if (answer == false && !isEmpty)
+                        if (shouldWarn)
                             dashPayViewModel.sendContactRequest(usernameSearchResult.fromContactRequest!!.userId)
                     }
                 } else {
