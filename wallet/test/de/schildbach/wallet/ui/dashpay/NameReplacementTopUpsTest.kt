@@ -27,6 +27,7 @@ import org.bitcoinj.core.ECKey
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionConfidence.ConfidenceType
+import org.bitcoinj.core.TransactionOutPoint
 import org.bitcoinj.evolution.AssetLockTransaction
 import org.bitcoinj.params.TestNet3Params
 import org.bitcoinj.script.ScriptBuilder
@@ -48,6 +49,7 @@ class NameReplacementTopUpsTest {
         every { context } returns this@NameReplacementTopUpsTest.context
         every { getTransaction(any()) } answers { known[firstArg()] }
         every { commitTx(any()) } just Runs
+        every { isLockedOutput(any<TransactionOutPoint>()) } returns false
         every { getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) } returns authentication
     }
     private val topUps = NameReplacementTopUps()
@@ -81,13 +83,48 @@ class NameReplacementTopUpsTest {
     }
 
     @Test
-    fun topUpLostFromTheWallet_withItsInputsUnspent_isCommittedAgain() {
+    fun topUpLostFromTheWallet_withItsInputsUnspent_isCommittedAgainWithItsKey() {
         known[parent.txId] = parent
+        every { authentication.getAssetLockTransaction(match { it.txId == topUp.txId }) } answers {
+            AssetLockTransaction(params, firstArg<Transaction>().unsafeBitcoinSerialize()).apply {
+                addAssetLockPublicKey(lockKey)
+            }
+        }
 
         val resolution = topUps.resolve(wallet, saved)
 
-        assertEquals(topUp.txId, (resolution as NameReplacementTopUps.Resolution.Ready).tx.txId)
+        val ready = (resolution as NameReplacementTopUps.Resolution.Ready).tx
+        assertEquals(topUp.txId, ready.txId)
+        assertEquals(lockKey, ready.assetLockPublicKey)
         verify(exactly = 1) { wallet.commitTx(match { it.txId == topUp.txId }) }
+    }
+
+    @Test
+    fun topUpLostFromTheWalletWithoutItsKey_waitsWithoutCommittingIt() {
+        known[parent.txId] = parent
+        every { authentication.getAssetLockTransaction(any()) } answers {
+            AssetLockTransaction(params, firstArg<Transaction>().unsafeBitcoinSerialize())
+        }
+
+        assertTrue(topUps.resolve(wallet, saved) is NameReplacementTopUps.Resolution.Pending)
+        verify(exactly = 0) { wallet.commitTx(any()) }
+    }
+
+    @Test
+    fun topUpInTheWalletWithoutItsKey_waits() {
+        known[topUp.txId] = topUp
+        every { authentication.getAssetLockTransaction(topUp) } returns AssetLockTransaction(params, saved)
+
+        assertTrue(topUps.resolve(wallet, saved) is NameReplacementTopUps.Resolution.Pending)
+    }
+
+    @Test
+    fun topUpLostFromTheWallet_withAnInputReservedByAPendingPayment_waits() {
+        known[parent.txId] = parent
+        every { wallet.isLockedOutput(parent.getOutput(0).outPointFor) } returns true
+
+        assertTrue(topUps.resolve(wallet, saved) is NameReplacementTopUps.Resolution.Pending)
+        verify(exactly = 0) { wallet.commitTx(any()) }
     }
 
     @Test

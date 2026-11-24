@@ -685,6 +685,53 @@ class RequestUserNameViewModelTest {
     }
 
     @Test
+    fun replacementVerifiedThenSkippedForTheSameName_carriesNoLink() {
+        givenInviteFundedIdentityWithNameRejected(credits = CreditBalanceInfo.MAX_OPERATION_COST * 2)
+        viewModel.requestedUserName = nonContestedName
+        viewModel.setRequestedUserNameLink("https://example.com/new")
+        viewModel.verify()
+
+        viewModel.skipVerification()
+        submitAndCaptureIntent(nonContestedName, Coin.ZERO)
+
+        assertApproved(nonContestedName, Coin.ZERO, null)
+    }
+
+    @Test
+    fun replacementResubmittedAfterSkip_isApprovedAgainWithoutTheLink() {
+        givenInviteFundedIdentityWithNameRejected(credits = CreditBalanceInfo.MAX_OPERATION_COST * 2)
+        viewModel.requestedUserName = nonContestedName
+        viewModel.setRequestedUserNameLink("https://example.com/new")
+        viewModel.verify()
+        submitAndCaptureIntent(nonContestedName, Coin.ZERO)
+        awaitSubmission()
+
+        viewModel.skipVerification()
+        viewModel.submit(Coin.ZERO)
+        awaitSubmission()
+
+        coVerify(exactly = 1) {
+            identityConfig.approveReplacement(match { it.username == nonContestedName && it.verificationLink == null })
+        }
+    }
+
+    @Test
+    fun replacementApproval_recordsTheProtocolVersionOfItsQuote() {
+        ContestedUsernameFees.updateProtocolVersion(ContestedUsernameFees.REDUCED_FEE_PROTOCOL_VERSION)
+        givenInviteFundedIdentityWithNameRejected(
+            credits = ContestedUsernameFees.nameFee.value * 1000 + CreditBalanceInfo.MAX_OPERATION_COST * 2
+        )
+
+        submitAndCaptureIntent(username, Coin.ZERO)
+
+        coVerify(exactly = 1) {
+            identityConfig.approveReplacement(
+                match { it.protocolVersion == ContestedUsernameFees.REDUCED_FEE_PROTOCOL_VERSION }
+            )
+        }
+    }
+
+    @Test
     fun replacementVerifiedForAnotherName_carriesNoLink() {
         givenInviteFundedIdentityWithNameRejected(credits = CreditBalanceInfo.MAX_OPERATION_COST * 2)
         viewModel.requestedUserName = "dashuser3"

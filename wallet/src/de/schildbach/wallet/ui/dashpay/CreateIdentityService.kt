@@ -23,6 +23,7 @@ import de.schildbach.wallet.database.entity.NameReplacementState
 import de.schildbach.wallet.database.entity.NameReplacementStore
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.database.entity.UsernameRequest
+import de.schildbach.wallet.payments.PendingDirectPaymentVerifier
 import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.CoinJoinMode
@@ -158,6 +159,7 @@ class CreateIdentityService : LifecycleService() {
     @Inject lateinit var usernameRequestDao: UsernameRequestDao
     @Inject lateinit var walletDataProvider: WalletDataProvider
     @Inject lateinit var replacementStore: NameReplacementStore
+    @Inject lateinit var pendingPaymentVerifier: PendingDirectPaymentVerifier
     internal var replacementTopUps = NameReplacementTopUps()
     private lateinit var securityGuard: SecurityGuard
     
@@ -636,7 +638,7 @@ class CreateIdentityService : LifecycleService() {
             log.error("name replacement {} failed at {} ({})", attempt.id, attempt.state, failure, e)
             analytics.logError(e, "invite: name replacement failed at ${attempt.state}")
             replacementStore.failReplacement(attempt.id, failure, message)
-            createIdentityNotification.displayError(true)
+            createIdentityNotification.displayError(true, retryable = failure == NameReplacementFailure.RETRYABLE)
         }
     }
 
@@ -655,7 +657,9 @@ class CreateIdentityService : LifecycleService() {
         }
         if (attempt.paidFromCredits) {
             val credits = platformRepo.getIdentityBalance(Identifier.from(attempt.identityId)).balance
-            if (!NameReplacementFunding.creditsCover(credits, Names.isUsernameContestable(attempt.username))) {
+            val contestable = Names.isUsernameContestable(attempt.username)
+            val protocolVersion = maxOf(attempt.protocolVersion, ContestedUsernameFees.currentProtocolVersion)
+            if (!NameReplacementFunding.creditsCover(credits, contestable, protocolVersion)) {
                 throw NameReplacementStop("$credits credits no longer pay for ${attempt.username}")
             }
             return saveReplacementName(attempt, NameReplacementState.APPROVED)
@@ -682,6 +686,7 @@ class CreateIdentityService : LifecycleService() {
     }
 
     private suspend fun creditReplacementTopUp(attempt: NameReplacementAttempt): NameReplacementAttempt? {
+        pendingPaymentVerifier.awaitRestored()
         val wallet = walletApplication.wallet!!
         val topUpTx = when (val resolution = replacementTopUps.resolve(wallet, attempt.topUpTx!!)) {
             is NameReplacementTopUps.Resolution.Ready -> resolution.tx

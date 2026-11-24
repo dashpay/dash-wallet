@@ -502,6 +502,7 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
                         )
                     )
                 } else {
+                    requestUserNameViewModel.skipVerification()
                     lifecycleScope.launch {
                         checkViewConfirmDialog()
                     }
@@ -510,6 +511,7 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
         } else {
             lifecycleScope.launch {
                 setUsernameInViewModel(binding.usernameInput.text.toString())
+                requestUserNameViewModel.skipVerification()
                 checkViewConfirmDialog()
             }
         }

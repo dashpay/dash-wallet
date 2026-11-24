@@ -24,6 +24,7 @@ import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.google.common.base.Stopwatch
@@ -235,6 +236,7 @@ open class BlockchainIdentityConfig @Inject constructor(
         val REPLACEMENT_USERNAME = stringPreferencesKey("replacement_username")
         val REPLACEMENT_LINK = stringPreferencesKey("replacement_link")
         val REPLACEMENT_TOP_UP = longPreferencesKey("replacement_top_up")
+        val REPLACEMENT_PROTOCOL_VERSION = intPreferencesKey("replacement_protocol_version")
         val REPLACEMENT_STATE = stringPreferencesKey("replacement_state")
         val REPLACEMENT_FAILURE = stringPreferencesKey("replacement_failure")
         val REPLACEMENT_FAILURE_MESSAGE = stringPreferencesKey("replacement_failure_message")
@@ -244,8 +246,8 @@ open class BlockchainIdentityConfig @Inject constructor(
         val REPLACEMENT_REJECTED_ERROR = stringPreferencesKey("replacement_rejected_error")
         private val REPLACEMENT_KEYS = listOf(
             REPLACEMENT_ID, REPLACEMENT_IDENTITY_ID, REPLACEMENT_USERNAME, REPLACEMENT_LINK, REPLACEMENT_TOP_UP,
-            REPLACEMENT_STATE, REPLACEMENT_FAILURE, REPLACEMENT_FAILURE_MESSAGE, REPLACEMENT_TOP_UP_KEY,
-            REPLACEMENT_TOP_UP_TX, REPLACEMENT_REJECTED_STATE, REPLACEMENT_REJECTED_ERROR
+            REPLACEMENT_PROTOCOL_VERSION, REPLACEMENT_STATE, REPLACEMENT_FAILURE, REPLACEMENT_FAILURE_MESSAGE,
+            REPLACEMENT_TOP_UP_KEY, REPLACEMENT_TOP_UP_TX, REPLACEMENT_REJECTED_STATE, REPLACEMENT_REJECTED_ERROR
         )
         private val log = LoggerFactory.getLogger(BlockchainIdentityConfig::class.java)
     }
@@ -451,7 +453,7 @@ open class BlockchainIdentityConfig @Inject constructor(
         val attempt = readReplacement(prefs)
             ?.takeIf { it.id == id && it.failure == NameReplacementFailure.RETRYABLE }
             ?: return@editReplacement null
-        if (ownsIdentity(prefs, attempt.identityId)) {
+        if (attempt.state != NameReplacementState.NAME_SAVED && ownsIdentity(prefs, attempt.identityId)) {
             prefs.remove(CREATION_STATE_ERROR_MESSAGE)
         }
         attempt.copy(failure = null, failureMessage = null).also { writeReplacement(prefs, it) }
@@ -504,6 +506,7 @@ open class BlockchainIdentityConfig @Inject constructor(
             username = prefs[REPLACEMENT_USERNAME] ?: return null,
             verificationLink = prefs[REPLACEMENT_LINK],
             approvedTopUp = Coin.valueOf(prefs[REPLACEMENT_TOP_UP] ?: return null),
+            protocolVersion = prefs[REPLACEMENT_PROTOCOL_VERSION] ?: 0,
             state = NameReplacementState.valueOf(prefs[REPLACEMENT_STATE] ?: return null),
             failure = prefs[REPLACEMENT_FAILURE]?.let { NameReplacementFailure.valueOf(it) },
             failureMessage = prefs[REPLACEMENT_FAILURE_MESSAGE],
@@ -521,6 +524,7 @@ open class BlockchainIdentityConfig @Inject constructor(
         prefs[REPLACEMENT_USERNAME] = attempt.username
         attempt.verificationLink?.let { prefs[REPLACEMENT_LINK] = it }
         prefs[REPLACEMENT_TOP_UP] = attempt.approvedTopUp.value
+        prefs[REPLACEMENT_PROTOCOL_VERSION] = attempt.protocolVersion
         prefs[REPLACEMENT_STATE] = attempt.state.name
         attempt.failure?.let { prefs[REPLACEMENT_FAILURE] = it.name }
         attempt.failureMessage?.let { prefs[REPLACEMENT_FAILURE_MESSAGE] = it }

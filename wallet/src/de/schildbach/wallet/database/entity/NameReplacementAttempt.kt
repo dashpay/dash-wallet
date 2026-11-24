@@ -25,6 +25,7 @@ enum class NameReplacementFailure { RETRYABLE, FINAL }
 /**
  * The user's approval to replace a rejected name of an invite-funded identity, and how far it got.
  * A zero [approvedTopUp] is paid from the identity's credits; otherwise the wallet tops up the identity first.
+ * [protocolVersion] is the Platform protocol version the approved fee was quoted at.
  */
 data class NameReplacementAttempt(
     val id: String,
@@ -32,6 +33,7 @@ data class NameReplacementAttempt(
     val username: String,
     val verificationLink: String?,
     val approvedTopUp: Coin,
+    val protocolVersion: Int = 0,
     val state: NameReplacementState = NameReplacementState.APPROVED,
     val failure: NameReplacementFailure? = null,
     val failureMessage: String? = null,
@@ -68,6 +70,7 @@ interface NameReplacementStore {
 
     suspend fun failReplacement(id: String, failure: NameReplacementFailure, message: String): Boolean
 
+    /** At NAME_SAVED the identity error stays, so registration can still recover from it. */
     suspend fun clearReplacementFailure(id: String): NameReplacementAttempt?
 
     suspend fun completeReplacement(id: String)

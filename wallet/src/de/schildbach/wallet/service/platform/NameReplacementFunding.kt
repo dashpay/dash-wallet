@@ -25,23 +25,34 @@ object NameReplacementFunding {
     private const val NAME_REGISTRATION_CREDITS = CreditBalanceInfo.MAX_OPERATION_COST * 2
     private const val TOP_UP_STEP_DUFFS = 100_000L
 
-    fun creditsNeeded(contestable: Boolean): Long = if (contestable) {
-        ContestedUsernameFees.nameFee.value * CREDITS_PER_DUFF + NAME_REGISTRATION_CREDITS
+    fun creditsNeeded(
+        contestable: Boolean,
+        protocolVersion: Int = ContestedUsernameFees.currentProtocolVersion
+    ): Long = if (contestable) {
+        ContestedUsernameFees.nameFeeFor(protocolVersion).value * CREDITS_PER_DUFF + NAME_REGISTRATION_CREDITS
     } else {
         NAME_REGISTRATION_CREDITS
     }
 
-    fun creditsCover(credits: Long, contestable: Boolean): Boolean = credits >= creditsNeeded(contestable)
+    fun creditsCover(
+        credits: Long,
+        contestable: Boolean,
+        protocolVersion: Int = ContestedUsernameFees.currentProtocolVersion
+    ): Boolean = credits >= creditsNeeded(contestable, protocolVersion)
 
     /** The wallet top-up that, with [credits], pays for the name; zero when the credits already do. */
-    fun topUp(credits: Long, contestable: Boolean): Coin {
-        val shortfall = creditsNeeded(contestable) - credits
+    fun topUp(
+        credits: Long,
+        contestable: Boolean,
+        protocolVersion: Int = ContestedUsernameFees.currentProtocolVersion
+    ): Coin {
+        val shortfall = creditsNeeded(contestable, protocolVersion) - credits
         if (shortfall <= 0) {
             return Coin.ZERO
         }
         val stepCredits = TOP_UP_STEP_DUFFS * CREDITS_PER_DUFF
         val steps = (shortfall + stepCredits - 1) / stepCredits
-        val minimum = if (contestable) ContestedUsernameFees.nameFee else Constants.DASH_PAY_FEE
+        val minimum = if (contestable) ContestedUsernameFees.nameFeeFor(protocolVersion) else Constants.DASH_PAY_FEE
         return maxOf(Coin.valueOf(steps * TOP_UP_STEP_DUFFS), minimum)
     }
 }

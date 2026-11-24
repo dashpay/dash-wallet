@@ -272,6 +272,30 @@ class BlockchainIdentityConfigTest {
     }
 
     @Test
+    fun retryableFailureAfterTheNameIsSaved_keepsTheErrorForRegistrationToRecoverFrom() = runBlocking {
+        config.insert(rejectedInviteIdentity())
+        config.approveReplacement(attempt("a"))
+        config.saveReplacementName("a", NameReplacementState.APPROVED)
+        config.updateCreationState(IdentityCreationState.USERNAME_REGISTERING, null)
+        val missingPreorder = "IllegalStateException: cannot find preorder document, though it should be somewhere"
+
+        config.failReplacement("a", NameReplacementFailure.RETRYABLE, missingPreorder)
+        assertNull(config.clearReplacementFailure("a")!!.failure)
+
+        assertEquals(missingPreorder, config.load()!!.creationStateErrorMessage)
+        assertEquals(IdentityCreationState.USERNAME_REGISTERING, config.load()!!.creationState)
+    }
+
+    @Test
+    fun approval_keepsTheProtocolVersionItsFeeWasQuotedAt() = runBlocking {
+        config.insert(rejectedInviteIdentity())
+
+        config.approveReplacement(attempt("a").copy(protocolVersion = 14))
+
+        assertEquals(14, config.loadReplacement()!!.protocolVersion)
+    }
+
+    @Test
     fun completion_removesOnlyItsOwnAttempt() = runBlocking {
         config.insert(rejectedInviteIdentity())
         config.approveReplacement(attempt("a"))

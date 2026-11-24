@@ -16,6 +16,7 @@
 
 package de.schildbach.wallet.ui.dashpay
 
+import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionConfidence
 import org.bitcoinj.evolution.AssetLockTransaction
 import org.bitcoinj.wallet.AuthenticationKeyChain
@@ -41,25 +42,35 @@ open class NameReplacementTopUps {
     open fun resolve(wallet: Wallet, savedTx: ByteArray): Resolution {
         val saved = AssetLockTransaction(wallet.params, savedTx)
         wallet.getTransaction(saved.txId)?.let { tx ->
-            return if (tx.getConfidence(wallet.context).confidenceType == TransactionConfidence.ConfidenceType.DEAD) {
-                Resolution.Dead
-            } else {
-                Resolution.Ready(authentication(wallet).getAssetLockTransaction(tx))
+            if (tx.getConfidence(wallet.context).confidenceType == TransactionConfidence.ConfidenceType.DEAD) {
+                return Resolution.Dead
             }
+            return withKey(wallet, tx)?.let { Resolution.Ready(it) } ?: noKey(tx)
         }
+        var pending: String? = null
         for (input in saved.inputs) {
             val parent = wallet.getTransaction(input.outpoint.hash)
-                ?: return Resolution.Pending("the wallet does not know an input of top-up ${saved.txId} yet")
-            val spender = parent.getOutput(input.outpoint.index).spentBy?.parentTransaction ?: continue
-            return if (spender.getConfidence(wallet.context).confidenceType == TransactionConfidence.ConfidenceType.BUILDING) {
-                Resolution.Dead
-            } else {
-                Resolution.Pending("an input of top-up ${saved.txId} is spent by unconfirmed ${spender.txId}")
+            val spender = parent?.getOutput(input.outpoint.index)?.spentBy?.parentTransaction
+            val reason = when {
+                parent == null -> "the wallet does not know an input of top-up ${saved.txId} yet"
+                spender?.getConfidence(wallet.context)?.confidenceType ==
+                    TransactionConfidence.ConfidenceType.BUILDING -> return Resolution.Dead
+                spender != null -> "an input of top-up ${saved.txId} is spent by unconfirmed ${spender.txId}"
+                wallet.isLockedOutput(input.outpoint) -> "an input of top-up ${saved.txId} is locked by the wallet"
+                else -> null
             }
+            pending = pending ?: reason
         }
-        wallet.commitTx(saved)
-        return Resolution.Ready(saved)
+        pending?.let { return Resolution.Pending(it) }
+        val topUp = withKey(wallet, saved) ?: return noKey(saved)
+        wallet.commitTx(topUp)
+        return Resolution.Ready(topUp)
     }
+
+    private fun withKey(wallet: Wallet, tx: Transaction): AssetLockTransaction? =
+        authentication(wallet).getAssetLockTransaction(tx)?.takeIf { it.assetLockPublicKey != null }
+
+    private fun noKey(tx: Transaction) = Resolution.Pending("the wallet has no key for top-up ${tx.txId}")
 
     private fun authentication(wallet: Wallet) =
         wallet.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as AuthenticationGroupExtension

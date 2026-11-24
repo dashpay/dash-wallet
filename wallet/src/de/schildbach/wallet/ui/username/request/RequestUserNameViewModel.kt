@@ -373,8 +373,9 @@ class RequestUserNameViewModel @Inject constructor(
     private fun submitInviteNameReplacement(approvedTopUp: Coin?) {
         val username = requestedUserName
         val identityId = identity?.userId
+        val protocolVersion = ContestedUsernameFees.currentProtocolVersion
         if (username == null || identityId == null || approvedTopUp == null ||
-            inviteNameReplacementTopUp() != approvedTopUp
+            inviteNameReplacementTopUp(protocolVersion) != approvedTopUp
         ) {
             _uiState.update { it.copy(usernameSubmittedError = true) }
             return
@@ -382,10 +383,21 @@ class RequestUserNameViewModel @Inject constructor(
         if (replacementSubmission?.isActive == true) {
             return
         }
+        val link = replacementVerification?.takeIf { it.first == username }?.second
         replacementSubmission = viewModelScope.launch(NonCancellable) {
             val attempt = approvedReplacement?.takeIf {
-                it.identityId == identityId && it.username == username && it.approvedTopUp == approvedTopUp
-            } ?: approveReplacement(identityId, username, approvedTopUp)
+                it.identityId == identityId && it.username == username && it.approvedTopUp == approvedTopUp &&
+                    it.verificationLink == link
+            } ?: approveReplacement(
+                NameReplacementAttempt(
+                    id = UUID.randomUUID().toString(),
+                    identityId = identityId,
+                    username = username,
+                    verificationLink = link,
+                    approvedTopUp = approvedTopUp,
+                    protocolVersion = protocolVersion
+                )
+            )
             if (attempt == null) {
                 _uiState.update { it.copy(usernameSubmittedError = true) }
                 return@launch
@@ -395,14 +407,8 @@ class RequestUserNameViewModel @Inject constructor(
         }
     }
 
-    private suspend fun approveReplacement(identityId: String, username: String, approvedTopUp: Coin) =
-        NameReplacementAttempt(
-            id = UUID.randomUUID().toString(),
-            identityId = identityId,
-            username = username,
-            verificationLink = replacementVerification?.takeIf { it.first == username }?.second,
-            approvedTopUp = approvedTopUp
-        ).takeIf { attempt ->
+    private suspend fun approveReplacement(attempt: NameReplacementAttempt) =
+        attempt.takeIf {
             try {
                 withContext(Dispatchers.IO) { identityConfig.approveReplacement(attempt) }
             } catch (e: Exception) {
@@ -514,6 +520,10 @@ class RequestUserNameViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    fun skipVerification() {
+        replacementVerification = null
     }
 
     fun verify() {
@@ -660,16 +670,19 @@ class RequestUserNameViewModel @Inject constructor(
 
     fun isUsingInvite(): Boolean = createUsernameArgs?.invite != null
 
-    fun inviteNameReplacementTopUp(): Coin? =
-        requestedUserName?.let { inviteNameReplacementTopUp(Names.isUsernameContestable(it)) }
+    fun inviteNameReplacementTopUp(protocolVersion: Int = ContestedUsernameFees.currentProtocolVersion): Coin? =
+        requestedUserName?.let { inviteNameReplacementTopUp(Names.isUsernameContestable(it), protocolVersion) }
 
-    private fun inviteNameReplacementTopUp(contestable: Boolean): Coin? {
+    private fun inviteNameReplacementTopUp(
+        contestable: Boolean,
+        protocolVersion: Int = ContestedUsernameFees.currentProtocolVersion
+    ): Coin? {
         val identityId = identity?.userId ?: return null
         val credits = loadedCredits?.takeIf { it.first == identityId }?.second ?: return null
         if (!isInviteNameReplacement()) {
             return null
         }
-        val topUp = NameReplacementFunding.topUp(credits, contestable)
+        val topUp = NameReplacementFunding.topUp(credits, contestable, protocolVersion)
         return topUp.takeIf { _walletBalance.value >= it }
     }
 

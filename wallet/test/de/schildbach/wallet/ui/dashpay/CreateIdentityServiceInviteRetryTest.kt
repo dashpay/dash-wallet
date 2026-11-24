@@ -17,6 +17,7 @@
 package de.schildbach.wallet.ui.dashpay
 
 import android.app.Application
+import android.app.NotificationManager
 import android.app.Service
 import android.net.Uri
 import androidx.test.core.app.ApplicationProvider
@@ -30,6 +31,8 @@ import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.database.entity.NameReplacementAttempt
 import de.schildbach.wallet.database.entity.NameReplacementFailure
 import de.schildbach.wallet.database.entity.NameReplacementState
+import de.schildbach.wallet.payments.PendingDirectPaymentVerifier
+import de.schildbach.wallet.service.platform.ContestedUsernameFees
 import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.TopUpRepository
 import de.schildbach.wallet.ui.dashpay.work.InviterContactRequestOperation
@@ -95,6 +98,7 @@ class CreateIdentityServiceInviteRetryTest {
     private val invite = InvitationLinkData(Uri.parse("dashpay://invite?du=inviter&assetlocktx=00&pk=00"), true)
     private val topUpTx = mockk<AssetLockTransaction>(relaxed = true)
     private val walletApplication = mockk<WalletApplication>(relaxed = true)
+    private val pendingPaymentVerifier = mockk<PendingDirectPaymentVerifier>(relaxed = true)
     private lateinit var service: CreateIdentityService
 
     @Before
@@ -141,6 +145,7 @@ class CreateIdentityServiceInviteRetryTest {
             it.blockchainIdentityDataDao = config
             it.replacementStore = config
             it.replacementTopUps = topUps
+            it.pendingPaymentVerifier = pendingPaymentVerifier
         }
         val wallet = mockk<Wallet>(relaxed = true) {
             every { context } returns Context.getOrCreate(Constants.NETWORK_PARAMETERS)
@@ -154,6 +159,7 @@ class CreateIdentityServiceInviteRetryTest {
 
     @After
     fun tearDown() {
+        ContestedUsernameFees.reset()
         unmockkAll()
     }
 
@@ -209,6 +215,31 @@ class CreateIdentityServiceInviteRetryTest {
         assertRejectedNameRestored()
         verify(exactly = 0) { platformRepo.preorderName(any(), any(), any()) }
         verifyNoTopUp()
+        val notification = errorNotification()
+        assertTrue("a final stop offers no Retry", notification.actions.isNullOrEmpty())
+        assertTrue("a final stop opens the wallet", notification.contentIntent != null)
+    }
+
+    @Test
+    fun coldRetry_contestedNameQuotedAtTheReducedFee_isNotDiscardedBeforeTheVersionIsKnown() = runBlocking {
+        givenRejectedName()
+        val contested = "dashusers"
+        val credits = ContestedUsernameFees.nameFeeFor(ContestedUsernameFees.REDUCED_FEE_PROTOCOL_VERSION).value *
+            1000 + CreditBalanceInfo.MAX_OPERATION_COST * 2
+        coEvery { platformRepo.getIdentityBalance(any()) } returns CreditBalanceInfo(credits)
+        val approval = NameReplacementAttempt(
+            "attempt", IDENTITY_ID, contested, null, Coin.ZERO,
+            protocolVersion = ContestedUsernameFees.REDUCED_FEE_PROTOCOL_VERSION
+        )
+        assertTrue(config.approveReplacement(approval))
+        ContestedUsernameFees.reset()
+
+        service.runReplacement(config.loadReplacement()!!)
+
+        verify(exactly = 1) { platformRepo.preorderName(blockchainIdentity, any(), contested) }
+        assertTrue(config.loadReplacement()?.failure != NameReplacementFailure.FINAL)
+        assertEquals(contested, stored().username)
+        verifyNoTopUp()
     }
 
     @Test
@@ -226,6 +257,7 @@ class CreateIdentityServiceInviteRetryTest {
         assertEquals("dashuser", stored().username)
         verify(exactly = 0) { platformRepo.preorderName(any(), any(), any()) }
         verifyNoTopUp()
+        assertEquals(1, errorNotification().actions.size)
     }
 
     @Test
@@ -296,11 +328,15 @@ class CreateIdentityServiceInviteRetryTest {
     }
 
     @Test
-    fun crashAfterDispatched_sendsTheSavedTransaction() = runBlocking {
+    fun crashAfterDispatched_sendsTheSavedTransactionOncePaymentReservationsAreBack() = runBlocking {
         givenRejectedName()
 
         service.runReplacement(dispatched())
 
+        coVerifyOrder {
+            pendingPaymentVerifier.awaitRestored()
+            topUps.resolve(any(), TX)
+        }
         verify(exactly = 1) { topUps.resolve(any(), TX) }
         coVerify(exactly = 0) { topUpRepository.createTopupTransaction(any(), any(), any(), any()) }
         coVerify(exactly = 1) { topUpRepository.topUpIdentity(topUpTx, any()) }
@@ -353,6 +389,29 @@ class CreateIdentityServiceInviteRetryTest {
         coVerify(exactly = 1) { topUpRepository.createTopupTransaction(any(), any(), any(), any()) }
         coVerify(exactly = 2) { topUpRepository.topUpIdentity(topUpTx, any()) }
         verify(exactly = 0) { platformRepo.registerName(any(), any(), "dashuser") }
+    }
+
+    @Test
+    fun retryAfterAMissingPreorder_registersThePreorderAgain() {
+        givenRejectedName()
+        var registrations = 0
+        every { platformRepo.registerName(any(), any(), "dashuser2") } answers {
+            if (registrations++ == 0) {
+                throw IllegalStateException("cannot find preorder document, though it should be somewhere")
+            }
+        }
+        runBlocking { service.runReplacement(approve(Coin.ZERO)) }
+        val failed = runBlocking { config.loadReplacement()!! }
+        assertEquals(NameReplacementState.NAME_SAVED, failed.state)
+        assertEquals(NameReplacementFailure.RETRYABLE, failed.failure)
+
+        service.onStartCommand(CreateIdentityService.createIntentForRetryFromInvite(service), 0, 2)
+
+        verify(timeout = 10_000, exactly = 2) { platformRepo.registerName(blockchainIdentity, any(), "dashuser2") }
+        awaitIdle()
+        verify(exactly = 2) { platformRepo.preorderName(blockchainIdentity, any(), "dashuser2") }
+        assertNull(runBlocking { config.loadReplacement() })
+        assertEquals(IdentityCreationState.DONE, stored().creationState)
     }
 
     @Test
@@ -568,6 +627,10 @@ class CreateIdentityServiceInviteRetryTest {
         }
         assertTrue("the service is still running", !workInProgress.getBoolean(service))
     }
+
+    private fun errorNotification() = shadowOf(
+        ApplicationProvider.getApplicationContext<Application>().getSystemService(NotificationManager::class.java)
+    ).getNotification(Constants.NOTIFICATION_ID_DASHPAY_CREATE_IDENTITY_ERROR)
 
     private fun stored(): BlockchainIdentityData = runBlocking { config.load()!! }
 
