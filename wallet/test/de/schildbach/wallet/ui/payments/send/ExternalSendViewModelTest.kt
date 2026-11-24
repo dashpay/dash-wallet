@@ -75,6 +75,9 @@ class ExternalSendViewModelTest {
     private val shieldedAddress =
         requireNotNull(Bech32m.encode("tdash", byteArrayOf(0x10) + ByteArray(43) { (it * 3 + 7).toByte() }))
     private val identityId = Base58.encode(ByteArray(32) { (255 - it).toByte() })
+    private val mainnetPlatformAddress = requireNotNull(Bech32m.encode("dash", byteArrayOf(0xb0.toByte()) + hash20))
+    private val mainnetShieldedAddress =
+        requireNotNull(Bech32m.encode("dash", byteArrayOf(0x10) + ByteArray(43) { (it * 3 + 7).toByte() }))
 
     private val oneDash = Dash.COIN
     private val twoDash = Dash.COIN * 2L
@@ -819,6 +822,31 @@ class ExternalSendViewModelTest {
             AdvancedScanAction.Error(wrongNetwork = true),
             AdvancedSendViewModel.scanActionFor(mainnetCoreAddress, network, true, connect)
         )
+    }
+
+    @Test
+    fun scanAction_routesPlatformAndShieldedCodes() {
+        val connect = { _: String -> false }
+        // Bare, and as the Receive screen's `dash:<x>?amount=` request.
+        for (address in listOf(platformAddress, platformP2shAddress, shieldedAddress)) {
+            for (input in listOf(address, "dash:$address?amount=0.5")) {
+                assertEquals(
+                    input,
+                    AdvancedScanAction.ExternalSend(input),
+                    AdvancedSendViewModel.scanActionFor(input, network, true, connect)
+                )
+            }
+        }
+        // Mainnet (dash1…) codes scanned on testnet.
+        for (address in listOf(mainnetPlatformAddress, mainnetShieldedAddress)) {
+            for (input in listOf(address, "dash:$address?amount=0.5")) {
+                assertEquals(
+                    input,
+                    AdvancedScanAction.Error(wrongNetwork = true),
+                    AdvancedSendViewModel.scanActionFor(input, network, true, connect)
+                )
+            }
+        }
     }
 
     @Test
