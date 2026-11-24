@@ -248,10 +248,13 @@ class PaymentProtocolViewModelRetryPreviewTest {
         openInvoice(viewModel)
         awaitCondition("the refusal is stored") { viewModel.sendRequestLiveData.value?.exception != null }
         viewModel.retryPreview()
-        runBlocking { buildStarted.await() }
-
-        store.clear()
-        finishBuild.complete(Unit)
+        try {
+            runBlocking { kotlinx.coroutines.withTimeout(10_000) { buildStarted.await() } }
+            store.clear()
+        } finally {
+            // a retry that never reaches the build must not leave the fake one parked
+            finishBuild.complete(Unit)
+        }
 
         awaitCondition("the late preview is released") {
             runCatching {

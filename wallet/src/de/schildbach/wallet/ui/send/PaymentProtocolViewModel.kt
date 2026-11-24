@@ -115,8 +115,9 @@ class PaymentProtocolViewModel @Inject constructor(
      * An earlier submission for this invoice that a preview of this screen found unresolved.
      * Kept for as long as the screen lives: the stored record goes when that payment settles,
      * and a retry or a confirm after that would find nothing and pay the invoice a second
-     * time (thepastaclaw on #1714). Only a match on the invoice itself is kept: a payment of
-     * another order of the same merchant blocks this one only while it is unresolved. A kept
+     * time (thepastaclaw on #1714). Only a match on the invoice itself is kept (a record
+     * with no order identity counts by its url): a payment of another order of the same
+     * merchant blocks this one only while it is unresolved. A kept
      * payment that a conflicting spend later invalidated still refuses here, until the
      * invoice is reopened. In memory only; reopening starts again from the payee's own
      * answer to the fetch.
