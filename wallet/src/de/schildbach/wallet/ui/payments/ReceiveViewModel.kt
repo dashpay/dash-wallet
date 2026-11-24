@@ -98,10 +98,12 @@ data class ReceiveUIState(
     val specifyAmountEnabled: Boolean
         get() = selectedTab == ReceiveBalanceTab.CORE || address != null
 
-    /** A username identifies a DashPay user, who is paid on Core; the Identity tab is theirs too. */
+    /**
+     * The username row (with its copy button) is on every balance tab whenever the user has a
+     * username (MO-1123 AC5), so it can be copied from any tab; only the Core QR carries it.
+     */
     val showUsername: Boolean
-        get() = username != null &&
-            (selectedTab == ReceiveBalanceTab.CORE || selectedTab == ReceiveBalanceTab.IDENTITY)
+        get() = username != null
 }
 
 /**

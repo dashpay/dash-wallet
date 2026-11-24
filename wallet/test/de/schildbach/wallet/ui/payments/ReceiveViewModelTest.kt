@@ -509,12 +509,11 @@ class ReceiveViewModelTest {
     }
 
     @Test
-    fun `the username row shows on Core and Identity when there is a username`() {
-        assertFalse(ReceiveUIState(selectedTab = CORE).showUsername)
-        assertTrue(ReceiveUIState(selectedTab = CORE, username = "u").showUsername)
-        assertTrue(ReceiveUIState(selectedTab = IDENTITY, username = "u").showUsername)
-        assertFalse(ReceiveUIState(selectedTab = SHIELD, username = "u").showUsername)
-        assertFalse(ReceiveUIState(selectedTab = PLATFORM, username = "u").showUsername)
+    fun `the username row shows on every tab when there is a username`() {
+        for (tab in listOf(CORE, SHIELD, PLATFORM, IDENTITY)) {
+            assertTrue("$tab", ReceiveUIState(selectedTab = tab, username = "u").showUsername)
+            assertFalse("$tab", ReceiveUIState(selectedTab = tab).showUsername)
+        }
     }
 
     @Test
