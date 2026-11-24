@@ -25,6 +25,7 @@ import de.schildbach.wallet_test.BuildConfig
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.currentCoroutineContext
@@ -34,6 +35,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -2054,12 +2056,21 @@ internal class DashSdkL1ShadowSource(
 
     override suspend fun isSpvRunning(): Boolean = manager().isSpvRunning()
 
-    override suspend fun startSpv(dataDir: String) =
-        // Example-app conventions (SyncStatusScreen.startSync): default
-        // peer discovery (no peer override in this app), default user
-        // agent, no height override — Rust resumes from its persisted
-        // state in dataDir.
-        manager().startSpv(dataDir = dataDir)
+    override suspend fun startSpv(dataDir: String) {
+        val devnet = sdkNetworkSettings(
+            Constants.NETWORK_PARAMETERS, BuildConfig.DEVNET_QUORUM_URL,
+            BuildConfig.DEVNET_LLMQ_SIZE, BuildConfig.DEVNET_LLMQ_THRESHOLD
+        ).devnet
+        val peers = devnet?.let { withContext(Dispatchers.IO) { it.activeSpvPeers() } }.orEmpty()
+        manager().startSpv(
+            dataDir = dataDir,
+            peers = peers,
+            restrictToConfiguredPeers = devnet != null,
+            devnetName = devnet?.name,
+            llmqDevnetSize = devnet?.llmqSize ?: 0,
+            llmqDevnetThreshold = devnet?.llmqThreshold ?: 0
+        )
+    }
 
     override suspend fun stopSpv() = manager().stopSpv()
 

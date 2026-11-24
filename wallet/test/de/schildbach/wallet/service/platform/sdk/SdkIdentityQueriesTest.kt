@@ -254,4 +254,23 @@ class SdkIdentityQueriesTest {
         assertSameFailure(boot, assertThrows(IllegalStateException::class.java) { runBlocking { production.identityByPublicKeyHash(hash) } })
         assertSameFailure(boot, assertThrows(IllegalStateException::class.java) { runBlocking { production.creditBalance(Identifier.from(firstId)) } })
     }
+
+    @Test
+    fun missingOrUnreachableDevnetEndpointIsUnknownForDiscoveryAndBalance() {
+        for (message in listOf("Set devnetQuorumUrl", "quorum endpoint did not return active masternodes")) {
+            val service = mockk<DashSdkService>()
+            val failure = SdkDevnetConfigurationException(message)
+            coEvery { service.ensureStarted() } throws failure
+            val production = SdkIdentityQueries(DashSdkIdentityReadSource(service))
+
+            // The resumed IDENTITY_REGISTERING path writes only after this
+            // lookup returns null. A configuration failure must throw instead.
+            assertSameFailure(failure, assertThrows(SdkDevnetConfigurationException::class.java) {
+                runBlocking { production.identityByPublicKeyHash(hash) }
+            })
+            assertSameFailure(failure, assertThrows(SdkDevnetConfigurationException::class.java) {
+                runBlocking { production.creditBalance(Identifier.from(firstId)) }
+            })
+        }
+    }
 }

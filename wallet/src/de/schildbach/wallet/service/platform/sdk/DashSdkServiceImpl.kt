@@ -33,7 +33,6 @@ import org.bitcoinj.core.Utils
 import org.bitcoinj.params.DevNetParams
 import org.dashfoundation.dashsdk.Network
 import org.dashfoundation.dashsdk.Sdk
-import org.dashfoundation.dashsdk.config.SdkConfig
 import org.dashfoundation.dashsdk.persistence.DashDatabase
 import org.dashfoundation.dashsdk.security.KeySecurityPolicy
 import org.dashfoundation.dashsdk.security.WalletStorage
@@ -1706,11 +1705,22 @@ class DashSdkServiceImpl @Inject constructor(
      * leaving the service stopped (retryable).
      */
     private suspend fun bootstrap(): SdkRuntime {
-        val network = toSdkNetwork(Constants.NETWORK_PARAMETERS)
+        val settings = sdkNetworkSettings(
+            Constants.NETWORK_PARAMETERS, BuildConfig.DEVNET_QUORUM_URL,
+            BuildConfig.DEVNET_LLMQ_SIZE, BuildConfig.DEVNET_LLMQ_THRESHOLD
+        )
+        val network = settings.config.network
         log.info(
             "bootstrapping Dash Platform SDK for network={} (flavor={})",
             network.networkName, BuildConfig.FLAVOR
         )
+
+        // The SDK's own devnet discovery returns null for an unreachable or
+        // unusable /masternodes feed. Fail explicitly before opening native
+        // state; identity discovery must never read this as an absent identity.
+        settings.devnet?.let { devnet ->
+            withContext(Dispatchers.IO) { devnet.activeSpvPeers() }
+        }
 
         // 1. One-time native library load + dash_sdk_init, then logging —
         //    ← AppContainer.bootstrap() steps 1–2. Idempotent.
@@ -1762,10 +1772,9 @@ class DashSdkServiceImpl @Inject constructor(
             val walletStorage = WalletStorage(context, KeySecurityPolicy.DEVICE_BOUND)
             val walletManagerStore = WalletManagerStore(database, walletStorage)
 
-            // 3. Per-network SDK build — ← AppState.initializeSdk called from
-            //    bootstrap(). Mainnet/testnet need no overrides; devnet would
-            //    need a quorum URL (unsupported by this scaffold).
-            sdk = Sdk.create(SdkConfig(network = network))
+            // 3. Per-network SDK build — the devnet quorum URL is also the
+            // SDK's source of active DAPI addresses and trusted quorum keys.
+            sdk = Sdk.create(settings.config)
 
             // 4. Activate the network-locked manager, then restore any
             //    persisted SDK wallets — ← AppContainer.activateManager()
