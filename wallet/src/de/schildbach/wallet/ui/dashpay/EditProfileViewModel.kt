@@ -145,10 +145,13 @@ class EditProfileViewModel @Inject constructor(
     }
 
     fun retryBroadcastProfile() {
-        if (lastAttemptedProfile != null) {
-            UpdateProfileOperation(walletApplication)
-                .create(lastAttemptedProfile!!, "", "")
-                .enqueue()
+        val profile = lastAttemptedProfile ?: return
+        viewModelScope.launch {
+            if (identityRepository.getIdentityBalance()?.isBalanceEmpty() == false) {
+                UpdateProfileOperation(walletApplication)
+                    .create(profile, "", "")
+                    .enqueue()
+            }
         }
     }
 
