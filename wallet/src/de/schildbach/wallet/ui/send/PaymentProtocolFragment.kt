@@ -186,27 +186,34 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
     }
 
     private fun initObservers() {
-        viewModel.exchangeRateData.observe(viewLifecycleOwner) {
-            if (viewModel.finalPaymentIntent != null && it != null) {
-                displayRequest(viewModel.finalPaymentIntent!!)
+        // A retry's failed fetch drops the request on another thread, so each observer reads it
+        // once: a second read may find it gone.
+        viewModel.exchangeRateData.observe(viewLifecycleOwner) { rate ->
+            val request = viewModel.finalPaymentIntent
+            if (request != null && rate != null) {
+                displayRequest(request)
             }
         }
         viewModel.sendRequestLiveData.observe(viewLifecycleOwner) {
+            val request = viewModel.finalPaymentIntent
             when (it.status) {
                 Status.LOADING -> {
                     binding.viewFlipper.displayedChild = VIEW_LOADING
                 }
                 Status.SUCCESS -> {
-                    viewModel.consumeRetryResult()
-                    displayRequest(viewModel.finalPaymentIntent!!)
-                    binding.viewFlipper.displayedChild = VIEW_PAYMENT
+                    // No request: a later fetch failed, and its error is on its way here.
+                    if (request != null) {
+                        viewModel.consumeRetryResult()
+                        displayRequest(request)
+                        binding.viewFlipper.displayedChild = VIEW_PAYMENT
+                    }
                 }
                 Status.ERROR -> {
                     if (it.exception is PaymentSubmissionPendingException) {
                         showSubmissionPending()
                     } else if (it.exception is PaymentProtocolException.Expired) {
                         showRequestExpiredMessage()
-                    } else if (viewModel.finalPaymentIntent == null) {
+                    } else if (request == null) {
                         // server error
                         binding.errorView.title = R.string.payment_request_unable_to_connect
                         binding.errorView.message = R.string.payment_request_please_try_again
@@ -217,7 +224,7 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
                         binding.viewFlipper.displayedChild = VIEW_ERROR
                     } else {
                         // preview build error (eg insufficient funds)
-                        displayRequest(viewModel.finalPaymentIntent!!)
+                        displayRequest(request)
                         binding.viewFlipper.displayedChild = VIEW_PAYMENT
                         if (userAuthorizedDuring && !viewModel.canSendPayment) {
                             viewModel.consumeRetryResult()
