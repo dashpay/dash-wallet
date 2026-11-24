@@ -3,21 +3,25 @@ buildscript {
         kotlin_version = '2.1.0'
         coroutinesVersion = '1.6.4'
         ok_http_version = '4.12.0'
-        dashjVersion = '24.0.0' // Dash Core v24 support; required by dppVersion 5.0.1
+        dashjVersion = '24.0.0' // Dash Core v24 support; required by dppVersion 5.1.0-dev.3
         // Dash Platform Kotlin SDK (org.dashj:dash-sdk-android). Single source of
         // truth for both the dependency coordinate (wallet/build.gradle) and the
         // DASH_SDK_VERSION BuildConfig field shown on the About screen once the
         // cutover hands L1 ownership to the SDK.
         // Recipe: HashEngineering/dash-wallet-qa
-        // recipes/platform/5.1.0-int36.yaml.
-        dashSdkVersion = '5.1.0-int36-20261106.165805-1'
-        // Legacy dashj-platform SDK (org.dashj.platform), master's pin. It replaces the
-        // 5.0.0-20261016.200955-3 snapshot this branch pinned for document serialization
-        // format 3 (Platform protocol 14) and the IdentityPublicKey.toObject() CBOR fix;
-        // DashConnect needs 5.0.1's client calls (getProtocolVersion, getPlatformTime,
-        // contract groups), and 5.0.1 requires dashj 24.0.0. The Kotlin SDK
-        // (dashSdkVersion) is unaffected.
-        dppVersion = "5.0.1"
+        // recipes/platform/5.1.0-int42.yaml.
+        dashSdkVersion = '5.1.0-int42-20261123.182722-1'
+        // Legacy dashj-platform SDK (org.dashj.platform). Moved from the 5.0.1 Maven
+        // Central release to the 5.1.0-dev.3 snapshot, pinned to an exact timestamped
+        // build rather than the floating -SNAPSHOT so the artifact is reproducible.
+        // 5.1.0-dev.3 is the SAME Platform base that the Kotlin SDK's int42 pin above
+        // was built from, which is why the two move together and are changed in one
+        // commit. It keeps the 5.0.1 client calls DashConnect needs
+        // (getProtocolVersion, getPlatformTime, contract groups), and still requires
+        // dashj 24.0.0.
+        // Published 2026-11-23 to central.sonatype.com/repository/maven-snapshots,
+        // which is already in the repository list in wallet/build.gradle.
+        dppVersion = "5.1.0-dev.3-20261123.212721-1"
         hiltVersion = '2.53'
         hiltCompilerVersion = '1.2.0'
         hiltWorkVersion = '1.2.0'
