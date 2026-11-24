@@ -69,6 +69,14 @@
                 android:defaultValue="true" />
         </action>
 
+        <!-- Advanced mode Home scan of a destination (MO-1121); prefill = the scanned code. -->
+        <action
+            android:id="@+id/home_to_externalSend"
+            app:destination="@id/externalSendFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+
         <action
             android:id="@+id/home_to_addressInput"
             app:destination="@id/addressInputFragment"
