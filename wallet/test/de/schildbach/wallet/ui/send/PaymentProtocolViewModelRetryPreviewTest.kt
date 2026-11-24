@@ -34,7 +34,6 @@ import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.PaymentIntent
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.services.ExchangeRatesProvider
-import org.dash.wallet.common.services.PaymentSubmissionPendingException
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -60,7 +59,6 @@ class PaymentProtocolViewModelRetryPreviewTest {
 
     private fun buildViewModel(runner: SendCoinsTaskRunner): PaymentProtocolViewModel {
         coEvery { runner.findUnresolvedSubmission(any<PaymentIntent>()) } returns null
-        coEvery { runner.findUnresolvedSubmissionOfInvoice(any()) } returns null
         coEvery { runner.fetchPaymentRequest(any()) } returns mockk(relaxed = true)
         coEvery { runner.findAbandonedSubmission(any(), any()) } returns null
         val wallet = mockk<Wallet>(relaxed = true)
@@ -80,8 +78,11 @@ class PaymentProtocolViewModelRetryPreviewTest {
     private fun openInvoice(viewModel: PaymentProtocolViewModel) {
         val baseIntent = mockk<PaymentIntent>(relaxed = true) {
             every { isExtendedBy(any(), any(), any()) } returns true
+            every { hasPaymentRequestUrl() } returns true
+            every { isHttpPaymentRequestUrl } returns true
         }
-        viewModel.requestPaymentRequest(baseIntent)
+        // as the screen does: the retry fetches from the link the screen was opened with
+        runBlocking { viewModel.initPaymentIntent(baseIntent) }
     }
 
     private fun awaitCondition(what: String, timeoutMs: Long = 5_000, condition: () -> Boolean) {
@@ -117,6 +118,62 @@ class PaymentProtocolViewModelRetryPreviewTest {
     }
 
     /**
+     * thepastaclaw on #1714. The retry does what reopening the invoice does: it asks the payee
+     * again and builds from that answer, not from the request the screen already holds.
+     */
+    @Test
+    fun `a retry fetches the request again and builds from the new answer`() {
+        val runner = mockk<SendCoinsTaskRunner>(relaxed = true)
+        coEvery { runner.buildDeferredBip70Payment(any(), any()) } throws
+            SendEngineNotSyncedException("L1 funding gate closed: scan short of the chain tip") andThen payment
+        val viewModel = buildViewModel(runner)
+        val first = mockk<PaymentIntent>(relaxed = true)
+        val second = mockk<PaymentIntent>(relaxed = true)
+        coEvery { runner.fetchPaymentRequest(any()) } returns first andThen second
+
+        openInvoice(viewModel)
+        awaitCondition("the refusal is stored") { viewModel.sendRequestLiveData.value?.exception != null }
+        assertTrue(viewModel.finalPaymentIntent === first)
+
+        viewModel.retryPreview()
+        awaitCondition("the rebuilt preview is armed") { viewModel.deferredPayment != null }
+
+        assertTrue("the screen now shows the new answer", viewModel.finalPaymentIntent === second)
+        runBlocking {
+            coVerify(exactly = 2) { runner.fetchPaymentRequest(any()) }
+            coVerify(exactly = 1) { runner.buildDeferredBip70Payment(first, any()) }
+            coVerify(exactly = 1) { runner.buildDeferredBip70Payment(second, any()) }
+        }
+    }
+
+    /** A payee that no longer serves the invoice (paid, retired) stops the retry before any build. */
+    @Test
+    fun `a retry of an invoice the payee no longer serves builds nothing`() {
+        val runner = mockk<SendCoinsTaskRunner>(relaxed = true)
+        coEvery { runner.buildDeferredBip70Payment(any(), any()) } throws
+            SendEngineNotSyncedException("L1 funding gate closed: scan short of the chain tip") andThen payment
+        val viewModel = buildViewModel(runner)
+        coEvery { runner.fetchPaymentRequest(any()) } returns mockk(relaxed = true) andThenThrows
+            java.io.IOException("HTTP 404")
+
+        openInvoice(viewModel)
+        awaitCondition("the refusal is stored") { viewModel.sendRequestLiveData.value?.exception != null }
+
+        viewModel.retryPreview()
+        awaitCondition("the failed fetch is stored") {
+            viewModel.sendRequestLiveData.value?.exception is java.io.IOException
+        }
+
+        assertEquals("the old request is not kept", null, viewModel.finalPaymentIntent)
+        assertFalse(viewModel.canSendPayment)
+        assertFalse(viewModel.canRetryPreview)
+        runBlocking {
+            coVerify(exactly = 1) { runner.buildDeferredBip70Payment(any(), any()) }
+            coVerify(exactly = 0) { runner.sendPrebuiltDirectPayment(any(), any(), any()) }
+        }
+    }
+
+    /**
      * thepastaclaw on #1714. The fragment that receives a retry's failure can be a new one (a
      * rotation during the rebuild), so the ViewModel remembers that the user asked for it.
      */
@@ -136,75 +193,6 @@ class PaymentProtocolViewModelRetryPreviewTest {
 
         assertTrue("the result answers a retry", viewModel.consumeRetryResult())
         assertFalse("reported once", viewModel.consumeRetryResult())
-    }
-
-    /**
-     * thepastaclaw on #1714. An earlier payment for the invoice is unresolved when the refused
-     * preview looks, and settles (its record is removed) before the retry: the retry must not
-     * build a second payment.
-     */
-    @Test
-    fun `a retry does not build a payment after an earlier one for the invoice settled`() {
-        val runner = mockk<SendCoinsTaskRunner>(relaxed = true)
-        coEvery { runner.buildDeferredBip70Payment(any(), any()) } throws
-            SendEngineNotSyncedException("L1 funding gate closed: scan short of the chain tip") andThen payment
-        val viewModel = buildViewModel(runner)
-        val earlier = org.bitcoinj.core.Sha256Hash.wrap("cc".repeat(32))
-        coEvery { runner.findUnresolvedSubmissionOfInvoice(any()) } returns earlier andThen null
-
-        openInvoice(viewModel)
-        awaitCondition("the refusal is stored") { viewModel.sendRequestLiveData.value?.exception != null }
-        assertTrue(viewModel.canRetryPreview)
-
-        viewModel.retryPreview()
-        awaitCondition("the retry is answered") {
-            viewModel.sendRequestLiveData.value?.exception is PaymentSubmissionPendingException
-        }
-
-        assertFalse("nothing was armed", viewModel.canSendPayment)
-        assertFalse("and it is not retried again", viewModel.canRetryPreview)
-        runBlocking { coVerify(exactly = 1) { runner.buildDeferredBip70Payment(any(), any()) } }
-    }
-
-    /** A payment store that cannot be read is not taken as "no earlier payment". */
-    @Test
-    fun `a preview is not built when the earlier-payment lookup fails`() {
-        val runner = mockk<SendCoinsTaskRunner>(relaxed = true)
-        coEvery { runner.buildDeferredBip70Payment(any(), any()) } returns payment
-        val viewModel = buildViewModel(runner)
-        coEvery { runner.findUnresolvedSubmissionOfInvoice(any()) } throws IllegalStateException("store unreadable")
-
-        openInvoice(viewModel)
-        awaitCondition("the failure is stored") { viewModel.sendRequestLiveData.value?.exception != null }
-
-        assertFalse(viewModel.canSendPayment)
-        assertFalse("only a syncing refusal is retried", viewModel.canRetryPreview)
-        runBlocking { coVerify(exactly = 0) { runner.buildDeferredBip70Payment(any(), any()) } }
-    }
-
-    /**
-     * The same payment settling while the built preview waits for the confirm: the confirm
-     * finds no record any more and still refuses.
-     */
-    @Test
-    fun `a confirm is refused after an earlier payment seen by the preview settled`() {
-        val runner = mockk<SendCoinsTaskRunner>(relaxed = true)
-        coEvery { runner.buildDeferredBip70Payment(any(), any()) } returns payment
-        val viewModel = buildViewModel(runner)
-        val earlier = org.bitcoinj.core.Sha256Hash.wrap("cc".repeat(32))
-        coEvery { runner.findUnresolvedSubmissionOfInvoice(any()) } returns earlier andThen null
-
-        openInvoice(viewModel)
-        awaitCondition("the preview is armed") { viewModel.deferredPayment != null }
-
-        viewModel.sendPayment()
-        awaitCondition("the confirm is answered") { viewModel.directPaymentAckLiveData.value?.exception != null }
-
-        assertTrue(viewModel.directPaymentAckLiveData.value?.exception is PaymentSubmissionPendingException)
-        runBlocking {
-            coVerify(exactly = 0) { runner.sendPrebuiltDirectPayment(any(), any(), any()) }
-            coVerify(exactly = 1) { runner.releaseDeferredPayment(payment, any()) }
-        }
     }
 
     @Test

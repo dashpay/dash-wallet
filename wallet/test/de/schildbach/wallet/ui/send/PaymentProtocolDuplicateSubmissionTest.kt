@@ -112,7 +112,6 @@ class PaymentProtocolDuplicateSubmissionTest {
         coEvery { runner.fetchPaymentRequest(any()) } returns finalIntent
         // nothing paid before: the preview builds a new payment
         coEvery { runner.findAbandonedSubmission(any(), any()) } returns null
-        coEvery { runner.findUnresolvedSubmissionOfInvoice(any()) } returns null
         coEvery { runner.buildDeferredBip70Payment(any(), any()) } returns payment
 
         viewModel.requestPaymentRequest(baseIntent)
@@ -265,7 +264,6 @@ class PaymentProtocolDuplicateSubmissionTest {
         // previewed again: nothing paid before any more, so a new payment is built
         coEvery { runner.findAbandonedSubmission(any(), any()) } returns null
         coEvery { runner.findUnresolvedSubmission(any<PaymentIntent>()) } returns null
-        coEvery { runner.findUnresolvedSubmissionOfInvoice(any()) } returns null
         coEvery { runner.buildDeferredBip70Payment(any(), any()) } returns payment
         viewModel.requestPaymentRequest(
             mockk<PaymentIntent>(relaxed = true) { every { isExtendedBy(any(), any(), any()) } returns true }
