@@ -91,7 +91,16 @@ fun isSyncIdle(history: List<SyncActivitySample>): Boolean {
 
 /**
  * The verdict that actually stops the service: idle counters AND no replay
- * in progress (docs/upgrade-memory-and-sync-plan.md, Phase 1b item 7).
+ * in progress (docs/upgrade-memory-and-sync-plan.md, Phase 1b item 7) AND
+ * the app not open.
+ *
+ * [appOpen]: the rule exists to stop a service nobody is watching. Since the
+ * cutover the service also runs the SDK engine that feeds the balance, so a
+ * stop with the app on screen puts the header on "Syncing balance" and ends
+ * the wallet-event tap until a screen change, a reopen or the periodic alarm
+ * restarts the service (12.0.1-beta field log: stopped four seconds after
+ * the user unlocked, on three quiet samples taken in the background).
+ *
  *
  * The SDK replay has multi-minute stretches with no filter advance —
  * matched-block download and processing for the CoinJoin years, and the
@@ -106,8 +115,8 @@ fun isSyncIdle(history: List<SyncActivitySample>): Boolean {
  * engine is the SDK stall impediment's and the watchdog's problem, not this
  * rule's. Pure — host-testable.
  */
-fun shouldStopForIdle(history: List<SyncActivitySample>, replaying: Boolean): Boolean =
-    !replaying && isSyncIdle(history)
+fun shouldStopForIdle(history: List<SyncActivitySample>, replaying: Boolean, appOpen: Boolean): Boolean =
+    !replaying && !appOpen && isSyncIdle(history)
 
 /**
  * The longest an in-flight SDK engine start keeps an idle service alive

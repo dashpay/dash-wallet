@@ -1248,6 +1248,18 @@ class ShieldedBalanceServiceImpl internal constructor(
     override val shieldedSyncStatus: StateFlow<ShieldedSyncStatus> = _shieldedSyncStatus.asStateFlow()
 
     /**
+     * The only writer of [_shieldedSyncStatus]; callers hold [readyMonitor].
+     * Logs transitions only (the poller republishes the same value every
+     * tick), so a report shows whether the pool was SYNCING or READY.
+     */
+    private fun publishSyncStatus(status: ShieldedSyncStatus) {
+        val previous = _shieldedSyncStatus.value
+        if (previous == status) return
+        _shieldedSyncStatus.value = status
+        log.info("shielded sync status: {} -> {}", previous, status)
+    }
+
+    /**
      * "The last-known balance is stale" latch — see [shieldedBalanceMaybeStale].
      * Set the moment a successful local spend broadcasts (its note-store
      * change has not landed yet), cleared once [onShieldedPassCompleted]
@@ -1778,7 +1790,7 @@ class ShieldedBalanceServiceImpl internal constructor(
     private fun tearDownReadyState() = synchronized(readyMonitor) {
         // Status FIRST: clearing the latch makes observeShieldedBalance() emit
         // ZERO, which a READY observer would briefly take as a known balance.
-        _shieldedSyncStatus.value = ShieldedSyncStatus.NOT_READY
+        publishSyncStatus(ShieldedSyncStatus.NOT_READY)
         readyWalletIdHex.value = null
         readyGeneration.set(NO_GENERATION)
         syncStatusJob?.cancel()
@@ -1791,7 +1803,7 @@ class ShieldedBalanceServiceImpl internal constructor(
         // bring-up restarts the driver; it must not force passes meanwhile.
         settlementKickJob?.cancel()
         settlementKickJob = null
-        _shieldedSyncStatus.value = ShieldedSyncStatus.NOT_READY
+        publishSyncStatus(ShieldedSyncStatus.NOT_READY)
         _shieldedBalanceMaybeStale.value = false
     }
 
@@ -1871,10 +1883,12 @@ class ShieldedBalanceServiceImpl internal constructor(
                     if (readyWalletIdHex.value == null || readyGeneration.get() != sessionGeneration) {
                         false
                     } else {
-                        _shieldedSyncStatus.value = mapShieldedSyncStatus(
-                            ready = true,
-                            firstPassCompleted = firstPassCompleted,
-                            passInFlight = inFlight
+                        publishSyncStatus(
+                            mapShieldedSyncStatus(
+                                ready = true,
+                                firstPassCompleted = firstPassCompleted,
+                                passInFlight = inFlight
+                            )
                         )
                         true
                     }
