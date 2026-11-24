@@ -511,7 +511,7 @@ class RequestUserNameViewModelTest {
 
         assertTrue("an empty wallet must not block the identity's own credits", enoughBalanceForNonContestedName())
         assertEquals(
-            CreateIdentityService.createIntentFromInviteForNewUsername(walletApplication, nonContestedName, null).action,
+            CreateIdentityService.createIntentFromInviteForNewUsername(walletApplication, nonContestedName).action,
             submitAndCaptureIntent(nonContestedName).action
         )
     }
@@ -525,6 +525,37 @@ class RequestUserNameViewModelTest {
             CreateIdentityService.createIntentForNewUsername(walletApplication, nonContestedName, null).action,
             submitAndCaptureIntent(nonContestedName).action
         )
+    }
+
+    @Test
+    fun inviteIdentityNameRejected_tooFewCredits_needsTheWholeAssetLockInTheWallet() {
+        givenInviteFundedIdentityWithNameRejected(credits = CreditBalanceInfo.MAX_OPERATION_COST * 2 - 1)
+
+        setWalletBalance(Coin.parseCoin("0.01"))
+        assertFalse("credits do not pay for the new asset lock", enoughBalanceForNonContestedName())
+
+        setWalletBalance(Constants.DASH_PAY_FEE)
+        assertTrue(enoughBalanceForNonContestedName())
+    }
+
+    @Test
+    fun inviteIdentityNameRejected_creditsCoverTheName_confirmsACreditFundedRetry() {
+        givenInviteFundedIdentityWithNameRejected(credits = CreditBalanceInfo.MAX_OPERATION_COST * 2)
+
+        viewModel.requestedUserName = nonContestedName
+        assertTrue(viewModel.isRetryFundedByIdentityCredits())
+        viewModel.requestedUserName = username
+        assertFalse(viewModel.isRetryFundedByIdentityCredits())
+    }
+
+    @Test
+    fun inviteIdentityNameRegistered_isNotReplacedFromCredits() {
+        givenInviteFundedIdentityWithNameRejected(credits = CreditBalanceInfo.MAX_OPERATION_COST * 2) {
+            creationState = IdentityCreationState.USERNAME_REGISTERED
+        }
+
+        viewModel.requestedUserName = nonContestedName
+        assertFalse(viewModel.isRetryFundedByIdentityCredits())
     }
 
     @Test
@@ -577,10 +608,16 @@ class RequestUserNameViewModelTest {
         }
         every { identityConfig.observe(IDENTITY_ID) } returns flowOf(identity.userId!!)
         coEvery { identityConfig.load() } returns identity
+        coEvery { identityConfig.get(USERNAME) } returns identity.username
         coEvery { platformRepo.getIdentityBalance(any()) } returns CreditBalanceInfo(credits)
 
         viewModel = createViewModel()
         runBlocking { withTimeout(5_000) { viewModel.identityBalance.first { it == credits } } }
+    }
+
+    private fun setWalletBalance(amount: Coin) {
+        balance.value = amount
+        runBlocking { withTimeout(5_000) { viewModel.walletBalance.first { it == amount } } }
     }
 
     private fun enoughBalanceForNonContestedName(): Boolean {

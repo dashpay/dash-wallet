@@ -19,6 +19,8 @@ package de.schildbach.wallet.database.entity
 
 import android.content.Context
 import android.net.Uri
+import androidx.datastore.core.DataMigration
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
@@ -198,7 +200,7 @@ open class BlockchainIdentityConfig @Inject constructor(
     context,
     PREFERENCES_NAME,
     walletDataProvider,
-    migrations = listOf()
+    migrations = listOf(DuplicateSecondaryUsernameMigration)
 ) {
     companion object {
         const val PREFERENCES_NAME = "platform-identity"
@@ -241,7 +243,7 @@ open class BlockchainIdentityConfig @Inject constructor(
                 creationState = IdentityCreationState.valueOf(prefs[CREATION_STATE] ?: "NONE"),
                 creationStateErrorMessage = prefs[CREATION_STATE_ERROR_MESSAGE],
                 username = prefs[USERNAME],
-                usernameSecondary = prefs[USERNAME_SECONDARY],
+                usernameSecondary = prefs[USERNAME_SECONDARY]?.takeIf { it != prefs[USERNAME] },
                 userId = prefs[IDENTITY_ID],
                 restoring = prefs[RESTORING] ?: false,
                 creditFundingTxId = prefs[ASSET_LOCK_TXID]?.let { Sha256Hash.wrap(it) },
@@ -268,7 +270,7 @@ open class BlockchainIdentityConfig @Inject constructor(
                 creationState = IdentityCreationState.valueOf(prefs[CREATION_STATE] ?: "NONE"),
                 creationStateErrorMessage = prefs[CREATION_STATE_ERROR_MESSAGE],
                 username = prefs[USERNAME],
-                usernameSecondary = prefs[USERNAME_SECONDARY],
+                usernameSecondary = prefs[USERNAME_SECONDARY]?.takeIf { it != prefs[USERNAME] },
                 userId = prefs[IDENTITY_ID],
                 restoring = prefs[RESTORING] ?: false,
                 creditFundingTxId = prefs[ASSET_LOCK_TXID]?.let { Sha256Hash.wrap(it) },
@@ -313,6 +315,8 @@ open class BlockchainIdentityConfig @Inject constructor(
             blockchainIdentityData.identity?.let { prefs[IDENTITY] = it.toBuffer().toHex() }
             prefs[USING_INVITE] = blockchainIdentityData.usingInvite
             blockchainIdentityData.invite?.let { prefs[INVITE_LINK] = it.link.toString() }
+            blockchainIdentityData.preorderSalt?.let { prefs[PREORDER_SALT] = it.toHex() }
+            blockchainIdentityData.preorderSaltSecondary?.let { prefs[PREORDER_SALT_SECONDARY] = it.toHex() }
             blockchainIdentityData.registrationStatus?.let { prefs[IDENTITY_REGISTRATION_STATUS] = it.name }
             blockchainIdentityData.usernameStatus?.let { prefs[USERNAME_REGISTRATION_STATUS] = it.name }
             blockchainIdentityData.usernameSecondaryStatus?.let { prefs[USERNAME_SECONDARY_REGISTRATION_STATUS] = it.name }
@@ -349,6 +353,21 @@ open class BlockchainIdentityConfig @Inject constructor(
         saveIdentityBasePrefs(blockchainIdentityBaseData)
     }
 
+    suspend fun replaceUsername(username: String) {
+        context.dataStore.edit { prefs ->
+            prefs[USERNAME] = username
+            prefs.remove(USERNAME_SECONDARY)
+            prefs.remove(PREORDER_SALT)
+            prefs.remove(PREORDER_SALT_SECONDARY)
+            prefs.remove(USERNAME_REGISTRATION_STATUS)
+            prefs.remove(USERNAME_SECONDARY_REGISTRATION_STATUS)
+            prefs.remove(USERNAME_REQUESTED)
+            prefs.remove(VOTING_PERIOD_START)
+            prefs[CREATION_STATE] = IdentityCreationState.IDENTITY_REGISTERED.name
+            prefs.remove(CREATION_STATE_ERROR_MESSAGE)
+        }
+    }
+
     suspend fun updateCreationState(state: IdentityCreationState, creationStateErrorMessage: String?) {
         context.dataStore.edit { prefs ->
             prefs[CREATION_STATE] = state.name
@@ -364,4 +383,21 @@ open class BlockchainIdentityConfig @Inject constructor(
         log.info("clearing data")
         clearAll()
     }
+}
+
+/** Earlier versions saved the primary username as the secondary one whenever they reloaded the identity. */
+internal object DuplicateSecondaryUsernameMigration : DataMigration<Preferences> {
+    override suspend fun shouldMigrate(currentData: Preferences): Boolean {
+        val secondary = currentData[BlockchainIdentityConfig.USERNAME_SECONDARY]
+        return secondary != null && secondary == currentData[BlockchainIdentityConfig.USERNAME]
+    }
+
+    override suspend fun migrate(currentData: Preferences): Preferences =
+        currentData.toMutablePreferences().apply {
+            remove(BlockchainIdentityConfig.USERNAME_SECONDARY)
+            remove(BlockchainIdentityConfig.USERNAME_SECONDARY_REGISTRATION_STATUS)
+            remove(BlockchainIdentityConfig.PREORDER_SALT_SECONDARY)
+        }.toPreferences()
+
+    override suspend fun cleanUp() {}
 }

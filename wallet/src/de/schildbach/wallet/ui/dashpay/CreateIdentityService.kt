@@ -115,13 +115,10 @@ class CreateIdentityService : LifecycleService() {
         }
 
         @JvmStatic
-        fun createIntentFromInviteForNewUsername(context: Context, username: String, usernameSecondary: String?): Intent {
+        fun createIntentFromInviteForNewUsername(context: Context, username: String): Intent {
             return Intent(context, CreateIdentityService::class.java).apply {
                 action = ACTION_RETRY_INVITE_WITH_NEW_USERNAME
                 putExtra(EXTRA_USERNAME, username)
-                usernameSecondary?.let {
-                    putExtra(EXTRA_USERNAME_SECONDARY, it)
-                }
             }
         }
 
@@ -228,7 +225,11 @@ class CreateIdentityService : LifecycleService() {
                 identityRepository.loadBlockchainIdentityBaseData()
             }
             if (blockchainIdentityData != null && blockchainIdentityData.creationState != IdentityCreationState.DONE && !blockchainIdentityData.restoring) {
-                handleCreateIdentityAction(null, null)
+                if (!blockchainIdentityData.usingInvite) {
+                    handleCreateIdentityAction(null, null)
+                } else if (blockchainIdentityData.creationState < IdentityCreationState.VOTING) {
+                    handleCreateIdentityFromInvitationAction(null, null, null)
+                }
             }
 
         } else if (!workInProgress) {
@@ -250,8 +251,7 @@ class CreateIdentityService : LifecycleService() {
                 }
                 ACTION_RETRY_INVITE_WITH_NEW_USERNAME -> {
                     val username = intent.getStringExtra(EXTRA_USERNAME)!!
-                    val usernameSecondary = intent.getStringExtra(EXTRA_USERNAME_SECONDARY)
-                    handleRetryInviteWithNewUsernameAction(username, usernameSecondary)
+                    handleRetryInviteWithNewUsernameAction(username)
                 }
                 ACTION_RETRY_AFTER_INTERRUPTION -> {
                     val startForegroundPromised = intent.getBooleanExtra(EXTRA_START_FOREGROUND_PROMISED, false)
@@ -524,41 +524,34 @@ class CreateIdentityService : LifecycleService() {
         }
     }
 
-    private fun handleRetryInviteWithNewUsernameAction(username: String, usernameSecondary: String?) {
+    private fun handleRetryInviteWithNewUsernameAction(username: String) {
         workInProgress = true
         serviceScope.launch(createIdentityExceptionHandler) {
-            retryInviteWithNewUsername(username, usernameSecondary)
+            retryInviteWithNewUsername(username)
             workInProgress = false
             stopSelf()
         }
     }
 
     // The invite was spent registering the identity, so the replacement name is paid from its credits.
-    private suspend fun retryInviteWithNewUsername(username: String, usernameSecondary: String?) {
+    internal suspend fun retryInviteWithNewUsername(username: String) {
         log.info("username registration with the invite-funded identity starting($username)")
-        val wallet = walletApplication.wallet!!
-        org.bitcoinj.core.Context.propagate(wallet.context)
-
-        blockchainIdentityData = identityRepository.loadBlockchainIdentityData()
+        org.bitcoinj.core.Context.propagate(walletApplication.wallet!!.context)
+        val identityData = identityRepository.loadBlockchainIdentityData()
             ?: throw IllegalStateException("there is no identity to register $username for")
         checkState(
-            blockchainIdentityData.usingInvite &&
-                blockchainIdentityData.creationStateErrorMessage != null &&
-                blockchainIdentityData.creationState >= IdentityCreationState.IDENTITY_REGISTERED,
+            identityData.usingInvite &&
+                identityData.creationStateErrorMessage != null &&
+                identityData.creationState >= IdentityCreationState.IDENTITY_REGISTERED &&
+                identityData.creationState <= IdentityCreationState.USERNAME_REGISTERING &&
+                identityData.usernameSecondary == null,
             "there is no failed username step of an invite-funded identity to retry"
         )
-        blockchainIdentityData.username = username
-        blockchainIdentityData.usernameSecondary = usernameSecondary
-        blockchainIdentityData.creationState = IdentityCreationState.IDENTITY_REGISTERED
-        blockchainIdentityData.creationStateErrorMessage = null
-        identityRepository.updateBlockchainIdentityData(blockchainIdentityData)
-
-        val encryptionKey = platformRepo.getWalletEncryptionKey() ?: throw IllegalStateException("cannot obtain wallet encryption key")
-        val blockchainIdentity = identityRepository.initBlockchainIdentity(blockchainIdentityData, wallet)
-        finishRegistration(blockchainIdentity, encryptionKey, usernameSecondary)
+        identityRepository.replaceUsername(identityData, username)
+        createIdentityFromInvitation(null, null, null)
     }
 
-    private suspend fun createIdentityFromInvitation(username: String?, usernameSecondary: String?, invite: InvitationLinkData?, retryWithNewUserName: Boolean = false) {
+    internal suspend fun createIdentityFromInvitation(username: String?, usernameSecondary: String?, invite: InvitationLinkData?, retryWithNewUserName: Boolean = false) {
         log.info("username registration starting from invitation")
         val timerInviteProcess = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_INVITATION_CLAIM)
 
@@ -663,14 +656,10 @@ class CreateIdentityService : LifecycleService() {
         val blockchainIdentity = identityRepository.initBlockchainIdentity(blockchainIdentityData, wallet)
 
 
-        if (blockchainIdentityData.creationState <= IdentityCreationState.CREDIT_FUNDING_TX_CREATING) {
-            identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.CREDIT_FUNDING_TX_CREATING)
-            //
-            // Step 2: Create and send the credit funding transaction
-            //
-            topUpRepository.obtainAssetLockTransaction(blockchainIdentity, blockchainIdentityData.invite!!)
-        } else {
-            // if we are retrying, then we need to initialize the credit funding tx
+        if (blockchainIdentityData.creationState < IdentityCreationState.IDENTITY_REGISTERED) {
+            if (blockchainIdentityData.creationState <= IdentityCreationState.CREDIT_FUNDING_TX_CREATING) {
+                identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.CREDIT_FUNDING_TX_CREATING)
+            }
             topUpRepository.obtainAssetLockTransaction(blockchainIdentity, blockchainIdentityData.invite!!)
         }
 
@@ -726,20 +715,6 @@ class CreateIdentityService : LifecycleService() {
         topUpRepository.clearInvitation()
 
         finishRegistration(blockchainIdentity, encryptionKey, usernameSecondary)
-
-        invite?.apply {
-            val results = identityRepository.getUser(user)
-            if (results.isNotEmpty()) {
-                val inviterUserId = results[0].dashPayProfile.userId
-                SendContactRequestOperation(walletApplication)
-                        .create(inviterUserId)
-                        .enqueue()
-                configuration.apply {
-                    inviter = inviterUserId
-                    inviterContactRequestSentInfoShown = false
-                }
-            }
-        }
         timerInviteProcess.logTiming()
         log.info("username registration with invite complete")
     }
@@ -761,6 +736,12 @@ class CreateIdentityService : LifecycleService() {
             registerUsername(blockchainIdentity, encryptionKey, UsernameType.Secondary)
         }
         registerUsername(blockchainIdentity, encryptionKey, UsernameType.Primary)
+
+        if (blockchainIdentityData.usingInvite) {
+            // the contact request worker sends from the identity the repository has loaded
+            identityRepository.init()
+            queueInviterContactRequest()
+        }
 
         addInviteUserAlert()
 
@@ -924,6 +905,8 @@ class CreateIdentityService : LifecycleService() {
         }
 
         if (blockchainIdentityData.creationState <= preorderRegistering) {
+            // save the salt before the preorder, so a restart reveals the name with the salt that was preordered
+            identityRepository.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
             identityRepository.updateIdentityCreationState(blockchainIdentityData, preorderRegistering)
             //
             // Step 4: Preorder the username
@@ -961,6 +944,19 @@ class CreateIdentityService : LifecycleService() {
                 UsernameType.Primary -> analytics.logEvent(AnalyticsConstants.UsersContacts.CREATE_USERNAME, mapOf())
                 UsernameType.Secondary -> analytics.logEvent(AnalyticsConstants.UsersContacts.CREATE_USERNAME_INSTANT, mapOf())
             }
+        }
+    }
+
+    private suspend fun queueInviterContactRequest() {
+        val inviterUsername = blockchainIdentityData.invite?.user ?: return
+        val inviterUserId = identityRepository.getUser(inviterUsername).firstOrNull()?.dashPayProfile?.userId ?: return
+        if (configuration.inviter == inviterUserId) return
+        SendContactRequestOperation(walletApplication)
+            .create(inviterUserId)
+            .enqueue()
+        configuration.apply {
+            inviter = inviterUserId
+            inviterContactRequestSentInfoShown = false
         }
     }
 

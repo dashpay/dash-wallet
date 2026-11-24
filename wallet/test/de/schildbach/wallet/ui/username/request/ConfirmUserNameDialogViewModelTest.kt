@@ -52,4 +52,23 @@ class ConfirmUserNameDialogViewModelTest {
             ContestedUsernameFees.reset()
         }
     }
+
+    @Test
+    fun replacementNamePaidFromIdentityCredits_costsTheWalletNothing() = runTest {
+        val config = mockk<WalletUIConfig>()
+        every { config.observe(WalletUIConfig.SELECTED_CURRENCY) } returns flowOf("USD")
+        val rates = mockk<ExchangeRatesProvider>()
+        every { rates.observeExchangeRate("USD") } returns flowOf(ExchangeRate("USD", "100"))
+        val viewModel = ConfirmUserNameDialogViewModel(mockk(relaxed = true), rates, config)
+        try {
+            viewModel.hasIdentity = true
+            runCurrent()
+            assertEquals("0.03", viewModel.uiState.value.amountStr)
+
+            viewModel.paidFromIdentityCredits = true
+            assertEquals("0.00", viewModel.uiState.value.amountStr)
+        } finally {
+            viewModel.viewModelScope.cancel()
+        }
+    }
 }

@@ -21,6 +21,7 @@ import android.app.ActivityManager
 import androidx.fragment.app.FragmentActivity
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.entity.BlockchainIdentityBaseData
+import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Resource.Companion.error
@@ -230,7 +231,8 @@ class InviteHandler(val activity: FragmentActivity, private val analytics: Analy
                     identityRepository.clearBlockchainIdentityData()
                     return true
                 }
-                exception is BalanceIsNotEnoughException -> {
+                exception is BalanceIsNotEnoughException &&
+                    blockchainIdentityData.creationState < IdentityCreationState.IDENTITY_REGISTERED -> {
                     showInsufficientFundsDialog()
                     // now erase the blockchain data
                     identityRepository.clearBlockchainIdentityData()

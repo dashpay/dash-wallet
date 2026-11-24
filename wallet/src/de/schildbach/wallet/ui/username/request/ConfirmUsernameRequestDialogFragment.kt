@@ -46,7 +46,9 @@ class ConfirmUsernameRequestDialogFragment: OffsetDialogFragment(R.layout.dialog
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         viewModel.isContestableUsername = requestUserNameViewModel.isUsernameContestable()
-        viewModel.hasIdentity = requestUserNameViewModel.identity != null
+        // an invite-funded identity has no wallet asset lock to top up, so its new name needs a whole new one
+        viewModel.hasIdentity = requestUserNameViewModel.identity?.usingInvite == false
+        viewModel.paidFromIdentityCredits = requestUserNameViewModel.isRetryFundedByIdentityCredits()
         val usernameType = args.usernameType
         viewModel.usernameType = usernameType
         binding.confirmBtn.setOnClickListener {

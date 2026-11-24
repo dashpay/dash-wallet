@@ -96,6 +96,7 @@ interface IdentityRepository {
     fun getIdentityFromPublicKeyId(): Identity?
     suspend fun clearBlockchainIdentityData()
     suspend fun resetIdentityCreationStateError(blockchainIdentityData: BlockchainIdentityData)
+    suspend fun replaceUsername(blockchainIdentityData: BlockchainIdentityData, username: String)
     suspend fun searchUsernames(text: String, onlyExactUsername: Boolean = false, limit: Int = -1): List<UsernameSearchResult>
     suspend fun getUser(username: String): List<UsernameSearchResult>
     suspend fun searchContacts(text: String, orderBy: UsernameSortOrderBy, includeSentPending: Boolean = false): Resource<List<UsernameSearchResult>>
@@ -275,14 +276,15 @@ class IdentityRepositoryImpl @Inject constructor(
         // Syncing complete
         log.info("loading identity ${blockchainIdentityData.userId}: {}", watch)
         return blockchainIdentity.apply {
-            primaryUsername = blockchainIdentityData.username
-            secondaryUsername = blockchainIdentityData.usernameSecondary
             blockchainIdentityData.username?.let {
                 addUsername(it)
             }
             blockchainIdentityData.usernameSecondary?.let {
                 addUsername(it)
             }
+            // addUsername() fills the secondary slot with the primary name when it is added second
+            primaryUsername = blockchainIdentityData.username
+            secondaryUsername = blockchainIdentityData.usernameSecondary
 
             registrationStatus = blockchainIdentityData.registrationStatus ?: IdentityStatus.NOT_REGISTERED
             // usernameStatus, usernameSalts are not set if preorder hasn't started
@@ -296,6 +298,7 @@ class IdentityRepositoryImpl @Inject constructor(
                 )
                 currentUsername ?.let {
                     usernameStatuses[it] = usernameStatus
+                    blockchainIdentityData.preorderSalt?.let { salt -> usernameSalts[it] = salt }
                 }
             }
 
@@ -309,6 +312,7 @@ class IdentityRepositoryImpl @Inject constructor(
                 )
                 secondaryUsername ?.let {
                     usernameStatuses[it] = usernameStatus
+                    blockchainIdentityData.preorderSaltSecondary?.let { salt -> usernameSalts[it] = salt }
                 }
             }
 
@@ -328,6 +332,23 @@ class IdentityRepositoryImpl @Inject constructor(
     override suspend fun resetIdentityCreationStateError(blockchainIdentityData: BlockchainIdentityData) {
         blockchainIdentityDataStorage.updateCreationState(blockchainIdentityData.creationState, null)
         blockchainIdentityData.creationStateErrorMessage = null
+    }
+
+    override suspend fun replaceUsername(blockchainIdentityData: BlockchainIdentityData, username: String) {
+        blockchainIdentityDataStorage.replaceUsername(username)
+        blockchainIdentityData.apply {
+            this.username = username
+            requestedUsername = username
+            usernameSecondary = null
+            preorderSalt = null
+            preorderSaltSecondary = null
+            usernameStatus = null
+            usernameSecondaryStatus = null
+            usernameRequested = null
+            votingPeriodStart = null
+            creationState = IdentityCreationState.IDENTITY_REGISTERED
+            creationStateErrorMessage = null
+        }
     }
 
     override suspend fun updateIdentityCreationState(blockchainIdentityData: BlockchainIdentityData,

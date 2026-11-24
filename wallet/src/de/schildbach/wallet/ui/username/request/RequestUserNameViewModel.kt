@@ -300,15 +300,10 @@ class RequestUserNameViewModel @Inject constructor(
         val username = requestedUserName!!
         val usernameSecondary = requestedUsernameSecondary
         val isUsingInvite = isUsingInvite()
-        val reuseInviteIdentity = reuseTransaction && !isUsernameContestable() && canRetryNameWithInviteIdentityCredits()
         when {
-            (isUsingInvite && reuseTransaction) || reuseInviteIdentity -> {
+            reuseTransaction && isRetryFundedByIdentityCredits() -> {
                 walletApplication.startService(
-                    CreateIdentityService.createIntentFromInviteForNewUsername(
-                        walletApplication,
-                        username,
-                        usernameSecondary
-                    )
+                    CreateIdentityService.createIntentFromInviteForNewUsername(walletApplication, username)
                 )
             }
             isUsingInvite -> {
@@ -566,6 +561,8 @@ class RequestUserNameViewModel @Inject constructor(
             isUsingInvite() && contestable -> inviteBalance >= ContestedUsernameFees.fee
             isUsingInvite() -> inviteBalance >= Constants.DASH_PAY_INVITE_MIN
             !contestable && canRetryNameWithInviteIdentityCredits() -> true
+            identity?.usingInvite == true ->
+                walletBalance >= if (contestable) ContestedUsernameFees.fee else Constants.DASH_PAY_FEE
             identityBalance > 0L -> (Coin.valueOf(identityBalance / 1000) + walletBalance) > Coin.valueOf(
                 (if (contestable) CONTEST_DOCUMENT_FEE else NON_CONTEST_DOCUMENT_FEE) / 1000)
             identityBalance == 0L -> walletBalance >= if (contestable) ContestedUsernameFees.fee else Constants.DASH_PAY_FEE
@@ -599,12 +596,16 @@ class RequestUserNameViewModel @Inject constructor(
 
     fun isUsingInvite(): Boolean = createUsernameArgs?.invite != null
 
+    fun isRetryFundedByIdentityCredits(): Boolean =
+        requestedUserName?.let { !Names.isUsernameContestable(it) } == true && canRetryNameWithInviteIdentityCredits()
+
     // The invite was spent on the identity, so a name rejected after registration is paid from its credits.
     private fun canRetryNameWithInviteIdentityCredits(): Boolean {
         val identity = identity ?: return false
         return identity.usingInvite &&
             identity.creationStateErrorMessage != null &&
             identity.creationState >= IdentityCreationState.IDENTITY_REGISTERED &&
+            identity.creationState <= IdentityCreationState.USERNAME_REGISTERING &&
             identity.usernameSecondary == null &&
             requestedUsernameSecondary == null &&
             _identityBalance.value >= NAME_REGISTRATION_CREDITS
