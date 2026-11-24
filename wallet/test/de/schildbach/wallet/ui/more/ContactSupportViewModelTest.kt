@@ -40,13 +40,17 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import java.io.File
+import java.io.IOException
 import java.util.Collections
 import java.util.concurrent.Executors
+import java.util.zip.GZIPInputStream
 
 /**
  * The support report's wallet acquisition. The recovery screen opens the report
@@ -359,5 +363,54 @@ class ContactSupportViewModelTest {
         } finally {
             Dispatchers.resetMain()
         }
+    }
+
+    @Test
+    fun gzipTo_writesACompleteArchive() {
+        val source = tmp.newFile("wallet.log").apply { writeText("line\n".repeat(10_000)) }
+        val dest = File(tmp.root, "wallet.log.gz")
+
+        assertEquals(dest, gzipTo(source, dest))
+
+        // Reading to the end checks the trailer (CRC and size) as well.
+        assertEquals(source.readText(), GZIPInputStream(dest.inputStream()).use { it.readBytes().decodeToString() })
+    }
+
+    @Test
+    fun gzipTo_leavesNoPartialArchive_whenTheSourceIsGone() {
+        val dest = File(tmp.root, "wallet.log.gz")
+
+        assertThrows(IOException::class.java) { gzipTo(File(tmp.root, "missing.log"), dest) }
+        assertFalse(dest.exists())
+    }
+
+    @Test
+    fun copyTail_keepsTheNewestBytes() {
+        val source = tmp.newFile("run.log").apply { writeText("0123456789") }
+        val dest = File(tmp.root, "sdk-run.log")
+
+        assertEquals(dest, copyTail(source, dest, maxBytes = 4))
+        assertEquals("6789", dest.readText())
+    }
+
+    @Test
+    fun copyTail_returnsNull_forAnEmptyCopy() {
+        val source = tmp.newFile("empty.log")
+
+        assertNull(copyTail(source, File(tmp.root, "sdk-empty.log"), maxBytes = 4))
+    }
+
+    @Test
+    fun deletingOnFailure_removesThePartialFile_andRethrows() {
+        val dest = File(tmp.root, "partial.txt")
+
+        val thrown = assertThrows(IllegalStateException::class.java) {
+            deletingOnFailure(dest) {
+                dest.writeText("half written")
+                throw IllegalStateException("disk full")
+            }
+        }
+        assertEquals("disk full", thrown.message)
+        assertFalse(dest.exists())
     }
 }

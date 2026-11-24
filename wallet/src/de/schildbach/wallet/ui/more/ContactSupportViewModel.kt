@@ -160,6 +160,50 @@ internal fun fallbackReportText(userIssueDescription: String, failureClass: Stri
     userIssueDescription + "\n\n\n=== report generation failed ===\n\n" +
         reportSectionFailureLine("report", failureClass)
 
+/**
+ * Copies the LAST [maxBytes] of [source] into [dest] (whole file when it
+ * fits). Returns [dest], or null when the copy came out empty. A read or
+ * write failure is thrown (no partial [dest] is left) so the caller's
+ * report section can say the file is missing.
+ */
+internal fun copyTail(source: File, dest: File, maxBytes: Long): File? = deletingOnFailure(dest) {
+    FileInputStream(source).use { fis ->
+        val length = source.length()
+        if (length > maxBytes) {
+            var toSkip = length - maxBytes
+            while (toSkip > 0) {
+                val skipped = fis.skip(toSkip)
+                if (skipped <= 0) break
+                toSkip -= skipped
+            }
+        }
+        FileOutputStream(dest).use { fos -> fis.copyTo(fos) }
+    }
+    if (dest.length() > 0) dest else null
+}
+
+/**
+ * Gzips [source] into [dest] and returns [dest] once both streams have
+ * closed — the gzip trailer is written on close, so only then is the
+ * archive complete. Throws on failure, leaving no partial [dest] behind.
+ */
+internal fun gzipTo(source: File, dest: File): File = deletingOnFailure(dest) {
+    FileInputStream(source).use { fis ->
+        GZIPOutputStream(FileOutputStream(dest)).use { gzipOS -> fis.copyTo(gzipOS) }
+    }
+    reportSectionLog.info("{} compressed to {}", source.name, dest.name)
+    dest
+}
+
+/** Runs [block]; on any failure deletes the partly written [dest] and rethrows. */
+internal inline fun <T> deletingOnFailure(dest: File, block: () -> T): T =
+    try {
+        block()
+    } catch (t: Throwable) {
+        runCatching { dest.delete() }
+        throw t
+    }
+
 @HiltViewModel
 class ContactSupportViewModel @Inject constructor(
     private val configuration: Configuration,
@@ -604,12 +648,6 @@ class ContactSupportViewModel @Inject constructor(
     }
 
     /**
-     * Copies the LAST [maxBytes] of [source] into [dest] (whole file when it
-     * fits). Returns [dest], or null when the copy came out empty. A read or
-     * write failure is thrown (no partial [dest] is left) so the caller's
-     * report section can say the file is missing.
-     */
-    /**
      * This process's own logcat, tail-capped, or null when nothing could be
      * read.
      *
@@ -664,44 +702,6 @@ class ContactSupportViewModel @Inject constructor(
             runCatching { process?.destroy() }
         }
     }
-
-    private fun copyTail(source: File, dest: File, maxBytes: Long): File? = deletingOnFailure(dest) {
-        FileInputStream(source).use { fis ->
-            val length = source.length()
-            if (length > maxBytes) {
-                var toSkip = length - maxBytes
-                while (toSkip > 0) {
-                    val skipped = fis.skip(toSkip)
-                    if (skipped <= 0) break
-                    toSkip -= skipped
-                }
-            }
-            FileOutputStream(dest).use { fos -> fis.copyTo(fos) }
-        }
-        if (dest.length() > 0) dest else null
-    }
-
-    /**
-     * Gzips [source] into [dest] and returns [dest] once both streams have
-     * closed — the gzip trailer is written on close, so only then is the
-     * archive complete. Throws on failure, leaving no partial [dest] behind.
-     */
-    private fun gzipTo(source: File, dest: File): File = deletingOnFailure(dest) {
-        FileInputStream(source).use { fis ->
-            GZIPOutputStream(FileOutputStream(dest)).use { gzipOS -> fis.copyTo(gzipOS) }
-        }
-        log.info("{} compressed to {}", source.name, dest.name)
-        dest
-    }
-
-    /** Runs [block]; on any failure deletes the partly written [dest] and rethrows. */
-    private inline fun <T> deletingOnFailure(dest: File, block: () -> T): T =
-        try {
-            block()
-        } catch (t: Throwable) {
-            runCatching { dest.delete() }
-            throw t
-        }
 
     fun subject(): CharSequence {
         @Suppress("ktlint:standard:wrapping")
