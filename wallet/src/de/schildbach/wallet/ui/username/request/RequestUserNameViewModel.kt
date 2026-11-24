@@ -114,8 +114,11 @@ class RequestUserNameViewModel @Inject constructor(
             get() = ContestedUsernameFees.nameFee.value * 1000
         private val NON_CONTEST_DOCUMENT_FEE = Coin.valueOf(1000000).value * 1000
         private const val NAME_REGISTRATION_CREDITS = CreditBalanceInfo.MAX_OPERATION_COST * 2
+        private const val TOP_UP_STEP_DUFFS = 100_000L
+        private const val TOP_UP_STEP_CREDITS = TOP_UP_STEP_DUFFS * 1000
     }
 
+    private var approvedInviteNameReplacementTopUp: Coin? = null
     private val workerJob = SupervisorJob()
     private val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
     private val _uiState = MutableStateFlow(RequestUserNameUIState())
@@ -197,7 +200,7 @@ class RequestUserNameViewModel @Inject constructor(
 
             identity?.userId != null -> {
                 val credits = _identityBalance.value
-                credits > Constants.DASH_PAY_FEE.value / 10 * 1000 || canRetryNameWithInviteIdentityCredits()
+                credits > Constants.DASH_PAY_FEE.value / 10 * 1000 || inviteNameReplacementTopUp(false) != null
             }
 
             else -> {
@@ -209,7 +212,7 @@ class RequestUserNameViewModel @Inject constructor(
     fun canAffordContestedUsername(): Boolean {
         return if (identity?.userId != null) {
             val credits = _identityBalance.value
-            credits > CONTEST_DOCUMENT_FEE
+            credits > CONTEST_DOCUMENT_FEE || inviteNameReplacementTopUp(true) != null
         } else {
             _walletBalance.value >= ContestedUsernameFees.fee
         }
@@ -301,11 +304,6 @@ class RequestUserNameViewModel @Inject constructor(
         val usernameSecondary = requestedUsernameSecondary
         val isUsingInvite = isUsingInvite()
         when {
-            reuseTransaction && isRetryFundedByIdentityCredits() -> {
-                walletApplication.startService(
-                    CreateIdentityService.createIntentFromInviteForNewUsername(walletApplication, username)
-                )
-            }
             isUsingInvite -> {
                 walletApplication.startService(
                     CreateIdentityService.createIntentFromInvite(
@@ -337,9 +335,13 @@ class RequestUserNameViewModel @Inject constructor(
         }
     }
 
-    fun submit() {
-        // Reset ui state for retry if needed
+    fun submit(inviteNameReplacementTopUp: Coin? = approvedInviteNameReplacementTopUp) {
+        approvedInviteNameReplacementTopUp = inviteNameReplacementTopUp
         resetUiForRetrySubmit()
+        if (inviteNameReplacementTopUp != null || isInviteNameReplacement()) {
+            submitInviteNameReplacement(inviteNameReplacementTopUp)
+            return
+        }
         viewModelScope.launch {
             withContext(Dispatchers.IO) { updateConfig() }
             // send the request / create username, assume not retry
@@ -352,6 +354,17 @@ class RequestUserNameViewModel @Inject constructor(
             } ?: false
             triggerIdentityCreation(reuseTransaction)
         }
+    }
+
+    private fun submitInviteNameReplacement(approvedTopUp: Coin?) {
+        val username = requestedUserName
+        if (username == null || approvedTopUp == null || inviteNameReplacementTopUp() != approvedTopUp) {
+            _uiState.update { it.copy(usernameSubmittedError = true) }
+            return
+        }
+        walletApplication.startService(
+            CreateIdentityService.createIntentFromInviteForNewUsername(walletApplication, username, approvedTopUp)
+        )
     }
 
     fun reset() {
@@ -560,8 +573,8 @@ class RequestUserNameViewModel @Inject constructor(
         return when {
             isUsingInvite() && contestable -> inviteBalance >= ContestedUsernameFees.fee
             isUsingInvite() -> inviteBalance >= Constants.DASH_PAY_INVITE_MIN
-            !contestable && canRetryNameWithInviteIdentityCredits() -> true
-            identity?.usingInvite == true ->
+            isInviteNameReplacement() -> inviteNameReplacementTopUp(contestable) != null
+            identity?.usingInvite == true -> identityBalance >= 0L &&
                 walletBalance >= if (contestable) ContestedUsernameFees.fee else Constants.DASH_PAY_FEE
             identityBalance > 0L -> (Coin.valueOf(identityBalance / 1000) + walletBalance) > Coin.valueOf(
                 (if (contestable) CONTEST_DOCUMENT_FEE else NON_CONTEST_DOCUMENT_FEE) / 1000)
@@ -596,19 +609,32 @@ class RequestUserNameViewModel @Inject constructor(
 
     fun isUsingInvite(): Boolean = createUsernameArgs?.invite != null
 
-    fun isRetryFundedByIdentityCredits(): Boolean =
-        requestedUserName?.let { !Names.isUsernameContestable(it) } == true && canRetryNameWithInviteIdentityCredits()
+    fun inviteNameReplacementTopUp(): Coin? =
+        requestedUserName?.let { inviteNameReplacementTopUp(Names.isUsernameContestable(it)) }
 
-    // The invite was spent on the identity, so a name rejected after registration is paid from its credits.
-    private fun canRetryNameWithInviteIdentityCredits(): Boolean {
+    private fun inviteNameReplacementTopUp(contestable: Boolean): Coin? {
+        val credits = _identityBalance.value
+        if (!isInviteNameReplacement() || credits < 0L) {
+            return null
+        }
+        val needed = if (contestable) CONTEST_DOCUMENT_FEE + NAME_REGISTRATION_CREDITS else NAME_REGISTRATION_CREDITS
+        if (credits >= needed) {
+            return Coin.ZERO
+        }
+        val steps = (needed - credits + TOP_UP_STEP_CREDITS - 1) / TOP_UP_STEP_CREDITS
+        val minimum = if (contestable) ContestedUsernameFees.nameFee else Constants.DASH_PAY_FEE
+        val topUp = maxOf(Coin.valueOf(steps * TOP_UP_STEP_DUFFS), minimum)
+        return topUp.takeIf { _walletBalance.value >= it }
+    }
+
+    private fun isInviteNameReplacement(): Boolean {
         val identity = identity ?: return false
         return identity.usingInvite &&
             identity.creationStateErrorMessage != null &&
             identity.creationState >= IdentityCreationState.IDENTITY_REGISTERED &&
             identity.creationState <= IdentityCreationState.USERNAME_REGISTERING &&
             identity.usernameSecondary == null &&
-            requestedUsernameSecondary == null &&
-            _identityBalance.value >= NAME_REGISTRATION_CREDITS
+            requestedUsernameSecondary == null
     }
 
     suspend fun getInviteAssetLockTransaction(): AssetLockTransaction? = withContext(Dispatchers.IO) {

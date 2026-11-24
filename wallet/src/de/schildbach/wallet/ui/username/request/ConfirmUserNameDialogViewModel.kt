@@ -74,7 +74,7 @@ class ConfirmUserNameDialogViewModel @Inject constructor(
             field = value
             latestExchangeRate?.let(::updateFees)
         }
-    var paidFromIdentityCredits: Boolean = false
+    var inviteNameReplacementTopUp: Coin? = null
         set(value) {
             field = value
             latestExchangeRate?.let(::updateFees)
@@ -82,11 +82,14 @@ class ConfirmUserNameDialogViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(ConfirmUserNameUIState())
     val uiState: StateFlow<ConfirmUserNameUIState> = _uiState.asStateFlow()
     private val amount: Coin
-        get() = when {
-            usernameType == UsernameType.Secondary || paidFromIdentityCredits -> Coin.ZERO
-            isContestableUsername && !hasIdentity -> ContestedUsernameFees.fee
-            isContestableUsername && hasIdentity -> ContestedUsernameFees.nameFee
-            else -> Constants.DASH_PAY_FEE
+        get() = if (usernameType == UsernameType.Secondary) {
+            Coin.ZERO
+        } else {
+            inviteNameReplacementTopUp ?: when {
+                isContestableUsername && !hasIdentity -> ContestedUsernameFees.fee
+                isContestableUsername && hasIdentity -> ContestedUsernameFees.nameFee
+                else -> Constants.DASH_PAY_FEE
+            }
         }
     init {
 

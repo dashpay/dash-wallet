@@ -28,11 +28,12 @@ import de.schildbach.wallet.service.platform.TopUpRepository
 import de.schildbach.wallet.ui.dashpay.UserAlert.Companion.INVITATION_NOTIFICATION_ICON
 import de.schildbach.wallet.ui.dashpay.UserAlert.Companion.INVITATION_NOTIFICATION_TEXT
 import de.schildbach.wallet.ui.dashpay.work.GetUsernameVotingResultOperation
-import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
+import de.schildbach.wallet.ui.dashpay.work.InviterContactRequestOperation
 import de.schildbach.wallet.ui.username.UsernameType
 import io.grpc.Status
 import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.*
+import org.bitcoinj.core.Coin
 import org.bitcoinj.core.TransactionConfidence
 import org.bitcoinj.evolution.AssetLockTransaction
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
@@ -79,6 +80,7 @@ class CreateIdentityService : LifecycleService() {
         private const val EXTRA_START_FOREGROUND_PROMISED = "org.dash.dashpay.extra.EXTRA_START_FOREGROUND_PROMISED"
         private const val EXTRA_IDENTITY = "org.dash.dashpay.extra.IDENTITY"
         private const val EXTRA_INVITE = "org.dash.dashpay.extra.INVITE"
+        private const val EXTRA_TOP_UP = "org.dash.dashpay.extra.TOP_UP"
 
         @JvmStatic
         fun createIntentForNewUsername(context: Context, username: String, usernameSecondary: String?): Intent {
@@ -115,10 +117,11 @@ class CreateIdentityService : LifecycleService() {
         }
 
         @JvmStatic
-        fun createIntentFromInviteForNewUsername(context: Context, username: String): Intent {
+        fun createIntentFromInviteForNewUsername(context: Context, username: String, topUp: Coin): Intent {
             return Intent(context, CreateIdentityService::class.java).apply {
                 action = ACTION_RETRY_INVITE_WITH_NEW_USERNAME
                 putExtra(EXTRA_USERNAME, username)
+                putExtra(EXTRA_TOP_UP, topUp.value)
             }
         }
 
@@ -231,6 +234,10 @@ class CreateIdentityService : LifecycleService() {
                     handleCreateIdentityFromInvitationAction(null, null, null)
                 }
             }
+            if (!workInProgress) {
+                stopSelf(startId)
+                return Service.START_NOT_STICKY
+            }
 
         } else if (!workInProgress) {
 
@@ -251,7 +258,8 @@ class CreateIdentityService : LifecycleService() {
                 }
                 ACTION_RETRY_INVITE_WITH_NEW_USERNAME -> {
                     val username = intent.getStringExtra(EXTRA_USERNAME)!!
-                    handleRetryInviteWithNewUsernameAction(username)
+                    val topUp = Coin.valueOf(intent.getLongExtra(EXTRA_TOP_UP, 0))
+                    handleRetryInviteWithNewUsernameAction(username, topUp)
                 }
                 ACTION_RETRY_AFTER_INTERRUPTION -> {
                     val startForegroundPromised = intent.getBooleanExtra(EXTRA_START_FOREGROUND_PROMISED, false)
@@ -524,17 +532,16 @@ class CreateIdentityService : LifecycleService() {
         }
     }
 
-    private fun handleRetryInviteWithNewUsernameAction(username: String) {
+    private fun handleRetryInviteWithNewUsernameAction(username: String, topUp: Coin) {
         workInProgress = true
         serviceScope.launch(createIdentityExceptionHandler) {
-            retryInviteWithNewUsername(username)
+            retryInviteWithNewUsername(username, topUp)
             workInProgress = false
             stopSelf()
         }
     }
 
-    // The invite was spent registering the identity, so the replacement name is paid from its credits.
-    internal suspend fun retryInviteWithNewUsername(username: String) {
+    internal suspend fun retryInviteWithNewUsername(username: String, topUp: Coin = Coin.ZERO) {
         log.info("username registration with the invite-funded identity starting($username)")
         org.bitcoinj.core.Context.propagate(walletApplication.wallet!!.context)
         val identityData = identityRepository.loadBlockchainIdentityData()
@@ -547,8 +554,25 @@ class CreateIdentityService : LifecycleService() {
                 identityData.usernameSecondary == null,
             "there is no failed username step of an invite-funded identity to retry"
         )
+        blockchainIdentityData = identityData
+        if (topUp.isPositive) {
+            topUpIdentityForReplacement(topUp)
+        }
         identityRepository.replaceUsername(identityData, username)
         createIdentityFromInvitation(null, null, null)
+    }
+
+    private suspend fun topUpIdentityForReplacement(topUp: Coin) {
+        val encryptionKey = platformRepo.getWalletEncryptionKey()
+            ?: throw IllegalStateException("cannot obtain wallet encryption key")
+        if (identityRepository.blockchainIdentity == null) {
+            identityRepository.init()
+        }
+        val blockchainIdentity = identityRepository.blockchainIdentity
+            ?: throw IllegalStateException("there is no identity to top up")
+        val useCoinJoin = coinJoinConfig.getMode() != CoinJoinMode.NONE
+        val topUpTx = topUpRepository.createTopupTransaction(blockchainIdentity, topUp, encryptionKey, useCoinJoin)
+        topUpRepository.topUpIdentity(topUpTx, encryptionKey)
     }
 
     internal suspend fun createIdentityFromInvitation(username: String?, usernameSecondary: String?, invite: InvitationLinkData?, retryWithNewUserName: Boolean = false) {
@@ -738,8 +762,6 @@ class CreateIdentityService : LifecycleService() {
         registerUsername(blockchainIdentity, encryptionKey, UsernameType.Primary)
 
         if (blockchainIdentityData.usingInvite) {
-            // the contact request worker sends from the identity the repository has loaded
-            identityRepository.init()
             queueInviterContactRequest()
         }
 
@@ -949,14 +971,13 @@ class CreateIdentityService : LifecycleService() {
 
     private suspend fun queueInviterContactRequest() {
         val inviterUsername = blockchainIdentityData.invite?.user ?: return
-        val inviterUserId = identityRepository.getUser(inviterUsername).firstOrNull()?.dashPayProfile?.userId ?: return
-        if (configuration.inviter == inviterUserId) return
-        SendContactRequestOperation(walletApplication)
-            .create(inviterUserId)
-            .enqueue()
-        configuration.apply {
-            inviter = inviterUserId
-            inviterContactRequestSentInfoShown = false
+        val identityId = blockchainIdentityData.userId ?: return
+        try {
+            InviterContactRequestOperation(walletApplication).enqueue(inviterUsername, identityId)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            analytics.logError(e, "invite: failed to queue the contact request to the inviter")
         }
     }
 

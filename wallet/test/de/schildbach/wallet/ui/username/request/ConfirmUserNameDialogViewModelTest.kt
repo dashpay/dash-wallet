@@ -14,6 +14,7 @@ import kotlinx.coroutines.test.runTest
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
+import org.bitcoinj.core.Coin
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -54,7 +55,7 @@ class ConfirmUserNameDialogViewModelTest {
     }
 
     @Test
-    fun replacementNamePaidFromIdentityCredits_costsTheWalletNothing() = runTest {
+    fun replacementOfARejectedInviteName_showsTheApprovedTopUp() = runTest {
         val config = mockk<WalletUIConfig>()
         every { config.observe(WalletUIConfig.SELECTED_CURRENCY) } returns flowOf("USD")
         val rates = mockk<ExchangeRatesProvider>()
@@ -65,8 +66,12 @@ class ConfirmUserNameDialogViewModelTest {
             runCurrent()
             assertEquals("0.03", viewModel.uiState.value.amountStr)
 
-            viewModel.paidFromIdentityCredits = true
+            viewModel.inviteNameReplacementTopUp = Coin.ZERO
             assertEquals("0.00", viewModel.uiState.value.amountStr)
+
+            viewModel.isContestableUsername = true
+            viewModel.inviteNameReplacementTopUp = Coin.parseCoin("0.10")
+            assertEquals("0.10", viewModel.uiState.value.amountStr)
         } finally {
             viewModel.viewModelScope.cancel()
         }
