@@ -429,9 +429,18 @@
             android:name="de.schildbach.wallet.service.BootstrapReceiver"
             android:exported="true">
 
+            <!-- Must never start BlockchainServiceImpl: Android 15+ forbids starting a
+                 dataSync foreground service from BOOT_COMPLETED. Updates are handled by
+                 PackageReplacedReceiver. -->
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name="de.schildbach.wallet.service.PackageReplacedReceiver"
+            android:exported="true">
+
             <intent-filter>
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
