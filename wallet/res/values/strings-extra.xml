@@ -129,6 +129,7 @@
     <string name="request_coins_clipboard_address_msg">Dash address copied to clipboard</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Show</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" is not a recovery phrase word</string>
+    <string name="restore_wallet_from_invalid_seed_word_position">Word %d is not a recovery phrase word</string>
     <string name="restore_wallet_from_invalid_seed_not_twelve_words">Recovery phrase must have 12 or 24 words</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">Bad recovery phrase</string>
     <string name="restore_wallet_from_invalid_seed_failure">Wallet could not be restored:\n\n%s\n\nBad recovery phrase?</string>

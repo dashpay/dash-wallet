@@ -95,7 +95,7 @@ class RestoreWalletFromSeedActivity : RestoreFromFileActivity() {
                     dstart: Int,
                     dend: Int
                 ): CharSequence {
-                    return source.toString().lowercase(Locale.getDefault())
+                    return source.toString().lowercase(Locale.ROOT)
                 }
             }
         )
@@ -110,7 +110,9 @@ class RestoreWalletFromSeedActivity : RestoreFromFileActivity() {
         })
         binding.submit.setOnClickListener {
             walletApplication.initEnvironmentIfNeeded()
-            val seed = binding.input.text.trim().replace(Regex(" +"), " ")
+            // Any whitespace separates words: the field is multi-line, and a pasted phrase can
+            // carry tabs or line breaks.
+            val seed = binding.input.text.trim().replace(Regex("\\s+"), " ")
             if (seed.isNotEmpty()) {
                 val words = ArrayList(mutableListOf(*seed.split(' ').toTypedArray()))
                 lifecycleScope.launch {
@@ -129,8 +131,10 @@ class RestoreWalletFromSeedActivity : RestoreFromFileActivity() {
                                 R.string.restore_wallet_from_invalid_seed_bad_checksum
                             )
                             is MnemonicException.MnemonicWordException -> walletApplication.getString(
-                                R.string.restore_wallet_from_invalid_seed_warning_message,
-                                ex.badWord
+                                // The position, never the text: this dialog's window is not
+                                // FLAG_SECURE, and a lost separator makes one "word" of two.
+                                R.string.restore_wallet_from_invalid_seed_word_position,
+                                words.indexOf(ex.badWord) + 1
                             )
                             else -> walletApplication.getString(
                                 R.string.restore_wallet_from_invalid_seed_failure,

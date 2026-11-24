@@ -61,6 +61,43 @@ class Bip39Test {
     }
 
     @Test
+    fun exactLookup_normalizesCaseAndUnicodeFormOnly() {
+        val wordlist = Bip39Wordlist.ENGLISH
+        assertEquals(0, wordlist.exactIndexOf("abandon"))
+        assertEquals(0, wordlist.exactIndexOf("Abandon"))
+        assertEquals(2047, wordlist.exactIndexOf("ZOO"))
+        // The collator lookup takes these for "theme" and "hotel"; they are different words.
+        assertTrue(wordlist.contains("th\u00e8me"))
+        assertEquals(-1, wordlist.exactIndexOf("th\u00e8me"))
+        assertEquals(-1, wordlist.exactIndexOf("the\u0300me"))
+        assertEquals(-1, wordlist.exactIndexOf("h\u00f4tel"))
+        assertEquals(-1, wordlist.exactIndexOf("yello"))
+        assertEquals(-1, wordlist.exactIndexOf(""))
+        // One character or letter + combining accent: the same text in two Unicode forms.
+        assertEquals("me\u0301daille", Bip39Wordlist.normalize("M\u00c9DAILLE"))
+        assertEquals("me\u0301daille", Bip39Wordlist.normalize("me\u0301daille"))
+    }
+
+    @Test
+    fun checkExact_returnsTheWordlistSpelling_andRejectsWhatCheckAccepts() {
+        val words = Bip39.toMnemonic(unhex("7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f"))
+        assertEquals(words, Bip39.checkExact(words))
+        assertEquals(words, Bip39.checkExact(words.map { it.uppercase() }))
+
+        val prefix = List(11) { "theme" }
+        val themes = prefix + Bip39Wordlist.ENGLISH.words.first { Bip39.isValid(prefix + it) }
+        val accented = listOf("th\u00e8me") + themes.drop(1)
+        Bip39.check(accented)
+        val thrown = assertThrows(Bip39Exception.WordException::class.java) { Bip39.checkExact(accented) }
+        assertEquals("th\u00e8me", thrown.badWord)
+
+        assertThrows(Bip39Exception.ChecksumException::class.java) {
+            Bip39.checkExact(words.dropLast(1) + words.first())
+        }
+        assertThrows(Bip39Exception.LengthException::class.java) { Bip39.checkExact(words.take(11)) }
+    }
+
+    @Test
     fun load_rejectsWrongWordCount() {
         assertThrows(IllegalArgumentException::class.java) {
             Bip39Wordlist.load("one\ntwo\nthree".byteInputStream())

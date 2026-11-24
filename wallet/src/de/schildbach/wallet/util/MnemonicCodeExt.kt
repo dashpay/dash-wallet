@@ -19,9 +19,14 @@ import java.io.InputStream
  * this class still extends dashj's [MnemonicCode] because the global [MnemonicCode.INSTANCE]
  * feeds dashj-internal seed handling (actual wallet restore) until kill-list Step D removes it.
  */
-class MnemonicCodeExt(wordstream: InputStream, wordListDigest: String?) : MnemonicCode(wordstream, wordListDigest) {
+class MnemonicCodeExt(
+    wordstream: InputStream,
+    wordListDigest: String?,
+    /** The asset this instance's words were loaded from. */
+    private val wordlistPath: String
+) : MnemonicCode(wordstream, wordListDigest) {
 
-    /** The same words dashj loaded, wrapped for dashj-faithful Bip39 validation. */
+    /** The same words dashj loaded, wrapped for Bip39 validation. */
     private val bip39Wordlist: Bip39Wordlist by lazy { Bip39Wordlist.of(wordList) }
 
     companion object {
@@ -42,7 +47,7 @@ class MnemonicCodeExt(wordstream: InputStream, wordListDigest: String?) : Mnemon
             try {
                 val watch = Stopwatch.createStarted()
                 val wordlistPath = getWordlistPath(context)
-                INSTANCE = MnemonicCodeExt(context.assets.open(wordlistPath), null)
+                INSTANCE = MnemonicCodeExt(context.assets.open(wordlistPath), null, wordlistPath)
                 watch.stop()
                 log.info("BIP39 wordlist loaded from: '{}', took {}", wordlistPath, watch)
             } catch (x: IOException) {
@@ -68,56 +73,73 @@ class MnemonicCodeExt(wordstream: InputStream, wordListDigest: String?) : Mnemon
         }
     }
 
+    /**
+     * Validates a recovery phrase the user typed and returns its words as the wordlist spells
+     * them. Every word must be exactly an entry of one wordlist, this instance's or another
+     * language's, and the checksum must hold in that wordlist: the same rule as iOS and the SDK.
+     * The language that validates the phrase becomes the app's wordlist, unless [selectWordlist]
+     * is false: then nothing is changed, for a phrase that is not authenticated yet.
+     *
+     * dashj's own lookup ignores case and accents, but it derives the seed from the text it is
+     * given and the SDK accepts only exact entries. A phrase accepted loosely ("medaille" for
+     * "médaille") restored a different wallet in dashj and none at all in the SDK.
+     *
+     * @throws MnemonicException.MnemonicLengthException not 12 or 24 words
+     * @throws MnemonicException.MnemonicWordException a word is in no wordlist
+     * @throws MnemonicException.MnemonicChecksumException every word is known, but no wordlist
+     *   validates the phrase
+     */
     @Throws(MnemonicException::class)
-    fun check(context: Context, words: List<String>) {
+    @JvmOverloads
+    fun checkExact(context: Context, words: List<String>, selectWordlist: Boolean = true): List<String> {
         if (words.size != 12 && words.size != 24) {
             throw MnemonicException.MnemonicLengthException("Word list size must be 12 or 24")
         }
-        try {
-            checkWords(words)
-        } catch (x: MnemonicException) {
-            checkNonEnglish(context, words, x)
+        val known = BooleanArray(words.size)
+        exactWordsOrNull(words, known)?.let { exactWords ->
+            // A reset clears the saved path without reloading this instance.
+            if (selectWordlist && getWordlistPath(context) != wordlistPath) {
+                saveWordlistPath(context, wordlistPath)
+            }
+            return exactWords
+        }
+
+        for (wordlistFileName in context.assets.list(ASSETS_PATH).orEmpty()) {
+            val otherPath = "$ASSETS_PATH/$wordlistFileName"
+            // Skip the list this instance holds, which is not always the saved one.
+            if (otherPath == wordlistPath) {
+                continue
+            }
+            val mnemonicCode = MnemonicCodeExt(context.assets.open(otherPath), null, otherPath)
+            val exactWords = mnemonicCode.exactWordsOrNull(words, known) ?: continue
+            if (selectWordlist) {
+                saveWordlistPath(context, otherPath)
+                INSTANCE = mnemonicCode
+            }
+            return exactWords
+        }
+        val unknownWord = known.indexOfFirst { !it }
+        throw if (unknownWord >= 0) {
+            MnemonicException.MnemonicWordException(words[unknownWord])
+        } else {
+            MnemonicException.MnemonicChecksumException()
         }
     }
 
     /**
-     * Validates against this instance's wordlist using the self-contained [Bip39] port
-     * (differential-tested identical to dashj's `MnemonicCode.check`), translating
-     * [Bip39Exception] subtypes 1:1 to the [MnemonicException] types callers expect.
+     * [words] as this instance's wordlist spells them when it validates them exactly, else null.
+     * Marks in [known] each word that is an entry of this wordlist.
      */
-    @Throws(MnemonicException::class)
-    private fun checkWords(words: List<String>) {
-        try {
-            Bip39.check(words, bip39Wordlist)
-        } catch (x: Bip39Exception.LengthException) {
-            throw MnemonicException.MnemonicLengthException(x.message)
-        } catch (x: Bip39Exception.WordException) {
-            throw MnemonicException.MnemonicWordException(x.badWord)
-        } catch (x: Bip39Exception.ChecksumException) {
-            throw MnemonicException.MnemonicChecksumException()
+    private fun exactWordsOrNull(words: List<String>, known: BooleanArray): List<String>? {
+        words.forEachIndexed { index, word ->
+            if (bip39Wordlist.exactIndexOf(word) >= 0) {
+                known[index] = true
+            }
         }
-    }
-
-    private fun checkNonEnglish(context: Context, words: List<String>, initialException: MnemonicException) {
-        val currentWordlistPath = getWordlistPath(context)
-        val wordlistFiles = context.assets.list(ASSETS_PATH)
-        for (wordlistFileName in wordlistFiles!!) {
-            val wordlistPath = "$ASSETS_PATH/$wordlistFileName"
-            if (wordlistPath == currentWordlistPath) {
-                continue
-            }
-            val mnemonicCode = MnemonicCodeExt(context.assets.open(wordlistPath), null)
-            try {
-                mnemonicCode.checkWords(words)
-                saveWordlistPath(context, wordlistPath)
-                INSTANCE = mnemonicCode
-                break
-            } catch (x: MnemonicException) {
-                if (wordlistFileName == wordlistFiles.last()) {
-                    // re-throw the original exception if checking failed for wordlists in all languages
-                    throw initialException
-                }
-            }
+        return try {
+            Bip39.checkExact(words, bip39Wordlist)
+        } catch (x: Bip39Exception) {
+            null
         }
     }
 }

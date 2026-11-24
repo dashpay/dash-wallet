@@ -32,7 +32,6 @@ import de.schildbach.wallet.util.MnemonicCodeExt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.bitcoinj.crypto.ChildNumber
 import org.bitcoinj.crypto.DeterministicKey
 import org.bitcoinj.crypto.HDKeyDerivation
 import org.bitcoinj.crypto.MnemonicException
@@ -86,35 +85,19 @@ class RestoreWalletFromSeedViewModel @Inject constructor(
             // Derive the master key from the provided mnemonic
             val providedMasterKey = HDKeyDerivation.createMasterPrivateKey(providedSeed.seedBytes)
 
-            // Derive a key at m/44'/5'/0'/0/0 (first receiving address in BIP44 path for Dash)
-            // This is a standard path that should exist in any Dash wallet
-            val derivationPath = listOf(
-                ChildNumber(44, true),  // BIP44
-                ChildNumber(5, true),   // Dash coin type
-                ChildNumber(0, true),   // Account 0
-                ChildNumber(0, false),  // External chain (receiving)
-                ChildNumber(0, false)   // First address
-            )
-
-            var providedKey: DeterministicKey = providedMasterKey
-            for (childNumber in derivationPath) {
-                providedKey = HDKeyDerivation.deriveChildKey(providedKey, childNumber)
-            }
-
-            // Get the same key from the wallet's key chain
+            // Compare the account key at the installed chain's own account path: the path
+            // differs by network (m/44'/5'/0' on mainnet, m/44'/1'/0' on testnet), and the
+            // account key is always present, even in a wallet that has derived no address.
             val walletKeyChain = wallet.activeKeyChain
             if (walletKeyChain != null) {
-                // Get the key at the same path from the wallet
-                val walletKey = walletKeyChain.getKeyByPath(derivationPath, false)
-
-                if (walletKey != null) {
-                    // Compare the public keys (more reliable than comparing seeds directly)
-                    val match = providedKey.pubKey.contentEquals(walletKey.pubKey)
-                    log.info("Mnemonic verification: public keys match = $match")
-                    return match
-                } else {
-                    log.warn("Could not get key from wallet at derivation path")
+                var providedKey: DeterministicKey = providedMasterKey
+                for (childNumber in walletKeyChain.accountPath) {
+                    providedKey = HDKeyDerivation.deriveChildKey(providedKey, childNumber)
                 }
+                // Compare the public keys (more reliable than comparing seeds directly)
+                val match = providedKey.pubKey.contentEquals(walletKeyChain.watchingKey.pubKey)
+                log.info("Mnemonic verification: public keys match = $match")
+                return match
             } else {
                 log.warn("Wallet active key chain is null")
             }
@@ -192,28 +175,35 @@ class RestoreWalletFromSeedViewModel @Inject constructor(
     }
 
     /**
-     * Normalize - converts all letter to lowercase and to words matching those of a BIP39 word list.
-     * Examples:
-     *   Satoshi -> satoshi (all letters become lowercase)
-     *   TODO: also handle this: medaille -> médaille
-     * @param words - the recovery phrase word list
+     * Restores the wallet from the recovery phrase the user typed.
+     *
+     * A new restore accepts only a phrase that is exactly valid in one wordlist and builds the
+     * wallet from the wordlist's spelling of it; anything else throws, naming the reason.
+     * Forgot-PIN recovery replaces the installed wallet with itself, so it rebuilds from the
+     * spelling that wallet holds and refuses ([SeedRestoreResult.INVALID_SEED]) when the phrase
+     * no longer matches the installed wallet in any spelling.
+     *
+     * @throws MnemonicException a new restore's phrase is not exactly valid
      */
-    private fun normalize(words: List<String>): List<String> {
-        return words.map { it.lowercase(Locale.getDefault()) }
-    }
-
+    @Throws(MnemonicException::class)
     suspend fun restoreWalletFromSeed(
         words: List<String>,
         forgotPinRecovery: Boolean = false
     ): SeedRestoreResult = withContext(Dispatchers.IO) {
-        if (isSeedValid(words)) {
+        val restoreWords = if (forgotPinRecovery) {
+            spellings(words).firstOrNull(::verifyMnemonicMatchesWallet)
+        } else {
+            // Read-only until the install is accepted: see the selection below.
+            MnemonicCodeExt.getInstance().checkExact(walletApplication, words, selectWordlist = false)
+        }
+        if (restoreWords != null) {
             // Before any restore work: a wipe marker refuses the replacement.
             if (walletApplication.isWalletReplacementRefused) {
                 log.warn("seed restore refused before it began: a wallet reset is unfinished or unverified")
                 return@withContext SeedRestoreResult.REFUSED
             }
             val creationTime = selectedCreationDate.value
-            val wallet = walletFactory.restoreFromSeed(Constants.NETWORK_PARAMETERS, normalize(words))
+            val wallet = walletFactory.restoreFromSeed(Constants.NETWORK_PARAMETERS, restoreWords)
             // Forgot-PIN recovery replaces the installed wallet on purpose; an
             // onboarding restore must not (see WalletApplication.installWallet).
             when (walletApplication.installWallet(wallet, forgotPinRecovery)) {
@@ -226,6 +216,11 @@ class RestoreWalletFromSeedViewModel @Inject constructor(
                     return@withContext SeedRestoreResult.REFUSED
                 }
                 WalletInstallResult.INSTALLED -> Unit
+            }
+            // The phrase's language becomes the app's wordlist only with its wallet: a refused
+            // or dropped restore must not leave the installed wallet with another language.
+            if (!forgotPinRecovery) {
+                MnemonicCodeExt.getInstance().checkExact(walletApplication, restoreWords)
             }
             // Only once the replacement is accepted: a refused wallet must not
             // overwrite the existing wallet's persisted scan-start date.
@@ -241,28 +236,32 @@ class RestoreWalletFromSeedViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Looks for the wallet's PIN with the recovery phrase the user typed, in each of the
+     * [spellings] the wallet may hold. What authenticates the phrase is the wallet itself (its
+     * decrypted seed, its mnemonic-based fallbacks or its keys), not a wordlist.
+     */
     suspend fun recoverPin(words: List<String>): RecoveryData? {
-        return if (isSeedValid(words)) {
-            recover(normalize(words))
-        } else {
-            null
+        for (spelling in spellings(words)) {
+            recover(spelling)?.let { return it }
         }
+        return null
     }
 
     /**
-     * Checks to see if this seed is valid.  The validation is not case sensitive, nor does it
-     * depend on accent marks or other diacritics.
-     *
-     * @param words
-     * @return
+     * The spellings an installed wallet may hold for the phrase the user typed: the wordlist's,
+     * which a restore stores, then the words as typed (lowercased), which restores stored before
+     * the phrase had to match a wordlist exactly — a missing accent, a different Unicode form, or
+     * a phrase no wordlist validates.
      */
-    private fun isSeedValid(words: List<String>): Boolean {
-        return try {
-            MnemonicCodeExt.getInstance().check(walletApplication, words)
-            true
+    private fun spellings(words: List<String>): List<List<String>> {
+        val exactWords = try {
+            // Read-only: this phrase is not authenticated yet, and the installed wallet's
+            // mnemonic-based fallbacks validate against the app's current wordlist.
+            MnemonicCodeExt.getInstance().checkExact(walletApplication, words, selectWordlist = false)
         } catch (x: MnemonicException) {
-            log.info("problem restoring wallet from seed: ", x)
-            false
+            null
         }
+        return listOfNotNull(exactWords, words.map { it.lowercase(Locale.getDefault()) }).distinct()
     }
 }
