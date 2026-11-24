@@ -33,6 +33,7 @@ import de.schildbach.wallet_test.R
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.BufferOverflow
@@ -4232,6 +4233,27 @@ class CutoverUiDataService internal constructor(
     }
 
     /**
+     * Stop only the balance writer for a wallet wipe, and wait for it. Reset
+     * Wallet calls this BEFORE it clears wallet_ui: a balance waiting behind a
+     * slow save would otherwise be written after the clear and shown by the
+     * next wallet.
+     *
+     * It does not wait for the rest of the pipeline, which can sit in a
+     * blocking engine read; [stopForWalletWipe] still stops and joins all of
+     * it later. It raises the same fence, so no pipeline started from here on
+     * gets a writer. [resumeAfterWalletWipe] lifts it, and the pipeline it
+     * restarts has a new one.
+     */
+    suspend fun stopBalanceSavesForWalletWipe() {
+        val writer = synchronized(wipeFenceLock) {
+            wipeFenced = true
+            balanceSaveJob.also { balanceSaveJob = null }
+        }
+        writer?.cancelAndJoin()
+        log.info("SDK balance saves stopped for the wallet wipe")
+    }
+
+    /**
      * Lift [stopForWalletWipe]'s fence and re-arm the gate. Non-suspending so
      * the wipe can call it from a `finally`: a wipe that fails or is cancelled
      * after the stop must not leave the pipeline dead for the next wallet.
@@ -4256,6 +4278,9 @@ class CutoverUiDataService internal constructor(
 
     /** Makes [requestFullReconcile]'s fence check and latch atomic against the wipe stop. */
     private val wipeFenceLock = Any()
+
+    /** The running pipeline's balance writer ([balancePipeline]). Guarded by [wipeFenceLock]. */
+    private var balanceSaveJob: Job? = null
 
     /**
      * [walletBindConfirmations] when the last wipe resumed, until the gate has
@@ -4517,9 +4542,17 @@ class CutoverUiDataService internal constructor(
         // because a newer figure fit to save replaces an older one not yet
         // written.
         val balanceSaves = Channel<Long>(Channel.CONFLATED)
-        launch {
+        // Registered and started under the wipe fence's lock, so Reset Wallet
+        // either stops this writer or it never starts
+        // ([stopBalanceSavesForWalletWipe]).
+        val balanceWriter = launch(start = CoroutineStart.LAZY) {
             for (duffs in balanceSaves) saveBalance(duffs)
         }
+        val writerAllowed = synchronized(wipeFenceLock) {
+            if (!wipeFenced) balanceSaveJob = balanceWriter
+            !wipeFenced
+        }
+        if (writerAllowed) balanceWriter.start() else balanceWriter.cancel()
 
         // Seed the confirmed/total split once up front so the shielded screen's
         // Max (confirmed) and pending (total − confirmed) are populated before

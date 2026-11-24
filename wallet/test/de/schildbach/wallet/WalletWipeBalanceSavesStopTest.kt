@@ -17,20 +17,20 @@
 
 package de.schildbach.wallet
 
-import de.schildbach.wallet.WalletApplicationExt.clearWithSdkUiPipelineStopped
+import de.schildbach.wallet.WalletApplicationExt.clearWithBalanceSavesStopped
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** Reset Wallet stops the SDK UI pipeline before it clears the configs, and never leaves it stopped. */
-class WalletWipeSdkUiPipelineStopTest {
+/** Reset Wallet stops the balance saves before it clears anything, and never leaves them stopped. */
+class WalletWipeBalanceSavesStopTest {
 
     @Test
-    fun pipelineIsStoppedBeforeAnythingIsCleared() = runBlocking {
+    fun balanceSavesAreStoppedBeforeAnythingIsCleared() = runBlocking {
         val steps = mutableListOf<String>()
-        clearWithSdkUiPipelineStopped(
-            stopSdkUiPipeline = { steps += "stop" },
+        clearWithBalanceSavesStopped(
+            stopBalanceSaves = { steps += "stop" },
             clearBeforeDatabases = { steps += "configs" },
             clearDatabases = { steps += "databases" },
             resumeSdkUiPipeline = { steps += "resume" }
@@ -42,8 +42,8 @@ class WalletWipeSdkUiPipelineStopTest {
     @Test
     fun aFailedStopDoesNotSkipTheClears() = runBlocking {
         val steps = mutableListOf<String>()
-        clearWithSdkUiPipelineStopped(
-            stopSdkUiPipeline = { throw IllegalStateException("stop failed") },
+        clearWithBalanceSavesStopped(
+            stopBalanceSaves = { throw IllegalStateException("stop failed") },
             clearBeforeDatabases = { steps += "configs" },
             clearDatabases = { steps += "databases" },
             resumeSdkUiPipeline = { steps += "resume" }
@@ -55,8 +55,8 @@ class WalletWipeSdkUiPipelineStopTest {
     fun aWipeThatFailsBeforeTheDatabaseClearReArmsThePipeline() = runBlocking {
         val steps = mutableListOf<String>()
         val failure = runCatching {
-            clearWithSdkUiPipelineStopped(
-                stopSdkUiPipeline = { steps += "stop" },
+            clearWithBalanceSavesStopped(
+                stopBalanceSaves = { steps += "stop" },
                 clearBeforeDatabases = { throw IllegalStateException("file delete failed") },
                 clearDatabases = { steps += "databases" },
                 resumeSdkUiPipeline = { steps += "resume" }

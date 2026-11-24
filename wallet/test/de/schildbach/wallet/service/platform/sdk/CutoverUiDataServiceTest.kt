@@ -1685,10 +1685,12 @@ class CutoverUiDataServiceTest {
     }
 
     @Test
-    fun stopForWalletWipe_dropsABalanceWaitingBehindASlowSave() = runTest {
-        // Reset Wallet stops the pipeline before it clears wallet_ui. A balance
-        // still waiting behind a slow save must be dropped by that stop, or it
-        // would be written after the clear and shown by the next wallet.
+    fun stopBalanceSavesForWalletWipe_dropsAWaitingBalance_withoutWaitingForTheAddressRead() = runTest {
+        // Reset Wallet stops the balance saves before it clears wallet_ui. A
+        // balance still waiting behind a slow save must be dropped by that
+        // stop, or it would be written after the clear and shown by the next
+        // wallet. The stop must not wait for a receive-address read parked in
+        // the engine: the wallet files are deleted right after it.
         val events = kotlinx.coroutines.flow.MutableSharedFlow<L1TxEvent>(extraBufferCapacity = 4)
         val source = FakeSource(balanceDuffs = MutableStateFlow(1_103_225_474L))
         val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
@@ -1701,29 +1703,69 @@ class CutoverUiDataServiceTest {
         }
         val service = buildService(
             source, configWithState("CUT_OVER"), backgroundScope,
-            walletUIConfig = walletUIConfig, txEvents = events, l1Synced = flowOf(true)
+            walletUIConfig = walletUIConfig, txEvents = events, l1Synced = flowOf(true),
+            receiveRefreshDispatcher = Dispatchers.IO
         )
         try {
             service.start()
-            runCurrent()
+            assertTrue(pumpUntil { service.sdkReceiveAddressOrNull() == "yENGINEnextUnusedAddress" })
 
             source.balanceDuffs.value = 900_000L
             assertTrue("the older write must be parked", pumpUntil { olderWriteParked.isCompleted })
 
             // A second balance is read and judged fit to save while the first
-            // save is still in flight, so it waits for the writer.
+            // save is still in flight, so it waits for the writer. The same tx
+            // event parks the address read in the engine.
+            source.gatedReadThreadName = "DefaultDispatcher"
+            source.gateByThreadNamePrefix = true
+            source.receiveAddressReadParked = false
             source.balanceDuffs.value = 781L
             events.emit(L1TxEvent.Detected(displayHex(3), -899_219L, null, contextCode = 0, directionCode = 0))
-            runCurrent()
-            assertEquals(Coin.valueOf(781), service.sdkBalanceOrNull())
+            assertTrue("the address read must be parked", pumpUntil { source.receiveAddressReadParked })
+            assertTrue(pumpUntil { service.sdkBalanceOrNull() == Coin.valueOf(781) })
 
-            service.stopForWalletWipe()
+            // Returns although the address read is still parked.
+            service.stopBalanceSavesForWalletWipe()
+            assertEquals(1L, source.receiveAddressGate.count)
+
+            releaseOlderWrite.complete(Unit)
+            runCurrent()
+            coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 781L) }
         } finally {
             releaseOlderWrite.complete(Unit)
+            source.receiveAddressGate.countDown()
         }
+    }
 
+    @Test
+    fun resumeAfterWalletWipe_restoresBalanceSavesAfterAnEarlyStop() = runTest {
+        // A wipe that fails after the early stop re-arms the pipeline. It must
+        // come back with a working balance writer.
+        val source = FakeSource(balanceDuffs = MutableStateFlow(900_000L))
+        val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
+        coEvery { walletUIConfig.get(WalletUIConfig.LAST_TOTAL_BALANCE) } returns 900_000L
+        val bindPasses = MutableStateFlow(0L)
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            walletUIConfig = walletUIConfig, l1Synced = flowOf(true),
+            walletBindConfirmations = bindPasses
+        )
+        service.start()
+        runCurrent()
+
+        service.stopBalanceSavesForWalletWipe()
+        source.balanceDuffs.value = 781L
         runCurrent()
         coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 781L) }
+
+        // The wallet was not wiped, so the pipeline waits for the next
+        // confirmed bind before it restarts.
+        service.resumeAfterWalletWipe()
+        runCurrent()
+        bindPasses.value = 1L
+        testScheduler.advanceTimeBy(CutoverUiDataService.WALLET_BIND_RETRY_MS + 1)
+        runCurrent()
+        coVerify(atLeast = 1) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 781L) }
     }
 
     @Test
