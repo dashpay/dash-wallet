@@ -53,36 +53,55 @@ class DashPayConfigShieldedBalanceCacheTest {
     @Before
     fun setUp() = runBlocking {
         cfg = DashPayConfig(RuntimeEnvironment.getApplication(), mockk<WalletDataProvider>(relaxed = true))
+        // The constructor seeds debug flags on Dispatchers.IO. Left running, that write can
+        // land mid-test (under full-suite load) and drop this test's keys.
+        cfg.initialSeeding.join()
         cfg.clearAll()
     }
 
     @Test
     fun noReconcile_persistsTheBalance() = runBlocking {
-        assertTrue(cfg.setLastShieldedBalanceDuffsUnlessReconciling(1_000_000_000L))
-        assertEquals(1_000_000_000L, cfg.getLastShieldedBalanceDuffs())
+        assertTrue(cfg.setLastShieldedBalanceDuffsUnlessReconciling(1_000_000_000L, WALLET_A))
+        assertEquals(1_000_000_000L, cfg.getLastShieldedBalanceDuffs(WALLET_A))
+        // Written with it: the value is wallet A's, never another wallet's.
+        assertEquals(WALLET_A, cfg.get(DashPayConfig.LAST_SHIELDED_BALANCE_WALLET))
+        assertNull(cfg.getLastShieldedBalanceDuffs(WALLET_B))
+    }
+
+    @Test
+    fun aValueAnEarlierVersionStored_isNotRead() = runBlocking {
+        cfg.set(DashPayConfig.LAST_SHIELDED_BALANCE_DUFFS, 5_000L)
+        assertNull(cfg.getLastShieldedBalanceDuffs(WALLET_A))
+    }
+
+    @Test
+    fun theSpendDropsTheWalletTagWithTheValue() = runBlocking {
+        assertTrue(cfg.setLastShieldedBalanceDuffsUnlessReconciling(1_000_000_000L, WALLET_A))
+        cfg.markShieldedSpendReconcilePending(1_000L)
+        assertNull(cfg.get(DashPayConfig.LAST_SHIELDED_BALANCE_WALLET))
     }
 
     @Test
     fun aPreSpendSnapshot_writtenAfterTheSpend_isRejected_andStaysGoneAfterRestart() = runBlocking {
-        assertTrue(cfg.setLastShieldedBalanceDuffsUnlessReconciling(1_000_000_000L))
+        assertTrue(cfg.setLastShieldedBalanceDuffsUnlessReconciling(1_000_000_000L, WALLET_A))
 
         // the spend lands first: drops the cache, sets the marker
         cfg.markShieldedSpendReconcilePending(1_000L)
         // the delayed persistence write of the PRE-spend sample lands second
-        assertFalse(cfg.setLastShieldedBalanceDuffsUnlessReconciling(1_000_000_000L))
-        assertNull(cfg.getLastShieldedBalanceDuffs())
+        assertFalse(cfg.setLastShieldedBalanceDuffsUnlessReconciling(1_000_000_000L, WALLET_A))
+        assertNull(cfg.getLastShieldedBalanceDuffs(WALLET_A))
 
         // what a restart reads back: the cache stays gone, the marker stays set
-        assertNull("the pre-spend cache must not come back", cfg.getLastShieldedBalanceDuffs())
+        assertNull("the pre-spend cache must not come back", cfg.getLastShieldedBalanceDuffs(WALLET_A))
         assertEquals(1_000L, cfg.shieldedSpendReconcilePendingSinceMs())
     }
 
     @Test
     fun aPreSpendSnapshot_writtenBeforeTheSpend_isRemovedByIt() = runBlocking {
         // the persistence write lands first, the spend second
-        assertTrue(cfg.setLastShieldedBalanceDuffsUnlessReconciling(1_000_000_000L))
+        assertTrue(cfg.setLastShieldedBalanceDuffsUnlessReconciling(1_000_000_000L, WALLET_A))
         cfg.markShieldedSpendReconcilePending(1_000L)
-        assertNull(cfg.getLastShieldedBalanceDuffs())
+        assertNull(cfg.getLastShieldedBalanceDuffs(WALLET_A))
     }
 
     @Test
@@ -90,8 +109,8 @@ class DashPayConfigShieldedBalanceCacheTest {
         cfg.markShieldedSpendReconcilePending(1_000L)
         cfg.clearShieldedSpendReconcilePending()
         assertNull(cfg.shieldedSpendReconcilePendingSinceMs())
-        assertTrue(cfg.setLastShieldedBalanceDuffsUnlessReconciling(600_000_000L))
-        assertEquals(600_000_000L, cfg.getLastShieldedBalanceDuffs())
+        assertTrue(cfg.setLastShieldedBalanceDuffsUnlessReconciling(600_000_000L, WALLET_A))
+        assertEquals(600_000_000L, cfg.getLastShieldedBalanceDuffs(WALLET_A))
     }
 
     /** Overlapping spends: the reconciliation keeps the EARLIEST since until it settles. */
@@ -148,5 +167,10 @@ class DashPayConfigShieldedBalanceCacheTest {
             fail("expected the IOException")
         } catch (expected: IOException) {
         }
+    }
+
+    private companion object {
+        const val WALLET_A = "aaaa"
+        const val WALLET_B = "bbbb"
     }
 }

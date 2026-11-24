@@ -105,6 +105,7 @@ import org.dash.wallet.integrations.coinbase.service.CoinBaseClientConstants;
 import ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy;
 import ch.qos.logback.core.util.FileSize;
 import de.schildbach.wallet.security.SecurityInitializer;
+import de.schildbach.wallet.service.InactivityReminder;
 import de.schildbach.wallet.service.PeriodicAlarmTier;
 import de.schildbach.wallet.service.BlockchainStateDataProvider;
 import de.schildbach.wallet.service.TxDisplayCacheService;
@@ -397,8 +398,10 @@ public class WalletApplication extends MultiDexApplication
      * transaction-stripped key backup. The public {@link #walletFileExists()}
      * predicate intentionally keeps its old, strict meaning because onboarding
      * uses it to distinguish an already-loaded primary wallet from first run.
+     * Background work checks this one: a cold start with only the key backup
+     * still recovers the wallet (see the startup load).
      */
-    private boolean recoverableWalletFileExists() {
+    public boolean recoverableWalletFileExists() {
         return walletFileExists() || getFileStreamPath(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF).exists();
     }
 
@@ -775,7 +778,7 @@ public class WalletApplication extends MultiDexApplication
 
     /**
      * For a background component that changes the wallet it got from
-     * {@link #getWallet()} (BootstrapReceiver's upgrade and maintenance on
+     * {@link #getWallet()} (PackageReplacedReceiver's upgrade and maintenance on
      * MY_PACKAGE_REPLACED): wait until a background start's load has finished
      * completely, main-thread initialisation included, as it would have before
      * any receiver ran in a synchronous start. A no-op otherwise.
@@ -1169,6 +1172,7 @@ public class WalletApplication extends MultiDexApplication
         }
         // The deferred-load wait is the callers' (installWallet, setWallet),
         // before they take walletInstallLock: never while holding it.
+
         EnumSet<AuthenticationKeyChain.KeyChainType> authKeyTypes = EnumSet.of(
                 AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER,
                 AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING,
@@ -1190,6 +1194,11 @@ public class WalletApplication extends MultiDexApplication
         // what the previous wallet file held durably is not in this one.
         reportWalletChangedToContactPayments();
         walletStateFlow.setValue(newWallet);
+        // A reminder posted for the replaced wallet names its funds: remove it.
+        // Under the reminder's posting lock, after the new wallet is published,
+        // so one being prepared for the old wallet either posts first and is
+        // removed here, or sees the new wallet and is not posted.
+        InactivityReminder.cancel(this);
         // TODO: move to a wallet creation class
         if (!wallet.hasKeyChain(Constants.BIP44_PATH)) {
             wallet.addKeyChain(Constants.BIP44_PATH);
@@ -1541,7 +1550,7 @@ public class WalletApplication extends MultiDexApplication
         }, "wallet-startup-maintenance").start();
 
         // setup WalletBalanceObserver
-        walletBalanceObserver = new WalletBalanceObserver(wallet, walletUIConfig);
+        walletBalanceObserver = new WalletBalanceObserver(wallet, walletUIConfig, dashPayConfig);
 
         // Parity-free cutover (QA directive): make the SDK L1-primary from the FIRST
         // launch for EVERY wallet — UPGRADES included, not just fresh create/restore
@@ -1705,6 +1714,12 @@ public class WalletApplication extends MultiDexApplication
      */
     public boolean hasWallet() {
         return walletStateFlow.getValue() != null;
+    }
+
+    /** The loaded wallet as {@link #hasWallet} sees it: never waits for a deferred load. */
+    @Nullable
+    public Wallet loadedWalletOrNull() {
+        return walletStateFlow.getValue();
     }
 
     private final MutableStateFlow<Wallet> walletStateFlow = StateFlowKt.MutableStateFlow(null);
@@ -2643,9 +2658,9 @@ public class WalletApplication extends MultiDexApplication
      * Android 12+ background foreground-service-start restrictions, so a
      * {@code startForegroundService} from here is allowed; the service
      * promotes itself immediately via the {@code START_AS_FOREGROUND_EXTRA}
-     * promise it already honors. If the platform refuses anyway, fall back to
-     * the same delayed AlarmManager start that the boot path uses on
-     * Android 15+, where an alarm-driven start is exempt.
+     * promise it already honors. If the platform refuses anyway, the caller
+     * ({@code PackageReplacedReceiver}) falls back to a delayed AlarmManager
+     * start through {@code DelayedServiceStartReceiver}.
      *
      * @return true when the start was issued directly, false when it was
      *         deferred to the alarm.

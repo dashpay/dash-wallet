@@ -32,6 +32,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Coin
 import org.dash.wallet.common.Configuration
@@ -42,7 +43,12 @@ import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.toFormattedString
+import org.bitcoinj.utils.ContextPropagatingThreadFactory
+import org.slf4j.LoggerFactory
+import java.util.concurrent.Executor
+import java.util.concurrent.Executors
 import javax.inject.Inject
+import de.schildbach.wallet.service.InactivityReminder
 import de.schildbach.wallet.util.toDashjFiat
 import de.schildbach.wallet.util.toFormattedString
 
@@ -60,6 +66,14 @@ class SecurityViewModel @Inject constructor(
     dashPayProfileDao: DashPayProfileDao,
     private val platformSyncService: PlatformSyncService,
 ): BaseProfileViewModel(blockchainIdentityConfig, dashPayProfileDao) {
+    companion object {
+        private val log = LoggerFactory.getLogger(SecurityViewModel::class.java)
+
+        /** Process-wide and single-threaded: Autohide writes land in the order they were made. */
+        private val autohideWrites: Executor =
+            Executors.newSingleThreadExecutor(ContextPropagatingThreadFactory("autohide-balance-write"))
+    }
+
     private var selectedExchangeRate: ExchangeRate? = null
 
     val needPassphraseBackUp
@@ -130,8 +144,25 @@ class SecurityViewModel @Inject constructor(
     }
 
     fun setHideBalanceOnLaunch(hide: Boolean) {
+        // One queue for every Autohide write, in the order the user chose: a later choice is
+        // never overwritten by an earlier one still waiting for the reminder's lock. Not tied
+        // to this screen, so leaving Settings doesn't stop a write half done.
+        autohideWrites.execute {
+            try {
+                if (hide) {
+                    // A posted reminder may show the amount: removed before the setting is
+                    // saved, under the posting lock, so none with an amount posts after it.
+                    InactivityReminder.cancelThen(walletApplication) {
+                        runBlocking { walletUIConfig.set(WalletUIConfig.AUTO_HIDE_BALANCE, true) }
+                    }
+                } else {
+                    runBlocking { walletUIConfig.set(WalletUIConfig.AUTO_HIDE_BALANCE, false) }
+                }
+            } catch (e: Exception) {
+                log.warn("could not save the autohide balance setting", e)
+            }
+        }
         viewModelScope.launch {
-            walletUIConfig.set(WalletUIConfig.AUTO_HIDE_BALANCE, hide)
             analytics.logEvent(
                 if (hide) {
                     AnalyticsConstants.Security.AUTOHIDE_BALANCE_ON

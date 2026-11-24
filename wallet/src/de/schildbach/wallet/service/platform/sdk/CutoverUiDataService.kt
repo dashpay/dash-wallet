@@ -2479,6 +2479,18 @@ class CutoverUiDataService internal constructor(
      */
     private val rescanRecentlyArmed: () -> Boolean = { false },
     /**
+     * The app wallet a balance read from SDK wallet `walletIdHex` is stored as
+     * ([SdkWalletBinder.appWalletIdFor]); null while that is not known, and the balance is
+     * then not stored. Defaults to the SDK id itself for the fake-fed tests.
+     */
+    private val appWalletIdFor: (String) -> String? = { it },
+    /**
+     * The loaded app wallet's id ([SdkWalletBinder.installedWalletId]): the stored
+     * last-known balance is read only as this wallet's. Default null for the fake-fed tests,
+     * which stub the read itself.
+     */
+    private val installedWalletId: () -> String? = { null },
+    /**
      * How many DashPay contact ACCOUNT BUILDS the SDK still has queued for
      * the given wallet — the receive-side DIP-15 accounts whose addresses are
      * not in the watched script set until they are registered, so any payment
@@ -2667,6 +2679,8 @@ class CutoverUiDataService internal constructor(
         retryBind = { sdkBindRetryService.maybeRetry("cutover-ui bound-wallet wait") },
         walletBindConfirmations = sdkWalletBinder.walletBindConfirmations,
         rescanRecentlyArmed = { sdkService.spvRescanArmedWithin(RESCAN_ARM_PERSIST_HOLD_MS) },
+        appWalletIdFor = sdkWalletBinder::appWalletIdFor,
+        installedWalletId = sdkWalletBinder::installedWalletId,
         deferredContactBuildCount = { walletIdHex -> sdkService.dashPayPendingAccountBuilds(walletIdHex) },
         accountBuildDrainState = { walletIdHex -> sdkService.dashPayAccountBuildDrainState(walletIdHex) },
         dashPayBackfillStatus = { dashPayBackfillGate.readBackfillStatus() },
@@ -4496,7 +4510,8 @@ class CutoverUiDataService internal constructor(
         // degrades to the pre-fix behaviour (the live figure) rather than
         // freezing the header on a value we could not read.
         _lastKnownTotalBalance.value = runCatching {
-            walletUIConfig.get(WalletUIConfig.LAST_TOTAL_BALANCE)?.let(Coin::valueOf)
+            walletUIConfig.getLastTotalBalance(installedWalletId())
+                ?.let(Coin::valueOf)
         }.onFailure { log.warn("failed to read LAST_TOTAL_BALANCE", it) }.getOrNull()
 
         // BEFORE the first figure is published: whether the wallet still has
@@ -4527,7 +4542,7 @@ class CutoverUiDataService internal constructor(
             source.observeTotalDuffs(walletIdHex)
                 .distinctUntilChanged()
                 .catch { e -> log.error("SDK balance flow failed; balance override frozen", e) }
-                .collect { duffs -> updateSdkBalance(duffs) }
+                .collect { duffs -> updateSdkBalance(walletIdHex, duffs) }
         }
         launch {
             ticker().collect { refreshDeferredContactBuilds(walletIdHex) }
@@ -4633,7 +4648,7 @@ class CutoverUiDataService internal constructor(
     private suspend fun refreshNativeSplit(walletIdHex: String) {
         val split = source.currentBalanceSplitDuffs(walletIdHex)
         _sdkConfirmedBalance.value = Coin.valueOf(split.confirmed)
-        updateSdkBalance(split.total)
+        updateSdkBalance(walletIdHex, split.total)
         // The max-sendable figure rides the same cadence (initial seed, tx
         // events, ticker). Contained separately: a failed/unavailable
         // account-level read must not undo the split above, and it drops
@@ -4693,7 +4708,7 @@ class CutoverUiDataService internal constructor(
         }
     }
 
-    private suspend fun updateSdkBalance(duffs: Long) {
+    private suspend fun updateSdkBalance(walletIdHex: String, duffs: Long) {
         val previous = _sdkTotalBalance.value
         val synced = _l1Synced.value
         val backfillStatus = dashPayBackfillStatus()
@@ -4810,7 +4825,18 @@ class CutoverUiDataService internal constructor(
             )
         }
         if (!persist) return
-        runCatching { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, duffs) }
+        // Stored as the app wallet this SDK wallet was bound from. Unknown (not bound in this
+        // process yet, or the app wallet replaced since): not stored this tick.
+        val owner = appWalletIdFor(walletIdHex)
+        if (owner == null) {
+            // EDGE LOG, like the persisted line below: once per stretch without an owner.
+            if (lastPersistedDuffs != UNPERSISTED_NO_OWNER) {
+                lastPersistedDuffs = UNPERSISTED_NO_OWNER
+                log.info("SDK balance not persisted: the binder has not confirmed its app wallet")
+            }
+            return
+        }
+        runCatching { walletUIConfig.setLastTotalBalance(duffs, owner) }
             .onSuccess {
                 // EDGE LOG: once per distinct value written, not per tick. The
                 // publication line above is gated on the DISPLAYED figure
@@ -5863,6 +5889,9 @@ class CutoverUiDataService internal constructor(
          * launch seed; under-holding re-opens the partial-persist window.
          */
         internal const val RESCAN_ARM_PERSIST_HOLD_MS = 5 * 60_000L
+
+        /** [lastPersistedDuffs] while a figure was withheld for want of an owner: never a balance. */
+        private const val UNPERSISTED_NO_OWNER = -1L
 
         /**
          * One retry's grace for the TXO mirror to persist a just-detected tx

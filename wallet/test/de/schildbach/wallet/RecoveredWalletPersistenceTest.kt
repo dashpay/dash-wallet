@@ -1,6 +1,7 @@
 package de.schildbach.wallet
 
 import android.app.Application
+import android.app.NotificationManager
 import android.app.Activity
 import android.content.Intent
 import de.schildbach.wallet.ui.OnboardingActivity
@@ -1030,6 +1031,7 @@ class RecoveredWalletPersistenceTest {
         every { writingApp.filesDir } returns directory.root
         every { writingApp.noBackupFilesDir } returns noBackupDir
         every { writingApp.getFileStreamPath(Constants.Files.WALLET_KEY_BACKUP_PROTOBUF) } returns keyBackup
+        every { writingApp.getSystemService(NotificationManager::class.java) } returns notificationManager
         every { writingApp.openFileOutput(any(), any()) } answers {
             java.io.FileOutputStream(File(directory.root, firstArg<String>()))
         }
@@ -1141,6 +1143,31 @@ class RecoveredWalletPersistenceTest {
         val setupApp = backupWritingApp()
         every { setupApp.finalizeInitialization() } returns Unit
         return setupApp
+    }
+
+    private val notificationManager = mockk<NotificationManager>(relaxed = true)
+
+    /**
+     * A reminder posted for the wallet an install replaces names that wallet's funds, so the
+     * install removes it once the new wallet is published; a dropped install leaves it alone.
+     */
+    @Test
+    fun `installing a wallet removes the inactivity reminder of the wallet it replaces`() {
+        ReflectionHelpers.setField(app, "wallet", null)
+        ReflectionHelpers.setField(app, "committedWallet", null)
+        val setupApp = setupCapableApp()
+
+        val replacement = replacementWallet()
+        assertEquals(WalletApplication.WalletInstallResult.INSTALLED, setupApp.installWallet(replacement, false))
+        assertSame(replacement, setupApp.loadedWalletOrNull())
+        verify(exactly = 1) { notificationManager.cancel(Constants.NOTIFICATION_ID_INACTIVITY) }
+
+        setupApp.saveWalletAndFinalizeInitialization()
+        assertEquals(
+            WalletApplication.WalletInstallResult.ALREADY_INSTALLED,
+            setupApp.installWallet(replacementWallet(), false)
+        )
+        verify(exactly = 1) { notificationManager.cancel(Constants.NOTIFICATION_ID_INACTIVITY) }
     }
 
     private fun readWallet(file: File): Wallet = file.inputStream().use { WalletProtobufSerializer().readWallet(it) }

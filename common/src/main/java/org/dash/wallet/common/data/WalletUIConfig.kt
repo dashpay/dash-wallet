@@ -21,6 +21,7 @@ import android.content.Context
 import androidx.datastore.core.DataMigration
 import androidx.datastore.preferences.SharedPreferencesMigration
 import androidx.datastore.preferences.core.*
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
@@ -65,6 +66,12 @@ open class WalletUIConfig @Inject constructor(
         val SELECTED_CURRENCY = stringPreferencesKey("exchange_currency")
         val EXCHANGE_CURRENCY_DETECTED = booleanPreferencesKey("exchange_currency_detected")
         val LAST_TOTAL_BALANCE = longPreferencesKey("last_total_balance")
+        /**
+         * The id of the wallet whose balance [LAST_TOTAL_BALANCE] is, written with it in one
+         * transaction ([setLastTotalBalance]). Absent on a value an earlier version stored,
+         * which is then not read ([lastKnownBalance]).
+         */
+        val LAST_TOTAL_BALANCE_WALLET = stringPreferencesKey("last_total_balance_wallet")
         val CUSTOMIZED_SHORTCUTS = stringPreferencesKey("customized_shortcuts")
         val IS_SHORTCUT_INFO_HIDDEN = booleanPreferencesKey("is_shortcut_info_hidden")
     }
@@ -76,6 +83,21 @@ open class WalletUIConfig @Inject constructor(
     fun getExchangeCurrencyCodeBlocking(): String {
         return runBlocking { getExchangeCurrencyCode() }
     }
+
+    /** Stores [duffs] as wallet [walletId]'s last-known total balance, value and id together. */
+    open suspend fun setLastTotalBalance(duffs: Long, walletId: String) {
+        editPreferences { prefs ->
+            prefs[LAST_TOTAL_BALANCE] = duffs
+            prefs[LAST_TOTAL_BALANCE_WALLET] = walletId
+        }
+    }
+
+    /**
+     * Wallet [walletId]'s last-known total balance, or null when there is none, it is not
+     * stored as that wallet's, or the store cannot be read.
+     */
+    open suspend fun getLastTotalBalance(walletId: String?): Long? =
+        data.first().lastKnownBalance(LAST_TOTAL_BALANCE, LAST_TOTAL_BALANCE_WALLET, walletId)
 }
 
 class ExchangeCurrencyMigration(

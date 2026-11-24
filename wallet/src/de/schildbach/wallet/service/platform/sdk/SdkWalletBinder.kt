@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.service.platform.sdk
 
+import de.schildbach.wallet.balanceOwnerId
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.IdentityCreationState
@@ -680,11 +681,26 @@ class SdkWalletBinder internal constructor(
      * evidence" — see [isBoundWalletStale]).
      */
     private fun currentWalletFingerprint(): String? = try {
-        walletData.wallet?.watchingKey?.pubKeyHash?.joinToString("") { "%02x".format(it) }
+        walletData.wallet?.balanceOwnerId()
     } catch (t: Throwable) {
         log.warn("failed to fingerprint the app wallet; keeping the current binder state", t)
         null
     }
+
+    /**
+     * The fingerprint of the app wallet SDK wallet [walletIdHex] was bound from, while that
+     * app wallet is still the loaded one; null when this process has not bound it, or the
+     * app wallet has been replaced since. What a balance read from that SDK wallet is
+     * stored as ([de.schildbach.wallet.balanceOwnerId]): null means do not store it.
+     */
+    fun appWalletIdFor(walletIdHex: String): String? {
+        val fingerprint = boundWalletFingerprint ?: return null
+        if (!walletIdHex.equals(boundWalletIdHex, ignoreCase = true)) return null
+        return fingerprint.takeIf { it == currentWalletFingerprint() }
+    }
+
+    /** The loaded app wallet's fingerprint ([de.schildbach.wallet.balanceOwnerId]), or null. */
+    fun installedWalletId(): String? = currentWalletFingerprint()
 
     /**
      * Per-trigger latch revalidation (caller holds [mutex]): if the app

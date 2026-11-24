@@ -395,11 +395,11 @@ class ShieldedBalanceServiceTest {
             coEvery { get(DashPayConfig.USE_KOTLIN_SDK_SHIELDED) } returns enabled
         }
         coEvery { get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) } returns l1ShadowEnabled
-        coEvery { getLastShieldedBalanceDuffs() } returns lastBalanceDuffs
+        coEvery { getLastShieldedBalanceDuffs(any()) } returns lastBalanceDuffs
         coEvery { markShieldedSpendReconcilePending(any()) } just Runs
         coEvery { shieldedSpendReconcilePendingSinceMs() } returns null
         coEvery { clearShieldedSpendReconcilePending() } just Runs
-        coEvery { setLastShieldedBalanceDuffsUnlessReconciling(any()) } returns true
+        coEvery { setLastShieldedBalanceDuffsUnlessReconciling(any(), any()) } returns true
         coEvery { getPreservingErrors(DashPayConfig.SHIELD_LOCKS_PLATFORM_CONSUMED) } answers {
             consumed.readFailure?.let { throw it }
             consumed.value
@@ -1898,7 +1898,7 @@ class ShieldedBalanceServiceTest {
     @Test
     fun lastKnownShieldedBalance_configReadFailure_isNull() = runBlocking {
         val cfg: DashPayConfig = mockk {
-            coEvery { getLastShieldedBalanceDuffs() } throws IllegalStateException("datastore down")
+            coEvery { getLastShieldedBalanceDuffs(any()) } throws IllegalStateException("datastore down")
         }
         val service = ShieldedBalanceServiceImpl(
             source = readySource(),
@@ -1957,7 +1957,7 @@ class ShieldedBalanceServiceTest {
     fun afterRestart_aPendingReconcile_keepsTheFirstReadyStale_andUnpersisted() = runBlocking {
         val cfg = config(true)
         coEvery { cfg.shieldedSpendReconcilePendingSinceMs() } returns 0L
-        coEvery { cfg.setLastShieldedBalanceDuffsUnlessReconciling(any()) } returns true
+        coEvery { cfg.setLastShieldedBalanceDuffsUnlessReconciling(any(), any()) } returns true
         val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
         try {
             // a fresh service = a new process: the in-memory flag starts false
@@ -1980,7 +1980,7 @@ class ShieldedBalanceServiceTest {
                 while (service.shieldedSyncStatus.value != ShieldedSyncStatus.READY) delay(50)
             }
             assertTrue("first READY after restart is still reconciling", service.shieldedBalanceMaybeStale.value)
-            coVerify(exactly = 0) { cfg.setLastShieldedBalanceDuffsUnlessReconciling(any()) }
+            coVerify(exactly = 0) { cfg.setLastShieldedBalanceDuffsUnlessReconciling(any(), any()) }
             coVerify(exactly = 0) { cfg.clearShieldedSpendReconcilePending() }
         } finally {
             sweepScope.cancel()
@@ -2103,6 +2103,81 @@ class ShieldedBalanceServiceTest {
         }
     }
 
+    /** Brings a service up to READY with [appWalletIdFor]; returns its config. */
+    private fun readyWithOwner(
+        sweepScope: CoroutineScope,
+        bindConfirmations: Flow<Long> = flowOf(0L),
+        appWalletIdFor: (String) -> String?
+    ) = runBlocking {
+        val cfg = config(true)
+        val source = readySource()
+        val service = ShieldedBalanceServiceImpl(
+            source = source,
+            dashPayConfig = cfg,
+            shieldedDbPath = { dbPath },
+            displayHrp = { hrp },
+            sweepScope = sweepScope,
+            fundingSelection = de.schildbach.wallet.payments.FundingSelectionLock(),
+            appWalletIdFor = appWalletIdFor,
+            bindConfirmations = bindConfirmations
+        )
+        assertTrue(service.ensureShieldedReady())
+        withTimeout(5_000) { while (source.passResults.subscriptionCount.value == 0) delay(10) }
+        source.passResults.emit(passOk())
+        withTimeout(10_000) {
+            while (service.shieldedSyncStatus.value != ShieldedSyncStatus.READY) delay(50)
+        }
+        cfg
+    }
+
+    /** The READY balance is stored as the app wallet the ready SDK wallet was bound from. */
+    @Test
+    fun theReadyBalance_isStoredAsItsAppWallet() {
+        val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            val cfg = readyWithOwner(sweepScope) { hex -> "app-wallet".takeIf { hex.equals(walletIdHex, ignoreCase = true) } }
+            coVerify(timeout = 5_000) { cfg.setLastShieldedBalanceDuffsUnlessReconciling(any(), "app-wallet") }
+        } finally {
+            sweepScope.cancel()
+        }
+    }
+
+    /**
+     * The SDK can reach READY on a wallet it loaded from disk before this process's bind: the
+     * withheld balance is stored when the binder confirms the app wallet, with nothing else
+     * changing.
+     */
+    @Test
+    fun aWithheldReadyBalance_isStored_whenTheBindIsConfirmed() = runBlocking {
+        val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            val confirmations = MutableStateFlow(0L)
+            var owner: String? = null
+            val cfg = readyWithOwner(sweepScope, confirmations) { owner }
+            delay(300)
+            coVerify(exactly = 0) { cfg.setLastShieldedBalanceDuffsUnlessReconciling(any(), any()) }
+
+            owner = "app-wallet"
+            confirmations.value = 1L
+            coVerify(timeout = 5_000) { cfg.setLastShieldedBalanceDuffsUnlessReconciling(any(), "app-wallet") }
+        } finally {
+            sweepScope.cancel()
+        }
+    }
+
+    /** Not stored while the binder cannot confirm the app wallet: it could be another wallet's. */
+    @Test
+    fun theReadyBalance_isNotStored_withoutAConfirmedAppWallet() = runBlocking {
+        val sweepScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        try {
+            val cfg = readyWithOwner(sweepScope) { null }
+            delay(300)
+            coVerify(exactly = 0) { cfg.setLastShieldedBalanceDuffsUnlessReconciling(any(), any()) }
+        } finally {
+            sweepScope.cancel()
+        }
+    }
+
     /**
      * Settlement of an earlier reconciliation pauses while clearing its durable
      * marker; a new spend arrives in that window. The older settlement must not
@@ -2115,7 +2190,7 @@ class ShieldedBalanceServiceTest {
         val cfg = config(true)
         // the earlier reconciliation (restored at bring-up, as after a restart)
         coEvery { cfg.shieldedSpendReconcilePendingSinceMs() } returns 0L
-        coEvery { cfg.setLastShieldedBalanceDuffsUnlessReconciling(any()) } returns true
+        coEvery { cfg.setLastShieldedBalanceDuffsUnlessReconciling(any(), any()) } returns true
         val clearEntered = CompletableDeferred<Unit>()
         val clearGate = CompletableDeferred<Unit>()
         coEvery { cfg.clearShieldedSpendReconcilePending() } coAnswers {
