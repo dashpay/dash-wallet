@@ -18,17 +18,22 @@ package de.schildbach.wallet.service
 
 import android.app.Application
 import android.app.Notification
+import android.content.BroadcastReceiver
 import android.content.ComponentCallbacks2
 import android.content.Intent
 import android.os.HandlerThread
+import de.schildbach.wallet.AppForegroundMonitor
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.service.BlockchainServiceImpl.Companion.ReplayRestartAlarmAction
 import de.schildbach.wallet.service.BlockchainServiceImpl.Companion.decideOnReplayRestartAlarm
+import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
+import de.schildbach.wallet.service.platform.sdk.ShadowSyncProgress
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
 import io.mockk.verify
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.dash.wallet.common.data.entity.BlockchainState
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -37,6 +42,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import org.robolectric.util.ReflectionHelpers
 
@@ -62,6 +68,7 @@ class ServiceSelfStopTest {
 
     @After
     fun tearDown() {
+        AppForegroundMonitor.noteBackground()
         ReflectionHelpers.getField<Job>(service, "serviceJob").cancel()
         ReflectionHelpers.getField<HandlerThread>(service, "notificationHandlerThread").quitSafely()
     }
@@ -83,6 +90,39 @@ class ServiceSelfStopTest {
         service.recordStartCommand(lastIssuedStartId)
         service.onIdleVerdict()
         verify(exactly = 1) { service.stopSelfResult(3) }
+        verify(exactly = 0) { service.stopSelf() }
+    }
+
+    @Test
+    fun `the minute tick does not stop while the app is open, and stops on the first quiet tick after it closes`() {
+        // The SDK path with an engine that reports no activity: every sample is zero.
+        val quietEngine = mockk<L1ShadowSyncService>(relaxed = true)
+        every { quietEngine.progress } returns MutableStateFlow(mockk<ShadowSyncProgress>(relaxed = true))
+        every { quietEngine.isEngineRunning() } returns true
+        every { quietEngine.engineStartingSinceMs() } returns 0L
+        every { quietEngine.durableSyncedHeight() } returns 0L
+        every { quietEngine.engineCommittedHeight() } returns 0L
+        service.l1ShadowSyncService = quietEngine
+        ReflectionHelpers.setField(service, "dashjHeldByCutover", true)
+        // The receiver was created by the instance the spy copies, and would
+        // call that instance's stop. Point it at the spy, whose stop is stubbed.
+        val tickReceiver = ReflectionHelpers.getField<BroadcastReceiver>(service, "tickReceiver")
+        ReflectionHelpers.setField(tickReceiver, "this\$0", service)
+        val tick = { tickReceiver.onReceive(RuntimeEnvironment.getApplication(), Intent(Intent.ACTION_TIME_TICK)) }
+        deliverStart()
+
+        AppForegroundMonitor.noteForeground()
+        tick() // takes the reference snapshot, no sample yet
+        tick()
+        tick() // two quiet samples: the idle threshold, with the app open
+        verify(exactly = 0) { service.stopSelfResult(any()) }
+
+        // The last activity stops. One background sample alone is below the
+        // threshold, so this tick stops only if the samples taken while the
+        // app was open were kept.
+        AppForegroundMonitor.noteBackground()
+        tick()
+        verify(exactly = 1) { service.stopSelfResult(1) }
         verify(exactly = 0) { service.stopSelf() }
     }
 
