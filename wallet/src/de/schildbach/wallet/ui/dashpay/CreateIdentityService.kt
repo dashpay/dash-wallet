@@ -780,7 +780,7 @@ class CreateIdentityService : LifecycleService() {
                 val firstIdentityKey = platformRepo.getBlockchainIdentityKey(0, encryptionKey)!!
                 platformRepo.recoverIdentityAsync(blockchainIdentity, firstIdentityKey.pubKeyHash)
                 if (assetLockTransaction != null) {
-                    topUpRepository.topUpIdentity(assetLockTransaction, encryptionKey)
+                    topUpRepository.topUpIdentity(assetLockTransaction, encryptionKey, blockchainIdentity)
                 }
             } else {
                 platformRepo.registerIdentity(blockchainIdentity, encryptionKey)

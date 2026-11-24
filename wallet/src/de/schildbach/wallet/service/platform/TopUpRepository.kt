@@ -115,10 +115,16 @@ interface TopUpRepository {
     /** waits for IS or CL */
     suspend fun waitForTransaction(confidence: TransactionConfidence)
 
-    /** top up identity and save topup state to the db */
+    /**
+     * top up identity and save topup state to the db
+     *
+     * @param blockchainIdentity the identity to credit; defaults to [IdentityRepository.blockchainIdentity],
+     * which is unset until [IdentityRepository.init]
+     */
     suspend fun topUpIdentity(
         topupAssetLockTransaction: AssetLockTransaction,
-        aesKeyParameter: KeyParameter?
+        aesKeyParameter: KeyParameter?,
+        blockchainIdentity: BlockchainIdentity? = null
     )
 
     suspend fun checkTopUps(aesKeyParameter: KeyParameter?)
@@ -382,10 +388,10 @@ class TopUpRepositoryImpl @Inject constructor(
         }
     }
 
-    private suspend fun addTopUp(txId: Sha256Hash): TopUp {
+    private suspend fun addTopUp(txId: Sha256Hash, blockchainIdentity: BlockchainIdentity): TopUp {
         val topUp = TopUp(
             txId,
-            identityRepository.blockchainIdentity!!.uniqueIdString
+            blockchainIdentity.uniqueIdString
         )
         topUpsDao.insert(topUp)
         return topUp
@@ -393,14 +399,18 @@ class TopUpRepositoryImpl @Inject constructor(
 
     override suspend fun topUpIdentity(
         topUpTx: AssetLockTransaction,
-        aesKeyParameter: KeyParameter?
+        aesKeyParameter: KeyParameter?,
+        blockchainIdentity: BlockchainIdentity?
     ) {
+        val identity = blockchainIdentity ?: checkNotNull(identityRepository.blockchainIdentity) {
+            "No identity to top up with ${topUpTx.txId}"
+        }
         // Funding runs outside SendCoinsTaskRunner, so it needs the same barrier: after a restart
         // the input locks of an uncertain payment live only in memory until they are restored.
         pendingPaymentVerifier.awaitRestored()
         val topUp = topUpsDao.getByTxId(
             topUpTx.txId
-        ) ?: addTopUp(topUpTx.txId)
+        ) ?: addTopUp(topUpTx.txId, identity)
         Context.propagate(walletDataProvider.wallet!!.context)
         val confidence = topUpTx.getConfidence(walletDataProvider.wallet!!.context)
         log.info("topup tx confidence: {}", confidence)
@@ -424,7 +434,7 @@ class TopUpRepositoryImpl @Inject constructor(
         }
         log.info("topup tx sent: {}; tx = {}", status, topUpTx.txId)
         try {
-            identityRepository.blockchainIdentity!!.topUp(
+            identity.topUp(
                 topUpTx,
                 aesKeyParameter,
                 useISLock = true,
