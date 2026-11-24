@@ -61,7 +61,6 @@ import java.io.FileOutputStream
 import java.io.FileWriter
 import java.io.IOException
 import java.io.OutputStreamWriter
-import java.io.Writer
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -97,6 +96,113 @@ internal fun shouldAttachParityLog(
     hasParityHistory: Boolean,
     breakdown: ReportParityBreakdown
 ): Boolean = diagnosticEnabled || hasParityHistory || breakdown.applicable
+
+/**
+ * Runs one section of the support report, and keeps a failure inside it.
+ *
+ * The report is what support asks for when something is already wrong, so no
+ * section may take it down. The sections used to catch only [IOException]:
+ * anything else (a runtime exception from the dashj wallet walk in the
+ * application info, a [FileProvider] refusal, an [OutOfMemoryError] on a large
+ * wallet) escaped the dialog's coroutine and crashed the app, which relaunched
+ * to the home screen with no chooser and no report.
+ *
+ * On failure the section's result is [onFailure] of the throwable, so it can
+ * say in the report text that it is missing. [OutOfMemoryError] is kept too:
+ * the section that ran out is dropped, and the rest of the report is small.
+ * Recovery from an exhausted heap is best effort: [onFailure] still allocates,
+ * so the OOM path does no logging of its own (Logback has run out of memory
+ * here before, see WalletApplication.initLogging).
+ * Cancellation is rethrown. Pure — host-testable.
+ *
+ * The log line names the section and the exception's class only, never the
+ * throwable: wallet.log is itself attached to the report, and an exception's
+ * message or cause can carry paths, addresses or amounts.
+ */
+internal inline fun <T> reportSection(name: String, onFailure: (Throwable) -> T, block: () -> T): T =
+    try {
+        block()
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        reportSectionLog.warn(
+            "support report: the {} section failed ({}); the report goes on without it",
+            name,
+            e.javaClass.simpleName
+        )
+        onFailure(e)
+    } catch (e: OutOfMemoryError) {
+        onFailure(e)
+    }
+
+internal val reportSectionLog = LoggerFactory.getLogger("ContactSupportReport")
+
+/**
+ * The line a failed section leaves in the report text: the section and the
+ * exception's class, never its message (messages can carry paths, addresses
+ * or amounts).
+ */
+internal fun reportSectionFailureLine(name: String, failure: Throwable): String =
+    reportSectionFailureLine(name, failure.javaClass.simpleName)
+
+internal fun reportSectionFailureLine(name: String, failureClass: String): String =
+    "\n[$name not collected: $failureClass]\n"
+
+/**
+ * The report sent when generating the full one failed outright: the user's
+ * description, why the rest is missing, and nothing attached. A report that
+ * says "generation failed" still reaches support; no report at all does not.
+ */
+internal fun fallbackReportText(userIssueDescription: String, failure: Throwable): String =
+    fallbackReportText(userIssueDescription, failure.javaClass.simpleName)
+
+internal fun fallbackReportText(userIssueDescription: String, failureClass: String): String =
+    userIssueDescription + "\n\n\n=== report generation failed ===\n\n" +
+        reportSectionFailureLine("report", failureClass)
+
+/**
+ * Copies the LAST [maxBytes] of [source] into [dest] (whole file when it
+ * fits). Returns [dest], or null when the copy came out empty. A read or
+ * write failure is thrown (no partial [dest] is left) so the caller's
+ * report section can say the file is missing.
+ */
+internal fun copyTail(source: File, dest: File, maxBytes: Long): File? = deletingOnFailure(dest) {
+    FileInputStream(source).use { fis ->
+        val length = source.length()
+        if (length > maxBytes) {
+            var toSkip = length - maxBytes
+            while (toSkip > 0) {
+                val skipped = fis.skip(toSkip)
+                if (skipped <= 0) break
+                toSkip -= skipped
+            }
+        }
+        FileOutputStream(dest).use { fos -> fis.copyTo(fos) }
+    }
+    if (dest.length() > 0) dest else null
+}
+
+/**
+ * Gzips [source] into [dest] and returns [dest] once both streams have
+ * closed — the gzip trailer is written on close, so only then is the
+ * archive complete. Throws on failure, leaving no partial [dest] behind.
+ */
+internal fun gzipTo(source: File, dest: File): File = deletingOnFailure(dest) {
+    FileInputStream(source).use { fis ->
+        GZIPOutputStream(FileOutputStream(dest)).use { gzipOS -> fis.copyTo(gzipOS) }
+    }
+    reportSectionLog.info("{} compressed to {}", source.name, dest.name)
+    dest
+}
+
+/** Runs [block]; on any failure deletes the partly written [dest] and rethrows. */
+internal inline fun <T> deletingOnFailure(dest: File, block: () -> T): T =
+    try {
+        block()
+    } catch (t: Throwable) {
+        runCatching { dest.delete() }
+        throw t
+    }
 
 @HiltViewModel
 class ContactSupportViewModel @Inject constructor(
@@ -218,6 +324,45 @@ class ContactSupportViewModel @Inject constructor(
         )
     }
 
+    /**
+     * [createReport], or — should it fail outright despite the per-section
+     * guards — [fallbackReportText] with no attachments. Never throws except
+     * cancellation, so the dialog always reaches the chooser.
+     *
+     * The out-of-memory fallback is built before any collector runs, so that
+     * path returns it without allocating (building it in the catch would copy
+     * the description on an exhausted heap). Still best effort: the chooser
+     * itself needs memory.
+     */
+    suspend fun createReportOrFallback(
+        userIssueDescription: String,
+        collectDeviceInfo: Boolean,
+        collectInstalledPackages: Boolean,
+        collectApplicationLog: Boolean,
+        collectWalletDump: Boolean
+    ): Pair<String, ArrayList<Uri>> {
+        val outOfMemoryFallback =
+            fallbackReportText(userIssueDescription, OutOfMemoryError::class.java.simpleName) to ArrayList<Uri>()
+        return reportSection(
+            "report",
+            onFailure = { e ->
+                if (e is OutOfMemoryError) {
+                    outOfMemoryFallback
+                } else {
+                    fallbackReportText(userIssueDescription, e) to ArrayList()
+                }
+            }
+        ) {
+            createReport(
+                userIssueDescription,
+                collectDeviceInfo,
+                collectInstalledPackages,
+                collectApplicationLog,
+                collectWalletDump
+            )
+        }
+    }
+
     private suspend fun generateReport(
         userIssueDescription: String,
         collectDeviceInfo: Boolean,
@@ -234,56 +379,50 @@ class ContactSupportViewModel @Inject constructor(
         val watch = Stopwatch.createStarted()
         text.append(userIssueDescription).append('\n')
 
-        try {
+        // Every section runs under reportSection: a failure costs that section,
+        // never the report (see its KDoc).
+        val noteFailure = { name: String -> { e: Throwable -> text.append(reportSectionFailureLine(name, e)); Unit } }
+        val ignoreFailure = { _: Throwable -> }
+
+        reportSection("contextual data", noteFailure("contextual data")) {
             _status.value = ReportGenerationStatus.ContextualInfo
             val contextualData: CharSequence? = collectContextualData()
             if (contextualData != null) {
                 text.append("\n\n\n=== contextual data ===\n\n")
                 text.append(contextualData)
             }
-        } catch (x: IOException) {
-            text.append(x.toString()).append('\n')
         }
 
-        try {
+        reportSection("application info", noteFailure("application info")) {
             _status.value = ReportGenerationStatus.ApplicationInfo
             text.append("\n\n\n=== application info ===\n\n")
             val applicationInfo: CharSequence = collectApplicationInfo()
             text.append(applicationInfo)
-        } catch (x: IOException) {
-            text.append(x.toString()).append('\n')
         }
 
-        try {
+        reportSection("stack trace", noteFailure("stack trace")) {
             _status.value = ReportGenerationStatus.StackTrace
             val stackTrace: CharSequence? = collectStackTrace()
             if (stackTrace != null) {
                 text.append("\n\n\n=== stack trace ===\n\n")
                 text.append(stackTrace)
             }
-        } catch (x: IOException) {
-            text.append("\n\n\n=== stack trace ===\n\n")
-            text.append(x.toString()).append('\n')
         }
 
         if (collectDeviceInfo) {
             _status.value = ReportGenerationStatus.DeviceInfo
-            try {
+            reportSection("device info", noteFailure("device info")) {
                 text.append("\n\n\n=== device info ===\n\n")
                 val deviceInfo: CharSequence = collectDeviceInfo()
                 text.append(deviceInfo)
-            } catch (x: IOException) {
-                text.append(x.toString()).append('\n')
             }
         }
 
         if (collectInstalledPackages) {
             _status.value = ReportGenerationStatus.Packages
-            try {
+            reportSection("installed packages", noteFailure("installed packages")) {
                 text.append("\n\n\n=== installed packages ===\n\n")
                 CrashReporter.appendInstalledPackages(text, application)
-            } catch (x: IOException) {
-                text.append(x.toString()).append('\n')
             }
         }
 
@@ -292,7 +431,12 @@ class ContactSupportViewModel @Inject constructor(
         // attached wallet.log too. Bounded (it falls back to the last stored
         // result with the reason) and never fails the report. It lists txids
         // and amounts, so only when the user shares the application log.
-        val parityBreakdown = parityBreakdownForReport(collectApplicationLog)
+        val parityBreakdown = reportSection(
+            "parity breakdown",
+            { e -> ReportParityBreakdown(stored = null, notRefreshedReason = "failed (${e.javaClass.simpleName})") }
+        ) {
+            parityBreakdownForReport(collectApplicationLog)
+        }
 
         if (collectApplicationLog) {
             _status.value = ReportGenerationStatus.Logs
@@ -300,48 +444,33 @@ class ContactSupportViewModel @Inject constructor(
             // the bridge's last poll, so the attached log includes the tail of
             // the session and not just up-to-one-interval-old native output.
             // Blocking is fine here (Dispatchers.IO) and it never throws.
-            NativeLogBridge.drainNow()
-            val logDir = File(application.filesDir, "log")
-            var totalLogsSize = 0L
-            if (logDir.exists()) {
-                val sortedLogFiles = logDir.listFiles()
-                sortedLogFiles?.let { it ->
-                    it.sortByDescending { file -> file.lastModified() }
-                    for (logFile in sortedLogFiles) {
-                        if (logFile.isFile() && logFile.length() > 0 && totalLogsSize < MAX_LOGS_SIZE) {
-                            // Check if it's wallet.log and larger than 4 MB
-                            if (logFile.name == "wallet.log" && logFile.length() > MAX_WALLET_LOG_SIZE) {
-                                // Compress the wallet.log file
-                                val compressedFile = File(reportDir, "wallet.log.gz")
-                                try {
-                                    FileInputStream(logFile).use { fis ->
-                                        GZIPOutputStream(FileOutputStream(compressedFile)).use { gzipOS ->
-                                            val buffer = ByteArray(4096)
-                                            var len: Int
-                                            while (fis.read(buffer).also { count -> len = count } != -1) {
-                                                gzipOS.write(buffer, 0, len)
-                                            }
-                                            log.info("wallet.log compressed successfully to $compressedFile")
-                                            attachments.add(
-                                                FileProvider.getUriForFile(
-                                                    application,
-                                                    application.packageName + ".file_attachment", compressedFile
-                                                )
-                                            )
-                                            totalLogsSize += compressedFile.length()
+            reportSection("application logs", noteFailure("application logs")) {
+                NativeLogBridge.drainNow()
+                val logDir = File(application.filesDir, "log")
+                var totalLogsSize = 0L
+                if (logDir.exists()) {
+                    val sortedLogFiles = logDir.listFiles()
+                    sortedLogFiles?.let { it ->
+                        it.sortByDescending { file -> file.lastModified() }
+                        for (logFile in sortedLogFiles) {
+                            if (logFile.isFile() && logFile.length() > 0 && totalLogsSize < MAX_LOGS_SIZE) {
+                                // One file's failure costs that file, not the logs after it.
+                                reportSection(logFile.name, noteFailure(logFile.name)) {
+                                    // Compress wallet.log when it is larger than 4 MB
+                                    val attached =
+                                        if (logFile.name == "wallet.log" && logFile.length() > MAX_WALLET_LOG_SIZE) {
+                                            gzipTo(logFile, File(reportDir, "wallet.log.gz"))
+                                        } else {
+                                            logFile
                                         }
-                                    }
-                                } catch (e: IOException) {
-                                    log.error("Failed to compress wallet.log", e)
-                                }
-                            } else {
-                                attachments.add(
-                                    FileProvider.getUriForFile(
-                                        application,
-                                        application.packageName + ".file_attachment", logFile
+                                    attachments.add(
+                                        FileProvider.getUriForFile(
+                                            application,
+                                            application.packageName + ".file_attachment", attached
+                                        )
                                     )
-                                )
-                                totalLogsSize += logFile.length()
+                                    totalLogsSize += attached.length()
+                                }
                             }
                         }
                     }
@@ -362,17 +491,17 @@ class ContactSupportViewModel @Inject constructor(
             // SPV log, and a report that omits it cannot diagnose a wallet
             // that never finishes syncing. Each crate gets its own budget so
             // a chatty one cannot starve the other.
-            try {
-                val sdkRoot = File(application.filesDir, DashSdkServiceImpl.SDK_LOG_DIR_NAME)
-                for (crate in listOf("platform_wallet", "dash_spv")) {
-                    val sdkLogDir = File(sdkRoot, crate)
-                    var tailBudget = MAX_SDK_RUN_LOG_TAIL
-                    for (name in listOf("run.log", "run.log.1")) {
-                        if (tailBudget <= 0L) break
-                        val source = File(sdkLogDir, name)
-                        if (!source.isFile || source.length() == 0L) continue
-                        val copied =
-                            copyTail(source, File(reportDir, "sdk-$crate-$name"), tailBudget)
+            val sdkRoot = File(application.filesDir, DashSdkServiceImpl.SDK_LOG_DIR_NAME)
+            for (crate in listOf("platform_wallet", "dash_spv")) {
+                val sdkLogDir = File(sdkRoot, crate)
+                var tailBudget = MAX_SDK_RUN_LOG_TAIL
+                for (name in listOf("run.log", "run.log.1")) {
+                    if (tailBudget <= 0L) break
+                    val source = File(sdkLogDir, name)
+                    if (!source.isFile || source.length() == 0L) continue
+                    val section = "sdk-$crate-$name"
+                    reportSection(section, noteFailure(section)) {
+                        val copied = copyTail(source, File(reportDir, section), tailBudget)
                         if (copied != null) {
                             attachments.add(
                                 FileProvider.getUriForFile(
@@ -385,8 +514,6 @@ class ContactSupportViewModel @Inject constructor(
                         }
                     }
                 }
-            } catch (x: Exception) {
-                log.info("problem attaching the SDK run.log", x)
             }
 
             // THE APP'S OWN LOGCAT. wallet.log carries only what this app
@@ -407,61 +534,42 @@ class ContactSupportViewModel @Inject constructor(
             // since Jelly Bean, so this needs no permission and can expose no
             // other app's data. `--pid` makes that explicit rather than
             // implicit.
-            runCatching { collectLogcat(reportDir) }
-                .onSuccess { file ->
-                    if (file != null) {
-                        attachments.add(
-                            FileProvider.getUriForFile(
-                                application,
-                                application.packageName + ".file_attachment", file
-                            )
+            reportSection("logcat", noteFailure("logcat")) {
+                val file = collectLogcat(reportDir)
+                if (file != null) {
+                    attachments.add(
+                        FileProvider.getUriForFile(
+                            application,
+                            application.packageName + ".file_attachment", file
                         )
-                        log.info("attached {} bytes of this process's logcat", file.length())
-                    }
+                    )
+                    log.info("attached {} bytes of this process's logcat", file.length())
                 }
-                .onFailure { log.info("problem attaching logcat", it) }
+            }
         }
 
         if (collectWalletDump) {
             _status.value = ReportGenerationStatus.WalletDump
             log.info("createReport - collecting wallet dump")
-            try {
+            reportSection("wallet dump", noteFailure("wallet dump")) {
                 val walletDump: CharSequence = collectWalletDump()
                 val file = File.createTempFile("wallet-dump.", ".txt", reportDir)
-                val writer: Writer = OutputStreamWriter(FileOutputStream(file), Charsets.UTF_8)
-                writer.write(walletDump.toString())
-                writer.close()
-                if(file.length() > MAX_WALLET_DUMP_SIZE) {
-                    // compress the wallet dump
-                    val compressedFile = File(file.absolutePath + ".gz")
-                    try {
-                        FileInputStream(file).use { fis ->
-                            GZIPOutputStream(FileOutputStream(compressedFile)).use { gzipOS ->
-                                val buffer = ByteArray(4096)
-                                var len: Int
-                                while (fis.read(buffer).also { len = it } != -1) {
-                                    gzipOS.write(buffer, 0, len)
-                                }
-                                log.info("wallet dump compressed successfully to $compressedFile")
-                                attachments.add(
-                                    FileProvider.getUriForFile(application, application.packageName + ".file_attachment", compressedFile)
-                                )
-                            }
-                        }
-                    } catch (e: IOException) {
-                        e.printStackTrace()
-                    }
-                } else {
-                    attachments.add(
-                        FileProvider.getUriForFile(application, application.packageName + ".file_attachment", file)
-                    )
+                OutputStreamWriter(FileOutputStream(file), Charsets.UTF_8).use { writer ->
+                    writer.write(walletDump.toString())
                 }
-            } catch (x: IOException) {
-                log.info("problem writing attachment", x)
+                val attached = if (file.length() > MAX_WALLET_DUMP_SIZE) {
+                    // compress the wallet dump
+                    gzipTo(file, File(file.absolutePath + ".gz"))
+                } else {
+                    file
+                }
+                attachments.add(
+                    FileProvider.getUriForFile(application, application.packageName + ".file_attachment", attached)
+                )
             }
         }
 
-        try {
+        reportSection("background traces", noteFailure("background traces")) {
             _status.value = ReportGenerationStatus.BackgroundTraces
             val savedBackgroundTraces = File.createTempFile("background-traces.", ".txt", reportDir)
             if (CrashReporter.collectSavedBackgroundTraces(savedBackgroundTraces)) {
@@ -473,12 +581,10 @@ class ContactSupportViewModel @Inject constructor(
                 )
             }
             savedBackgroundTraces.deleteOnExit()
-        } catch (x: IOException) {
-            log.info("problem writing attachment", x)
         }
         // only for development
         if (BuildConfig.DEBUG) {
-            try {
+            reportSection("transaction metadata", ignoreFailure) {
                 val txMetadataEntries = File.createTempFile("tx-metadata-documents.", ".txt", reportDir)
                 val listDocs = transactionMetadataDocumentDao.load()
                 try {
@@ -501,8 +607,6 @@ class ContactSupportViewModel @Inject constructor(
                     )
                 }
                 txMetadataEntries.deleteOnExit()
-            } catch (x: IOException) {
-                log.info("problem writing attachment", x)
             }
         }
 
@@ -510,7 +614,7 @@ class ContactSupportViewModel @Inject constructor(
         // "dashj sync (diagnostic)" toggle is on, or the diagnostic ran at
         // some point this launch (parity history exists). Fully additive —
         // with the flag off and never used, no file is added.
-        try {
+        reportSection("parity log", noteFailure("parity log")) {
             val diagnosticEnabled = dashPayConfig.getDashjSyncDiagnostic()
             val parityHistory = dashjDiagnosticSyncState.parityHistory()
             if (shouldAttachParityLog(diagnosticEnabled, parityHistory.isNotEmpty(), parityBreakdown)) {
@@ -525,8 +629,6 @@ class ContactSupportViewModel @Inject constructor(
                     )
                 )
             }
-        } catch (x: Exception) {
-            log.info("problem writing the dashJ-kotlin parity log attachment", x)
         }
 
         // Launch-stage breadcrumbs: which numbered startup stage the current —
@@ -534,11 +636,9 @@ class ContactSupportViewModel @Inject constructor(
         // launch-crash diagnostic for installs with no adb and no usable
         // Crashlytics stack (e.g. a native crash or an LMK kill leaves no Java
         // trace at all). Tiny text, inlined into the report body.
-        try {
+        reportSection("launch breadcrumbs", noteFailure("launch breadcrumbs")) {
             text.append("\n\n\n=== launch breadcrumbs ===\n\n")
             text.append(StartupBreadcrumbs.reportText())
-        } catch (x: Exception) {
-            text.append(x.toString()).append('\n')
         }
 
         text.append("\n\nPUT ADDITIONAL COMMENTS TO THE TOP. DOWN HERE NOBODY WILL NOTICE.")
@@ -547,12 +647,6 @@ class ContactSupportViewModel @Inject constructor(
         return@withContext Pair(text.toString(), attachments)
     }
 
-    /**
-     * Copies the LAST [maxBytes] of [source] into [dest] (whole file when it
-     * fits). Returns [dest], or null when nothing could be copied — never
-     * throws, so a mid-write rotation or permission hiccup cannot sink the
-     * report.
-     */
     /**
      * This process's own logcat, tail-capped, or null when nothing could be
      * read.
@@ -566,65 +660,46 @@ class ContactSupportViewModel @Inject constructor(
      * holds the fatal exception that `main` may have lost to rotation, which
      * is exactly the case a support report is sent about.
      *
-     * Never throws and never blocks the report for long: the process is given
-     * a hard [LOGCAT_TIMEOUT_SECS] and destroyed if it outstays it. A report
-     * without logcat is worth far more than a report that never finishes.
+     * Never blocks the report for long: the process is given a hard
+     * [LOGCAT_TIMEOUT_SECS] and destroyed if it outstays it. A report without
+     * logcat is worth far more than a report that never finishes. A failure to
+     * run logcat or write its output is thrown (no partial file is left), so
+     * the caller's report section can say logcat is missing; null means
+     * logcat ran and had nothing to say.
      */
     private fun collectLogcat(reportDir: File): File? {
         val dest = File(reportDir, "logcat.txt")
         var process: Process? = null
         return try {
-            process = ProcessBuilder(
-                "logcat", "-d", "-v", "time",
-                "-b", "main", "-b", "crash",
-                "-t", MAX_LOGCAT_LINES.toString(),
-                "--pid=${android.os.Process.myPid()}"
-            ).redirectErrorStream(true).start()
+            deletingOnFailure(dest) {
+                val started = ProcessBuilder(
+                    "logcat", "-d", "-v", "time",
+                    "-b", "main", "-b", "crash",
+                    "-t", MAX_LOGCAT_LINES.toString(),
+                    "--pid=${android.os.Process.myPid()}"
+                ).redirectErrorStream(true).start()
+                process = started
 
-            var written = 0L
-            FileOutputStream(dest).use { out ->
-                process.inputStream.use { input ->
-                    val buffer = ByteArray(8192)
-                    while (written < MAX_LOGCAT_TAIL) {
-                        val read = input.read(buffer)
-                        if (read <= 0) break
-                        val take = minOf(read.toLong(), MAX_LOGCAT_TAIL - written).toInt()
-                        out.write(buffer, 0, take)
-                        written += take
+                var written = 0L
+                FileOutputStream(dest).use { out ->
+                    started.inputStream.use { input ->
+                        val buffer = ByteArray(8192)
+                        while (written < MAX_LOGCAT_TAIL) {
+                            val read = input.read(buffer)
+                            if (read <= 0) break
+                            val take = minOf(read.toLong(), MAX_LOGCAT_TAIL - written).toInt()
+                            out.write(buffer, 0, take)
+                            written += take
+                        }
                     }
                 }
+                if (!started.waitFor(LOGCAT_TIMEOUT_SECS, TimeUnit.SECONDS)) {
+                    log.info("logcat did not exit within {}s — taking what it produced", LOGCAT_TIMEOUT_SECS)
+                }
+                if (written > 0L) dest else { dest.delete(); null }
             }
-            if (!process.waitFor(LOGCAT_TIMEOUT_SECS, TimeUnit.SECONDS)) {
-                log.info("logcat did not exit within {}s — taking what it produced", LOGCAT_TIMEOUT_SECS)
-            }
-            if (written > 0L) dest else { dest.delete(); null }
-        } catch (t: Throwable) {
-            log.info("could not read this process's logcat: {}", t.toString())
-            runCatching { dest.delete() }
-            null
         } finally {
             runCatching { process?.destroy() }
-        }
-    }
-
-    private fun copyTail(source: File, dest: File, maxBytes: Long): File? {
-        return try {
-            FileInputStream(source).use { fis ->
-                val length = source.length()
-                if (length > maxBytes) {
-                    var toSkip = length - maxBytes
-                    while (toSkip > 0) {
-                        val skipped = fis.skip(toSkip)
-                        if (skipped <= 0) break
-                        toSkip -= skipped
-                    }
-                }
-                FileOutputStream(dest).use { fos -> fis.copyTo(fos) }
-            }
-            if (dest.length() > 0) dest else null
-        } catch (e: IOException) {
-            log.info("could not tail-copy {}: {}", source, e.toString())
-            null
         }
     }
 
@@ -735,14 +810,20 @@ class ContactSupportViewModel @Inject constructor(
         } catch (x: CancellationException) {
             throw x
         } catch (x: Exception) {
-            log.info("problem computing the parity breakdown for the report", x)
-            ReportParityBreakdown(stored = null, notRefreshedReason = "failed (${x.javaClass.simpleName}: ${x.message})")
+            // The class only: the reason is written into the parity log
+            // attachment, and wallet.log is attached too.
+            log.info("problem computing the parity breakdown for the report: {}", x.javaClass.simpleName)
+            ReportParityBreakdown(stored = null, notRefreshedReason = "failed (${x.javaClass.simpleName})")
         }
     }
 
     @Throws(IOException::class)
     private fun collectApplicationInfo(): CharSequence {
         val applicationInfo = java.lang.StringBuilder()
+        // The application info walks the dashj wallet's transactions on this
+        // IO thread; give it the wallet's Context, as [collectWalletDump] does.
+        val wallet = wallet
+        wallet?.let { org.bitcoinj.core.Context.propagate(it.context) }
         CrashReporter.appendApplicationInfo(
             applicationInfo,
             packageInfoProvider,
