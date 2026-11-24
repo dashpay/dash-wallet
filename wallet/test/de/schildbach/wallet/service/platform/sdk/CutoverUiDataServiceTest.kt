@@ -1724,8 +1724,10 @@ class CutoverUiDataServiceTest {
             assertTrue("the address read must be parked", pumpUntil { source.receiveAddressReadParked })
             assertTrue(pumpUntil { service.sdkBalanceOrNull() == Coin.valueOf(781) })
 
-            // Returns although the address read is still parked.
-            service.stopBalanceSavesForWalletWipe()
+            // The stop must complete while the address read is still parked.
+            val stop = launch { service.stopBalanceSavesForWalletWipe() }
+            runCurrent()
+            assertTrue("the stop must finish before the address read is released", stop.isCompleted)
             assertEquals(1L, source.receiveAddressGate.count)
 
             releaseOlderWrite.complete(Unit)
