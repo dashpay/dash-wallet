@@ -594,10 +594,19 @@ private fun BarcodeSection(
         }
     }
 
+    // Scanners need dark bars on a light background, so the panel stays white in dark mode too.
+    val panelModifier = if (barcodeBitmap != null) {
+        Modifier.background(MyTheme.ColorScheme.White, RoundedCornerShape(10.dp))
+    } else {
+        Modifier
+    }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 20.dp)
+            .padding(vertical = 12.dp)
+            .then(panelModifier)
+            .padding(vertical = 8.dp)
             .onGloballyPositioned { containerWidthPx = it.size.width },
         contentAlignment = Alignment.Center
     ) {
