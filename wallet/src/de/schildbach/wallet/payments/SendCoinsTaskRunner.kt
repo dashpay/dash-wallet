@@ -508,21 +508,6 @@ class SendCoinsTaskRunner @Inject constructor(
         )
 
     /**
-     * [findUnresolvedSubmission] narrowed to this invoice itself: the exact request, its
-     * order, or a record with no order identity posting to the same url (the only way such
-     * a record is known to be this invoice's). It leaves out another order of the same
-     * merchant, which blocks only while its payment is unresolved. For a caller that keeps
-     * the answer after the record is gone.
-     */
-    suspend fun findUnresolvedSubmissionOfInvoice(paymentIntent: PaymentIntent): Sha256Hash? =
-        pendingPaymentVerifier.unresolvedSubmissionFor(
-            paymentIntent.paymentRequestId,
-            paymentIntent.orderIdentity(),
-            paymentIntent.legacyOrderIdentity(),
-            paymentIntent.paymentUrl
-        )
-
-    /**
      * Refuses to go on with a payment whose wallet has been wiped since the user confirmed it,
      * including one a wipe has started on but not yet removed.
      */
