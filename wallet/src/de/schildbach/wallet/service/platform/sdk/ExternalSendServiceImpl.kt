@@ -451,6 +451,30 @@ private val retryLog = LoggerFactory.getLogger("de.schildbach.wallet.service.pla
  * [canWithdraw]). DPP's minimum fee grows with the input count, so for a subset of those
  * addresses it is an upper bound.
  */
+/**
+ * The shielded balance a send / Max may use: the raw note-store [balance] only while the
+ * runtime is READY and no shielded spend is [reconciling]; otherwise unknown (null). During a
+ * reconciliation the store can still count an ambiguous spend's reserved inputs as unspent, or
+ * read an intermediate balance, so neither is offered as spendable.
+ */
+internal fun sendableShieldedBalance(balance: Dash, status: ShieldedSyncStatus, reconciling: Boolean): Dash? =
+    if (status == ShieldedSyncStatus.READY && !reconciling) balance else null
+
+/**
+ * Whether an External Send outcome may have changed a Platform-address balance, so the
+ * Platform-address resync is scheduled (iOS `schedulePlatformResync`): a Platform source or a
+ * Platform destination, and a submitted or may-have-gone-through outcome. A provably unsent
+ * one changed nothing.
+ */
+internal fun changesPlatformBalance(
+    source: SendBalance,
+    destination: SendDestination,
+    result: ExternalSendResult
+): Boolean {
+    val submitted = result is ExternalSendResult.Sent || result is ExternalSendResult.MayHaveGoneThrough
+    return submitted && (source == SendBalance.PLATFORM || destination is SendDestination.Platform)
+}
+
 internal data class PlatformWithdrawalPreflight(val canWithdraw: Boolean, val estimatedFeeCredits: Long)
 
 // ── Source seam ───────────────────────────────────────────────────────
@@ -743,13 +767,15 @@ internal class DashSdkExternalSendSource(
                 if (enabled != true) {
                     flowOf(null)
                 } else {
+                    // The raw store balance (never the display form), READY-gated, and
+                    // unknown while a shielded spend reconciles: until it settles the store
+                    // can count an ambiguous spend's reserved inputs as unspent, or read an
+                    // intermediate balance, so Max never offers either.
                     combine(
                         shieldedBalanceService.observeShieldedBalance(),
                         shieldedBalanceService.shieldedSyncStatus,
-                        shieldedBalanceService.shieldedBalanceMaybeStale
-                    ) { balance, status, stale ->
-                        if (status == ShieldedSyncStatus.READY && !stale) balance else null
-                    }
+                        shieldedBalanceService.shieldedSpendReconciling
+                    ) { balance, status, reconciling -> sendableShieldedBalance(balance, status, reconciling) }
                 }
             }
             .retryReadErrors(null, onError = logReadRetry("shielded balance"))
@@ -1051,7 +1077,14 @@ class ExternalSendServiceImpl internal constructor(
      * one [FundingSelectionLock], the one Reset Wallet raises. No default: a private lock is one
      * no wipe raises.
      */
-    private val fundingSelection: FundingSelectionLock
+    private val fundingSelection: FundingSelectionLock,
+    /**
+     * A send that may have changed a Platform-address balance was submitted (or may have
+     * been): prod wires [PlatformAddressSyncService.schedulePlatformResync] (sync-now requests at
+     * 0 / 4 / 12 s, iOS `schedulePlatformResync`; no-ops until the Kotlin SDK binds sync-now).
+     * No-op default keeps host tests inert.
+     */
+    private val onPlatformBalanceChanged: () -> Unit = {}
 ) : ExternalSendService {
 
     @Inject
@@ -1067,7 +1100,8 @@ class ExternalSendServiceImpl internal constructor(
         identityConfig: BlockchainIdentityConfig,
         walletData: WalletData,
         fundingGate: PendingPaymentFundingGate,
-        assetLockKindResolver: AssetLockKindResolver
+        assetLockKindResolver: AssetLockKindResolver,
+        platformAddressSyncService: dagger.Lazy<PlatformAddressSyncService>
     ) : this(
         source = DashSdkExternalSendSource(
             sdkService, sendPaymentService, sdkL1SendService, cutoverUiDataService, shieldedBalanceService,
@@ -1076,7 +1110,8 @@ class ExternalSendServiceImpl internal constructor(
         network = AddressNetwork.fromId(Constants.NETWORK_PARAMETERS.id),
         platformFundingStore = DashPayConfigPlatformFundingStore(dashPayConfig),
         seedAssetLockKind = { displayHex, kind -> assetLockKindResolver.seed(displayHex, kind) },
-        fundingSelection = fundingGate.selectionLock
+        fundingSelection = fundingGate.selectionLock,
+        onPlatformBalanceChanged = { platformAddressSyncService.get().schedulePlatformResync() }
     )
 
     /** Single-flight for [send] AND [resumePendingPlatformFunding]: the one owner of the funding record. */
@@ -1387,7 +1422,7 @@ class ExternalSendServiceImpl internal constructor(
             log.warn("external send refused: another external send is in progress")
             return ExternalSendResult.NotSent(NotSentReason.IN_PROGRESS)
         }
-        return try {
+        val result = try {
             withContext(ioDispatcher) {
                 sendInner(source, destination, amount, isMax, coreSession, expectedWalletIdHex)
             }
@@ -1400,6 +1435,17 @@ class ExternalSendServiceImpl internal constructor(
             ExternalSendResult.MayHaveGoneThrough
         } finally {
             inFlight.set(false)
+        }
+        if (changesPlatformBalance(source, destination, result)) requestPlatformResync()
+        return result
+    }
+
+    /** [onPlatformBalanceChanged], contained: a failing scheduler never changes a send's result. */
+    private fun requestPlatformResync() {
+        try {
+            onPlatformBalanceChanged()
+        } catch (e: Exception) {
+            log.warn("platform address resync not scheduled ({})", safeErrorSummary(e))
         }
     }
 
@@ -1844,7 +1890,9 @@ class ExternalSendServiceImpl internal constructor(
     // ── Core → Platform resume ────────────────────────────────────────
 
     override suspend fun resumePendingPlatformFunding(): Int = try {
+        // A completed Core → Platform funding changed the Platform-address balance.
         withContext(ioDispatcher) { resumePendingPlatformFundingInner() }
+            .also { resumed -> if (resumed > 0) requestPlatformResync() }
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
