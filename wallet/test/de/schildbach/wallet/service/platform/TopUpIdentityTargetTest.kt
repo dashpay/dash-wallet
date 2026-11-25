@@ -20,6 +20,7 @@ import org.bitcoinj.evolution.AssetLockTransaction
 import org.bitcoinj.params.TestNet3Params
 import org.bitcoinj.wallet.Wallet
 import org.dashj.platform.dashpay.BlockchainIdentity
+import org.dashj.platform.dashpay.IdentityStatus
 import org.junit.Assert.assertThrows
 import org.junit.Test
 
@@ -49,9 +50,11 @@ class TopUpIdentityTargetTest {
         mockk(relaxed = true), verifier, mockk(relaxed = true)
     )
 
-    private fun identity(id: String) = mockk<BlockchainIdentity>(relaxed = true) {
-        every { uniqueIdString } returns id
-    }
+    private fun identity(id: String, status: IdentityStatus = IdentityStatus.REGISTERED) =
+        mockk<BlockchainIdentity>(relaxed = true) {
+            every { uniqueIdString } returns id
+            every { registrationStatus } returns status
+        }
 
     @Test
     fun `tops up the identity being created while the repository has none`() = runTest {
@@ -100,5 +103,34 @@ class TopUpIdentityTargetTest {
             runBlocking { repository().topUpIdentity(topUpTx, null) }
         }
         coVerify(exactly = 0) { topUpsDao.insert(any<TopUp>()) }
+    }
+
+    @Test
+    fun `an identity whose recovery failed is not recorded or topped up`() {
+        every { identityRepository.blockchainIdentity } returns null
+        coEvery { topUpsDao.getByTxId(txId) } returns null
+        val unrecovered = identity("funding-lock-id", IdentityStatus.UNKNOWN)
+
+        assertThrows(IllegalStateException::class.java) {
+            runBlocking { repository().topUpIdentity(topUpTx, null, unrecovered) }
+        }
+        coVerify(exactly = 0) { topUpsDao.insert(any<TopUp>()) }
+        verify(exactly = 0) { unrecovered.topUp(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `a cached identity without an id fails before recording a top-up`() {
+        val noId = mockk<BlockchainIdentity>(relaxed = true) {
+            every { uniqueIdString } throws UninitializedPropertyAccessException("uniqueId")
+            every { registrationStatus } returns IdentityStatus.REGISTERED
+        }
+        every { identityRepository.blockchainIdentity } returns noId
+        coEvery { topUpsDao.getByTxId(txId) } returns null
+
+        assertThrows(IllegalStateException::class.java) {
+            runBlocking { repository().topUpIdentity(topUpTx, null) }
+        }
+        coVerify(exactly = 0) { topUpsDao.insert(any<TopUp>()) }
+        verify(exactly = 0) { noId.topUp(any(), any(), any(), any()) }
     }
 }
