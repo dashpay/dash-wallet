@@ -31,7 +31,9 @@ import de.schildbach.wallet.database.dao.TopUpsDao
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.database.entity.Invitation
 import de.schildbach.wallet.database.entity.TopUp
+import de.schildbach.wallet.payments.FundingSelectionLock
 import de.schildbach.wallet.payments.PendingDirectPaymentVerifier
+import de.schildbach.wallet.payments.WalletWipedException
 import de.schildbach.wallet.service.DashSystemService
 import de.schildbach.wallet.service.platform.sdk.ContestedUsernameFees
 import de.schildbach.wallet.service.platform.sdk.DashSdkService
@@ -54,6 +56,8 @@ import org.bitcoinj.wallet.Wallet
 import org.bouncycastle.crypto.params.KeyParameter
 import de.schildbach.wallet.data.WalletData
 import org.dashj.platform.dashpay.BlockchainIdentity
+import org.dashj.platform.dashpay.IdentityStatus
+import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.dpp.toHex
 import org.dashj.platform.sdk.platform.Names
 import org.slf4j.LoggerFactory
@@ -68,13 +72,18 @@ import de.schildbach.wallet_test.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.AddressFormatException
 import org.bitcoinj.core.InsufficientMoneyException
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.TimeoutCancellationException
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import java.util.concurrent.TimeUnit
@@ -115,7 +124,12 @@ interface TopUpRepository {
     /** waits for IS or CL */
     suspend fun waitForTransaction(confidence: TransactionConfidence)
 
-    /** top up identity and save topup state to the db */
+    /**
+     * top up [IdentityRepository.blockchainIdentity] and save topup state to the db
+     *
+     * @throws IllegalStateException before saving anything if there is no identity, or it is not
+     * registered or has no id
+     */
     suspend fun topUpIdentity(
         topupAssetLockTransaction: AssetLockTransaction,
         aesKeyParameter: KeyParameter?
@@ -182,11 +196,13 @@ class TopUpRepositoryImpl @Inject constructor(
     private val dashSystemService: DashSystemService,
     private val sdkTopUpRecoveryService: SdkTopUpRecoveryService,
     private val pendingPaymentVerifier: PendingDirectPaymentVerifier,
-    private val dashSdkService: DashSdkService
+    private val dashSdkService: DashSdkService,
+    private val fundingSelectionLock: FundingSelectionLock
 ) : TopUpRepository {
     companion object {
         private val log = LoggerFactory.getLogger(TopUpRepositoryImpl::class.java)
         private const val MIN_DUST_FACTOR = 10L
+        private val UNUSED_REGISTRATION_LOCK_MIN_AGE_MS = TimeUnit.HOURS.toMillis(1)
     }
 
     private val workerJob = Job()
@@ -382,11 +398,8 @@ class TopUpRepositoryImpl @Inject constructor(
         }
     }
 
-    private suspend fun addTopUp(txId: Sha256Hash): TopUp {
-        val topUp = TopUp(
-            txId,
-            identityRepository.blockchainIdentity!!.uniqueIdString
-        )
+    private suspend fun addTopUp(txId: Sha256Hash, identityId: String): TopUp {
+        val topUp = TopUp(txId, identityId)
         topUpsDao.insert(topUp)
         return topUp
     }
@@ -395,12 +408,14 @@ class TopUpRepositoryImpl @Inject constructor(
         topUpTx: AssetLockTransaction,
         aesKeyParameter: KeyParameter?
     ) {
+        val identity = checkNotNull(identityRepository.blockchainIdentity) {
+            "No identity to top up with ${topUpTx.txId}"
+        }
+        val identityId = registeredIdentityId(identity, topUpTx)
         // Funding runs outside SendCoinsTaskRunner, so it needs the same barrier: after a restart
         // the input locks of an uncertain payment live only in memory until they are restored.
         pendingPaymentVerifier.awaitRestored()
-        val topUp = topUpsDao.getByTxId(
-            topUpTx.txId
-        ) ?: addTopUp(topUpTx.txId)
+        val topUp = topUpsDao.getByTxId(topUpTx.txId) ?: addTopUp(topUpTx.txId, identityId)
         Context.propagate(walletDataProvider.wallet!!.context)
         val confidence = topUpTx.getConfidence(walletDataProvider.wallet!!.context)
         log.info("topup tx confidence: {}", confidence)
@@ -424,24 +439,74 @@ class TopUpRepositoryImpl @Inject constructor(
         }
         log.info("topup tx sent: {}; tx = {}", status, topUpTx.txId)
         try {
-            identityRepository.blockchainIdentity!!.topUp(
+            identity.topUp(
                 topUpTx,
                 aesKeyParameter,
                 useISLock = true,
                 waitForChainlock = true
             )
             log.info("topup success: {}", topUpTx.txId)
-            topUpsDao.insert(topUp.copy(creditedAt = System.currentTimeMillis()))
+            topUpsDao.insert(topUp.copy(toUserId = identityId, creditedAt = System.currentTimeMillis()))
         } catch (e: Exception) {
-            val regex = Regex(""".*Asset lock transaction [a-fA-F0-9]{64} output \d+ already completely used""")
-            if (e.message?.let { regex.matches(it) || it.contains("Object already exists: state transition already in chain")} == true) {
-                // the asset lock was already used
+            if (isAlreadyUsed(e)) {
                 topUpsDao.insert(topUp.copy(creditedAt = System.currentTimeMillis()))
                 log.info("topup success, already submitted: {}", topUpTx.txId)
             } else {
                 throw e
             }
         }
+    }
+
+    private fun registeredIdentityId(identity: BlockchainIdentity, topUpTx: AssetLockTransaction): String {
+        check(identity.registrationStatus == IdentityStatus.REGISTERED) {
+            "Identity is ${identity.registrationStatus}, not topping up with ${topUpTx.txId}"
+        }
+        return checkNotNull(identity.uniqueIdStringOrNull()) {
+            "Identity has no id, not topping up with ${topUpTx.txId}"
+        }
+    }
+
+    private fun isAlreadyUsed(e: Exception): Boolean {
+        val regex = Regex(""".*Asset lock transaction [a-fA-F0-9]{64} output \d+ already completely used""")
+        return e.message?.let { regex.matches(it) || it.contains("Object already exists: state transition already in chain") } == true
+    }
+
+    /**
+     * Tops up [identity] with a mined registration lock found by [creditUnusedRegistrationLocks], using a
+     * chain asset lock proof at [chainLockedHeight]. The height is used for this attempt only and the
+     * wallet's copy of the transaction is left untouched. No top-up is recorded until Platform accepts it,
+     * and a rejection as already used is not taken as proof of a credit.
+     */
+    private suspend fun creditRegistrationLock(
+        lock: AssetLockTransaction,
+        aesKeyParameter: KeyParameter?,
+        identity: BlockchainIdentity,
+        chainLockedHeight: Int
+    ) {
+        val identityId = registeredIdentityId(identity, lock)
+        val assetLockKey = lock.assetLockPublicKey.let { if (it.isEncrypted) it.decrypt(aesKeyParameter) else it }
+        val platformIdentity = checkNotNull(identity.identity) { "Identity has no Platform record, not topping up with ${lock.txId}" }
+        // The Core lookup before this blocks without checking cancellation: a sweep cancelled meanwhile,
+        // such as by a wallet reset, must not spend the lock with no one left to record the credit.
+        currentCoroutineContext().ensureActive()
+        val credits = try {
+            identity.platform.identities.topUp(platformIdentity, 0, lock, chainLockedHeight.toLong(), assetLockKey)
+        } catch (e: Exception) {
+            if (isAlreadyUsed(e)) {
+                log.info("asset lock {} is already used; not recording a credit without proof", lock.txId)
+                return
+            }
+            throw e
+        }
+        identity.creditBalance = Coin.valueOf(credits / 1000)
+        log.info("topup success: {}", lock.txId)
+        // Platform has spent the lock: record it even if the sweep was cancelled while it was submitting.
+        withContext(NonCancellable) {
+            val topUp = topUpsDao.getByTxId(lock.txId) ?: TopUp(lock.txId, identityId)
+            topUpsDao.insert(topUp.copy(toUserId = identityId, creditedAt = System.currentTimeMillis()))
+        }
+        // A cancelled sweep must not return as if it finished, or its caller would mark top-ups checked.
+        currentCoroutineContext().ensureActive()
     }
 
     private suspend fun updateConfidence(confidence: TransactionConfidence) {
@@ -463,6 +528,15 @@ class TopUpRepositoryImpl @Inject constructor(
         } catch (e: Exception) {
             log.warn("error updating confidence using platform:", e)
         }
+    }
+
+    /**
+     * The height at which Platform's Core reports [txId] mined and chain locked, or null if it does not.
+     * dashj stops syncing at the SDK cutover, so its copy of the transaction can be stale either way.
+     */
+    private fun chainLockedHeight(txId: Sha256Hash): Int? {
+        val txInfo = platform.client.getTransactionKotlin(txId.toString()) ?: return null
+        return txInfo.height.takeIf { it > 0 && txInfo.isChainLocked }
     }
 
     override suspend fun waitForTransaction(confidence: TransactionConfidence) {
@@ -550,11 +624,12 @@ class TopUpRepositoryImpl @Inject constructor(
 
     /**
      * Phase 2/3 (MO-998): the legacy dashj retry loops are DELETED — the
-     * SDK's tracked-lock queue is the only top-up retry system. Uncredited
-     * dashj-era top-ups from before the migration are NOT retried by the
-     * app anymore; they become recoverable again when the SDK gains
-     * chain rediscovery of asset locks (the pending platform change), at
-     * which point they surface on the recovery queue below like any
+     * SDK's tracked-lock queue is the only top-up retry system, apart from
+     * [creditUnusedRegistrationLocks]. Uncredited dashj-era top-ups from
+     * before the migration are NOT retried by the app anymore; they
+     * become recoverable again when the SDK gains chain rediscovery of
+     * asset locks (the pending platform change), at which point they
+     * surface on the recovery queue below like any
      * interrupted SDK top-up. Funds are never lost in the interim — the
      * locks sit on chain, claimable by this wallet's keys.
      */
@@ -563,8 +638,67 @@ class TopUpRepositoryImpl @Inject constructor(
             if (sdkTopUpRecoveryService.hasPendingTopUpLocks()) {
                 ResumeTopUpsOperation(walletApplication).enqueue()
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             log.warn("failed to check/enqueue the SDK top-up drain", e)
+        }
+        creditUnusedRegistrationLocks(aesKeyParameter)
+    }
+
+    /**
+     * Credits the wallet's identity with mined registration asset locks that never registered an
+     * identity, such as the one left when identity creation adopted an existing identity and then
+     * failed. Platform accepts each asset lock once; a lock it reports as already used is left as it
+     * was and tried again on a later launch, because that rejection does not prove which identity it
+     * credited. Remove this once the Platform wallet SDK can apply an unused registration lock to an existing
+     * identity itself; rediscovering the lock alone is not enough.
+     */
+    private suspend fun creditUnusedRegistrationLocks(aesKeyParameter: KeyParameter?) {
+        // Under a funding hold, like every other spend: Reset Wallet refuses it once begun, cancels it
+        // while it runs (so the check before submitting stops it), and waits for a submission under way.
+        try {
+            fundingSelectionLock.withShared {
+                creditUnusedRegistrationLocksHeld(aesKeyParameter)
+                // withShared keeps a block's result even if a wipe cancelled it; a cancelled sweep must not.
+                currentCoroutineContext().ensureActive()
+            }
+        } catch (e: WalletWipedException) {
+            log.info("wallet reset under way; not crediting registration asset locks")
+            currentCoroutineContext().ensureActive()
+        }
+    }
+
+    private suspend fun creditUnusedRegistrationLocksHeld(aesKeyParameter: KeyParameter?) {
+        val locks = try {
+            authExtension.identityFundingTransactions.toList()
+        } catch (e: Exception) {
+            log.warn("failed to list registration asset locks", e)
+            return
+        }
+        val identity = identityRepository.blockchainIdentity ?: return
+        if (identity.registrationStatus != IdentityStatus.REGISTERED || identity.identity == null) return
+        val ownId = runCatching { identity.uniqueId }.getOrNull() ?: return
+        val wallet = walletDataProvider.wallet ?: return
+        val context = wallet.context
+        Context.propagate(context)
+        val settledBefore = System.currentTimeMillis() - UNUSED_REGISTRATION_LOCK_MIN_AGE_MS
+        for (lock in locks) {
+            try {
+                currentCoroutineContext().ensureActive()
+                if (lock.identityId == ownId) continue
+                val updatedAt = wallet.getTransaction(lock.txId)?.updateTime?.time ?: continue
+                if (updatedAt == 0L || updatedAt > settledBefore) continue
+                if (topUpsDao.getByTxId(lock.txId)?.used() == true) continue
+                if (platform.getIdentity(Identifier.from(lock.identityId)) != null) continue
+                val height = chainLockedHeight(lock.txId) ?: continue
+                log.info("crediting unused registration asset lock {} to {}", lock.txId, identity.uniqueIdString)
+                creditRegistrationLock(lock, aesKeyParameter, identity, height)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                log.warn("failed to credit registration asset lock {}", lock.txId, e)
+            }
         }
     }
 
