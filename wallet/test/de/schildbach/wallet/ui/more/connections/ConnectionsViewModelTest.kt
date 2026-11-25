@@ -3,6 +3,7 @@ package de.schildbach.wallet.ui.more.connections
 import android.app.Application
 import androidx.lifecycle.viewModelScope
 import com.google.gson.JsonParser
+import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.more.connections.protocol.DashConnectUri
@@ -273,6 +274,39 @@ class ConnectionsViewModelTest {
         assertEquals(ConnectionsViewModel.ScanOutcome.IdentityMismatch("requested", "wallet", "alice"),
             model.scanOutcome.value)
         assertNull(model.uiState.value.pendingRequest)
+    }
+
+    @Test fun `an identity mismatch shows the profile's display form of the normalized username`() {
+        coEvery { repository.prepareLogin(any()) } throws AppConnectIdentityMismatch("requested", "wallet")
+        coEvery { identities.getUsername() } returns "0rphanc1a1m4829"
+        coEvery { identities.getLocalUserProfile() } returns
+            DashPayProfile("wallet", "orphanclaim4829")
+        scan()
+        assertEquals(ConnectionsViewModel.ScanOutcome.IdentityMismatch("requested", "wallet", "orphanclaim4829"),
+            model.scanOutcome.value)
+    }
+
+    @Test fun `an identity mismatch keeps the stored username without a matching profile`() {
+        coEvery { repository.prepareLogin(any()) } throws AppConnectIdentityMismatch("requested", "wallet")
+        coEvery { identities.getUsername() } returns "0rphanc1a1m4829"
+        coEvery { identities.getLocalUserProfile() } returns null
+        scan()
+        assertEquals(ConnectionsViewModel.ScanOutcome.IdentityMismatch("requested", "wallet", "0rphanc1a1m4829"),
+            model.scanOutcome.value)
+        coEvery { identities.getLocalUserProfile() } returns
+            DashPayProfile("other", "orphanclaim4829")
+        scan()
+        assertEquals(ConnectionsViewModel.ScanOutcome.IdentityMismatch("requested", "wallet", "0rphanc1a1m4829"),
+            model.scanOutcome.value)
+        coEvery { identities.getLocalUserProfile() } returns
+            DashPayProfile("wallet", "someoneelse")
+        scan()
+        assertEquals(ConnectionsViewModel.ScanOutcome.IdentityMismatch("requested", "wallet", "0rphanc1a1m4829"),
+            model.scanOutcome.value)
+        coEvery { identities.getLocalUserProfile() } throws IllegalStateException("database closed")
+        scan()
+        assertEquals(ConnectionsViewModel.ScanOutcome.IdentityMismatch("requested", "wallet", "0rphanc1a1m4829"),
+            model.scanOutcome.value)
     }
 
     @Test fun `acknowledging an earlier identity mismatch keeps a newer outcome`() {
