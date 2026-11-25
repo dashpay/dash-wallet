@@ -136,7 +136,8 @@ internal fun IdentityMismatchDialog(
         },
         buttons = listOf(
             ButtonData(label = stringResource(R.string.button_ok), onClick = onDismiss, style = Style.FilledBlue)
-        )
+        ),
+        scrollableBody = true
     )
 }
 

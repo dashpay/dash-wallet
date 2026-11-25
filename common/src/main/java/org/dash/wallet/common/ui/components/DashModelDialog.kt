@@ -46,9 +46,11 @@ import org.dash.wallet.common.R
  * @param limitationItems Optional list of limitation items with values and labels
  * @param moreInfoButton Optional button for additional information
  * @param buttons List of button data with labels and click actions
- * @param content Optional custom content to display after text blocks. The dialog body scrolls
- *   vertically, so this must not contain vertically scrolling or lazy layouts of its own.
+ * @param content Optional custom content to display after text blocks
  * @param horizontalPadding Horizontal padding for the dialog (default: 15.dp)
+ * @param scrollableBody Lets everything between the icon and the buttons scroll so the buttons stay on screen. Leave
+ *   it off when a button is destructive: the body can then scroll out of view while the button stays.
+ *   When on, [content] must not contain vertically scrolling or lazy layouts of its own.
  */
 @Composable
 fun ModalDialog(
@@ -62,7 +64,8 @@ fun ModalDialog(
     moreInfoButton: ButtonData? = null,
     buttons: List<ButtonData> = emptyList(),
     content: @Composable (() -> Unit)? = null,
-    horizontalPadding: androidx.compose.ui.unit.Dp = 15.dp
+    horizontalPadding: androidx.compose.ui.unit.Dp = 15.dp,
+    scrollableBody: Boolean = false
 ) {
     if (showDialog) {
         DashWalletTheme {
@@ -112,12 +115,16 @@ fun ModalDialog(
                             Spacer(modifier = Modifier.height(20.dp))
                         }
 
-                        // Content wrapper: scrolls when it does not fit, so the buttons stay on screen
+                        // Content wrapper
                         Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f, fill = false)
-                                .verticalScroll(rememberScrollState()),
+                            modifier = if (scrollableBody) {
+                                Modifier
+                                    .fillMaxWidth()
+                                    .weight(1f, fill = false)
+                                    .verticalScroll(rememberScrollState())
+                            } else {
+                                Modifier.fillMaxWidth()
+                            },
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
