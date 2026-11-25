@@ -31,7 +31,9 @@ import de.schildbach.wallet.database.dao.TopUpsDao
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.database.entity.Invitation
 import de.schildbach.wallet.database.entity.TopUp
+import de.schildbach.wallet.payments.FundingSelectionLock
 import de.schildbach.wallet.payments.PendingDirectPaymentVerifier
+import de.schildbach.wallet.payments.WalletWipedException
 import de.schildbach.wallet.service.DashSystemService
 import de.schildbach.wallet.service.platform.sdk.ContestedUsernameFees
 import de.schildbach.wallet.service.platform.sdk.DashSdkService
@@ -194,7 +196,8 @@ class TopUpRepositoryImpl @Inject constructor(
     private val dashSystemService: DashSystemService,
     private val sdkTopUpRecoveryService: SdkTopUpRecoveryService,
     private val pendingPaymentVerifier: PendingDirectPaymentVerifier,
-    private val dashSdkService: DashSdkService
+    private val dashSdkService: DashSdkService,
+    private val fundingSelectionLock: FundingSelectionLock
 ) : TopUpRepository {
     companion object {
         private val log = LoggerFactory.getLogger(TopUpRepositoryImpl::class.java)
@@ -502,6 +505,8 @@ class TopUpRepositoryImpl @Inject constructor(
             val topUp = topUpsDao.getByTxId(lock.txId) ?: TopUp(lock.txId, identityId)
             topUpsDao.insert(topUp.copy(toUserId = identityId, creditedAt = System.currentTimeMillis()))
         }
+        // A cancelled sweep must not return as if it finished, or its caller would mark top-ups checked.
+        currentCoroutineContext().ensureActive()
     }
 
     private suspend fun updateConfidence(confidence: TransactionConfidence) {
@@ -633,6 +638,8 @@ class TopUpRepositoryImpl @Inject constructor(
             if (sdkTopUpRecoveryService.hasPendingTopUpLocks()) {
                 ResumeTopUpsOperation(walletApplication).enqueue()
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             log.warn("failed to check/enqueue the SDK top-up drain", e)
         }
@@ -648,6 +655,17 @@ class TopUpRepositoryImpl @Inject constructor(
      * identity itself; rediscovering the lock alone is not enough.
      */
     private suspend fun creditUnusedRegistrationLocks(aesKeyParameter: KeyParameter?) {
+        // Under a funding hold, like every other spend: Reset Wallet refuses it once begun, cancels it
+        // while it runs (so the check before submitting stops it), and waits for a submission under way.
+        try {
+            fundingSelectionLock.withShared { creditUnusedRegistrationLocksHeld(aesKeyParameter) }
+        } catch (e: WalletWipedException) {
+            log.info("wallet reset under way; not crediting registration asset locks")
+            currentCoroutineContext().ensureActive()
+        }
+    }
+
+    private suspend fun creditUnusedRegistrationLocksHeld(aesKeyParameter: KeyParameter?) {
         val locks = try {
             authExtension.identityFundingTransactions.toList()
         } catch (e: Exception) {
@@ -663,6 +681,7 @@ class TopUpRepositoryImpl @Inject constructor(
         val settledBefore = System.currentTimeMillis() - UNUSED_REGISTRATION_LOCK_MIN_AGE_MS
         for (lock in locks) {
             try {
+                currentCoroutineContext().ensureActive()
                 if (lock.identityId == ownId) continue
                 val updatedAt = wallet.getTransaction(lock.txId)?.updateTime?.time ?: continue
                 if (updatedAt == 0L || updatedAt > settledBefore) continue

@@ -58,6 +58,9 @@ import kotlin.coroutines.CoroutineContext
  * - A BIP70 POST holds it SHARED together with its last ownership check
  *   ([PendingDirectPaymentVerifier.submitWhileOwned]), so a wipe never clears a payment's recovery
  *   record between that check and the POST.
+ * - The sweep that spends orphaned registration asset locks
+ *   ([de.schildbach.wallet.service.platform.TopUpRepository.checkTopUps]) holds it SHARED throughout,
+ *   so a wipe refuses or cancels it and waits for a top-up it is submitting to be recorded.
  * - A wallet wipe raises the WIPE BARRIER ([raiseWipeBarrier]) the moment Reset Wallet starts,
  *   before anything of the wallet or the SDK is torn down: from then on every new hold is refused
  *   at once ([WalletWipedException]) and every hold under way is CANCELLED. The wipe then waits,

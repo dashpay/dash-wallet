@@ -19,6 +19,7 @@ package de.schildbach.wallet.service.platform
 import de.schildbach.wallet.data.WalletData
 import de.schildbach.wallet.database.dao.TopUpsDao
 import de.schildbach.wallet.database.entity.TopUp
+import de.schildbach.wallet.payments.FundingSelectionLock
 import de.schildbach.wallet.payments.PendingDirectPaymentVerifier
 import io.mockk.Runs
 import io.mockk.coEvery
@@ -64,7 +65,7 @@ class TopUpIdentityGuardTest {
     private fun repository() = TopUpRepositoryImpl(
         mockk(relaxed = true), walletData, identityRepository, mockk(relaxed = true), topUpsDao,
         mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true),
-        mockk(relaxed = true), verifier, mockk(relaxed = true)
+        mockk(relaxed = true), verifier, mockk(relaxed = true), FundingSelectionLock()
     )
 
     private fun identity(id: String, status: IdentityStatus = IdentityStatus.REGISTERED) =

@@ -19,7 +19,10 @@ package de.schildbach.wallet.service.platform
 import de.schildbach.wallet.data.WalletData
 import de.schildbach.wallet.database.dao.TopUpsDao
 import de.schildbach.wallet.database.entity.TopUp
+import de.schildbach.wallet.payments.FundingSelectionLock
 import de.schildbach.wallet.payments.PendingDirectPaymentVerifier
+import de.schildbach.wallet.payments.WalletWipedCancellationException
+import de.schildbach.wallet.service.platform.sdk.SdkTopUpRecoveryService
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import io.mockk.Runs
 import io.mockk.coEvery
@@ -97,6 +100,8 @@ class OrphanedRegistrationLockTest {
     private val identities = mockk<Identities>()
     private val dapiClient = mockk<DapiClient>()
     private val lockKey = mockk<ECKey>()
+    private val fundingLock = FundingSelectionLock()
+    private val sdkTopUpRecoveryService = mockk<SdkTopUpRecoveryService>(relaxed = true)
 
     init {
         every { platformRepo.platform } returns platformService
@@ -120,7 +125,7 @@ class OrphanedRegistrationLockTest {
     private fun repository() = TopUpRepositoryImpl(
         mockk(relaxed = true), walletData, identityRepository, platformRepo, topUpsDao,
         mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true),
-        mockk(relaxed = true), verifier, mockk(relaxed = true)
+        sdkTopUpRecoveryService, verifier, mockk(relaxed = true), fundingLock
     )
 
     private fun hash(hex: String) = Sha256Hash.wrap(hex.repeat(32))
@@ -433,11 +438,81 @@ class OrphanedRegistrationLockTest {
             3_000_000_000L
         }
 
-        sweep = launch { repository().checkTopUps(null) }
+        var returned = false
+        sweep = launch {
+            repository().checkTopUps(null)
+            returned = true
+        }
         sweep.join()
 
         toppedUp(orphan)
         assertEquals(true, topUpsDao.rows.getValue(hash("18")).used())
+        assertEquals(false, returned)
+    }
+
+    @Test
+    fun `a wallet reset begun while Core looks up the lock stops the sweep before it submits`() = runTest {
+        val orphan = lock("19", minedAt = null)
+        fundingLocks(orphan)
+        every { dapiClient.getTransactionKotlin("19".repeat(32)) } answers {
+            fundingLock.raiseWipeBarrier()
+            GetTransactionResponse(ByteArray(0), hash("ee"), MINED_AT, 6, false, true)
+        }
+
+        val result = runCatching { repository().checkTopUps(null) }
+
+        assertTrue(result.exceptionOrNull() is WalletWipedCancellationException)
+        assertNotToppedUp()
+        assertNull(topUpsDao.rows[hash("19")])
+        fundingLock.awaitWipeDrained()
+    }
+
+    @Test
+    fun `a top-up submitted as a wallet reset begins is recorded and releases its hold`() = runTest {
+        val orphan = lock("1b")
+        fundingLocks(orphan)
+        every { identities.topUp(any(), any(), orphan, any<Long>(), any()) } answers {
+            fundingLock.raiseWipeBarrier()
+            3_000_000_000L
+        }
+
+        val result = runCatching { repository().checkTopUps(null) }
+
+        assertTrue(result.exceptionOrNull() is WalletWipedCancellationException)
+        toppedUp(orphan)
+        assertEquals(true, topUpsDao.rows.getValue(hash("1b")).used())
+        fundingLock.awaitWipeDrained()
+    }
+
+    @Test
+    fun `a sweep refused by a wallet reset does not return as finished to a cancelled caller`() = runTest {
+        fundingLocks(lock("1c"))
+        fundingLock.raiseWipeBarrier()
+        var returned = false
+        val sweep = launch {
+            repository().checkTopUps(null)
+            returned = true
+        }
+        coEvery { sdkTopUpRecoveryService.hasPendingTopUpLocks() } answers {
+            sweep.cancel()
+            false
+        }
+
+        sweep.join()
+
+        assertEquals(false, returned)
+    }
+
+    @Test
+    fun `a sweep started during a wallet reset looks nothing up and submits nothing`() = runTest {
+        fundingLocks(lock("1a"))
+        fundingLock.raiseWipeBarrier()
+
+        repository().checkTopUps(null)
+
+        verify(exactly = 0) { platformService.getIdentity(any<Identifier>()) }
+        verify(exactly = 0) { dapiClient.getTransactionKotlin(any()) }
+        assertNotToppedUp()
     }
 
     @Test
