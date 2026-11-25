@@ -28,6 +28,10 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
@@ -53,6 +57,7 @@ import org.dashj.platform.sdk.platform.Platform
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.Date
 import java.util.concurrent.TimeUnit
@@ -60,9 +65,16 @@ import java.util.concurrent.TimeUnit
 class OrphanedRegistrationLockTest {
     private class FakeTopUpsDao : TopUpsDao {
         val rows = mutableMapOf<Sha256Hash, TopUp>()
-        override suspend fun insert(topUp: TopUp) { rows[topUp.txId] = topUp }
+        // Like Room's suspend DAO methods, the two the sweep calls throw once its coroutine is cancelled.
+        override suspend fun insert(topUp: TopUp) {
+            currentCoroutineContext().ensureActive()
+            rows[topUp.txId] = topUp
+        }
         override suspend fun getByUserId(userId: String) = rows.values.filter { it.toUserId == userId }
-        override suspend fun getByTxId(txId: Sha256Hash) = rows[txId]
+        override suspend fun getByTxId(txId: Sha256Hash): TopUp? {
+            currentCoroutineContext().ensureActive()
+            return rows[txId]
+        }
         override fun observe(txId: Sha256Hash): Flow<TopUp?> = flowOf(rows[txId])
         override suspend fun getAll() = rows.values.toList()
         override suspend fun clear() = rows.clear()
@@ -391,6 +403,41 @@ class OrphanedRegistrationLockTest {
 
         verify(exactly = 0) { identities.topUp(any(), any(), broken, any<Long>(), any()) }
         toppedUp(orphan)
+    }
+
+    @Test
+    fun `a sweep cancelled while Core looks up the lock does not submit it`() = runTest {
+        val orphan = lock("17", minedAt = null)
+        fundingLocks(orphan)
+        lateinit var sweep: Job
+        every { dapiClient.getTransactionKotlin("17".repeat(32)) } answers {
+            sweep.cancel()
+            GetTransactionResponse(ByteArray(0), hash("ee"), MINED_AT, 6, false, true)
+        }
+
+        sweep = launch { repository().checkTopUps(null) }
+        sweep.join()
+
+        assertTrue(sweep.isCancelled)
+        assertNotToppedUp()
+        assertNull(topUpsDao.rows[hash("17")])
+    }
+
+    @Test
+    fun `a credit Platform accepted is recorded even if the sweep was cancelled while submitting`() = runTest {
+        val orphan = lock("18")
+        fundingLocks(orphan)
+        lateinit var sweep: Job
+        every { identities.topUp(any(), any(), orphan, any<Long>(), any()) } answers {
+            sweep.cancel()
+            3_000_000_000L
+        }
+
+        sweep = launch { repository().checkTopUps(null) }
+        sweep.join()
+
+        toppedUp(orphan)
+        assertEquals(true, topUpsDao.rows.getValue(hash("18")).used())
     }
 
     @Test

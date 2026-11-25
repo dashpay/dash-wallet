@@ -70,12 +70,16 @@ import de.schildbach.wallet_test.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.AddressFormatException
 import org.bitcoinj.core.InsufficientMoneyException
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.TimeoutCancellationException
@@ -479,6 +483,9 @@ class TopUpRepositoryImpl @Inject constructor(
         val identityId = registeredIdentityId(identity, lock)
         val assetLockKey = lock.assetLockPublicKey.let { if (it.isEncrypted) it.decrypt(aesKeyParameter) else it }
         val platformIdentity = checkNotNull(identity.identity) { "Identity has no Platform record, not topping up with ${lock.txId}" }
+        // The Core lookup before this blocks without checking cancellation: a sweep cancelled meanwhile,
+        // such as by a wallet reset, must not spend the lock with no one left to record the credit.
+        currentCoroutineContext().ensureActive()
         val credits = try {
             identity.platform.identities.topUp(platformIdentity, 0, lock, chainLockedHeight.toLong(), assetLockKey)
         } catch (e: Exception) {
@@ -490,8 +497,11 @@ class TopUpRepositoryImpl @Inject constructor(
         }
         identity.creditBalance = Coin.valueOf(credits / 1000)
         log.info("topup success: {}", lock.txId)
-        val topUp = topUpsDao.getByTxId(lock.txId) ?: TopUp(lock.txId, identityId)
-        topUpsDao.insert(topUp.copy(toUserId = identityId, creditedAt = System.currentTimeMillis()))
+        // Platform has spent the lock: record it even if the sweep was cancelled while it was submitting.
+        withContext(NonCancellable) {
+            val topUp = topUpsDao.getByTxId(lock.txId) ?: TopUp(lock.txId, identityId)
+            topUpsDao.insert(topUp.copy(toUserId = identityId, creditedAt = System.currentTimeMillis()))
+        }
     }
 
     private suspend fun updateConfidence(confidence: TransactionConfidence) {
