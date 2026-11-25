@@ -68,6 +68,8 @@
     <string name="dash_connect_tab_empty_expired">No expired connections</string>
     <string name="dash_connect_status">Status</string>
     <string name="dash_connect_disconnect_action">Disconnect</string>
+    <string name="dash_connect_identity_mismatch_title">This request is for a different identity</string>
+    <string name="dash_connect_identity_mismatch_message">The app asked to sign in with identity %1$s.\n\nThis wallet’s identity is %2$s.\n\nSign in to the app with this wallet’s identity, then scan or open the new request it shows.</string>
     <string name="dash_connect_disconnect_confirm_title">Disconnect %1$s?</string>
     <string name="dash_connect_disconnect_confirm_message">%1$s’s keys will be disabled on Platform for good. To use %1$s again, connect from %1$s with a new QR code or link.</string>
     <string name="dash_connect_expired_on">Connection expired</string>

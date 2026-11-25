@@ -400,9 +400,11 @@ class AppConnectOwnershipTest {
         every { service.platform.client.getProtocolVersion() } returns 13
         assertThrows(IllegalStateException::class.java) { runBlocking { session.prepare(request) } }
         every { service.platform.client.getProtocolVersion() } returns 14
-        assertThrows(IllegalStateException::class.java) {
+        val mismatch = assertThrows(AppConnectIdentityMismatch::class.java) {
             runBlocking { session.prepare(request.copy(appConnect = request.appConnect!!.copy(identityHint = ByteArray(32)))) }
         }
+        assertEquals(Identifier.from(ByteArray(32)).toString(), mismatch.requestedIdentityId)
+        assertEquals(identityId.toString(), mismatch.walletIdentityId)
     }
 
     @Test fun `consent cannot remove limits exceed the wallet maximums or broaden bounds`() = runBlocking {

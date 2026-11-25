@@ -266,6 +266,15 @@ class ConnectionsViewModelTest {
         coVerify(exactly = 1) { repository.approvePreparedLogin(request, changed.copy(groupScopeChangeApproved = true)) }
     }
 
+    @Test fun `a request for another identity names both identities instead of a generic error`() {
+        coEvery { repository.prepareLogin(any()) } throws AppConnectIdentityMismatch("requested", "wallet")
+        coEvery { identities.getUsername() } returns "alice"
+        scan()
+        assertEquals(ConnectionsViewModel.ScanOutcome.IdentityMismatch("requested", "wallet", "alice"),
+            model.scanOutcome.value)
+        assertNull(model.uiState.value.pendingRequest)
+    }
+
     @Test fun `failed recovery refresh blocks stale retry but retains revocation`() {
         scan()
         coEvery { repository.prepareLogin(any()) } throws IllegalStateException("Proof unavailable")

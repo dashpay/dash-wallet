@@ -34,6 +34,27 @@ class ConnectionDialogsTest {
         }
     }
 
+    @Test fun `identity mismatch dialog names the requested and the wallet identity`() {
+        val controller = Robolectric.buildActivity(FragmentActivity::class.java)
+        controller.get().setTheme(org.dash.wallet.common.R.style.My_Theme)
+        val activity = controller.setup().get()
+        val dialog = identityMismatchDialog(activity,
+            ConnectionsViewModel.ScanOutcome.IdentityMismatch("RequestedId", "WalletId", "alice"))
+        try {
+            dialog.show(activity) { }
+            shadowOf(Looper.getMainLooper()).idle()
+            activity.supportFragmentManager.executePendingTransactions()
+            assertTrue(dialog.requireDialog().isShowing)
+            val message = dialog.requireView().findViewById<android.widget.TextView>(
+                org.dash.wallet.common.R.id.dialog_message).text.toString()
+            assertTrue(message.contains("RequestedId"))
+            assertTrue(message.contains("alice (WalletId)"))
+        } finally {
+            dialog.dismiss()
+            controller.pause().stop().destroy()
+        }
+    }
+
     @Test fun `tabs keep pending with active and legacy records with disconnected`() {
         fun connection(status: ConnectionStatus, legacy: Boolean = false) =
             DAppConnection("app", "App", "", status, 0L, legacyOnly = legacy)

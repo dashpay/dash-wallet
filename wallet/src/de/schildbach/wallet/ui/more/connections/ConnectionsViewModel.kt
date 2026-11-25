@@ -123,6 +123,12 @@ class ConnectionsViewModel @Inject constructor(
         object ConnectionRequested : ScanOutcome()
 
         data class Error(val message: String?) : ScanOutcome()
+
+        data class IdentityMismatch(
+            val requestedIdentityId: String,
+            val walletIdentityId: String,
+            val walletUsername: String?
+        ) : ScanOutcome()
     }
 
     private val _uiState = MutableStateFlow(ConnectionsUIState())
@@ -346,8 +352,13 @@ class ConnectionsViewModel @Inject constructor(
                 _scanOutcome.value = ScanOutcome.ConnectionRequested
             } catch (ex: Exception) {
                 if (ex is CancellationException) throw ex
-                log.error("failed to process scanned DashConnect QR", ex)
-                _scanOutcome.value = ScanOutcome.Error(ex.message)
+                _scanOutcome.value = if (ex is AppConnectIdentityMismatch) {
+                    log.warn("DashConnect request names identity {}, not {}", ex.requestedIdentityId, ex.walletIdentityId)
+                    ScanOutcome.IdentityMismatch(ex.requestedIdentityId, ex.walletIdentityId, walletUsernameOrNull())
+                } else {
+                    log.error("failed to process scanned DashConnect QR", ex)
+                    ScanOutcome.Error(ex.message)
+                }
                 _uiState.update { it.copy(error = ex.message) }
             } finally {
                 operationInProgress = false
@@ -375,6 +386,18 @@ class ConnectionsViewModel @Inject constructor(
 
     fun resetScanOutcome() {
         _scanOutcome.value = ScanOutcome.Idle
+    }
+
+    /** Resets only if [shown] is still the current outcome, so a newer one is not lost. */
+    fun resetScanOutcome(shown: ScanOutcome) {
+        _scanOutcome.compareAndSet(shown, ScanOutcome.Idle)
+    }
+
+    private suspend fun walletUsernameOrNull(): String? = try {
+        identityRepository.getUsername()
+    } catch (e: Exception) {
+        if (e is CancellationException) throw e
+        null
     }
 
     fun approveTokenPurchase() {

@@ -136,6 +136,10 @@ class ConnectionsFragment : Fragment() {
                             ).show()
                             viewModel.resetScanOutcome()
                         }
+                        is ConnectionsViewModel.ScanOutcome.IdentityMismatch -> {
+                            showUnlockedDialog { identityMismatchDialog(requireContext(), outcome) }
+                            viewModel.resetScanOutcome(outcome)
+                        }
                         is ConnectionsViewModel.ScanOutcome.Idle -> Unit
                     }
                 }

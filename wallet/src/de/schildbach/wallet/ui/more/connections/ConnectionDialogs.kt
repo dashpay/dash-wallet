@@ -50,6 +50,20 @@ internal fun connectionCallbackDialog(context: Context, host: String): AdaptiveD
     context.getString(R.string.dash_connect_return_open)
 )
 
+internal fun identityMismatchDialog(
+    context: Context,
+    mismatch: ConnectionsViewModel.ScanOutcome.IdentityMismatch
+): AdaptiveDialog = AdaptiveDialog.create(
+    R.drawable.ic_warning_yellow_circle,
+    context.getString(R.string.dash_connect_identity_mismatch_title),
+    context.getString(
+        R.string.dash_connect_identity_mismatch_message,
+        mismatch.requestedIdentityId,
+        mismatch.walletUsername?.let { "$it (${mismatch.walletIdentityId})" } ?: mismatch.walletIdentityId
+    ),
+    context.getString(R.string.button_ok)
+).apply { isMessageSelectable = true }
+
 /** Disconnecting revokes the app's keys on Platform for good, so it is confirmed first. */
 internal fun disconnectConfirmationDialog(context: Context, appName: String): AdaptiveDialog = AdaptiveDialog.create(
     R.drawable.ic_warning_yellow_circle,
