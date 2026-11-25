@@ -275,6 +275,23 @@ class ConnectionsViewModelTest {
         assertNull(model.uiState.value.pendingRequest)
     }
 
+    @Test fun `acknowledging an earlier identity mismatch keeps a newer outcome`() {
+        coEvery { repository.prepareLogin(any()) } throws AppConnectIdentityMismatch("requested", "wallet")
+        coEvery { identities.getUsername() } returns "alice"
+        scan()
+        val mismatch = model.scanOutcome.value
+        assertTrue(mismatch is ConnectionsViewModel.ScanOutcome.IdentityMismatch)
+        coEvery { repository.prepareLogin(any()) } throws IllegalStateException("Proof unavailable")
+        scan()
+        val newer = model.scanOutcome.value
+        assertEquals(ConnectionsViewModel.ScanOutcome.Error("Proof unavailable"), newer)
+
+        model.resetScanOutcome(mismatch)
+        assertEquals(newer, model.scanOutcome.value)
+        model.resetScanOutcome(newer)
+        assertEquals(ConnectionsViewModel.ScanOutcome.Idle, model.scanOutcome.value)
+    }
+
     @Test fun `failed recovery refresh blocks stale retry but retains revocation`() {
         scan()
         coEvery { repository.prepareLogin(any()) } throws IllegalStateException("Proof unavailable")

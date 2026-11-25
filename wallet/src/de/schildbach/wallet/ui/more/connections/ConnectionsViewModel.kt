@@ -353,7 +353,7 @@ class ConnectionsViewModel @Inject constructor(
             } catch (ex: Exception) {
                 if (ex is CancellationException) throw ex
                 _scanOutcome.value = if (ex is AppConnectIdentityMismatch) {
-                    log.warn("DashConnect request names identity {}, not {}", ex.requestedIdentityId, ex.walletIdentityId)
+                    log.warn("DashConnect request rejected because it names a different identity")
                     ScanOutcome.IdentityMismatch(ex.requestedIdentityId, ex.walletIdentityId, walletUsernameOrNull())
                 } else {
                     log.error("failed to process scanned DashConnect QR", ex)
