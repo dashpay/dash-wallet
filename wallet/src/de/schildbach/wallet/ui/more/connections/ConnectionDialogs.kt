@@ -10,6 +10,9 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
@@ -33,6 +36,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.ui.components.ButtonData
+import org.dash.wallet.common.ui.getActivity
 import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.ModalDialog
 import org.dash.wallet.common.ui.components.MyTheme
@@ -104,13 +108,24 @@ internal fun IdentityMismatchDialog(
     onDismiss: () -> Unit
 ) {
     val colors = LocalDashColors.current
+    val activity = LocalContext.current.getActivity()
     ModalDialog(
         showDialog = true,
         onDismissRequest = onDismiss,
         icon = ImageVector.vectorResource(R.drawable.ic_warning_yellow_circle),
         heading = stringResource(R.string.dash_connect_identity_mismatch_title),
         content = {
-            SelectionContainer {
+            // The dialog window bypasses the activity's dispatch, so selecting an id would not reset auto-lock.
+            SelectionContainer(
+                Modifier.pointerInput(activity) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            awaitPointerEvent(PointerEventPass.Initial)
+                            activity?.onUserInteraction()
+                        }
+                    }
+                }
+            ) {
                 Text(
                     text = identityMismatchMessage(LocalContext.current, mismatch),
                     style = MyTheme.Body2Regular,

@@ -43,9 +43,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.withContext
-import de.schildbach.wallet.ui.dashpay.utils.preferDisplayLabel
 import org.bitcoinj.core.Base58
-import org.dashj.platform.sdk.platform.Names
 import java.math.BigInteger
 import javax.inject.Inject
 
@@ -397,14 +395,15 @@ class ConnectionsViewModel @Inject constructor(
     }
 
     private suspend fun localWalletUsername(identityId: String?): String? {
-        val stored = identityRepository.getUsername() ?: return null
         val profile = try {
             identityRepository.getLocalUserProfile()?.takeIf { it.userId == identityId }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             null
         }
-        return preferDisplayLabel(profile?.username, stored, Names::normalizeString)
+        // Sync and recovery keep this identity's profile on the record's registered primary, which can be a
+        // replacement name rather than the stored one.
+        return profile?.username?.takeIf { it.isNotEmpty() } ?: identityRepository.getUsername()
     }
 
     private suspend fun walletUsernameOrNull(identityId: String): String? = try {

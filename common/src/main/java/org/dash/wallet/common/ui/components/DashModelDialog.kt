@@ -1,6 +1,8 @@
 package org.dash.wallet.common.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -44,7 +46,8 @@ import org.dash.wallet.common.R
  * @param limitationItems Optional list of limitation items with values and labels
  * @param moreInfoButton Optional button for additional information
  * @param buttons List of button data with labels and click actions
- * @param content Optional custom content to display after text blocks
+ * @param content Optional custom content to display after text blocks. The dialog body scrolls
+ *   vertically, so this must not contain vertically scrolling or lazy layouts of its own.
  * @param horizontalPadding Horizontal padding for the dialog (default: 15.dp)
  */
 @Composable
@@ -109,9 +112,12 @@ fun ModalDialog(
                             Spacer(modifier = Modifier.height(20.dp))
                         }
 
-                        // Content wrapper
+                        // Content wrapper: scrolls when it does not fit, so the buttons stay on screen
                         Column(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f, fill = false)
+                                .verticalScroll(rememberScrollState()),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {

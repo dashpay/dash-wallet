@@ -298,14 +298,18 @@ class ConnectionsViewModelTest {
         scan()
         assertEquals(ConnectionsViewModel.ScanOutcome.IdentityMismatch("requested", "wallet", "0rphanc1a1m4829"),
             model.scanOutcome.value)
-        coEvery { identities.getLocalUserProfile() } returns
-            DashPayProfile("wallet", "someoneelse")
-        scan()
-        assertEquals(ConnectionsViewModel.ScanOutcome.IdentityMismatch("requested", "wallet", "0rphanc1a1m4829"),
-            model.scanOutcome.value)
         coEvery { identities.getLocalUserProfile() } throws IllegalStateException("database closed")
         scan()
         assertEquals(ConnectionsViewModel.ScanOutcome.IdentityMismatch("requested", "wallet", "0rphanc1a1m4829"),
+            model.scanOutcome.value)
+    }
+
+    @Test fun `an identity mismatch shows the profile's replacement username over the stored one`() {
+        coEvery { repository.prepareLogin(any()) } throws AppConnectIdentityMismatch("requested", "wallet")
+        coEvery { identities.getUsername() } returns "0ldname"
+        coEvery { identities.getLocalUserProfile() } returns DashPayProfile("wallet", "NewName")
+        scan()
+        assertEquals(ConnectionsViewModel.ScanOutcome.IdentityMismatch("requested", "wallet", "NewName"),
             model.scanOutcome.value)
     }
 
