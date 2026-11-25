@@ -22,7 +22,6 @@ import de.schildbach.wallet.database.dao.TxDisplayCacheDao
 import de.schildbach.wallet.database.entity.TxDisplayCacheEntry
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import org.dash.wallet.common.data.TxId
 import org.dash.wallet.common.data.entity.TransactionMetadata
@@ -155,6 +154,12 @@ private fun defaultSdkTxMetadata(
  *   the wallet owns/tracks it, else null. Parallel to `decoded.inputs`.
  * @param inputTxoValues per decoded input: the spent TXO's value in duffs
  *   when known, else null. Parallel to `decoded.inputs`.
+ * @param inputTxoForeign per decoded input: true when the caller's resolved
+ *   TXO is a contact's foreign mirror (the same verdict [inputTxoValues]
+ *   already excludes from the fee) — its address is never shown as a sender
+ *   address, not even via the decoded scriptSig hint. Defaults to "none
+ *   foreign" for callers that never resolve a TXO at all. Parallel to
+ *   `decoded.inputs`.
  */
 internal fun buildSdkTxDetail(
     record: L1TxUiRecord,
@@ -162,17 +167,18 @@ internal fun buildSdkTxDetail(
     myOutputAddresses: Set<String>,
     inputTxoAddresses: List<String?>,
     inputTxoValues: List<Long?>,
+    inputTxoForeign: List<Boolean> = emptyList(),
     // Platform-funding role when this internal move is an identified asset lock
     // (identity upgrade / top-up / invite), else null — see [SdkTxDetail.assetLockKind].
     assetLockKind: AssetLockKind? = null,
     // True when the caller could not resolve the foreign-contact TXO exclusion
-    // (ambiguous/unbound SDK wallet, or the account/address read failed) — so
-    // [myOutputAddresses] may be missing a contact's foreign output. Unknown
-    // must not be read as "nothing to exclude" (the same principle the project
-    // already applies to amounts): an OUTGOING send withholds its recipient
-    // list rather than risk showing the contact's own output as ours and
-    // falling back to "entirely self", the exact bug this fixes for a known,
-    // recurring wallet state.
+    // (ambiguous/unbound SDK wallet, or the account/address read failed), in
+    // which case the caller leaves [myOutputAddresses] EMPTY rather than guess —
+    // unknown must not be read as "nothing to exclude" (the same principle the
+    // project already applies to amounts). An OUTGOING send withholds its
+    // recipient list via the check below; an INCOMING one withholds via
+    // [myOutputAddresses] being empty, since its filter only ever admits a
+    // provably-ours address. Either way, no foreign output is ever shown as ours.
     ownershipUnknown: Boolean = false
 ): SdkTxDetail {
     val outputs = decoded?.outputs.orEmpty()
@@ -218,12 +224,16 @@ internal fun buildSdkTxDetail(
     // authoritative source; the decoded P2PKH scriptSig hint fills gaps for
     // our own inputs (self-authored, so the hint is our own address), and
     // is never used for INCOMING txs where it would be an unauthenticated
-    // third-party claim.
+    // third-party claim. A known-foreign input (contact's mirror TXO) is
+    // dropped outright — the hint is skipped for it too, since restoring it
+    // would show a non-wallet address as if it funded this spend; the hint
+    // still fills in for a genuinely unresolved input (no TXO row at all).
     val inputAddresses = if (record.direction == L1TxUiDirection.INCOMING || decoded == null) {
         emptyList()
     } else {
         decoded.inputs.mapIndexedNotNull { i, input ->
-            inputTxoAddresses.getOrNull(i) ?: input.address
+            if (inputTxoForeign.getOrNull(i) == true) null
+            else inputTxoAddresses.getOrNull(i) ?: input.address
         }.distinct()
     }
 
@@ -369,11 +379,13 @@ internal fun txoOutpoint(wireTxid: ByteArray, vout: Int): ByteArray =
 /**
  * Account ids and addresses of this wallet's watch-only DIP-15 external
  * friendship accounts — the contact's own funds, never ours (see
- * [SdkTxContactResolver.ACCOUNT_TYPE_DASHPAY_EXTERNAL]'s KDoc and
- * `txoIsForeignSql`). [load]'s `myOutputAddresses` needs the same exclusion
- * [SdkTxContactResolver.signedNetsFor] already applies to its TXO sums, so a
- * contact's mirrored TXO (persisted so an outgoing payment is displayable) is
- * never counted as this wallet's own output.
+ * [isForeignTxo] and [txoIsForeignSql]'s KDoc, the single rule this,
+ * [SdkTxContactResolver.foreignExclusionContext] and
+ * [SdkTxStoreWalker.txoIsForeignSql] all apply). [load]'s
+ * `myOutputAddresses` needs the same exclusion [SdkTxContactResolver.signedNetsFor]
+ * already applies to its TXO sums, so a contact's mirrored TXO (persisted so
+ * an outgoing payment is displayable) is never counted as this wallet's own
+ * output.
  *
  * Null — not a crash — when the wallet isn't resolvable or the read fails:
  * callers must treat that as UNKNOWN, not "nothing to exclude" ([load] then
@@ -393,16 +405,7 @@ internal suspend fun foreignContactTxoExclusion(
                 loadedWalletIds.size
             )
         }
-    val externalAccountIds = db.accountDao()
-        .observeByWalletAndType(walletId, SdkTxContactResolver.ACCOUNT_TYPE_DASHPAY_EXTERNAL)
-        .first()
-        .map { it.id }
-        .toSet()
-    val externalAddresses = HashSet<String>()
-    for (accountId in externalAccountIds) {
-        db.coreAddressDao().observeByAccount(accountId).first().mapTo(externalAddresses) { it.address }
-    }
-    externalAccountIds to externalAddresses
+    foreignTxoExclusionSets(db, walletId)
 } catch (e: CancellationException) {
     throw e
 } catch (t: Throwable) {
@@ -510,29 +513,65 @@ class SdkTxDetailProvider internal constructor(
         val txoDao = db.txoDao()
         val myOutputAddresses = mutableSetOf<String>()
         var ownershipUnknown = false
-        if (!decoded?.outputs.isNullOrEmpty()) {
-            val exclusion = foreignContactTxoExclusion(sdkService, db)
-            if (exclusion == null) {
-                // OUTGOING still withholds (ownershipUnknown is fail-closed there), but
-                // the raw walk below must still run with no exclusion so INCOMING keeps
-                // attributing outputs from the persisted TXO rows — see foreignContactTxoExclusion's
-                // own KDoc: null means "exclusion unavailable", not "skip the walk".
-                ownershipUnknown = true
-            }
-            val (externalAccountIds, externalAddresses) = exclusion ?: (emptySet<Long>() to emptySet<String>())
-            decoded?.outputs?.forEachIndexed { index, _ ->
-                val txo = txoDao.getByOutpoint(txoOutpoint(wireTxid, index)) ?: return@forEachIndexed
-                // Mirrors SdkTxContactResolver.signedNetsFor's NULL-accountId classification:
-                // a friendship-send TXO persists with accountId NULL, so coreAddressId (the
-                // core_addresses PK, always populated) is the authoritative fallback — address
-                // alone misses it whenever the TXO's own address column doesn't match.
-                val isForeign = (txo.accountId != null && txo.accountId in externalAccountIds) ||
-                    (txo.accountId == null && (txo.coreAddressId ?: txo.address) in externalAddresses)
-                if (!isForeign) myOutputAddresses += txo.address
-            }
-        }
         val inputTxos = decoded?.inputs.orEmpty().map { input ->
             txoDao.getByOutpoint(txoOutpoint(input.prevTxid, input.prevVout))
+        }
+        // Resolved once for both walks below: the output walk needs it to tell
+        // a contact's mirrored output from ours, and the input walk needs the
+        // same sets to tell a contact's mirrored INPUT from ours (DW-1658 round
+        // 2 finding 2) — a foreign input must not fund derivedFeeDuffs's Σin
+        // any more than a foreign output may be shown as ours.
+        val exclusion = if (!decoded?.outputs.isNullOrEmpty() || inputTxos.isNotEmpty()) {
+            foreignContactTxoExclusion(sdkService, db)
+        } else {
+            null
+        }
+        if (!decoded?.outputs.isNullOrEmpty()) {
+            if (exclusion == null) {
+                // Fail-closed for BOTH directions: without the exclusion sets, no TXO
+                // row can be told apart from a contact's foreign output, so the walk
+                // is skipped entirely rather than risk counting one as ours.
+                // myOutputAddresses stays empty, which OUTGOING's ownershipUnknown
+                // check and INCOMING's "only provably-ours" filter both already treat
+                // as withholding the recipient list.
+                ownershipUnknown = true
+            } else {
+                val (externalAccountIds, externalAddresses) = exclusion
+                decoded?.outputs?.forEachIndexed { index, _ ->
+                    val txo = txoDao.getByOutpoint(txoOutpoint(wireTxid, index)) ?: return@forEachIndexed
+                    val isForeign = isForeignTxo(
+                        txo.accountId, txo.coreAddressId, txo.address, externalAccountIds, externalAddresses
+                    )
+                    if (!isForeign) myOutputAddresses += txo.address
+                }
+            }
+        }
+
+        // Per-input foreign verdict (DIP-15, the same rule the output walk
+        // applies above): true when the resolved TXO is a contact's foreign
+        // mirror, never for a genuinely UNRESOLVED input (no TXO row at all —
+        // that one still gets its decoded scriptSig hint, below). Exclusion
+        // unavailable → fail closed like the output walk: every RESOLVED
+        // input is treated as foreign, since none can be told apart from it;
+        // an unresolved one stays false (no TXO row to classify as foreign).
+        val inputIsForeign: List<Boolean> = if (exclusion == null) {
+            inputTxos.map { it != null }
+        } else {
+            val (externalAccountIds, externalAddresses) = exclusion
+            inputTxos.map { txo ->
+                txo != null && isForeignTxo(
+                    txo.accountId, txo.coreAddressId, txo.address, externalAccountIds, externalAddresses
+                )
+            }
+        }
+
+        // Input values feeding the derived fee ([derivedFeeDuffs]): a foreign
+        // input is not this wallet's coin, so it must not fund Σin — treated
+        // the same as an UNRESOLVED input (null), which fails
+        // derivedFeeDuffs's all-non-null precondition and leaves the fee null
+        // rather than built from the contact's own money.
+        val inputFeeValues: List<Long?> = inputTxos.mapIndexed { i, txo ->
+            if (inputIsForeign[i]) null else txo?.amount
         }
 
         // The fee the history list used: the store's, or — while the store still has it
@@ -542,7 +581,7 @@ class SdkTxDetailProvider internal constructor(
             storeRecordOf(entity),
             walletRecord = walletRecordFor(db, txIdDisplayHex.lowercase()),
             cacheEntry = cacheEntryFor(txIdDisplayHex),
-            derivedFee = derivedFeeDuffs(decoded, inputTxos.map { it?.amount })
+            derivedFee = derivedFeeDuffs(decoded, inputFeeValues)
         )
 
         // Classify a wallet-authored internal move as a Platform-funding asset
@@ -555,7 +594,8 @@ class SdkTxDetailProvider internal constructor(
             decoded = decoded,
             myOutputAddresses = myOutputAddresses,
             inputTxoAddresses = inputTxos.map { it?.address },
-            inputTxoValues = inputTxos.map { it?.amount },
+            inputTxoValues = inputFeeValues,
+            inputTxoForeign = inputIsForeign,
             assetLockKind = assetLockKind,
             ownershipUnknown = ownershipUnknown
         )
