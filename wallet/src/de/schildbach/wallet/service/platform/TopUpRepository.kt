@@ -54,6 +54,8 @@ import org.bitcoinj.wallet.Wallet
 import org.bouncycastle.crypto.params.KeyParameter
 import de.schildbach.wallet.data.WalletData
 import org.dashj.platform.dashpay.BlockchainIdentity
+import org.dashj.platform.dashpay.IdentityStatus
+import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.dpp.toHex
 import org.dashj.platform.sdk.platform.Names
 import org.slf4j.LoggerFactory
@@ -75,6 +77,7 @@ import org.bitcoinj.core.AddressFormatException
 import org.bitcoinj.core.InsufficientMoneyException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.TimeoutCancellationException
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import java.util.concurrent.TimeUnit
@@ -115,7 +118,12 @@ interface TopUpRepository {
     /** waits for IS or CL */
     suspend fun waitForTransaction(confidence: TransactionConfidence)
 
-    /** top up identity and save topup state to the db */
+    /**
+     * top up [IdentityRepository.blockchainIdentity] and save topup state to the db
+     *
+     * @throws IllegalStateException before saving anything if there is no identity, or it is not
+     * registered or has no id
+     */
     suspend fun topUpIdentity(
         topupAssetLockTransaction: AssetLockTransaction,
         aesKeyParameter: KeyParameter?
@@ -187,6 +195,7 @@ class TopUpRepositoryImpl @Inject constructor(
     companion object {
         private val log = LoggerFactory.getLogger(TopUpRepositoryImpl::class.java)
         private const val MIN_DUST_FACTOR = 10L
+        private val UNUSED_REGISTRATION_LOCK_MIN_AGE_MS = TimeUnit.HOURS.toMillis(1)
     }
 
     private val workerJob = Job()
@@ -382,11 +391,8 @@ class TopUpRepositoryImpl @Inject constructor(
         }
     }
 
-    private suspend fun addTopUp(txId: Sha256Hash): TopUp {
-        val topUp = TopUp(
-            txId,
-            identityRepository.blockchainIdentity!!.uniqueIdString
-        )
+    private suspend fun addTopUp(txId: Sha256Hash, identityId: String): TopUp {
+        val topUp = TopUp(txId, identityId)
         topUpsDao.insert(topUp)
         return topUp
     }
@@ -395,12 +401,34 @@ class TopUpRepositoryImpl @Inject constructor(
         topUpTx: AssetLockTransaction,
         aesKeyParameter: KeyParameter?
     ) {
+        val identity = checkNotNull(identityRepository.blockchainIdentity) {
+            "No identity to top up with ${topUpTx.txId}"
+        }
+        topUpIdentity(topUpTx, aesKeyParameter, identity, recovery = false)
+    }
+
+    /**
+     * @param recovery for a lock found by [creditUnusedRegistrationLocks]: no top-up is recorded
+     * until Platform accepts it, a rejection as already used is not taken as proof of a credit, and
+     * the chain lock is not waited for because the lock is already mined
+     */
+    private suspend fun topUpIdentity(
+        topUpTx: AssetLockTransaction,
+        aesKeyParameter: KeyParameter?,
+        identity: BlockchainIdentity,
+        recovery: Boolean
+    ) {
+        check(identity.registrationStatus == IdentityStatus.REGISTERED) {
+            "Identity is ${identity.registrationStatus}, not topping up with ${topUpTx.txId}"
+        }
+        val identityId = checkNotNull(identity.uniqueIdStringOrNull()) {
+            "Identity has no id, not topping up with ${topUpTx.txId}"
+        }
         // Funding runs outside SendCoinsTaskRunner, so it needs the same barrier: after a restart
         // the input locks of an uncertain payment live only in memory until they are restored.
         pendingPaymentVerifier.awaitRestored()
-        val topUp = topUpsDao.getByTxId(
-            topUpTx.txId
-        ) ?: addTopUp(topUpTx.txId)
+        val topUp = topUpsDao.getByTxId(topUpTx.txId)
+            ?: if (recovery) TopUp(topUpTx.txId, identityId) else addTopUp(topUpTx.txId, identityId)
         Context.propagate(walletDataProvider.wallet!!.context)
         val confidence = topUpTx.getConfidence(walletDataProvider.wallet!!.context)
         log.info("topup tx confidence: {}", confidence)
@@ -424,18 +452,21 @@ class TopUpRepositoryImpl @Inject constructor(
         }
         log.info("topup tx sent: {}; tx = {}", status, topUpTx.txId)
         try {
-            identityRepository.blockchainIdentity!!.topUp(
+            identity.topUp(
                 topUpTx,
                 aesKeyParameter,
                 useISLock = true,
-                waitForChainlock = true
+                waitForChainlock = !recovery
             )
             log.info("topup success: {}", topUpTx.txId)
-            topUpsDao.insert(topUp.copy(creditedAt = System.currentTimeMillis()))
+            topUpsDao.insert(topUp.copy(toUserId = identityId, creditedAt = System.currentTimeMillis()))
         } catch (e: Exception) {
             val regex = Regex(""".*Asset lock transaction [a-fA-F0-9]{64} output \d+ already completely used""")
             if (e.message?.let { regex.matches(it) || it.contains("Object already exists: state transition already in chain")} == true) {
-                // the asset lock was already used
+                if (recovery) {
+                    log.info("asset lock {} is already used; not recording a credit without proof", topUpTx.txId)
+                    return
+                }
                 topUpsDao.insert(topUp.copy(creditedAt = System.currentTimeMillis()))
                 log.info("topup success, already submitted: {}", topUpTx.txId)
             } else {
@@ -463,6 +494,22 @@ class TopUpRepositoryImpl @Inject constructor(
         } catch (e: Exception) {
             log.warn("error updating confidence using platform:", e)
         }
+    }
+
+    /**
+     * dashj stops syncing at the SDK cutover, so a lock it last saw unconfirmed is looked up on
+     * Platform's Core; the mined height it reports is what the chain asset lock proof uses.
+     */
+    private fun isMined(confidence: TransactionConfidence): Boolean {
+        if (confidence.confidenceType == TransactionConfidence.ConfidenceType.BUILDING) return true
+        val txInfo = platform.client.getTransactionKotlin(confidence.transactionHash.toString())
+        if (txInfo == null || txInfo.height <= 0) return false
+        confidence.confidenceType = TransactionConfidence.ConfidenceType.BUILDING
+        confidence.appearedAtChainHeight = txInfo.height
+        if (txInfo.isChainLocked) {
+            confidence.setChainLock(true)
+        }
+        return true
     }
 
     override suspend fun waitForTransaction(confidence: TransactionConfidence) {
@@ -550,11 +597,12 @@ class TopUpRepositoryImpl @Inject constructor(
 
     /**
      * Phase 2/3 (MO-998): the legacy dashj retry loops are DELETED — the
-     * SDK's tracked-lock queue is the only top-up retry system. Uncredited
-     * dashj-era top-ups from before the migration are NOT retried by the
-     * app anymore; they become recoverable again when the SDK gains
-     * chain rediscovery of asset locks (the pending platform change), at
-     * which point they surface on the recovery queue below like any
+     * SDK's tracked-lock queue is the only top-up retry system, apart from
+     * [creditUnusedRegistrationLocks]. Uncredited dashj-era top-ups from
+     * before the migration are NOT retried by the app anymore; they
+     * become recoverable again when the SDK gains chain rediscovery of
+     * asset locks (the pending platform change), at which point they
+     * surface on the recovery queue below like any
      * interrupted SDK top-up. Funds are never lost in the interim — the
      * locks sit on chain, claimable by this wallet's keys.
      */
@@ -565,6 +613,46 @@ class TopUpRepositoryImpl @Inject constructor(
             }
         } catch (e: Exception) {
             log.warn("failed to check/enqueue the SDK top-up drain", e)
+        }
+        creditUnusedRegistrationLocks(aesKeyParameter)
+    }
+
+    /**
+     * Credits the wallet's identity with mined registration asset locks that never registered an
+     * identity, such as the one left when identity creation adopted an existing identity and then
+     * failed. Platform accepts each asset lock once; a lock it reports as already used is left as it
+     * was and tried again on a later launch, because that rejection does not prove which identity it
+     * credited. Remove this once the SDK rediscovers dashj-era asset locks itself.
+     */
+    private suspend fun creditUnusedRegistrationLocks(aesKeyParameter: KeyParameter?) {
+        val locks = try {
+            authExtension.identityFundingTransactions.toList()
+        } catch (e: Exception) {
+            log.warn("failed to list registration asset locks", e)
+            return
+        }
+        val identity = identityRepository.blockchainIdentity ?: return
+        if (identity.registrationStatus != IdentityStatus.REGISTERED || identity.identity == null) return
+        val ownId = runCatching { identity.uniqueId }.getOrNull() ?: return
+        val wallet = walletDataProvider.wallet ?: return
+        val context = wallet.context
+        Context.propagate(context)
+        val settledBefore = System.currentTimeMillis() - UNUSED_REGISTRATION_LOCK_MIN_AGE_MS
+        for (lock in locks) {
+            try {
+                if (lock.identityId == ownId) continue
+                val updatedAt = wallet.getTransaction(lock.txId)?.updateTime?.time ?: continue
+                if (updatedAt == 0L || updatedAt > settledBefore) continue
+                if (topUpsDao.getByTxId(lock.txId)?.used() == true) continue
+                if (platform.getIdentity(Identifier.from(lock.identityId)) != null) continue
+                if (!isMined(lock.getConfidence(context))) continue
+                log.info("crediting unused registration asset lock {} to {}", lock.txId, identity.uniqueIdString)
+                topUpIdentity(lock, aesKeyParameter, identity, recovery = true)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                log.warn("failed to credit registration asset lock {}", lock.txId, e)
+            }
         }
     }
 
