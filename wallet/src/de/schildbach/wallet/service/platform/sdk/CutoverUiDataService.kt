@@ -33,10 +33,12 @@ import de.schildbach.wallet_test.R
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
@@ -57,7 +59,6 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onSubscription
@@ -1451,30 +1452,29 @@ interface CutoverUiSource {
     suspend fun boundWalletIdOrNull(): String?
 
     /**
-     * Live total L1 balance of the wallet in duffs — the SDK's NATIVE-ledger
-     * figure (`balance()` = confirmed + unconfirmed, the same read
-     * [currentBalanceSplitDuffs] serves), re-read whenever the Room `txos`
-     * mirror changes so the header updates the moment the SPV loop lands a
-     * change. The mirror only ever TRIGGERS this flow, never VALUES it: the
-     * mirror legitimately carries rows that are NOT this wallet's money (the
+     * Emits whenever the Room `txos` mirror of the wallet changes, so the
+     * header updates the moment the SPV loop lands a change. A TRIGGER only,
+     * with no figure: the collector takes the one native-ledger read itself
+     * ([currentBalanceSplitDuffs]). The mirror must never VALUE the balance:
+     * it legitimately carries rows that are NOT this wallet's money (the
      * DIP-15 `dashpayExternalAccount` outputs of a payment TO a contact — see
      * [txoIsForeignSql]), so a SQL SUM over it is a second, wrong truth that
      * dueled the native reads in the header (observed live: 1.69998912 ↔
      * 1.00000000 once a minute after a sent contact payment).
      */
-    fun observeTotalDuffs(walletIdHex: String): Flow<Long>
+    fun observeBalanceChanges(walletIdHex: String): Flow<Unit>
 
     /**
      * ONE-SHOT authoritative total balance in duffs read straight from the
      * SDK wallet's NATIVE ledger (`ManagedPlatformWallet.balance()` =
      * confirmed + unconfirmed) — the SAME read [L1ShadowSyncService.sdkBalanceDuffs]
-     * uses. Unlike [observeTotalDuffs] (which sums the Room `txos` table),
+     * uses. Unlike a sum over the Room `txos` table,
      * this reflects a self-send's native debit IMMEDIATELY: on a spend the
      * SDK debits its native ledger at once, but the spent-TXO marks are not
      * written to Room until the block/IS-lock lands, so a Room re-read would
-     * return the STALE pre-send sum. Used by [balancePipeline]'s post-event /
-     * ticker re-read so the header reaches 0 after a max self-send regardless
-     * of Room `txos` timing.
+     * return the STALE pre-send sum. The balance pipeline reads
+     * [currentBalanceSplitDuffs] instead, so the displayed total and confirmed
+     * balance come from the same native snapshot.
      */
     suspend fun currentTotalDuffs(walletIdHex: String): Long
 
@@ -1814,35 +1814,22 @@ internal class DashSdkCutoverUiSource(
     override suspend fun boundWalletIdOrNull(): String? =
         manager().wallets.value.keys.singleOrNull()
 
-    override fun observeTotalDuffs(walletIdHex: String): Flow<Long> = flow {
+    override fun observeBalanceChanges(walletIdHex: String): Flow<Unit> = flow {
         val walletId = requireNotNull(walletIdFromHex(walletIdHex)) { "malformed SDK wallet id" }
         val db = database()
-        // Trigger on any txos-table change (Room re-emits the count on every
-        // invalidation, value-changed or not), but read the FIGURE from the
-        // SDK's NATIVE ledger — the same `balance()` read every other
-        // publisher of [CutoverUiDataService.updateSdkBalance] uses, so the
-        // balance pipeline has ONE truth. The old SQL SUM over the mirror
-        // (`WHERE isSpent = 0`) was a second truth, and a wrong one: the
-        // mirror carries watch-only DIP-15 contact-payment outputs
-        // ([txoIsForeignSql] — the CONTACT's money, `isSpent` frozen at 0
-        // until THEY spend it), so after a sent contact payment the sum
-        // counted the payment as still ours and dueled the native reads in
-        // the header (observed live on S22 testnet 11.10.73: 169998912 ↔
-        // 100000000 duffs, alternating publications once a minute).
-        emitAll(
-            db.txoDao().countByWallet(walletId).mapNotNull {
-                try {
-                    currentBalanceSplitDuffs(walletIdHex).total
-                } catch (t: Throwable) {
-                    if (t is CancellationException) throw t
-                    // Skip this emission rather than kill the flow or publish a
-                    // guess (transient: wallet unloading mid-reset/restore) —
-                    // the balance pipeline's event/ticker lane re-reads anyway.
-                    log.warn("native balance read on txos change failed; emission skipped", t)
-                    null
-                }
-            }
-        )
+        // Any txos-table change (Room re-emits the count on every
+        // invalidation, value-changed or not). No figure is read here: the
+        // balance pipeline's one collector reads the SDK's NATIVE ledger
+        // itself, so a failed read cannot swallow the trigger and each change
+        // costs one read. The old SQL SUM over the mirror (`WHERE isSpent = 0`)
+        // was a second truth, and a wrong one: the mirror carries watch-only
+        // DIP-15 contact-payment outputs ([txoIsForeignSql] — the CONTACT's
+        // money, `isSpent` frozen at 0 until THEY spend it), so after a sent
+        // contact payment the sum counted the payment as still ours and
+        // dueled the native reads in the header (observed live on S22 testnet
+        // 11.10.73: 169998912 ↔ 100000000 duffs, alternating publications
+        // once a minute).
+        emitAll(db.txoDao().countByWallet(walletId).map { })
     }
 
     override suspend fun currentTotalDuffs(walletIdHex: String): Long =
@@ -2599,7 +2586,7 @@ class CutoverUiDataService internal constructor(
      */
     private val reconcileInitialDelayMs: Long = RECONCILE_INITIAL_DELAY_MS,
     /**
-     * Where [refreshNativeSplit] runs its blocking receive-address read. The
+     * Where [refreshReceiveAddress] runs its blocking receive-address read. The
      * refresh lanes publish everything else on [scope]'s dispatcher; a fixed
      * [kotlinx.coroutines.Dispatchers.IO] here put one real-thread hop in the
      * middle of every refresh, so a virtual-time test could assert before the
@@ -2978,8 +2965,8 @@ class CutoverUiDataService internal constructor(
      * actually delivers, gross of the drain fee; CoinJoin excluded), or
      * null while the cutover UI feed is inactive OR the account-level
      * snapshot is unavailable (in which case [overlayMaxSendableBalance]
-     * falls back to [sdkTotalBalance]). Refreshed with the native split
-     * ([refreshNativeSplit]: initial seed, engine tx events, ticker).
+     * falls back to [sdkTotalBalance]). Refreshed after each native split
+     * read ([refreshSpendFigures]).
      */
     val sdkMaxSendable: StateFlow<Coin?> = _sdkMaxSendable.asStateFlow()
 
@@ -3223,9 +3210,9 @@ class CutoverUiDataService internal constructor(
     /**
      * The SDK's live UNSPENT-output COUNT
      * ([CutoverUiSource.currentSpendableUtxoCount]), or null while the
-     * cutover UI feed is inactive / the read is unavailable. Refreshed on
-     * the same cadence as the native balance split ([refreshNativeSplit]),
-     * so the count and the balance always describe the same moment.
+     * cutover UI feed is inactive / the read is unavailable. Refreshed after
+     * each native balance split read ([refreshSpendFigures]), so the count
+     * follows the balance it is used with.
      */
     val sdkSpendableUtxoCount: StateFlow<Int?> = _sdkSpendableUtxoCount.asStateFlow()
 
@@ -3879,10 +3866,19 @@ class CutoverUiDataService internal constructor(
      * The LAST KNOWN total balance ([WalletUIConfig.LAST_TOTAL_BALANCE], the
      * same fast-startup seed the dashj
      * [WalletBalanceObserver][de.schildbach.wallet.transactions.WalletBalanceObserver]
-     * maintains), read ONCE at pipeline start — before any SDK figure is
+     * maintains), read at pipeline start — before any SDK figure is
      * published — or null when the key has never been written (first ever
      * run). This is what the header shows while the from-scratch
      * compact-filter scan is still running; see [overlayTotalBalance].
+     *
+     * It then FOLLOWS every figure [updateSdkBalance] persists to that key.
+     * The engine also reads as not synced whenever it is stopped and
+     * restarted in a running process, and the header falls back to this value
+     * each time — so left at the launch read it showed the pre-send balance
+     * again after a send or a shield (12.0.1-beta field report: a wallet
+     * shielded down to 781 duffs showed its launch 11.03225474 DASH at every
+     * engine stop). Only a figure that passed the persist conditions gets
+     * here, so a mid-scan partial still cannot replace it.
      */
     private val _lastKnownTotalBalance = MutableStateFlow<Coin?>(null)
 
@@ -4237,6 +4233,27 @@ class CutoverUiDataService internal constructor(
     }
 
     /**
+     * Stop only the balance writer for a wallet wipe, and wait for it. Reset
+     * Wallet calls this BEFORE it clears wallet_ui: a balance waiting behind a
+     * slow save would otherwise be written after the clear and shown by the
+     * next wallet.
+     *
+     * It does not wait for the rest of the pipeline, which can sit in a
+     * blocking engine read; [stopForWalletWipe] still stops and joins all of
+     * it later. It raises the same fence, so no pipeline started from here on
+     * gets a writer. [resumeAfterWalletWipe] lifts it, and the pipeline it
+     * restarts has a new one.
+     */
+    suspend fun stopBalanceSavesForWalletWipe() {
+        val writer = synchronized(wipeFenceLock) {
+            wipeFenced = true
+            balanceSaveJob.also { balanceSaveJob = null }
+        }
+        writer?.cancelAndJoin()
+        log.info("SDK balance saves stopped for the wallet wipe")
+    }
+
+    /**
      * Lift [stopForWalletWipe]'s fence and re-arm the gate. Non-suspending so
      * the wipe can call it from a `finally`: a wipe that fails or is cancelled
      * after the stop must not leave the pipeline dead for the next wallet.
@@ -4261,6 +4278,9 @@ class CutoverUiDataService internal constructor(
 
     /** Makes [requestFullReconcile]'s fence check and latch atomic against the wipe stop. */
     private val wipeFenceLock = Any()
+
+    /** The running pipeline's balance writer ([balancePipeline]). Guarded by [wipeFenceLock]. */
+    private var balanceSaveJob: Job? = null
 
     /**
      * [walletBindConfirmations] when the last wipe resumed, until the gate has
@@ -4504,17 +4524,48 @@ class CutoverUiDataService internal constructor(
         // figure may be persisted as the next launch's last-known balance.
         refreshDeferredContactBuilds(walletIdHex)
 
+        // The max-sendable and UTXO-count reads follow every balance reading,
+        // in their OWN collector: the per-account snapshot can wait on the
+        // engine's wallet lock, and inside the balance collector that wait
+        // held up the next balance reading ([refreshSpendFigures]). Conflated:
+        // readings that arrive during a slow read are served by one re-read.
+        val spendFiguresDue = Channel<Unit>(Channel.CONFLATED)
+        launch {
+            for (due in spendFiguresDue) refreshSpendFigures(walletIdHex)
+        }
+
+        // Saving the balance gets ONE writer of its own ([saveBalance]).
+        // A reading is judged fit to save when it is taken ([updateSdkBalance])
+        // and only the storage write waits here, so a slow write no longer
+        // keeps the next reading from being taken and judged while the engine
+        // is still synced. One writer keeps the writes in order; conflated,
+        // because a newer figure fit to save replaces an older one not yet
+        // written.
+        val balanceSaves = Channel<Long>(Channel.CONFLATED)
+        // Registered and started under the wipe fence's lock, so Reset Wallet
+        // either stops this writer or it never starts
+        // ([stopBalanceSavesForWalletWipe]).
+        val balanceWriter = launch(start = CoroutineStart.LAZY) {
+            for (duffs in balanceSaves) saveBalance(duffs)
+        }
+        val writerAllowed = synchronized(wipeFenceLock) {
+            if (!wipeFenced) balanceSaveJob = balanceWriter
+            !wipeFenced
+        }
+        if (writerAllowed) balanceWriter.start() else balanceWriter.cancel()
+
         // Seed the confirmed/total split once up front so the shielded screen's
         // Max (confirmed) and pending (total − confirmed) are populated before
         // the first tx event or ticker tick.
         try {
-            refreshNativeSplit(walletIdHex)
+            refreshNativeSplit(walletIdHex, balanceSaves)
+            spendFiguresDue.trySend(Unit)
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             log.warn("initial SDK balance split read failed", t)
         }
         // Belt-and-suspenders (Bug D). The Room-TRIGGERED source
-        // (observeTotalDuffs — native balance() re-read per `txos`
+        // (observeBalanceChanges — native balance() re-read per `txos`
         // invalidation) only fires on Room invalidation. A SELF-AUTHORED send
         // settles by a Rust-side spent-TXO write that does NOT re-fire that
         // Room flow, so after a max-send the balance override could stay stale
@@ -4524,25 +4575,59 @@ class CutoverUiDataService internal constructor(
         // ticker tick — guaranteeing a re-read after a spend regardless of
         // Room invalidation. All three lanes read the SAME native balance().
         launch {
-            source.observeTotalDuffs(walletIdHex)
-                .distinctUntilChanged()
-                .catch { e -> log.error("SDK balance flow failed; balance override frozen", e) }
-                .collect { duffs -> updateSdkBalance(duffs) }
-        }
-        launch {
             ticker().collect { refreshDeferredContactBuilds(walletIdHex) }
         }
+        // ONE collector for all three, so balance readings are taken and
+        // published strictly one after another. The Room-triggered source is
+        // used as a trigger only (its figure is the same native read): with
+        // its own collector, two publications could interleave and an older
+        // reading be saved as the last-known balance, or become the header's
+        // fallback, after a newer one ([updateSdkBalance], [saveBalance]).
+        // The receive-address read blocks in the FFI, so it gets its own
+        // collector: parked, it must not hold up a balance reading
+        // ([refreshReceiveAddress]). The ticker emits at once, which is the
+        // initial read. Its triggers go through a conflated channel: while a
+        // read is parked [txEvents] must still be drained, because its
+        // producer drops an event for EVERY subscriber once one of them stops
+        // taking them. One re-read serves whatever arrived meanwhile.
+        val receiveAddressDue = Channel<Unit>(Channel.CONFLATED)
         launch {
-            merge(txEvents.map { }, ticker()).collect {
+            merge(txEvents.map { }, ticker()).collect { receiveAddressDue.trySend(Unit) }
+        }
+        launch {
+            for (due in receiveAddressDue) {
+                try {
+                    refreshReceiveAddress()
+                } catch (t: Throwable) {
+                    if (t is CancellationException) throw t
+                    log.warn("engine receive-address re-read failed", t)
+                }
+            }
+        }
+        // The balance triggers take the same conflated handoff as the address
+        // lane, for the same reason: a reading stuck on the native read or the
+        // balance save must not stop [txEvents] being drained. A trigger that
+        // arrives during a reading is served by one more reading after it.
+        val balanceDue = Channel<Unit>(Channel.CONFLATED)
+        launch {
+            // NOT deduplicated: every Room change is a reason to read again,
+            // including the retry after a failed read.
+            val roomTrigger = source.observeBalanceChanges(walletIdHex)
+                .catch { e -> log.error("SDK balance flow failed; Room-triggered balance re-reads stop", e) }
+            merge(roomTrigger, txEvents.map { }, ticker()).collect { balanceDue.trySend(Unit) }
+        }
+        launch {
+            for (due in balanceDue) {
                 try {
                     // Re-read the SDK's NATIVE ledger split, NOT the Room txos sum:
                     // a self-send debits the native ledger at once but the spent-TXO
-                    // marks land in Room only on block/IS-lock, so observeTotalDuffs()
-                    // .first() would return the stale pre-send sum. The native read
+                    // marks land in Room only on block/IS-lock, so a Room sum
+                    // would return the stale pre-send sum. The native read
                     // reaches 0 immediately after a max send. On error this throws and
                     // the catch keeps the prior override values (never zeroes the
                     // header on a transient read failure).
-                    refreshNativeSplit(walletIdHex)
+                    refreshNativeSplit(walletIdHex, balanceSaves)
+                    spendFiguresDue.trySend(Unit)
                 } catch (t: Throwable) {
                     if (t is CancellationException) throw t
                     log.warn("SDK balance snapshot re-read failed", t)
@@ -4630,13 +4715,19 @@ class CutoverUiDataService internal constructor(
      * confirmed-only feed ([sdkConfirmedBalance], the shielded Max). One
      * `balance()` read keeps the two in lockstep.
      */
-    private suspend fun refreshNativeSplit(walletIdHex: String) {
+    private suspend fun refreshNativeSplit(walletIdHex: String, balanceSaves: SendChannel<Long>) {
         val split = source.currentBalanceSplitDuffs(walletIdHex)
         _sdkConfirmedBalance.value = Coin.valueOf(split.confirmed)
-        updateSdkBalance(split.total)
-        // The max-sendable figure rides the same cadence (initial seed, tx
-        // events, ticker). Contained separately: a failed/unavailable
-        // account-level read must not undo the split above, and it drops
+        updateSdkBalance(split.total, balanceSaves)
+    }
+
+    /**
+     * Re-read the max-sendable figure and the UTXO count. Runs after every
+     * successful [refreshNativeSplit], in its own collector
+     * ([balancePipeline]), so a slow read here cannot delay a balance reading.
+     */
+    private suspend fun refreshSpendFigures(walletIdHex: String) {
+        // Contained separately: a failed/unavailable account-level read drops
         // the override to null so overlayMaxSendableBalance falls back to
         // the wallet-wide total rather than freezing a stale max.
         try {
@@ -4646,9 +4737,9 @@ class CutoverUiDataService internal constructor(
             log.warn("SDK max-sendable read failed; falling back to the wallet-wide total", t)
             _sdkMaxSendable.value = null
         }
-        // The UTXO COUNT rides the same cadence so it always describes the
-        // same moment as the split above (the shielded max-fee reserve sizes
-        // itself from the count while shielding the balance). Contained the
+        // The UTXO COUNT is read after the split it follows (the shielded
+        // max-fee reserve sizes itself from the count while shielding the
+        // balance). Contained the
         // same way: a failed read drops to null so the overlay falls back to
         // dashj rather than freezing a stale count.
         try {
@@ -4658,10 +4749,20 @@ class CutoverUiDataService internal constructor(
             log.warn("SDK spendable-UTXO-count read failed; falling back to the dashj count", t)
             _sdkSpendableUtxoCount.value = null
         }
-        // The RECEIVE ADDRESS rides the same cadence for a reason of its own:
-        // the only thing that moves the engine's pointer is a receive landing on
-        // the current address, and that is precisely an engine tx event — one of
-        // the two triggers of this function. Unlike the reads above, a failed one
+    }
+
+    /**
+     * Re-read the engine's next receive address into the overlay cache. Runs
+     * in its OWN collector ([balancePipeline]), not inside
+     * [refreshNativeSplit]: this read blocks in the FFI, and while it was part
+     * of the balance refresh a parked one kept every later balance reading
+     * from being published or saved.
+     */
+    private suspend fun refreshReceiveAddress() {
+        // The RECEIVE ADDRESS rides the tx-event and ticker cadence for a reason
+        // of its own: the only thing that moves the engine's pointer is a receive
+        // landing on the current address, and that is precisely an engine tx
+        // event. Unlike the balance-side reads, a failed one
         // HOLDS the last known address instead of dropping to null: null sends
         // the overlay back to the frozen dashj index-0 address, which is the
         // defect ([sdkReceiveAddressOrNull]), whereas a slightly stale engine
@@ -4693,7 +4794,7 @@ class CutoverUiDataService internal constructor(
         }
     }
 
-    private suspend fun updateSdkBalance(duffs: Long) {
+    private suspend fun updateSdkBalance(duffs: Long, balanceSaves: SendChannel<Long>) {
         val previous = _sdkTotalBalance.value
         val synced = _l1Synced.value
         val backfillStatus = dashPayBackfillStatus()
@@ -4810,24 +4911,46 @@ class CutoverUiDataService internal constructor(
             )
         }
         if (!persist) return
-        runCatching { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, duffs) }
-            .onSuccess {
-                // EDGE LOG: once per distinct value written, not per tick. The
-                // publication line above is gated on the DISPLAYED figure
-                // changing, and the ticker re-runs this write every interval,
-                // so a seed that lands only after the pipeline drains — with
-                // the figure long settled — used to leave no trace at all.
-                if (lastPersistedDuffs != duffs) {
-                    lastPersistedDuffs = duffs
-                    log.info(
-                        "SDK balance PERSISTED as the launch seed: {} duffs (was {}) | l1Synced={} " +
-                            "pipelineLagging={} rescanArmedHold={} backfillSettled={} buildsSettled={}",
-                        duffs, _lastKnownTotalBalance.value?.value ?: "none", synced, lagging,
-                        armedRescanHold, backfillStatus.settled, buildsSettled
-                    )
-                }
-            }
-            .onFailure { log.warn("failed to persist LAST_TOTAL_BALANCE", it) }
+        // Judged fit to save NOW, on the conditions read above; the storage
+        // write itself is the balance writer's ([saveBalance]), so this collector
+        // can take the next reading without waiting for it.
+        balanceSaves.trySend(duffs)
+    }
+
+    /**
+     * Write a figure [updateSdkBalance] judged fit to save as the last-known balance,
+     * then make it the header's fallback. Only [balancePipeline]'s one balance
+     * writer calls this, so the writes land in the order they were handed
+     * over and the write and the fallback update below cannot interleave with
+     * another one.
+     */
+    private suspend fun saveBalance(duffs: Long) {
+        try {
+            walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, duffs)
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("failed to persist LAST_TOTAL_BALANCE", t)
+            return
+        }
+        // The figure just saved as the last-known balance is also what the
+        // header must fall back to for the rest of THIS process; see
+        // [_lastKnownTotalBalance]. Only after the write succeeded, so the
+        // two never disagree. A zero lands here too: the overlay ignores a
+        // non-positive value and shows the live figure.
+        val previousLastKnown = _lastKnownTotalBalance.value
+        _lastKnownTotalBalance.value = Coin.valueOf(duffs)
+        // EDGE LOG: once per distinct value written, not per tick. The
+        // publication line in [updateSdkBalance] is gated on the DISPLAYED figure changing,
+        // and the ticker re-runs this write every interval, so a save that
+        // lands only after the pipeline drains — with the figure long
+        // settled — used to leave no trace at all.
+        if (lastPersistedDuffs != duffs) {
+            lastPersistedDuffs = duffs
+            log.info(
+                "SDK balance PERSISTED as the launch seed: {} duffs (was {})",
+                duffs, previousLastKnown?.value ?: "none"
+            )
+        }
     }
 
     /** One unit of tx-feed work, so all feeds share ONE sequential collector. */

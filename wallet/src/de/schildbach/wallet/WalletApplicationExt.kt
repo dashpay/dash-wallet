@@ -230,19 +230,57 @@ object WalletApplicationExt {
             { coinJoinFundsMigrationService.get().stopForWalletWipe() },
             { shieldedBalanceService.get().resetForWalletWipe() }
         )
-        destroyWalletFiles()
-        // Live DataStore-backed configs must be cleared through their API (one
-        // atomic memory+disk edit) before the leftover files are deleted:
-        // deleting a LIVE DataStore's file out-of-band leaves its in-memory
-        // cache populated while disk is empty. Files with no live instance
-        // this process have no cache, so raw deletion is safe for them.
-        val apiCleared = runCatching { BaseConfig.clearAllLiveInstances() }
-            .onFailure { rethrowCancellation(it); log.warn("live-config clear failed during wipe", it) }
-            .getOrDefault(emptySet())
-        clearDatastorePrefFiles(apiCleared)
-        notifyWalletWipeListeners()
-        destroyWalletSecrets()
-        clearDatabasesInner(isWalletWipe = true)
+        clearWithBalanceSavesStopped(
+            stopBalanceSaves = { cutoverUiDataService.stopBalanceSavesForWalletWipe() },
+            clearBeforeDatabases = {
+                destroyWalletFiles()
+                // Live DataStore-backed configs must be cleared through their API (one
+                // atomic memory+disk edit) before the leftover files are deleted:
+                // deleting a LIVE DataStore's file out-of-band leaves its in-memory
+                // cache populated while disk is empty. Files with no live instance
+                // this process have no cache, so raw deletion is safe for them.
+                val apiCleared = runCatching { BaseConfig.clearAllLiveInstances() }
+                    .onFailure { rethrowCancellation(it); log.warn("live-config clear failed during wipe", it) }
+                    .getOrDefault(emptySet())
+                clearDatastorePrefFiles(apiCleared)
+                notifyWalletWipeListeners()
+                destroyWalletSecrets()
+            },
+            clearDatabases = { clearDatabasesInner(isWalletWipe = true) },
+            resumeSdkUiPipeline = { cutoverUiDataService.resumeAfterWalletWipe() }
+        )
+    }
+
+    /**
+     * Stop the SDK UI pipeline's balance saves, and wait for them, BEFORE
+     * anything is cleared. The pipeline saves this wallet's balance to
+     * wallet_ui, and a balance waiting behind a slow save would otherwise be
+     * written after the clear and shown by the next wallet. Only the saves are
+     * stopped here: the rest of the pipeline can sit in a blocking engine
+     * read, and the wallet files must not wait for that. A failed stop does
+     * not skip the clears.
+     *
+     * [clearDatabases] ([clearDatabasesInner]) stops and joins the whole
+     * pipeline and re-arms it when the caches are clear. A wipe that fails
+     * before reaching it re-arms the pipeline here instead, so it is never
+     * left without its balance saves.
+     */
+    internal suspend fun clearWithBalanceSavesStopped(
+        stopBalanceSaves: suspend () -> Unit,
+        clearBeforeDatabases: suspend () -> Unit,
+        clearDatabases: suspend () -> Unit,
+        resumeSdkUiPipeline: () -> Unit
+    ) {
+        runCatching { stopBalanceSaves() }
+            .onFailure { rethrowCancellation(it); log.warn("SDK balance-save stop failed before the config clear", it) }
+        var databaseClearReached = false
+        try {
+            clearBeforeDatabases()
+            databaseClearReached = true
+            clearDatabases()
+        } finally {
+            if (!databaseClearReached) resumeSdkUiPipeline()
+        }
     }
 
     /**

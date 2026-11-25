@@ -1096,10 +1096,19 @@ class CutoverUiDataServiceTest {
             return boundWalletId
         }
 
-        override fun observeTotalDuffs(walletIdHex: String): Flow<Long> {
+        override fun observeBalanceChanges(walletIdHex: String): Flow<Unit> {
             balanceSubscriptions++
-            return balanceDuffs
+            return roomChanges ?: balanceDuffs.map { }
         }
+
+        /**
+         * The Room-change feed when a test needs a change WITHOUT a new total
+         * (a StateFlow cannot repeat one); null = every [balanceDuffs] change.
+         */
+        var roomChanges: Flow<Unit>? = null
+
+        /** How many of the next native balance reads throw. */
+        var failingBalanceReads = 0
 
         var currentBalanceReads = 0
 
@@ -1107,6 +1116,26 @@ class CutoverUiDataServiceTest {
         var utxoCount: Int? = 0
 
         override suspend fun currentSpendableUtxoCount(walletIdHex: String): Int? = utxoCount
+
+        /** The SDK's max-sendable figure (null = read unavailable). */
+        var maxSendableDuffs: Long? = null
+
+        /** When set, the max-sendable read waits on it, modelling a read held on the engine's wallet lock. */
+        var maxSendableGate: kotlinx.coroutines.CompletableDeferred<Unit>? = null
+        var maxSendableReadsParked = 0
+        var maxSendableReads = 0
+
+        override suspend fun currentMaxSendableDuffs(walletIdHex: String): Long? {
+            maxSendableReads++
+            // Captured BEFORE parking, so a parked read returns what it read
+            // and not whatever the test set meanwhile.
+            val answer = maxSendableDuffs
+            maxSendableGate?.let { gate ->
+                maxSendableReadsParked++
+                gate.await()
+            }
+            return answer
+        }
 
         /**
          * The ENGINE's next unused receive address (null = read unavailable),
@@ -1188,6 +1217,10 @@ class CutoverUiDataServiceTest {
 
         override suspend fun currentBalanceSplitDuffs(walletIdHex: String): SdkBalanceSplitDuffs {
             currentBalanceReads++
+            if (failingBalanceReads > 0) {
+                failingBalanceReads--
+                error("native balance read failed")
+            }
             return SdkBalanceSplitDuffs(confirmed = balanceDuffs.value, unconfirmed = 0L)
         }
 
@@ -1508,6 +1541,419 @@ class CutoverUiDataServiceTest {
         // And the partial is NEVER written back over the seed (the
         // compounding bug: it would poison the next launch's last-known).
         coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, any<Long>()) }
+    }
+
+    @Test
+    fun postCutover_engineStopAfterASpend_holdsThePersistedFigureNotTheLaunchOne() = runTest {
+        // 12.0.1-beta field report: the wallet opened on 11.03225474 DASH, was
+        // shielded down to 781 duffs (saved as the last-known balance), and at
+        // the next engine stop the header went back to the launch figure.
+        val source = FakeSource(balanceDuffs = MutableStateFlow(1_103_225_474L))
+        val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
+        coEvery { walletUIConfig.get(WalletUIConfig.LAST_TOTAL_BALANCE) } returns 1_103_225_474L
+        val synced = MutableStateFlow(true)
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            walletUIConfig = walletUIConfig, l1Synced = synced
+        )
+        service.start()
+        runCurrent()
+
+        // The spend settles while synced and is saved as the last-known balance.
+        source.balanceDuffs.value = 781L
+        runCurrent()
+        coVerify { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 781L) }
+
+        // The engine stops: the header must fall back to the figure just
+        // persisted, not the one read at process start.
+        synced.value = false
+        runCurrent()
+        assertEquals(Coin.valueOf(781), service.overlayTotalBalance(flowOf(Coin.valueOf(999))).first())
+
+        // The hold itself is intact: a mid-scan partial neither reaches the
+        // header nor replaces the held figure.
+        source.balanceDuffs.value = 500L
+        runCurrent()
+        assertEquals(Coin.valueOf(500), service.sdkBalanceOrNull())
+        assertEquals(Coin.valueOf(781), service.overlayTotalBalance(flowOf(Coin.valueOf(999))).first())
+        coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 500L) }
+    }
+
+    @Test
+    fun postCutover_engineStopAfterSpendingEverything_showsZeroNotTheLaunchFigure() = runTest {
+        // A wallet emptied in this process has nothing to hold: the overlay
+        // ignores a non-positive last-known value and shows the live figure.
+        val source = FakeSource(balanceDuffs = MutableStateFlow(1_103_225_474L))
+        val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
+        coEvery { walletUIConfig.get(WalletUIConfig.LAST_TOTAL_BALANCE) } returns 1_103_225_474L
+        val synced = MutableStateFlow(true)
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            walletUIConfig = walletUIConfig, l1Synced = synced
+        )
+        service.start()
+        runCurrent()
+
+        source.balanceDuffs.value = 0L
+        runCurrent()
+        coVerify { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 0L) }
+
+        synced.value = false
+        runCurrent()
+        assertEquals(Coin.ZERO, service.overlayTotalBalance(flowOf(Coin.valueOf(999))).first())
+    }
+
+    @Test
+    fun postCutover_failedBalanceSave_leavesTheHeldFigureAlone() = runTest {
+        // The in-memory figure follows the PERSISTED one, so a write that
+        // failed must not move it: memory and disk never disagree.
+        val source = FakeSource(balanceDuffs = MutableStateFlow(900_000L))
+        val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
+        coEvery { walletUIConfig.get(WalletUIConfig.LAST_TOTAL_BALANCE) } returns 900_000L
+        coEvery { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 781L) } throws
+            java.io.IOException("disk full")
+        val synced = MutableStateFlow(true)
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            walletUIConfig = walletUIConfig, l1Synced = synced
+        )
+        service.start()
+        runCurrent()
+
+        source.balanceDuffs.value = 781L
+        runCurrent()
+        synced.value = false
+        runCurrent()
+        assertEquals(Coin.valueOf(900_000), service.overlayTotalBalance(flowOf(Coin.valueOf(999))).first())
+    }
+
+    @Test
+    fun postCutover_balanceSavesLandInOrder_withoutHoldingUpTheNextReading() = runTest {
+        // Every balance trigger (Room change, tx event, ticker) goes through
+        // ONE collector, and every save through ONE writer. With two writers
+        // an older save could land after a newer one, as the last-known balance and
+        // as the header's fallback. And a slow save must not keep the next
+        // reading from being taken: it is judged fit to save when it is read,
+        // so an engine stop during the slow save cannot lose it.
+        val events = kotlinx.coroutines.flow.MutableSharedFlow<L1TxEvent>(extraBufferCapacity = 4)
+        val source = FakeSource(balanceDuffs = MutableStateFlow(1_103_225_474L))
+        val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
+        coEvery { walletUIConfig.get(WalletUIConfig.LAST_TOTAL_BALANCE) } returns 1_103_225_474L
+        val olderWriteParked = CompletableDeferred<Unit>()
+        val releaseOlderWrite = CompletableDeferred<Unit>()
+        coEvery { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 900_000L) } coAnswers {
+            olderWriteParked.complete(Unit)
+            releaseOlderWrite.await()
+        }
+        val synced = MutableStateFlow(true)
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            walletUIConfig = walletUIConfig, txEvents = events, l1Synced = synced
+        )
+        try {
+            service.start()
+            runCurrent()
+
+            // A reading of 900,000 is published and parks mid-save.
+            source.balanceDuffs.value = 900_000L
+            assertTrue("the older write must be parked", pumpUntil { olderWriteParked.isCompleted })
+
+            // The spend lands while that save is still in flight. Its reading
+            // is published at once; its save must wait its turn, not overtake.
+            source.balanceDuffs.value = 781L
+            events.emit(L1TxEvent.Detected(displayHex(3), -899_219L, null, contextCode = 0, directionCode = 0))
+            runCurrent()
+            assertEquals(Coin.valueOf(781), service.sdkBalanceOrNull())
+            coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 781L) }
+
+            // The engine stops BEFORE the older save is released. The 781
+            // reading was taken while synced, so it is still saved.
+            synced.value = false
+            runCurrent()
+            coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 781L) }
+        } finally {
+            releaseOlderWrite.complete(Unit)
+        }
+
+        // Once the older save finishes, the newer one follows it, in order.
+        runCurrent()
+        io.mockk.coVerifyOrder {
+            walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 900_000L)
+            walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 781L)
+        }
+        assertEquals(Coin.valueOf(781), service.overlayTotalBalance(flowOf(Coin.valueOf(999))).first())
+    }
+
+    @Test
+    fun stopBalanceSavesForWalletWipe_dropsAWaitingBalance_withoutWaitingForTheAddressRead() = runTest {
+        // Reset Wallet stops the balance saves before it clears wallet_ui. A
+        // balance still waiting behind a slow save must be dropped by that
+        // stop, or it would be written after the clear and shown by the next
+        // wallet. The stop must not wait for a receive-address read parked in
+        // the engine: the wallet files are deleted right after it.
+        val events = kotlinx.coroutines.flow.MutableSharedFlow<L1TxEvent>(extraBufferCapacity = 4)
+        val source = FakeSource(balanceDuffs = MutableStateFlow(1_103_225_474L))
+        val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
+        coEvery { walletUIConfig.get(WalletUIConfig.LAST_TOTAL_BALANCE) } returns 1_103_225_474L
+        val olderWriteParked = CompletableDeferred<Unit>()
+        val releaseOlderWrite = CompletableDeferred<Unit>()
+        coEvery { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 900_000L) } coAnswers {
+            olderWriteParked.complete(Unit)
+            releaseOlderWrite.await()
+        }
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            walletUIConfig = walletUIConfig, txEvents = events, l1Synced = flowOf(true),
+            receiveRefreshDispatcher = Dispatchers.IO
+        )
+        try {
+            service.start()
+            assertTrue(pumpUntil { service.sdkReceiveAddressOrNull() == "yENGINEnextUnusedAddress" })
+
+            source.balanceDuffs.value = 900_000L
+            assertTrue("the older write must be parked", pumpUntil { olderWriteParked.isCompleted })
+
+            // A second balance is read and judged fit to save while the first
+            // save is still in flight, so it waits for the writer. The same tx
+            // event parks the address read in the engine.
+            source.gatedReadThreadName = "DefaultDispatcher"
+            source.gateByThreadNamePrefix = true
+            source.receiveAddressReadParked = false
+            source.balanceDuffs.value = 781L
+            events.emit(L1TxEvent.Detected(displayHex(3), -899_219L, null, contextCode = 0, directionCode = 0))
+            assertTrue("the address read must be parked", pumpUntil { source.receiveAddressReadParked })
+            assertTrue(pumpUntil { service.sdkBalanceOrNull() == Coin.valueOf(781) })
+
+            // The stop must complete while the address read is still parked.
+            val stop = launch { service.stopBalanceSavesForWalletWipe() }
+            runCurrent()
+            assertTrue("the stop must finish before the address read is released", stop.isCompleted)
+            assertEquals(1L, source.receiveAddressGate.count)
+
+            releaseOlderWrite.complete(Unit)
+            runCurrent()
+            coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 781L) }
+        } finally {
+            releaseOlderWrite.complete(Unit)
+            source.receiveAddressGate.countDown()
+        }
+    }
+
+    @Test
+    fun resumeAfterWalletWipe_restoresBalanceSavesAfterAnEarlyStop() = runTest {
+        // A wipe that fails after the early stop re-arms the pipeline. It must
+        // come back with a working balance writer.
+        val source = FakeSource(balanceDuffs = MutableStateFlow(900_000L))
+        val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
+        coEvery { walletUIConfig.get(WalletUIConfig.LAST_TOTAL_BALANCE) } returns 900_000L
+        val bindPasses = MutableStateFlow(0L)
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            walletUIConfig = walletUIConfig, l1Synced = flowOf(true),
+            walletBindConfirmations = bindPasses
+        )
+        service.start()
+        runCurrent()
+
+        service.stopBalanceSavesForWalletWipe()
+        source.balanceDuffs.value = 781L
+        runCurrent()
+        coVerify(exactly = 0) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 781L) }
+
+        // The wallet was not wiped, so the pipeline waits for the next
+        // confirmed bind before it restarts.
+        service.resumeAfterWalletWipe()
+        runCurrent()
+        bindPasses.value = 1L
+        testScheduler.advanceTimeBy(CutoverUiDataService.WALLET_BIND_RETRY_MS + 1)
+        runCurrent()
+        coVerify(atLeast = 1) { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 781L) }
+    }
+
+    @Test
+    fun postCutover_roomChangeRetriesAfterAFailedReRead_evenWithAnUnchangedTotal() = runTest {
+        // The Room feed is a trigger only. If the read it triggers fails, the
+        // next Room change must still trigger one, even though the total has
+        // not changed since. No tx event and no ticker tick help here.
+        val room = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(extraBufferCapacity = 4)
+        val source = FakeSource(balanceDuffs = MutableStateFlow(900_000L)).apply { roomChanges = room }
+        val service = buildService(source, configWithState("CUT_OVER"), backgroundScope, l1Synced = flowOf(true))
+        service.start()
+        runCurrent()
+        assertEquals(Coin.valueOf(900_000), service.sdkBalanceOrNull())
+
+        source.balanceDuffs.value = 781L
+        source.failingBalanceReads = 1
+        room.emit(Unit)
+        runCurrent()
+        assertEquals("a failed re-read keeps the prior figure", Coin.valueOf(900_000), service.sdkBalanceOrNull())
+
+        room.emit(Unit)
+        runCurrent()
+        assertEquals(Coin.valueOf(781), service.sdkBalanceOrNull())
+    }
+
+    @Test
+    fun postCutover_parkedBalanceSave_doesNotDropTxEvents() = runTest {
+        // The balance lane subscribes to the same tx events as the history
+        // feed. While a Room-triggered reading is stuck mid-save it must keep
+        // taking them, or the engine drops a later event for every subscriber
+        // (an InstantSend lock the history feed cannot get back from Room).
+        val events = kotlinx.coroutines.flow.MutableSharedFlow<L1TxEvent>(extraBufferCapacity = 64)
+        val source = FakeSource(balanceDuffs = MutableStateFlow(1_103_225_474L))
+        val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
+        val writeParked = CompletableDeferred<Unit>()
+        val releaseWrite = CompletableDeferred<Unit>()
+        coEvery { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 900_000L) } coAnswers {
+            writeParked.complete(Unit)
+            releaseWrite.await()
+        }
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            walletUIConfig = walletUIConfig, txEvents = events, l1Synced = flowOf(true)
+        )
+        try {
+            service.start()
+            runCurrent()
+
+            // A Room-triggered reading parks mid-save.
+            source.balanceDuffs.value = 900_000L
+            assertTrue("the save must be parked", pumpUntil { writeParked.isCompleted })
+
+            // A burst far larger than the buffers, while the save stays parked.
+            val event = L1TxEvent.Detected(displayHex(7), 1_000L, null, contextCode = 0, directionCode = 0)
+            repeat(300) { i ->
+                assertTrue("tx event $i was dropped", pumpUntil(2_000) { events.tryEmit(event) })
+            }
+        } finally {
+            releaseWrite.complete(Unit)
+        }
+        // Released: the readings that were due are served.
+        source.balanceDuffs.value = 781L
+        assertTrue(pumpUntil { service.sdkBalanceOrNull() == Coin.valueOf(781) })
+    }
+
+    @Test
+    fun postCutover_parkedReceiveAddressRead_doesNotHoldUpTheBalance() = runTest {
+        // The receive-address read blocks in the FFI. While it is parked, a
+        // later balance reading must still be published and saved: otherwise
+        // an engine stop during the park leaves the pre-spend figure as the
+        // header's fallback.
+        val events = kotlinx.coroutines.flow.MutableSharedFlow<L1TxEvent>(extraBufferCapacity = 4)
+        val source = FakeSource(balanceDuffs = MutableStateFlow(900_000L))
+        val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
+        coEvery { walletUIConfig.get(WalletUIConfig.LAST_TOTAL_BALANCE) } returns 900_000L
+        // The parked read below is gated on the IO worker thread it runs on.
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            walletUIConfig = walletUIConfig, txEvents = events, l1Synced = flowOf(true),
+            receiveRefreshDispatcher = Dispatchers.IO
+        )
+        try {
+            service.start()
+            assertTrue(pumpUntil { service.sdkReceiveAddressOrNull() == "yENGINEnextUnusedAddress" })
+
+            source.gatedReadThreadName = "DefaultDispatcher"
+            source.gateByThreadNamePrefix = true
+            source.receiveAddressReadParked = false
+            events.emit(L1TxEvent.Detected(displayHex(5), 1_000L, null, contextCode = 0, directionCode = 0))
+            assertTrue("the address read must be parked", pumpUntil { source.receiveAddressReadParked })
+
+            // The spend lands while the address read is still parked.
+            source.balanceDuffs.value = 781L
+            assertTrue(
+                "the balance must not wait for the parked address read",
+                pumpUntil(5_000) { service.sdkBalanceOrNull() == Coin.valueOf(781) }
+            )
+            runCurrent()
+            coVerify { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 781L) }
+        } finally {
+            source.receiveAddressGate.countDown()
+        }
+    }
+
+    @Test
+    fun postCutover_parkedReceiveAddressRead_doesNotDropTxEvents() = runTest {
+        // The engine publishes tx events with tryEmit into ONE shared buffer:
+        // a subscriber that stops draining makes a later event be dropped for
+        // every subscriber. The address lane must keep draining while its
+        // read is parked, or an event-only spend loses its balance re-read.
+        val events = kotlinx.coroutines.flow.MutableSharedFlow<L1TxEvent>(extraBufferCapacity = 64)
+        val source = FakeSource(balanceDuffs = MutableStateFlow(900_000L))
+        // Room stays silent: only a tx event can trigger the balance re-read.
+        source.roomChanges = kotlinx.coroutines.flow.emptyFlow()
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            txEvents = events, l1Synced = flowOf(true),
+            receiveRefreshDispatcher = Dispatchers.IO
+        )
+        try {
+            service.start()
+            assertTrue(pumpUntil { service.sdkReceiveAddressOrNull() == "yENGINEnextUnusedAddress" })
+            assertEquals(Coin.valueOf(900_000), service.sdkBalanceOrNull())
+
+            source.gatedReadThreadName = "DefaultDispatcher"
+            source.gateByThreadNamePrefix = true
+            source.receiveAddressReadParked = false
+            val event = L1TxEvent.Detected(displayHex(5), 1_000L, null, contextCode = 0, directionCode = 0)
+            events.emit(event)
+            assertTrue("the address read must be parked", pumpUntil { source.receiveAddressReadParked })
+
+            // A burst far larger than the buffers, while the read stays parked.
+            // Each emit may wait for the lanes that are merely busy; a lane
+            // that has stopped draining never frees the buffer.
+            repeat(300) { i ->
+                assertTrue("tx event $i was dropped", pumpUntil(2_000) { events.tryEmit(event) })
+            }
+
+            // The spend arrives as an event only.
+            source.balanceDuffs.value = 781L
+            assertTrue("the spend's tx event was dropped", events.tryEmit(event))
+            assertTrue(
+                "the event-only spend must refresh the balance",
+                pumpUntil(5_000) { service.sdkBalanceOrNull() == Coin.valueOf(781) }
+            )
+        } finally {
+            source.receiveAddressGate.countDown()
+        }
+    }
+
+    @Test
+    fun postCutover_slowMaxSendableRead_doesNotHoldUpTheBalance() = runTest {
+        // The per-account snapshot behind the max-sendable figure can wait on
+        // the engine's wallet lock. A balance reading that arrives meanwhile
+        // must still be published and saved.
+        val source = FakeSource(balanceDuffs = MutableStateFlow(900_000L))
+        source.maxSendableDuffs = 850_000L
+        val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
+        val service = buildService(
+            source, configWithState("CUT_OVER"), backgroundScope,
+            walletUIConfig = walletUIConfig, l1Synced = flowOf(true)
+        )
+        service.start()
+        runCurrent()
+        assertEquals(Coin.valueOf(850_000), service.sdkMaxSendable.value)
+
+        val gate = kotlinx.coroutines.CompletableDeferred<Unit>()
+        source.maxSendableGate = gate
+        source.balanceDuffs.value = 800_000L
+        runCurrent()
+        assertEquals("the max-sendable read must be waiting", 1, source.maxSendableReadsParked)
+
+        // The spend lands while that read is still waiting.
+        source.balanceDuffs.value = 781L
+        runCurrent()
+        assertEquals(Coin.valueOf(781), service.sdkBalanceOrNull())
+        coVerify { walletUIConfig.set(WalletUIConfig.LAST_TOTAL_BALANCE, 781L) }
+
+        // Released: one more read serves the reading that arrived meanwhile.
+        source.maxSendableGate = null
+        source.maxSendableDuffs = 700L
+        val readsBeforeRelease = source.maxSendableReads
+        gate.complete(Unit)
+        runCurrent()
+        assertEquals("exactly one re-read after the release", readsBeforeRelease + 1, source.maxSendableReads)
+        assertEquals(Coin.valueOf(700), service.sdkMaxSendable.value)
     }
 
     @Test
