@@ -404,31 +404,11 @@ class TopUpRepositoryImpl @Inject constructor(
         val identity = checkNotNull(identityRepository.blockchainIdentity) {
             "No identity to top up with ${topUpTx.txId}"
         }
-        topUpIdentity(topUpTx, aesKeyParameter, identity, recovery = false)
-    }
-
-    /**
-     * @param recovery for a lock found by [creditUnusedRegistrationLocks]: no top-up is recorded
-     * until Platform accepts it, a rejection as already used is not taken as proof of a credit, and
-     * the chain lock is not waited for because the lock is already mined
-     */
-    private suspend fun topUpIdentity(
-        topUpTx: AssetLockTransaction,
-        aesKeyParameter: KeyParameter?,
-        identity: BlockchainIdentity,
-        recovery: Boolean
-    ) {
-        check(identity.registrationStatus == IdentityStatus.REGISTERED) {
-            "Identity is ${identity.registrationStatus}, not topping up with ${topUpTx.txId}"
-        }
-        val identityId = checkNotNull(identity.uniqueIdStringOrNull()) {
-            "Identity has no id, not topping up with ${topUpTx.txId}"
-        }
+        val identityId = registeredIdentityId(identity, topUpTx)
         // Funding runs outside SendCoinsTaskRunner, so it needs the same barrier: after a restart
         // the input locks of an uncertain payment live only in memory until they are restored.
         pendingPaymentVerifier.awaitRestored()
-        val topUp = topUpsDao.getByTxId(topUpTx.txId)
-            ?: if (recovery) TopUp(topUpTx.txId, identityId) else addTopUp(topUpTx.txId, identityId)
+        val topUp = topUpsDao.getByTxId(topUpTx.txId) ?: addTopUp(topUpTx.txId, identityId)
         Context.propagate(walletDataProvider.wallet!!.context)
         val confidence = topUpTx.getConfidence(walletDataProvider.wallet!!.context)
         log.info("topup tx confidence: {}", confidence)
@@ -456,23 +436,61 @@ class TopUpRepositoryImpl @Inject constructor(
                 topUpTx,
                 aesKeyParameter,
                 useISLock = true,
-                waitForChainlock = !recovery
+                waitForChainlock = true
             )
             log.info("topup success: {}", topUpTx.txId)
             topUpsDao.insert(topUp.copy(toUserId = identityId, creditedAt = System.currentTimeMillis()))
         } catch (e: Exception) {
-            val regex = Regex(""".*Asset lock transaction [a-fA-F0-9]{64} output \d+ already completely used""")
-            if (e.message?.let { regex.matches(it) || it.contains("Object already exists: state transition already in chain")} == true) {
-                if (recovery) {
-                    log.info("asset lock {} is already used; not recording a credit without proof", topUpTx.txId)
-                    return
-                }
+            if (isAlreadyUsed(e)) {
                 topUpsDao.insert(topUp.copy(creditedAt = System.currentTimeMillis()))
                 log.info("topup success, already submitted: {}", topUpTx.txId)
             } else {
                 throw e
             }
         }
+    }
+
+    private fun registeredIdentityId(identity: BlockchainIdentity, topUpTx: AssetLockTransaction): String {
+        check(identity.registrationStatus == IdentityStatus.REGISTERED) {
+            "Identity is ${identity.registrationStatus}, not topping up with ${topUpTx.txId}"
+        }
+        return checkNotNull(identity.uniqueIdStringOrNull()) {
+            "Identity has no id, not topping up with ${topUpTx.txId}"
+        }
+    }
+
+    private fun isAlreadyUsed(e: Exception): Boolean {
+        val regex = Regex(""".*Asset lock transaction [a-fA-F0-9]{64} output \d+ already completely used""")
+        return e.message?.let { regex.matches(it) || it.contains("Object already exists: state transition already in chain") } == true
+    }
+
+    /**
+     * Tops up [identity] with a mined registration lock found by [creditUnusedRegistrationLocks], using a
+     * chain asset lock proof at [chainLockedHeight]. The height is used for this attempt only and the
+     * wallet's copy of the transaction is left untouched. No top-up is recorded until Platform accepts it,
+     * and a rejection as already used is not taken as proof of a credit.
+     */
+    private suspend fun creditRegistrationLock(
+        lock: AssetLockTransaction,
+        aesKeyParameter: KeyParameter?,
+        identity: BlockchainIdentity,
+        chainLockedHeight: Int
+    ) {
+        val identityId = registeredIdentityId(identity, lock)
+        val assetLockKey = lock.assetLockPublicKey.let { if (it.isEncrypted) it.decrypt(aesKeyParameter) else it }
+        val credits = try {
+            identity.platform.identities.topUp(identity.identity!!, 0, lock, chainLockedHeight.toLong(), assetLockKey)
+        } catch (e: Exception) {
+            if (isAlreadyUsed(e)) {
+                log.info("asset lock {} is already used; not recording a credit without proof", lock.txId)
+                return
+            }
+            throw e
+        }
+        identity.creditBalance = Coin.valueOf(credits / 1000)
+        log.info("topup success: {}", lock.txId)
+        val topUp = topUpsDao.getByTxId(lock.txId) ?: TopUp(lock.txId, identityId)
+        topUpsDao.insert(topUp.copy(toUserId = identityId, creditedAt = System.currentTimeMillis()))
     }
 
     private suspend fun updateConfidence(confidence: TransactionConfidence) {
@@ -497,19 +515,12 @@ class TopUpRepositoryImpl @Inject constructor(
     }
 
     /**
-     * dashj stops syncing at the SDK cutover, so a lock it last saw unconfirmed is looked up on
-     * Platform's Core; the mined height it reports is what the chain asset lock proof uses.
+     * The height at which Platform's Core reports [txId] mined and chain locked, or null if it does not.
+     * dashj stops syncing at the SDK cutover, so its copy of the transaction can be stale either way.
      */
-    private fun isMined(confidence: TransactionConfidence): Boolean {
-        if (confidence.confidenceType == TransactionConfidence.ConfidenceType.BUILDING) return true
-        val txInfo = platform.client.getTransactionKotlin(confidence.transactionHash.toString())
-        if (txInfo == null || txInfo.height <= 0) return false
-        confidence.confidenceType = TransactionConfidence.ConfidenceType.BUILDING
-        confidence.appearedAtChainHeight = txInfo.height
-        if (txInfo.isChainLocked) {
-            confidence.setChainLock(true)
-        }
-        return true
+    private fun chainLockedHeight(txId: Sha256Hash): Int? {
+        val txInfo = platform.client.getTransactionKotlin(txId.toString()) ?: return null
+        return txInfo.height.takeIf { it > 0 && txInfo.isChainLocked }
     }
 
     override suspend fun waitForTransaction(confidence: TransactionConfidence) {
@@ -622,7 +633,8 @@ class TopUpRepositoryImpl @Inject constructor(
      * identity, such as the one left when identity creation adopted an existing identity and then
      * failed. Platform accepts each asset lock once; a lock it reports as already used is left as it
      * was and tried again on a later launch, because that rejection does not prove which identity it
-     * credited. Remove this once the SDK rediscovers dashj-era asset locks itself.
+     * credited. Remove this once the Platform wallet SDK can apply an unused registration lock to an existing
+     * identity itself; rediscovering the lock alone is not enough.
      */
     private suspend fun creditUnusedRegistrationLocks(aesKeyParameter: KeyParameter?) {
         val locks = try {
@@ -645,9 +657,9 @@ class TopUpRepositoryImpl @Inject constructor(
                 if (updatedAt == 0L || updatedAt > settledBefore) continue
                 if (topUpsDao.getByTxId(lock.txId)?.used() == true) continue
                 if (platform.getIdentity(Identifier.from(lock.identityId)) != null) continue
-                if (!isMined(lock.getConfidence(context))) continue
+                val height = chainLockedHeight(lock.txId) ?: continue
                 log.info("crediting unused registration asset lock {} to {}", lock.txId, identity.uniqueIdString)
-                topUpIdentity(lock, aesKeyParameter, identity, recovery = true)
+                creditRegistrationLock(lock, aesKeyParameter, identity, height)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

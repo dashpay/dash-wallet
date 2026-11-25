@@ -33,6 +33,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.bitcoinj.core.Context
+import org.bitcoinj.core.ECKey
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionConfidence
@@ -40,12 +41,15 @@ import org.bitcoinj.evolution.AssetLockTransaction
 import org.bitcoinj.params.TestNet3Params
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
+import org.bouncycastle.crypto.params.KeyParameter
 import org.dashj.platform.dashpay.BlockchainIdentity
 import org.dashj.platform.dapiclient.DapiClient
 import org.dashj.platform.dapiclient.model.GetTransactionResponse
 import org.dashj.platform.dashpay.IdentityStatus
 import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.dpp.identity.Identity
+import org.dashj.platform.sdk.platform.Identities
+import org.dashj.platform.sdk.platform.Platform
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
@@ -77,7 +81,10 @@ class OrphanedRegistrationLockTest {
     private val walletData = mockk<WalletData>(relaxed = true)
     private val verifier = mockk<PendingDirectPaymentVerifier>()
     private val own = mockk<BlockchainIdentity>(relaxed = true)
+    private val ownIdentity = mockk<Identity>(relaxed = true)
+    private val identities = mockk<Identities>()
     private val dapiClient = mockk<DapiClient>()
+    private val lockKey = mockk<ECKey>()
 
     init {
         every { platformRepo.platform } returns platformService
@@ -91,7 +98,10 @@ class OrphanedRegistrationLockTest {
         every { own.uniqueId } returns ownId
         every { own.uniqueIdString } returns "own"
         every { own.registrationStatus } returns IdentityStatus.REGISTERED
-        every { own.identity } returns mockk<Identity>(relaxed = true)
+        every { own.identity } returns ownIdentity
+        every { own.platform } returns mockk<Platform>().also { every { it.identities } returns identities }
+        every { identities.topUp(any(), any(), any<Transaction>(), any<Long>(), any()) } returns 3_000_000_000L
+        every { lockKey.isEncrypted } returns false
         every { identityRepository.blockchainIdentity } returns own
     }
 
@@ -103,25 +113,29 @@ class OrphanedRegistrationLockTest {
 
     private fun hash(hex: String) = Sha256Hash.wrap(hex.repeat(32))
 
+    private fun onCore(hex: String, height: Int, chainLocked: Boolean = true) {
+        every { dapiClient.getTransactionKotlin(hex.repeat(32)) } returns
+            GetTransactionResponse(ByteArray(0), hash("ee"), height, 6, false, chainLocked)
+    }
+
+    /** A dashj registration lock that Platform's Core reports chain locked at [minedAt], unless null. */
     private fun lock(
         hex: String,
         identityId: Sha256Hash = hash(hex),
-        type: TransactionConfidence.ConfidenceType = TransactionConfidence.ConfidenceType.BUILDING,
+        minedAt: Int? = MINED_AT,
         ageMs: Long = TimeUnit.DAYS.toMillis(1),
         updateTime: Date = Date(System.currentTimeMillis() - ageMs),
-        confidence: TransactionConfidence = mockk<TransactionConfidence>(relaxed = true).also {
-            every { it.confidenceType } returns type
-            every { it.isChainLocked } returns (type == TransactionConfidence.ConfidenceType.BUILDING)
-            every { it.transactionHash } returns hash(hex)
-        }
+        confidence: TransactionConfidence = TransactionConfidence(hash(hex))
     ): AssetLockTransaction {
         val tx = mockk<AssetLockTransaction>(relaxed = true)
         every { tx.txId } returns hash(hex)
         every { tx.identityId } returns identityId
+        every { tx.assetLockPublicKey } returns lockKey
         every { tx.getConfidence(any<Context>()) } returns confidence
         val walletCopy = mockk<Transaction>(relaxed = true)
         every { walletCopy.updateTime } returns updateTime
         every { wallet.getTransaction(hash(hex)) } returns walletCopy
+        minedAt?.let { onCore(hex, it) }
         return tx
     }
 
@@ -129,7 +143,17 @@ class OrphanedRegistrationLockTest {
         every { authExtension.identityFundingTransactions } returns locks.toList()
     }
 
-    private fun assertNotToppedUp() = verify(exactly = 0) { own.topUp(any(), any(), any(), any()) }
+    private fun toppedUp(lock: AssetLockTransaction, height: Int = MINED_AT) =
+        verify { identities.topUp(ownIdentity, 0, lock, height.toLong(), lockKey) }
+
+    private fun assertNotToppedUp() =
+        verify(exactly = 0) { identities.topUp(any(), any(), any<Transaction>(), any<Long>(), any()) }
+
+    private fun rejectAsUsed(lock: AssetLockTransaction) {
+        every { identities.topUp(any(), any(), lock, any<Long>(), any()) } throws IllegalStateException(
+            "Asset lock transaction ${lock.txId} output 0 already completely used"
+        )
+    }
 
     @Test
     fun `credits a mined registration lock that never registered an identity`() = runTest {
@@ -138,10 +162,69 @@ class OrphanedRegistrationLockTest {
 
         repository().checkTopUps(null)
 
-        verify { own.topUp(orphan, null, true, false) }
+        toppedUp(orphan)
+        verify(exactly = 0) { own.topUp(any(), any(), any(), any()) }
         val row = topUpsDao.rows.getValue(hash("01"))
         assertEquals("own", row.toUserId)
         assertEquals(true, row.used())
+    }
+
+    @Test
+    fun `credits a lock still pending in dashj at Core's height and leaves the wallet's copy as it was`() = runTest {
+        val confidence = TransactionConfidence(hash("11"))
+        confidence.confidenceType = TransactionConfidence.ConfidenceType.PENDING
+        val orphan = lock("11", minedAt = 1234, confidence = confidence)
+        fundingLocks(orphan)
+
+        repository().checkTopUps(null)
+
+        toppedUp(orphan, 1234)
+        assertEquals(TransactionConfidence.ConfidenceType.PENDING, confidence.confidenceType)
+        assertEquals(true, topUpsDao.rows.getValue(hash("11")).used())
+    }
+
+    @Test
+    fun `uses Core's height over the one dashj saved`() = runTest {
+        val confidence = TransactionConfidence(hash("12"))
+        confidence.appearedAtChainHeight = 900
+        val orphan = lock("12", minedAt = 1000, confidence = confidence)
+        fundingLocks(orphan)
+
+        repository().checkTopUps(null)
+
+        toppedUp(orphan, 1000)
+        assertEquals(900, confidence.appearedAtChainHeight)
+    }
+
+    @Test
+    fun `a rejected height does not stop a later launch from using the corrected one`() = runTest {
+        val orphan = lock("14", minedAt = 999)
+        fundingLocks(orphan)
+        every { identities.topUp(any(), any(), orphan, 999L, any()) } throws
+            IllegalStateException("Core chain locked height is below the proof height")
+
+        repository().checkTopUps(null)
+        assertNull(topUpsDao.rows[hash("14")])
+
+        onCore("14", 1000)
+        repository().checkTopUps(null)
+
+        toppedUp(orphan, 1000)
+        assertEquals(true, topUpsDao.rows.getValue(hash("14")).used())
+    }
+
+    @Test
+    fun `decrypts the lock key with the wallet key`() = runTest {
+        val orphan = lock("15")
+        fundingLocks(orphan)
+        val aesKey = KeyParameter(ByteArray(32))
+        val decrypted = mockk<ECKey>()
+        every { lockKey.isEncrypted } returns true
+        every { lockKey.decrypt(aesKey) } returns decrypted
+
+        repository().checkTopUps(aesKey)
+
+        verify { identities.topUp(ownIdentity, 0, orphan, MINED_AT.toLong(), decrypted) }
     }
 
     @Test
@@ -177,8 +260,8 @@ class OrphanedRegistrationLockTest {
     }
 
     @Test
-    fun `skips a lock that is not mined`() = runTest {
-        fundingLocks(lock("05", type = TransactionConfidence.ConfidenceType.PENDING))
+    fun `skips a lock Core has not seen mined`() = runTest {
+        fundingLocks(lock("05", minedAt = 0))
 
         repository().checkTopUps(null)
 
@@ -188,40 +271,27 @@ class OrphanedRegistrationLockTest {
     }
 
     @Test
-    fun `skips a lock still pending in dashj that Platform has not seen mined`() = runTest {
-        val confidence = TransactionConfidence(hash("10"))
-        confidence.confidenceType = TransactionConfidence.ConfidenceType.PENDING
-        fundingLocks(lock("10", confidence = confidence))
-        every { dapiClient.getTransactionKotlin("10".repeat(32)) } returns
-            GetTransactionResponse(ByteArray(0), Sha256Hash.ZERO_HASH, 0, 0, true, false)
+    fun `skips a lock Core does not know`() = runTest {
+        fundingLocks(lock("10", minedAt = null))
 
         repository().checkTopUps(null)
 
         assertNotToppedUp()
-        assertEquals(TransactionConfidence.ConfidenceType.PENDING, confidence.confidenceType)
-        assertEquals(false, confidence.isTransactionLocked)
     }
 
     @Test
-    fun `credits a lock still pending in dashj at the height Platform reports it mined`() = runTest {
-        val confidence = TransactionConfidence(hash("11"))
-        confidence.confidenceType = TransactionConfidence.ConfidenceType.PENDING
-        val orphan = lock("11", confidence = confidence)
-        fundingLocks(orphan)
-        every { dapiClient.getTransactionKotlin("11".repeat(32)) } returns
-            GetTransactionResponse(ByteArray(0), hash("12"), 1234, 6, false, true)
+    fun `skips a mined lock that is not chain locked yet`() = runTest {
+        fundingLocks(lock("16", minedAt = null))
+        onCore("16", 1000, chainLocked = false)
 
         repository().checkTopUps(null)
 
-        verify { own.topUp(orphan, null, true, false) }
-        assertEquals(TransactionConfidence.ConfidenceType.BUILDING, confidence.confidenceType)
-        assertEquals(1234, confidence.appearedAtChainHeight)
-        assertEquals(true, topUpsDao.rows.getValue(hash("11")).used())
+        assertNotToppedUp()
     }
 
     @Test
-    fun `skips a lock still pending in dashj when Platform cannot be reached`() = runTest {
-        fundingLocks(lock("13", type = TransactionConfidence.ConfidenceType.PENDING))
+    fun `skips a lock when Core cannot be reached`() = runTest {
+        fundingLocks(lock("13", minedAt = null))
         every { dapiClient.getTransactionKotlin("13".repeat(32)) } throws IllegalStateException("dapi down")
 
         repository().checkTopUps(null)
@@ -279,7 +349,7 @@ class OrphanedRegistrationLockTest {
 
         repository().checkTopUps(null)
 
-        verify { own.topUp(orphan, null, true, false) }
+        toppedUp(orphan)
         val row = topUpsDao.rows.getValue(hash("09"))
         assertEquals("own", row.toUserId)
         assertEquals(true, row.used())
@@ -290,9 +360,7 @@ class OrphanedRegistrationLockTest {
         val spent = lock("0a")
         fundingLocks(spent)
         topUpsDao.insert(TopUp(hash("0a"), "adopted"))
-        every { own.topUp(spent, any(), any(), any()) } throws IllegalStateException(
-            "Asset lock transaction ${"0a".repeat(32)} output 0 already completely used"
-        )
+        rejectAsUsed(spent)
 
         repository().checkTopUps(null)
 
@@ -305,9 +373,7 @@ class OrphanedRegistrationLockTest {
     fun `a lock Platform reports as used leaves no top-up record when there was none`() = runTest {
         val spent = lock("0f")
         fundingLocks(spent)
-        every { own.topUp(spent, any(), any(), any()) } throws IllegalStateException(
-            "Asset lock transaction ${"0f".repeat(32)} output 0 already completely used"
-        )
+        rejectAsUsed(spent)
 
         repository().checkTopUps(null)
 
@@ -323,8 +389,8 @@ class OrphanedRegistrationLockTest {
 
         repository().checkTopUps(null)
 
-        verify(exactly = 0) { own.topUp(broken, any(), any(), any()) }
-        verify { own.topUp(orphan, null, true, false) }
+        verify(exactly = 0) { identities.topUp(any(), any(), broken, any<Long>(), any()) }
+        toppedUp(orphan)
     }
 
     @Test
@@ -335,5 +401,9 @@ class OrphanedRegistrationLockTest {
         assertThrows(CancellationException::class.java) {
             runBlocking { repository().checkTopUps(null) }
         }
+    }
+
+    private companion object {
+        const val MINED_AT = 1598126
     }
 }
