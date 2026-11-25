@@ -70,7 +70,10 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.zxing.BarcodeFormat
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.data.ServiceName
@@ -97,11 +100,14 @@ import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardStatus
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
 import org.dash.wallet.features.exploredash.ui.dashspend.DashSpendViewModel
 import org.dash.wallet.features.exploredash.ui.explore.MerchantLogo
+import org.slf4j.LoggerFactory
 import java.text.DecimalFormat
 import java.text.NumberFormat
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Currency
+
+private val log = LoggerFactory.getLogger(GiftCardDetailsDialog::class.java)
 
 @AndroidEntryPoint
 class GiftCardDetailsDialog : ComposeBottomSheet() {
@@ -581,7 +587,16 @@ private fun BarcodeSection(
                 withContext(Dispatchers.Default) {
                     Qr.bitmap(barcode.value, barcode.barcodeFormat, Size(containerWidthPx, barcodeHeightPx))
                 }
-            } catch (_: Exception) {
+            } catch (e: CancellationException) {
+                // A width or barcode change restarted this effect; the new run owns the state.
+                throw e
+            } catch (e: Exception) {
+                // A failing encoder can outrun cancellation; the restarted run owns the state.
+                currentCoroutineContext().ensureActive()
+                log.error(
+                    "failed to render a ${barcode.value.length}-char ${barcode.barcodeFormat} barcode: " +
+                        e.javaClass.simpleName
+                )
                 null
             }
             isQrCode = barcode.barcodeFormat == BarcodeFormat.QR_CODE

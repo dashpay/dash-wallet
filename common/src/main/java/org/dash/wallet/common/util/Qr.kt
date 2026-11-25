@@ -108,7 +108,8 @@ object Qr {
             bitmap.copyPixelsFromBuffer(ByteBuffer.wrap(pixels))
             bitmap
         } catch (x: WriterException) {
-            log.error("problem creating barcode", x)
+            // ZXing messages can quote characters of the content, so the exception itself stays out of the log.
+            log.error("problem creating a ${content.length}-char $format barcode: ${x.javaClass.simpleName}")
             null
         }
     }
