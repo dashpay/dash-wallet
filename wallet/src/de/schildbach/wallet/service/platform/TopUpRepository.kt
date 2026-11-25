@@ -478,8 +478,9 @@ class TopUpRepositoryImpl @Inject constructor(
     ) {
         val identityId = registeredIdentityId(identity, lock)
         val assetLockKey = lock.assetLockPublicKey.let { if (it.isEncrypted) it.decrypt(aesKeyParameter) else it }
+        val platformIdentity = checkNotNull(identity.identity) { "Identity has no Platform record, not topping up with ${lock.txId}" }
         val credits = try {
-            identity.platform.identities.topUp(identity.identity!!, 0, lock, chainLockedHeight.toLong(), assetLockKey)
+            identity.platform.identities.topUp(platformIdentity, 0, lock, chainLockedHeight.toLong(), assetLockKey)
         } catch (e: Exception) {
             if (isAlreadyUsed(e)) {
                 log.info("asset lock {} is already used; not recording a credit without proof", lock.txId)
