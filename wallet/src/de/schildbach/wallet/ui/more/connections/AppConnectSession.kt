@@ -52,6 +52,9 @@ internal fun connectWalletScope(wallet: org.bitcoinj.wallet.Wallet): String {
     return "${network.id}:$devnet:${Sha256Hash.of(wallet.watchingKey.pubKey)}"
 }
 
+internal class AppConnectIdentityMismatch(val requestedIdentityId: String, val walletIdentityId: String) :
+    IllegalStateException("QR requests a different identity")
+
 /** One-QR, PV14 grant lifecycle. The mutex covers approval, recovery and revocation. */
 internal class AppConnectSession(
     private val service: PlatformService,
@@ -219,7 +222,11 @@ internal class AppConnectSession(
         requireProtocolVersion()
         val blockTime = platform.client.getPlatformTime(identity.id)
         parsed.requireFresh(System.currentTimeMillis())
-        parsed.identityHint?.let { check(it.contentEquals(identity.id.toBuffer())) { "QR requests a different identity" } }
+        parsed.identityHint?.let { hint ->
+            if (!hint.contentEquals(identity.id.toBuffer())) {
+                throw AppConnectIdentityMismatch(Identifier.from(hint).toString(), identity.id.toString())
+            }
+        }
         // A retry must show and use the original approved limits, not a new rolling expiry.
         val prior = config.getGrants().firstOrNull { it.getString("id") == "$scope:${requestHash(request)}" }
         val selectedAuth = prior?.let { indices(it, "authIndices") } ?: parsed.auth.indices.toSet()

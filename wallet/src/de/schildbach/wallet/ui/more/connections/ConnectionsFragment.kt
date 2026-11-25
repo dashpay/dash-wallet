@@ -27,6 +27,8 @@ import android.view.ViewGroup
 import android.widget.Toast
 import de.schildbach.wallet_test.R
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.fragment.app.Fragment
@@ -44,6 +46,7 @@ import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.ui.main.MainViewModel
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -60,6 +63,7 @@ class ConnectionsFragment : Fragment() {
     private val mainViewModel: MainViewModel by activityViewModels()
     // A list row's Disconnect confirmation; one at a time, and dropped on lock like the details sheet's.
     private var rowDisconnect: Job? = null
+    private val identityMismatch = MutableStateFlow<ConnectionsViewModel.ScanOutcome.IdentityMismatch?>(null)
 
     private val scanLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -94,6 +98,8 @@ class ConnectionsFragment : Fragment() {
                             mainViewModel.joinDashPay()
                         }
                     )
+                    val mismatch by identityMismatch.collectAsState()
+                    mismatch?.let { shown -> IdentityMismatchDialog(shown) { viewModel.resetScanOutcome(shown) } }
                 }
             }
         }
@@ -136,10 +142,20 @@ class ConnectionsFragment : Fragment() {
                             ).show()
                             viewModel.resetScanOutcome()
                         }
+                        is ConnectionsViewModel.ScanOutcome.IdentityMismatch,
                         is ConnectionsViewModel.ScanOutcome.Idle -> Unit
                     }
                 }
             }
+        }
+        if (host != null) {
+            viewLifecycleOwner.lifecycleScope.launch {
+                identityMismatchToShow(viewModel.scanOutcome, host.lifecycle, viewLifecycleOwner.lifecycle,
+                    host.walletLocked) { viewModel.isWalletUnlocked }
+                    .collect { identityMismatch.value = it }
+            }
+        } else if (viewModel.scanOutcome.value is ConnectionsViewModel.ScanOutcome.IdentityMismatch) {
+            viewModel.resetScanOutcome()
         }
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
@@ -219,6 +235,7 @@ class ConnectionsFragment : Fragment() {
     }
 
     override fun onDestroyView() {
+        identityMismatch.value = null
         viewModel.bindWalletUnlockCheck { false }
         super.onDestroyView()
     }

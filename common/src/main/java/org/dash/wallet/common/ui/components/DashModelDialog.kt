@@ -1,6 +1,8 @@
 package org.dash.wallet.common.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -46,6 +48,9 @@ import org.dash.wallet.common.R
  * @param buttons List of button data with labels and click actions
  * @param content Optional custom content to display after text blocks
  * @param horizontalPadding Horizontal padding for the dialog (default: 15.dp)
+ * @param scrollableBody Lets everything between the icon and the buttons scroll so the buttons stay on screen. Leave
+ *   it off when a button is destructive: the body can then scroll out of view while the button stays.
+ *   When on, [content] must not contain vertically scrolling or lazy layouts of its own.
  */
 @Composable
 fun ModalDialog(
@@ -59,7 +64,8 @@ fun ModalDialog(
     moreInfoButton: ButtonData? = null,
     buttons: List<ButtonData> = emptyList(),
     content: @Composable (() -> Unit)? = null,
-    horizontalPadding: androidx.compose.ui.unit.Dp = 15.dp
+    horizontalPadding: androidx.compose.ui.unit.Dp = 15.dp,
+    scrollableBody: Boolean = false
 ) {
     if (showDialog) {
         DashWalletTheme {
@@ -111,7 +117,14 @@ fun ModalDialog(
 
                         // Content wrapper
                         Column(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = if (scrollableBody) {
+                                Modifier
+                                    .fillMaxWidth()
+                                    .weight(1f, fill = false)
+                                    .verticalScroll(rememberScrollState())
+                            } else {
+                                Modifier.fillMaxWidth()
+                            },
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {

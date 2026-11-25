@@ -80,6 +80,41 @@ class ConnectionDialogLockTest {
         }
     }
 
+    @Test fun `a fragment view dialog comes back after a pause once the host resumes with an unchanged lock`() = runTest {
+        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+        val controller = Robolectric.buildActivity(FragmentActivity::class.java)
+        controller.get().setTheme(org.dash.wallet.common.R.style.My_Theme)
+        val activity = controller.setup().get()
+        val fragment = ConnectionDialogsTest.ViewFragment()
+        activity.supportFragmentManager.beginTransaction().add(android.R.id.content, fragment).commitNow()
+        val locked = MutableStateFlow(false)
+        val dialogs = mutableListOf<org.dash.wallet.common.ui.dialogs.AdaptiveDialog>()
+        val result = async(Dispatchers.Main.immediate) {
+            awaitUnlockedConnectionDialog(activity, fragment.viewLifecycleOwner, locked, { !locked.value }) {
+                connectionCallbackDialog(activity, "example.org").also { dialogs += it }
+            }
+        }
+        try {
+            runCurrent()
+            assertEquals(1, dialogs.size)
+            controller.pause()
+            runCurrent()
+            assertFalse(dialogs.last().dialog?.isShowing == true)
+            controller.resume()
+            runCurrent()
+            shadowOf(Looper.getMainLooper()).idle()
+            assertEquals(2, dialogs.size)
+            assertTrue(dialogs.last().requireDialog().isShowing)
+            assertFalse(result.isCompleted)
+        } finally {
+            result.cancel()
+            runCurrent()
+            shadowOf(Looper.getMainLooper()).idle()
+            controller.pause().stop().destroy()
+            Dispatchers.resetMain()
+        }
+    }
+
     /** Owns the screen's ViewModel, as ConnectionsFragment does for the approve sheet and its child sheets. */
     class ScreenHost : androidx.fragment.app.Fragment() {
         lateinit var model: ConnectionsViewModel

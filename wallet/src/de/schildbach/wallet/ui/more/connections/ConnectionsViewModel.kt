@@ -123,6 +123,12 @@ class ConnectionsViewModel @Inject constructor(
         object ConnectionRequested : ScanOutcome()
 
         data class Error(val message: String?) : ScanOutcome()
+
+        data class IdentityMismatch(
+            val requestedIdentityId: String,
+            val walletIdentityId: String,
+            val walletUsername: String?
+        ) : ScanOutcome()
     }
 
     private val _uiState = MutableStateFlow(ConnectionsUIState())
@@ -346,8 +352,14 @@ class ConnectionsViewModel @Inject constructor(
                 _scanOutcome.value = ScanOutcome.ConnectionRequested
             } catch (ex: Exception) {
                 if (ex is CancellationException) throw ex
-                log.error("failed to process scanned DashConnect QR", ex)
-                _scanOutcome.value = ScanOutcome.Error(ex.message)
+                _scanOutcome.value = if (ex is AppConnectIdentityMismatch) {
+                    log.warn("DashConnect request rejected because it names a different identity")
+                    ScanOutcome.IdentityMismatch(ex.requestedIdentityId, ex.walletIdentityId,
+                        walletUsernameOrNull(ex.walletIdentityId))
+                } else {
+                    log.error("failed to process scanned DashConnect QR", ex)
+                    ScanOutcome.Error(ex.message)
+                }
                 _uiState.update { it.copy(error = ex.message) }
             } finally {
                 operationInProgress = false
@@ -357,10 +369,10 @@ class ConnectionsViewModel @Inject constructor(
     }
 
     private suspend fun toConnectionRequest(request: DashKeyRequest): ConnectionRequest {
-        // Prefer the DPNS display label (e.g. "John.Doe"); fall back to the stored (normalized)
-        // username if it can't be resolved from Platform.
-        val username = repository.resolveWalletUsername() ?: identityRepository.getUsername().orEmpty()
+        // Prefer the DPNS display label (e.g. "John.Doe"); fall back to the stored username,
+        // in its profile's display form, if it can't be resolved from Platform.
         val identityId = identityRepository.blockchainIdentity?.uniqueIdString.orEmpty()
+        val username = repository.resolveWalletUsername() ?: localWalletUsername(identityId).orEmpty()
         // Prefer the app's on-chain name (contract owner's profile / DPNS) over the spoofable QR
         // label; falls back to the yappr branding and then the raw label.
         val appDisplay = repository.resolveAppDisplay(request.contractId, request.label)
@@ -375,6 +387,30 @@ class ConnectionsViewModel @Inject constructor(
 
     fun resetScanOutcome() {
         _scanOutcome.value = ScanOutcome.Idle
+    }
+
+    /** Resets only if [shown] is still the current outcome, so a newer one is not lost. */
+    fun resetScanOutcome(shown: ScanOutcome) {
+        _scanOutcome.compareAndSet(shown, ScanOutcome.Idle)
+    }
+
+    private suspend fun localWalletUsername(identityId: String?): String? {
+        val profile = try {
+            identityRepository.getLocalUserProfile()?.takeIf { it.userId == identityId }
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            null
+        }
+        // Sync and recovery keep this identity's profile on the record's registered primary, which can be a
+        // replacement name rather than the stored one.
+        return profile?.username?.takeIf { it.isNotEmpty() } ?: identityRepository.getUsername()
+    }
+
+    private suspend fun walletUsernameOrNull(identityId: String): String? = try {
+        localWalletUsername(identityId)
+    } catch (e: Exception) {
+        if (e is CancellationException) throw e
+        null
     }
 
     fun approveTokenPurchase() {
@@ -621,8 +657,8 @@ class ConnectionsViewModel @Inject constructor(
             val loaded = try {
                 requireConnectionRecords()
                 // The username and identity are read first: the terms read checks the scope after them.
-                val username = repository.resolveWalletUsername() ?: identityRepository.getUsername().orEmpty()
                 val identityId = identityRepository.blockchainIdentity?.uniqueIdString.orEmpty()
+                val username = repository.resolveWalletUsername() ?: localWalletUsername(identityId).orEmpty()
                 val terms = repository.connectionTerms(connection.id, connection.scope)
                 ConnectionDetailsState(connection.id, connection.scope, username, identityId, terms, isLoading = false)
             } catch (ex: Exception) {
