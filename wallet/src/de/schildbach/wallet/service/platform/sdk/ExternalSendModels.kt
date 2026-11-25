@@ -353,9 +353,6 @@ enum class SendSupport {
     /** The SDK (or the wallet) cannot do this pair yet. */
     NOT_SUPPORTED_YET,
 
-    /** A Core-funded identity top-up is only possible for an identity this wallet manages. */
-    NEEDS_OWN_IDENTITY,
-
     /** The source is the identity balance and the user has no identity. */
     NO_IDENTITY
 }
@@ -366,7 +363,7 @@ enum class SendSupport {
  *
  * | From \ To | Core | Shielded | Platform | Identity |
  * |---|---|---|---|---|
- * | Core | yes | yes | yes, P2PKH only (1) | own identity only (2) |
+ * | Core | yes | yes | yes, P2PKH only (1) | yes (2) |
  * | Shielded | yes | yes | yes | yes |
  * | Platform | yes (3) | yes (4) | yes | yes (6) |
  * | Identity | yes | yes (5) | yes | yes, not to itself |
@@ -377,9 +374,15 @@ enum class SendSupport {
  *    [SendSupport.NOT_SUPPORTED_YET] here and refused by [ExternalSendService.send]
  *    before anything is built. A lock interrupted after it was built is resumed with its
  *    persisted recipients ([PendingPlatformFunding]).
- * 2. The Core top-up's resume gate keys on the managed identity's registration index;
- *    for someone else's identity a killed attempt could not be resumed (double-pay
- *    risk). [destinationIsOwnIdentity] null (could not tell) fails closed.
+ * 2. An identity this wallet manages: [SdkTransparentTopUp] (`identityCredits.topUpFromCore`,
+ *    resume-gated on the identity's registration index). Any other identity:
+ *    `identityCredits.topUpExternalIdentityFromCore` (platform#5931; Rust fetches the identity
+ *    first, an unknown one failing `NotFound` before anything is built, and records it on the
+ *    lock's row before the broadcast). A lock left behind by an interrupted attempt is never
+ *    rebuilt: the next send to that identity, and the top-up recovery drain
+ *    ([SdkTopUpRecoveryService]), resume it with `resumeTopUpToRecordedRecipient`, which pays
+ *    only the identity the lock recorded. Supported either way here; [ExternalSendService.send]
+ *    picks the path from the managed set and refuses (Not sent) when that set is unreadable.
  * 3. The partial-amount `ManagedPlatformWallet.withdrawCredits(coreAddress, inputs, …)`
  *    with inputs the wallet selects ([selectPlatformWithdrawalInputs]); amounts below the
  *    withdrawal minimum ([PLATFORM_MIN_WITHDRAWAL_CREDITS], over the amount plus the Core
@@ -410,8 +413,7 @@ fun externalSendSupport(
             is SendDestination.Core, is SendDestination.Shielded -> SendSupport.SUPPORTED
             is SendDestination.Platform ->
                 if (isP2pkhPlatformAddress(destination.address)) SendSupport.SUPPORTED else SendSupport.NOT_SUPPORTED_YET
-            is SendDestination.Identity ->
-                if (destinationIsOwnIdentity == true) SendSupport.SUPPORTED else SendSupport.NEEDS_OWN_IDENTITY
+            is SendDestination.Identity -> SendSupport.SUPPORTED
         }
         SendBalance.SHIELDED -> SendSupport.SUPPORTED
         SendBalance.PLATFORM -> SendSupport.SUPPORTED
