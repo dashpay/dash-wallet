@@ -52,6 +52,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.bitcoinj.wallet.Wallet.BalanceType
 import de.schildbach.wallet.data.WalletData
+import org.dashfoundation.dashsdk.errors.DashSdkError
 import org.dashfoundation.dashsdk.wallet.SpvSyncProgressData
 import org.dashfoundation.dashsdk.wallet.SpvSyncState
 import org.slf4j.LoggerFactory
@@ -1896,6 +1897,14 @@ interface L1ShadowSource {
     suspend fun stopSpv()
 
     /**
+     * Whether [t], thrown by [startSpv] or [stopSpv], is the SDK reporting
+     * that an earlier SPV teardown has not finished. A stop that times out
+     * leaves the teardown tracked inside the SDK, and every start is then
+     * refused until a later [stopSpv] sees it through.
+     */
+    fun isSpvTeardownIncomplete(t: Throwable): Boolean = false
+
+    /**
      * Ordered DashPay bring-up (identity → contacts → contact-account
      * drain) for one wallet, run immediately before [startSpv] so a
      * contact's DIP-15 receiving addresses are watched from the first
@@ -2071,6 +2080,9 @@ internal class DashSdkL1ShadowSource(
         manager().startSpv(dataDir = dataDir)
 
     override suspend fun stopSpv() = manager().stopSpv()
+
+    override fun isSpvTeardownIncomplete(t: Throwable): Boolean =
+        t is DashSdkError.PlatformWallet.ShutdownIncomplete
 
     override suspend fun startWalletSubsystems(walletIdHex: String): String? {
         val walletId = walletIdFromHex(walletIdHex) ?: return null
@@ -2464,6 +2476,15 @@ class L1ShadowSyncService internal constructor(
     private val scanGateRetryInitialMs: Long = SCAN_GATE_RETRY_INITIAL_MS,
     private val scanGateRetryMaxMs: Long = SCAN_GATE_RETRY_MAX_MS,
     /**
+     * How many times a start refused over an unfinished SPV teardown stops
+     * the client again and retries, and how long it waits when that stop
+     * reports the teardown still running — see [startSpvFinishingTeardown].
+     */
+    private val spvTeardownRetryRounds: Int = SPV_TEARDOWN_RETRY_ROUNDS,
+    private val spvTeardownRetryDelayMs: Long = SPV_TEARDOWN_RETRY_DELAY_MS,
+    /** The wallet wipe's own, longer budget of such stops — see [clearForWalletWipe]. */
+    private val spvTeardownWipeRetryRounds: Int = SPV_TEARDOWN_WIPE_RETRY_ROUNDS,
+    /**
      * Where the latest [ParityBreakdown] is kept across restarts, for a report
      * to fall back on; null (tests' default) keeps it in memory only. See
      * [parityBreakdownForReport].
@@ -2668,6 +2689,73 @@ class L1ShadowSyncService internal constructor(
 
     /** See [engineStartingSinceMs]. */
     fun engineStartingSinceMs(): Long = engineStartingSinceMs
+
+    /**
+     * Start the SPV client, first finishing an earlier teardown the SDK is
+     * still tracking. Call only while holding [mutex].
+     *
+     * `stopSpv` waits a bounded time for the native teardown. When that runs
+     * out it throws, the SDK keeps the teardown tracked, and it refuses every
+     * `startSpv` until another `stopSpv` has seen the teardown through. A
+     * start that only logged the refusal left the engine down for the rest
+     * of the process (field report, 2026-11-18: a filter-stall restart whose
+     * stop timed out; each start over the next two days was refused, though
+     * the native teardown had finished within a minute).
+     *
+     * So a refused start stops the client again and retries, at most
+     * [spvTeardownRetryRounds] times, waiting [spvTeardownRetryDelayMs] after
+     * a stop that reports the teardown still running. Past that the refusal
+     * is thrown to [startIfEnabled], which schedules another start. Any
+     * other failure, of the start or of the stop, is thrown at once.
+     *
+     * Returns false, having started nothing more, once an external stop has
+     * moved [externalStopGeneration] past [startGeneration]: that stop is
+     * queued on [mutex] behind this start and must not wait through further
+     * rounds for an engine it will tear down.
+     *
+     * The native start is not cancellable. The SDK runs it on another
+     * dispatcher, and a caller cancelled meanwhile (the scheduled retry is
+     * cancelled by [stop]) would lose the result of a start that succeeded:
+     * [runningWalletIdHex] would stay null and the queued stop would skip
+     * `stopSpv`, leaving native SPV running. A true return is followed by
+     * the caller setting that latch with no suspension point in between.
+     *
+     * Only [startIfEnabled] uses this. The restart inside [resetShadowState]
+     * and the in-place one in [ensureSpvRunning] start the client as they
+     * did before, so a reset whose own stop times out is still refused at
+     * its start and leaves the engine stopped but marked running. That
+     * reset has deleted SPV state by then; waiting its teardown out there
+     * would start a scan on state the teardown may still be writing.
+     */
+    private suspend fun startSpvFinishingTeardown(dataDirPath: String, startGeneration: Long): Boolean {
+        var round = 0
+        while (true) {
+            if (externalStopGeneration != startGeneration) return false
+            try {
+                withContext(NonCancellable) { source.startSpv(dataDirPath) }
+                if (round > 0) {
+                    log.info("L1 shadow SPV started once the earlier teardown finished (stop retries: {})", round)
+                }
+                return true
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                if (!source.isSpvTeardownIncomplete(t) || round >= spvTeardownRetryRounds) throw t
+            }
+            round++
+            log.warn(
+                "L1 shadow SPV start refused: an earlier teardown has not finished — stopping the client " +
+                    "again before retrying (round {} of {})",
+                round, spvTeardownRetryRounds
+            )
+            try {
+                source.stopSpv()
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                if (!source.isSpvTeardownIncomplete(t)) throw t
+                delay(spvTeardownRetryDelayMs)
+            }
+        }
+    }
 
     /**
      * Runs [block], an engine start, with [engineStartingSinceMs] set. Call
@@ -3137,7 +3225,6 @@ class L1ShadowSyncService internal constructor(
                     )
                     return false
                 }
-                scanGateRefusals = 0
                 currentCoroutineContext()[Job].let { self -> scanGateRetryJob?.takeIf { it !== self }?.cancel() }
 
                 holdingEngineStart {
@@ -3257,9 +3344,36 @@ class L1ShadowSyncService internal constructor(
                                 }
                             }
                         }
-                        source.startSpv(dataDir.absolutePath)
+                        try {
+                            if (!startSpvFinishingTeardown(dataDir.absolutePath, startGeneration)) {
+                                log.info("L1 shadow sync not started: an external stop() arrived during the start")
+                                return false
+                            }
+                        } catch (t: Throwable) {
+                            if (t is CancellationException) throw t
+                            if (!source.isSpvTeardownIncomplete(t)) throw t
+                            // Still refused after every round. A filter-stall
+                            // restart has already torn its loops down, so
+                            // nothing else would start the engine again: this
+                            // refusal carries its own retry, as the scan
+                            // gate's does.
+                            if (externalStopGeneration != startGeneration) {
+                                log.info("L1 shadow sync not started: an external stop() arrived during the start")
+                                return false
+                            }
+                            val retryInMs = scheduleScanGateRetry(startGeneration)
+                            log.warn(
+                                "L1 shadow sync not started: an earlier SPV teardown has still not finished; " +
+                                    "retrying in {}s",
+                                retryInMs / 1000
+                            )
+                            return false
+                        }
                     }
                     runningWalletIdHex.value = walletIdHex
+                    // Only now: a start still refused over an unfinished
+                    // teardown shares this backoff, and it gets past the gate.
+                    scanGateRefusals = 0
                     // Seed the committed-cursor tracker from the durable
                     // watermark so the drain predicate has evidence before the
                     // session's first SyncHeightAdvanced event; a failed read
@@ -3337,7 +3451,8 @@ class L1ShadowSyncService internal constructor(
     }
 
     /**
-     * Schedule the start again after a scan-gate refusal, with backoff; one
+     * Schedule the start again after a scan-gate refusal, or a start still
+     * refused over an unfinished SPV teardown, with backoff; one
      * retry in flight at a time. Returns the delay. The retry carries the
      * ORIGINATING start's external-stop generation, so any stop after that
      * start began, including one that landed while it was inside the gate,
@@ -5075,6 +5190,56 @@ class L1ShadowSyncService internal constructor(
         }
 
     /**
+     * Under [mutex], after the caller's stop. That stop only logs a
+     * `stopSpv` whose native teardown outlived its wait, and the teardown's
+     * last persist can write the old client's files back into an SPV dataDir
+     * deleted meanwhile; the next start, which waits such a teardown out
+     * ([startSpvFinishingTeardown]), would then open them. So the callers
+     * that delete stop the client again here until the SDK reports the
+     * teardown through, and delete only after that.
+     *
+     * Only a stop that returns is that report. One that fails for any other
+     * reason proves nothing about the client's writers — after a native
+     * panic the SDK answers every stop with `SpvProcessRestartRequired` for
+     * the rest of the process — so it is not retried and refuses the caller.
+     *
+     * @param rounds how many more stops to try, [spvTeardownRetryDelayMs]
+     *   apart, while the SDK reports the teardown still running.
+     * @return whether the caller may delete. False means no stop succeeded:
+     *   the caller must leave the SDK wallet and the dataDir alone.
+     */
+    private suspend fun confirmSpvTeardownForDestruction(what: String, rounds: Int): Boolean {
+        var round = 0
+        while (true) {
+            try {
+                source.stopSpv()
+                return true
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                if (!source.isSpvTeardownIncomplete(t)) {
+                    log.error(
+                        "{}: the SPV stop failed, so its teardown is unconfirmed — refusing to remove the " +
+                            "SDK wallet or the SPV dataDir underneath it; nothing was touched",
+                        what, t
+                    )
+                    return false
+                }
+            }
+            if (round >= rounds) {
+                log.error(
+                    "{}: the SPV teardown is still running after {} more stops — refusing to remove the " +
+                        "SDK wallet or the SPV dataDir underneath it; nothing was touched",
+                    what, round
+                )
+                return false
+            }
+            round++
+            log.warn("{}: the SPV teardown has not finished — waiting before stopping again (round {})", what, round)
+            delay(spvTeardownRetryDelayMs)
+        }
+    }
+
+    /**
      * Under [mutex]. A bring-up that [stopInternal] cancelled but could not
      * join is still INSIDE `startWalletSubsystems` — still using the SDK
      * wallet and the SPV dataDir the caller is about to remove. A stop may
@@ -5429,6 +5594,10 @@ class L1ShadowSyncService internal constructor(
                     if (!quiesceBringUpForDestruction("wallet re-creation", destructiveBringUpJoinMs)) {
                         return false
                     }
+                    // …and the same for an SPV teardown that outlived the stop.
+                    if (!confirmSpvTeardownForDestruction("wallet re-creation", spvTeardownRetryRounds)) {
+                        return false
+                    }
                     // The re-created wallet has the same id, so a paid-history
                     // marker would vouch for the empty store that replaces this
                     // one. Dropped first, and not recorded again until the
@@ -5510,28 +5679,34 @@ class L1ShadowSyncService internal constructor(
      * dashj wallet, which the wipe removes separately). Never throws;
      * every step is failure-contained so one failure cannot abort the
      * rest (a partial clear is exactly the resurrection bug).
+     *
+     * @return false only when the SPV client's stop could not be confirmed
+     *   ([confirmSpvTeardownForDestruction]): the SDK wallet, the SPV
+     *   dataDir and the binder latch were then left in place, and the
+     *   caller must keep the wipe pending so a fresh process finishes it.
+     *   A cleanup that fails before reaching the stop still returns true.
      */
-    suspend fun clearForWalletWipe() {
+    suspend fun clearForWalletWipe(): Boolean {
         // Closed until the SDK wallet is gone, or a run started before the
         // stop() below could keep this wallet's txids after the discard.
         closeParityBreakdown()
-        try {
+        return try {
             clearForWalletWipeWithBreakdownClosed()
         } finally {
             reopenParityBreakdown()
         }
     }
 
-    private suspend fun clearForWalletWipeWithBreakdownClosed() {
+    private suspend fun clearForWalletWipeWithBreakdownClosed(): Boolean {
         // First and unconditionally: the stored parity breakdown carries this
         // wallet's txids and amounts, and must never reach the next wallet's
         // support report.
         discardParityBreakdown("the wallet wipe")
         val recreator = this.recreator ?: run {
             log.info("wallet-wipe SDK cleanup skipped: no recreator wired (test construction?)")
-            return
+            return true
         }
-        try {
+        return try {
             recoveryMutex.withLock {
                 val walletIdHex = runningWalletIdHex.value ?: source.boundWalletIdOrNull()
                 log.warn(
@@ -5557,6 +5732,16 @@ class L1ShadowSyncService internal constructor(
                     // returns is the process's problem, not a reason to delete
                     // underneath it.
                     quiesceBringUpForDestruction("wallet-wipe SDK cleanup", budgetMs = null)
+                    // An SPV teardown that outlived the stop gets a budget
+                    // instead: the SDK bounds one stop, not the teardown, and
+                    // the reset screen is waiting on this call. Unconfirmed,
+                    // nothing below runs and the caller keeps the wipe marker,
+                    // so the next launch finishes the wipe in a process whose
+                    // SPV client never started.
+                    val wipeWhat = "wallet-wipe SDK cleanup"
+                    if (!confirmSpvTeardownForDestruction(wipeWhat, spvTeardownWipeRetryRounds)) {
+                        return false
+                    }
                     if (walletIdHex != null) {
                         runCatching { recreator.removeSdkWallet(walletIdHex) }
                             .onFailure { log.warn("wipe cleanup: removeSdkWallet failed; continuing", it) }
@@ -5570,6 +5755,7 @@ class L1ShadowSyncService internal constructor(
                     "wallet-wipe SDK cleanup complete for wallet {}: the next wallet binds fresh",
                     walletIdHex?.take(8) ?: "none"
                 )
+                true
             }
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
@@ -5579,6 +5765,12 @@ class L1ShadowSyncService internal constructor(
                     "identity could linger until then",
                 t
             )
+            // Not a reason to keep the wipe pending, as before: this is
+            // thrown ahead of the stop (every later step contains its own
+            // failure), typically by an SDK that cannot load its database,
+            // and a relaunch would fail the same way with no wallet to
+            // create or restore into.
+            true
         }
     }
 
@@ -5770,6 +5962,22 @@ class L1ShadowSyncService internal constructor(
 
         /** How long a stop waits for a cancelled DashPay bring-up to actually end before moving on. */
         internal const val BRING_UP_STOP_JOIN_MS = 5_000L
+
+        /**
+         * See [startSpvFinishingTeardown]. Each round is one `stopSpv`, which
+         * the SDK bounds itself (15 s observed), plus the delay; the teardown
+         * in the field report took 68 s.
+         */
+        internal const val SPV_TEARDOWN_RETRY_ROUNDS = 4
+        internal const val SPV_TEARDOWN_RETRY_DELAY_MS = 5_000L
+
+        /**
+         * The wallet wipe's budget for the same wait. Longer than a start's,
+         * because the wipe is the user's one request to erase and the next
+         * chance is the next launch; bounded, because the reset screen waits
+         * on it and a teardown that never ends must not hold it for ever.
+         */
+        internal const val SPV_TEARDOWN_WIPE_RETRY_ROUNDS = 12
 
         /**
          * How long a refusable destructive step waits for that bring-up to

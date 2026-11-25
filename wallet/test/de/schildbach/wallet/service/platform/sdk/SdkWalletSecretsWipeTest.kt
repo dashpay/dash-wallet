@@ -235,7 +235,9 @@ class SdkWalletSecretsWipeTest {
                     destroy = {
                         clearForWalletWipe { throw IllegalStateException("removeWallet failed") }
                         val outcome = SdkWalletSecretsWipe.erase({ store }, file::delete)
-                        WalletApplicationExt.confirmWipeDestroyed(outcome) { walletSourcesChecked = true }
+                        WalletApplicationExt.confirmWipeDestroyed(outcome, sdkWalletCleared = true) {
+                            walletSourcesChecked = true
+                        }
                     },
                     markComplete = { markedComplete = true }
                 )
@@ -261,7 +263,7 @@ class SdkWalletSecretsWipeTest {
                 destroy = {
                     clearForWalletWipe { store.removeWalletEntries() }
                     val outcome = SdkWalletSecretsWipe.erase({ store }, RawFile()::delete)
-                    WalletApplicationExt.confirmWipeDestroyed(outcome) { }
+                    WalletApplicationExt.confirmWipeDestroyed(outcome, sdkWalletCleared = true) { }
                 },
                 markComplete = { markedComplete = true }
             )
@@ -295,7 +297,7 @@ class SdkWalletSecretsWipeTest {
         }
         try {
             val erased = SdkSecretsWipeOutcome.DELETED_ALL
-            WalletApplicationExt.confirmWipeDestroyed(erased, firstSyncRecordGone = false) { }
+            WalletApplicationExt.confirmWipeDestroyed(erased, sdkWalletCleared = true, firstSyncRecordGone = false) { }
             fail("a surviving first-sync record must fail the wipe")
         } catch (expected: IOException) {
             // the marker stays
@@ -305,13 +307,27 @@ class SdkWalletSecretsWipeTest {
     @Test
     fun `a surviving dashj source still fails the wipe when the SDK secrets were erased`() {
         try {
-            WalletApplicationExt.confirmWipeDestroyed(SdkSecretsWipeOutcome.DELETED_ALL) {
+            WalletApplicationExt.confirmWipeDestroyed(SdkSecretsWipeOutcome.DELETED_ALL, sdkWalletCleared = true) {
                 throw IOException("wallet file survives")
             }
             fail("expected the dashj source failure")
         } catch (expected: IOException) {
             assertEquals("wallet file survives", expected.message)
         }
+    }
+
+    @Test
+    fun `an SDK wallet left in place under an unconfirmed SPV stop fails the wipe`() {
+        var walletSourcesChecked = false
+        try {
+            WalletApplicationExt.confirmWipeDestroyed(SdkSecretsWipeOutcome.DELETED_ALL, sdkWalletCleared = false) {
+                walletSourcesChecked = true
+            }
+            fail("expected the wipe to stay pending")
+        } catch (expected: IOException) {
+            assertTrue(expected.message!!.contains("SPV client's stop was not confirmed"))
+        }
+        assertTrue("the dashj sources are still checked first", walletSourcesChecked)
     }
 
     // ── Wipe fence: old-wallet secret producers vs the erase ─────────────
@@ -346,7 +362,7 @@ class SdkWalletSecretsWipeTest {
                         erase = { SdkWalletSecretsWipe.erase({ store }, RawFile()::delete) }
                     )
                     outcomes += outcome
-                    WalletApplicationExt.confirmWipeDestroyed(outcome) { }
+                    WalletApplicationExt.confirmWipeDestroyed(outcome, sdkWalletCleared = true) { }
                 },
                 markComplete = { markedComplete = true }
             )
@@ -615,7 +631,7 @@ class SdkWalletSecretsWipeTest {
                             SdkWalletSecretsWipe.erase({ store }, RawFile()::delete)
                         }
                     )
-                    WalletApplicationExt.confirmWipeDestroyed(checkNotNull(outcome)) { }
+                    WalletApplicationExt.confirmWipeDestroyed(checkNotNull(outcome), sdkWalletCleared = true) { }
                 },
                 markComplete = { markedComplete = true }
             )

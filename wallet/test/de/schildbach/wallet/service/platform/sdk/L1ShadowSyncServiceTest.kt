@@ -26,6 +26,9 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.awaitCancellation
@@ -90,6 +93,8 @@ class L1ShadowSyncServiceTest {
         var stopCalls = 0
         var lastDataDir: String? = null
         var onStart: () -> Unit = {}
+        /** Runs after [onStart] let the start through: a start parked inside the native `startSpv`. */
+        var onStartSuspending: suspend () -> Unit = {}
         /** The DashPay bring-up: how long it takes, and how many times it ran. */
         var bringUpDelayMs: Long = 0L
         var bringUpCalls = 0
@@ -120,8 +125,11 @@ class L1ShadowSyncServiceTest {
 
         fun interactions() = boundCalls + isRunningCalls + startCalls + stopCalls
 
+        var onBoundWalletId: () -> Unit = {}
+
         override suspend fun boundWalletIdOrNull(): String? {
             boundCalls++
+            onBoundWalletId()
             return boundWalletId
         }
 
@@ -135,6 +143,7 @@ class L1ShadowSyncServiceTest {
             lastDataDir = dataDir
             callOrder += "startSpv"
             onStart()
+            onStartSuspending()
         }
         override suspend fun startWalletSubsystems(walletIdHex: String): String? {
             subsystemsCalls++
@@ -152,6 +161,31 @@ class L1ShadowSyncServiceTest {
         override suspend fun stopSpv() {
             stopCalls++
             onStop()
+        }
+
+        override fun isSpvTeardownIncomplete(t: Throwable): Boolean = t is TeardownIncomplete
+
+        /**
+         * The SDK's model of a teardown that outlives `stopSpv`'s wait: while
+         * [teardownStopsRemaining] is above zero each stop consumes one and
+         * throws, and every start is refused until a stop has returned.
+         */
+        var teardownStopsRemaining = 0
+        var teardownPending = false
+
+        fun trackTeardown(stopsThatTimeOut: Int) {
+            teardownStopsRemaining = stopsThatTimeOut
+            onStop = {
+                if (teardownStopsRemaining > 0) {
+                    teardownStopsRemaining--
+                    teardownPending = true
+                    throw TeardownIncomplete("SPV teardown timed out; it is still tracked for a retry")
+                }
+                teardownPending = false
+            }
+            onStart = {
+                if (teardownPending) throw TeardownIncomplete("SPV teardown is still running")
+            }
         }
 
         override fun spvProgress(): Flow<SpvSyncProgressData> = progressFlow
@@ -294,6 +328,29 @@ class L1ShadowSyncServiceTest {
      * exposes a controllable bind [Job] so tests can verify the shadow
      * restart WAITS for the rebind pass.
      */
+    /**
+     * Parks the scheduled start retry in its enablement read (the first thing
+     * `startIfEnabled` does) until [gate] completes, so a test decides when
+     * the retry runs instead of racing its delay. Armed from the next
+     * `startSpv`, which the start under test reaches after its own read.
+     */
+    private class ParkedRetry {
+        val gate = CompletableDeferred<Unit>()
+        val parked = java.util.concurrent.atomic.AtomicInteger()
+        private val armed = java.util.concurrent.atomic.AtomicBoolean()
+        val flagGate: () -> CompletableDeferred<Unit>? = {
+            if (armed.get()) gate.also { parked.incrementAndGet() } else null
+        }
+
+        fun armOnTheNextStart(source: FakeSource) {
+            val onStart = source.onStart
+            source.onStart = {
+                armed.set(true)
+                onStart()
+            }
+        }
+    }
+
     private class FakeRecreator : ShadowWalletRecreator {
         val events = mutableListOf<String>()
         val removedWalletIds = mutableListOf<String>()
@@ -325,6 +382,8 @@ class L1ShadowSyncServiceTest {
         }
     }
 
+    private class TeardownIncomplete(message: String) : RuntimeException(message)
+
     private fun service(
         source: FakeSource,
         flag: Boolean? = true,
@@ -343,6 +402,9 @@ class L1ShadowSyncServiceTest {
         flagGate: () -> CompletableDeferred<Unit>? = { null },
         scanMayAdvance: suspend (String) -> Boolean = { true },
         scanGateRetryInitialMs: Long = L1ShadowSyncService.SCAN_GATE_RETRY_INITIAL_MS,
+        spvTeardownRetryRounds: Int = L1ShadowSyncService.SPV_TEARDOWN_RETRY_ROUNDS,
+        spvTeardownRetryDelayMs: Long = 1L,
+        spvTeardownWipeRetryRounds: Int = L1ShadowSyncService.SPV_TEARDOWN_WIPE_RETRY_ROUNDS,
         durableHeightRefreshMs: Long = L1ShadowSyncService.DURABLE_HEIGHT_REFRESH_MS,
         breakdownStore: ParityBreakdownStore? = null,
         contactPaidHistory: ContactPaidHistoryInvalidation = ContactPaidHistoryInvalidation.NONE
@@ -361,6 +423,9 @@ class L1ShadowSyncServiceTest {
         destructiveBringUpJoinMs = destructiveBringUpJoinMs,
         scanMayAdvance = scanMayAdvance,
         scanGateRetryInitialMs = scanGateRetryInitialMs,
+        spvTeardownRetryRounds = spvTeardownRetryRounds,
+        spvTeardownRetryDelayMs = spvTeardownRetryDelayMs,
+        spvTeardownWipeRetryRounds = spvTeardownWipeRetryRounds,
         durableHeightRefreshMs = durableHeightRefreshMs,
         breakdownStore = breakdownStore,
         contactPaidHistory = contactPaidHistory
@@ -1563,6 +1628,158 @@ class L1ShadowSyncServiceTest {
         source.onStart = {}
         assertTrue(service.startIfEnabled())
         assertEquals(2, source.startCalls)
+    }
+
+    /**
+     * Field report, 2026-11-18: the filter-stall restart's stop timed out, the
+     * SDK kept the teardown tracked, and the start that followed was refused.
+     * The engine stayed down for the rest of the process.
+     */
+    @Test
+    fun stallRestart_whoseStopTimedOut_stopsAgainAndStarts() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val service = service(source)
+        assertTrue(service.startIfEnabled())
+        source.trackTeardown(stopsThatTimeOut = 1)
+
+        service.launchStallRestart(stuckAt = 2_498_000L).join()
+
+        assertEquals("the restart's own stop, then the one the refused start asked for", 2, source.stopCalls)
+        assertEquals("the first start, the refused one, and the retry", 3, source.startCalls)
+        assertTrue("the engine is up again", service.isEngineRunning())
+    }
+
+    @Test
+    fun startRefusedOverUnfinishedTeardown_waitsWhileTheStopStillReportsItRunning() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val service = service(source)
+        assertTrue(service.startIfEnabled())
+        // The restart's stop and the next two all time out; the fourth returns.
+        source.trackTeardown(stopsThatTimeOut = 3)
+
+        service.launchStallRestart(stuckAt = 2_498_000L).join()
+
+        assertEquals(4, source.stopCalls)
+        assertTrue(service.isEngineRunning())
+    }
+
+    /**
+     * A filter-stall restart has torn its loops down by the time its start
+     * is refused, so a refusal that outlasts every round has to schedule the
+     * next start itself.
+     */
+    @Test
+    fun startStillRefusedAfterItsRounds_retriesOnItsOwn_untilTheTeardownFinishes() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val retry = ParkedRetry()
+        val service = service(
+            source, spvTeardownRetryRounds = 2, scanGateRetryInitialMs = 20, flagGate = retry.flagGate
+        )
+        assertTrue(service.startIfEnabled())
+        source.trackTeardown(stopsThatTimeOut = 4)
+        retry.armOnTheNextStart(source)
+
+        service.launchStallRestart(stuckAt = 2_498_000L).join()
+
+        // The scheduled retry cannot get past its enablement read yet.
+        assertFalse("still refused after two rounds", service.isEngineRunning())
+        assertEquals("the restart's stop and one per round", 3, source.stopCalls)
+        assertEquals("the first start, the refused one, and one per round", 4, source.startCalls)
+
+        retry.gate.complete(Unit)
+        withTimeout(5_000) { while (!service.isEngineRunning()) delay(10) }
+        service.stop()
+    }
+
+    @Test
+    fun startStillRefusedAfterItsRounds_doesNotRetry_afterAnExternalStop() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val retry = ParkedRetry()
+        val service = service(
+            source, spvTeardownRetryRounds = 1, scanGateRetryInitialMs = 20, flagGate = retry.flagGate
+        )
+        assertTrue(service.startIfEnabled())
+        source.trackTeardown(stopsThatTimeOut = 3)
+        retry.armOnTheNextStart(source)
+        service.launchStallRestart(stuckAt = 2_498_000L).join()
+        assertFalse(service.isEngineRunning())
+        // The retry has woken and is parked in its enablement read, before the mutex.
+        withTimeout(5_000) { while (retry.parked.get() == 0) delay(5) }
+        val startsBeforeStop = source.startCalls
+        val stopsBeforeStop = source.stopCalls
+
+        service.stop()
+        retry.gate.complete(Unit)
+
+        assertEquals("the retry did not start after the stop", startsBeforeStop, source.startCalls)
+        assertEquals("and stopped nothing again either", stopsBeforeStop, source.stopCalls)
+        assertFalse(service.isEngineRunning())
+    }
+
+    @Test
+    fun scheduledRetry_cancelledInsideTheNativeStart_isStillTornDownByThatStop() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val service = service(source, spvTeardownRetryRounds = 1, scanGateRetryInitialMs = 20)
+        assertTrue(service.startIfEnabled())
+        source.trackTeardown(stopsThatTimeOut = 2)
+        val insideStart = CompletableDeferred<Unit>()
+        val nativeStarted = CompletableDeferred<Unit>()
+        source.onStartSuspending = {
+            insideStart.complete(Unit)
+            nativeStarted.await()
+            // The SDK returns from its own dispatcher: a caller cancelled
+            // meanwhile loses the result, though native SPV is running.
+            currentCoroutineContext().ensureActive()
+        }
+        service.launchStallRestart(stuckAt = 2_498_000L).join()
+        assertFalse("refused after its round; the retry is scheduled", service.isEngineRunning())
+
+        withTimeout(5_000) { insideStart.await() }
+        val stopsBefore = source.stopCalls
+        // Runs up to the mutex: the generation has moved and the retry is cancelled.
+        val stopping = async(start = CoroutineStart.UNDISPATCHED) { service.stop() }
+        nativeStarted.complete(Unit)
+        withTimeout(5_000) { stopping.await() }
+
+        assertEquals("the stop tore down the SPV the cancelled retry started", stopsBefore + 1, source.stopCalls)
+        assertFalse(service.isEngineRunning())
+    }
+
+    @Test
+    fun startRefusedOverUnfinishedTeardown_startsNothingMore_afterAnExternalStop() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val service = service(source)
+        val insideStop = CompletableDeferred<Unit>()
+        val stopReturns = CompletableDeferred<Unit>()
+        source.onStart = { throw TeardownIncomplete("SPV teardown is still running") }
+        source.onStop = {
+            insideStop.complete(Unit)
+            stopReturns.await()
+        }
+
+        val starting = async { service.startIfEnabled() }
+        withTimeout(5_000) { insideStop.await() }
+        val stopping = async(start = CoroutineStart.UNDISPATCHED) { service.stop() }
+        stopReturns.complete(Unit)
+
+        assertFalse(withTimeout(5_000) { starting.await() })
+        withTimeout(5_000) { stopping.await() }
+        assertEquals("no start after the stop arrived", 1, source.startCalls)
+        assertEquals("only the round's own stop", 1, source.stopCalls)
+        assertFalse(service.isEngineRunning())
+    }
+
+    @Test
+    fun startRefusedOverUnfinishedTeardown_aStopThatFailsOtherwiseIsNotRetried() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val service = service(source)
+        source.onStart = { throw TeardownIncomplete("SPV teardown is still running") }
+        source.onStop = { throw IllegalStateException("native stop failed") }
+
+        assertFalse(service.startIfEnabled())
+
+        assertEquals(1, source.startCalls)
+        assertEquals(1, source.stopCalls)
     }
 
     @Test
@@ -2838,7 +3055,8 @@ class L1ShadowSyncServiceTest {
         assertTrue(service.recoverByRecreatingWallet())
 
         // 1. shadow SPV + shielded stopped BEFORE the destructive steps…
-        assertEquals(1, spvStoppedWhenRemoved)
+        //    (the stop, and the second one that confirms its teardown is through)
+        assertEquals(2, spvStoppedWhenRemoved)
         assertEquals(
             listOf("stopShielded", "removeWallet", "resetBinderLatch", "rebind"),
             recreator.events
@@ -3077,7 +3295,9 @@ class L1ShadowSyncServiceTest {
             listOf("stopShielded", "removeWallet", "resetBinderLatch", "rebind"),
             recreator.events
         )
-        assertEquals(0, source.stopCalls) // nothing was running to stop
+        // Nothing was running to stop, but a teardown left by an earlier stop
+        // is not visible from here: the one stop is the check for it.
+        assertEquals(1, source.stopCalls)
         // Bind job is completed by default → restart attempt happens and
         // succeeds (the fake still reports a bound wallet).
         assertEquals(1, source.startCalls)
@@ -3101,6 +3321,152 @@ class L1ShadowSyncServiceTest {
         assertTrue(service.startIfEnabled())
         assertFalse(service.recoverByRecreatingWallet())
         assertEquals(0, source.stopCalls) // nothing torn down
+    }
+
+    @Test
+    fun recoverByRecreatingWallet_refusesWhileTheSpvTeardownIsStillRunning() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val recreator = FakeRecreator()
+        val service = service(source, recreator = recreator, spvTeardownRetryRounds = 2)
+        assertTrue(service.startIfEnabled())
+        val spvDir = dataDir.resolve("spv").apply { mkdirs() }
+        spvDir.resolve("headers.dat").writeText("chain data")
+        // The re-creation's own stop and every stop of its two rounds time out.
+        source.trackTeardown(stopsThatTimeOut = 4)
+
+        assertFalse(
+            "nothing may be deleted under a teardown that is still running",
+            service.recoverByRecreatingWallet()
+        )
+        assertFalse(recreator.events.contains("removeWallet"))
+        assertTrue("the dataDir is untouched", spvDir.resolve("headers.dat").exists())
+
+        // With the teardown through, the same re-runnable path succeeds.
+        recreator.bindJob = kotlinx.coroutines.Job()
+        assertTrue(service.recoverByRecreatingWallet())
+        assertEquals(listOf(walletIdHex), recreator.removedWalletIds)
+        assertFalse("the dataDir went with the wallet", spvDir.exists())
+    }
+
+    @Test
+    fun recoverByRecreatingWallet_deletesOnlyAfterTheTeardownIsThrough() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val recreator = FakeRecreator()
+        val service = service(source, recreator = recreator)
+        assertTrue(service.startIfEnabled())
+        val spvDir = dataDir.resolve("spv")
+        val stale = spvDir.resolve("headers.stale")
+        var stops = 0
+        source.onStop = {
+            if (stops++ == 0) throw TeardownIncomplete("SPV teardown timed out; it is still tracked for a retry")
+            // The old client's last persist lands before this stop sees its teardown through.
+            spvDir.mkdirs()
+            stale.writeText("written back by the old client")
+        }
+        recreator.bindJob = kotlinx.coroutines.Job() // no restart: the dataDir is inspected as the re-creation left it
+
+        assertTrue(service.recoverByRecreatingWallet())
+
+        assertEquals(listOf(walletIdHex), recreator.removedWalletIds)
+        assertFalse("what the old teardown wrote back went with the dataDir", stale.exists())
+    }
+
+    @Test
+    fun clearForWalletWipe_waitsForTheSpvTeardown_beforeRemovingTheWallet() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val recreator = FakeRecreator()
+        val service = service(source, recreator = recreator, spvTeardownRetryRounds = 1)
+        assertTrue(service.startIfEnabled())
+        var timedOut = 0
+        var teardownThrough = false
+        var removedWhilePending = false
+        source.onStop = {
+            if (timedOut < 5) {
+                timedOut++
+                throw TeardownIncomplete("SPV teardown timed out; it is still tracked for a retry")
+            }
+            teardownThrough = true
+        }
+        recreator.onRemove = { removedWhilePending = !teardownThrough }
+
+        assertTrue(withTimeout(5_000) { service.clearForWalletWipe() })
+
+        assertEquals("the wipe outwaits more stops than a start's rounds", 5, timedOut)
+        assertFalse(removedWhilePending)
+        assertEquals(listOf(walletIdHex), recreator.removedWalletIds)
+    }
+
+    @Test
+    fun clearForWalletWipe_leavesTheSdkWalletInPlace_whenTheTeardownOutlastsItsBudget() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val recreator = FakeRecreator()
+        val service = service(source, recreator = recreator, spvTeardownWipeRetryRounds = 3)
+        assertTrue(service.startIfEnabled())
+        val spvDir = dataDir.resolve("spv").apply { mkdirs() }
+        spvDir.resolve("headers.dat").writeText("chain data")
+        source.onStop = { throw TeardownIncomplete("SPV teardown timed out; it is still tracked for a retry") }
+
+        assertFalse("the caller must keep the wipe pending", withTimeout(5_000) { service.clearForWalletWipe() })
+
+        assertEquals("the wipe's stop, the confirming one, and its three rounds", 5, source.stopCalls)
+        assertEquals("nothing of the SDK wallet was touched", listOf("stopShielded"), recreator.events)
+        assertTrue("the dataDir is untouched", spvDir.resolve("headers.dat").exists())
+    }
+
+    @Test
+    fun clearForWalletWipe_leavesTheSdkWalletInPlace_whenTheStopFailsOutright() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val recreator = FakeRecreator()
+        val service = service(source, recreator = recreator)
+        assertTrue(service.startIfEnabled())
+        val spvDir = dataDir.resolve("spv").apply { mkdirs() }
+        spvDir.resolve("headers.dat").writeText("chain data")
+        // What the SDK answers every stop with after a native panic.
+        source.onStop = { throw IllegalStateException("SPV process restart required") }
+
+        assertFalse("a failed stop confirms nothing", service.clearForWalletWipe())
+
+        assertEquals("not retried: only a fresh process can stop it", 2, source.stopCalls)
+        assertEquals(listOf("stopShielded"), recreator.events)
+        assertTrue("the dataDir is untouched", spvDir.resolve("headers.dat").exists())
+
+        // The next launch: a process whose client never started stops cleanly.
+        source.onStop = {}
+        assertTrue(service.clearForWalletWipe())
+        assertEquals(listOf(walletIdHex), recreator.removedWalletIds)
+        assertFalse(spvDir.exists())
+    }
+
+    @Test
+    fun clearForWalletWipe_doesNotHoldTheWipe_whenItFailsBeforeTheStop() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val recreator = FakeRecreator()
+        val service = service(source, recreator = recreator)
+        // A wipe resumed at launch: nothing is running, so the wallet is looked up.
+        source.onBoundWalletId = { throw IllegalStateException("SDK database unavailable") }
+
+        // Only an unconfirmed stop keeps the wipe pending; a relaunch would fail this lookup again.
+        assertTrue(service.clearForWalletWipe())
+
+        assertEquals(0, source.stopCalls)
+        assertTrue(recreator.events.isEmpty())
+    }
+
+    @Test
+    fun recoverByRecreatingWallet_refusesWhenTheStopFailsOutright() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val recreator = FakeRecreator()
+        val service = service(source, recreator = recreator)
+        assertTrue(service.startIfEnabled())
+        val spvDir = dataDir.resolve("spv").apply { mkdirs() }
+        spvDir.resolve("headers.dat").writeText("chain data")
+        source.onStop = { throw IllegalStateException("SPV process restart required") }
+
+        assertFalse("a failed stop confirms nothing", service.recoverByRecreatingWallet())
+
+        assertEquals("not retried", 2, source.stopCalls)
+        assertFalse(recreator.events.contains("removeWallet"))
+        assertTrue("the dataDir is untouched", spvDir.resolve("headers.dat").exists())
     }
 
     @Test
@@ -3174,7 +3540,7 @@ class L1ShadowSyncServiceTest {
         // The teardown ran, but neither the binder latch nor the rebind may
         // fire against a wallet whose removal state is unknown.
         assertEquals(listOf("stopShielded", "removeWallet"), recreator.events)
-        assertEquals(1, source.stopCalls)
+        assertEquals("the stop, and the one confirming its teardown", 2, source.stopCalls)
         assertEquals(1, source.startCalls) // no restart launched
     }
 
