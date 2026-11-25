@@ -54,6 +54,7 @@ import org.bitcoinj.wallet.Wallet
 import org.bouncycastle.crypto.params.KeyParameter
 import de.schildbach.wallet.data.WalletData
 import org.dashj.platform.dashpay.BlockchainIdentity
+import org.dashj.platform.dashpay.IdentityStatus
 import org.dashj.platform.dpp.toHex
 import org.dashj.platform.sdk.platform.Names
 import org.slf4j.LoggerFactory
@@ -115,10 +116,17 @@ interface TopUpRepository {
     /** waits for IS or CL */
     suspend fun waitForTransaction(confidence: TransactionConfidence)
 
-    /** top up identity and save topup state to the db */
+    /**
+     * top up identity and save topup state to the db
+     *
+     * @param blockchainIdentity the identity to credit; defaults to [IdentityRepository.blockchainIdentity],
+     * which is unset until [IdentityRepository.init]
+     * @throws IllegalStateException before saving anything if the identity is not registered or has no id
+     */
     suspend fun topUpIdentity(
         topupAssetLockTransaction: AssetLockTransaction,
-        aesKeyParameter: KeyParameter?
+        aesKeyParameter: KeyParameter?,
+        blockchainIdentity: BlockchainIdentity? = null
     )
 
     suspend fun checkTopUps(aesKeyParameter: KeyParameter?)
@@ -382,25 +390,32 @@ class TopUpRepositoryImpl @Inject constructor(
         }
     }
 
-    private suspend fun addTopUp(txId: Sha256Hash): TopUp {
-        val topUp = TopUp(
-            txId,
-            identityRepository.blockchainIdentity!!.uniqueIdString
-        )
+    private suspend fun addTopUp(txId: Sha256Hash, identityId: String): TopUp {
+        val topUp = TopUp(txId, identityId)
         topUpsDao.insert(topUp)
         return topUp
     }
 
     override suspend fun topUpIdentity(
         topUpTx: AssetLockTransaction,
-        aesKeyParameter: KeyParameter?
+        aesKeyParameter: KeyParameter?,
+        blockchainIdentity: BlockchainIdentity?
     ) {
+        val identity = blockchainIdentity ?: checkNotNull(identityRepository.blockchainIdentity) {
+            "No identity to top up with ${topUpTx.txId}"
+        }
+        check(identity.registrationStatus == IdentityStatus.REGISTERED) {
+            "Identity is ${identity.registrationStatus}, not topping up with ${topUpTx.txId}"
+        }
+        val identityId = checkNotNull(identity.uniqueIdStringOrNull()) {
+            "Identity has no id, not topping up with ${topUpTx.txId}"
+        }
         // Funding runs outside SendCoinsTaskRunner, so it needs the same barrier: after a restart
         // the input locks of an uncertain payment live only in memory until they are restored.
         pendingPaymentVerifier.awaitRestored()
         val topUp = topUpsDao.getByTxId(
             topUpTx.txId
-        ) ?: addTopUp(topUpTx.txId)
+        ) ?: addTopUp(topUpTx.txId, identityId)
         Context.propagate(walletDataProvider.wallet!!.context)
         val confidence = topUpTx.getConfidence(walletDataProvider.wallet!!.context)
         log.info("topup tx confidence: {}", confidence)
@@ -424,7 +439,7 @@ class TopUpRepositoryImpl @Inject constructor(
         }
         log.info("topup tx sent: {}; tx = {}", status, topUpTx.txId)
         try {
-            identityRepository.blockchainIdentity!!.topUp(
+            identity.topUp(
                 topUpTx,
                 aesKeyParameter,
                 useISLock = true,
