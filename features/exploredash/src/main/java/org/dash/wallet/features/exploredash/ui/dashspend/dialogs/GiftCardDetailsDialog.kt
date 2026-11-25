@@ -72,6 +72,8 @@ import com.google.zxing.BarcodeFormat
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.data.ServiceName
@@ -589,6 +591,8 @@ private fun BarcodeSection(
                 // A width or barcode change restarted this effect; the new run owns the state.
                 throw e
             } catch (e: Exception) {
+                // A failing encoder can outrun cancellation; the restarted run owns the state.
+                currentCoroutineContext().ensureActive()
                 log.error(
                     "failed to render a ${barcode.value.length}-char ${barcode.barcodeFormat} barcode: " +
                         e.javaClass.simpleName
