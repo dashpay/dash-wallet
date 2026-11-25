@@ -658,7 +658,11 @@ class TopUpRepositoryImpl @Inject constructor(
         // Under a funding hold, like every other spend: Reset Wallet refuses it once begun, cancels it
         // while it runs (so the check before submitting stops it), and waits for a submission under way.
         try {
-            fundingSelectionLock.withShared { creditUnusedRegistrationLocksHeld(aesKeyParameter) }
+            fundingSelectionLock.withShared {
+                creditUnusedRegistrationLocksHeld(aesKeyParameter)
+                // withShared keeps a block's result even if a wipe cancelled it; a cancelled sweep must not.
+                currentCoroutineContext().ensureActive()
+            }
         } catch (e: WalletWipedException) {
             log.info("wallet reset under way; not crediting registration asset locks")
             currentCoroutineContext().ensureActive()

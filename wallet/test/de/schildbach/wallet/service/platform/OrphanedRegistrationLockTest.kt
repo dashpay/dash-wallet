@@ -504,6 +504,20 @@ class OrphanedRegistrationLockTest {
     }
 
     @Test
+    fun `a wallet reset begun while Core finds nothing still ends the sweep as cancelled`() = runTest {
+        fundingLocks(lock("1d", minedAt = null))
+        every { dapiClient.getTransactionKotlin("1d".repeat(32)) } answers {
+            fundingLock.raiseWipeBarrier()
+            null
+        }
+
+        val result = runCatching { repository().checkTopUps(null) }
+
+        assertTrue(result.exceptionOrNull() is WalletWipedCancellationException)
+        assertNotToppedUp()
+    }
+
+    @Test
     fun `a sweep started during a wallet reset looks nothing up and submits nothing`() = runTest {
         fundingLocks(lock("1a"))
         fundingLock.raiseWipeBarrier()
