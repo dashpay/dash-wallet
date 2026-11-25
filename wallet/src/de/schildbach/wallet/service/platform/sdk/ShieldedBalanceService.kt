@@ -428,6 +428,13 @@ interface ShieldedBalanceService {
     suspend fun isWalletShieldingAvailable(): Boolean
 
     /**
+     * [isWalletShieldingAvailable] for [shieldMixedFundsFromWallet]. That shield drains the
+     * whole CoinJoin account, so it needs the scan at the chain tip now, also after the
+     * wallet's first scan; see [SdkL1SendService.probeFullScanGate].
+     */
+    suspend fun isMixedFundsShieldingAvailable(): Boolean = isWalletShieldingAvailable()
+
+    /**
      * Live version of [isWalletShieldingAvailable] for open screens: emits
      * whether the L1 funding gate is currently open, re-deriving it from
      * the same [evaluateWalletFundingGate] logic on every

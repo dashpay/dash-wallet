@@ -265,7 +265,28 @@ class L1ShadowSyncServiceTest {
             markerWrites.add(secondArg())
             Unit
         }
+        coEvery { it.get(DashPayConfig.SDK_L1_FIRST_SYNC_DONE_WALLET) } coAnswers {
+            firstSyncReadStarted.complete(Unit)
+            firstSyncReadGate?.await()
+            firstSyncRecord
+        }
+        coEvery { it.set(DashPayConfig.SDK_L1_FIRST_SYNC_DONE_WALLET, any()) } answers {
+            firstSyncRecord = secondArg()
+            Unit
+        }
+        coEvery { it.remove(DashPayConfig.SDK_L1_FIRST_SYNC_DONE_WALLET) } answers {
+            firstSyncRecord = null
+            mockk(relaxed = true)
+        }
     }
+
+    /** The saved first-sync record ([DashPayConfig.SDK_L1_FIRST_SYNC_DONE_WALLET]) of [config]. */
+    @Volatile private var firstSyncRecord: String? = null
+
+    /** Completed when the record is first read; a read waits on [firstSyncReadGate] when it is set. */
+    private val firstSyncReadStarted = kotlinx.coroutines.CompletableDeferred<Unit>()
+
+    @Volatile private var firstSyncReadGate: kotlinx.coroutines.CompletableDeferred<Unit>? = null
 
     /**
      * [ShadowWalletRecreator] fake: records the recovery orchestration
@@ -1376,6 +1397,149 @@ class L1ShadowSyncServiceTest {
         // Single-flight latch: a second start is a cheap no-op.
         assertTrue(service.startIfEnabled())
         assertEquals(1, source.startCalls)
+    }
+
+    // ── The first-sync record ─────────────────────────────────────────
+
+    private fun atTip() = syncing().copy(overallState = SpvSyncState.SYNCED, overallPercentage = 1.0)
+
+    private fun behindTip() = syncing(filters = sub(SpvSyncState.SYNCING, 60, 100))
+
+    @Test
+    fun firstSync_isSavedTheFirstTimeTheStrictGatePasses_afterTheCutover() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        source.walletSyncedHeight = 100
+        val service = service(source, cutoverState = "CUT_OVER")
+        assertTrue(service.startIfEnabled())
+
+        source.progressFlow.value = behindTip()
+        withTimeout(5_000) { while (service.progress.value.filterHeight != 60L) delay(5) }
+        assertFalse(service.progress.value.firstSyncDone)
+        assertNull("nothing saved while the first scan runs", firstSyncRecord)
+
+        source.progressFlow.value = atTip()
+        withTimeout(5_000) { while (!service.progress.value.firstSyncDone) delay(5) }
+        assertEquals(walletIdHex, firstSyncRecord)
+
+        // a later catch-up keeps it, and the gate stays open
+        source.progressFlow.value = behindTip()
+        withTimeout(5_000) { while (service.progress.value.filterHeight != 60L) delay(5) }
+        assertTrue(service.progress.value.firstSyncDone)
+        assertTrue(evaluateWalletFundingGate(service.progress.value).allowed)
+    }
+
+    /**
+     * thepastaclaw on #1721. The snapshot that ends the scan can arrive before the wallet cursor
+     * catches up, and no further snapshot follows: the cursor event alone must save the record
+     * and open the live funding gate.
+     */
+    @Test
+    fun firstSync_isSavedAndPublishedWhenTheCursorCatchesUp_withNoFurtherSnapshot() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        source.walletSyncedHeight = 10
+        val service = service(source, cutoverState = "CUT_OVER")
+        assertTrue(service.startIfEnabled())
+
+        source.progressFlow.value = atTip()
+        withTimeout(5_000) { while (service.progress.value.phase != ShadowSyncPhase.SYNCED) delay(5) }
+        assertNull("the cursor is still behind the tip", firstSyncRecord)
+        assertFalse(evaluateWalletFundingGate(service.progress.value).allowed)
+
+        source.eventStrings.emit("SyncHeightAdvanced { wallet_id: WalletId([205]), height: 100 }")
+
+        withTimeout(5_000) { while (!service.progress.value.firstSyncDone) delay(5) }
+        assertEquals(walletIdHex, firstSyncRecord)
+        assertEquals("the cursor reached the live progress", 100L, service.progress.value.walletSyncedHeight)
+        assertTrue("the live gate is open", evaluateWalletFundingGate(service.progress.value).allowed)
+    }
+
+    /**
+     * Pre-review, 2026-11-19. A reset removes the record before it deletes the wallet's rows,
+     * with the progress monitor still running: a caught-up sample of the scan being torn down
+     * must not put the record back.
+     */
+    @Test
+    fun firstSync_removedByAReset_isNotWrittenAgainByTheRunningSession() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        source.walletSyncedHeight = 100
+        val service = service(source, cutoverState = "CUT_OVER")
+        assertTrue(service.startIfEnabled())
+        source.progressFlow.value = atTip()
+        withTimeout(5_000) { while (!service.progress.value.firstSyncDone) delay(5) }
+        // the reset's SPV stop: the old scan reports caught-up once more
+        source.onStop = {
+            source.progressFlow.value = atTip().copy(overallPercentage = 0.999)
+            delay(100) // the monitor takes the sample
+            source.progressFlow.value = behindTip() // the rebuilt wallet scans from the start
+        }
+
+        service.resetShadowState(hard = false)
+        delay(100)
+
+        assertNull("the record stays removed", firstSyncRecord)
+    }
+
+    @Test
+    fun firstSync_isNotSavedBeforeTheCutover() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        source.walletSyncedHeight = 100
+        val service = service(source)
+        assertTrue(service.startIfEnabled())
+
+        source.progressFlow.value = atTip()
+        withTimeout(5_000) { while (service.progress.value.phase != ShadowSyncPhase.SYNCED) delay(5) }
+        delay(100)
+
+        assertFalse(service.progress.value.firstSyncDone)
+        assertNull(firstSyncRecord)
+    }
+
+    @Test
+    fun firstSync_savedForThisWallet_isReadWhenTheScannerStarts() = runBlocking {
+        firstSyncRecord = walletIdHex
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val service = service(source, cutoverState = "CUT_OVER")
+        assertTrue(service.startIfEnabled())
+
+        source.progressFlow.value = behindTip()
+        withTimeout(5_000) { while (service.progress.value.filterHeight != 60L) delay(5) }
+
+        assertTrue(service.progress.value.firstSyncDone)
+    }
+
+    /**
+     * thepastaclaw on #1721. The scanner is published as running before the record is read; a
+     * start cancelled during that read must still launch its jobs, or the next start would find
+     * "already running" with nothing feeding the funding gate.
+     */
+    @Test
+    fun firstSync_aStartCancelledDuringTheRecordRead_stillStartsTheMonitor() = runBlocking {
+        val readGate = kotlinx.coroutines.CompletableDeferred<Unit>()
+        firstSyncReadGate = readGate
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val service = service(source, cutoverState = "CUT_OVER")
+
+        val starter = launch(kotlinx.coroutines.Dispatchers.Default) { service.startIfEnabled() }
+        withTimeout(5_000) { firstSyncReadStarted.await() }
+        starter.cancel()
+        readGate.complete(Unit)
+        starter.join()
+
+        source.progressFlow.value = behindTip()
+        withTimeout(5_000) { while (service.progress.value.filterHeight != 60L) delay(5) }
+    }
+
+    @Test
+    fun firstSync_savedForAnotherWallet_doesNotCount() = runBlocking {
+        firstSyncRecord = "ef".repeat(32)
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val service = service(source, cutoverState = "CUT_OVER")
+        assertTrue(service.startIfEnabled())
+
+        source.progressFlow.value = behindTip()
+        withTimeout(5_000) { while (service.progress.value.filterHeight != 60L) delay(5) }
+
+        assertFalse(service.progress.value.firstSyncDone)
     }
 
     @Test

@@ -152,6 +152,37 @@ class SdkBlockchainStateServiceTest {
         assertFalse(h.updates.single().networkStalled)
     }
 
+    /**
+     * thepastaclaw on #1721. The scanner publishes every wallet-cursor advance. One that
+     * changes nothing the row stores is not written; the one that ends the replay is.
+     */
+    @Test
+    fun postCutover_aCursorAdvanceThatDerivesTheSameUpdate_isNotWritten() = runTest {
+        val atTip = ShadowSyncProgress(ShadowSyncPhase.SYNCED, 100.0, 100_000, 100_000, 100_000, 100_000)
+        val h = Harness(
+            this,
+            "CUT_OVER",
+            MutableStateFlow(atTip.copy(walletSyncedHeight = 10)),
+            tip = MutableStateFlow(1_700_000_000L)
+        )
+        h.service.start()
+        runCurrent()
+        // The tip feed starts with 0 before its real value, so the start may write twice.
+        val written = h.updates.size
+        assertEquals("the block pipeline is still behind", false, h.updates.last().replayComplete)
+
+        h.progress.value = atTip.copy(walletSyncedHeight = 20)
+        runCurrent()
+        h.progress.value = atTip.copy(walletSyncedHeight = 30)
+        runCurrent()
+        assertEquals("lagging cursor advances derive the same update", written, h.updates.size)
+
+        h.progress.value = atTip.copy(walletSyncedHeight = 100_000)
+        runCurrent()
+        assertEquals(written + 1, h.updates.size)
+        assertEquals("the catch-up is saved", true, h.updates.last().replayComplete)
+    }
+
     @Test
     fun postCutover_progressChangePropagates() = runTest {
         val h = Harness(this, "CUT_OVER", MutableStateFlow(syncing))

@@ -23,11 +23,16 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.dao.BlockchainStateDao
+import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
+import de.schildbach.wallet.service.platform.sdk.evaluateWalletFundingGate
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -47,6 +52,7 @@ import org.dash.wallet.common.data.NetworkStatus
 import org.dash.wallet.common.data.SyncStage
 import org.dash.wallet.common.data.entity.BlockchainState.Impediment
 import org.dash.wallet.common.services.BlockchainStateProvider
+import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.io.InputStream
 import java.math.BigInteger
@@ -72,9 +78,12 @@ class BlockchainStateDataProvider @Inject constructor(
     private val dashSystemService: DashSystemService,
     private val blockchainStateDao: BlockchainStateDao,
     private val walletDataProvider: WalletData,
-    private val configuration: Configuration
+    private val configuration: Configuration,
+    private val l1ShadowSyncService: javax.inject.Provider<L1ShadowSyncService>
 ) : BlockchainStateProvider {
     companion object {
+        private val log = LoggerFactory.getLogger(BlockchainStateDataProvider::class.java)
+
         /**
          *  NetworkParameters.TARGET_SPACING is 2.5 min, but the DGW algorithm targets 2.625 min
          *  See [org.bitcoinj.params.AbstractBitcoinNetParams.DarkGravityWave]
@@ -115,6 +124,20 @@ class BlockchainStateDataProvider @Inject constructor(
     override fun observeState(): Flow<BlockchainState?> {
         return blockchainStateDao.observeState().distinctUntilChanged()
     }
+
+    /**
+     * The scanner's own answer, not the saved record
+     * ([de.schildbach.wallet.ui.dashpay.utils.DashPayConfig.SDK_L1_FIRST_SYNC_DONE_WALLET]):
+     * the first scan is finished for the wallet the scanner runs now, and the funding gate is
+     * open ([evaluateWalletFundingGate], the rule the send applies). So a screen does not open
+     * for a catch-up while the engine is stopped, waiting for peers or in error, or on a record
+     * that names another wallet (thepastaclaw on #1721).
+     */
+    override fun observeFirstSyncDone(): Flow<Boolean> = flow {
+        // Resolved on collection: the scanner is not needed to construct this provider.
+        emitAll(l1ShadowSyncService.get().progress)
+    }.map { it.firstSyncDone && evaluateWalletFundingGate(it).allowed }
+        .distinctUntilChanged()
 
     fun updateImpediments(impediments: Set<Impediment>) {
         coroutineScope.launch {

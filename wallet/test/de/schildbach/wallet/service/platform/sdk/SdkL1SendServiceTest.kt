@@ -2217,6 +2217,27 @@ class SdkL1SendServiceTest {
     }
 
     /**
+     * Pre-review, 2026-11-19. After the wallet's first scan a catch-up lets a payment of a
+     * fixed amount through, but not a send-all: it would take coins the catch-up finds after
+     * the user confirmed the amount.
+     */
+    @Test
+    fun afterTheFirstScan_aCatchUp_allowsAFixedAmount_butNotASendAll() = runBlocking {
+        val catchingUp = { scanShortOfTip(208).copy(firstSyncDone = true) }
+
+        val plain = service(readySource(), progress = catchingUp)
+            .sendToAddress(validAddress, amount, emptyWallet = false)
+        assertTrue("a fixed amount is sent: $plain", plain is SdkWriteResult.Broadcast)
+
+        val source = drainReadySource()
+        val all = service(source, enabled = false, cutoverState = "CUT_OVER", progress = catchingUp)
+            .sendToAddress(validAddress, amount, emptyWallet = true)
+        assertTrue("a send-all is refused: $all", all is SdkWriteResult.NotBroadcast)
+        assertTrue((all as SdkWriteResult.NotBroadcast).reason.contains(L1_FUNDING_GATE_CLOSED_REASON))
+        assertEquals(0, source.sendAllCalls)
+    }
+
+    /**
      * thepastaclaw on #1714. An unbound wallet is not reported as "syncing": the bind can be
      * waiting for the user (keystore, setup), which no retry of the build fixes.
      */

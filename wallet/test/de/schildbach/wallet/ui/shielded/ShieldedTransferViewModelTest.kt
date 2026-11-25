@@ -1022,16 +1022,23 @@ class ShieldedTransferViewModelTest {
     // ── AC3: L1 sync gate ───────────────────────────────────────────────
 
     @Test
-    fun chainNotSynced_blocksBothDirections() = runTest(dispatcher) {
+    fun chainNotSynced_blocksShieldedToWallet_andWalletToShieldedOnlyWithItsFundingGate() = runTest(dispatcher) {
         every { blockchainStateProvider.observeState() } returns
             flowOf(blockchainState(synced = false))
         val vm = viewModel()
 
+        // Dash Wallet → Shielded follows the funding gate (#1714): open during a catch-up.
         vm.onKeyInput("1")
         assertFalse(vm.uiState.value.chainSynced)
-        assertFalse(vm.uiState.value.canContinue)
+        assertTrue(vm.uiState.value.canContinue)
 
-        // 'pending design' per AC: the gate applies to BOTH directions
+        // Closed (a restore or rescan, no engine): blocked, with the syncing message.
+        walletShieldingAvailable.value = false
+        assertFalse(vm.uiState.value.canContinue)
+        assertEquals(ShieldedBlockedReason.CHAIN_SYNCING, vm.uiState.value.blockedReason)
+        walletShieldingAvailable.value = true
+
+        // Shielded → Dash Wallet keeps the chain requirement.
         vm.onSwapDirection()
         assertFalse(vm.uiState.value.canContinue)
     }
@@ -1048,10 +1055,15 @@ class ShieldedTransferViewModelTest {
     @Test
     fun missingBlockchainState_staysConservativelyBlocked() = runTest(dispatcher) {
         every { blockchainStateProvider.observeState() } returns flowOf(null)
+        // What the service reports for a state it cannot read: the funding gate closes on an
+        // unknown replay state.
+        walletShieldingAvailable.value = false
         val vm = viewModel()
 
         vm.onKeyInput("1")
         assertFalse(vm.uiState.value.chainSynced)
+        assertFalse(vm.uiState.value.canContinue)
+        vm.onSwapDirection()
         assertFalse(vm.uiState.value.canContinue)
     }
 
@@ -1165,6 +1177,40 @@ class ShieldedTransferViewModelTest {
         assertTrue(vm.uiState.value.canContinue)
     }
 
+    /**
+     * Review, #1714. Dash Wallet → Shielded spends L1 funds, so it follows the funding gate:
+     * open during an ordinary catch-up, closed during a restore or rescan. The chain rule on
+     * top refused it for all of a catch-up while the service would have made the transfer.
+     * Shielded → Dash Wallet keeps the chain rule.
+     */
+    @Test
+    fun anUnsyncedChain_blocksWalletToShielded_onlyWhileItsFundingGateIsClosedToo() {
+        val catchingUp = ShieldedTransferUIState(
+            ready = true,
+            readyCheckDone = true,
+            chainSynced = false,
+            shieldedSyncStatus = ShieldedSyncStatus.READY,
+            walletShieldingAvailable = true,
+            direction = ShieldedTransferDirection.ToShielded
+        )
+        assertTrue("a catch-up does not block it", catchingUp.canSubmit)
+        assertNull(catchingUp.blockedReason)
+
+        val replaying = catchingUp.copy(walletShieldingAvailable = false)
+        assertFalse(replaying.canSubmit)
+        assertEquals("still the syncing message", ShieldedBlockedReason.CHAIN_SYNCING, replaying.blockedReason)
+
+        val fromShielded = catchingUp.copy(direction = ShieldedTransferDirection.FromShielded)
+        assertFalse("the reverse direction waits for the chain", fromShielded.canSubmit)
+        assertEquals(ShieldedBlockedReason.CHAIN_SYNCING, fromShielded.blockedReason)
+
+        // thepastaclaw on #1721: a stalled catch-up leaves the funding gate open, and a
+        // reported sync failure must still block.
+        val syncFailed = catchingUp.copy(chainSyncFailed = true)
+        assertFalse("a sync failure blocks it, gate open or not", syncFailed.canSubmit)
+        assertEquals(ShieldedBlockedReason.CHAIN_SYNCING, syncFailed.blockedReason)
+    }
+
     // blockedReason is the pure priority mapping behind the blocked-state
     // toast (the composable only picks the string per reason) — pin it.
     @Test
@@ -1182,11 +1228,22 @@ class ShieldedTransferViewModelTest {
         // before the first readiness check finishes, never flash a toast
         assertNull(allGreen.copy(readyCheckDone = false, ready = false).blockedReason)
 
-        // chain/runtime sync outranks everything
+        // chain/runtime sync outranks everything, for the direction it blocks
         assertEquals(
             ShieldedBlockedReason.CHAIN_SYNCING,
-            allGreen.copy(chainSynced = false, shieldedSyncStatus = ShieldedSyncStatus.SYNCING)
-                .blockedReason
+            allGreen.copy(
+                chainSynced = false,
+                shieldedSyncStatus = ShieldedSyncStatus.SYNCING,
+                walletShieldingAvailable = false
+            ).blockedReason
+        )
+        assertEquals(
+            ShieldedBlockedReason.CHAIN_SYNCING,
+            allGreen.copy(
+                chainSynced = false,
+                shieldedSyncStatus = ShieldedSyncStatus.SYNCING,
+                direction = ShieldedTransferDirection.FromShielded
+            ).blockedReason
         )
         assertEquals(ShieldedBlockedReason.CHAIN_SYNCING, allGreen.copy(ready = false).blockedReason)
 

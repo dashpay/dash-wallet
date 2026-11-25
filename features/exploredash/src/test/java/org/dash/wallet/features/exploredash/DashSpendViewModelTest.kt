@@ -143,7 +143,10 @@ class DashSpendViewModelTest {
             SavedStateHandle(),
             mock<MerchantDao>(),
             mock<CTXSpendConfig>(),
-            mock<BlockchainStateProvider> { on { observeState() } doReturn emptyFlow() },
+            mock<BlockchainStateProvider> {
+                on { observeState() } doReturn emptyFlow()
+                on { observeFirstSyncDone() } doReturn emptyFlow()
+            },
             // nothing outstanding: these tests are about merchant details, and the view model
             // refuses to start a purchase until this says so explicitly
             mock<UnresolvedPaymentsProvider> {

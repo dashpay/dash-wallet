@@ -123,7 +123,7 @@ class CoinJoinMigrationRecoveryTest {
         coEvery { config.getPreservingErrors(DashPayConfig.MIXED_FUNDS_MIGRATION_IN_FLIGHT) } answers { marker }
         val shield = mockk<ShieldedBalanceService>(relaxed = true)
         // Shielding available would make anyOptionOperable() true pre-cutover.
-        coEvery { shield.isWalletShieldingAvailable() } returns true
+        coEvery { shield.isMixedFundsShieldingAvailable() } returns true
         coEvery { shield.ensureShieldedReady() } returns true
         coEvery { shield.pendingCoinJoinShieldLockCount() } returns 0
         coEvery { shield.unsuppressedCoinJoinShieldLockCount(any()) } returns 0

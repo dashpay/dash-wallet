@@ -19,10 +19,17 @@ package de.schildbach.wallet.service
 
 import de.schildbach.wallet.database.dao.BlockchainStateDao
 import de.schildbach.wallet.service.platform.sdk.SdkBlockchainStateUpdate
+import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
+import de.schildbach.wallet.service.platform.sdk.ShadowSyncPhase
+import de.schildbach.wallet.service.platform.sdk.ShadowSyncProgress
+import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.runTest
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.SyncStage
 import org.dash.wallet.common.data.entity.BlockchainState
@@ -61,12 +68,15 @@ class BlockchainStateDataProviderTest {
 
     private val dao = FakeBlockchainStateDao()
     private val configuration = mockk<Configuration>(relaxed = true)
+    private val l1Progress = MutableStateFlow(ShadowSyncProgress.IDLE)
+    private val l1ShadowSyncService = mockk<L1ShadowSyncService> { every { progress } returns l1Progress }
     private val provider = BlockchainStateDataProvider(
         context = mockk(relaxed = true),
         dashSystemService = mockk(relaxed = true),
         blockchainStateDao = dao,
         walletDataProvider = mockk(relaxed = true),
-        configuration = configuration
+        configuration = configuration,
+        l1ShadowSyncService = { l1ShadowSyncService }
     )
 
     private fun sdkUpdate(
@@ -488,4 +498,30 @@ class BlockchainStateDataProviderTest {
         assertEquals(SyncStage.BLOCKS, provider.getSyncStage())
     }
 
+
+    private fun progress(phase: ShadowSyncPhase, firstSyncDone: Boolean) =
+        ShadowSyncProgress(phase, 0.0, 100, 200, 100, 200, firstSyncDone = firstSyncDone)
+
+    /**
+     * The screens' signal is the scanner's answer: first scan finished for the running wallet
+     * AND the funding gate open. A stopped engine, one waiting for peers or one in error does
+     * not open a screen, whatever was recorded.
+     */
+    @Test
+    fun observeFirstSyncDone_followsTheFundingGate_notOnlyTheRecord() = runTest {
+        val cases = listOf(
+            ShadowSyncPhase.IDLE to true,
+            ShadowSyncPhase.CONNECTING to true,
+            ShadowSyncPhase.ERROR to true,
+            ShadowSyncPhase.FILTERS to false,
+            ShadowSyncPhase.FILTERS to true,
+            ShadowSyncPhase.HEADERS to true
+        )
+        val seen = cases.map { (phase, done) ->
+            l1Progress.value = progress(phase, done)
+            provider.observeFirstSyncDone().first()
+        }
+
+        assertEquals(listOf(false, false, false, false, true, true), seen)
+    }
 }

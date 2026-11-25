@@ -95,8 +95,17 @@ class EnterAmountToTransferViewModel @Inject constructor(
         get() = _enteredConvertDashAmount
 
     private val _isBlockchainSynced = MutableLiveData<Boolean>()
+    private var lastPostedSynced: Boolean? = null
     val isBlockchainSynced: LiveData<Boolean>
         get() = _isBlockchainSynced
+
+    /**
+     * The chain is at the tip. A Max transfer out of the wallet needs this even after the
+     * wallet's first scan: it sends whatever the wallet holds when it runs, and the send
+     * refuses it during a catch-up.
+     */
+    var isChainFullySynced: Boolean = false
+        private set
 
     private val _isBlockchainSyncFailed = MutableLiveData<Boolean>()
     val isBlockchainSyncFailed: LiveData<Boolean>
@@ -117,15 +126,22 @@ class EnterAmountToTransferViewModel @Inject constructor(
 
         blockchainStateProvider.observeState()
             .filterNotNull()
-            .onEach { state ->
-                updateSyncStatus(state)
+            .combine(blockchainStateProvider.observeFirstSyncDone()) { state, firstSyncDone ->
+                updateSyncStatus(state, firstSyncDone)
             }
             .launchIn(viewModelScope)
     }
 
-    private fun updateSyncStatus(state: BlockchainState) {
-        if (_isBlockchainSyncFailed.value != state.isSynced()) {
-            _isBlockchainSynced.postValue(state.isSynced())
+    private fun updateSyncStatus(state: BlockchainState, firstSyncDone: Boolean) {
+        // The same rule as the Send screen: once the wallet has finished its first scan, a
+        // catch-up does not block a transfer out of the wallet; a sync failure still does.
+        val synced = !state.blocksFixedPayment(firstSyncDone)
+        isChainFullySynced = state.isSynced()
+        // Compared with the last value posted, not the last delivered: a second change made
+        // before the first post reaches the main thread was dropped (thepastaclaw on #1721).
+        if (lastPostedSynced != synced) {
+            lastPostedSynced = synced
+            _isBlockchainSynced.postValue(synced)
         }
 
         _isBlockchainSyncFailed.postValue(state.syncFailed())
