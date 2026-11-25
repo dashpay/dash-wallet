@@ -76,6 +76,12 @@ class TransactionResultViewBinder(
     private val binding: TransactionResultContentBinding,
     private val openProfile: (DashPayProfile) -> Unit
 ): TransactionConfidence.Listener {
+    companion object {
+        /** Marks a row [bind]'s DashPay-contact branch adds directly to the inputs/outputs containers,
+         * so a re-bind can remove just those rows and leave the containers' layout-defined siblings
+         * (the "Sent to"/"Sent from" caption, the nested address/OP_RETURN container) alone. */
+        private const val DASHPAY_CONTACT_ROW_TAG = "dashpay_contact_row"
+    }
     private val iconSize = binding.root.context.resources.getDimensionPixelSize(R.dimen.transaction_details_icon_size)
     private val context by lazy { binding.root.context }
     private val resourceMapper = TxResourceMapper()
@@ -186,12 +192,15 @@ class TransactionResultViewBinder(
             val userNameView = inflater.inflate(R.layout.transaction_result_address_row,
                 binding.outputsContainer, false) as TextView
             userNameView.text = profile.username
+            userNameView.tag = DASHPAY_CONTACT_ROW_TAG
 
             if (isSent) {
                 setInputs(inputAddresses, inflater)
+                removeDashPayContactRows(binding.outputsContainer)
                 binding.outputsContainer.addView(userNameView)
                 binding.outputsContainer.setOnClickListener { openProfile(profile) }
             } else {
+                removeDashPayContactRows(binding.inputsContainer)
                 binding.inputsContainer.addView(userNameView)
                 binding.inputsContainer.setOnClickListener { openProfile(profile) }
                 setOutputs(outputAddresses, outputAssetLocks, inflater)
@@ -201,6 +210,7 @@ class TransactionResultViewBinder(
                 val displayNameView = inflater.inflate(R.layout.transaction_result_address_row,
                     binding.outputsContainer, false) as TextView
                 displayNameView.text = profile.displayName
+                displayNameView.tag = DASHPAY_CONTACT_ROW_TAG
                 (userNameView.layoutParams as ConstraintLayout.LayoutParams).apply {
                     topToBottom = displayNameView.id
                 }
@@ -274,17 +284,24 @@ class TransactionResultViewBinder(
         val isSent = detail.isSent
 
         if (isSent) {
-            binding.transactionTitle.setTextColor(ContextCompat.getColor(context, R.color.dash_blue))
             // A Platform-funding asset lock (upgrade / top-up / invite) surfaces
             // its "…Fee" title instead of the generic "Amount Sent".
             sdkAssetLockKind = detail.assetLockKind
-            binding.transactionTitle.text = detail.assetLockKind
-                ?.let { context.getText(assetLockTitleRes(it)) }
-                ?: context.getText(R.string.transaction_details_amount_sent)
+            // customTitle (e.g. a gift-card merchant name) is set once from a
+            // LiveData observer that has no reason to re-emit on a later
+            // bindSdkDetail refresh — don't let the generic title clobber it.
+            if (customTitle == null) {
+                binding.transactionTitle.setTextColor(ContextCompat.getColor(context, R.color.dash_blue))
+                binding.transactionTitle.text = detail.assetLockKind
+                    ?.let { context.getText(assetLockTitleRes(it)) }
+                    ?: context.getText(R.string.transaction_details_amount_sent)
+            }
             binding.transactionAmountSignal.text = "-"
         } else {
-            binding.transactionTitle.setTextColor(ContextCompat.getColor(context, R.color.system_green))
-            binding.transactionTitle.text = context.getText(R.string.transaction_details_amount_received)
+            if (customTitle == null) {
+                binding.transactionTitle.setTextColor(ContextCompat.getColor(context, R.color.system_green))
+                binding.transactionTitle.text = context.getText(R.string.transaction_details_amount_received)
+            }
             binding.transactionAmountSignal.text = "+"
         }
         binding.transactionAmountSignal.isVisible = true
@@ -326,6 +343,7 @@ class TransactionResultViewBinder(
 
     private fun setStringInputs(addresses: List<String>, inflater: LayoutInflater) {
         binding.inputsContainer.isVisible = addresses.isNotEmpty()
+        binding.transactionInputAddressesContainer.removeAllViews()
         addresses.forEach {
             val addressView = inflater.inflate(
                 R.layout.transaction_result_address_row,
@@ -340,6 +358,7 @@ class TransactionResultViewBinder(
     private fun setStringOutputs(addresses: List<String>, hasOpReturn: Boolean, inflater: LayoutInflater) {
         binding.outputsContainer.isVisible = addresses.isNotEmpty() || hasOpReturn
         binding.transactionOutputAddressesContainer.isVisible = addresses.isNotEmpty()
+        binding.transactionOutputAddressesContainer.removeAllViews()
         addresses.forEach {
             val addressView = inflater.inflate(
                 R.layout.transaction_result_address_row,
@@ -350,6 +369,7 @@ class TransactionResultViewBinder(
             binding.transactionOutputAddressesContainer.addView(addressView)
         }
         binding.transactionOutputOpReturnsContainer.isVisible = hasOpReturn
+        binding.transactionOutputOpReturnsContainer.removeAllViews()
         if (hasOpReturn) {
             val opReturnView = inflater.inflate(
                 R.layout.transaction_result_address_row,
@@ -583,13 +603,20 @@ class TransactionResultViewBinder(
             // frozen dashj wallet values at 0 would otherwise title "Received").
             val isSent = sdkOverride?.isSent ?: (tx.getValue(wallet).signum() < 0)
             if (isSent) {
-                binding.transactionTitle.setTextColor(ContextCompat.getColor(context, R.color.dash_blue))
-                binding.transactionTitle.text = context.getText(R.string.transaction_details_amount_sent)
+                // customTitle (e.g. a gift-card merchant name) is set once from
+                // a LiveData observer that has no reason to re-emit on a later
+                // re-bind — don't let the generic title clobber it.
+                if (customTitle == null) {
+                    binding.transactionTitle.setTextColor(ContextCompat.getColor(context, R.color.dash_blue))
+                    binding.transactionTitle.text = context.getText(R.string.transaction_details_amount_sent)
+                }
                 binding.transactionAmountSignal.text = "-"
                 binding.transactionAmountSignal.isVisible = true
             } else {
-                binding.transactionTitle.setTextColor(ContextCompat.getColor(context, R.color.system_green))
-                binding.transactionTitle.text = context.getText(R.string.transaction_details_amount_received)
+                if (customTitle == null) {
+                    binding.transactionTitle.setTextColor(ContextCompat.getColor(context, R.color.system_green))
+                    binding.transactionTitle.text = context.getText(R.string.transaction_details_amount_received)
+                }
                 binding.transactionAmountSignal.isVisible = true
                 binding.transactionAmountSignal.text = "+"
             }
@@ -605,8 +632,20 @@ class TransactionResultViewBinder(
         return transactionFee != null && transactionFee.isPositive
     }
 
+    /** Removes only the rows [bind]'s DashPay-contact branch tagged with [DASHPAY_CONTACT_ROW_TAG],
+     * leaving [container]'s layout-defined siblings (caption label, nested address/OP_RETURN container)
+     * in place — unlike [android.view.ViewGroup.removeAllViews], which would detach them too. */
+    private fun removeDashPayContactRows(container: ConstraintLayout) {
+        for (i in container.childCount - 1 downTo 0) {
+            if (container.getChildAt(i).tag == DASHPAY_CONTACT_ROW_TAG) {
+                container.removeViewAt(i)
+            }
+        }
+    }
+
     private fun setInputs(inputAddresses: List<Address>, inflater: LayoutInflater) {
         binding.inputsContainer.isVisible = inputAddresses.isNotEmpty()
+        binding.transactionInputAddressesContainer.removeAllViews()
         inputAddresses.forEach {
             val addressView = inflater.inflate(
                 R.layout.transaction_result_address_row,
@@ -621,6 +660,7 @@ class TransactionResultViewBinder(
     private fun setOutputs(outputAddresses: List<Address>, outputOpReturns: List<String>, inflater: LayoutInflater) {
         binding.outputsContainer.isVisible = (outputOpReturns.isNotEmpty() && outputOpReturns.contains("OP RETURN")) || outputAddresses.isNotEmpty()
         binding.transactionOutputAddressesContainer.isVisible = outputAddresses.isNotEmpty()
+        binding.transactionOutputAddressesContainer.removeAllViews()
         outputAddresses.forEach {
             val addressView = inflater.inflate(
                 R.layout.transaction_result_address_row,
@@ -643,6 +683,7 @@ class TransactionResultViewBinder(
     ) {
         binding.outputsContainer.isVisible = (outputOpReturns.isNotEmpty() && outputOpReturns.contains("OP RETURN")) || outputAddresses.isNotEmpty()
         binding.transactionOutputOpReturnsContainer.isVisible = (outputOpReturns.isNotEmpty() && outputOpReturns.contains("OP RETURN"))
+        binding.transactionOutputOpReturnsContainer.removeAllViews()
         outputOpReturns.forEach {
             when (transactionVersion) {
                 Transaction.SPECIAL_VERSION -> {
