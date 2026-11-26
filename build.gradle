@@ -3,7 +3,7 @@ buildscript {
         kotlin_version = '2.1.0'
         coroutinesVersion = '1.6.4'
         ok_http_version = '4.12.0'
-        dashjVersion = '24.0.0' // Dash Core v24 support; required by dppVersion 5.0.1
+        dashjVersion = '24.0.0' // Dash Core v24 support; required by dppVersion 5.0.2
         // Dash Platform Kotlin SDK (org.dashj:dash-sdk-android). Single source of
         // truth for both the dependency coordinate (wallet/build.gradle) and the
         // DASH_SDK_VERSION BuildConfig field shown on the About screen once the
@@ -16,8 +16,8 @@ buildscript {
         // format 3 (Platform protocol 14) and the IdentityPublicKey.toObject() CBOR fix;
         // DashConnect needs 5.0.1's client calls (getProtocolVersion, getPlatformTime,
         // contract groups), and 5.0.1 requires dashj 24.0.0. The Kotlin SDK
-        // (dashSdkVersion) is unaffected.
-        dppVersion = "5.0.1"
+        // (dashSdkVersion) is unaffected. 12.0.3 moves to the 5.0.2 release.
+        dppVersion = "5.0.2"
         hiltVersion = '2.53'
         hiltCompilerVersion = '1.2.0'
         hiltWorkVersion = '1.2.0'
