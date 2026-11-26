@@ -1,4 +1,22 @@
 DashPay Wallet
+v12.0.3
+  Sending
+  - Retry a payment-request preview that was refused while the wallet was syncing (#1714)
+  - Let a send through once the wallet's first scan is finished, even while it is catching up (#1721)
+
+  Home & sync
+  - The balance header falls back to the saved balance, not the one from launch (#1718)
+  - The sync service is not stopped for idleness while the app is open (#1719)
+  - Restart SPV after a teardown that outlived its stop (#1725)
+  - Ask for quorum keys again when the SDK had not started yet (#1730)
+
+  Support
+  - Report Issue always opens the share chooser, even when part of the report cannot be collected (#1736)
+
+  Maintenance
+  - Updated dashj-platform (dpp) to 5.0.2
+  - Removed Conscrypt, clearing the Google Play 16 KB page size warning (#1712)
+
 v12.0.2
   Includes everything in v11.9.2: DashConnect on mainnet with the v2 one-QR flow, the redesigned approve sheet and Connections page, and the removal of the CrowdNode integration (#1604, #1662, #1664, #1670, #1674)
 
