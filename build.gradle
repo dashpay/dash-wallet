@@ -3,25 +3,19 @@ buildscript {
         kotlin_version = '2.1.0'
         coroutinesVersion = '1.6.4'
         ok_http_version = '4.12.0'
-        dashjVersion = '24.0.0' // Dash Core v24 support; required by dppVersion 5.1.0-dev.3
+        dashjVersion = '24.0.0' // Dash Core v24 support; required by dppVersion 5.1.0
         // Dash Platform Kotlin SDK (org.dashj:dash-sdk-android). Single source of
         // truth for both the dependency coordinate (wallet/build.gradle) and the
         // DASH_SDK_VERSION BuildConfig field shown on the About screen once the
         // cutover hands L1 ownership to the SDK.
         // Recipe: HashEngineering/dash-wallet-qa
-        // recipes/platform/5.1.0-int42.yaml.
-        dashSdkVersion = '5.1.0-int42-20261123.182722-1'
-        // Legacy dashj-platform SDK (org.dashj.platform). Moved from the 5.0.1 Maven
-        // Central release to the 5.1.0-dev.3 snapshot, pinned to an exact timestamped
-        // build rather than the floating -SNAPSHOT so the artifact is reproducible.
-        // 5.1.0-dev.3 is the SAME Platform base that the Kotlin SDK's int42 pin above
-        // was built from, which is why the two move together and are changed in one
-        // commit. It keeps the 5.0.1 client calls DashConnect needs
-        // (getProtocolVersion, getPlatformTime, contract groups), and still requires
-        // dashj 24.0.0.
-        // Published 2026-11-23 to central.sonatype.com/repository/maven-snapshots,
-        // which is already in the repository list in wallet/build.gradle.
-        dppVersion = "5.1.0-dev.3-20261123.212721-1"
+        // recipes/dash-wallet/run50.yaml.
+        dashSdkVersion = '5.1.0-int43-20261126.183836-1'
+        // Legacy dashj-platform SDK (org.dashj.platform). The 5.1.0 release, for
+        // Platform 5.1; it replaces the 5.1.0-dev.3 snapshot. It keeps the 5.0.1
+        // client calls DashConnect needs (getProtocolVersion, getPlatformTime,
+        // contract groups), and still requires dashj 24.0.0.
+        dppVersion = "5.1.0"
         hiltVersion = '2.53'
         hiltCompilerVersion = '1.2.0'
         hiltWorkVersion = '1.2.0'
