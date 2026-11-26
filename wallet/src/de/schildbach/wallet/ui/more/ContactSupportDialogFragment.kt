@@ -29,9 +29,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.DialogContactSupportBinding
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.dash.wallet.common.SecureActivity
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
@@ -128,19 +126,30 @@ class ContactSupportDialogFragment : OffsetDialogFragment(R.layout.dialog_contac
     }
 
     private fun sendReport() {
+        // One report per sheet: the sheet always closes once it is generated,
+        // and a second tap would race the first over the same files in the
+        // report directory (a failed collection deletes its partial output).
+        binding.submitReport.isEnabled = false
         lifecycleScope.launch {
             binding.reportGenerationProgressContainer.isVisible = true
             (requireActivity() as? SecureActivity)?.turnOffAutoLogout()
-            val (reportText, attachments) = withContext(Dispatchers.IO) {
-                log.info("createReport({})", binding.reportIssueDialogCollectWalletDump.isChecked)
-                viewModel.createReport(
-                    binding.reportIssueDialogDescription.text.toString(),
-                    binding.reportIssueDialogCollectDeviceInfo.isChecked,
-                    binding.reportIssueDialogCollectInstalledPackages.isChecked,
-                    binding.reportIssueDialogCollectApplicationLog.isChecked,
-                    binding.reportIssueDialogCollectWalletDump.isChecked
-                )
-            }
+            val description = binding.reportIssueDialogDescription.text.toString()
+            val collectDeviceInfo = binding.reportIssueDialogCollectDeviceInfo.isChecked
+            val collectInstalledPackages = binding.reportIssueDialogCollectInstalledPackages.isChecked
+            val collectApplicationLog = binding.reportIssueDialogCollectApplicationLog.isChecked
+            val collectWalletDump = binding.reportIssueDialogCollectWalletDump.isChecked
+            // The sections keep their own failures (reportSection); this is the
+            // backstop for anything outside them. An exception escaping this
+            // coroutine crashed the app, which relaunched to the home screen
+            // with no chooser and nothing sent — so a failure here still sends
+            // the user's description, and says why the rest is missing.
+            val (reportText, attachments) = viewModel.createReportOrFallback(
+                description,
+                collectDeviceInfo,
+                collectInstalledPackages,
+                collectApplicationLog,
+                collectWalletDump
+            )
             startSend(viewModel.subject(), reportText, attachments)
             binding.reportGenerationProgressContainer.isVisible = false
             dismiss()
@@ -181,7 +190,9 @@ class ContactSupportDialogFragment : OffsetDialogFragment(R.layout.dialog_contac
             log.info("invoked chooser for sending issue report")
         } catch (x: Exception) {
             Toast.makeText(context, R.string.report_issue_dialog_mail_intent_failed, Toast.LENGTH_LONG).show()
-            log.error("report issue failed", x)
+            // The class only: the report text is in this intent, and its
+            // message can carry it (wallet.log is attached to the next report).
+            log.error("report issue failed: {}", x.javaClass.simpleName)
         }
     }
 }

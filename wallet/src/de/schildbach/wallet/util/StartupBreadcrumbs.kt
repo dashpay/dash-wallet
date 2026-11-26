@@ -398,7 +398,9 @@ object StartupBreadcrumbs {
             }
         }
     } catch (t: Throwable) {
-        "(breadcrumbs unavailable: $t)"
+        // The class only: this text goes into the support report body, and a
+        // read failure's message carries the breadcrumb file's path.
+        "(breadcrumbs unavailable: ${t.javaClass.simpleName})"
     }
 
     // ── Pure decision logic (unit-tested) ─────────────────────────────
