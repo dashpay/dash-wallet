@@ -14,7 +14,7 @@ v12.0.3
   - Report Issue always opens the share chooser, even when part of the report cannot be collected (#1736)
 
   Maintenance
-  - Updated dashj-platform (dpp) to 5.0.2
+  - Updated to Dash Platform Kotlin SDK 5.1.0-int42 and dashj-platform 5.1.0-dev.3 for Platform 5.1 (#1742)
   - Removed Conscrypt, clearing the Google Play 16 KB page size warning (#1712)
 
 v12.0.2
