@@ -44,7 +44,8 @@ data class GetMerchantResponse(
     val userDiscount: Int? = 0,
     val redeemType: String = "",
     val enabled: Boolean = true,
-    val productId: String = ""
+    val productId: String = "",
+    val currency: String? = null
 ) {
     val discount
         get() = userDiscount ?: savingsPercentage ?: 0

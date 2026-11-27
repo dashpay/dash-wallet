@@ -61,12 +61,9 @@ import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.NavBarClose
 import org.dash.wallet.common.ui.dialogs.ComposeBottomSheet
-import org.dash.wallet.common.util.Constants
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.ui.explore.MerchantLogo
-import java.text.DecimalFormat
-import java.text.NumberFormat
-import java.util.Currency
+import org.dash.wallet.features.exploredash.utils.GiftCardCurrency
 
 @AndroidEntryPoint
 class GiftCardOrderDetailsDialog : ComposeBottomSheet() {
@@ -184,10 +181,8 @@ private fun MerchantHeader(uiState: GiftCardOrderUIState) {
 @Composable
 private fun GiftCardRow(card: GiftCard, onClick: () -> Unit) {
     val colors = LocalDashColors.current
-    val currencyFormat = remember {
-        (NumberFormat.getCurrencyInstance() as DecimalFormat).apply {
-            currency = Currency.getInstance(Constants.USD_CURRENCY)
-        }
+    val currencyFormat = remember(card.currency) {
+        GiftCardCurrency.savedCardFormat(card.currency)
     }
     Row(
         modifier = Modifier

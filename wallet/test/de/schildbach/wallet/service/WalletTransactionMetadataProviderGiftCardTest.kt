@@ -249,6 +249,22 @@ class WalletTransactionMetadataProviderGiftCardTest {
     }
 
     @Test
+    fun `an update without a currency keeps the stored one`() = runTest {
+        val existing = GiftCard(
+            txId = txId, merchantName = "Acme", price = 25.0,
+            note = "order-7", index = 0, currency = "GBP"
+        )
+        coEvery { giftCardDao.getCardForTransaction(txId) } returns listOf(existing)
+        val captured = slot<GiftCard>()
+        coEvery { giftCardDao.updateGiftCard(capture(captured)) } returns 1
+
+        provider.updateGiftCardMetadata(GiftCard(txId = txId, number = "N", index = 0))
+
+        assertEquals("GBP", captured.captured.currency)
+        assertEquals("N", captured.captured.number)
+    }
+
+    @Test
     fun `cache write is gated on index == 0 and uses merged values`() = runTest {
         val existing = GiftCard(
             txId = txId, merchantName = "Acme", price = 25.0,

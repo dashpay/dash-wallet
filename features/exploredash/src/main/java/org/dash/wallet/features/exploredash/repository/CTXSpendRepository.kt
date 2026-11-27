@@ -20,6 +20,7 @@ package org.dash.wallet.features.exploredash.repository
 import com.google.gson.Gson
 import kotlinx.coroutines.flow.Flow
 import org.dash.wallet.common.util.ResourceString
+import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.GetMerchantResponse
 import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.GiftCardResponse
 import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.LoginRequest
@@ -33,6 +34,7 @@ import org.dash.wallet.features.exploredash.network.service.ctxspend.CTXSpendApi
 import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardShoppingCart
 import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
 import org.dash.wallet.features.exploredash.utils.GiftCardCurrency
+import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.util.UUID
 import java.util.concurrent.TimeUnit
@@ -106,6 +108,7 @@ class CTXSpendRepository @Inject constructor(
 ) : DashSpendRepository {
     companion object {
         private val REFRESH_TOKEN_EXPIRATION = TimeUnit.DAYS.toMillis(90)
+        private val log = LoggerFactory.getLogger(CTXSpendRepository::class.java)
     }
     private val giftCardMap = hashMapOf<String, GetMerchantResponse>()
 
@@ -174,6 +177,13 @@ class CTXSpendRepository @Inject constructor(
             fiatCurrency = fiatCurrency,
             cryptoCurrency = cryptoCurrency
         )
+        // the Dash quoted in this response is paid as it stands, so it must be for the card ordered
+        listOfNotNull(response.fiatCurrency, response.cardFiatCurrency)
+            .firstOrNull { it.isNotBlank() && !it.equals(fiatCurrency, ignoreCase = true) }
+            ?.let { reported ->
+                log.error("gift card order came back in {} but {} was ordered", reported, fiatCurrency)
+                throw CTXSpendException(ResourceString(R.string.gift_card_error))
+            }
 
         return listOf(
             GiftCardInfo(
@@ -188,7 +198,7 @@ class CTXSpendRepository @Inject constructor(
                 rate = response.rate,
                 redeemUrl = response.redeemUrl,
                 fiatAmount = response.fiatAmount,
-                fiatCurrency = response.fiatCurrency,
+                fiatCurrency = response.fiatCurrency?.takeIf { it.isNotBlank() } ?: fiatCurrency,
                 paymentUrls = response.paymentUrls
             )
         )
@@ -282,7 +292,8 @@ class CTXSpendRepository @Inject constructor(
                 denominationsType = response.denominationsType,
                 denominations = response.denominations.map { denom -> denom.toDouble() },
                 redeemType = response.redeemType,
-                enabled = response.enabled
+                enabled = response.enabled,
+                currency = response.currency
             )
         }
     }

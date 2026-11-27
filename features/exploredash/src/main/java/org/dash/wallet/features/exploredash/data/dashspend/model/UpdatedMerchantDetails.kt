@@ -27,7 +27,9 @@ data class UpdatedMerchantDetails(
     val redeemType: String = "",
     val enabled: Boolean = true,
     val productId: String = "",
-    val quantity: Map<Double, Int> = mapOf()
+    val quantity: Map<Double, Int> = mapOf(),
+    // the currency the denominations are in; only CTX reports one
+    val currency: String? = null
 ) {
     val denominationType: DenominationType
         get() = DenominationType.fromString(denominationsType)

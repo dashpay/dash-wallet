@@ -60,6 +60,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.InsufficientMoneyException
@@ -79,28 +80,29 @@ import org.dash.wallet.common.ui.components.Style
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.ComposeBottomSheet
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
-import org.dash.wallet.common.util.Constants
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardInfo
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
 import org.dash.wallet.features.exploredash.ui.dashspend.DashSpendViewModel
 import org.dash.wallet.features.exploredash.ui.dashspend.DuplicateGiftCardSubmissionException
+import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardPurchaseBlock
 import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardPurchaseMode
 import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardSubmissionState
+import org.dash.wallet.features.exploredash.ui.dashspend.message
 import org.dash.wallet.features.exploredash.ui.explore.MerchantLogo
+import org.dash.wallet.features.exploredash.utils.GiftCardCurrency
 import org.dash.wallet.features.exploredash.utils.SavingsFormatting
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
 import org.slf4j.LoggerFactory
 import java.math.RoundingMode
 import java.text.NumberFormat
-import java.util.Currency
 import javax.inject.Inject
 
 data class PurchaseConfirmUIState(
     val merchantName: String = "",
     val merchantLogoUrl: String? = null,
     val purchaseValueText: String = "",
-    val purchaseValueCurrency: String = "$",
+    val currencyCode: String = "",
     val giftCardTotalText: String = "",
     val discountText: String = "",
     val youPayText: String = "",
@@ -130,15 +132,7 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
         // force the sheet to expand (full height + scrollable body with pinned buttons).
         // Tune this value if clipping is still observed.
         private const val SMALL_SCREEN_HEIGHT_DP = 720
-        private val USD_CURRENCY = Currency.getInstance(Constants.USD_CURRENCY)
-        private val noCentsFormat = NumberFormat.getCurrencyInstance().apply {
-            currency = USD_CURRENCY
-            minimumFractionDigits = 0
-        }
         private val currencyFormatNoSymbol = NumberFormat.getInstance()
-        private val currencyFormat = NumberFormat.getCurrencyInstance().apply {
-            currency = USD_CURRENCY
-        }
     }
 
     private val viewModel by exploreViewModels<DashSpendViewModel>()
@@ -172,6 +166,20 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
             dismiss()
             return
         }
+
+        val cardCurrency = viewModel.cardCurrency
+        if (cardCurrency == null) {
+            log.warn("PurchaseGiftCardConfirmDialog: card currency unknown, dismissing dialog")
+            dismiss()
+            return
+        }
+        if (viewModel.purchaseBlock == GiftCardPurchaseBlock.NO_AMOUNT) {
+            log.warn("PurchaseGiftCardConfirmDialog: nothing to buy, dismissing dialog")
+            dismiss()
+            return
+        }
+        val noCentsFormat = GiftCardCurrency.displayFormat(cardCurrency, trimZeroDecimals = true)
+        val currencyFormat = GiftCardCurrency.displayFormat(cardCurrency)
 
         val orderEntries = viewModel.giftCardOrderInfo.value.entries
         val orderTotalAmount = orderEntries.sumOf { it.key * it.value }
@@ -215,7 +223,7 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
         val discountedValue = orderTotalAmount - savingsFraction * orderTotalAmount
         val youPayText = currencyFormat.format(
             discountedValue.toBigDecimal()
-                .setScale(USD_CURRENCY.defaultFractionDigits, RoundingMode.UP)
+                .setScale(GiftCardCurrency.fractionDigits(cardCurrency), RoundingMode.UP)
                 .toDouble()
         )
 
@@ -236,7 +244,7 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
             merchantName = merchant.name ?: "",
             merchantLogoUrl = merchant.logoLocation,
             purchaseValueText = currencyFormatNoSymbol.format(orderTotalAmount.toBigDecimal().toDouble()),
-            purchaseValueCurrency = "$",
+            currencyCode = cardCurrency,
             giftCardTotalText = noCentsFormat.format(orderTotalAmount.toBigDecimal().toDouble()),
             discountText = SavingsFormatting.format(
                 context = requireContext(),
@@ -254,6 +262,18 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
         viewModel.isNetworkAvailable.observe(viewLifecycleOwner) { isNetworkAvailable ->
             _uiState.update {
                 it.copy(isNetworkAvailable = isNetworkAvailable)
+            }
+        }
+
+        // The amounts on this sheet are fixed when it opens, so it closes once they are no longer
+        // what would be ordered. Not during a purchase: its order has been placed by then.
+        viewLifecycleOwner.lifecycleScope.launch {
+            combine(viewModel.cardCurrencyState, viewModel.giftCardOrderInfo) { _, _ -> }.collect {
+                val isOutdated = viewModel.cardCurrency != cardCurrency ||
+                    viewModel.purchaseBlock == GiftCardPurchaseBlock.NO_AMOUNT
+                if (isOutdated && viewModel.submissionState.value == GiftCardSubmissionState.IDLE) {
+                    dismissAllowingStateLoss()
+                }
             }
         }
 
@@ -280,10 +300,24 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
         }
     }
 
+    private fun showPurchaseBlocked(block: GiftCardPurchaseBlock) {
+        AdaptiveDialog.create(
+            R.drawable.ic_error,
+            getString(R.string.gift_card_purchase_failed),
+            block.message(requireContext(), viewModel.cardCurrency),
+            getString(R.string.button_close)
+        ).show(requireActivity())
+    }
+
     private fun onConfirmButtonClicked() {
         // Claim before purchaseGiftCard(), which creates a fresh order at the merchant. Merely
         // checking here would let two quick taps both pass, since the state was not claimed until
         // payAndRecordOrder, and each would leave an order behind.
+        viewModel.purchaseBlock?.let { block ->
+            log.warn("ignoring Confirm, the purchase is blocked: {}", block)
+            showPurchaseBlocked(block)
+            return
+        }
         if (!viewModel.tryStartSubmission()) {
             log.warn("ignoring Confirm, a gift card purchase is already outstanding")
             return
@@ -305,10 +339,20 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
                 }
 
                 val data = try {
-                    viewModel.purchaseGiftCard()
+                    viewModel.purchaseGiftCard(uiState.value.currencyCode)
                 } catch (ex: CTXSpendException) {
                     hideLoading()
                     when {
+                        ex.resourceString != null -> {
+                            if (isAdded) {
+                                AdaptiveDialog.create(
+                                    R.drawable.ic_error,
+                                    getString(R.string.gift_card_purchase_failed),
+                                    getString(ex.resourceString!!.resourceId),
+                                    getString(R.string.button_close)
+                                ).show(requireActivity())
+                            }
+                        }
                         ex.isNetworkError -> {
                             if (isAdded) {
                                 AdaptiveDialog.create(
@@ -709,7 +753,7 @@ internal fun PurchaseGiftCardConfirmView(
         ) {
             EnterAmount(
                 primaryAmount = uiState.purchaseValueText,
-                currencyCodes = listOf(Constants.USD_CURRENCY),
+                currencyCodes = listOf(uiState.currencyCode),
                 showSecondary = false,
                 showMaxButton = false,
                 showPrimaryChevron = false,

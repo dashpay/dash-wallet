@@ -248,6 +248,9 @@
     <string name="try_again">Try Again</string>
     <string name="cancel">Cancel</string>
     <string name="gift_card_error">For some reason we were not able to buy a gift card. Please, try again.</string>
+    <string name="gift_card_currency_unknown">We could not confirm which currency this gift card is sold in. Check your connection and try again.</string>
+    <string name="gift_card_rate_missing">There is no Dash exchange rate for %1$s, so this gift card cannot be bought right now.</string>
+    <string name="gift_card_amount_too_precise">This amount has more decimal places than %1$s allows.</string>
     <string name="gift_card_out_of_stock_error">This gift card is out of stock. Please, try again.</string>
     <string name="gift_card_details_error">For some reason we were not able to buy a gift card. Please contact support.</string>
     <string name="gift_card_limit_error">The purchase limits for this merchant have changed.  Please contact CTX Support for more information.</string>

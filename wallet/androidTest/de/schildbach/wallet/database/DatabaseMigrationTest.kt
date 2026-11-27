@@ -72,7 +72,8 @@ open class DatabaseMigrationTest {
         AppDatabaseMigrations.migration17to18,
         AppDatabaseMigrations.migration18to19,
         AppDatabaseMigrations.migration19to20,
-        AppDatabaseMigrations.migration20to21
+        AppDatabaseMigrations.migration20to21,
+        AppDatabaseMigrations.migration21to22
     )
 
     @Rule

@@ -84,7 +84,6 @@ import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.NavBarBackClose
 import org.dash.wallet.common.ui.components.Style
 import org.dash.wallet.common.ui.dialogs.ComposeBottomSheet
-import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.DeepLinkDestination
 import org.dash.wallet.common.util.Qr
 import org.dash.wallet.common.util.copy
@@ -97,11 +96,9 @@ import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardStatus
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
 import org.dash.wallet.features.exploredash.ui.dashspend.DashSpendViewModel
 import org.dash.wallet.features.exploredash.ui.explore.MerchantLogo
-import java.text.DecimalFormat
-import java.text.NumberFormat
+import org.dash.wallet.features.exploredash.utils.GiftCardCurrency
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import java.util.Currency
 
 @AndroidEntryPoint
 class GiftCardDetailsDialog : ComposeBottomSheet() {
@@ -407,10 +404,8 @@ private fun GiftCardItemCard(
     onRefresh: () -> Unit
 ) {
     val colors = LocalDashColors.current
-    val currencyFormat = remember {
-        (NumberFormat.getCurrencyInstance() as DecimalFormat).apply {
-            currency = Currency.getInstance(Constants.USD_CURRENCY)
-        }
+    val currencyFormat = remember(giftCard?.currency) {
+        GiftCardCurrency.savedCardFormat(giftCard?.currency)
     }
 
     val hasNumber = !giftCard?.number.isNullOrEmpty()

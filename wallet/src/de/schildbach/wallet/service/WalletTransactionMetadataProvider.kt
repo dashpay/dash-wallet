@@ -388,7 +388,8 @@ class WalletTransactionMetadataProvider @Inject constructor(
                 barcodeFormat = giftCard.barcodeFormat ?: existing.barcodeFormat,
                 merchantUrl = giftCard.merchantUrl ?: existing.merchantUrl,
                 note = giftCard.note ?: existing.note,
-                redeemUrlChallenge = giftCard.redeemUrlChallenge ?: existing.redeemUrlChallenge
+                redeemUrlChallenge = giftCard.redeemUrlChallenge ?: existing.redeemUrlChallenge,
+                currency = giftCard.currency ?: existing.currency
             )
         }
 
@@ -745,7 +746,8 @@ class WalletTransactionMetadataProvider @Inject constructor(
                 barcodeFormat = giftCard.barcodeFormat ?: existingGiftCard.barcodeFormat,
                 merchantUrl = giftCard.merchantUrl ?: existingGiftCard.merchantUrl,
                 note = giftCard.note ?: existingGiftCard.note,
-                redeemUrlChallenge = giftCard.redeemUrlChallenge ?: existingGiftCard.redeemUrlChallenge
+                redeemUrlChallenge = giftCard.redeemUrlChallenge ?: existingGiftCard.redeemUrlChallenge,
+                currency = giftCard.currency ?: existingGiftCard.currency
             )
             giftCardDao.updateGiftCard(updatedGiftCard)
         }

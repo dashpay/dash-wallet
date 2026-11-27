@@ -268,6 +268,12 @@ class AppDatabaseMigrations {
             }
         }
 
+        val migration21to22 = object : Migration(21, 22) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE `gift_cards` ADD COLUMN `currency` TEXT")
+            }
+        }
+
         /**
          * CrowdNode was removed, so its transactions are no longer grouped. If the cache still
          * holds a "crowdnode" group, clear both caches when the database opens, before any query

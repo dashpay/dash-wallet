@@ -34,5 +34,6 @@ data class GiftCard(
     var merchantUrl: String? = null, // holds claimLink or redeemUrl
     var note: String? = null, // holds order number
     var index: Int = 0,
-    var redeemUrlChallenge: String? = null
+    var redeemUrlChallenge: String? = null,
+    var currency: String? = null // ISO 4217 code that price is in; null means USD
 )

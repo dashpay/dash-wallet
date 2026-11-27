@@ -52,6 +52,7 @@ import org.dash.wallet.features.exploredash.repository.CTXSpendException
 import org.dash.wallet.features.exploredash.repository.CTXSpendRepository
 import org.dash.wallet.features.exploredash.repository.PiggyCardsRepository
 import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
+import org.dash.wallet.features.exploredash.utils.GiftCardCurrency
 import org.slf4j.LoggerFactory
 import java.time.Instant
 import java.time.LocalDateTime
@@ -98,6 +99,8 @@ class GiftCardDetailsViewModel @Inject constructor(
 
     private var exchangeRate: ExchangeRate? = null
     private var retries = 3
+    private var currencyLookup: Job? = null
+    private var currencyLookupsLeft = 1
 
     private val _uiState = MutableStateFlow(GiftCardUIState())
     val uiState: StateFlow<GiftCardUIState> = _uiState.asStateFlow()
@@ -147,6 +150,16 @@ class GiftCardDetailsViewModel @Inject constructor(
                     )
                 }
 
+                if (currencyLookupsLeft > 0 && currencyLookup?.isActive != true &&
+                    giftCards.any { it.currency == null }
+                ) {
+                    currencyLookup = viewModelScope.launch {
+                        if (backfillCurrency(transactionId)) {
+                            currencyLookupsLeft--
+                        }
+                    }
+                }
+
                 val needsPolling = giftCards.any { card ->
                     card.number == null && card.merchantUrl.isNullOrEmpty() && card.note != null
                 }
@@ -158,6 +171,32 @@ class GiftCardDetailsViewModel @Inject constructor(
                 }
             }
             .launchIn(viewModelScope)
+    }
+
+    /** Returns false when the lookup failed and is worth repeating. */
+    private suspend fun backfillCurrency(txid: Sha256Hash): Boolean = withContext(Dispatchers.IO) {
+        try {
+            if (metadataProvider.getTransactionMetadata(txid)?.service != ServiceName.CTXSpend ||
+                !ctxSpendRepository.isUserSignedIn()
+            ) {
+                return@withContext true
+            }
+            val orderId = giftCardDao.getCardForTransaction(txid).firstOrNull()?.note
+            val giftCards = if (orderId != null) {
+                ctxSpendRepository.getGiftCard(orderId)
+            } else {
+                ctxSpendRepository.getGiftCardByTxId(txid.toStringBase58())
+            }
+            GiftCardCurrency.normalize(giftCards.firstOrNull()?.fiatCurrency)?.let { currency ->
+                giftCardDao.backfillCurrency(txid, currency)
+            }
+            true
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("could not look up the currency of a saved gift card", e)
+            false
+        }
     }
 
     // for testing/debugging only

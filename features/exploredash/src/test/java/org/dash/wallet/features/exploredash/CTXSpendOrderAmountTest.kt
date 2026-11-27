@@ -29,7 +29,9 @@ import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
 import org.dash.wallet.features.exploredash.utils.GiftCardCurrency
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
@@ -88,10 +90,15 @@ class CTXSpendOrderAmountTest {
         )
 
         cases.forEach { (amount, currency) ->
+            assertFalse("$amount $currency", GiftCardCurrency.isRepresentable(amount, currency))
             assertThrows("$amount $currency", ArithmeticException::class.java) {
                 GiftCardCurrency.orderAmount(amount, currency)
             }
         }
+        assertFalse(GiftCardCurrency.isRepresentable(Double.NaN, "USD"))
+        assertTrue(GiftCardCurrency.isRepresentable(1000.0, "JPY"))
+        assertTrue(GiftCardCurrency.isRepresentable(1.234, "KWD"))
+        assertTrue(GiftCardCurrency.isRepresentable(19.99, "USD"))
     }
 
     @Test
