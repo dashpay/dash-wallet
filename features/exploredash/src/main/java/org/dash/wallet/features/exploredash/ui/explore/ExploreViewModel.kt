@@ -41,6 +41,7 @@ import org.dash.wallet.features.exploredash.ui.extensions.Const
 import org.dash.wallet.features.exploredash.ui.extensions.isMetric
 import org.dash.wallet.features.exploredash.utils.ExploreConfig
 import org.slf4j.LoggerFactory
+import java.text.Collator
 import java.util.*
 import javax.inject.Inject
 import kotlin.String
@@ -117,6 +118,10 @@ class ExploreViewModel @Inject constructor(
         val DEFAULT_SORT_OPTION = SortOption.Name
         const val DEFAULT_COUNTRY = "US"
 
+        // Localized country name to ISO code, in the order the names sort in that language
+        internal fun countryNames(countries: List<String>, locale: Locale = Locale.getDefault()): Map<String, String> =
+            countries.associateBy { Locale("", it).getDisplayCountry(locale) }.toSortedMap(Collator.getInstance(locale))
+
         // An explicit choice wins over the detected country; either only counts while the database has it
         internal fun resolveCountry(available: List<String>, chosen: String?, detected: String): String =
             listOfNotNull(chosen, detected.uppercase(Locale.ROOT)).firstOrNull { it in available } ?: DEFAULT_COUNTRY
@@ -135,7 +140,9 @@ class ExploreViewModel @Inject constructor(
     private var boundedFilterJob: Job? = null
     private var pagingFilterJob: Job? = null
     private var allMerchantLocationsJob: Job? = null
-    private var countriesJob: Job? = null
+    private var catalogJob: Job? = null
+    private var countJob: Job? = null
+    private val catalogGeneration = MutableStateFlow(0)
     val isMetric = Locale.getDefault().isMetric
 
     var exploreTopic = ExploreTopic.Merchants
@@ -325,6 +332,17 @@ class ExploreViewModel @Inject constructor(
         initialValue = DEFAULT_COUNTRY
     )
 
+    private suspend fun reloadCountries() {
+        try {
+            _countries.value = exploreData.getMerchantCountries()
+        } catch (ex: CancellationException) {
+            throw ex
+        } catch (ex: Exception) {
+            // The previous list stays; this collector also restarts the lists and must survive
+            log.error("failed to read the merchant countries", ex)
+        }
+    }
+
     // Nearby is scoped by the user's location instead
     private fun getCountryFilter(mode: FilterMode): String {
         return if (mode == FilterMode.Online || mode == FilterMode.All) selectedCountry.value else ""
@@ -352,8 +370,9 @@ class ExploreViewModel @Inject constructor(
         combine(
             _appliedFilters.debounce(QUERY_DEBOUNCE_VALUE),
             location, // React to location changes for filtering
-            selectedCountry
-        ) { filters, _, _ -> filters }
+            selectedCountry,
+            catalogGeneration
+        ) { filters, _, _, _ -> filters }
             .flatMapLatest { filters ->
                 _filterMode
                     .filter { screenState.value == ScreenState.SearchResults }
@@ -375,8 +394,9 @@ class ExploreViewModel @Inject constructor(
             _filterMode.filterNot { it == FilterMode.Online },
             _appliedFilters.debounce(QUERY_DEBOUNCE_VALUE),
             _searchBounds.filterNotNull(),
-            selectedCountry
-        ) { mode, filters, bounds, _ ->
+            selectedCountry,
+            catalogGeneration
+        ) { mode, filters, bounds, _, _ ->
             Triple(mode, filters, bounds)
         }.filter { (_, _, _) ->
             screenState.value == ScreenState.SearchResults
@@ -391,15 +411,18 @@ class ExploreViewModel @Inject constructor(
 
         this.exploreTopic = exploreTopic
 
-        if (exploreTopic == ExploreTopic.Merchants) {
-            // A finished sync may have replaced the database, so the list is read again then
-            this.countriesJob?.cancel()
-            this.countriesJob = syncStatusService.getSyncProgressFlow()
-                .map { it.status == Status.SUCCESS }
-                .distinctUntilChanged()
-                .onEach { _countries.value = exploreData.getMerchantCountries() }
-                .launchIn(viewModelWorkerScope)
-        }
+        // A finished sync may have replaced the database, so everything on screen is read again
+        this.catalogJob?.cancel()
+        this.catalogJob = syncStatusService.getSyncProgressFlow()
+            .map { it.status == Status.SUCCESS }
+            .distinctUntilChanged()
+            .onEach { isSynced ->
+                reloadCountries()
+                if (isSynced) {
+                    catalogGeneration.value++
+                }
+            }
+            .launchIn(viewModelWorkerScope)
 
         this.pagingFilterJob?.cancel(CancellationException())
         this.pagingFilterJob = pagingSearchFlow
@@ -896,7 +919,8 @@ class ExploreViewModel @Inject constructor(
     private fun countPagedResults() {
         val bounds = radiusBounds
 
-        viewModelWorkerScope.launch {
+        countJob?.cancel()
+        countJob = viewModelWorkerScope.launch {
             val radiusBounds = bounds?.let {
                 locationProvider.getRadiusBounds(
                     bounds.centerLat,

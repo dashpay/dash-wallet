@@ -45,7 +45,6 @@ import org.dash.wallet.features.exploredash.ui.extensions.openAppSettings
 import org.dash.wallet.features.exploredash.ui.extensions.registerPermissionLauncher
 import org.dash.wallet.features.exploredash.ui.extensions.runLocationFlow
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
-import java.text.Collator
 import java.util.Locale
 
 @AndroidEntryPoint
@@ -61,7 +60,7 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
     private var selectedRadiusOption: Int = ExploreViewModel.DEFAULT_RADIUS_OPTION
     private var sortOption = ExploreViewModel.DEFAULT_SORT_OPTION
     private var selectedTerritory: String = ""
-    private var isCountryShown = false
+    private var countryNames: Map<String, String> = mapOf()
 
     // Only a country the user picked here is saved; the one shown by default is not a choice
     private var pickedCountry: String? = null
@@ -406,34 +405,33 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
     }
 
     private fun setupCountryFilter() {
-        val countries = viewModel.countries.value
-        val isOnlineOrAll = viewModel.filterMode.value == FilterMode.Online ||
-            viewModel.filterMode.value == FilterMode.All
-        // With a single country there is nothing to choose between
-        val isShown = viewModel.exploreTopic == ExploreTopic.Merchants && isOnlineOrAll && countries.size > 1
-        isCountryShown = isShown
-        binding.countryLabel.isVisible = isShown
-        binding.countryBtn.isVisible = isShown
-
-        if (!isShown) {
-            return
+        viewModel.selectedCountry.observe(viewLifecycleOwner) { showCountry() }
+        viewModel.countries.observe(viewLifecycleOwner) { countries ->
+            val isOnlineOrAll = viewModel.filterMode.value == FilterMode.Online ||
+                viewModel.filterMode.value == FilterMode.All
+            // With a single country there is nothing to choose between
+            val isShown = viewModel.exploreTopic == ExploreTopic.Merchants && isOnlineOrAll && countries.size > 1
+            binding.countryLabel.isVisible = isShown
+            binding.countryBtn.isVisible = isShown
+            countryNames = ExploreViewModel.countryNames(countries)
+            showCountry()
         }
 
-        viewModel.selectedCountry.observe(viewLifecycleOwner) { showCountry() }
-        val options = countries.map { it to getCountryName(it) }
-            .sortedWith(compareBy(Collator.getInstance()) { (_, name) -> name })
-
         binding.countryBtn.setOnClickListener {
+            val names = countryNames
             OptionPickerDialog(
                 getString(R.string.explore_country),
-                options.map { (_, name) -> IconifiedViewItem(name) },
-                options.indexOfFirst { (code, _) -> code == shownCountry },
+                names.keys.map { IconifiedViewItem(it) },
+                names.values.indexOf(shownCountry),
                 useCheckMark = true
-            ) { _, index, dialog ->
+            ) { item, _, dialog ->
                 dialog.dismiss()
-                pickedCountry = options[index].first
-                showCountry()
-                checkResetButton()
+                // The picker's index counts within its search results, so the name identifies the pick
+                names[item.title]?.let { country ->
+                    pickedCountry = country
+                    showCountry()
+                    checkResetButton()
+                }
             }.show(requireActivity())
         }
     }
@@ -442,13 +440,12 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
         get() = pickedCountry ?: if (isCountryReset) viewModel.defaultCountry else viewModel.selectedCountry.value
 
     private fun showCountry() {
-        binding.countryName.text = getCountryName(shownCountry)
+        binding.countryName.text = Locale("", shownCountry).displayCountry
     }
 
     private val hasCountryChoice: Boolean
-        get() = isCountryShown && (pickedCountry != null || (!isCountryReset && viewModel.chosenCountry.value != null))
-
-    private fun getCountryName(country: String): String = Locale("", country).displayCountry
+        get() = viewModel.exploreTopic == ExploreTopic.Merchants &&
+            (pickedCountry != null || (!isCountryReset && viewModel.chosenCountry.value != null))
 
     private fun setupLocationPermission() {
         binding.locationSettingsLabel.isVisible = true
@@ -612,7 +609,7 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
         sortOption = ExploreViewModel.DEFAULT_SORT_OPTION
         sortByOptionsAdapter?.selectedIndex = sortOptions.indexOf(sortOption)
 
-        if (isCountryShown) {
+        if (viewModel.exploreTopic == ExploreTopic.Merchants) {
             pickedCountry = null
             isCountryReset = true
             showCountry()

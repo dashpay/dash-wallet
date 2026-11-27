@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.TestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -41,6 +42,7 @@ import org.dash.wallet.features.exploredash.data.explore.model.GeoBounds
 import org.dash.wallet.features.exploredash.data.explore.model.Merchant
 import org.dash.wallet.features.exploredash.data.explore.model.MerchantType
 import org.dash.wallet.features.exploredash.data.explore.model.PaymentMethod
+import org.dash.wallet.features.exploredash.data.explore.model.SearchResult
 import org.dash.wallet.features.exploredash.data.explore.model.SortOption
 import org.dash.wallet.features.exploredash.repository.DataSyncStatusService
 import org.dash.wallet.features.exploredash.services.UserLocation
@@ -59,6 +61,7 @@ import org.junit.rules.TestRule
 import org.junit.rules.TestWatcher
 import org.junit.runner.Description
 import org.mockito.kotlin.*
+import java.util.Locale
 
 @ExperimentalCoroutinesApi
 class MainCoroutineRule(
@@ -1258,5 +1261,79 @@ class ExploreViewModelTest {
         assertEquals(listOf("CTX"), offeredProviders("US", "EUR"))
         assertEquals(listOf("CTX"), offeredProviders("GB", null))
         assertEquals(listOf("CTX"), offeredProviders(null, "GBP"))
+    }
+    @Test
+    fun countryNames_mapEachNameToItsCountryInNameOrder() {
+        val names = ExploreViewModel.countryNames(listOf("US", "GB", "DE", "AE"), Locale.ENGLISH)
+
+        assertEquals(listOf("Germany", "United Arab Emirates", "United Kingdom", "United States"), names.keys.toList())
+        assertEquals(listOf("DE", "AE", "GB", "US"), names.values.toList())
+        // A search for "united k" leaves one row at index 0; the name, not the index, gives the country
+        assertEquals("GB", names["United Kingdom"])
+        assertEquals("US", names["United States"])
+        assertNull(names["Atlantis"])
+
+        val german = ExploreViewModel.countryNames(listOf("US", "GB", "DE", "AT"), Locale.GERMAN)
+        assertEquals(listOf("DE", "AT", "GB", "US"), german.values.toList())
+        assertEquals("AT", german["Österreich"])
+    }
+
+    @Test
+    fun finishedSync_readsTheListCountAndMapAgain() {
+        runBlocking {
+            val progress = MutableStateFlow(Resource.loading(50.0))
+            val dataSource = mock<ExploreDataSource> {
+                onBlocking { getMerchantCountries() } doReturn listOf("US")
+                onBlocking {
+                    getMerchantsResultCount(any(), any(), any(), any(), any(), any(), any(), any())
+                } doReturn 1
+                on {
+                    observeMerchantsPaging(
+                        any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()
+                    )
+                } doAnswer { TestPagingSource() }
+                on { observePhysicalMerchants(any(), any(), any(), any(), any(), any(), any(), any()) } doReturn
+                    flowOf(listOf())
+            }
+            val locationMock = mock<UserLocationStateInt> {
+                on { getRadiusBounds(any(), any(), any()) } doReturn GeoBounds.noBounds
+            }
+            val viewModel = ExploreViewModel(
+                dataSource,
+                locationMock,
+                syncStatusOf(progress),
+                networkState,
+                mockPreferences,
+                mock<AnalyticsService>()
+            ).also { it.init(ExploreTopic.Merchants) }
+            viewModel.setFilterMode(FilterMode.All)
+            viewModel.searchBounds = GeoBounds.noBounds
+            val mapResults = mutableListOf<List<SearchResult>>()
+            val mapJob = launch(Dispatchers.Unconfined) { viewModel.boundedSearchFlow.collect { mapResults.add(it) } }
+            kotlinx.coroutines.delay(1000)
+
+            verify(dataSource, times(1)).getMerchantCountries()
+            verify(dataSource, times(1))
+                .getMerchantsResultCount(any(), any(), any(), any(), any(), any(), any(), any())
+            verify(dataSource, times(1))
+                .observePhysicalMerchants(any(), any(), any(), any(), any(), any(), any(), any())
+            verify(dataSource, times(1)).observeMerchantsPaging(
+                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()
+            )
+
+            progress.value = Resource.success(100.0)
+            kotlinx.coroutines.delay(1000)
+
+            assertEquals("US", viewModel.selectedCountry.value)
+            verify(dataSource, times(2)).getMerchantCountries()
+            verify(dataSource, times(2))
+                .getMerchantsResultCount(any(), any(), any(), any(), any(), any(), any(), any())
+            verify(dataSource, times(2))
+                .observePhysicalMerchants(any(), any(), any(), any(), any(), any(), any(), any())
+            verify(dataSource, times(2)).observeMerchantsPaging(
+                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()
+            )
+            mapJob.cancel()
+        }
     }
 }

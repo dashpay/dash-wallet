@@ -35,7 +35,34 @@ internal fun exploreSchema(version: Int): JSONObject =
     JSONObject(File("schemas/${ExploreDatabase::class.java.name}/$version.json").readText())
         .getJSONObject("database")
 
-internal fun createExploreDatabaseVersion4(file: File, fill: (SQLiteDatabase) -> Unit) {
+/**
+ * The tables as the published version 4 file declares them. The sync job fills a hand-made template,
+ * not a Room export: same identity hash, but `gift_card_providers` has a nullable `id` without
+ * AUTOINCREMENT and an INTEGER `sourceId`, and `merchant` orders its columns differently.
+ */
+internal val PUBLISHED_VERSION_4_TABLES = mapOf(
+    "merchant" to "CREATE TABLE \"merchant\" (\"deeplink\" TEXT, \"plusCode\" TEXT, \"addDate\" TEXT, " +
+        "\"updateDate\" TEXT, \"paymentMethod\" TEXT, \"merchantId\" TEXT, \"id\" INTEGER NOT NULL, " +
+        "\"active\" INTEGER DEFAULT 1, \"name\" TEXT, \"address1\" TEXT, \"address2\" TEXT, \"address3\" TEXT, " +
+        "\"address4\" TEXT, \"latitude\" REAL, \"longitude\" REAL, \"website\" TEXT, \"phone\" TEXT, " +
+        "\"territory\" TEXT, \"city\" TEXT, \"source\" TEXT, \"sourceId\" TEXT, \"logoLocation\" TEXT, " +
+        "\"googleMaps\" TEXT, \"coverImage\" TEXT, \"type\" TEXT, \"redeemType\" TEXT, " +
+        "\"savingsPercentage\" INTEGER, \"denominationsType\" TEXT, PRIMARY KEY(\"id\" AUTOINCREMENT))",
+    "atm" to "CREATE TABLE \"atm\" (\"postcode\" TEXT, \"manufacturer\" TEXT, \"id\" INTEGER NOT NULL, " +
+        "\"active\" INTEGER DEFAULT 1, \"name\" TEXT, \"address1\" TEXT, \"address2\" TEXT, \"address3\" TEXT, " +
+        "\"address4\" TEXT, \"latitude\" REAL, \"longitude\" REAL, \"website\" TEXT, \"phone\" TEXT, " +
+        "\"territory\" TEXT, \"city\" TEXT, \"source\" TEXT, \"sourceId\" TEXT, \"logoLocation\" TEXT, " +
+        "\"googleMaps\" TEXT, \"coverImage\" TEXT, \"type\" TEXT, PRIMARY KEY(\"id\" AUTOINCREMENT))",
+    "gift_card_providers" to "CREATE TABLE gift_card_providers (id INTEGER PRIMARY KEY, merchantId TEXT NOT NULL, " +
+        "provider TEXT NOT NULL, redeemType TEXT NOT NULL, savingsPercentage INTEGER NOT NULL, " +
+        "active INTEGER NOT NULL, denominationsType TEXT NOT NULL, sourceId INTEGER NOT NULL)"
+)
+
+internal fun createExploreDatabaseVersion4(
+    file: File,
+    tables: Map<String, String> = mapOf(),
+    fill: (SQLiteDatabase) -> Unit
+) {
     val schema = exploreSchema(4)
     file.parentFile!!.mkdirs()
 
@@ -44,7 +71,7 @@ internal fun createExploreDatabaseVersion4(file: File, fill: (SQLiteDatabase) ->
         for (i in 0 until entities.length()) {
             val entity = entities.getJSONObject(i)
             val table = entity.getString("tableName")
-            v4.execSQL(entity.getString("createSql").replace("\${TABLE_NAME}", table))
+            v4.execSQL(tables[table] ?: entity.getString("createSql").replace("\${TABLE_NAME}", table))
             val indices = entity.getJSONArray("indices")
             for (j in 0 until indices.length()) {
                 v4.execSQL(indices.getJSONObject(j).getString("createSql").replace("\${TABLE_NAME}", table))
@@ -75,8 +102,8 @@ class ExploreMigration4To5Test {
         context.deleteDatabase(dbName)
     }
 
-    private fun createVersion4() {
-        createExploreDatabaseVersion4(context.getDatabasePath(dbName)) { v4 ->
+    private fun createVersion4(tables: Map<String, String> = mapOf()) {
+        createExploreDatabaseVersion4(context.getDatabasePath(dbName), tables) { v4 ->
             v4.execSQL(
                 "INSERT INTO merchant (merchantId, name, type, paymentMethod, territory, active, redeemType) " +
                     "VALUES ('card', 'Card merchant', 'online', 'gift card', 'Texas', 1, 'barcode')"
@@ -88,8 +115,8 @@ class ExploreMigration4To5Test {
             v4.execSQL("INSERT INTO atm (name, territory) VALUES ('An atm', 'Texas')")
             v4.execSQL(
                 "INSERT INTO gift_card_providers " +
-                    "(merchantId, provider, redeemType, savingsPercentage, active, denominationsType, sourceId) " +
-                    "VALUES ('card', 'CTX', 'barcode', 250, 1, 'fixed', 'source-1')"
+                    "(id, merchantId, provider, redeemType, savingsPercentage, active, denominationsType, sourceId) " +
+                    "VALUES (7, 'card', 'CTX', 'barcode', 250, 1, 'fixed', 1234)"
             )
         }
     }
@@ -102,8 +129,14 @@ class ExploreMigration4To5Test {
             .also { db = it }
 
     @Test
-    fun migration4To5_keepsEveryRowAndLeavesCountryAndCurrencyUnset() = runBlocking {
-        createVersion4()
+    fun migration4To5_keepsEveryRowAndLeavesCountryAndCurrencyUnset() = keepsEveryRow(mapOf())
+
+    @Test
+    fun migration4To5_publishedLayout_keepsEveryRowAndLeavesCountryAndCurrencyUnset() =
+        keepsEveryRow(PUBLISHED_VERSION_4_TABLES)
+
+    private fun keepsEveryRow(tables: Map<String, String>) = runBlocking {
+        createVersion4(tables)
 
         val migrated = openMigrated()
 
@@ -119,12 +152,28 @@ class ExploreMigration4To5Test {
         val provider = migrated.giftCardProviderDao().getProvidersByMerchantId("card").single()
         assertEquals("CTX", provider.provider)
         assertEquals(250, provider.savingsPercentage)
+        assertEquals(7L, provider.id)
+        assertEquals("1234", provider.sourceId)
         assertNull(provider.currency)
+
+        // AUTOINCREMENT continues after the copied ids
+        migrated.openHelper.writableDatabase.execSQL(
+            "INSERT INTO gift_card_providers " +
+                "(merchantId, provider, redeemType, savingsPercentage, active, denominationsType, sourceId) " +
+                "VALUES ('card', 'PiggyCards', 'barcode', 100, 1, 'fixed', '99')"
+        )
+        assertEquals(listOf(7L, 8L), migrated.giftCardProviderDao().getProvidersByMerchantId("card").map { it.id })
     }
 
     @Test
-    fun migration4To5_producesTheExportedVersion5Schema() {
-        createVersion4()
+    fun migration4To5_producesTheExportedVersion5Schema() = producesVersion5(mapOf())
+
+    @Test
+    fun migration4To5_publishedLayout_producesTheExportedVersion5Schema() =
+        producesVersion5(PUBLISHED_VERSION_4_TABLES)
+
+    private fun producesVersion5(tables: Map<String, String>) {
+        createVersion4(tables)
 
         val migrated = openMigrated().openHelper.readableDatabase
 

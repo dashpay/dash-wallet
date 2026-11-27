@@ -161,8 +161,10 @@ class ExploreSyncWorker @AssistedInject constructor(
             )
             log.error("sync explore db crashed ${ex.message}", ex)
             syncStatus.setSyncError(ex)
+            // Read again: a finished update has already recorded its timestamp and schema version
+            val latestPrefs = exploreConfig.exploreDatabasePrefs.first()
             exploreConfig.saveExploreDatabasePrefs(
-                databasePrefs.copy(failedSyncAttempts = databasePrefs.failedSyncAttempts + 1)
+                latestPrefs.copy(failedSyncAttempts = latestPrefs.failedSyncAttempts + 1)
             )
             return@withContext Result.failure()
         }

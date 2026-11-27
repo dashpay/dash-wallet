@@ -18,6 +18,7 @@
 package org.dash.wallet.features.exploredash
 
 import android.content.Context
+import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteException
 import androidx.annotation.VisibleForTesting
 import androidx.room.Database
@@ -72,6 +73,10 @@ abstract class ExploreDatabase : RoomDatabase() {
         private val log = LoggerFactory.getLogger(ExploreDatabase::class.java)
         private var instance: ExploreDatabase? = null
 
+        // Injected DAOs keep using the instance they came from. It reopens on its next query, so
+        // closing every earlier instance before a swap is what moves them to the new file.
+        private val replacedInstances = mutableListOf<ExploreDatabase>()
+
         suspend fun getAppDatabase(context: Context, exploreConfig: ExploreConfig): ExploreDatabase {
             if (instance == null) {
                 instance = open(context, exploreConfig)
@@ -90,7 +95,8 @@ abstract class ExploreDatabase : RoomDatabase() {
             // succeeds, instance is reassigned to the fresh DB.
             val previous = instance
             instance = null
-            previous?.close()
+            previous?.let { replacedInstances.add(it) }
+            replacedInstances.forEach { it.close() }
             instance = update(context, repository, exploreConfig)
         }
 
@@ -99,13 +105,22 @@ abstract class ExploreDatabase : RoomDatabase() {
             val previous = instance
             instance = null
             previous?.close()
+            replacedInstances.forEach { it.close() }
+            replacedInstances.clear()
         }
 
         private suspend fun open(context: Context, exploreConfig: ExploreConfig): ExploreDatabase {
             fixObsoleteName(context, exploreConfig)
 
             return try {
-                buildAndProbe(context)
+                val wasOlderVersion = storedVersion(context)?.let { it < VERSION } ?: false
+                val database = buildAndProbe(context)
+                // Neither an empty database (first run, or wiped by a downgrade) nor rows migrated
+                // from an older schema's file are the current remote data, whatever the timestamp says.
+                if (wasOlderVersion || !hasExpectedData(database.openHelper.writableDatabase)) {
+                    clearLocalTimestamp(exploreConfig)
+                }
+                database
             } catch (ex: RuntimeException) {
                 // RoomOpenHelper.checkIdentity throws IllegalStateException when the on-disk
                 // file is missing room_master_table or has a schema that doesn't match the
@@ -231,9 +246,19 @@ abstract class ExploreDatabase : RoomDatabase() {
             return database
         }
 
+        private fun storedVersion(context: Context): Int? {
+            val file = context.getDatabasePath(EXPLORE_DB_NAME)
+            if (!file.exists()) {
+                return null
+            }
+            return SQLiteDatabase.openDatabase(file.path, null, SQLiteDatabase.OPEN_READWRITE).use { it.version }
+        }
+
         private suspend fun clearLocalTimestamp(exploreConfig: ExploreConfig) {
             val prefs = exploreConfig.exploreDatabasePrefs.first()
-            exploreConfig.saveExploreDatabasePrefs(prefs.copy(localDbTimestamp = 0L))
+            if (prefs.localDbTimestamp != 0L) {
+                exploreConfig.saveExploreDatabasePrefs(prefs.copy(localDbTimestamp = 0L))
+            }
         }
 
         private suspend fun update(

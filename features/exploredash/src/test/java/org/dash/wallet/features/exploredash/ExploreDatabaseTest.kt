@@ -138,9 +138,9 @@ class ExploreDatabaseTest {
             }
         }
 
-        private fun createPopulatedVersion4(file: File) {
+        private fun createPopulatedVersion4(file: File, merchants: Int = 1) {
             createExploreDatabaseVersion4(file) { v4 ->
-                v4.execSQL("INSERT INTO merchant (name) VALUES ('dummy merchant')")
+                repeat(merchants) { v4.execSQL("INSERT INTO merchant (name) VALUES ('dummy merchant')") }
                 v4.execSQL("INSERT INTO atm (name) VALUES ('dummy atm')")
             }
         }
@@ -234,8 +234,10 @@ class ExploreDatabaseTest {
 
         val dbFile = appContext.getDatabasePath("explore-database")
         assertTrue("DB file should exist after first open", dbFile.exists())
-        // Sanity: timestamp untouched so far.
-        assertEquals(1_234_567_890L, prefs.localDbTimestamp)
+        // An empty database is never up to date, so the first open has reset the timestamp.
+        // Put it back to simulate a device that had synced before the file was damaged.
+        assertEquals(0L, prefs.localDbTimestamp)
+        prefs = ExploreDatabasePrefs(localDbTimestamp = 1_234_567_890L)
 
         // 2. Corrupt: drop merchant + room_master_table to mimic the field crash —
         //    Found columns empty + no room_master_table => "Pre-packaged database has
@@ -357,11 +359,14 @@ class ExploreDatabaseTest {
     @Test
     fun version4LocalDb_isMigratedInPlaceAndKeepsItsRows() = runTest {
         createPopulatedVersion4(appContext.getDatabasePath("explore-database"))
-        val mockConfig = mock<ExploreConfig> {
-            onBlocking { get<String>(any()) } doReturn null
-        }
+        // A build that reads version 4 wrote this timestamp; the version marker is from an earlier
+        // run of this build. Neither says the migrated rows are the version 5 data.
+        prefsState = ExploreDatabasePrefs(
+            localDbTimestamp = 1_234_567_890L,
+            localDbSchemaVersion = ExploreDatabase.VERSION
+        )
 
-        val database = ExploreDatabase.getAppDatabase(appContext, mockConfig)
+        val database = ExploreDatabase.getAppDatabase(appContext, updateConfig())
 
         val db = database.openHelper.readableDatabase
         assertEquals(5, db.version)
@@ -371,5 +376,62 @@ class ExploreDatabaseTest {
                 assertEquals("$table rows must survive the migration", 1, cursor.getInt(0))
             }
         }
+        assertEquals(0L, prefsState.localDbTimestampFor(ExploreDatabase.VERSION))
+    }
+
+    @Test
+    fun emptyLocalDb_isNeverUpToDate() = runTest {
+        val config = updateConfig()
+        // What a build that reads version 4 leaves behind after wiping a version 5 file
+        ExploreDatabase.getAppDatabase(appContext, config).close()
+        ExploreDatabase.resetInstanceForTest()
+        prefsState = ExploreDatabasePrefs(
+            localDbTimestamp = 1_234_567_890L,
+            localDbSchemaVersion = ExploreDatabase.VERSION
+        )
+
+        ExploreDatabase.getAppDatabase(appContext, config)
+
+        assertEquals(0L, prefsState.localDbTimestamp)
+    }
+
+    @Test
+    fun populatedCurrentLocalDb_keepsItsTimestamp() = runTest {
+        val config = updateConfig()
+        val repository = GCExploreDatabase(appContext, config, mock(), mock())
+        val timestamp = stageUpdateFile(repository)
+        ExploreDatabase.updateDatabase(appContext, repository, config)
+        ExploreDatabase.resetInstanceForTest()
+
+        ExploreDatabase.getAppDatabase(appContext, config)
+
+        assertEquals(timestamp, prefsState.localDbTimestampFor(ExploreDatabase.VERSION))
+    }
+
+    private fun stageUpdateFile(repository: GCExploreDatabase, merchants: Int) {
+        val inner = appContext.getDatabasePath("explore-update-inner")
+        createPopulatedVersion4(inner, merchants)
+        zipExploreDb(inner, repository.getUpdateFile())
+        appContext.deleteDatabase(inner.name)
+    }
+
+    @Test
+    fun secondUpdate_isReadThroughADaoFromBeforeTheFirst() = runTest {
+        val config = updateConfig()
+        val repository = GCExploreDatabase(appContext, config, mock(), mock())
+        val injectedDao = ExploreDatabase.getAppDatabase(appContext, config).merchantDao()
+        assertEquals(0, withContext(Dispatchers.IO) { injectedDao.getCount() })
+
+        stageUpdateFile(repository, merchants = 1)
+        ExploreDatabase.updateDatabase(appContext, repository, config)
+        assertEquals(1, withContext(Dispatchers.IO) { injectedDao.getCount() })
+
+        stageUpdateFile(repository, merchants = 2)
+        ExploreDatabase.updateDatabase(appContext, repository, config)
+        assertEquals(2, withContext(Dispatchers.IO) { injectedDao.getCount() })
+
+        stageUpdateFile(repository, merchants = 3)
+        ExploreDatabase.updateDatabase(appContext, repository, config)
+        assertEquals(3, withContext(Dispatchers.IO) { injectedDao.getCount() })
     }
 }
