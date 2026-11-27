@@ -186,6 +186,7 @@ class CTXSpendRepository @Inject constructor(
                 percentDiscount = response.percentDiscount,
                 rate = response.rate,
                 redeemUrl = response.redeemUrl,
+                redeemUrlChallenge = response.redeemUrlChallenge,
                 fiatAmount = response.fiatAmount,
                 fiatCurrency = response.fiatCurrency,
                 paymentUrls = response.paymentUrls

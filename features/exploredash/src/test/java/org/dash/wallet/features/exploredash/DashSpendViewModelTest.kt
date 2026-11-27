@@ -26,8 +26,10 @@ import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import org.bitcoinj.core.Coin
+import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.NetworkStateInt
@@ -38,13 +40,18 @@ import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProvider
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderDao
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderType
+import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.GiftCardResponse
 import org.dash.wallet.features.exploredash.data.dashspend.model.UpdatedMerchantDetails
 import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
 import org.dash.wallet.features.exploredash.data.explore.MerchantDao
 import org.dash.wallet.features.exploredash.data.explore.model.Merchant
+import org.dash.wallet.features.exploredash.network.service.ctxspend.CTXSpendApi
+import org.dash.wallet.features.exploredash.repository.CTXSpendRepository
 import org.dash.wallet.features.exploredash.repository.DashSpendRepository
 import org.dash.wallet.features.exploredash.repository.DashSpendRepositoryFactory
 import org.dash.wallet.features.exploredash.ui.dashspend.DashSpendViewModel
+import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardShoppingCart
+import org.dash.wallet.features.exploredash.ui.dashspend.dialogs.GiftCardDetailsViewModel
 import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -116,7 +123,8 @@ class DashSpendViewModelTest {
     private fun viewModel(
         piggyCardsRepository: DashSpendRepository,
         ctxRepository: DashSpendRepository = mock(),
-        providers: List<GiftCardProvider> = listOf(cachedCtxRow, cachedPiggyCardsRow)
+        providers: List<GiftCardProvider> = listOf(cachedCtxRow, cachedPiggyCardsRow),
+        giftCardDao: GiftCardDao = mock()
     ): DashSpendViewModel {
         val providerDao = mock<GiftCardProviderDao> {
             onBlocking {
@@ -136,7 +144,7 @@ class DashSpendViewModelTest {
             mock<SendPaymentService>(),
             repositoryFactory,
             mock<TransactionMetadataProvider>(),
-            mock<GiftCardDao>(),
+            giftCardDao,
             providerDao,
             mock<NetworkStateInt> { on { isConnected } doReturn MutableStateFlow(true) },
             mock<AnalyticsService>(),
@@ -209,6 +217,54 @@ class DashSpendViewModelTest {
                 it.provider == GiftCardProviderType.PiggyCards.name
             }
             assertEquals(cachedPiggyCardsRow, untouched)
+        }
+    }
+
+    @Test
+    fun ctxCheckout_keepsTheChallengeForTheReopenedCard() {
+        runBlocking {
+            val txId = Sha256Hash.ZERO_HASH
+            val link = "https://spend.ctx.com/gift-cards/order-1/redeem"
+            val api = mock<CTXSpendApi> {
+                onBlocking { purchaseGiftCard(any()) } doReturn GiftCardResponse(
+                    id = "order-1",
+                    status = "unpaid",
+                    redeemUrl = link,
+                    redeemUrlChallenge = "A1B2C3",
+                    fiatAmount = "25.00"
+                )
+            }
+            val repository = CTXSpendRepository(api, mock(), mock())
+            val giftCardDao = mock<GiftCardDao>()
+
+            val ordered = repository.orderGiftcard("DASH", "USD", GiftCardShoppingCart(25.0, 1), "ctx-source")
+            viewModel(mock(), giftCardDao = giftCardDao).saveGiftCardDummy(txId, ordered)
+
+            val saved = argumentCaptor<List<GiftCard>>()
+            verify(giftCardDao).insertGiftCards(saved.capture())
+            whenever(giftCardDao.observeCardForTransaction(txId)).thenReturn(flowOf(saved.firstValue))
+            val metadataProvider = mock<TransactionMetadataProvider> {
+                on { observeTransactionMetadata(txId) } doReturn emptyFlow()
+            }
+            val reopened = GiftCardDetailsViewModel(
+                mock(),
+                mock(),
+                giftCardDao,
+                metadataProvider,
+                mock(),
+                repository,
+                mock(),
+                mock(),
+                mock()
+            )
+            reopened.init(txId)
+
+            val card = reopened.uiState.value.giftCard
+            assertEquals(link, card?.merchantUrl)
+            assertEquals("A1B2C3", card?.redeemUrlChallenge)
+            // A saved link stops polling, so nothing else would deliver the challenge later.
+            verify(api, never()).getGiftCardByOrderId(any())
+            verify(api, never()).getGiftCardByTxId(any())
         }
     }
 }
