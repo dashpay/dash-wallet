@@ -242,6 +242,7 @@ class DashSpendViewModelTest {
 
             val saved = argumentCaptor<List<GiftCard>>()
             verify(giftCardDao).insertGiftCards(saved.capture())
+            assertEquals(1, saved.firstValue.size)
             whenever(giftCardDao.observeCardForTransaction(txId)).thenReturn(flowOf(saved.firstValue))
             val metadataProvider = mock<TransactionMetadataProvider> {
                 on { observeTransactionMetadata(txId) } doReturn emptyFlow()

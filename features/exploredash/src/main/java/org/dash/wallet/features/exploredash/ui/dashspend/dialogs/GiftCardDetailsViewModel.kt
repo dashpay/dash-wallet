@@ -94,8 +94,7 @@ class GiftCardDetailsViewModel @Inject constructor(
     companion object {
         private val log = LoggerFactory.getLogger(GiftCardDetailsViewModel::class.java)
 
-        // The same number of polls the sheet allows an unpaid or paid order before it reports a delay.
-        const val MAX_MISSING_DETAILS_QUERIES = 60
+        const val WAIT_LIMIT_FOR_ERROR = 60
     }
 
     lateinit var transactionId: Sha256Hash
@@ -305,7 +304,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                                     newState
                                 } else {
                                     missingDetailsQueries++
-                                    val error = if (missingDetailsQueries >= MAX_MISSING_DETAILS_QUERIES) {
+                                    val error = if (missingDetailsQueries >= WAIT_LIMIT_FOR_ERROR) {
                                         log.error("CTXSpend: fulfilled gift card has neither a number nor a link")
                                         cancelTicker()
                                         CTXSpendException(

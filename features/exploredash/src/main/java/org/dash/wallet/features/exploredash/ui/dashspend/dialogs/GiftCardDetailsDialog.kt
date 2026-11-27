@@ -112,7 +112,6 @@ class GiftCardDetailsDialog : ComposeBottomSheet() {
     companion object {
         private const val ARG_TRANSACTION_ID = "transactionId"
         private const val ARG_CARD_INDEX = "cardIndex"
-        private const val WAIT_LIMIT_FOR_ERROR = 60
 
         fun newInstance(transactionId: Sha256Hash, cardIndex: Int = 0) =
             GiftCardDetailsDialog().apply {
@@ -142,7 +141,7 @@ class GiftCardDetailsDialog : ComposeBottomSheet() {
     override fun Content() {
         GiftCardDetailsContent(
             viewModel = viewModel,
-            waitLimitForError = WAIT_LIMIT_FOR_ERROR,
+            waitLimitForError = GiftCardDetailsViewModel.WAIT_LIMIT_FOR_ERROR,
             onCloseClick = { dismiss() },
             onMaxBrightness = { enable -> setMaxBrightness(enable) },
             onViewTransaction = {

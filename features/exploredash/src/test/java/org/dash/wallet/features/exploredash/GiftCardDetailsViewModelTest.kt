@@ -65,7 +65,7 @@ class GiftCardDetailsViewModelTest {
         cardNumber = "",
         redeemUrl = "  "
     )
-    private val limit = GiftCardDetailsViewModel.MAX_MISSING_DETAILS_QUERIES
+    private val limit = GiftCardDetailsViewModel.WAIT_LIMIT_FOR_ERROR
 
     private val repository = mock<CTXSpendRepository> {
         onBlocking { isUserSignedIn() } doReturn true
