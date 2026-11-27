@@ -21,6 +21,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.net.ConnectivityManager
 import android.net.Uri
 import android.net.http.SslError
 import android.os.Build
@@ -104,6 +105,8 @@ import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.utils.CTXSpendConstants
 import org.slf4j.LoggerFactory
 import java.io.ByteArrayInputStream
+import java.net.ProxySelector
+import java.net.URI
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -121,6 +124,36 @@ class RedeemLinkActivity : InteractionAwareActivity() {
         // last screen to close lifts the override and wipes; an earlier one would cut into a newer claim.
         private var cleartextBlockUsers = 0
         private val log = LoggerFactory.getLogger(RedeemLinkActivity::class.java)
+
+        fun canOpenInApp(context: Context, url: String?, ctxBaseUrl: String): Boolean {
+            return RedeemLinkPolicy.canOpenInApp(url, Build.VERSION.SDK_INT, ctxBaseUrl) &&
+                canIsolate() &&
+                connectsDirectly(context, url)
+        }
+
+        // WebStorage.deleteAllData and clearCache leave service workers and Cache Storage behind.
+        private fun canIsolate(): Boolean {
+            return try {
+                WebViewFeature.isFeatureSupported(WebViewFeature.DELETE_BROWSING_DATA) &&
+                    WebViewFeature.isFeatureSupported(WebViewFeature.PROXY_OVERRIDE)
+            } catch (e: Exception) {
+                log.warn("WebView is not available: {}", e.javaClass.simpleName)
+                false
+            }
+        }
+
+        // getDefaultProxy is what the platform copies into the proxy system properties and what WebView follows:
+        // the global proxy, else the active network's, including a PAC script.
+        private fun connectsDirectly(context: Context, url: String?): Boolean {
+            return try {
+                val proxy = context.getSystemService(ConnectivityManager::class.java).defaultProxy
+                val pacUrl = proxy?.pacFileUrl?.takeUnless { it == Uri.EMPTY }?.toString()
+                RedeemLinkPolicy.connectsDirectly(proxy?.host, pacUrl) { ProxySelector.getDefault()?.select(URI(url)) }
+            } catch (e: Exception) {
+                log.warn("Proxy settings could not be read: {}", e.javaClass.simpleName)
+                false
+            }
+        }
 
         fun createIntent(context: Context, url: String, challenge: String?, merchantName: String?): Intent {
             val intent = Intent(context, RedeemLinkActivity::class.java)
@@ -379,7 +412,7 @@ class RedeemLinkActivity : InteractionAwareActivity() {
     }
 
     private fun loadRedeemPage(wipeData: Boolean): Boolean {
-        if (!canIsolate()) {
+        if (!canIsolate() || !connectsDirectly(this, redeemUrl)) {
             return false
         }
         val view = createWebView() ?: return false
@@ -450,17 +483,6 @@ class RedeemLinkActivity : InteractionAwareActivity() {
         } catch (e: Exception) {
             log.warn("WebView is not available: {}", e.javaClass.simpleName)
             null
-        }
-    }
-
-    // WebStorage.deleteAllData and clearCache leave service workers and Cache Storage behind.
-    private fun canIsolate(): Boolean {
-        return try {
-            WebViewFeature.isFeatureSupported(WebViewFeature.DELETE_BROWSING_DATA) &&
-                WebViewFeature.isFeatureSupported(WebViewFeature.PROXY_OVERRIDE)
-        } catch (e: Exception) {
-            log.warn("WebView is not available: {}", e.javaClass.simpleName)
-            false
         }
     }
 

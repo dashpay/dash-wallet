@@ -21,6 +21,8 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.net.InetSocketAddress
+import java.net.Proxy
 
 class RedeemLinkPolicyTest {
     private val prodBase = "https://spend.ctx.com/"
@@ -240,6 +242,30 @@ class RedeemLinkPolicyTest {
             assertFalse(url, RedeemLinkPolicy.canOpenExternally(url, prodBase))
         }
         assertFalse(RedeemLinkPolicy.canOpenExternally(null, prodBase))
+    }
+
+    @Test
+    fun inAppScreen_isOnlyUsedWithoutAProxy() {
+        val direct = { listOf(Proxy.NO_PROXY) }
+        val httpProxy = Proxy(Proxy.Type.HTTP, InetSocketAddress.createUnresolved("proxy.example.invalid", 8080))
+        val socksProxy = Proxy(Proxy.Type.SOCKS, InetSocketAddress.createUnresolved("127.0.0.1", 9050))
+
+        assertTrue(RedeemLinkPolicy.connectsDirectly(null, null, direct))
+        assertTrue(RedeemLinkPolicy.connectsDirectly("", " ", direct))
+
+        // a global or per-network proxy, and a PAC script (served through a local proxy)
+        assertFalse(RedeemLinkPolicy.connectsDirectly("proxy.example.invalid", null, direct))
+        assertFalse(RedeemLinkPolicy.connectsDirectly(null, "http://wpad.example.invalid/proxy.pac", direct))
+        assertFalse(RedeemLinkPolicy.connectsDirectly("localhost", "http://wpad.example.invalid/proxy.pac", direct))
+
+        // the process' own selection, when the platform reports no proxy
+        assertFalse(RedeemLinkPolicy.connectsDirectly(null, null) { listOf(httpProxy) })
+        assertFalse(RedeemLinkPolicy.connectsDirectly(null, null) { listOf(socksProxy) })
+        assertFalse(RedeemLinkPolicy.connectsDirectly(null, null) { listOf(Proxy.NO_PROXY, httpProxy) })
+
+        // unknown counts as a proxy
+        assertFalse(RedeemLinkPolicy.connectsDirectly(null, null) { null })
+        assertFalse(RedeemLinkPolicy.connectsDirectly(null, null) { emptyList() })
     }
 
     @Test

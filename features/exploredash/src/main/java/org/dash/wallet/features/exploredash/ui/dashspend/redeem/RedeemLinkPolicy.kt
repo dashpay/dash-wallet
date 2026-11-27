@@ -18,6 +18,7 @@ package org.dash.wallet.features.exploredash.ui.dashspend.redeem
 
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import java.net.Proxy
 
 object RedeemLinkPolicy {
     private const val MIN_SDK_INT = 26
@@ -63,6 +64,16 @@ object RedeemLinkPolicy {
 
     fun isContactLink(url: String?): Boolean {
         return url?.substringBefore(':', "")?.lowercase() in contactSchemes
+    }
+
+    // The screen connects to HTTPS hosts directly, so it must not be used where the user routes traffic through a
+    // proxy. A null or empty selection means the answer is unknown, which counts as a proxy.
+    fun connectsDirectly(proxyHost: String?, pacUrl: String?, selectProxies: () -> List<Proxy>?): Boolean {
+        if (!proxyHost.isNullOrBlank() || !pacUrl.isNullOrBlank()) {
+            return false
+        }
+        val selected = selectProxies()
+        return !selected.isNullOrEmpty() && selected.all { it.type() == Proxy.Type.DIRECT }
     }
 
     fun normalizeChallenge(challenge: String?): String? {

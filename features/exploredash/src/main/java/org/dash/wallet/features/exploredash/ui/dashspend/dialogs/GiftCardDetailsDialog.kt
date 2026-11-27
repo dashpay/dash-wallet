@@ -18,7 +18,6 @@ package org.dash.wallet.features.exploredash.ui.dashspend.dialogs
 
 import android.content.Intent
 import android.graphics.Bitmap
-import android.os.Build
 import android.os.Bundle
 import android.util.Size
 import android.view.View
@@ -242,7 +241,7 @@ private fun GiftCardDetailsContent(
             viewModel.logEvent(AnalyticsConstants.DashSpend.REDEEM_LINK)
             val giftCard = uiState.giftCard
 
-            if (RedeemLinkPolicy.canOpenInApp(url, Build.VERSION.SDK_INT, viewModel.ctxBaseUrl)) {
+            if (RedeemLinkActivity.canOpenInApp(context, url, viewModel.ctxBaseUrl)) {
                 context.startActivity(
                     RedeemLinkActivity.createIntent(
                         context,
