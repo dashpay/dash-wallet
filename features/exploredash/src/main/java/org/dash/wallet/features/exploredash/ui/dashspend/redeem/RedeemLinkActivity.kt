@@ -216,10 +216,7 @@ class RedeemLinkActivity : InteractionAwareActivity() {
             if (RedeemLinkPolicy.isAllowedNavigation(url, isMainFrame = true)) {
                 hasCommittedPage = true
             } else {
-                view.stopLoading()
-                hasError = true
-                // Destroying a WebView from inside its own callback is only supported for onRenderProcessGone.
-                Handler(Looper.getMainLooper()).post { discardWebView(view) }
+                failInitialLoad(view)
             }
         }
 
@@ -237,7 +234,7 @@ class RedeemLinkActivity : InteractionAwareActivity() {
         ) {
             val status = errorResponse.statusCode
             if (RedeemLinkPolicy.isInitialServerError(request.isForMainFrame, hasCommittedPage, status)) {
-                hasError = true
+                failInitialLoad(view)
             }
         }
 
@@ -427,18 +424,30 @@ class RedeemLinkActivity : InteractionAwareActivity() {
         loadProgress = 0
 
         val load = Runnable {
-            if (view === webView) {
+            if (isShowing(view)) {
                 view.loadUrl(redeemUrl)
             }
         }
         blockCleartext {
-            if (wipeData) {
+            if (wipeData && isShowing(view)) {
                 wipeWebData(load)
             } else {
                 load.run()
             }
         }
         return true
+    }
+
+    // Setup callbacks can arrive after the screen was closed but before onDestroy has run.
+    private fun isShowing(view: WebView): Boolean {
+        return !isFinishing && !isDestroyed && view === webView
+    }
+
+    private fun failInitialLoad(view: WebView) {
+        view.stopLoading()
+        hasError = true
+        // Destroying a WebView from inside its own callback is only supported for onRenderProcessGone.
+        Handler(Looper.getMainLooper()).post { discardWebView(view) }
     }
 
     private fun retry() {
@@ -529,7 +538,7 @@ class RedeemLinkActivity : InteractionAwareActivity() {
         result: JsResult,
         canDecline: Boolean
     ): Boolean {
-        if (isFinishing || isDestroyed || jsDialogCount >= MAX_JS_DIALOGS) {
+        if (isFinishing || isDestroyed || hasError || jsDialogCount >= MAX_JS_DIALOGS) {
             result.cancel()
             return true
         }
