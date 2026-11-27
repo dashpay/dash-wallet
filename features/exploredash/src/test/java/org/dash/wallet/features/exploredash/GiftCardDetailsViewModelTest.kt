@@ -19,8 +19,11 @@ package org.dash.wallet.features.exploredash
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
@@ -37,15 +40,19 @@ import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardStatus
 import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
 import org.dash.wallet.features.exploredash.repository.CTXSpendRepository
+import org.dash.wallet.features.exploredash.repository.PiggyCardsRepository
 import org.dash.wallet.features.exploredash.ui.dashspend.dialogs.GiftCardDetailsViewModel
 import org.dash.wallet.features.exploredash.ui.dashspend.dialogs.GiftCardUIState
+import org.dash.wallet.features.exploredash.ui.dashspend.redeem.RedeemLinkPolicy
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
@@ -72,20 +79,26 @@ class GiftCardDetailsViewModelTest {
         onBlocking { getCTXSpendEmail() } doReturn "user@example.com"
         onBlocking { getGiftCard(orderId) } doReturn listOf(withoutDetails)
     }
-    private val metadataProvider = mock<TransactionMetadataProvider> {
+    private val metadataProvider = metadataProvider(ServiceName.CTXSpend)
+
+    private fun metadataProvider(service: String) = mock<TransactionMetadataProvider> {
         on { observeTransactionMetadata(txId) } doReturn emptyFlow()
         onBlocking { getTransactionMetadata(txId) } doReturn TransactionMetadata(
             txId,
             0,
             Coin.ZERO,
             TransactionCategory.Sent,
-            service = ServiceName.CTXSpend
+            service = service
         )
     }
 
-    private fun TestScope.viewModel(): GiftCardDetailsViewModel {
+    private fun TestScope.viewModel(
+        savedCards: Flow<List<GiftCard>> = flowOf(listOf(pendingCard)),
+        metadataProvider: TransactionMetadataProvider = this@GiftCardDetailsViewModelTest.metadataProvider,
+        piggyCardsRepository: PiggyCardsRepository = mock()
+    ): GiftCardDetailsViewModel {
         val giftCardDao = mock<GiftCardDao> {
-            on { observeCardForTransaction(txId) } doReturn flowOf(listOf(pendingCard))
+            on { observeCardForTransaction(txId) } doReturn savedCards
             onBlocking { getCardForTransaction(txId) } doReturn listOf(pendingCard)
         }
         return GiftCardDetailsViewModel(
@@ -95,7 +108,7 @@ class GiftCardDetailsViewModelTest {
             metadataProvider,
             mock(),
             repository,
-            mock(),
+            piggyCardsRepository,
             mock(),
             mock()
         ).also { it.init(txId) }
@@ -178,6 +191,51 @@ class GiftCardDetailsViewModelTest {
         verify(metadataProvider).updateGiftCardMetadata(saved.capture())
         assertEquals(link, saved.lastValue.merchantUrl)
         verify(repository, times(limit + 2)).getGiftCard(orderId)
+    }
+
+    @Test
+    fun piggyCardsOrderWithANumberCardAndALinkCard_savesBothAndStopsPolling() = runTest {
+        val fakeNumber = "0000-FAKE-0000"
+        val fakeLink = "https://claims.example.invalid/c/FAKE-CLAIM-0000"
+        val piggyCards = mock<PiggyCardsRepository> {
+            onBlocking { isUserSignedIn() } doReturn true
+            onBlocking { getAccountEmail() } doReturn "user@example.com"
+            onBlocking { getGiftCard(orderId) } doReturn listOf(
+                GiftCardInfo(
+                    orderId,
+                    status = GiftCardStatus.FULFILLED,
+                    barcodeUrl = null,
+                    cardNumber = fakeNumber,
+                    cardPin = "0000"
+                ),
+                GiftCardInfo(orderId, status = GiftCardStatus.FULFILLED, barcodeUrl = null, redeemUrl = fakeLink)
+            )
+        }
+        val savedCards = MutableStateFlow(listOf(pendingCard, pendingCard.copy(index = 1)))
+        val metadataProvider = metadataProvider(ServiceName.PiggyCards)
+        whenever(metadataProvider.updateGiftCardMetadata(any())).doAnswer { call ->
+            val updated = call.getArgument<GiftCard>(0)
+            savedCards.update { cards -> cards.map { if (it.index == updated.index) updated else it } }
+        }
+        val viewModel = viewModel(savedCards, metadataProvider, piggyCards)
+
+        pollUntil { viewModel.uiState.value.queries > 0 }
+        pollFor(virtualSeconds = 5)
+
+        val state = viewModel.uiState.value
+        val numberCard = state.giftCards.single { it.index == 0 }
+        val linkCard = state.giftCards.single { it.index == 1 }
+        assertEquals(fakeNumber, numberCard.number)
+        assertEquals("0000", numberCard.pin)
+        assertNull(numberCard.merchantUrl)
+        assertEquals(fakeLink, linkCard.merchantUrl)
+        assertNull(linkCard.number)
+        assertEquals(GiftCardStatus.FULFILLED, state.status)
+        assertNull(state.error)
+        assertFalse(state.copy(index = 0).isMissingDetails)
+        assertFalse(state.copy(index = 1).isMissingDetails)
+        verify(piggyCards, times(1)).getGiftCard(orderId)
+        assertFalse(RedeemLinkPolicy.canOpenInApp(fakeLink, 36, "https://spend.ctx.com/"))
     }
 
     @Test
