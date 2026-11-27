@@ -22,6 +22,7 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 object RedeemLinkPolicy {
     private const val MIN_SDK_INT = 26
     private const val HTTPS_PORT = 443
+    private val serverErrors = 500..599
     private val redeemPath = Regex("^/+gift-cards/[A-Za-z0-9_-]+/redeem$")
     private val subframeOnlyUrls = setOf("about:blank", "about:srcdoc")
     private val contactSchemes = setOf("mailto", "tel")
@@ -62,6 +63,14 @@ object RedeemLinkPolicy {
 
     fun isContactLink(url: String?): Boolean {
         return url?.substringBefore(':', "")?.lowercase() in contactSchemes
+    }
+
+    fun normalizeChallenge(challenge: String?): String? {
+        return challenge?.trim()?.takeUnless { it.isEmpty() }
+    }
+
+    fun isInitialServerError(isMainFrame: Boolean, hasCommittedPage: Boolean, statusCode: Int): Boolean {
+        return isMainFrame && !hasCommittedPage && statusCode in serverErrors
     }
 
     fun displayHost(url: String?): String? {

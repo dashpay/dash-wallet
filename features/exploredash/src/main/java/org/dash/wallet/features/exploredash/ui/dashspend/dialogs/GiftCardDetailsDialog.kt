@@ -821,7 +821,7 @@ private fun HowToUseItem(iconRes: Int, title: String, description: String) {
 }
 
 private val GiftCard.challengeCode: String?
-    get() = redeemUrlChallenge?.trim()?.takeUnless { it.isEmpty() }
+    get() = RedeemLinkPolicy.normalizeChallenge(redeemUrlChallenge)
 
 // ─── Previews ────────────────────────────────────────────────────────────────
 

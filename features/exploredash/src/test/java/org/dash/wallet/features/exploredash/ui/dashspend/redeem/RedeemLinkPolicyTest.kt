@@ -243,6 +243,30 @@ class RedeemLinkPolicyTest {
     }
 
     @Test
+    fun challenge_isTrimmedAndBlankMeansAbsent() {
+        assertNull(RedeemLinkPolicy.normalizeChallenge(null))
+        assertNull(RedeemLinkPolicy.normalizeChallenge(""))
+        assertNull(RedeemLinkPolicy.normalizeChallenge("  \t\n "))
+        assertEquals("A1B2C3", RedeemLinkPolicy.normalizeChallenge("  A1B2C3\n"))
+        assertEquals("A1 B2", RedeemLinkPolicy.normalizeChallenge(" A1 B2 "))
+        assertEquals("A1B2C3", RedeemLinkPolicy.normalizeChallenge("A1B2C3"))
+    }
+
+    @Test
+    fun onlyAnInitialMainFrameServerError_offersRetry() {
+        assertTrue(RedeemLinkPolicy.isInitialServerError(isMainFrame = true, hasCommittedPage = false, 500))
+        assertTrue(RedeemLinkPolicy.isInitialServerError(isMainFrame = true, hasCommittedPage = false, 503))
+        assertTrue(RedeemLinkPolicy.isInitialServerError(isMainFrame = true, hasCommittedPage = false, 599))
+
+        assertFalse(RedeemLinkPolicy.isInitialServerError(isMainFrame = false, hasCommittedPage = false, 503))
+        assertFalse(RedeemLinkPolicy.isInitialServerError(isMainFrame = true, hasCommittedPage = true, 503))
+        assertFalse(RedeemLinkPolicy.isInitialServerError(isMainFrame = true, hasCommittedPage = false, 404))
+        assertFalse(RedeemLinkPolicy.isInitialServerError(isMainFrame = true, hasCommittedPage = false, 410))
+        assertFalse(RedeemLinkPolicy.isInitialServerError(isMainFrame = true, hasCommittedPage = false, 499))
+        assertFalse(RedeemLinkPolicy.isInitialServerError(isMainFrame = true, hasCommittedPage = false, 600))
+    }
+
+    @Test
     fun contactLinks_areMailtoAndTelOnly() {
         assertTrue(RedeemLinkPolicy.isContactLink("mailto:help@storedvalue.com"))
         assertTrue(RedeemLinkPolicy.isContactLink("TEL:+18005550100"))

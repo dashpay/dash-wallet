@@ -184,6 +184,17 @@ class RedeemLinkActivity : InteractionAwareActivity() {
             }
         }
 
+        override fun onReceivedHttpError(
+            view: WebView,
+            request: WebResourceRequest,
+            errorResponse: WebResourceResponse
+        ) {
+            val status = errorResponse.statusCode
+            if (RedeemLinkPolicy.isInitialServerError(request.isForMainFrame, hasCommittedPage, status)) {
+                hasError = true
+            }
+        }
+
         override fun onReceivedSslError(view: WebView, handler: SslErrorHandler, error: SslError) {
             handler.cancel()
             if (!hasCommittedPage) {
@@ -264,7 +275,7 @@ class RedeemLinkActivity : InteractionAwareActivity() {
             return
         }
 
-        val challenge = intent.getStringExtra(EXTRA_CHALLENGE)?.trim()?.takeUnless { it.isEmpty() }
+        val challenge = RedeemLinkPolicy.normalizeChallenge(intent.getStringExtra(EXTRA_CHALLENGE))
         val merchantName = intent.getStringExtra(EXTRA_MERCHANT_NAME)
 
         setContentView(
@@ -543,7 +554,6 @@ private fun RedeemLinkScreen(
             style = MyTheme.Typography.TitleSmallSemibold,
             color = colors.textPrimary,
             textAlign = TextAlign.Center,
-            maxLines = 1,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp)
