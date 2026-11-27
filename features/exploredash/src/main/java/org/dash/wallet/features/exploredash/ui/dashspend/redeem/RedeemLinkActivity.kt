@@ -83,7 +83,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
+import androidx.webkit.WebStorageCompat
+import androidx.webkit.WebViewFeature
 import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.WalletDataProvider
@@ -340,10 +343,10 @@ class RedeemLinkActivity : InteractionAwareActivity() {
         val view = webView
         webView = null
 
-        if (isFinishing) {
-            wipeWebData(view)
-        }
         view?.let { destroyWebView(it) }
+        if (isFinishing && canWipeWebData()) {
+            runCatching { wipeWebData {} }
+        }
         super.onDestroy()
     }
 
@@ -358,20 +361,30 @@ class RedeemLinkActivity : InteractionAwareActivity() {
     }
 
     private fun loadRedeemPage(wipeData: Boolean): Boolean {
+        if (!canWipeWebData()) {
+            return false
+        }
         val view = createWebView() ?: return false
         webView?.let { destroyWebView(it) }
         webView = view
 
-        if (wipeData) {
-            wipeWebData(view)
-        }
         host = null
         hasCommittedPage = false
         jsDialogCount = 0
         downloadNoticeShown = false
         hasError = false
         loadProgress = 0
-        view.loadUrl(redeemUrl)
+
+        val load = Runnable {
+            if (view === webView) {
+                view.loadUrl(redeemUrl)
+            }
+        }
+        if (wipeData) {
+            wipeWebData(load)
+        } else {
+            load.run()
+        }
         return true
     }
 
@@ -420,28 +433,18 @@ class RedeemLinkActivity : InteractionAwareActivity() {
         }
     }
 
-    private fun wipeWebData(view: WebView?) {
-        try {
-            WebStorage.getInstance().deleteAllData()
-            CookieManager.getInstance().apply {
-                removeAllCookies(null)
-                flush()
-            }
+    // WebStorage.deleteAllData and clearCache leave service workers and Cache Storage behind.
+    private fun canWipeWebData(): Boolean {
+        return try {
+            WebViewFeature.isFeatureSupported(WebViewFeature.DELETE_BROWSING_DATA)
         } catch (e: Exception) {
-            log.warn("WebView data could not be wiped: {}", e.javaClass.simpleName)
+            log.warn("WebView is not available: {}", e.javaClass.simpleName)
+            false
         }
-        if (view != null) {
-            view.clearCache(true)
-            view.clearHistory()
-        } else {
-            // The HTTP cache is shared by the whole app but can only be cleared through a WebView.
-            runCatching {
-                WebView(applicationContext).apply {
-                    clearCache(true)
-                    destroy()
-                }
-            }
-        }
+    }
+
+    private fun wipeWebData(onWiped: Runnable) {
+        WebStorageCompat.deleteBrowsingData(WebStorage.getInstance(), ContextCompat.getMainExecutor(this), onWiped)
     }
 
     private fun discardWebView(view: WebView) {
