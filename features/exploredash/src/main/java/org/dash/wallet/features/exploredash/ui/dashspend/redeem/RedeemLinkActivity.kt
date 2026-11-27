@@ -85,6 +85,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
+import androidx.webkit.ProxyConfig
+import androidx.webkit.ProxyController
 import androidx.webkit.WebStorageCompat
 import androidx.webkit.WebViewFeature
 import dagger.hilt.android.AndroidEntryPoint
@@ -111,6 +113,12 @@ class RedeemLinkActivity : InteractionAwareActivity() {
         private const val EXTRA_CHALLENGE = "extra_challenge"
         private const val EXTRA_MERCHANT_NAME = "extra_merchant_name"
         private const val MAX_JS_DIALOGS = 3
+
+        // Apps cannot listen on a loopback port below 1024, so a request sent here fails before any data leaves.
+        private const val CLEARTEXT_SINK = "127.0.0.1:9"
+
+        // The proxy override covers every WebView in the process; it is lifted when the last screen closes.
+        private var cleartextBlockUsers = 0
         private val log = LoggerFactory.getLogger(RedeemLinkActivity::class.java)
 
         fun createIntent(context: Context, url: String, challenge: String?, merchantName: String?): Intent {
@@ -133,6 +141,7 @@ class RedeemLinkActivity : InteractionAwareActivity() {
     private var hasCommittedPage = false
     private var jsDialogCount = 0
     private var downloadNoticeShown = false
+    private var blocksCleartext = false
 
     // Auto-logout can be switched off, and then nothing else closes this screen when the device locks.
     private val screenOffReceiver = object : BroadcastReceiver() {
@@ -344,8 +353,11 @@ class RedeemLinkActivity : InteractionAwareActivity() {
         webView = null
 
         view?.let { destroyWebView(it) }
-        if (isFinishing && canWipeWebData()) {
+        if (isFinishing && canIsolate()) {
             runCatching { wipeWebData {} }
+        }
+        if (blocksCleartext && --cleartextBlockUsers == 0) {
+            runCatching { ProxyController.getInstance().clearProxyOverride(ContextCompat.getMainExecutor(this)) {} }
         }
         super.onDestroy()
     }
@@ -361,7 +373,7 @@ class RedeemLinkActivity : InteractionAwareActivity() {
     }
 
     private fun loadRedeemPage(wipeData: Boolean): Boolean {
-        if (!canWipeWebData()) {
+        if (!canIsolate()) {
             return false
         }
         val view = createWebView() ?: return false
@@ -380,10 +392,12 @@ class RedeemLinkActivity : InteractionAwareActivity() {
                 view.loadUrl(redeemUrl)
             }
         }
-        if (wipeData) {
-            wipeWebData(load)
-        } else {
-            load.run()
+        blockCleartext {
+            if (wipeData) {
+                wipeWebData(load)
+            } else {
+                load.run()
+            }
         }
         return true
     }
@@ -434,13 +448,30 @@ class RedeemLinkActivity : InteractionAwareActivity() {
     }
 
     // WebStorage.deleteAllData and clearCache leave service workers and Cache Storage behind.
-    private fun canWipeWebData(): Boolean {
+    private fun canIsolate(): Boolean {
         return try {
-            WebViewFeature.isFeatureSupported(WebViewFeature.DELETE_BROWSING_DATA)
+            WebViewFeature.isFeatureSupported(WebViewFeature.DELETE_BROWSING_DATA) &&
+                WebViewFeature.isFeatureSupported(WebViewFeature.PROXY_OVERRIDE)
         } catch (e: Exception) {
             log.warn("WebView is not available: {}", e.javaClass.simpleName)
             false
         }
+    }
+
+    // No WebViewClient callback runs before a redirected form post is sent, and the app's network security
+    // config permits cleartext, so plain HTTP is routed to a proxy that cannot exist.
+    private fun blockCleartext(onBlocked: Runnable) {
+        val config = ProxyConfig.Builder()
+            .addProxyRule(CLEARTEXT_SINK, ProxyConfig.MATCH_HTTP)
+            .addDirect(ProxyConfig.MATCH_HTTPS)
+            .removeImplicitRules()
+            .build()
+
+        if (!blocksCleartext) {
+            blocksCleartext = true
+            cleartextBlockUsers++
+        }
+        ProxyController.getInstance().setProxyOverride(config, ContextCompat.getMainExecutor(this), onBlocked)
     }
 
     private fun wipeWebData(onWiped: Runnable) {
