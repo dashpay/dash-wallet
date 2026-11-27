@@ -613,7 +613,8 @@ internal fun giftCardRowFromRecord(
     if (!definitiveRecord || record.direction != L1TxUiDirection.OUTGOING || record.netAmountDuffs >= 0L) {
         return entry
     }
-    val cachedAsReceipt = entry.valueSatoshis > 0L
+    // Zero too: dashj renders a value that is not negative as received, "Processing".
+    val cachedAsReceipt = entry.valueSatoshis >= 0L
     if (!cachedAsReceipt && entry.valueSatoshis == record.sentValueWithoutFeeDuffs) return entry
     return entry.copy(
         valueSatoshis = record.sentValueWithoutFeeDuffs,

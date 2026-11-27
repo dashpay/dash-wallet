@@ -722,6 +722,21 @@ class CutoverUiDataServiceTest {
     }
 
     @Test
+    fun syncPlan_giftCardCachedAtZeroIsAReceiptToo() {
+        // No input and no change recognised: dashj values it 0, which it renders
+        // as received and "Processing".
+        val existing = giftCardCachedAsReceipt(9).copy(valueSatoshis = 0L)
+        val sent = record(firstByte = 9, net = -35_459_933, fee = 226, context = 2, direction = 1)
+
+        val plan = planL1DisplaySync(listOf(sent), mapOf(existing.rowId to existing), emptySet(), resolve, now)
+
+        val updated = plan.updates.single()
+        assertEquals(-35_459_707L, updated.valueSatoshis)
+        assertEquals("", updated.statusText)
+        assertEquals(TxDisplayCacheEntry.FLAG_GIFT_CARD or TxDisplayCacheEntry.FLAG_SENT, updated.filterFlags)
+    }
+
+    @Test
     fun syncPlan_giftCardCachedAsReceiptIsLeftWithoutADefinitiveSend() {
         val existing = giftCardCachedAsReceipt(9)
         val byRowId = mapOf(existing.rowId to existing)
