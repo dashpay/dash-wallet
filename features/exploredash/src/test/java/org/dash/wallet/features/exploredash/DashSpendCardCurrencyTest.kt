@@ -62,6 +62,7 @@ import org.dash.wallet.features.exploredash.ui.dashspend.CardCurrencyState
 import org.dash.wallet.features.exploredash.ui.dashspend.CardRateState
 import org.dash.wallet.features.exploredash.ui.dashspend.DashSpendViewModel
 import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardPurchaseBlock
+import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardShoppingCart
 import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
 import org.dash.wallet.features.exploredash.utils.GiftCardCurrency
 import org.dash.wallet.features.exploredash.utils.toCardFormattedString
@@ -967,5 +968,40 @@ class DashSpendCardCurrencyTest {
         assertEquals(500.0, newer?.maxCardPurchase)
         assertNull("the older answer must not be applied", firstLoad.await())
         assertEquals(CardCurrencyState.Known("EUR"), viewModel.cardCurrencyState.value)
+    }
+
+    @Test
+    fun piggyCards_ordersAWholeCartOfSeveralCardsInUsd() = runBlocking {
+        piggyCards.stub { onBlocking { orderGiftcard(any(), any(), any(), any()) } doReturn emptyList() }
+        // rules for CTX merchants: a GBP rate that is absent and a USD one that is there
+        setRate("USD", "25")
+        val cart = mapOf(25.0 to 2, 50.0 to 1)
+        val viewModel = viewModel()
+        viewModel.selectedProvider = GiftCardProviderType.PiggyCards
+        viewModel.setGiftCardMerchant(merchant())
+        viewModel.setIsFixedDenomination(false)
+        viewModel.setIsFixedDenominationMultiple(true)
+        viewModel.setGiftCardOrderQuantities(cart)
+
+        // what only a CTX merchant reacts to
+        viewModel.setIsFixedDenomination(true)
+        viewModel.setGiftCardMerchant(merchant())
+        viewModel.updateMerchantDetails(merchant())
+        viewModel.selectedProvider = GiftCardProviderType.PiggyCards
+
+        assertEquals("USD", viewModel.cardCurrency)
+        assertNull(viewModel.purchaseBlock)
+        assertEquals(cart, viewModel.giftCardOrderInfo.value)
+        assertEquals(true, viewModel.isFixedDenominationMultiple.value)
+
+        viewModel.buy()
+
+        val ordered = argumentCaptor<GiftCardShoppingCart>()
+        verifyBlocking(piggyCards) {
+            orderGiftcard(eq("DASH"), eq("USD"), ordered.capture(), eq("piggycards-source"))
+        }
+        assertEquals(listOf(25.0 to 2, 50.0 to 1), ordered.firstValue.map { it.value to it.quantity })
+        assertEquals(3, ordered.firstValue.cardCount())
+        verifyBlocking(api, never()) { purchaseGiftCard(any()) }
     }
 }
