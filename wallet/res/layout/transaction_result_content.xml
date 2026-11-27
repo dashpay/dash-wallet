@@ -318,6 +318,38 @@
                 app:layout_constraintTop_toTopOf="parent"
                 tools:text="2014-01-19 01:40" />
         </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <!-- Settlement status of a shielded-pool activity entry (Platform activity detail only). -->
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/status_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingVertical="12dp"
+            android:visibility="gone"
+            tools:visibility="visible">
+
+            <TextView
+                android:id="@+id/transaction_status_label"
+                style="@style/Caption.Medium.Tertiary"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/transaction_details_status"
+                android:textSize="13sp"
+                app:layout_constraintBottom_toBottomOf="@id/transaction_status"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="@id/transaction_status" />
+
+            <TextView
+                android:id="@+id/transaction_status"
+                style="@style/Caption"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="end"
+                android:textSize="13sp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                tools:text="Processing" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
     </LinearLayout>
 
     <RelativeLayout

@@ -20,6 +20,8 @@ package de.schildbach.wallet.database.entity
 import android.content.Context
 import android.graphics.Bitmap
 import android.text.format.DateUtils
+import androidx.annotation.DrawableRes
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import de.schildbach.wallet.ui.transactions.TransactionRowView
@@ -89,9 +91,24 @@ data class TxDisplayCacheEntry(
     /** Hex id of the merchant/service icon bitmap in the `icon_bitmaps` table, or null if none.
      *  The bitmap itself is not cached here — it is re-loaded at display time from the
      *  [TransactionMetadataProvider] so the row stays small. See [toTransactionRowView]. */
-    val customIconId: String? = null
+    val customIconId: String? = null,
+    /**
+     * Which history the row belongs to: [SOURCE_L1] (a Core transaction, `rowId` = txid
+     * hex or a CoinJoin/CrowdNode group id) or [SOURCE_SHIELDED] (an SDK shielded-pool
+     * activity entry, `rowId` = `shielded:<accountIndex>:<entryIdHex>`, see
+     * [de.schildbach.wallet.service.platform.sdk.shieldedHistoryRowId]). The two writers
+     * own disjoint row sets: the L1 writers never delete or count [SOURCE_SHIELDED] rows
+     * (their row ids cannot collide either, thanks to the prefix), and the shielded sync
+     * only ever replaces [SOURCE_SHIELDED] rows. Added in schema version 23.
+     */
+    @ColumnInfo(defaultValue = "0")
+    val source: Int = SOURCE_L1
 ) {
     companion object {
+        // ── Row source constants (stable, persisted) ─────────────────────────────────
+        const val SOURCE_L1 = 0
+        const val SOURCE_SHIELDED = 1
+
         // ── Icon type constants (stable across app versions) ────────────────────────
         const val ICON_RECEIVED  = 0
         const val ICON_SENT      = 1
@@ -117,6 +134,18 @@ data class TxDisplayCacheEntry(
 
         /** Cached date/time format — same as [TxResourceMapper.dateTimeFormat] but avoids instantiation. */
         private const val DATE_TIME_FORMAT = DateUtils.FORMAT_SHOW_TIME
+
+        /** The drawable for a stable [iconType] constant ([ICON_*]); unknown types render as received. */
+        @DrawableRes
+        fun iconResFor(iconType: Int): Int = when (iconType) {
+            ICON_SENT      -> R.drawable.ic_transaction_sent
+            ICON_INTERNAL  -> R.drawable.ic_internal
+            ICON_ERROR     -> R.drawable.ic_transaction_failed
+            ICON_GIFT_CARD -> R.drawable.ic_gift_card_tx
+            ICON_COINJOIN  -> R.drawable.ic_coinjoin_mixing_group
+            ICON_CONVERT   -> R.drawable.ic_convert_circle
+            else           -> R.drawable.ic_transaction_received
+        }
 
         /** Convert a [TransactionRowView] (which uses current resource IDs) to a cache entry. */
         fun fromTransactionRowView(
@@ -178,15 +207,7 @@ data class TxDisplayCacheEntry(
         contact: DashPayProfile? = null,
         iconBitmap: Bitmap? = null
     ): TransactionRowView {
-        val iconRes = when (iconType) {
-            ICON_SENT      -> R.drawable.ic_transaction_sent
-            ICON_INTERNAL  -> R.drawable.ic_internal
-            ICON_ERROR     -> R.drawable.ic_transaction_failed
-            ICON_GIFT_CARD -> R.drawable.ic_gift_card_tx
-            ICON_COINJOIN  -> R.drawable.ic_coinjoin_mixing_group
-            ICON_CONVERT   -> R.drawable.ic_convert_circle
-            else           -> R.drawable.ic_transaction_received
-        }
+        val iconRes = iconResFor(iconType)
         val bgRes = when (iconBgType) {
             BG_SENT    -> R.style.TxSentBackground
             BG_ERROR   -> R.style.TxErrorBackground

@@ -37,7 +37,9 @@ import org.dash.wallet.common.ui.components.MerchantNameIcon
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.service.platform.sdk.AssetLockKind
+import de.schildbach.wallet.database.entity.TxDisplayCacheEntry
 import de.schildbach.wallet.service.platform.sdk.L1TxUiStatus
+import de.schildbach.wallet.service.platform.sdk.PlatformActivityDetail
 import de.schildbach.wallet.service.platform.sdk.SdkTxDetail
 import de.schildbach.wallet.service.platform.sdk.assetLockTitleRes
 import de.schildbach.wallet.ui.DashPayUserActivity
@@ -89,6 +91,9 @@ class TransactionResultViewBinder(
 
     private lateinit var transaction: Transaction
     private var sdkDetail: SdkTxDetail? = null
+
+    /** Non-null after [bindPlatformActivityDetail]: a shielded-pool entry with no Core tx. */
+    private var platformDetail: PlatformActivityDetail? = null
 
     /**
      * Bug A: a direction/amount/fee/address override for a dashj-held transaction
@@ -273,43 +278,24 @@ class TransactionResultViewBinder(
         this.sdkDetail = detail
         val isSent = detail.isSent
 
-        if (isSent) {
-            binding.transactionTitle.setTextColor(ContextCompat.getColor(context, R.color.dash_blue))
+        val title = if (isSent) {
             // A Platform-funding asset lock (upgrade / top-up / invite) surfaces
             // its "…Fee" title instead of the generic "Amount Sent".
             sdkAssetLockKind = detail.assetLockKind
-            binding.transactionTitle.text = detail.assetLockKind
+            detail.assetLockKind
                 ?.let { context.getText(assetLockTitleRes(it)) }
                 ?: context.getText(R.string.transaction_details_amount_sent)
-            binding.transactionAmountSignal.text = "-"
         } else {
-            binding.transactionTitle.setTextColor(ContextCompat.getColor(context, R.color.system_green))
-            binding.transactionTitle.text = context.getText(R.string.transaction_details_amount_received)
-            binding.transactionAmountSignal.text = "+"
+            context.getText(R.string.transaction_details_amount_received)
         }
-        binding.transactionAmountSignal.isVisible = true
-        updateIcon()
-
-        binding.dashAmount.setFormat(dashFormat)
-        binding.dashAmount.setAmount(Coin.valueOf(kotlin.math.abs(detail.netAmountDuffs)))
         // No exchange rate is recorded for SDK-only transactions.
-        binding.fiatValue.isVisible = false
-
-        val fee = detail.feeDuffs?.let { Coin.valueOf(it) }
-        binding.feeContainer.isVisible = isFeeAvailable(fee)
-        if (isFeeAvailable(fee)) {
-            binding.transactionFee.setFormat(dashFormat)
-            binding.transactionFee.setAmount(fee)
-        }
-
-        binding.dateContainer.isVisible = detail.timestampMs > 0
-        if (detail.timestampMs > 0) {
-            binding.transactionDateAndTime.text = DateUtils.formatDateTime(
-                context,
-                detail.timestampMs,
-                DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_SHOW_TIME
-            )
-        }
+        bindHeader(
+            outgoing = isSent,
+            title = title,
+            amountDuffs = kotlin.math.abs(detail.netAmountDuffs),
+            feeDuffs = detail.feeDuffs,
+            timestampMs = detail.timestampMs
+        )
 
         val inflater = LayoutInflater.from(context)
         when {
@@ -322,6 +308,93 @@ class TransactionResultViewBinder(
         }
         setStringInputs(detail.inputAddresses, inflater)
         setStringOutputs(detail.outputAddresses, detail.hasOpReturn, inflater)
+    }
+
+    /**
+     * Bind a shielded-pool activity entry (no Core transaction): kind title, the
+     * principal with its sign, the fee (when recorded), date, settlement status,
+     * the From / To balances and the memo. Everything txid-keyed — block
+     * explorer, tax category, private memo, report issue — and the fiat value
+     * (no rate is recorded) are hidden.
+     */
+    fun bindPlatformActivityDetail(detail: PlatformActivityDetail) {
+        this.platformDetail = detail
+
+        bindHeader(
+            outgoing = detail.outgoing,
+            title = context.getText(detail.titleRes),
+            amountDuffs = detail.principalDuffs,
+            feeDuffs = detail.feeDuffs,
+            timestampMs = detail.timestampMs
+        )
+
+        binding.statusContainer.isVisible = detail.pending
+        if (detail.pending) {
+            binding.transactionStatus.setText(R.string.transaction_row_status_processing)
+        }
+
+        // From / To: balance names, not addresses. A null side is an external
+        // counterparty (another wallet), which the entry does not name.
+        val inflater = LayoutInflater.from(context)
+        binding.transactionInputAddressesContainer.removeAllViews()
+        binding.transactionOutputAddressesContainer.removeAllViews()
+        binding.transactionOutputOpReturnsContainer.removeAllViews()
+        binding.inputAddressesLabel.setText(R.string.external_send_from)
+        binding.outputAddressesLabel.setText(R.string.external_send_to)
+        setStringInputs(listOfNotNull(detail.fromBalanceRes?.let(context::getString)), inflater)
+        setStringOutputs(listOfNotNull(detail.toBalanceRes?.let(context::getString)), false, inflater)
+
+        binding.paymentMemoContainer.isVisible = !detail.memo.isNullOrEmpty()
+        binding.paymentMemo.text = detail.memo.orEmpty()
+
+        binding.errorContainer.isVisible = false
+        binding.openTaxCategoryCard.isVisible = false
+        binding.privateMemo.isVisible = false
+        binding.openExplorerCard.isVisible = false
+        binding.openProviderExplorerCard.isVisible = false
+        binding.reportIssueCard.isVisible = false
+    }
+
+    /**
+     * The header shared by [bindSdkDetail] and [bindPlatformActivityDetail]: title
+     * (blue for [outgoing], green otherwise) with its sign, the icon, the amount
+     * without fiat (no rate is recorded for either), the fee when positive, and the
+     * date when known.
+     */
+    private fun bindHeader(
+        outgoing: Boolean,
+        title: CharSequence,
+        amountDuffs: Long,
+        feeDuffs: Long?,
+        timestampMs: Long
+    ) {
+        binding.transactionTitle.setTextColor(
+            ContextCompat.getColor(context, if (outgoing) R.color.dash_blue else R.color.system_green)
+        )
+        binding.transactionTitle.text = title
+        binding.transactionAmountSignal.text = if (outgoing) "-" else "+"
+        binding.transactionAmountSignal.isVisible = true
+        updateIcon()
+
+        binding.dashAmount.setFormat(dashFormat)
+        binding.dashAmount.setAmount(Coin.valueOf(amountDuffs))
+        binding.fiatValue.isVisible = false
+
+        val fee = feeDuffs?.let { Coin.valueOf(it) }
+        binding.feeContainer.isVisible = isFeeAvailable(fee)
+        if (fee != null && isFeeAvailable(fee)) {
+            binding.transactionFee.setFormat(dashFormat)
+            binding.transactionFee.setAmount(fee)
+        }
+
+        binding.dateContainer.isVisible = timestampMs > 0
+        if (timestampMs > 0) {
+            binding.transactionDateAndTime.text = DateUtils.formatDateTime(
+                context,
+                timestampMs,
+                DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_SHOW_TIME
+            )
+        }
     }
 
     private fun setStringInputs(addresses: List<String>, inflater: LayoutInflater) {
@@ -439,7 +512,8 @@ class TransactionResultViewBinder(
     private fun updateIcon() {
         val sdkDetail = this.sdkDetail
         val sdkOverride = this.sdkOverride
-        if (!::transaction.isInitialized && sdkDetail == null) {
+        val platformDetail = this.platformDetail
+        if (!::transaction.isInitialized && sdkDetail == null && platformDetail == null) {
             return
         }
 
@@ -452,6 +526,8 @@ class TransactionResultViewBinder(
             R.drawable.ic_transaction_failed
         } else if (iconRes != null) {
             iconRes!!
+        } else if (platformDetail != null) {
+            TxDisplayCacheEntry.iconResFor(platformDetail.iconType)
         } else if (sdkDetail != null) {
             when {
                 !sdkDetail.isSent -> R.drawable.ic_transaction_received
