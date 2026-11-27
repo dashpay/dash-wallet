@@ -56,6 +56,8 @@ import de.schildbach.wallet.ui.main.shortcuts.ShortcutsViewModel
 import org.dash.wallet.common.data.PaymentIntent
 import de.schildbach.wallet.ui.*
 import de.schildbach.wallet.ui.payments.PaymentsFragment
+import de.schildbach.wallet.ui.payments.send.ExternalSendViewModel
+import org.dash.wallet.common.payments.parsers.AddressNetwork
 import de.schildbach.wallet.ui.payments.paymentsRoute
 import de.schildbach.wallet.ui.payments.SweepWalletActivity
 import de.schildbach.wallet.ui.send.SendCoinsActivity
@@ -112,7 +114,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
 
         if (result.resultCode == Activity.RESULT_OK && intent != null) {
             val input = intent.getStringExtra(ScanActivity.INTENT_EXTRA_RESULT)
-            input?.let { handleString(input, R.string.button_scan, R.string.input_parser_cannot_classify) }
+            input?.let { handleScanResult(it) }
         }
     }
 
@@ -318,6 +320,39 @@ class WalletFragment : Fragment(R.layout.home_content) {
     private fun handlePayToAddress() {
         viewModel.logEvent(AnalyticsConstants.Home.SHORTCUT_SEND_TO_ADDRESS)
         safeNavigate(WalletFragmentDirections.homeToAddressInput())
+    }
+
+    /**
+     * A Home "Scan QR" result. In Advanced mode the Advanced Send tab's classification picks
+     * Platform/Shielded/Core/identity destinations for the external send flow; everything
+     * else, and every scan with Advanced mode off, takes the legacy [handleString] path.
+     */
+    private fun handleScanResult(input: String) {
+        // fully qualified: this file already imports org.dash.wallet.common.util.Constants
+        val route = homeScanRoute(
+            input,
+            viewModel.advancedMode.value,
+            AddressNetwork.fromId(de.schildbach.wallet.Constants.NETWORK_PARAMETERS.id),
+            de.schildbach.wallet.Constants.SUPPORTS_CONNECT,
+            DashConnectUri::isConnectUri
+        )
+        when (route) {
+            is HomeScanRoute.ExternalSend -> openExternalSend(route.input)
+            HomeScanRoute.WrongNetwork -> AdaptiveDialog.create(
+                R.drawable.ic_error,
+                getString(R.string.error),
+                getString(R.string.external_send_wrong_network),
+                getString(R.string.button_dismiss)
+            ).show(requireActivity())
+            HomeScanRoute.Legacy -> handleString(input, R.string.button_scan, R.string.input_parser_cannot_classify)
+        }
+    }
+
+    private fun openExternalSend(prefill: String) {
+        val navController = findNavController()
+        // Only from Home, so a result delivered after navigating away does nothing.
+        if (navController.currentDestination?.getAction(R.id.home_to_externalSend) == null) return
+        navController.navigate(R.id.home_to_externalSend, bundleOf(ExternalSendViewModel.ARG_PREFILL to prefill))
     }
 
     private fun handleString(input: String, errorDialogTitleResId: Int, cannotClassifyCustomMessageResId: Int) {

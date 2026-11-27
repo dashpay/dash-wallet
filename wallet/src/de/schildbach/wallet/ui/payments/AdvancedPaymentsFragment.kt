@@ -51,6 +51,7 @@ import de.schildbach.wallet.ui.payments.PaymentsFragment.Companion.ACTIVE_TAB_IN
 import de.schildbach.wallet.ui.payments.PaymentsFragment.Companion.ACTIVE_TAB_RECEIVE
 import de.schildbach.wallet.ui.payments.PaymentsFragment.Companion.ARG_ACTIVE_TAB
 import de.schildbach.wallet.ui.payments.PaymentsFragment.Companion.ARG_SOURCE
+import de.schildbach.wallet.ui.payments.send.AdvancedSendFragment
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentAdvancedPaymentsBinding
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -70,8 +71,8 @@ import org.dash.wallet.common.ui.viewBinding
  * Receive / Internal / Send picker right under the status bar, above the bottom
  * navigation (`ShowNavBar` on the destination), over the payments pages.
  *
- * Receive is [AdvancedReceiveFragment] (the Compose [ReceivePage]); Internal and Send
- * are the same child pages as [PaymentsFragment]'s. The enter/exit transitions are on
+ * Receive is [AdvancedReceiveFragment] (the Compose [ReceivePage]), Send is
+ * [AdvancedSendFragment] (MO-1121); Internal is the same child page as [PaymentsFragment]'s. The enter/exit transitions are on
  * the NavOptions (see [paymentsRoute]). There is no close control: like the other
  * bottom-nav screens it is left through the bottom navigation or Back.
  *
@@ -265,7 +266,7 @@ class AdvancedPaymentsFragment : Fragment(R.layout.fragment_advanced_payments) {
         override fun createFragment(position: Int): Fragment = when (tabIds[position]) {
             ACTIVE_TAB_RECEIVE -> AdvancedReceiveFragment.newInstance()
             ACTIVE_TAB_INTERNAL -> PaymentsInternalFragment.newInstance()
-            else -> PaymentsPayFragment.newInstance(source = source)
+            else -> AdvancedSendFragment.newInstance(source = source)
         }
     }
 }

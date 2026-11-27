@@ -458,12 +458,17 @@ private val sdkWipeLog = LoggerFactory.getLogger("de.schildbach.wallet.service.p
  * walletManagerStore) followed by `bootstrap()` (`Sdk.initialize` →
  * logging → per-network `Sdk.create`) and `activateManager()`
  * (`WalletManagerStore.activate` → `loadPersistedWallets`). The example's
- * remaining steps are intentionally deferred:
+ * remaining steps live elsewhere or are intentionally deferred:
  *
  * - `loadKnownContractsIntoSdk` — no contracts are persisted yet (3b),
- * - sync-service binding (`platformBalanceSyncService.configure`,
- *   `startPlatformAddressSync` / `startShieldedSync` /
- *   `startDashPaySync`) — Phase 3b/4,
+ * - sync-service binding: the example's `rebindWalletScopedServices` is
+ *   split across the app. The Platform-address loop
+ *   (`startPlatformAddressSync`) is started and stopped by
+ *   [PlatformAddressSyncService] from the blockchain service's engine kick /
+ *   `stopSdkEngines()`, and the shielded loop by [ShieldedBalanceServiceImpl].
+ *   `platformBalanceSyncService.configure` is not used (it only reflects the
+ *   loop for the example's Sync tab), and `startDashPaySync` stays deferred
+ *   (DashPay contacts still sync on dashj),
  * - network-switch observer — the app's network is flavor-fixed.
  *
  * @param mnemonicProvider the Phase 3b seed bridge

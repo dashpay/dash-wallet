@@ -1260,6 +1260,14 @@ class SdkShieldedUsernameCreationTest {
                 DashSdkError.PlatformWallet.ShieldedInviteAlreadyClaimed("")
             )
         )
+        // A typed unconfirmed outcome is never terminal, whatever its diagnostic quotes.
+        for (unconfirmed in listOf<Throwable>(
+            DashSdkError.StateTransitionResultUnconfirmed("Object already exists: tx already exists in cache"),
+            DashSdkError.PlatformWallet.ShieldedSpendUnconfirmed("nullifier already spent"),
+            DashSdkError.PlatformWallet.TransactionBroadcastUnconfirmed("outpoint already used")
+        )) {
+            assertFalse(SdkShieldedUsernameCreation.isInviteAlreadyUsedFailure(unconfirmed))
+        }
         // The fail-closed denomination refusal is NOT already-used — it is the
         // only refusal the ladder may descend on.
         assertFalse(

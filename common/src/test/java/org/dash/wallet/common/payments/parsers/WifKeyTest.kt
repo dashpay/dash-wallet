@@ -156,4 +156,13 @@ class WifKeyTest {
             WifKey.encode(AddressNetwork.DASH_MAINNET, ByteArray(33), false)
         }
     }
+
+    @Test
+    fun checksumValidEmptyPayload_isAFormatError_notACrash() {
+        // "3QJmnh" is the Base58Check encoding of ZERO bytes: a valid checksum, no version byte.
+        assertEquals(0, Base58.decodeChecked("3QJmnh").size)
+        assertThrows(AddressFormatException::class.java) { WifKey.decode("3QJmnh") }
+        assertThrows(AddressFormatException::class.java) { WifKey.decode("3QJmnh", AddressNetwork.DASH_MAINNET) }
+        assertThrows(AddressFormatException::class.java) { WifKey.decodeDash("3QJmnh") }
+    }
 }
