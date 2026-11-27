@@ -105,7 +105,15 @@ abstract class BaseConfig(
         produceMigrations = { migrations }
     )
 
-    protected val data = context.dataStore.data
+    /**
+     * The store's preferences WITHOUT [data]'s IOException rescue: an unreadable
+     * store arrives as the THROW it was, not as [emptyPreferences]. The one source
+     * for [data] and the `*PreservingErrors` reads; collect it (with a retry such as
+     * `retryReadErrors`) where "could not read" must not pass for "never written".
+     */
+    protected val dataPreservingErrors: Flow<Preferences> = context.dataStore.data
+
+    protected val data = dataPreservingErrors
         .catch { exception ->
             if (exception is IOException) {
                 emit(emptyPreferences())
@@ -146,7 +154,7 @@ abstract class BaseConfig(
      * IOException, for the caller to fail closed on.
      */
     open fun <T> observePreservingErrors(key: Preferences.Key<T>): Flow<T?> {
-        return context.dataStore.data.map { preferences -> preferences[key] }
+        return dataPreservingErrors.map { preferences -> preferences[key] }
     }
 
     open suspend fun <T> get(key: Preferences.Key<T>): T? {
