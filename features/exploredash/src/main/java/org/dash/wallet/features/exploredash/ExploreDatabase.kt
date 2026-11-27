@@ -55,7 +55,7 @@ import kotlin.coroutines.resumeWithException
         AtmFTS::class,
         GiftCardProvider::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = true
 )
 @TypeConverters(RoomConverters::class)

@@ -57,7 +57,9 @@ data class Merchant(
     @Ignore var fixedDenomination: Boolean = false,
     @Ignore var denominations: List<Double> = listOf(),
     @Ignore var giftCardProviders: List<GiftCardProvider> = listOf(),
-    @Ignore var quantities: Map<Double, Int> = mapOf()
+    @Ignore var quantities: Map<Double, Int> = mapOf(),
+    var country: String? = null,
+    var currency: String? = null
 ) : SearchResult() {
 
     // 1% discount is 0.01
