@@ -24,11 +24,11 @@ import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import junit.framework.TestCase.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.job
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
 import net.lingala.zip4j.ZipFile
 import net.lingala.zip4j.model.ZipParameters
 import net.lingala.zip4j.model.enums.AesKeyStrength
@@ -43,6 +43,7 @@ import org.mockito.ArgumentMatchers.anyLong
 import org.mockito.kotlin.*
 import org.robolectric.RobolectricTestRunner
 import java.io.File
+import java.io.IOException
 import java.lang.IllegalArgumentException
 import java.lang.RuntimeException
 
@@ -90,7 +91,7 @@ class ExploreDatabaseTest {
         private const val FIXTURE_PASSWORD = "test"
 
         /**
-         * Builds a v4 Room DB at a temp location, optionally inserts a dummy merchant +
+         * Builds a Room DB of the current version at a temp location, optionally inserts a dummy merchant +
          * atm row, then wraps the resulting SQLite file in a password-protected zip
          * with a "<timestamp>#<password>" comment — matching the format produced by
          * the Firebase Storage publisher and consumed by [GCExploreDatabase].
@@ -117,20 +118,30 @@ class ExploreDatabaseTest {
                     room.close()
                 }
 
-                val innerFile = context.getDatabasePath(innerName)
-                outputFile.delete()
-                ZipFile(outputFile, FIXTURE_PASSWORD.toCharArray()).use { zip ->
-                    val params = ZipParameters().apply {
-                        isEncryptFiles = true
-                        encryptionMethod = EncryptionMethod.AES
-                        aesKeyStrength = AesKeyStrength.KEY_STRENGTH_256
-                        fileNameInZip = "explore.db"
-                    }
-                    zip.addFile(innerFile, params)
-                    zip.comment = "${System.currentTimeMillis()}#$FIXTURE_PASSWORD"
-                }
+                zipExploreDb(context.getDatabasePath(innerName), outputFile)
             } finally {
                 context.deleteDatabase(innerName)
+            }
+        }
+
+        private fun zipExploreDb(innerFile: File, outputFile: File) {
+            outputFile.delete()
+            ZipFile(outputFile, FIXTURE_PASSWORD.toCharArray()).use { zip ->
+                val params = ZipParameters().apply {
+                    isEncryptFiles = true
+                    encryptionMethod = EncryptionMethod.AES
+                    aesKeyStrength = AesKeyStrength.KEY_STRENGTH_256
+                    fileNameInZip = "explore.db"
+                }
+                zip.addFile(innerFile, params)
+                zip.comment = "${System.currentTimeMillis()}#$FIXTURE_PASSWORD"
+            }
+        }
+
+        private fun createPopulatedVersion4(file: File) {
+            createExploreDatabaseVersion4(file) { v4 ->
+                v4.execSQL("INSERT INTO merchant (name) VALUES ('dummy merchant')")
+                v4.execSQL("INSERT INTO atm (name) VALUES ('dummy atm')")
             }
         }
     }
@@ -167,6 +178,7 @@ class ExploreDatabaseTest {
         } catch (ex: SQLiteException) {
             println("Got expected SQLiteException: ${ex.message}")
             assertFalse("This case should not update the timestamp", timestamp > 0)
+            assertEquals("A failed update must not record the schema version", 0, prefsState.localDbSchemaVersion)
         } finally {
             database?.close()
         }
@@ -257,24 +269,107 @@ class ExploreDatabaseTest {
         recovered.close()
     }
 
+    private fun updateConfig() = mock<ExploreConfig> {
+        on { exploreDatabasePrefs } doAnswer { flowOf(prefsState) }
+        onBlocking { saveExploreDatabasePrefs(any()) } doAnswer { invocation ->
+            prefsState = invocation.arguments[0] as ExploreDatabasePrefs
+        }
+        onBlocking { get<String>(any()) } doReturn null
+    }
+
+    private fun stageUpdateFile(repository: GCExploreDatabase): Long {
+        GOOD_EXPLORE_DB.copyTo(repository.getUpdateFile(), overwrite = true)
+        return ZipFile(GOOD_EXPLORE_DB).use { it.comment.split("#")[0].toLong() }
+    }
+
     @Test
-    fun goodPreloadedDb_updatesLocalTimestamp() = runTest {
+    fun goodUpdate_recordsTimestampAndSchemaVersion() = runTest {
+        val config = updateConfig()
+        val repository = GCExploreDatabase(appContext, config, mock(), mock())
+        val expectedTimestamp = stageUpdateFile(repository)
+        val daoFromBeforeTheUpdate = ExploreDatabase.getAppDatabase(appContext, config).merchantDao()
+
+        ExploreDatabase.updateDatabase(appContext, repository, config)
+
+        assertEquals("Wrong timestamp set;", expectedTimestamp, prefsState.localDbTimestamp)
+        assertEquals(ExploreDatabase.VERSION, prefsState.localDbSchemaVersion)
+        assertEquals(expectedTimestamp, prefsState.localDbTimestampFor(ExploreDatabase.VERSION))
+        ExploreDatabase.getAppDatabase(appContext, config).openHelper.readableDatabase
+            .query("SELECT count(*) FROM merchant").use { cursor ->
+                cursor.moveToFirst()
+                assertEquals(1, cursor.getInt(0))
+            }
+        // Injected DAOs outlive the swap; the country list is read through one right after a sync
+        assertEquals(listOf<String>(), withContext(Dispatchers.IO) { daoFromBeforeTheUpdate.getCountries() })
+        assertEquals(1, withContext(Dispatchers.IO) { daoFromBeforeTheUpdate.getCount() })
+    }
+
+    @Test
+    fun updateThatCannotReplaceTheDatabase_recordsNothing() = runTest {
+        val config = updateConfig()
+        val repository = GCExploreDatabase(appContext, config, mock(), mock())
+        stageUpdateFile(repository)
+        // A non-empty directory in the database's place makes the final rename fail
+        val blocker = appContext.getDatabasePath("explore-database")
+        File(blocker, "child").apply { parentFile!!.mkdirs() }.writeText("x")
+
+        try {
+            ExploreDatabase.updateDatabase(appContext, repository, config)
+            fail("the update should not have replaced the database")
+        } catch (ex: IOException) {
+            assertEquals(0L, prefsState.localDbTimestamp)
+            assertEquals(0, prefsState.localDbSchemaVersion)
+        } finally {
+            blocker.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun localTimestamp_fromAnotherSchemaVersion_countsAsNoData() {
+        val upgraded = ExploreDatabasePrefs(localDbTimestamp = 1_234_567_890L)
+        assertEquals(0L, upgraded.localDbTimestampFor(ExploreDatabase.VERSION))
+
+        val older = upgraded.copy(localDbSchemaVersion = ExploreDatabase.VERSION - 1)
+        assertEquals(0L, older.localDbTimestampFor(ExploreDatabase.VERSION))
+
+        val current = upgraded.copy(localDbSchemaVersion = ExploreDatabase.VERSION)
+        assertEquals(1_234_567_890L, current.localDbTimestampFor(ExploreDatabase.VERSION))
+    }
+
+    @Test
+    fun version4UpdateFile_isMigratedWhenLoaded() = runTest {
+        val inner = appContext.getDatabasePath("explore-v4-inner")
+        createPopulatedVersion4(inner)
+        val v4File = File(appContext.cacheDir, "explore-v4.zip")
+        zipExploreDb(inner, v4File)
+        appContext.deleteDatabase(inner.name)
         val dbBuilder =
             Room.databaseBuilder(appContext, ExploreDatabase::class.java, "explore.db").allowMainThreadQueries()
 
-        val zipFile = ZipFile(GOOD_EXPLORE_DB)
-        val expectedTimestamp = zipFile.comment.split("#")[0].toLong()
-        zipFile.close()
+        val database = ExploreDatabase.preloadAndOpen(dbBuilder, repo, v4File)
 
-        val database = ExploreDatabase.preloadAndOpen(dbBuilder, repo, GOOD_EXPLORE_DB)
-
-        // finalizeUpdate() launches its update on repo.configScope (Dispatchers.IO).
-        // Wait for the launch to drain so the assertion isn't racy.
-        repo.configScope.coroutineContext.job.children.forEach { child: Job -> child.join() }
-
-        println(timestamp)
-        assertTrue("This case should update the timestamp", timestamp > 0)
-        assertEquals("Wrong timestamp set;", expectedTimestamp, timestamp)
+        assertEquals(5, database.openHelper.readableDatabase.version)
+        assertEquals(1, database.merchantDao().getCount())
+        assertEquals(listOf<String>(), database.merchantDao().getCountries())
         database.close()
+    }
+
+    @Test
+    fun version4LocalDb_isMigratedInPlaceAndKeepsItsRows() = runTest {
+        createPopulatedVersion4(appContext.getDatabasePath("explore-database"))
+        val mockConfig = mock<ExploreConfig> {
+            onBlocking { get<String>(any()) } doReturn null
+        }
+
+        val database = ExploreDatabase.getAppDatabase(appContext, mockConfig)
+
+        val db = database.openHelper.readableDatabase
+        assertEquals(5, db.version)
+        for (table in listOf("merchant", "atm")) {
+            db.query("SELECT count(*) FROM $table").use { cursor ->
+                cursor.moveToFirst()
+                assertEquals("$table rows must survive the migration", 1, cursor.getInt(0))
+            }
+        }
     }
 }

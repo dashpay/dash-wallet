@@ -101,6 +101,52 @@
             </androidx.cardview.widget.CardView>
 
             <TextView
+                android:id="@+id/country_label"
+                style="@style/Caption.SemiBold.Secondary"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="15dp"
+                android:visibility="gone"
+                android:text="@string/explore_country" />
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/country_btn"
+                android:layout_width="match_parent"
+                android:layout_height="46dp"
+                android:layout_marginTop="10dp"
+                android:layout_marginBottom="26dp"
+                android:background="@drawable/rounded_ripple_background"
+                android:clickable="true"
+                android:focusable="true"
+                android:paddingHorizontal="15dp"
+                android:theme="@style/ListViewButtonBackground"
+                android:visibility="gone"
+                tools:background="@color/background_secondary">
+
+                <TextView
+                    android:id="@+id/country_name"
+                    style="@style/Body2.Medium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="20dp"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    tools:text="United States" />
+
+                <ImageView
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:rotation="180"
+                    android:src="@drawable/ic_chevron"
+                    app:tint="@color/dark_gray"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <TextView
                 android:id="@+id/location_label"
                 style="@style/Caption.SemiBold.Secondary"
                 android:layout_width="wrap_content"

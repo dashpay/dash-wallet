@@ -32,8 +32,13 @@ data class ExploreDatabasePrefs(
     val lastSyncTimestamp: Long = 0,
     val preloadedOnTimestamp: Long = 0,
     val failedSyncAttempts: Int = 0,
-    val preloadedTestDb: Boolean = false
-)
+    val preloadedTestDb: Boolean = false,
+    val localDbSchemaVersion: Int = 0
+) {
+    // Each schema version has its own remote file, so data fetched for another one is never up to date
+    fun localDbTimestampFor(schemaVersion: Int): Long =
+        if (localDbSchemaVersion == schemaVersion) localDbTimestamp else 0
+}
 
 @Singleton
 open class ExploreConfig @Inject constructor(
@@ -66,6 +71,8 @@ open class ExploreConfig @Inject constructor(
         val PRELOADED_ON_TIMESTAMP = longPreferencesKey("preloaded_on")
         val FAILED_SYNC_ATTEMPTS = intPreferencesKey("failed_sync_attempts")
         val PRELOADED_TEST_DB = booleanPreferencesKey("preloaded_test_database")
+        val LOCAL_DB_SCHEMA_VERSION = intPreferencesKey("local_db_schema_version")
+        val SELECTED_COUNTRY = stringPreferencesKey("selected_country")
 
         val HAS_INFO_SCREEN_BEEN_SHOWN = booleanPreferencesKey("has_info_screen_been_shown")
         val HAS_LOCATION_DIALOG_BEEN_SHOWN = booleanPreferencesKey("has_location_dialog_been_shown")
@@ -79,9 +86,18 @@ open class ExploreConfig @Inject constructor(
                 lastSyncTimestamp = prefs[LAST_SYNC_TIMESTAMP] ?: 0,
                 preloadedOnTimestamp = prefs[PRELOADED_ON_TIMESTAMP] ?: 0,
                 failedSyncAttempts = prefs[FAILED_SYNC_ATTEMPTS] ?: 0,
-                preloadedTestDb = prefs[PRELOADED_TEST_DB] ?: false
+                preloadedTestDb = prefs[PRELOADED_TEST_DB] ?: false,
+                localDbSchemaVersion = prefs[LOCAL_DB_SCHEMA_VERSION] ?: 0
             )
         }
+
+    open val selectedCountry: Flow<String?> = data.map { prefs -> prefs[SELECTED_COUNTRY] }
+
+    open suspend fun setSelectedCountry(country: String?) {
+        context.dataStore.edit { prefs ->
+            if (country == null) prefs.remove(SELECTED_COUNTRY) else prefs[SELECTED_COUNTRY] = country
+        }
+    }
 
     open suspend fun saveExploreDatabasePrefs(databasePrefs: ExploreDatabasePrefs) {
         context.dataStore.edit { prefs ->
@@ -90,6 +106,7 @@ open class ExploreConfig @Inject constructor(
             prefs[PRELOADED_ON_TIMESTAMP] = databasePrefs.preloadedOnTimestamp
             prefs[FAILED_SYNC_ATTEMPTS] = databasePrefs.failedSyncAttempts
             prefs[PRELOADED_TEST_DB] = databasePrefs.preloadedTestDb
+            prefs[LOCAL_DB_SCHEMA_VERSION] = databasePrefs.localDbSchemaVersion
         }
     }
 }

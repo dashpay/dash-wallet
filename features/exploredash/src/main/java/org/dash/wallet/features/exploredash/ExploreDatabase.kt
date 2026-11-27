@@ -55,7 +55,7 @@ import kotlin.coroutines.resumeWithException
         AtmFTS::class,
         GiftCardProvider::class
     ],
-    version = 5,
+    version = ExploreDatabase.VERSION,
     exportSchema = true
 )
 @TypeConverters(RoomConverters::class)
@@ -66,6 +66,7 @@ abstract class ExploreDatabase : RoomDatabase() {
     abstract fun giftCardProviderDao(): GiftCardProviderDao
 
     companion object {
+        const val VERSION = 5
         private const val EXPLORE_DB_NAME = "explore-database"
         private const val EXPLORE_DB_STAGING_NAME = "explore-database.staging"
         private val log = LoggerFactory.getLogger(ExploreDatabase::class.java)
@@ -165,7 +166,8 @@ abstract class ExploreDatabase : RoomDatabase() {
                     .addMigrations(
                         ExploreDatabaseMigrations.migration1To2,
                         ExploreDatabaseMigrations.migration2To3,
-                        ExploreDatabaseMigrations.migration3To4
+                        ExploreDatabaseMigrations.migration3To4,
+                        ExploreDatabaseMigrations.migration4To5
                     )
                     .build()
                 try {
@@ -218,7 +220,8 @@ abstract class ExploreDatabase : RoomDatabase() {
                 .addMigrations(
                     ExploreDatabaseMigrations.migration1To2,
                     ExploreDatabaseMigrations.migration2To3,
-                    ExploreDatabaseMigrations.migration3To4
+                    ExploreDatabaseMigrations.migration3To4,
+                    ExploreDatabaseMigrations.migration4To5
                 )
                 .fallbackToDestructiveMigration()
                 .build()
@@ -254,6 +257,9 @@ abstract class ExploreDatabase : RoomDatabase() {
             staging.close()
 
             promoteStagingToProduction(context)
+            // Recorded only once the new data is the production database, so a failed update is
+            // downloaded again. It comes before open() because a recovery there resets the timestamp.
+            repository.finalizeUpdate()
 
             return open(context, exploreConfig)
         }
@@ -303,7 +309,8 @@ abstract class ExploreDatabase : RoomDatabase() {
                 ).addMigrations(
                     ExploreDatabaseMigrations.migration1To2,
                     ExploreDatabaseMigrations.migration2To3,
-                    ExploreDatabaseMigrations.migration3To4
+                    ExploreDatabaseMigrations.migration3To4,
+                    ExploreDatabaseMigrations.migration4To5
                 )
 
                 val onOpenCallback = object : Callback() {
@@ -315,7 +322,6 @@ abstract class ExploreDatabase : RoomDatabase() {
 
                         try {
                             if (hasExpectedData(db)) {
-                                repository.finalizeUpdate()
                                 log.info("successfully loaded new version of explore db")
 
                                 if (coroutine.isActive) {
@@ -343,7 +349,8 @@ abstract class ExploreDatabase : RoomDatabase() {
                     .addMigrations(
                         ExploreDatabaseMigrations.migration1To2,
                         ExploreDatabaseMigrations.migration2To3,
-                        ExploreDatabaseMigrations.migration3To4
+                        ExploreDatabaseMigrations.migration3To4,
+                        ExploreDatabaseMigrations.migration4To5
                     )
                     .addCallback(onOpenCallback)
                     .build()

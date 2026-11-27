@@ -28,6 +28,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProvider
 import org.dash.wallet.features.exploredash.data.explore.model.Merchant
 import org.dash.wallet.features.exploredash.repository.ExploreDataSyncStatus
@@ -87,9 +88,8 @@ class ExploreSyncWorker @AssistedInject constructor(
                 val checkTestDB = inputData.getBoolean(USE_TEST_DB_KEY, false)
                 val hasPreloaded = exploreRepository.preloadFromAssetsInto(updateFile, checkTestDB)
 
-                log.info(
-                    "local data timestamp: ${databasePrefs.localDbTimestamp} (${Date(databasePrefs.localDbTimestamp)})"
-                )
+                var localDbTimestamp = databasePrefs.localDbTimestampFor(ExploreDatabase.VERSION)
+                log.info("local data timestamp: $localDbTimestamp (${Date(localDbTimestamp)})")
 
                 remoteDataTimestamp = exploreRepository.getRemoteTimestamp()
                 log.info("remote data timestamp: $remoteDataTimestamp (${Date(remoteDataTimestamp)})")
@@ -103,17 +103,15 @@ class ExploreSyncWorker @AssistedInject constructor(
                     // "local doesn't match remote" case is what the server download
                     // below is for — loading a stale asset over a newer local DB just
                     // forces migrations on an old user_version and risks crashing.
-                    if (databasePrefs.localDbTimestamp == 0L ||
-                        databasePrefs.localDbTimestamp < preloadedDbTimestamp
-                    ) {
+                    if (localDbTimestamp == 0L || localDbTimestamp < preloadedDbTimestamp) {
                         ExploreDatabase.updateDatabase(appContext, exploreRepository, exploreConfig)
-                        // Re-read prefs after updateDatabase: finalizeUpdate writes the new
-                        // localDbTimestamp asynchronously on configScope, so the snapshot
-                        // captured at the start of doWork() is now stale. Saving the stale
-                        // copy here would clobber finalizeUpdate's concurrent write.
+                        // Re-read prefs after updateDatabase: finalizeUpdate has written the new
+                        // localDbTimestamp and schema version, so the snapshot captured at the
+                        // start of doWork() is stale and saving it would undo that write.
                         val latestPrefs = exploreConfig.exploreDatabasePrefs.first()
                         databasePrefs = latestPrefs.copy(preloadedOnTimestamp = preloadedDbTimestamp)
                         exploreConfig.saveExploreDatabasePrefs(databasePrefs)
+                        localDbTimestamp = databasePrefs.localDbTimestampFor(ExploreDatabase.VERSION)
                     }
                 }
 
@@ -121,7 +119,7 @@ class ExploreSyncWorker @AssistedInject constructor(
                     log.error("unable to delete " + updateFile.absolutePath)
                 }
 
-                if (databasePrefs.localDbTimestamp >= remoteDataTimestamp) {
+                if (localDbTimestamp >= remoteDataTimestamp) {
                     log.info("explore db is up to date, nothing to sync")
                     syncStatus.setSyncProgress(100.0)
                     databasePrefs = databasePrefs.copy(failedSyncAttempts = 0)
@@ -206,7 +204,9 @@ class ExploreSyncWorker @AssistedInject constructor(
                     savingsPercentage = data.providerSavingsPercentage,
                     denominationsType = data.providerDenominationsType,
                     addDate = now,
-                    updateDate = now
+                    updateDate = now,
+                    country = Locale.US.country,
+                    currency = Constants.USD_CURRENCY
                 ).apply {
                     name = data.name
                     active = true
@@ -230,7 +230,8 @@ class ExploreSyncWorker @AssistedInject constructor(
                         savingsPercentage = data.providerSavingsPercentage,
                         active = true,
                         denominationsType = data.providerDenominationsType,
-                        sourceId = data.sourceId
+                        sourceId = data.sourceId,
+                        currency = Constants.USD_CURRENCY
                     )
                 )
             }

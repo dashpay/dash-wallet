@@ -32,7 +32,7 @@ interface MerchantDao : BaseDao<Merchant> {
     // in UI it should be done using map APIs.
     @Query(
         """
-        SELECT merchant.id, merchant.deeplink, merchant.plusCode, merchant.addDate, merchant.updateDate, merchant.paymentMethod, merchant.merchantId, merchant.redeemType, COALESCE((SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId), merchant.savingsPercentage, 0) as savingsPercentage, merchant.denominationsType, merchant.name, merchant.active, merchant.address1, merchant.address2, merchant.address3, merchant.address4, merchant.latitude, merchant.longitude, merchant.website, merchant.phone, merchant.territory, merchant.city, merchant.source, merchant.sourceId, merchant.logoLocation, merchant.googleMaps, merchant.coverImage, merchant.type
+        SELECT merchant.id, merchant.deeplink, merchant.plusCode, merchant.addDate, merchant.updateDate, merchant.paymentMethod, merchant.merchantId, merchant.redeemType, COALESCE((SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId), merchant.savingsPercentage, 0) as savingsPercentage, merchant.denominationsType, merchant.name, merchant.active, merchant.address1, merchant.address2, merchant.address3, merchant.address4, merchant.latitude, merchant.longitude, merchant.website, merchant.phone, merchant.territory, merchant.city, merchant.source, merchant.sourceId, merchant.logoLocation, merchant.googleMaps, merchant.coverImage, merchant.type, merchant.country, merchant.currency
         FROM merchant
         WHERE (:merchantId = '' OR merchantId = :merchantId)
             AND (:source = '' OR merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE source = :source COLLATE NOCASE))
@@ -66,7 +66,7 @@ interface MerchantDao : BaseDao<Merchant> {
     @Transaction
     @Query(
         """
-        SELECT merchant.id, merchant.deeplink, merchant.plusCode, merchant.addDate, merchant.updateDate, merchant.paymentMethod, merchant.merchantId, merchant.redeemType, COALESCE((SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId), merchant.savingsPercentage, 0) as savingsPercentage, merchant.denominationsType, merchant.name, merchant.active, merchant.address1, merchant.address2, merchant.address3, merchant.address4, merchant.latitude, merchant.longitude, merchant.website, merchant.phone, merchant.territory, merchant.city, merchant.source, merchant.sourceId, merchant.logoLocation, merchant.googleMaps, merchant.coverImage, merchant.type, COUNT(*) AS physical_amount
+        SELECT merchant.id, merchant.deeplink, merchant.plusCode, merchant.addDate, merchant.updateDate, merchant.paymentMethod, merchant.merchantId, merchant.redeemType, COALESCE((SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId), merchant.savingsPercentage, 0) as savingsPercentage, merchant.denominationsType, merchant.name, merchant.active, merchant.address1, merchant.address2, merchant.address3, merchant.address4, merchant.latitude, merchant.longitude, merchant.website, merchant.phone, merchant.territory, merchant.city, merchant.source, merchant.sourceId, merchant.logoLocation, merchant.googleMaps, merchant.coverImage, merchant.type, merchant.country, merchant.currency, COUNT(*) AS physical_amount
         FROM merchant 
         WHERE type IN (:types)
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
@@ -128,7 +128,7 @@ interface MerchantDao : BaseDao<Merchant> {
     @Transaction
     @Query(
         """
-        SELECT merchant.id, merchant.deeplink, merchant.plusCode, merchant.addDate, merchant.updateDate, merchant.paymentMethod, merchant.merchantId, merchant.redeemType, COALESCE((SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId), merchant.savingsPercentage, 0) as savingsPercentage, merchant.denominationsType, merchant.name, merchant.active, merchant.address1, merchant.address2, merchant.address3, merchant.address4, merchant.latitude, merchant.longitude, merchant.website, merchant.phone, merchant.territory, merchant.city, merchant.source, merchant.sourceId, merchant.logoLocation, merchant.googleMaps, merchant.coverImage, merchant.type, COUNT(*) AS physical_amount
+        SELECT merchant.id, merchant.deeplink, merchant.plusCode, merchant.addDate, merchant.updateDate, merchant.paymentMethod, merchant.merchantId, merchant.redeemType, COALESCE((SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId), merchant.savingsPercentage, 0) as savingsPercentage, merchant.denominationsType, merchant.name, merchant.active, merchant.address1, merchant.address2, merchant.address3, merchant.address4, merchant.latitude, merchant.longitude, merchant.website, merchant.phone, merchant.territory, merchant.city, merchant.source, merchant.sourceId, merchant.logoLocation, merchant.googleMaps, merchant.coverImage, merchant.type, merchant.country, merchant.currency, COUNT(*) AS physical_amount
         FROM merchant
         JOIN merchant_fts ON merchant.id = merchant_fts.docid
         WHERE merchant_fts MATCH :query
@@ -196,7 +196,7 @@ interface MerchantDao : BaseDao<Merchant> {
     @Transaction
     @Query(
         """
-        SELECT merchant.id, merchant.deeplink, merchant.plusCode, merchant.addDate, merchant.updateDate, merchant.paymentMethod, merchant.merchantId, merchant.redeemType, COALESCE((SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId), merchant.savingsPercentage, 0) as savingsPercentage, merchant.denominationsType, merchant.name, merchant.active, merchant.address1, merchant.address2, merchant.address3, merchant.address4, merchant.latitude, merchant.longitude, merchant.website, merchant.phone, merchant.territory, merchant.city, merchant.source, merchant.sourceId, merchant.logoLocation, merchant.googleMaps, merchant.coverImage, merchant.type, COUNT(*) AS physical_amount
+        SELECT merchant.id, merchant.deeplink, merchant.plusCode, merchant.addDate, merchant.updateDate, merchant.paymentMethod, merchant.merchantId, merchant.redeemType, COALESCE((SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId), merchant.savingsPercentage, 0) as savingsPercentage, merchant.denominationsType, merchant.name, merchant.active, merchant.address1, merchant.address2, merchant.address3, merchant.address4, merchant.latitude, merchant.longitude, merchant.website, merchant.phone, merchant.territory, merchant.city, merchant.source, merchant.sourceId, merchant.logoLocation, merchant.googleMaps, merchant.coverImage, merchant.type, merchant.country, merchant.currency, COUNT(*) AS physical_amount
         FROM merchant 
         WHERE (:territoryFilter = '' OR territory = :territoryFilter)
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
@@ -204,6 +204,7 @@ interface MerchantDao : BaseDao<Merchant> {
             AND type IN (:types)
             AND redeemType <> 'url'
             AND (:provider = '' OR merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider))
+            AND (:country = '' OR merchant.country IS NULL OR TRIM(merchant.country) = '' OR merchant.country = :country)
         GROUP BY merchantId
         HAVING (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) = MIN((latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng))
         ORDER BY 
@@ -223,6 +224,7 @@ interface MerchantDao : BaseDao<Merchant> {
         paymentMethod: String,
         denomType: String,
         provider: String,
+        country: String,
         sortOption: Int,
         anchorLat: Double,
         anchorLng: Double,
@@ -240,6 +242,7 @@ interface MerchantDao : BaseDao<Merchant> {
             AND type IN (:types)
             AND redeemType <> 'url'
             AND (:provider = '' OR merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider))
+            AND (:country = '' OR merchant.country IS NULL OR TRIM(merchant.country) = '' OR merchant.country = :country)
     """
     )
     suspend fun getByTerritoryResultCount(
@@ -247,13 +250,14 @@ interface MerchantDao : BaseDao<Merchant> {
         types: List<String>,
         paymentMethod: String,
         denomType: String,
-        provider: String
+        provider: String,
+        country: String
     ): Int
 
     @Transaction
     @Query(
         """
-        SELECT merchant.id, merchant.deeplink, merchant.plusCode, merchant.addDate, merchant.updateDate, merchant.paymentMethod, merchant.merchantId, merchant.redeemType, COALESCE((SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId), merchant.savingsPercentage, 0) as savingsPercentage, merchant.denominationsType, merchant.name, merchant.active, merchant.address1, merchant.address2, merchant.address3, merchant.address4, merchant.latitude, merchant.longitude, merchant.website, merchant.phone, merchant.territory, merchant.city, merchant.source, merchant.sourceId, merchant.logoLocation, merchant.googleMaps, merchant.coverImage, merchant.type, COUNT(*) AS physical_amount
+        SELECT merchant.id, merchant.deeplink, merchant.plusCode, merchant.addDate, merchant.updateDate, merchant.paymentMethod, merchant.merchantId, merchant.redeemType, COALESCE((SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId), merchant.savingsPercentage, 0) as savingsPercentage, merchant.denominationsType, merchant.name, merchant.active, merchant.address1, merchant.address2, merchant.address3, merchant.address4, merchant.latitude, merchant.longitude, merchant.website, merchant.phone, merchant.territory, merchant.city, merchant.source, merchant.sourceId, merchant.logoLocation, merchant.googleMaps, merchant.coverImage, merchant.type, merchant.country, merchant.currency, COUNT(*) AS physical_amount
         FROM merchant
         JOIN merchant_fts ON merchant.id = merchant_fts.docid
         WHERE merchant_fts MATCH :query
@@ -263,6 +267,7 @@ interface MerchantDao : BaseDao<Merchant> {
             AND type IN (:types)
             AND redeemType <> 'url'
             AND (:provider = '' OR merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider))
+            AND (:country = '' OR merchant.country IS NULL OR TRIM(merchant.country) = '' OR merchant.country = :country)
         GROUP BY merchantId
         HAVING (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) = MIN((latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng))
         ORDER BY
@@ -283,6 +288,7 @@ interface MerchantDao : BaseDao<Merchant> {
         paymentMethod: String,
         denomType: String,
         provider: String,
+        country: String,
         sortOption: Int,
         anchorLat: Double,
         anchorLng: Double,
@@ -302,6 +308,7 @@ interface MerchantDao : BaseDao<Merchant> {
             AND type IN (:types)
             AND redeemType <> 'url'
             AND (:provider = '' OR merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider))
+            AND (:country = '' OR merchant.country IS NULL OR TRIM(merchant.country) = '' OR merchant.country = :country)
     """
     )
     suspend fun searchByTerritoryResultCount(
@@ -310,19 +317,21 @@ interface MerchantDao : BaseDao<Merchant> {
         types: List<String>,
         paymentMethod: String,
         denomType: String,
-        provider: String
+        provider: String,
+        country: String
     ): Int
 
     @Transaction
     @Query(
         """
-        SELECT merchant.id, merchant.deeplink, merchant.plusCode, merchant.addDate, merchant.updateDate, merchant.paymentMethod, merchant.merchantId, merchant.redeemType, COALESCE((SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId), merchant.savingsPercentage, 0) as savingsPercentage, merchant.denominationsType, merchant.name, merchant.active, merchant.address1, merchant.address2, merchant.address3, merchant.address4, merchant.latitude, merchant.longitude, merchant.website, merchant.phone, merchant.territory, merchant.city, merchant.source, merchant.sourceId, merchant.logoLocation, merchant.googleMaps, merchant.coverImage, merchant.type, COUNT(*) AS physical_amount
+        SELECT merchant.id, merchant.deeplink, merchant.plusCode, merchant.addDate, merchant.updateDate, merchant.paymentMethod, merchant.merchantId, merchant.redeemType, COALESCE((SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId), merchant.savingsPercentage, 0) as savingsPercentage, merchant.denominationsType, merchant.name, merchant.active, merchant.address1, merchant.address2, merchant.address3, merchant.address4, merchant.latitude, merchant.longitude, merchant.website, merchant.phone, merchant.territory, merchant.city, merchant.source, merchant.sourceId, merchant.logoLocation, merchant.googleMaps, merchant.coverImage, merchant.type, merchant.country, merchant.currency, COUNT(*) AS physical_amount
         FROM merchant
         WHERE (:paymentMethod = '' OR paymentMethod = :paymentMethod)
             AND (:denomType = '' OR paymentMethod = 'dash' OR (:provider != '' AND merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider AND denominationsType = :denomType)) OR (:provider = '' AND denominationsType = :denomType))
             AND type IN (:types)
             AND redeemType <> 'url'
             AND (:provider = '' OR merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider))
+            AND (:country = '' OR merchant.country IS NULL OR TRIM(merchant.country) = '' OR merchant.country = :country)
         GROUP BY merchantId
         HAVING (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) = MIN((latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng))
         ORDER BY
@@ -335,6 +344,7 @@ interface MerchantDao : BaseDao<Merchant> {
         paymentMethod: String,
         denomType: String,
         provider: String,
+        country: String,
         sortByDiscount: Boolean,
         anchorLat: Double,
         anchorLng: Double
@@ -349,19 +359,21 @@ interface MerchantDao : BaseDao<Merchant> {
             AND type IN (:types)
             AND redeemType <> 'url'
             AND (:provider = '' OR merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider))
+            AND (:country = '' OR merchant.country IS NULL OR TRIM(merchant.country) = '' OR merchant.country = :country)
     """
     )
     suspend fun getGroupedResultCount(
         types: List<String>,
         paymentMethod: String,
         denomType: String,
-        provider: String
+        provider: String,
+        country: String
     ): Int
 
     @Transaction
     @Query(
         """
-        SELECT merchant.id, merchant.deeplink, merchant.plusCode, merchant.addDate, merchant.updateDate, merchant.paymentMethod, merchant.merchantId, merchant.redeemType, COALESCE((SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId), merchant.savingsPercentage, 0) as savingsPercentage, merchant.denominationsType, merchant.name, merchant.active, merchant.address1, merchant.address2, merchant.address3, merchant.address4, merchant.latitude, merchant.longitude, merchant.website, merchant.phone, merchant.territory, merchant.city, merchant.source, merchant.sourceId, merchant.logoLocation, merchant.googleMaps, merchant.coverImage, merchant.type, COUNT(*) AS physical_amount
+        SELECT merchant.id, merchant.deeplink, merchant.plusCode, merchant.addDate, merchant.updateDate, merchant.paymentMethod, merchant.merchantId, merchant.redeemType, COALESCE((SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId), merchant.savingsPercentage, 0) as savingsPercentage, merchant.denominationsType, merchant.name, merchant.active, merchant.address1, merchant.address2, merchant.address3, merchant.address4, merchant.latitude, merchant.longitude, merchant.website, merchant.phone, merchant.territory, merchant.city, merchant.source, merchant.sourceId, merchant.logoLocation, merchant.googleMaps, merchant.coverImage, merchant.type, merchant.country, merchant.currency, COUNT(*) AS physical_amount
         FROM merchant
         JOIN merchant_fts ON merchant.id = merchant_fts.docid
         WHERE merchant_fts MATCH :query
@@ -370,6 +382,7 @@ interface MerchantDao : BaseDao<Merchant> {
             AND type IN (:types)
             AND redeemType <> 'url'
             AND (:provider = '' OR merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider))
+            AND (:country = '' OR merchant.country IS NULL OR TRIM(merchant.country) = '' OR merchant.country = :country)
         GROUP BY merchantId
         HAVING (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) = MIN((latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng))
         ORDER BY
@@ -383,6 +396,7 @@ interface MerchantDao : BaseDao<Merchant> {
         paymentMethod: String,
         denomType: String,
         provider: String,
+        country: String,
         sortByDiscount: Boolean,
         anchorLat: Double,
         anchorLng: Double
@@ -399,6 +413,7 @@ interface MerchantDao : BaseDao<Merchant> {
             AND type IN (:types)
             AND redeemType <> 'url'
             AND (:provider = '' OR merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider))
+            AND (:country = '' OR merchant.country IS NULL OR TRIM(merchant.country) = '' OR merchant.country = :country)
     """
     )
     suspend fun searchGroupedResultCount(
@@ -406,7 +421,8 @@ interface MerchantDao : BaseDao<Merchant> {
         types: List<String>,
         paymentMethod: String,
         denomType: String,
-        provider: String
+        provider: String,
+        country: String
     ): Int
 
     @Query(
@@ -443,7 +459,7 @@ interface MerchantDao : BaseDao<Merchant> {
 
     @Query(
         """
-        SELECT merchant.id, merchant.deeplink, merchant.plusCode, merchant.addDate, merchant.updateDate, merchant.paymentMethod, merchant.merchantId, merchant.redeemType, COALESCE((SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId), merchant.savingsPercentage, 0) as savingsPercentage, merchant.denominationsType, merchant.name, merchant.active, merchant.address1, merchant.address2, merchant.address3, merchant.address4, merchant.latitude, merchant.longitude, merchant.website, merchant.phone, merchant.territory, merchant.city, merchant.source, merchant.sourceId, merchant.logoLocation, merchant.googleMaps, merchant.coverImage, merchant.type
+        SELECT merchant.id, merchant.deeplink, merchant.plusCode, merchant.addDate, merchant.updateDate, merchant.paymentMethod, merchant.merchantId, merchant.redeemType, COALESCE((SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId), merchant.savingsPercentage, 0) as savingsPercentage, merchant.denominationsType, merchant.name, merchant.active, merchant.address1, merchant.address2, merchant.address3, merchant.address4, merchant.latitude, merchant.longitude, merchant.website, merchant.phone, merchant.territory, merchant.city, merchant.source, merchant.sourceId, merchant.logoLocation, merchant.googleMaps, merchant.coverImage, merchant.type, merchant.country, merchant.currency
         FROM merchant
         JOIN merchant_fts ON merchant.id = merchant_fts.docid
         WHERE merchant_fts MATCH :query
@@ -472,7 +488,7 @@ interface MerchantDao : BaseDao<Merchant> {
 
     @Query(
         """
-        SELECT merchant.id, merchant.deeplink, merchant.plusCode, merchant.addDate, merchant.updateDate, merchant.paymentMethod, merchant.merchantId, merchant.redeemType, COALESCE((SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId), merchant.savingsPercentage, 0) as savingsPercentage, merchant.denominationsType, merchant.name, merchant.active, merchant.address1, merchant.address2, merchant.address3, merchant.address4, merchant.latitude, merchant.longitude, merchant.website, merchant.phone, merchant.territory, merchant.city, merchant.source, merchant.sourceId, merchant.logoLocation, merchant.googleMaps, merchant.coverImage, merchant.type 
+        SELECT merchant.id, merchant.deeplink, merchant.plusCode, merchant.addDate, merchant.updateDate, merchant.paymentMethod, merchant.merchantId, merchant.redeemType, COALESCE((SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId), merchant.savingsPercentage, 0) as savingsPercentage, merchant.denominationsType, merchant.name, merchant.active, merchant.address1, merchant.address2, merchant.address3, merchant.address4, merchant.latitude, merchant.longitude, merchant.website, merchant.phone, merchant.territory, merchant.city, merchant.source, merchant.sourceId, merchant.logoLocation, merchant.googleMaps, merchant.coverImage, merchant.type, merchant.country, merchant.currency 
         FROM merchant 
         WHERE (:merchantId = '' OR merchantId = :merchantId)
             AND (:source = '' OR merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE source = :source COLLATE NOCASE))
@@ -498,7 +514,7 @@ interface MerchantDao : BaseDao<Merchant> {
 
     @Query(
         """
-        SELECT merchant.id, merchant.deeplink, merchant.plusCode, merchant.addDate, merchant.updateDate, merchant.paymentMethod, merchant.merchantId, merchant.redeemType, COALESCE((SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId), merchant.savingsPercentage, 0) as savingsPercentage, merchant.denominationsType, merchant.name, merchant.active, merchant.address1, merchant.address2, merchant.address3, merchant.address4, merchant.latitude, merchant.longitude, merchant.website, merchant.phone, merchant.territory, merchant.city, merchant.source, merchant.sourceId, merchant.logoLocation, merchant.googleMaps, merchant.coverImage, merchant.type
+        SELECT merchant.id, merchant.deeplink, merchant.plusCode, merchant.addDate, merchant.updateDate, merchant.paymentMethod, merchant.merchantId, merchant.redeemType, COALESCE((SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId), merchant.savingsPercentage, 0) as savingsPercentage, merchant.denominationsType, merchant.name, merchant.active, merchant.address1, merchant.address2, merchant.address3, merchant.address4, merchant.latitude, merchant.longitude, merchant.website, merchant.phone, merchant.territory, merchant.city, merchant.source, merchant.sourceId, merchant.logoLocation, merchant.googleMaps, merchant.coverImage, merchant.type, merchant.country, merchant.currency
         FROM merchant
         JOIN merchant_fts ON merchant.id = merchant_fts.docid
         WHERE merchant_fts MATCH :query
@@ -522,6 +538,9 @@ interface MerchantDao : BaseDao<Merchant> {
     @Query("SELECT DISTINCT territory FROM merchant WHERE territory IS NOT NULL")
     suspend fun getTerritories(): List<String>
 
+    @Query("SELECT DISTINCT country FROM merchant WHERE country IS NOT NULL AND TRIM(country) != ''")
+    suspend fun getCountries(): List<String>
+
     @Query("DELETE FROM merchant")
     override suspend fun deleteAll(): Int
 
@@ -533,7 +552,7 @@ interface MerchantDao : BaseDao<Merchant> {
 
     @Query(
         """
-        SELECT merchant.id, merchant.deeplink, merchant.plusCode, merchant.addDate, merchant.updateDate, merchant.paymentMethod, merchant.merchantId, merchant.redeemType, COALESCE((SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId), merchant.savingsPercentage, 0) as savingsPercentage, merchant.denominationsType, merchant.name, merchant.active, merchant.address1, merchant.address2, merchant.address3, merchant.address4, merchant.latitude, merchant.longitude, merchant.website, merchant.phone, merchant.territory, merchant.city, merchant.source, merchant.sourceId, merchant.logoLocation, merchant.googleMaps, merchant.coverImage, merchant.type FROM merchant where merchantId = :merchantId
+        SELECT merchant.id, merchant.deeplink, merchant.plusCode, merchant.addDate, merchant.updateDate, merchant.paymentMethod, merchant.merchantId, merchant.redeemType, COALESCE((SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId), merchant.savingsPercentage, 0) as savingsPercentage, merchant.denominationsType, merchant.name, merchant.active, merchant.address1, merchant.address2, merchant.address3, merchant.address4, merchant.latitude, merchant.longitude, merchant.website, merchant.phone, merchant.territory, merchant.city, merchant.source, merchant.sourceId, merchant.logoLocation, merchant.googleMaps, merchant.coverImage, merchant.type, merchant.country, merchant.currency FROM merchant where merchantId = :merchantId
         """
     )
     suspend fun getMerchantById(merchantId: String): Merchant?

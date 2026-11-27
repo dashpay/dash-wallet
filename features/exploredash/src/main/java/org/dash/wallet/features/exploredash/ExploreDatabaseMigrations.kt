@@ -200,5 +200,13 @@ class ExploreDatabaseMigrations {
                 )
             }
         }
+
+        val migration4To5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE merchant ADD COLUMN country TEXT")
+                db.execSQL("ALTER TABLE merchant ADD COLUMN currency TEXT")
+                db.execSQL("ALTER TABLE gift_card_providers ADD COLUMN currency TEXT")
+            }
+        }
     }
 }

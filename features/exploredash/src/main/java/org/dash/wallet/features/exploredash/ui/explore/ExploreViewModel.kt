@@ -115,6 +115,11 @@ class ExploreViewModel @Inject constructor(
         const val DEFAULT_RADIUS_OPTION = 20
         const val MAX_MARKERS = 100
         val DEFAULT_SORT_OPTION = SortOption.Name
+        const val DEFAULT_COUNTRY = "US"
+
+        // An explicit choice wins over the detected country; either only counts while the database has it
+        internal fun resolveCountry(available: List<String>, chosen: String?, detected: String): String =
+            listOfNotNull(chosen, detected.uppercase(Locale.ROOT)).firstOrNull { it in available } ?: DEFAULT_COUNTRY
 
         private val log = LoggerFactory.getLogger(ExploreViewModel::class.java)
 
@@ -130,6 +135,7 @@ class ExploreViewModel @Inject constructor(
     private var boundedFilterJob: Job? = null
     private var pagingFilterJob: Job? = null
     private var allMerchantLocationsJob: Job? = null
+    private var countriesJob: Job? = null
     val isMetric = Locale.getDefault().isMetric
 
     var exploreTopic = ExploreTopic.Merchants
@@ -297,6 +303,42 @@ class ExploreViewModel @Inject constructor(
         initialValue = Locale.getDefault().country
     )
 
+    private val _countries = MutableStateFlow<List<String>>(listOf())
+    val countries: StateFlow<List<String>>
+        get() = _countries
+
+    val chosenCountry: StateFlow<String?> = exploreConfig.selectedCountry
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    val defaultCountry: String
+        get() = resolveCountry(_countries.value, null, location.value)
+
+    val selectedCountry: StateFlow<String> = combine(
+        _countries,
+        chosenCountry,
+        location
+    ) { available, chosen, detected ->
+        resolveCountry(available, chosen, detected)
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.Eagerly,
+        initialValue = DEFAULT_COUNTRY
+    )
+
+    // Nearby is scoped by the user's location instead
+    private fun getCountryFilter(mode: FilterMode): String {
+        return if (mode == FilterMode.Online || mode == FilterMode.All) selectedCountry.value else ""
+    }
+
+    // null forgets the choice, so the detected country applies again
+    fun setCountry(country: String?) {
+        viewModelScope.launch { exploreConfig.setSelectedCountry(country) }
+    }
+
+    private fun getExcludeProvider(merchant: Merchant): String {
+        return if (merchant.supportsPiggyCards) getExcludeProvider() else GiftCardProviderType.PiggyCards.name
+    }
+
     private fun getExcludeProvider(): String {
         return if (location.value in excludedCountriesForPiggyCards) {
             GiftCardProviderType.PiggyCards.name
@@ -309,8 +351,9 @@ class ExploreViewModel @Inject constructor(
     private val pagingSearchFlow: Flow<PagingData<SearchResult>> =
         combine(
             _appliedFilters.debounce(QUERY_DEBOUNCE_VALUE),
-            location // React to location changes for filtering
-        ) { filters, _ -> filters }
+            location, // React to location changes for filtering
+            selectedCountry
+        ) { filters, _, _ -> filters }
             .flatMapLatest { filters ->
                 _filterMode
                     .filter { screenState.value == ScreenState.SearchResults }
@@ -331,8 +374,9 @@ class ExploreViewModel @Inject constructor(
         combine(
             _filterMode.filterNot { it == FilterMode.Online },
             _appliedFilters.debounce(QUERY_DEBOUNCE_VALUE),
-            _searchBounds.filterNotNull()
-        ) { mode, filters, bounds ->
+            _searchBounds.filterNotNull(),
+            selectedCountry
+        ) { mode, filters, bounds, _ ->
             Triple(mode, filters, bounds)
         }.filter { (_, _, _) ->
             screenState.value == ScreenState.SearchResults
@@ -346,6 +390,16 @@ class ExploreViewModel @Inject constructor(
         }
 
         this.exploreTopic = exploreTopic
+
+        if (exploreTopic == ExploreTopic.Merchants) {
+            // A finished sync may have replaced the database, so the list is read again then
+            this.countriesJob?.cancel()
+            this.countriesJob = syncStatusService.getSyncProgressFlow()
+                .map { it.status == Status.SUCCESS }
+                .distinctUntilChanged()
+                .onEach { _countries.value = exploreData.getMerchantCountries() }
+                .launchIn(viewModelWorkerScope)
+        }
 
         this.pagingFilterJob?.cancel(CancellationException())
         this.pagingFilterJob = pagingSearchFlow
@@ -508,7 +562,7 @@ class ExploreViewModel @Inject constructor(
         merchant.merchantId?.let { id ->
             val providers = exploreData.getGiftCardProvidersFor(id)
             // Filter out excluded providers based on location
-            val excludeProvider = getExcludeProvider()
+            val excludeProvider = getExcludeProvider(merchant)
             merchant.giftCardProviders = if (excludeProvider.isNotBlank()) {
                 providers.filter { !it.provider.equals(excludeProvider, ignoreCase = true) }
             } else {
@@ -699,7 +753,7 @@ class ExploreViewModel @Inject constructor(
     fun updateSelectedItem(item: SearchResult) {
         // Filter providers if it's a merchant
         if (item is Merchant && item.giftCardProviders.isNotEmpty()) {
-            val excludeProvider = getExcludeProvider()
+            val excludeProvider = getExcludeProvider(item)
             if (excludeProvider.isNotBlank()) {
                 item.giftCardProviders = item.giftCardProviders.filter {
                     !it.provider.equals(excludeProvider, ignoreCase = true)
@@ -750,7 +804,8 @@ class ExploreViewModel @Inject constructor(
                 filters.denominationType,
                 filters.provider,
                 bounds,
-                getExcludeProvider()
+                getExcludeProvider(),
+                getCountryFilter(filterMode)
             )
         } else {
             val types = getAtmTypes(filterMode)
@@ -796,7 +851,8 @@ class ExploreViewModel @Inject constructor(
                     sortOption,
                     userLat ?: 0.0,
                     userLng ?: 0.0,
-                    onlineFirst
+                    onlineFirst,
+                    getCountryFilter(filterMode)
                 )
             }.flow.map { data ->
                 val excludeProvider = getExcludeProvider()
@@ -849,7 +905,8 @@ class ExploreViewModel @Inject constructor(
                 )
             }
             val result = if (exploreTopic == ExploreTopic.Merchants) {
-                val type = getMerchantType(filterMode.value ?: FilterMode.Online)
+                val mode = filterMode.value ?: FilterMode.Online
+                val type = getMerchantType(mode)
                 exploreData.getMerchantsResultCount(
                     _appliedFilters.value.query,
                     _appliedFilters.value.territory,
@@ -857,7 +914,8 @@ class ExploreViewModel @Inject constructor(
                     _appliedFilters.value.payment,
                     _appliedFilters.value.denominationType,
                     _appliedFilters.value.provider,
-                    radiusBounds ?: GeoBounds.noBounds
+                    radiusBounds ?: GeoBounds.noBounds,
+                    getCountryFilter(mode)
                 )
             } else {
                 val types = getAtmTypes(filterMode.value ?: FilterMode.All)

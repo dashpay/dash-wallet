@@ -312,7 +312,8 @@ platform :android do
     db = "#{repo_root}/wallet/assets/explore/explore.db"
     marker = "#{repo_root}/.deploy/.explore_db_flavor"
     # prod is its own database; every other flavor shares the testnet one.
-    wanted = flavor == "prod" ? "prod" : "testnet"
+    # The schema version is part of the marker so a cached file of an older schema is replaced.
+    wanted = "#{flavor == "prod" ? "prod" : "testnet"}-v5"
     cached = File.exist?(marker) ? File.read(marker).strip : nil
 
     if !force && File.exist?(db) && !File.zero?(db) && cached == wanted
@@ -399,11 +400,11 @@ platform :android do
     project_id = "dash-wallet-firebase"
     key_file = "#{ENV['PWD']}/.deploy/gc-storage-service-account.json"
     bucket_name = "dash-wallet-firebase.appspot.com"
-    file_name = "explore/explore-v4.db"
+    file_name = "explore/explore-v5.db"
     if flavor == "prod" || flavor.nil?
       puts "Downloading the production database"
     else
-      file_name = "explore/explore-v4-testnet.db"
+      file_name = "explore/explore-v5-testnet.db"
       puts "Downloading the test database"
     end
 
