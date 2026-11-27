@@ -29,7 +29,6 @@ import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.unit.dp
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.transition.Fade
 import androidx.transition.Slide
@@ -38,18 +37,14 @@ import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.transition.MaterialFadeThrough
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.Constants
-import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentPaymentsBinding
-import kotlinx.coroutines.launch
 import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.common.ui.segmented_picker.SegmentedOption
 import org.dash.wallet.common.ui.viewBinding
 import androidx.core.content.edit
 import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.segmented_picker.SegmentedPicker
-import javax.inject.Inject
 
 @AndroidEntryPoint
 class PaymentsFragment : Fragment(R.layout.fragment_payments) {
@@ -65,6 +60,9 @@ class PaymentsFragment : Fragment(R.layout.fragment_payments) {
         const val ACTIVE_TAB_PAY = 1
         const val ACTIVE_TAB_INTERNAL = 2
 
+        /** The Basic mode tabs: Receive | Send, never Internal. */
+        val BASIC_TAB_IDS: List<Int> = tabIdsFor(showInternalTab = false)
+
         /**
          * Tab ids in display order. With [showInternalTab] off this is exactly
          * the pre-shielded two-tab layout (Receive | Send); with it on, the
@@ -76,8 +74,6 @@ class PaymentsFragment : Fragment(R.layout.fragment_payments) {
             listOf(ACTIVE_TAB_RECEIVE, ACTIVE_TAB_PAY)
         }
     }
-
-    @Inject lateinit var dashPayConfig: DashPayConfig
 
     private val binding by viewBinding(FragmentPaymentsBinding::bind)
     private var selectedTab by mutableIntStateOf(0)
@@ -96,13 +92,10 @@ class PaymentsFragment : Fragment(R.layout.fragment_payments) {
             findNavController().popBackStack()
         }
 
-        // The shielded "Internal" tab is flag-gated; the flag is read once at
-        // screen build. Flags off ⇒ exactly the two pre-existing tabs.
-        viewLifecycleOwner.lifecycleScope.launch {
-            val showInternalTab = Constants.SUPPORTS_PLATFORM &&
-                dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_SHIELDED) == true
-            setupTabs(tabIdsFor(showInternalTab))
-        }
+        // Basic mode has only Receive | Send: transfers between the user's own balances are
+        // the Advanced payments screen's Internal tab. A stored or requested Internal tab
+        // falls back to Receive (activateTab).
+        setupTabs(BASIC_TAB_IDS)
     }
 
     private fun setupTabs(tabIds: List<Int>) {
@@ -179,7 +172,8 @@ class PaymentsFragment : Fragment(R.layout.fragment_payments) {
             preferences.getInt(PREFS_RECENT_TAB, ACTIVE_TAB_RECEIVE)
         }
 
-        val position = tabIds.indexOf(activeTabId).takeIf { it >= 0 } ?: 0
+        // A tab this screen does not show (Internal, stored before Basic mode dropped it) opens Receive.
+        val position = AdvancedPaymentsFragment.positionOf(tabIds, activeTabId)
         selectedTab = position
         binding.pager.setCurrentItem(position, false)
     }
