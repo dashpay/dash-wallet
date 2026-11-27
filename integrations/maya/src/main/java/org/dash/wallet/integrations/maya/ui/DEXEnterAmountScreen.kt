@@ -21,14 +21,12 @@ import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -36,19 +34,15 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.dash.wallet.common.ui.components.DASH_CURRENCY_CODE
-import org.dash.wallet.common.ui.components.DashButton
-import org.dash.wallet.common.ui.components.EnterAmount
 import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.NavBarBack
-import org.dash.wallet.common.ui.components.Size
-import org.dash.wallet.common.ui.components.Style
 import org.dash.wallet.common.ui.components.Toast
 import org.dash.wallet.common.ui.components.ToastImageResource
 import org.dash.wallet.common.ui.components.TopIntro
-import org.dash.wallet.common.ui.enter_amount.NumericKeyboardCompose
+import org.dash.wallet.common.ui.enter_amount.AmountEntryPage
+import org.dash.wallet.common.ui.enter_amount.AmountEntryPrimaryButton
 import org.dash.wallet.integrations.maya.R
-import java.text.DecimalFormatSymbols
 import java.util.Locale
 
 @Composable
@@ -99,11 +93,6 @@ private fun DEXEnterAmountScreenContent(
     // Overridable so previews can force a specific locale (symbol position, separators).
     locale: Locale = Locale.getDefault()
 ) {
-    // The ViewModel keeps the amount as a plain '.'-separated string (it round-trips through
-    // BigDecimal parsing and persistence); the locale's decimal separator is applied here,
-    // at the display boundary, and on the keypad's separator key label.
-    val decimalSeparator = remember(locale) { DecimalFormatSymbols.getInstance(locale).decimalSeparator }
-
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -114,67 +103,50 @@ private fun DEXEnterAmountScreenContent(
                 onBackClick = onBackClick
             )
 
-            // Amount input bar (design-system EnterAmount). Fiat is the primary input; DASH and
-            // the asset being bought are offered as alternate display currencies in the picker.
-            // No Max / balance / help text in this frame — only the amount + currency selector.
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    // .height(110.dp)
-                    .padding(horizontal = 20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                TopIntro(heading = stringResource(R.string.dex_enter_amount_title, assetDisplayCode))
-                EnterAmount(
-                    primaryAmount = amount.replace('.', decimalSeparator),
-                    currencyCodes = currencyCodes,
-                    selectedCurrencyIndex = selectedCurrencyIndex,
-                    locale = locale,
-                    showMaxButton = false,
-                    showBalanceButton = false,
-                    showSecondary = false,
-                    showCurrencyPicker = true,
-                    onCurrencyPickerSelect = { _, index -> onCurrencySelected(index) }
-                )
-
-                validationErrorRes?.let { errorRes ->
-                    // The message is chosen in the ViewModel: a below-minimum rejection names itself,
-                    // anything else falls back to the neutral catch-all (SwapKit's noRoutesFound
-                    // can't tell too-low from temporarily-unroutable, and the entered value is in the
-                    // selected display currency — so any min/max guess would be misleading). Messages
-                    // without a %1$s placeholder simply ignore the coin code.
-                    Text(
-                        text = stringResource(errorRes, assetCurrencyCode),
-                        style = MyTheme.Body2Regular,
-                        color = LocalDashColors.current.red,
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
-                }
-            }
-
-            // Empty flexible space between the amount bar and the keypad.
-            Spacer(modifier = Modifier.weight(1f))
-
-            // Numeric keypad with the Continue button in its bottom slot, flush to the bottom edge.
-            NumericKeyboardCompose(
-                modifier = Modifier.fillMaxWidth(),
+            // Amount input bar (design-system EnterAmount) over the keypad. The ViewModel keeps the
+            // amount as a plain '.'-separated string; the page applies the locale's decimal
+            // separator at the display boundary. Fiat is the primary input; DASH and the asset
+            // being bought are offered as alternate display currencies in the picker. No Max /
+            // balance / help text in this frame — only the amount + currency selector.
+            AmountEntryPage(
+                amount = amount,
+                currencyCodes = currencyCodes,
+                selectedCurrencyIndex = selectedCurrencyIndex,
+                locale = locale,
+                onKeyInput = onKeyInput,
+                onCurrencySelected = onCurrencySelected,
                 // Fully disabled (dimmed, not tappable) while offline — a swap can't be quoted
                 // without a connection — and while the entered amount is being validated, so the
                 // validated amount can't change mid-flight.
-                enabled = isOnline && !isValidating,
-                decimalSeparator = decimalSeparator,
-                onKeyInput = onKeyInput,
-                bottomSlot = {
-                    DashButton(
+                keypadEnabled = isOnline && !isValidating,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                header = {
+                    TopIntro(heading = stringResource(R.string.dex_enter_amount_title, assetDisplayCode))
+                },
+                belowAmount = {
+                    validationErrorRes?.let { errorRes ->
+                        // The message is chosen in the ViewModel: a below-minimum rejection names
+                        // itself, anything else falls back to the neutral catch-all (SwapKit's
+                        // noRoutesFound can't tell too-low from temporarily-unroutable, and the
+                        // entered value is in the selected display currency — so any min/max guess
+                        // would be misleading). Messages without a %1$s placeholder simply ignore
+                        // the coin code.
+                        Text(
+                            text = stringResource(errorRes, assetCurrencyCode),
+                            style = MyTheme.Body2Regular,
+                            color = LocalDashColors.current.red,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                    }
+                },
+                primaryButton = {
+                    AmountEntryPrimaryButton(
                         text = stringResource(R.string.button_continue),
-                        style = Style.FilledBlue,
-                        size = Size.Large,
                         // Disabled while offline: a swap can't be quoted without a connection.
-                        isEnabled = continueEnabled && isOnline,
-                        onClick = onContinueClick,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 20.dp, start = 20.dp, end = 20.dp)
+                        enabled = continueEnabled && isOnline,
+                        onClick = onContinueClick
                     )
                 }
             )
