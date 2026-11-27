@@ -64,6 +64,7 @@ import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderDao
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderType
 import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.DenominationType
 import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardInfo
+import org.dash.wallet.features.exploredash.data.dashspend.model.UnusableMerchantDetailsException
 import org.dash.wallet.features.exploredash.data.dashspend.model.UpdatedMerchantDetails
 import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
 import org.dash.wallet.features.exploredash.data.explore.MerchantDao
@@ -262,6 +263,7 @@ class DashSpendViewModel @Inject constructor(
         }
 
     private val _cardRateState = MutableStateFlow<CardRateState>(CardRateState.Loading)
+    private val rateLookup = MutableStateFlow(0)
     val cardRateState: StateFlow<CardRateState> = _cardRateState.asStateFlow()
 
     /** The rate that converts card amounts to Dash for display, limits and the balance check. */
@@ -355,6 +357,7 @@ class DashSpendViewModel @Inject constructor(
         _cardCurrencyState
             .map { (it as? CardCurrencyState.Known)?.code }
             .distinctUntilChanged()
+            .combine(rateLookup) { currency, _ -> currency }
             .transformLatest { currency ->
                 emit(CardRateState.Loading)
                 if (currency != null) {
@@ -665,8 +668,16 @@ class DashSpendViewModel @Inject constructor(
     /** updates merchant details according to the currently selected provider [selectedProvider]
      *
      */
-    suspend fun updateMerchantDetails(merchant: Merchant): Merchant = withContext(Dispatchers.IO) {
-        val load = if (selectedProvider == GiftCardProviderType.CTX) beginCurrencyLoad(merchant.merchantId) else null
+    suspend fun updateMerchantDetails(merchant: Merchant): Merchant = refreshMerchantDetails(merchant) ?: merchant
+
+    /**
+     * Like [updateMerchantDetails], but null when a newer load of a CTX merchant or another
+     * provider has taken over: nothing of such an answer may be applied.
+     */
+    suspend fun refreshMerchantDetails(merchant: Merchant): Merchant? = withContext(Dispatchers.IO) {
+        val provider = selectedProvider
+        val load = if (provider == GiftCardProviderType.CTX) beginCurrencyLoad(merchant.merchantId) else null
+        var isAnswered = false
         // previously this API call would only be made if we didn't have the min and max card values,
         // but now we need to call this every time to get an updated savings percentage and to see if
         // the merchant is enabled
@@ -674,6 +685,10 @@ class DashSpendViewModel @Inject constructor(
             getMerchant(merchant, selectedProvider!!.name)
         } catch (ex: CancellationException) {
             throw ex
+        } catch (ex: UnusableMerchantDetailsException) {
+            log.error("merchant ${merchant.merchantId} answered with details that cannot be read", ex)
+            isAnswered = true
+            null
         } catch (ex: Exception) {
             log.error("failed to get merchant ${merchant.merchantId}", ex)
             null
@@ -710,14 +725,20 @@ class DashSpendViewModel @Inject constructor(
                     copy.denominationsType = apiResponse.denominationsType
                     copy.quantities = apiResponse.quantity
                     // last, so that only a response that mapped cleanly names the currency of its limits
-                    load?.let { finishCurrencyLoad(it, GiftCardCurrency.normalize(apiResponse.currency)) }
+                    val currency = GiftCardCurrency.normalize(apiResponse.currency)
+                    if (selectedProvider != provider || (load != null && !finishCurrencyLoad(load, currency))) {
+                        return@withContext null
+                    }
                 }
             }
         } catch (e: Exception) {
             log.warn("updated merchant details contains unexpected data:", e)
         }
 
-        load?.let { finishCurrencyLoad(it, null, isAnswered = response != null) }
+        val isAccepted = load == null || finishCurrencyLoad(load, null, isAnswered = isAnswered || response != null)
+        if (selectedProvider != provider || !isAccepted) {
+            return@withContext null
+        }
         return@withContext merchant
     }
 
@@ -743,15 +764,19 @@ class DashSpendViewModel @Inject constructor(
     }
 
     @Synchronized
-    private fun finishCurrencyLoad(load: Int, currency: String?, isAnswered: Boolean = true) {
+    private fun finishCurrencyLoad(load: Int, currency: String?, isAnswered: Boolean = true): Boolean {
         if (load != currencyLoad) {
             log.info("ignoring a superseded merchant load")
-            return
+            return false
         }
         val previous = _cardCurrencyState.value
+        if (_cardRateState.value == CardRateState.Missing) {
+            // the lookup may have ended in an error, and the same currency would not start another
+            rateLookup.value++
+        }
         if (!isAnswered && previous is CardCurrencyState.Known) {
             // a refresh that got no answer says nothing new about a currency CTX already confirmed
-            return
+            return true
         }
         val current = currency?.let { CardCurrencyState.Known(it) } ?: CardCurrencyState.Unknown
         if (previous is CardCurrencyState.Known && previous != current) {
@@ -759,6 +784,7 @@ class DashSpendViewModel @Inject constructor(
             _giftCardOrderInfo.value = emptyMap()
         }
         _cardCurrencyState.value = current
+        return true
     }
 
     /**

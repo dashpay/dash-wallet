@@ -884,4 +884,69 @@ class DashSpendCardCurrencyTest {
         viewModel.setIsFixedDenomination(true)
         assertTrue(viewModel.giftCardOrderInfo.value.isEmpty())
     }
+
+    @Test
+    fun failedRateLookup_isStartedAgainByTheNextLoadOfTheSameCurrency() = runBlocking {
+        ctxSells("GBP", listOf("5", "500"))
+        rateLookups["GBP"] = flow { throw IOException("database closed") }
+        val viewModel = viewModel()
+        val merchant = viewModel.openCtxMerchant()
+        assertEquals(GiftCardPurchaseBlock.RATE_MISSING, viewModel.purchaseBlock)
+
+        rateLookups.remove("GBP")
+        setRate("GBP", "20")
+        assertEquals("the failed lookup is over", GiftCardPurchaseBlock.RATE_MISSING, viewModel.purchaseBlock)
+        viewModel.updateMerchantDetails(merchant)
+        viewModel.enter("25")
+
+        assertEquals(CardCurrencyState.Known("GBP"), viewModel.cardCurrencyState.value)
+        assertNull(viewModel.purchaseBlock)
+    }
+
+    @Test
+    fun refreshAnsweredWithDenominationsThatAreNotNumbers_blocksAMerchantThatHadACurrency() = runBlocking {
+        ctxSells("GBP", listOf("5", "500"))
+        setRate("GBP", "20")
+        val viewModel = viewModel()
+        val merchant = viewModel.openCtxMerchant()
+        viewModel.enter("25")
+
+        reset(api)
+        ctxSells("GBP", listOf("5", "five hundred"))
+        viewModel.updateMerchantDetails(merchant)
+
+        assertEquals(CardCurrencyState.Unknown, viewModel.cardCurrencyState.value)
+        assertTrue(viewModel.giftCardOrderInfo.value.isEmpty())
+        assertPurchaseRefused(viewModel)
+    }
+
+    @Test
+    fun olderLoadOfTheSameMerchantFinishingLast_appliesNothing() = runBlocking {
+        val firstLoadStarted = CountDownLatch(1)
+        val releaseFirstLoad = CountDownLatch(1)
+        val answers = java.util.concurrent.atomic.AtomicInteger()
+        api.stub {
+            onBlocking { getMerchant(eq("ctx-source")) } doAnswer {
+                if (answers.getAndIncrement() == 0) {
+                    firstLoadStarted.countDown()
+                    releaseFirstLoad.await(5, TimeUnit.SECONDS)
+                    merchantResponse("ctx-source", "GBP")
+                } else {
+                    merchantResponse("ctx-source", "EUR")
+                }
+            }
+        }
+        val viewModel = viewModel()
+        viewModel.selectedProvider = GiftCardProviderType.CTX
+        viewModel.setGiftCardMerchant(merchant())
+        val firstLoad = async(Dispatchers.Default) { viewModel.refreshMerchantDetails(merchant()) }
+        assertTrue(firstLoadStarted.await(5, TimeUnit.SECONDS))
+
+        val newer = viewModel.refreshMerchantDetails(merchant())
+        releaseFirstLoad.countDown()
+
+        assertEquals(500.0, newer?.maxCardPurchase)
+        assertNull("the older answer must not be applied", firstLoad.await())
+        assertEquals(CardCurrencyState.Known("EUR"), viewModel.cardCurrencyState.value)
+    }
 }

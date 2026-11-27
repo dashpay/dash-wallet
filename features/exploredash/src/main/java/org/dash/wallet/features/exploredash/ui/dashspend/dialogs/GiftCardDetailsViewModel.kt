@@ -176,10 +176,11 @@ class GiftCardDetailsViewModel @Inject constructor(
     /** Returns false when the lookup failed and is worth repeating. */
     private suspend fun backfillCurrency(txid: Sha256Hash): Boolean = withContext(Dispatchers.IO) {
         try {
-            if (metadataProvider.getTransactionMetadata(txid)?.service != ServiceName.CTXSpend ||
-                !ctxSpendRepository.isUserSignedIn()
-            ) {
+            if (metadataProvider.getTransactionMetadata(txid)?.service != ServiceName.CTXSpend) {
                 return@withContext true
+            }
+            if (!ctxSpendRepository.isUserSignedIn()) {
+                return@withContext false
             }
             val orderId = giftCardDao.getCardForTransaction(txid).firstOrNull()?.note
             val giftCards = if (orderId != null) {

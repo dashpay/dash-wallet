@@ -19,6 +19,9 @@ package org.dash.wallet.features.exploredash.data.dashspend.model
 
 import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.DenominationType
 
+/** The provider answered, but with details that cannot be read. Not a failure to reach it. */
+class UnusableMerchantDetailsException(cause: Throwable) : Exception("merchant details cannot be read", cause)
+
 data class UpdatedMerchantDetails(
     val id: String,
     val denominations: List<Double>,

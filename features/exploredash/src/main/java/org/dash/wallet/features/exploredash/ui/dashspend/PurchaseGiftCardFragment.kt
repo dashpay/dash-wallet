@@ -532,7 +532,8 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
         viewModel.setGiftCardMerchant(merchant)
 
         lifecycleScope.launch {
-            val updatedMerchant = viewModel.updateMerchantDetails(merchant)
+            // null: a newer load has taken over, and its details, currency and mode go together
+            val updatedMerchant = viewModel.refreshMerchantDetails(merchant) ?: return@launch
 
             // a slow answer for a merchant the user has left must not replace the current one
             if (viewModel.giftCardMerchant.value?.merchantId != merchant.merchantId) {

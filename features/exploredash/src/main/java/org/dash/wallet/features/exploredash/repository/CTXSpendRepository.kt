@@ -28,6 +28,7 @@ import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.PurchaseGif
 import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.VerifyEmailRequest
 import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardInfo
 import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardStatus
+import org.dash.wallet.features.exploredash.data.dashspend.model.UnusableMerchantDetailsException
 import org.dash.wallet.features.exploredash.data.dashspend.model.UpdatedMerchantDetails
 import org.dash.wallet.features.exploredash.network.authenticator.TokenAuthenticator
 import org.dash.wallet.features.exploredash.network.service.ctxspend.CTXSpendApi
@@ -286,15 +287,19 @@ class CTXSpendRepository @Inject constructor(
         val response = api.getMerchant(merchantId)
         return response?.let {
             giftCardMap[merchantId] = it
-            UpdatedMerchantDetails(
-                id = response.id,
-                savingsPercentage = response.discount,
-                denominationsType = response.denominationsType,
-                denominations = response.denominations.map { denom -> denom.toDouble() },
-                redeemType = response.redeemType,
-                enabled = response.enabled,
-                currency = response.currency
-            )
+            try {
+                UpdatedMerchantDetails(
+                    id = response.id,
+                    savingsPercentage = response.discount,
+                    denominationsType = response.denominationsType,
+                    denominations = response.denominations.map { denom -> denom.toDouble() },
+                    redeemType = response.redeemType,
+                    enabled = response.enabled,
+                    currency = response.currency
+                )
+            } catch (e: Exception) {
+                throw UnusableMerchantDetailsException(e)
+            }
         }
     }
 
