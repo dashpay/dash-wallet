@@ -127,6 +127,10 @@ arrives.**
 - Check the stale flag before READY.
 - Never release the hold on a polled busy→idle edge, on Room re-reads or on wall-clock age (#1621).
 - READY means "first pass done", not "this spend settled".
+- "Stale" gates the cache and money paths, not the display. Since the iOS alignment, home and More show
+  `observeDisplayedShieldedBalance()`, which holds only a transient post-spend zero (bounded window, released on a
+  nonzero reading or settlement). Send/Max paths read the raw store and treat it as unknown (null) while
+  `shieldedSpendReconciling` is set, held or not: an ambiguous spend's reserved inputs still count as unspent.
 
 **4.34 Gate fresh money-moving actions with one policy, enforced in the service as well as in every UI entry** (#1607
 `cutoverCommitted()`, per-route `MixedFundsRoutes`).

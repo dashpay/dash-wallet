@@ -616,9 +616,9 @@ class MainViewModel @Inject constructor(
         // unset may authorize a zero; an unreadable one is unknown.
         enabledFlag = dashPayConfig.observePreservingErrors(DashPayConfig.USE_KOTLIN_SDK_SHIELDED)
             .map { Constants.SUPPORTS_PLATFORM && it == true },
-        live = { shieldedBalanceService.observeShieldedBalance() },
+        // The display form: a spend's transient zero is held, not shown.
+        live = { shieldedBalanceService.observeDisplayedShieldedBalance() },
         status = { shieldedBalanceService.shieldedSyncStatus },
-        maybeStale = { shieldedBalanceService.shieldedBalanceMaybeStale },
         onError = { e, attempt -> log.error("home shielded balance flow error (attempt {})", attempt, e) }
     )
 
@@ -1034,7 +1034,6 @@ internal fun homeShieldedBalanceFlow(
     enabledFlag: Flow<Boolean>,
     live: () -> Flow<Dash>,
     status: () -> Flow<ShieldedSyncStatus>,
-    maybeStale: () -> Flow<Boolean>,
     onError: (Throwable, Long) -> Unit,
     retryDelayMs: (Long) -> Long = ::readRetryDelayMs
 ): Flow<Dash?> = enabledFlag
@@ -1043,8 +1042,8 @@ internal fun homeShieldedBalanceFlow(
         if (!enabled) {
             flowOf(Dash.ZERO)
         } else {
-            combine(live(), status(), maybeStale()) { balance, syncStatus, stale ->
-                homeShieldedBalance(syncStatus, balance, stale)
+            combine(live(), status()) { balance, syncStatus ->
+                homeShieldedBalance(syncStatus, balance)
             }
         }
     }
@@ -1064,10 +1063,12 @@ internal fun homeShieldedBalanceFlow(
  * The persisted last-known balance is deliberately NOT used here: it is one
  * install-wide value that can't be proven to belong to the loaded wallet.
  *
- * After a local shielded spend ([balanceMaybeStale]) the amount is unknown
- * until the service clears the flag (the note balance has settled) — even
- * while READY: once the first pass completes the status stays READY through
- * later sync passes, so READY alone does not mean the spend has settled.
+ * [live] is the service's DISPLAY balance
+ * (`ShieldedBalanceService.observeDisplayedShieldedBalance`): after a local
+ * shielded spend it keeps the last balance through the transient zero the
+ * note store can read mid-spend (the iOS hold rule) and shows nonzero
+ * intermediate readings at once, so the header no longer goes pending for
+ * the whole reconciliation.
  *
  * Platform identity is deliberately NOT consulted: with the shielded flag
  * on, `SdkWalletBinder` binds identity-free wallets too (fund → shield →
@@ -1077,13 +1078,8 @@ internal fun homeShieldedBalanceFlow(
  */
 internal fun homeShieldedBalance(
     status: ShieldedSyncStatus,
-    live: Dash,
-    balanceMaybeStale: Boolean
-): Dash? = when {
-    balanceMaybeStale -> null
-    status == ShieldedSyncStatus.READY -> live
-    else -> null
-}
+    live: Dash
+): Dash? = if (status == ShieldedSyncStatus.READY) live else null
 
 /**
  * Pick the DISPLAY form of the requested username, pure and host-testable.
