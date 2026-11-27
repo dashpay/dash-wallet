@@ -270,7 +270,8 @@ private fun GiftCardDetailsContent(
         onCopyOrder = { order -> order.copy(activity, "order") },
         onRefresh = {
             viewModel.refresh()
-        }
+        },
+        onRetry = { viewModel.retry() }
     )
 }
 
@@ -288,7 +289,8 @@ internal fun GiftCardDetailsView(
     onCopyPin: (String) -> Unit = {},
     onCopyChallenge: (String) -> Unit = {},
     onCopyOrder: (String) -> Unit = {},
-    onRefresh: () -> Unit = {}
+    onRefresh: () -> Unit = {},
+    onRetry: () -> Unit = {}
 ) {
     val colors = LocalDashColors.current
     var showHowToUse by remember { mutableStateOf(false) }
@@ -302,7 +304,8 @@ internal fun GiftCardDetailsView(
         GiftCardStatus.UNPAID, GiftCardStatus.PAID -> hasExceededWaitLimit
         else -> false
     }
-    val shouldShowError = (shouldShowTimeoutError || uiState.status == GiftCardStatus.REJECTED) && uiState.error != null
+    val hasFailed = shouldShowTimeoutError || uiState.status == GiftCardStatus.REJECTED || uiState.isMissingDetails
+    val shouldShowError = hasFailed && uiState.error != null
 
     Column(
         modifier = Modifier
@@ -348,6 +351,9 @@ internal fun GiftCardDetailsView(
                     else -> stringResource(R.string.gift_card_contact_support)
                 }
                 DashList {
+                    if (uiState.isMissingDetails) {
+                        NavigationRow(label = stringResource(R.string.try_again), onClick = onRetry)
+                    }
                     NavigationRow(label = supportLabel, onClick = onContactSupport)
                 }
             }

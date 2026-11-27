@@ -74,6 +74,9 @@ data class GiftCardUIState(
     private val position: Int get() = giftCards.indexOfFirst { it.index == index }
     val giftCard: GiftCard? get() = position.takeIf { it >= 0 }?.let { giftCards[it] }
     val barcode: Barcode? get() = position.takeIf { it >= 0 }?.let { barcodes.getOrNull(it) }
+    val isMissingDetails: Boolean
+        get() = status == GiftCardStatus.FULFILLED &&
+            giftCard?.let { it.number.isNullOrEmpty() && it.merchantUrl.isNullOrBlank() } == true
 }
 
 @HiltViewModel
@@ -90,6 +93,9 @@ class GiftCardDetailsViewModel @Inject constructor(
 ) : ViewModel() {
     companion object {
         private val log = LoggerFactory.getLogger(GiftCardDetailsViewModel::class.java)
+
+        // The same number of polls the sheet allows an unpaid or paid order before it reports a delay.
+        const val MAX_MISSING_DETAILS_QUERIES = 60
     }
 
     lateinit var transactionId: Sha256Hash
@@ -99,6 +105,7 @@ class GiftCardDetailsViewModel @Inject constructor(
 
     private var exchangeRate: ExchangeRate? = null
     private var retries = 3
+    private var missingDetailsQueries = 0
 
     val ctxBaseUrl: String
         get() = CTXSpendConstants.baseUrl(walletData.networkParameters)
@@ -155,12 +162,25 @@ class GiftCardDetailsViewModel @Inject constructor(
                     card.number == null && card.merchantUrl.isNullOrBlank() && card.note != null
                 }
                 if (needsPolling && tickerJob?.isActive != true) {
-                    tickerJob = TickerFlow(period = 0.5.seconds, initialDelay = 1.seconds)
-                        .cancellable()
-                        .onEach { fetchGiftCardInfo(transactionId) }
-                        .launchIn(viewModelScope)
+                    startPolling()
                 }
             }
+            .launchIn(viewModelScope)
+    }
+
+    fun retry() {
+        if (tickerJob?.isActive == true) {
+            return
+        }
+        missingDetailsQueries = 0
+        _uiState.update { it.copy(error = null) }
+        startPolling()
+    }
+
+    private fun startPolling() {
+        tickerJob = TickerFlow(period = 0.5.seconds, initialDelay = 1.seconds)
+            .cancellable()
+            .onEach { fetchGiftCardInfo(transactionId) }
             .launchIn(viewModelScope)
     }
 
@@ -182,10 +202,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                 newCards.forEach {
                     giftCardDao.updateGiftCard(it)
                 }
-                tickerJob = TickerFlow(period = 0.5.seconds, initialDelay = 1.seconds)
-                    .cancellable()
-                    .onEach { fetchGiftCardInfo(transactionId) }
-                    .launchIn(viewModelScope)
+                startPolling()
             }
         }
     }
@@ -287,10 +304,21 @@ class GiftCardDetailsViewModel @Inject constructor(
                                     cancelTicker()
                                     newState
                                 } else {
+                                    missingDetailsQueries++
+                                    val error = if (missingDetailsQueries >= MAX_MISSING_DETAILS_QUERIES) {
+                                        log.error("CTXSpend: fulfilled gift card has neither a number nor a link")
+                                        cancelTicker()
+                                        CTXSpendException(
+                                            ResourceString(R.string.gift_card_details_unavailable),
+                                            giftCard
+                                        )
+                                    } else {
+                                        null
+                                    }
                                     uiState.value.copy(
                                         status = giftCard.status,
                                         queries = uiState.value.queries + 1,
-                                        error = null
+                                        error = error
                                     )
                                 }
                             }
