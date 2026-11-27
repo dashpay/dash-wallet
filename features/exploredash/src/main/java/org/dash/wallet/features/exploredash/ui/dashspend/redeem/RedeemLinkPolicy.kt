@@ -19,6 +19,7 @@ package org.dash.wallet.features.exploredash.ui.dashspend.redeem
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import java.net.Proxy
+import java.net.URI
 
 object RedeemLinkPolicy {
     private const val MIN_SDK_INT = 26
@@ -74,6 +75,11 @@ object RedeemLinkPolicy {
         }
         val selected = selectProxies()
         return !selected.isNullOrEmpty() && selected.all { it.type() == Proxy.Type.DIRECT }
+    }
+
+    // A proxy selector only looks at the scheme and host, and java.net.URI rejects characters a link may hold.
+    fun proxyLookupUri(url: String?): URI? {
+        return url?.toHttpUrlOrNull()?.let { URI(it.scheme, it.host, null, null) }
     }
 
     fun normalizeChallenge(challenge: String?): String? {

@@ -23,6 +23,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.net.InetSocketAddress
 import java.net.Proxy
+import java.net.URI
 
 class RedeemLinkPolicyTest {
     private val prodBase = "https://spend.ctx.com/"
@@ -266,6 +267,18 @@ class RedeemLinkPolicyTest {
         // unknown counts as a proxy
         assertFalse(RedeemLinkPolicy.connectsDirectly(null, null) { null })
         assertFalse(RedeemLinkPolicy.connectsDirectly(null, null) { emptyList() })
+    }
+
+    @Test
+    fun proxyLookup_usesOnlySchemeAndHost() {
+        val origin = URI("https://spend.ctx.com")
+
+        assertEquals(origin, RedeemLinkPolicy.proxyLookupUri(prodLink))
+        // java.net.URI refuses these characters, the link parser does not
+        assertEquals(origin, RedeemLinkPolicy.proxyLookupUri("https://spend.ctx.com/gift-cards/abc/redeem?token=a|b^c"))
+        assertEquals(URI("https://[::1]"), RedeemLinkPolicy.proxyLookupUri("https://[::1]:8443/gift-cards/abc/redeem"))
+        assertNull(RedeemLinkPolicy.proxyLookupUri("not a url"))
+        assertNull(RedeemLinkPolicy.proxyLookupUri(null))
     }
 
     @Test

@@ -22,6 +22,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.net.ConnectivityManager
+import android.net.Proxy
 import android.net.Uri
 import android.net.http.SslError
 import android.os.Build
@@ -106,7 +107,6 @@ import org.dash.wallet.features.exploredash.utils.CTXSpendConstants
 import org.slf4j.LoggerFactory
 import java.io.ByteArrayInputStream
 import java.net.ProxySelector
-import java.net.URI
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -148,7 +148,9 @@ class RedeemLinkActivity : InteractionAwareActivity() {
             return try {
                 val proxy = context.getSystemService(ConnectivityManager::class.java).defaultProxy
                 val pacUrl = proxy?.pacFileUrl?.takeUnless { it == Uri.EMPTY }?.toString()
-                RedeemLinkPolicy.connectsDirectly(proxy?.host, pacUrl) { ProxySelector.getDefault()?.select(URI(url)) }
+                RedeemLinkPolicy.connectsDirectly(proxy?.host, pacUrl) {
+                    RedeemLinkPolicy.proxyLookupUri(url)?.let { ProxySelector.getDefault()?.select(it) }
+                }
             } catch (e: Exception) {
                 log.warn("Proxy settings could not be read: {}", e.javaClass.simpleName)
                 false
@@ -180,6 +182,18 @@ class RedeemLinkActivity : InteractionAwareActivity() {
     // Auto-logout can be switched off, and then nothing else closes this screen when the device locks.
     private val screenOffReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
+            finish()
+        }
+    }
+
+    private val proxyChangeReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            // The broadcast is sticky, so it also arrives once on registration.
+            if (isFinishing || !::redeemUrl.isInitialized || connectsDirectly(context, redeemUrl)) {
+                return
+            }
+            webView?.let { discardWebView(it) }
+            openInBrowser()
             finish()
         }
     }
@@ -294,7 +308,8 @@ class RedeemLinkActivity : InteractionAwareActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        registerScreenOffReceiver()
+        registerSystemReceiver(screenOffReceiver, Intent.ACTION_SCREEN_OFF)
+        registerSystemReceiver(proxyChangeReceiver, Proxy.PROXY_CHANGE_ACTION)
 
         // A restored instance would show the page without the wallet's lock screen in front of it.
         if (savedInstanceState != null) {
@@ -380,6 +395,7 @@ class RedeemLinkActivity : InteractionAwareActivity() {
 
     override fun onDestroy() {
         unregisterReceiver(screenOffReceiver)
+        unregisterReceiver(proxyChangeReceiver)
         val view = webView
         webView = null
 
@@ -398,13 +414,13 @@ class RedeemLinkActivity : InteractionAwareActivity() {
         super.onDestroy()
     }
 
-    private fun registerScreenOffReceiver() {
-        val filter = IntentFilter(Intent.ACTION_SCREEN_OFF)
+    private fun registerSystemReceiver(receiver: BroadcastReceiver, action: String) {
+        val filter = IntentFilter(action)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            registerReceiver(screenOffReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+            registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
         } else {
-            registerReceiver(screenOffReceiver, filter)
+            registerReceiver(receiver, filter)
         }
     }
 
