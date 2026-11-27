@@ -32,6 +32,7 @@ import org.dash.wallet.features.exploredash.network.authenticator.TokenAuthentic
 import org.dash.wallet.features.exploredash.network.service.ctxspend.CTXSpendApi
 import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardShoppingCart
 import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
+import org.dash.wallet.features.exploredash.utils.GiftCardCurrency
 import java.io.IOException
 import java.util.UUID
 import java.util.concurrent.TimeUnit
@@ -166,7 +167,7 @@ class CTXSpendRepository @Inject constructor(
         order: GiftCardShoppingCart,
         merchantId: String
     ): List<GiftCardInfo> {
-        val fiatAmount = order.first().valueAsString
+        val fiatAmount = GiftCardCurrency.orderAmount(order.first().value, fiatCurrency)
         val response = purchaseGiftCard(
             merchantId = merchantId,
             fiatAmount = fiatAmount,

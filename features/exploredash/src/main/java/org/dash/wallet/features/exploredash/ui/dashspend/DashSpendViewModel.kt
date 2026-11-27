@@ -75,7 +75,6 @@ import org.dash.wallet.features.exploredash.utils.PiggyCardsConstants.SUPPORT_PI
 import org.dash.wallet.features.exploredash.utils.PiggyCardsTestMerchants
 import org.slf4j.LoggerFactory
 import java.math.RoundingMode
-import java.text.DecimalFormat
 import javax.inject.Inject
 
 data class DashSpendState(
@@ -91,10 +90,6 @@ data class GiftCardOrderItem(
     companion object {
         val DEFAULT = GiftCardOrderItem()
     }
-    val valueAsString: String
-        get() = DecimalFormat.getNumberInstance().apply {
-            minimumFractionDigits = 2
-        }.format(value)
 }
 
 data class GiftCardShoppingCart constructor(
