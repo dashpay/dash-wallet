@@ -117,7 +117,8 @@ class RedeemLinkActivity : InteractionAwareActivity() {
         // Apps cannot listen on a loopback port below 1024, so a request sent here fails before any data leaves.
         private const val CLEARTEXT_SINK = "127.0.0.1:9"
 
-        // The proxy override covers every WebView in the process; it is lifted when the last screen closes.
+        // The proxy override and the stored web data are shared by every WebView in the process, so only the
+        // last screen to close lifts the override and wipes; an earlier one would cut into a newer claim.
         private var cleartextBlockUsers = 0
         private val log = LoggerFactory.getLogger(RedeemLinkActivity::class.java)
 
@@ -353,11 +354,16 @@ class RedeemLinkActivity : InteractionAwareActivity() {
         webView = null
 
         view?.let { destroyWebView(it) }
-        if (isFinishing && canIsolate()) {
-            runCatching { wipeWebData {} }
+        if (blocksCleartext) {
+            cleartextBlockUsers--
         }
-        if (blocksCleartext && --cleartextBlockUsers == 0) {
-            runCatching { ProxyController.getInstance().clearProxyOverride(ContextCompat.getMainExecutor(this)) {} }
+        if (cleartextBlockUsers == 0) {
+            if (isFinishing && canIsolate()) {
+                runCatching { wipeWebData {} }
+            }
+            if (blocksCleartext) {
+                runCatching { ProxyController.getInstance().clearProxyOverride(ContextCompat.getMainExecutor(this)) {} }
+            }
         }
         super.onDestroy()
     }
