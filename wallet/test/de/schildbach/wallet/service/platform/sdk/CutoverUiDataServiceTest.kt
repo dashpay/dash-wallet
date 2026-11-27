@@ -55,6 +55,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
@@ -681,6 +682,69 @@ class CutoverUiDataServiceTest {
             assertTrue(plan.inserts.isEmpty())
             assertTrue(plan.updates.isEmpty())
         }
+    }
+
+    // ── A gift card cached as a receipt (dashpay/dash-wallet#1745) ──────
+
+    /** The row the dashj-side writer authors for an SDK-built purchase: the change, received. */
+    private fun giftCardCachedAsReceipt(firstByte: Int) = cacheEntry(
+        rowId = displayHex(firstByte),
+        title = "Gift card · CVS",
+        statusText = resolve(R.string.transaction_row_status_processing),
+        service = "ctxspend",
+        filterFlags = TxDisplayCacheEntry.FLAG_GIFT_CARD or TxDisplayCacheEntry.FLAG_SENT or
+            TxDisplayCacheEntry.FLAG_RECEIVED
+    ).copy(
+        valueSatoshis = 3_398_163_022L,
+        iconType = TxDisplayCacheEntry.ICON_GIFT_CARD,
+        iconBgType = TxDisplayCacheEntry.BG_ORANGE
+    )
+
+    @Test
+    fun syncPlan_giftCardCachedAsReceiptBecomesTheSendTheStoreRecords() {
+        val existing = giftCardCachedAsReceipt(9)
+        val sent = record(firstByte = 9, net = -35_459_933, fee = 226, context = 2, direction = 1)
+
+        val plan = planL1DisplaySync(listOf(sent), mapOf(existing.rowId to existing), emptySet(), resolve, now)
+
+        val expected = existing.copy(
+            valueSatoshis = -35_459_707L,
+            statusText = "",
+            filterFlags = TxDisplayCacheEntry.FLAG_GIFT_CARD or TxDisplayCacheEntry.FLAG_SENT
+        )
+        assertEquals(expected, plan.updates.single())
+        // The title, icon and gift-card flag are still not the planner's, so the
+        // row is not claimed either.
+        assertTrue(plan.sdkAuthoritative.isEmpty())
+        // Idempotent: the corrected row is left alone.
+        val again = planL1DisplaySync(listOf(sent), mapOf(expected.rowId to expected), emptySet(), resolve, now)
+        assertTrue(again.updates.isEmpty())
+    }
+
+    @Test
+    fun syncPlan_giftCardCachedAsReceiptIsLeftWithoutADefinitiveSend() {
+        val existing = giftCardCachedAsReceipt(9)
+        val byRowId = mapOf(existing.rowId to existing)
+        val sent = record(firstByte = 9, net = -35_459_933, fee = 226, context = 2, direction = 1)
+        // The event feed's records are per account, never definitive.
+        val fromEvent = planL1DisplaySync(
+            listOf(sent), byRowId, emptySet(), resolve, now, restampFromDefinitiveRecord = false
+        )
+        assertTrue(fromEvent.updates.isEmpty())
+        // A store row that itself reads incoming or internal proves nothing.
+        for (direction in listOf(0, 2)) {
+            val other = record(firstByte = 9, net = 3_398_163_022, context = 2, direction = direction)
+            assertTrue(planL1DisplaySync(listOf(other), byRowId, emptySet(), resolve, now).updates.isEmpty())
+        }
+    }
+
+    @Test
+    fun giftCardRowAsSent_leavesARowAlreadyShowingASend() {
+        // An upgraded wallet's dashj-era value differs from the store's net; it is
+        // a send already, so it stands.
+        val existing = giftCardCachedAsReceipt(9).copy(valueSatoshis = -100_000_773L, statusText = "")
+        val sent = record(firstByte = 9, net = -7_599_227, fee = 227, context = 2, direction = 1)
+        assertSame(existing, giftCardRowAsSent(existing, sent, definitiveRecord = true))
     }
 
     @Test

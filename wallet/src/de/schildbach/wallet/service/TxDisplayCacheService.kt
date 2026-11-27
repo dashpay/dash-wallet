@@ -493,7 +493,7 @@ class TxDisplayCacheService @Inject constructor(
                                 filterFlags   = existing.filterFlags
                             )
                         }
-                        result
+                        keepGiftCardSend(result, existing)
                     }
                     txDisplayCacheDao.insertAll(entries)
                 }
@@ -1758,8 +1758,37 @@ internal fun mergeDisplayEntryPreservingSdkStamped(
             filterFlags   = existing.filterFlags
         )
     }
-    return result
+    return keepGiftCardSend(result, existing)
 }
+
+/**
+ * [entry], a dashj rebuild of a gift-card row, kept a send when the [existing]
+ * row already is one. A gift card purchase is always a send, so a rebuild that
+ * values it as a receipt is the held dashj wallet misreading an SDK-built
+ * payment whose input it never saw (it reports the change output as received;
+ * see [de.schildbach.wallet.service.platform.sdk.giftCardRowAsSent]). The
+ * cached send value stands, with no secondary status and the sent filter
+ * bucket; the rebuild's title, icon, memo and gift-card flag pass through, so a
+ * row the SDK inserted as a plain send still becomes a gift-card row.
+ *
+ * Needs no SDK-authority register, which is per process and never claimed for
+ * a gift-card row. With no cached send to keep, [entry] passes unchanged and
+ * the SDK sync pass corrects it. Returns [entry] itself when nothing changes.
+ * Pure, host-testable.
+ */
+internal fun keepGiftCardSend(entry: TxDisplayCacheEntry, existing: TxDisplayCacheEntry?): TxDisplayCacheEntry =
+    if (existing != null && existing.valueSatoshis < 0L && entry.valueSatoshis > 0L &&
+        !entry.hasErrors && (entry.filterFlags and TxDisplayCacheEntry.FLAG_GIFT_CARD) != 0
+    ) {
+        entry.copy(
+            valueSatoshis = existing.valueSatoshis,
+            statusText = "",
+            filterFlags = (entry.filterFlags and TxDisplayCacheEntry.FLAG_RECEIVED.inv()) or
+                TxDisplayCacheEntry.FLAG_SENT
+        )
+    } else {
+        entry
+    }
 
 /**
  * Whether rebuilding the display/group caches from the dashj wallet would

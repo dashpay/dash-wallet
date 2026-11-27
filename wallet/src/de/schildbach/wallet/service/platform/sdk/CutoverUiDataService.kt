@@ -588,6 +588,42 @@ internal fun withoutCachedFee(
     }
 
 /**
+ * [entry], a gift-card row cached as a RECEIPT, with the send [record] proves
+ * it is. A gift card purchase is always a send, but the dashj-side writer
+ * ([de.schildbach.wallet.service.TxDisplayCacheService]) values an SDK-built
+ * payment from the held dashj wallet, which never saw a coin funded after the
+ * cutover: with the input unrecognised it reports the change output as money
+ * received, "Processing" for good since that wallet no longer syncs
+ * (dashpay/dash-wallet#1745: a 0.3546 purchase shown as + 33.98163).
+ *
+ * Fires only on that provable misread: a positive cached value against a
+ * definitive OUTGOING record with a negative net. The event feed's
+ * per-account records are not definitive ([definitiveRecord] false), and a
+ * row already showing a send keeps its value, whichever engine wrote it. The
+ * title, icon and gift-card flag stay the row's own. Idempotent: the corrected
+ * value is negative. Returns [entry] itself when nothing changes. Pure,
+ * host-testable.
+ */
+internal fun giftCardRowAsSent(
+    entry: TxDisplayCacheEntry,
+    record: L1TxUiRecord,
+    definitiveRecord: Boolean
+): TxDisplayCacheEntry =
+    if (definitiveRecord && entry.valueSatoshis > 0L &&
+        record.direction == L1TxUiDirection.OUTGOING && record.netAmountDuffs < 0L
+    ) {
+        entry.copy(
+            valueSatoshis = record.sentValueWithoutFeeDuffs,
+            // A send carries no secondary status.
+            statusText = "",
+            filterFlags = (entry.filterFlags and TxDisplayCacheEntry.FLAG_RECEIVED.inv()) or
+                TxDisplayCacheEntry.FLAG_SENT
+        )
+    } else {
+        entry
+    }
+
+/**
  * [existing] with its time moved back to [record]'s block time when the cached
  * time is impossible: LATER than the block that contains the tx, by more than
  * [L1_BLOCK_TIME_SKEW_TOLERANCE_MS]. A tx can be seen before it is mined, never
@@ -629,6 +665,8 @@ internal fun redatedFromBlock(existing: TxDisplayCacheEntry, record: L1TxUiRecor
  *   fee-free value ([L1TxUiRecord.sentValueWithoutFeeDuffs]) once the fee is
  *   known ([withoutCachedFee]) — service-tagged, swap and gift-card rows
  *   included.
+ * - A gift-card row cached as a receipt takes the value, the empty status and
+ *   the sent filter bucket of a definitive OUTGOING record ([giftCardRowAsSent]).
  * Everything else is left byte-identical.
  */
 internal fun planL1DisplaySync(
@@ -783,9 +821,13 @@ internal fun planL1DisplaySync(
         ) {
             // Swap and gift-card rows are sends too, so they also take the fee-only
             // value fix ([withoutCachedFee]) — their title/icon/status stay theirs.
+            // A gift-card row cached as a receipt is also turned back into the send
+            // the definitive record proves ([giftCardRowAsSent]).
             // Error and CoinJoin rows take nothing else.
             val kept = if (existing.hasErrors || (existing.filterFlags and TxDisplayCacheEntry.FLAG_COINJOIN) != 0) {
                 redated
+            } else if (existing.swapStatus == null) {
+                giftCardRowAsSent(withoutCachedFee(redated, record, contact), record, restampFromDefinitiveRecord)
             } else {
                 withoutCachedFee(redated, record, contact)
             }
