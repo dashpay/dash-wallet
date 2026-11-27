@@ -341,12 +341,36 @@ class TxDisplayCacheMergeGuardTest {
             iconType = TxDisplayCacheEntry.ICON_SENT,
             service = "ctxspend"
         )
-        val merged = merge(giftCardMisread, cached, sdkAuthoritative = false)
-        assertEquals("Gift card · CVS", merged.title)
-        assertEquals(TxDisplayCacheEntry.ICON_GIFT_CARD, merged.iconType)
+        // Registered SDK-authoritative while the process that inserted it lives, and
+        // not after a restart: the gift-card decoration lands either way.
+        for (sdkAuthoritative in listOf(true, false)) {
+            val merged = merge(giftCardMisread, cached, sdkAuthoritative)
+            assertEquals("Gift card · CVS", merged.title)
+            assertEquals(TxDisplayCacheEntry.ICON_GIFT_CARD, merged.iconType)
+            assertEquals(TxDisplayCacheEntry.BG_ORANGE, merged.iconBgType)
+            assertEquals(-35_459_707L, merged.valueSatoshis)
+            assertEquals("", merged.statusText)
+            assertEquals(giftCardFlags, merged.filterFlags)
+        }
+    }
+
+    @Test
+    fun sdkAuthoritativeGiftCardRowKeepsItsValueAgainstASmallerDashjDebit() {
+        // dashj recognised only some inputs: a send, but the wrong amount.
+        val cached = giftCardMisread.copy(valueSatoshis = -35_459_707L, statusText = "", filterFlags = giftCardFlags)
+        val rebuild = cached.copy(valueSatoshis = -5_000_000L, title = "Gift card · CVS Pharmacy")
+        val merged = merge(rebuild, cached, sdkAuthoritative = true)
         assertEquals(-35_459_707L, merged.valueSatoshis)
-        assertEquals("", merged.statusText)
-        assertEquals(giftCardFlags, merged.filterFlags)
+        // A later merchant title still lands.
+        assertEquals("Gift card · CVS Pharmacy", merged.title)
+    }
+
+    @Test
+    fun erroredGiftCardRebuildIsNotDecoration() {
+        val cached = entry(title = sentTitle, valueSatoshis = -1_000L, iconType = TxDisplayCacheEntry.ICON_SENT)
+        val errored = giftCardMisread.copy(hasErrors = true)
+        assertFalse(isGiftCardDecorated(errored))
+        assertEquals(TxDisplayCacheEntry.FLAG_SENT, withGiftCardFlagOf(errored, cached.filterFlags))
     }
 
     @Test

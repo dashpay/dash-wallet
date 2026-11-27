@@ -484,13 +484,15 @@ class TxDisplayCacheService @Inject constructor(
                             // the filter bucket stay frozen: the dashj rebuild still
                             // cannot be trusted for those, swap or not.
                             val swapDecorated = entry.swapStatus != null
+                            // So is the gift-card decoration ([isGiftCardDecorated]).
+                            val decorated = swapDecorated || isGiftCardDecorated(entry)
                             result = result.copy(
                                 valueSatoshis = existing.valueSatoshis,
-                                iconType      = if (swapDecorated) entry.iconType else existing.iconType,
-                                iconBgType    = if (swapDecorated) entry.iconBgType else existing.iconBgType,
-                                title         = if (swapDecorated) entry.title else existing.title,
+                                iconType      = if (decorated) entry.iconType else existing.iconType,
+                                iconBgType    = if (decorated) entry.iconBgType else existing.iconBgType,
+                                title         = if (decorated) entry.title else existing.title,
                                 statusText    = if (swapDecorated) entry.statusText else existing.statusText,
-                                filterFlags   = existing.filterFlags
+                                filterFlags   = withGiftCardFlagOf(entry, existing.filterFlags)
                             )
                         }
                         keepGiftCardSend(result, existing)
@@ -1749,37 +1751,52 @@ internal fun mergeDisplayEntryPreservingSdkStamped(
         // swap metadata (entry.swapStatus == null) never undresses an existing
         // swap row — the freeze keeps the cached shape as before.
         val swapDecorated = entry.swapStatus != null
+        // So is the gift-card decoration ([isGiftCardDecorated]).
+        val decorated = swapDecorated || isGiftCardDecorated(entry)
         result = result.copy(
             valueSatoshis = existing.valueSatoshis,
-            iconType      = if (swapDecorated) entry.iconType else existing.iconType,
-            iconBgType    = if (swapDecorated) entry.iconBgType else existing.iconBgType,
-            title         = if (swapDecorated || sendingToSent) entry.title else existing.title,
+            iconType      = if (decorated) entry.iconType else existing.iconType,
+            iconBgType    = if (decorated) entry.iconBgType else existing.iconBgType,
+            title         = if (decorated || sendingToSent) entry.title else existing.title,
             statusText    = if (swapDecorated || statusCleared) entry.statusText else existing.statusText,
-            filterFlags   = existing.filterFlags
+            filterFlags   = withGiftCardFlagOf(entry, existing.filterFlags)
         )
     }
     return keepGiftCardSend(result, existing)
 }
 
 /**
+ * Whether a dashj rebuild rendered [entry] as a gift card: its title, icon and
+ * filter flag then come from the DashSpend metadata, not from a dashj
+ * valuation, so they pass the SDK-stamped freeze like the swap decoration. A
+ * purchase whose row the SDK inserted first, as a plain send, still becomes a
+ * gift-card row; its value, status and direction bucket stay frozen. An errored
+ * rebuild carries the error shape instead and is not decoration. Pure.
+ */
+internal fun isGiftCardDecorated(entry: TxDisplayCacheEntry): Boolean =
+    !entry.hasErrors && (entry.filterFlags and TxDisplayCacheEntry.FLAG_GIFT_CARD) != 0
+
+/** [flags] with the gift-card filter flag added when [entry] is gift-card decorated. Pure. */
+internal fun withGiftCardFlagOf(entry: TxDisplayCacheEntry, flags: Int): Int =
+    if (isGiftCardDecorated(entry)) flags or TxDisplayCacheEntry.FLAG_GIFT_CARD else flags
+
+/**
  * [entry], a dashj rebuild of a gift-card row, kept a send when the [existing]
  * row already is one. A gift card purchase is always a send, so a rebuild that
  * values it as a receipt is the held dashj wallet misreading an SDK-built
  * payment whose input it never saw (it reports the change output as received;
- * see [de.schildbach.wallet.service.platform.sdk.giftCardRowAsSent]). The
+ * see [de.schildbach.wallet.service.platform.sdk.giftCardRowFromRecord]). The
  * cached send value stands, with no secondary status and the sent filter
- * bucket; the rebuild's title, icon, memo and gift-card flag pass through, so a
- * row the SDK inserted as a plain send still becomes a gift-card row.
+ * bucket; the rebuild's title, icon, memo and gift-card flag pass through.
  *
- * Needs no SDK-authority register, which is per process and never claimed for
- * a gift-card row. With no cached send to keep, [entry] passes unchanged and
- * the SDK sync pass corrects it. Returns [entry] itself when nothing changes.
+ * This covers a row that is not SDK-stamped, which the freeze above does not
+ * reach: the SDK-authority register is per process and is not claimed for a
+ * gift-card row. With no cached send to keep, [entry] passes unchanged and the
+ * SDK sync pass corrects it. Returns [entry] itself when nothing changes.
  * Pure, host-testable.
  */
 internal fun keepGiftCardSend(entry: TxDisplayCacheEntry, existing: TxDisplayCacheEntry?): TxDisplayCacheEntry =
-    if (existing != null && existing.valueSatoshis < 0L && entry.valueSatoshis > 0L &&
-        !entry.hasErrors && (entry.filterFlags and TxDisplayCacheEntry.FLAG_GIFT_CARD) != 0
-    ) {
+    if (existing != null && existing.valueSatoshis < 0L && entry.valueSatoshis > 0L && isGiftCardDecorated(entry)) {
         entry.copy(
             valueSatoshis = existing.valueSatoshis,
             statusText = "",

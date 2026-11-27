@@ -739,12 +739,27 @@ class CutoverUiDataServiceTest {
     }
 
     @Test
-    fun giftCardRowAsSent_leavesARowAlreadyShowingASend() {
-        // An upgraded wallet's dashj-era value differs from the store's net; it is
-        // a send already, so it stands.
-        val existing = giftCardCachedAsReceipt(9).copy(valueSatoshis = -100_000_773L, statusText = "")
-        val sent = record(firstByte = 9, net = -7_599_227, fee = 227, context = 2, direction = 1)
-        assertSame(existing, giftCardRowAsSent(existing, sent, definitiveRecord = true))
+    fun syncPlan_giftCardSendFollowsALaterCorrectedNet() {
+        // The store walker re-nets an OUTGOING record as its inputs' spent marks land,
+        // and a dashj rebuild can cache a debit that is too small: the row follows.
+        val flags = TxDisplayCacheEntry.FLAG_GIFT_CARD or TxDisplayCacheEntry.FLAG_SENT
+        val existing = giftCardCachedAsReceipt(9).copy(
+            valueSatoshis = -5_000_000L, statusText = "", filterFlags = flags
+        )
+        val sent = record(firstByte = 9, net = -35_459_933, fee = 226, context = 2, direction = 1)
+
+        val plan = planL1DisplaySync(listOf(sent), mapOf(existing.rowId to existing), emptySet(), resolve, now)
+
+        assertEquals(existing.copy(valueSatoshis = -35_459_707L), plan.updates.single())
+    }
+
+    @Test
+    fun giftCardRowFromRecord_isIdempotentAndIgnoresTheEventFeed() {
+        val settled = giftCardCachedAsReceipt(9).copy(valueSatoshis = -35_459_707L, statusText = "")
+        val sent = record(firstByte = 9, net = -35_459_933, fee = 226, context = 2, direction = 1)
+        assertSame(settled, giftCardRowFromRecord(settled, sent, definitiveRecord = true))
+        val stale = settled.copy(valueSatoshis = -5_000_000L)
+        assertSame(stale, giftCardRowFromRecord(stale, sent, definitiveRecord = false))
     }
 
     @Test
@@ -1001,14 +1016,21 @@ class CutoverUiDataServiceTest {
             )
             assertTrue("re-stamped ${resolve(titleRes)}", plan.updates.isEmpty())
         }
-        // The gift-card / error / CoinJoin-flag carve-outs stay untouchable
-        // AND are never claimed as SDK-authoritative.
+        // The error / CoinJoin-flag carve-outs stay untouchable AND are never
+        // claimed as SDK-authoritative.
         val sendingTitle = resolve(R.string.transaction_row_status_sending)
+        // A gift-card row takes the record's amount and nothing else: its title,
+        // icon and flags are not the plain path's, and it is not claimed either.
+        val giftCard = cacheEntry(
+            rowId = displayHex(9), title = sendingTitle,
+            filterFlags = TxDisplayCacheEntry.FLAG_GIFT_CARD or TxDisplayCacheEntry.FLAG_SENT
+        )
+        val giftCardPlan = planL1DisplaySync(
+            listOf(r), mapOf(giftCard.rowId to giftCard), emptySet(), resolve, now
+        )
+        assertEquals(giftCard.copy(valueSatoshis = -40_000_000L), giftCardPlan.updates.single())
+        assertTrue(giftCardPlan.sdkAuthoritative.isEmpty())
         val carved = listOf(
-            cacheEntry(
-                rowId = displayHex(9), title = sendingTitle,
-                filterFlags = TxDisplayCacheEntry.FLAG_GIFT_CARD or TxDisplayCacheEntry.FLAG_SENT
-            ),
             cacheEntry(rowId = displayHex(9), title = sendingTitle, hasErrors = true),
             cacheEntry(
                 rowId = displayHex(9), title = sendingTitle,
