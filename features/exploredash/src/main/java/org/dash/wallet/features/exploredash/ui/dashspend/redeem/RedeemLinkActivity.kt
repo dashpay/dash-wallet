@@ -173,6 +173,7 @@ class RedeemLinkActivity : InteractionAwareActivity() {
     private var host by mutableStateOf<String?>(null)
     private var loadProgress by mutableIntStateOf(0)
     private var hasError by mutableStateOf(false)
+    private var isBlockedByProxy by mutableStateOf(false)
     private var jsDialog: AlertDialog? = null
     private var hasCommittedPage = false
     private var jsDialogCount = 0
@@ -192,9 +193,7 @@ class RedeemLinkActivity : InteractionAwareActivity() {
             if (isFinishing || !::redeemUrl.isInitialized || connectsDirectly(context, redeemUrl)) {
                 return
             }
-            webView?.let { discardWebView(it) }
-            openInBrowser()
-            finish()
+            showBlockedByProxy()
         }
     }
 
@@ -346,6 +345,7 @@ class RedeemLinkActivity : InteractionAwareActivity() {
                             challenge = challenge,
                             progress = loadProgress,
                             hasError = hasError,
+                            isBlockedByProxy = isBlockedByProxy,
                             webView = webView,
                             onClose = { finish() },
                             onCopyChallenge = { code ->
@@ -437,11 +437,15 @@ class RedeemLinkActivity : InteractionAwareActivity() {
         jsDialogCount = 0
         downloadNoticeShown = false
         hasError = false
+        isBlockedByProxy = false
         loadProgress = 0
 
         val load = Runnable {
-            if (isShowing(view)) {
+            // A proxy can appear while the page is being set up, before its change is broadcast.
+            if (isShowing(view) && connectsDirectly(this, redeemUrl)) {
                 view.loadUrl(redeemUrl)
+            } else if (isShowing(view)) {
+                showBlockedByProxy()
             }
         }
         blockCleartext {
@@ -466,8 +470,17 @@ class RedeemLinkActivity : InteractionAwareActivity() {
         Handler(Looper.getMainLooper()).post { discardWebView(view) }
     }
 
+    // The buyer may be in another app when a proxy appears, so the link is only handed over when they ask.
+    private fun showBlockedByProxy() {
+        webView?.let { discardWebView(it) }
+        isBlockedByProxy = true
+        hasError = true
+    }
+
     private fun retry() {
-        if (!loadRedeemPage(wipeData = false)) {
+        if (!connectsDirectly(this, redeemUrl)) {
+            showBlockedByProxy()
+        } else if (!loadRedeemPage(wipeData = false)) {
             openInBrowser()
             finish()
         }
@@ -612,6 +625,7 @@ private fun RedeemLinkScreen(
     challenge: String?,
     progress: Int,
     hasError: Boolean,
+    isBlockedByProxy: Boolean,
     webView: WebView?,
     onClose: () -> Unit = {},
     onCopyChallenge: (String) -> Unit = {},
@@ -677,6 +691,7 @@ private fun RedeemLinkScreen(
 
         if (hasError || webView == null) {
             ErrorState(
+                isBlockedByProxy = isBlockedByProxy,
                 onRetry = onRetry,
                 onOpenInBrowser = onOpenInBrowser,
                 modifier = Modifier
@@ -735,7 +750,13 @@ private fun ChallengeBanner(challenge: String, onCopy: () -> Unit) {
 }
 
 @Composable
-private fun ErrorState(onRetry: () -> Unit, onOpenInBrowser: () -> Unit, modifier: Modifier = Modifier) {
+private fun ErrorState(
+    isBlockedByProxy: Boolean,
+    onRetry: () -> Unit,
+    onOpenInBrowser: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val message = if (isBlockedByProxy) R.string.redeem_link_proxy else R.string.redeem_link_error
     val colors = LocalDashColors.current
 
     Column(
@@ -744,7 +765,7 @@ private fun ErrorState(onRetry: () -> Unit, onOpenInBrowser: () -> Unit, modifie
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = stringResource(R.string.redeem_link_error),
+            text = stringResource(message),
             style = MyTheme.Typography.BodyMedium,
             color = colors.textPrimary,
             textAlign = TextAlign.Center,
@@ -769,6 +790,7 @@ private fun RedeemLinkErrorPreview() {
             challenge = "A1B2C3D4E5",
             progress = 100,
             hasError = true,
+            isBlockedByProxy = false,
             webView = null
         )
     }

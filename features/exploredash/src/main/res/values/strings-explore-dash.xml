@@ -212,6 +212,7 @@
     <string name="redeem_link_copy">Copy</string>
     <string name="redeem_link_copy_challenge">Copy challenge code</string>
     <string name="redeem_link_error">This page could not be loaded.</string>
+    <string name="redeem_link_proxy">This page can\'t be shown in the app while this network uses a proxy. Open it in your browser instead.</string>
     <string name="redeem_link_open_in_browser">Open in browser</string>
     <string name="redeem_link_no_browser">No app found to open this link.</string>
     <string name="redeem_link_blocked">This link can\'t be opened here.</string>
