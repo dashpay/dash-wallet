@@ -162,6 +162,25 @@ class GiftCardDetailsViewModelTest {
     }
 
     @Test
+    fun retry_toleratesATransientFailureBeforeTheLinkArrives() = runTest {
+        val viewModel = viewModel()
+        pollUntil { viewModel.uiState.value.error != null }
+        val link = "https://spend.ctx.com/gift-cards/order-1/redeem"
+        whenever(repository.getGiftCard(orderId))
+            .thenThrow(IllegalStateException("offline"))
+            .thenReturn(listOf(withoutDetails.copy(redeemUrl = link)))
+
+        viewModel.retry()
+        pollUntil { viewModel.uiState.value.queries > limit || viewModel.uiState.value.error != null }
+
+        assertNull(viewModel.uiState.value.error)
+        val saved = argumentCaptor<GiftCard>()
+        verify(metadataProvider).updateGiftCardMetadata(saved.capture())
+        assertEquals(link, saved.lastValue.merchantUrl)
+        verify(repository, times(limit + 2)).getGiftCard(orderId)
+    }
+
+    @Test
     fun missingDetails_isJudgedForTheCardOnShow() {
         val usable = pendingCard.copy(number = "6006491234", index = 1)
         val state = GiftCardUIState(giftCards = listOf(pendingCard, usable), status = GiftCardStatus.FULFILLED)

@@ -95,6 +95,7 @@ class GiftCardDetailsViewModel @Inject constructor(
         private val log = LoggerFactory.getLogger(GiftCardDetailsViewModel::class.java)
 
         const val WAIT_LIMIT_FOR_ERROR = 60
+        private const val FAILURE_RETRIES = 3
     }
 
     lateinit var transactionId: Sha256Hash
@@ -103,7 +104,7 @@ class GiftCardDetailsViewModel @Inject constructor(
     private var tickerJob: Job? = null
 
     private var exchangeRate: ExchangeRate? = null
-    private var retries = 3
+    private var retries = FAILURE_RETRIES
     private var missingDetailsQueries = 0
 
     val ctxBaseUrl: String
@@ -172,6 +173,7 @@ class GiftCardDetailsViewModel @Inject constructor(
             return
         }
         missingDetailsQueries = 0
+        retries = FAILURE_RETRIES
         _uiState.update { it.copy(error = null) }
         startPolling()
     }
