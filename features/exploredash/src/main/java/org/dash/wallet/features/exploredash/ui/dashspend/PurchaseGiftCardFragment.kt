@@ -81,6 +81,16 @@ fun GiftCardPurchaseBlock.message(context: Context, cardCurrency: String?): Stri
     }
 }
 
+/**
+ * The entry is shared by the whole activity. The next screen must not get the card's amount or
+ * currency, nor this screen's reasons to disable Continue.
+ */
+internal fun EnterAmountViewModel.leaveGiftCardPurchase() {
+    clearSavedState()
+    resetCurrency()
+    blockContinue = false
+}
+
 /** Blocks that pass by themselves, or that the disabled Continue button already explains. */
 private val GiftCardPurchaseBlock.isSilent: Boolean
     get() = this == GiftCardPurchaseBlock.CURRENCY_LOADING || this == GiftCardPurchaseBlock.RATE_LOADING ||
@@ -228,11 +238,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
             // a rotation keeps the order, which an open confirmation dialog is showing
             if (activity?.isChangingConfigurations != true) {
                 viewModel.resetSelectedDenomination()
-                enterAmountViewModel.clearSavedState()
-                // the entry is shared by the whole activity and must not keep the card's currency
-                enterAmountViewModel.resetCurrency()
-                // nor this screen's reasons to disable Continue
-                enterAmountViewModel.blockContinue = false
+                enterAmountViewModel.leaveGiftCardPurchase()
             }
         }
     }

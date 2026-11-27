@@ -17,6 +17,9 @@
 
 package org.dash.wallet.common.ui.enter_amount
 
+import org.bitcoinj.utils.Fiat
+import org.bitcoinj.utils.MonetaryFormat
+import java.math.RoundingMode
 import java.util.Currency
 
 /** How many decimals the amount keypad accepts. */
@@ -38,6 +41,25 @@ object AmountInputRules {
             DEFAULT_FIAT_DECIMALS
         }
         return if (digits < 0) DEFAULT_FIAT_DECIMALS else minOf(digits, MAX_FIAT_DECIMALS)
+    }
+
+    /** [amount] as keypad input, with no more decimals than its currency has. */
+    fun fiatInput(amount: Fiat, format: MonetaryFormat): String {
+        val decimals = maxDecimals(false, amount.currencyCode)
+        val trimmed = format.minDecimals(0)
+        return (if (decimals > 0) trimmed.optionalDecimals(0, decimals) else trimmed.optionalDecimals())
+            .format(amount)
+            .toString()
+    }
+
+    /** A plain number such as "1234.56", rounded if it has more than [maxDecimals] decimals. */
+    fun fitDecimals(plainNumber: String, maxDecimals: Int): String {
+        val number = plainNumber.toBigDecimalOrNull() ?: return plainNumber
+        return if (number.scale() > maxDecimals) {
+            number.setScale(maxDecimals, RoundingMode.HALF_UP).toPlainString()
+        } else {
+            plainNumber
+        }
     }
 
     fun acceptsDigit(input: String, decimalSeparator: Char, maxDecimals: Int): Boolean {

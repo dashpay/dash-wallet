@@ -98,6 +98,7 @@ class GiftCardCurrencyTest {
         val order = mapOf(25.0 to 2, 33.33 to 3)
 
         // 2 * 22.5 + 3 * 32.163450 = 141.49035
-        assertEquals("141.50", GiftCardCurrency.discountedTotal(order, "USD") { discounts.getValue(it) }.toPlainString())
+        val total = GiftCardCurrency.discountedTotal(order, "USD") { discounts.getValue(it) }
+        assertEquals("141.50", total.toPlainString())
     }
 }

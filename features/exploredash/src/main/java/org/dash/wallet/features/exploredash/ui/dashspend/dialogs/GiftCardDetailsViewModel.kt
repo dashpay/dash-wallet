@@ -103,6 +103,9 @@ class GiftCardDetailsViewModel @Inject constructor(
     private var currencyLookup: Job? = null
     private var isCurrencyResolved = false
 
+    // replaced in tests, which run the lookup and its pauses on virtual time
+    internal var currencyLookupDispatcher: CoroutineDispatcher = Dispatchers.IO
+
     private val _uiState = MutableStateFlow(GiftCardUIState())
     val uiState: StateFlow<GiftCardUIState> = _uiState.asStateFlow()
 
@@ -174,7 +177,7 @@ class GiftCardDetailsViewModel @Inject constructor(
             return
         }
         currencyLookup = viewModelScope.launch {
-            isCurrencyResolved = withContext(Dispatchers.IO) {
+            isCurrencyResolved = withContext(currencyLookupDispatcher) {
                 repeat(CURRENCY_LOOKUP_ATTEMPTS) { attempt ->
                     if (backfillCurrency(transactionId)) {
                         return@withContext true

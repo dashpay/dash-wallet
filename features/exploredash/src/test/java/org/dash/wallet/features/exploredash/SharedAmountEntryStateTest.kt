@@ -22,9 +22,11 @@ import androidx.lifecycle.SavedStateHandle
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.emptyFlow
 import org.bitcoinj.core.Coin
+import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
+import org.dash.wallet.features.exploredash.ui.dashspend.leaveGiftCardPurchase
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -35,7 +37,7 @@ import org.mockito.kotlin.mock
 
 /**
  * The amount entry's view model belongs to the activity, so Receive and the other screens get
- * whatever the gift card screen left in it. These are the two calls that screen makes on its way out.
+ * whatever the gift card screen left in it.
  */
 @ExperimentalCoroutinesApi
 class SharedAmountEntryStateTest {
@@ -53,26 +55,20 @@ class SharedAmountEntryStateTest {
     }
 
     @Test
-    fun releasingTheBlock_letsTheNextScreenContinue() {
+    fun leavingTheGiftCardPurchase_handsTheEntryBackClean() {
         val entry = entry()
         entry.setMinAmount(Coin.ZERO, true)
         var canContinue: Boolean? = null
         entry.canContinue.observeForever { canContinue = it }
-
+        // what the purchase screen does to the entry while it is open
+        entry.selectedCurrencyCode = "KWD"
         entry.blockContinue = true
         assertEquals(false, canContinue)
 
-        entry.blockContinue = false
-        assertEquals(true, canContinue)
-    }
+        entry.leaveGiftCardPurchase()
 
-    @Test
-    fun resettingTheCurrency_goesBackToTheWalletCurrency() {
-        val entry = entry()
-        entry.selectedCurrencyCode = "KWD"
-
-        entry.resetCurrency()
-
+        assertEquals("Receive must be able to continue", true, canContinue)
         assertEquals("EUR", entry.selectedCurrencyCode)
+        assertEquals(Fiat.valueOf("KWD", 0), entry.fiatAmount.value)
     }
 }

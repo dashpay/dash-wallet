@@ -51,7 +51,6 @@ object GiftCardCurrency {
             .setScale(fractionDigits(currencyCode), RoundingMode.UNNECESSARY)
             .toPlainString()
 
-    // Fiat counts in 1/10000 units, enough for every ISO 4217 currency (JPY 0, KWD 3 decimals)
     /** What [order] (card value to quantity) costs after each card's discount, rounded up once. */
     fun discountedTotal(order: Map<Double, Int>, currencyCode: String, discountOf: (Double) -> Double): BigDecimal =
         order.entries.fold(BigDecimal.ZERO) { total, (value, quantity) ->
@@ -59,6 +58,7 @@ object GiftCardCurrency {
             total + price * BigDecimal(quantity)
         }.setScale(fractionDigits(currencyCode), RoundingMode.UP)
 
+    // Fiat counts in 1/10000 units, enough for every ISO 4217 currency (JPY 0, KWD 3 decimals)
     fun toFiat(amount: Double, currencyCode: String): Fiat =
         Fiat.valueOf(
             currencyCode,
