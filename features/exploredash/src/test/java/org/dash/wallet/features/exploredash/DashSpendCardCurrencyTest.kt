@@ -123,6 +123,7 @@ class DashSpendCardCurrencyTest {
     private val originalLocale = Locale.getDefault()
     private val rates = mutableMapOf<String, MutableStateFlow<ExchangeRate?>>()
     private val rateLookups = mutableMapOf<String, Flow<ExchangeRate?>>()
+    private val rateLookupsStarted = mutableListOf<String>()
     private val api = mock<CTXSpendApi>()
     private val piggyCards = mock<DashSpendRepository>()
     private val giftCardDao = mock<GiftCardDao>()
@@ -186,6 +187,7 @@ class DashSpendCardCurrencyTest {
         val exchangeRates = mock<ExchangeRatesProvider> {
             on { observeExchangeRate(any()) } doAnswer {
                 val currency = it.getArgument<String>(0)
+                rateLookupsStarted += currency
                 rateLookups[currency] ?: rateFlow(currency)
             }
         }
@@ -886,7 +888,23 @@ class DashSpendCardCurrencyTest {
     }
 
     @Test
-    fun failedRateLookup_isStartedAgainByTheNextLoadOfTheSameCurrency() = runBlocking {
+    fun absentRate_isNotLookedUpAgainByARefreshOfTheSameMerchant() = runBlocking {
+        ctxSells("GBP", listOf("5", "500"))
+        val viewModel = viewModel()
+        val merchant = viewModel.openCtxMerchant()
+        assertEquals(CardRateState.Missing, viewModel.cardRateState.value)
+
+        viewModel.updateMerchantDetails(merchant)
+
+        // the first lookup is still watching for the rate, so nothing may flip back to Loading
+        assertEquals(listOf("GBP"), rateLookupsStarted.filter { it == "GBP" })
+        assertEquals(CardRateState.Missing, viewModel.cardRateState.value)
+        setRate("GBP", "20")
+        assertTrue(viewModel.cardRateState.value is CardRateState.Available)
+    }
+
+    @Test
+    fun failedRateLookup_isStartedAgainByARefreshOfTheSameMerchant() = runBlocking {
         ctxSells("GBP", listOf("5", "500"))
         rateLookups["GBP"] = flow { throw IOException("database closed") }
         val viewModel = viewModel()
@@ -900,6 +918,7 @@ class DashSpendCardCurrencyTest {
         viewModel.enter("25")
 
         assertEquals(CardCurrencyState.Known("GBP"), viewModel.cardCurrencyState.value)
+        assertEquals(listOf("GBP", "GBP"), rateLookupsStarted.filter { it == "GBP" })
         assertNull(viewModel.purchaseBlock)
     }
 

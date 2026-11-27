@@ -264,6 +264,9 @@ class DashSpendViewModel @Inject constructor(
 
     private val _cardRateState = MutableStateFlow<CardRateState>(CardRateState.Loading)
     private val rateLookup = MutableStateFlow(0)
+
+    @Volatile
+    private var isRateLookupFailed = false
     val cardRateState: StateFlow<CardRateState> = _cardRateState.asStateFlow()
 
     /** The rate that converts card amounts to Dash for display, limits and the balance check. */
@@ -359,6 +362,7 @@ class DashSpendViewModel @Inject constructor(
             .distinctUntilChanged()
             .combine(rateLookup) { currency, _ -> currency }
             .transformLatest { currency ->
+                isRateLookupFailed = false
                 emit(CardRateState.Loading)
                 if (currency != null) {
                     emitAll(
@@ -367,6 +371,7 @@ class DashSpendViewModel @Inject constructor(
                             // caught here, so that the next merchant or currency starts a new lookup
                             .catch { e ->
                                 log.error("could not read the {} rate; keeping the purchase blocked", currency, e)
+                                isRateLookupFailed = true
                                 emit(CardRateState.Missing)
                             }
                     )
@@ -770,8 +775,8 @@ class DashSpendViewModel @Inject constructor(
             return false
         }
         val previous = _cardCurrencyState.value
-        if (_cardRateState.value == CardRateState.Missing) {
-            // the lookup may have ended in an error, and the same currency would not start another
+        if (isRateLookupFailed) {
+            // that lookup is over, and the same merchant in the same currency would not start another
             rateLookup.value++
         }
         if (!isAnswered && previous is CardCurrencyState.Known) {
