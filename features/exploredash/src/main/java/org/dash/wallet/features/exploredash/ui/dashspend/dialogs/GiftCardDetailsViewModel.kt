@@ -52,6 +52,7 @@ import org.dash.wallet.features.exploredash.repository.CTXSpendException
 import org.dash.wallet.features.exploredash.repository.CTXSpendRepository
 import org.dash.wallet.features.exploredash.repository.PiggyCardsRepository
 import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
+import org.dash.wallet.features.exploredash.utils.CTXSpendConstants
 import org.slf4j.LoggerFactory
 import java.time.Instant
 import java.time.LocalDateTime
@@ -98,6 +99,9 @@ class GiftCardDetailsViewModel @Inject constructor(
 
     private var exchangeRate: ExchangeRate? = null
     private var retries = 3
+
+    val ctxBaseUrl: String
+        get() = CTXSpendConstants.baseUrl(walletData.networkParameters)
 
     private val _uiState = MutableStateFlow(GiftCardUIState())
     val uiState: StateFlow<GiftCardUIState> = _uiState.asStateFlow()
@@ -148,7 +152,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                 }
 
                 val needsPolling = giftCards.any { card ->
-                    card.number == null && card.merchantUrl.isNullOrEmpty() && card.note != null
+                    card.number == null && card.merchantUrl.isNullOrBlank() && card.note != null
                 }
                 if (needsPolling && tickerJob?.isActive != true) {
                     tickerJob = TickerFlow(period = 0.5.seconds, initialDelay = 1.seconds)
@@ -273,8 +277,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                                     )
                                     cancelTicker()
                                     state
-                                } else if (giftCard.redeemUrl?.isNotEmpty() == true) {
-                                    log.error("CTXSpend returned a redeem url card: not supported")
+                                } else if (giftCard.redeemUrl?.isNotBlank() == true) {
                                     updateGiftCardWithURL(index = 0, giftCard.redeemUrl, giftCard.redeemUrlChallenge)
                                     val newState = uiState.value.copy(
                                         status = giftCard.status,
@@ -486,7 +489,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                                                 saveBarcode(giftCard.cardNumber, BarcodeFormat.CODE_128, cardIndex)
                                             }
                                         }
-                                    } else if (giftCard.redeemUrl?.isNotEmpty() == true) {
+                                    } else if (giftCard.redeemUrl?.isNotBlank() == true) {
                                         updateGiftCardWithURL(
                                             cardIndex,
                                             giftCard.redeemUrl,

@@ -19,7 +19,6 @@ package org.dash.wallet.features.exploredash.network
 import okhttp3.Authenticator
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
-import org.bitcoinj.core.NetworkParameters
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.features.exploredash.BuildConfig
@@ -46,13 +45,7 @@ class RemoteDataSource @Inject constructor(
 
     fun <Api> buildApi(api: Class<Api>): Api {
         return Retrofit.Builder()
-            .baseUrl(
-                if (walletData.networkParameters.id == NetworkParameters.ID_MAINNET) {
-                    CTXSpendConstants.BASE_URL
-                } else {
-                    CTXSpendConstants.DEV_BASE_URL
-                }
-            )
+            .baseUrl(CTXSpendConstants.baseUrl(walletData.networkParameters))
             .client(getOkHttpClient(TokenAuthenticator(buildTokenApi(), config)))
             .addConverterFactory(GsonConverterFactory.create())
             .build()
@@ -61,13 +54,7 @@ class RemoteDataSource @Inject constructor(
 
     fun buildTokenApi(): CTXSpendTokenApi {
         return Retrofit.Builder()
-            .baseUrl(
-                if (walletData.networkParameters.id == NetworkParameters.ID_MAINNET) {
-                    CTXSpendConstants.BASE_URL
-                } else {
-                    CTXSpendConstants.DEV_BASE_URL
-                }
-            )
+            .baseUrl(CTXSpendConstants.baseUrl(walletData.networkParameters))
             .client(getOkHttpClient(includeAuthorization = false))
             .addConverterFactory(GsonConverterFactory.create())
             .build()

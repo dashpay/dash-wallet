@@ -335,6 +335,15 @@
             android:theme="@style/My.Theme.ChildActivity" />
 
         <activity
+            android:name="org.dash.wallet.features.exploredash.ui.dashspend.redeem.RedeemLinkActivity"
+            android:configChanges="uiMode|fontScale|density|screenSize|smallestScreenSize|screenLayout|orientation|keyboard|keyboardHidden|navigation|locale|layoutDirection|fontWeightAdjustment|colorMode|mcc|mnc|touchscreen"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:screenOrientation="portrait"
+            android:theme="@style/My.Theme.ChildActivity"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
             android:name="de.schildbach.wallet.ui.AppUpgradeActivity"
             android:screenOrientation="portrait"
             android:theme="@style/LockScreenActivity.Theme" />
