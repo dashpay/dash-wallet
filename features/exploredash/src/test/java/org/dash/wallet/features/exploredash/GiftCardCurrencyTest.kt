@@ -27,12 +27,16 @@ import java.util.Locale
 
 class GiftCardCurrencyTest {
     private val originalLocale = Locale.getDefault()
+    private val originalFormatLocale = Locale.getDefault(Locale.Category.FORMAT)
+    private val originalDisplayLocale = Locale.getDefault(Locale.Category.DISPLAY)
 
     private fun digits(text: String) = text.filter(Char::isDigit).map { Character.digit(it, 10) }.joinToString("")
 
     @After
     fun restoreLocale() {
         Locale.setDefault(originalLocale)
+        Locale.setDefault(Locale.Category.FORMAT, originalFormatLocale)
+        Locale.setDefault(Locale.Category.DISPLAY, originalDisplayLocale)
     }
 
     @Test
@@ -75,5 +79,25 @@ class GiftCardCurrencyTest {
         assertEquals("1000", digits(GiftCardCurrency.toFiat(1000.0, "JPY").toCardFormattedString()))
         assertEquals("1234", digits(GiftCardCurrency.toFiat(1.234, "KWD").toCardFormattedString()))
         assertEquals("1900", digits(GiftCardCurrency.toFiat(18.991, "GBP").toCardFormattedString(roundUp = true)))
+    }
+
+    @Test
+    fun discountedTotal_roundsUpOnceAtTheCurrencyDigits() {
+        // 1.1 * 0.9 is 0.9900000000000001 in binary floating point, which must not become 0.991
+        assertEquals("0.990", GiftCardCurrency.discountedTotal(mapOf(1.1 to 1), "KWD") { 0.1 }.toPlainString())
+        assertEquals("22.50", GiftCardCurrency.discountedTotal(mapOf(25.0 to 1), "USD") { 0.1 }.toPlainString())
+        // 18.9905 is rounded up, never down
+        assertEquals("19.00", GiftCardCurrency.discountedTotal(mapOf(19.99 to 1), "USD") { 0.05 }.toPlainString())
+        assertEquals("965", GiftCardCurrency.discountedTotal(mapOf(1000.0 to 1), "JPY") { 0.035 }.toPlainString())
+        assertEquals("25.00", GiftCardCurrency.discountedTotal(mapOf(25.0 to 1), "USD") { 0.0 }.toPlainString())
+    }
+
+    @Test
+    fun discountedTotal_addsEveryCardAtItsOwnDiscountBeforeRounding() {
+        val discounts = mapOf(25.0 to 0.1, 33.33 to 0.035)
+        val order = mapOf(25.0 to 2, 33.33 to 3)
+
+        // 2 * 22.5 + 3 * 32.163450 = 141.49035
+        assertEquals("141.50", GiftCardCurrency.discountedTotal(order, "USD") { discounts.getValue(it) }.toPlainString())
     }
 }

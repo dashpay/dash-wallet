@@ -19,6 +19,7 @@ package org.dash.wallet.features.exploredash.repository
 
 import com.google.gson.Gson
 import kotlinx.coroutines.flow.Flow
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.ResourceString
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.GetMerchantResponse
@@ -185,6 +186,13 @@ class CTXSpendRepository @Inject constructor(
                 log.error("gift card order came back in {} but {} was ordered", reported, fiatCurrency)
                 throw CTXSpendException(ResourceString(R.string.gift_card_error))
             }
+        // USD is what CTX always sold, so only there may an answer leave the currency out
+        if (!fiatCurrency.equals(Constants.USD_CURRENCY, ignoreCase = true) &&
+            response.fiatCurrency.isNullOrBlank() && response.cardFiatCurrency.isNullOrBlank()
+        ) {
+            log.error("gift card order for {} came back without a currency", fiatCurrency)
+            throw CTXSpendException(ResourceString(R.string.gift_card_error))
+        }
 
         return listOf(
             GiftCardInfo(
@@ -296,7 +304,11 @@ class CTXSpendRepository @Inject constructor(
                     redeemType = response.redeemType,
                     enabled = response.enabled,
                     currency = response.currency
-                )
+                ).also { details ->
+                    // "NaN" and "-5" are numbers to toDouble(), but not amounts a card can have
+                    require(details.denominations.all { it.isFinite() && it >= 0.0 })
+                    require(details.denominations.any { it > 0.0 })
+                }
             } catch (e: Exception) {
                 throw UnusableMerchantDetailsException(e)
             }

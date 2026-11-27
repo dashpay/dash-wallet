@@ -38,6 +38,7 @@ import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
+import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.components.LocalDashColors
@@ -48,7 +49,6 @@ import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
-import org.dash.wallet.common.util.discountBy
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.features.exploredash.R
@@ -194,7 +194,11 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
         }
 
         viewModel.usdExchangeRate.observe(viewLifecycleOwner) {
-            viewModel.balance.value?.let { balance -> updateBalanceLabel(balance) }
+            if (viewModel.selectedProvider == GiftCardProviderType.CTX) {
+                viewModel.balance.value?.let { balance -> updateBalanceLabel(balance) }
+            } else {
+                onRateChanged()
+            }
         }
 
         enterAmountViewModel.selectedExchangeRate.observe(viewLifecycleOwner) {
@@ -209,17 +213,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
         }
 
         viewModel.cardRateState.observe(viewLifecycleOwner) {
-            viewModel.balance.value?.let { balance -> updateBalanceLabel(balance) }
-            setCardPurchaseLimits()
-            setDiscountHint()
-            enterAmountViewModel.setMinAmount(viewModel.minCardPurchaseCoin, true)
-            enterAmountViewModel.setMaxAmount(
-                min(
-                    viewModel.maxCardPurchaseCoin,
-                    viewModel.balanceWithDiscount
-                )
-            )
-            updateView()
+            onRateChanged()
         }
 
         viewModel.isNetworkAvailable.observe(viewLifecycleOwner) { isConnected ->
@@ -237,8 +231,24 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
                 enterAmountViewModel.clearSavedState()
                 // the entry is shared by the whole activity and must not keep the card's currency
                 enterAmountViewModel.resetCurrency()
+                // nor this screen's reasons to disable Continue
+                enterAmountViewModel.blockContinue = false
             }
         }
+    }
+
+    private fun onRateChanged() {
+        viewModel.balance.value?.let { balance -> updateBalanceLabel(balance) }
+        setCardPurchaseLimits()
+        setDiscountHint()
+        enterAmountViewModel.setMinAmount(viewModel.minCardPurchaseCoin, true)
+        enterAmountViewModel.setMaxAmount(
+            min(
+                viewModel.maxCardPurchaseCoin,
+                viewModel.balanceWithDiscount
+            )
+        )
+        updateView()
     }
 
     /** Builds the amount entry or the denominations once the card currency and the mode are known. */
@@ -467,12 +477,18 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
         }
 
         binding.discountValue.setTextColor(resources.getColor(R.color.content_primary, null))
-        val discountedAmount = purchaseAmount.discountBy(savingsFraction)
+        val discountedAmount = Fiat.parseFiat(
+            purchaseAmount.currencyCode,
+            GiftCardCurrency.discountedTotal(
+                mapOf(purchaseAmount.toBigDecimal().toDouble() to 1),
+                purchaseAmount.currencyCode
+            ) { savingsFraction }.toPlainString()
+        )
 
         binding.discountValue.text = getString(
             R.string.purchase_gift_card_discount_hint,
             purchaseAmount.toCardFormattedString(),
-            discountedAmount.toCardFormattedString(roundUp = true),
+            discountedAmount.toCardFormattedString(),
             GenericUtils.formatPercent(savingsFraction)
         )
     }
@@ -533,15 +549,14 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
 
         lifecycleScope.launch {
             // null: a newer load has taken over, and its details, currency and mode go together
-            val updatedMerchant = viewModel.refreshMerchantDetails(merchant) ?: return@launch
+            val refresh = viewModel.refreshMerchantDetails(merchant) ?: return@launch
 
             // a slow answer for a merchant the user has left must not replace the current one
             if (viewModel.giftCardMerchant.value?.merchantId != merchant.merchantId) {
                 return@launch
             }
             if (setMerchantEnabled()) {
-                viewModel.setGiftCardMerchant(updatedMerchant)
-                viewModel.setIsFixedDenomination(updatedMerchant.fixedDenomination)
+                viewModel.applyMerchantRefresh(refresh)
             }
         }
     }
@@ -572,7 +587,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
                 currency = Currency.getInstance(cardCurrency),
                 selectedDenomination = selectedDenomination.value.keys.firstOrNull()?.toBigDecimal()?.toDouble(),
                 // cardRate is read so that a rate arriving re-evaluates the checks
-                canContinue = cardRate.value is CardRateState.Available && viewModel.purchaseBlock == null &&
+                canContinue = cardRate.value.isUsable() && viewModel.purchaseBlock == null &&
                     !viewModel.exceedsBalance() && !isReplaying.value,
                 onDenominationSelected = { denomination ->
                     val fiat = GiftCardCurrency.toFiat(denomination, cardCurrency)
@@ -589,6 +604,10 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
             )
         }
     }
+
+    /** Only CTX has a card rate; any other provider is checked against the USD rate by the balance check. */
+    private fun CardRateState.isUsable() =
+        this is CardRateState.Available || viewModel.selectedProvider != GiftCardProviderType.CTX
 
     // taken from SendCoinsFragment.updateView
     private fun updateView() {

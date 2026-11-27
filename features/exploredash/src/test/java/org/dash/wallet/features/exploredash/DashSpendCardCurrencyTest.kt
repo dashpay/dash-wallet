@@ -122,6 +122,8 @@ class DashSpendCardCurrencyTest {
     )
 
     private val originalLocale = Locale.getDefault()
+    private val originalFormatLocale = Locale.getDefault(Locale.Category.FORMAT)
+    private val originalDisplayLocale = Locale.getDefault(Locale.Category.DISPLAY)
     private val rates = mutableMapOf<String, MutableStateFlow<ExchangeRate?>>()
     private val rateLookups = mutableMapOf<String, Flow<ExchangeRate?>>()
     private val rateLookupsStarted = mutableListOf<String>()
@@ -137,6 +139,8 @@ class DashSpendCardCurrencyTest {
     @After
     fun tearDown() {
         Locale.setDefault(originalLocale)
+        Locale.setDefault(Locale.Category.FORMAT, originalFormatLocale)
+        Locale.setDefault(Locale.Category.DISPLAY, originalDisplayLocale)
     }
 
     private fun merchant() = Merchant(paymentMethod = "gift card").apply {
@@ -244,7 +248,7 @@ class DashSpendCardCurrencyTest {
     }
 
     /** Confirm on a sheet that shows the currency the card is in right now. */
-    private suspend fun DashSpendViewModel.buy() = purchaseGiftCard(cardCurrency ?: "USD")
+    private suspend fun DashSpendViewModel.buy() = purchaseGiftCard(cardCurrency ?: "USD", giftCardOrderInfo.value)
 
     private fun DashSpendViewModel.enter(amount: String) {
         setGiftCardOrderInfo(Fiat.parseFiat(cardCurrency!!, amount), 1)
@@ -555,13 +559,14 @@ class DashSpendCardCurrencyTest {
     @Test
     fun savedCard_keepsTheCurrencyOfTheOrderNotOfTheScreen() = runBlocking {
         ctxSells("GBP", listOf("5", "500"))
-        // CTX answers without naming a currency, so the one ordered is what gets recorded
+        // CTX names the card's currency but not the payment's, so the one ordered is what gets recorded
         api.stub {
             onBlocking { purchaseGiftCard(any()) } doReturn GiftCardResponse(
                 id = "order-1",
                 status = "unpaid",
                 fiatAmount = "23.75",
-                fiatCurrency = ""
+                fiatCurrency = "",
+                cardFiatCurrency = "GBP"
             )
         }
         setRate("GBP", "20")
@@ -688,7 +693,7 @@ class DashSpendCardCurrencyTest {
         api.stub {
             onBlocking { getMerchant(eq("ctx-source")) } doAnswer {
                 firstLoadStarted.countDown()
-                releaseFirstLoad.await(5, TimeUnit.SECONDS)
+                check(releaseFirstLoad.await(5, TimeUnit.SECONDS))
                 merchantResponse("ctx-source", "GBP")
             }
             onBlocking { getMerchant(eq("ctx-source-2")) } doReturn merchantResponse("ctx-source-2", "EUR")
@@ -697,12 +702,14 @@ class DashSpendCardCurrencyTest {
         viewModel.selectedProvider = GiftCardProviderType.CTX
         viewModel.setGiftCardMerchant(merchant())
         val firstLoad = async(Dispatchers.Default) { viewModel.updateMerchantDetails(merchant()) }
-        assertTrue(firstLoadStarted.await(5, TimeUnit.SECONDS))
+        try {
+            assertTrue(firstLoadStarted.await(5, TimeUnit.SECONDS))
 
-        viewModel.openCtxMerchant(otherMerchant())
-        assertEquals(CardCurrencyState.Known("EUR"), viewModel.cardCurrencyState.value)
-
-        releaseFirstLoad.countDown()
+            viewModel.openCtxMerchant(otherMerchant())
+            assertEquals(CardCurrencyState.Known("EUR"), viewModel.cardCurrencyState.value)
+        } finally {
+            releaseFirstLoad.countDown()
+        }
         firstLoad.await()
 
         assertEquals(CardCurrencyState.Known("EUR"), viewModel.cardCurrencyState.value)
@@ -852,7 +859,8 @@ class DashSpendCardCurrencyTest {
         // even with an amount, a sheet that showed pounds cannot buy in euros
         viewModel.enter("25")
         assertNull(viewModel.purchaseBlock)
-        assertThrows(CTXSpendException::class.java) { runBlocking { viewModel.purchaseGiftCard("GBP") } }
+        val liveOrder = viewModel.giftCardOrderInfo.value
+        assertThrows(CTXSpendException::class.java) { runBlocking { viewModel.purchaseGiftCard("GBP", liveOrder) } }
         verifyBlocking(api, never()) { purchaseGiftCard(any()) }
     }
 
@@ -949,7 +957,7 @@ class DashSpendCardCurrencyTest {
             onBlocking { getMerchant(eq("ctx-source")) } doAnswer {
                 if (answers.getAndIncrement() == 0) {
                     firstLoadStarted.countDown()
-                    releaseFirstLoad.await(5, TimeUnit.SECONDS)
+                    check(releaseFirstLoad.await(5, TimeUnit.SECONDS))
                     merchantResponse("ctx-source", "GBP")
                 } else {
                     merchantResponse("ctx-source", "EUR")
@@ -960,12 +968,14 @@ class DashSpendCardCurrencyTest {
         viewModel.selectedProvider = GiftCardProviderType.CTX
         viewModel.setGiftCardMerchant(merchant())
         val firstLoad = async(Dispatchers.Default) { viewModel.refreshMerchantDetails(merchant()) }
-        assertTrue(firstLoadStarted.await(5, TimeUnit.SECONDS))
+        val newer = try {
+            assertTrue(firstLoadStarted.await(5, TimeUnit.SECONDS))
+            viewModel.refreshMerchantDetails(merchant())
+        } finally {
+            releaseFirstLoad.countDown()
+        }
 
-        val newer = viewModel.refreshMerchantDetails(merchant())
-        releaseFirstLoad.countDown()
-
-        assertEquals(500.0, newer?.maxCardPurchase)
+        assertEquals(500.0, newer?.merchant?.maxCardPurchase)
         assertNull("the older answer must not be applied", firstLoad.await())
         assertEquals(CardCurrencyState.Known("EUR"), viewModel.cardCurrencyState.value)
     }
@@ -1003,5 +1013,141 @@ class DashSpendCardCurrencyTest {
         assertEquals(listOf(25.0 to 2, 50.0 to 1), ordered.firstValue.map { it.value to it.quantity })
         assertEquals(3, ordered.firstValue.cardCount())
         verifyBlocking(api, never()) { purchaseGiftCard(any()) }
+    }
+
+    private fun ctxAnswersTheOrderWith(paymentCurrency: String?, cardCurrency: String?) {
+        api.stub {
+            onBlocking { purchaseGiftCard(any()) } doAnswer {
+                GiftCardResponse(
+                    id = "order-1",
+                    status = "unpaid",
+                    fiatAmount = it.getArgument<PurchaseGiftCardRequest>(0).fiatAmount,
+                    fiatCurrency = paymentCurrency,
+                    cardFiatCurrency = cardCurrency
+                )
+            }
+        }
+    }
+
+    @Test
+    fun nonUsdOrderAnsweredWithoutAnyCurrency_isNotPaid() = runBlocking {
+        ctxSells("GBP", listOf("5", "500"))
+        setRate("GBP", "20")
+        val viewModel = viewModel()
+        viewModel.openCtxMerchant()
+        viewModel.enter("25")
+
+        listOf<Pair<String?, String?>>(null to null, "" to "  ").forEach { (payment, card) ->
+            ctxAnswersTheOrderWith(payment, card)
+            assertThrows("$payment/$card", CTXSpendException::class.java) { runBlocking { viewModel.buy() } }
+        }
+
+        ctxAnswersTheOrderWith(paymentCurrency = null, cardCurrency = "GBP")
+        assertEquals("GBP", viewModel.buy().single().fiatCurrency)
+        ctxAnswersTheOrderWith(paymentCurrency = "gbp", cardCurrency = null)
+        assertEquals("gbp", viewModel.buy().single().fiatCurrency)
+    }
+
+    @Test
+    fun usdOrderAnsweredWithoutACurrency_isStillAccepted() = runBlocking {
+        ctxSells("USD", listOf("5", "500"))
+        setRate("USD", "25")
+        val viewModel = viewModel()
+        viewModel.openCtxMerchant()
+        viewModel.enter("25")
+        ctxAnswersTheOrderWith(paymentCurrency = null, cardCurrency = "")
+
+        assertEquals("USD", viewModel.buy().single().fiatCurrency)
+    }
+
+    @Test
+    fun denominationsThatAreNotAmounts_leaveTheCurrencyUnknown() {
+        listOf(
+            listOf("5", "NaN"),
+            listOf("5", "Infinity"),
+            listOf("-5", "500"),
+            listOf("0", "0")
+        ).forEach { denominations ->
+            reset(api)
+            ctxSells("GBP", denominations)
+            setRate("GBP", "20")
+            val viewModel = viewModel()
+
+            runBlocking { viewModel.openCtxMerchant() }
+
+            assertEquals("$denominations", CardCurrencyState.Unknown, viewModel.cardCurrencyState.value)
+            assertEquals(GiftCardPurchaseBlock.CURRENCY_UNKNOWN, viewModel.purchaseBlock)
+        }
+    }
+
+    @Test
+    fun screenRebuiltWithTheCatalogueRow_keepsTheConfirmedDetailsWhenTheRefreshFails() = runBlocking {
+        ctxSells("GBP", listOf("10", "20", "50"), denominationsType = "fixed")
+        setRate("GBP", "20")
+        val viewModel = viewModel()
+        viewModel.applyMerchantRefresh(
+            viewModel.run {
+                selectedProvider = GiftCardProviderType.CTX
+                setGiftCardMerchant(merchant())
+                refreshMerchantDetails(merchant())!!
+            }
+        )
+        assertEquals(true, viewModel.isFixedDenomination.value)
+
+        // what a rebuilt screen does: the row from the catalogue again, then a refresh that gets no answer
+        api.stub { onBlocking { getMerchant(any()) } doAnswer { throw IOException("offline") } }
+        viewModel.setGiftCardMerchant(merchant())
+        assertEquals("before the refresh", listOf(10.0, 20.0, 50.0), viewModel.giftCardMerchant.value?.denominations)
+        val refresh = viewModel.refreshMerchantDetails(merchant())!!
+        assertTrue(viewModel.applyMerchantRefresh(refresh))
+
+        assertEquals(CardCurrencyState.Known("GBP"), viewModel.cardCurrencyState.value)
+        assertEquals(listOf(10.0, 20.0, 50.0), viewModel.giftCardMerchant.value?.denominations)
+        assertEquals(50.0, viewModel.giftCardMerchant.value?.maxCardPurchase)
+        assertEquals(true, viewModel.giftCardMerchant.value?.fixedDenomination)
+        assertEquals(true, viewModel.isFixedDenomination.value)
+    }
+
+    @Test
+    fun refreshResultOfAnOlderLoad_isNotApplied() = runBlocking {
+        ctxSells("GBP", listOf("5", "500"))
+        setRate("GBP", "20")
+        val viewModel = viewModel()
+        viewModel.selectedProvider = GiftCardProviderType.CTX
+        viewModel.setGiftCardMerchant(merchant())
+        val older = viewModel.refreshMerchantDetails(merchant())!!
+
+        reset(api)
+        ctxSells("GBP", listOf("10", "20"), denominationsType = "fixed")
+        val newer = viewModel.refreshMerchantDetails(merchant())!!
+
+        assertFalse(viewModel.applyMerchantRefresh(older))
+        assertNull(viewModel.isFixedDenomination.value)
+        assertTrue(viewModel.applyMerchantRefresh(newer))
+        assertEquals(true, viewModel.isFixedDenomination.value)
+        assertEquals(20.0, viewModel.giftCardMerchant.value?.maxCardPurchase)
+
+        viewModel.selectedProvider = GiftCardProviderType.PiggyCards
+        assertFalse("another provider", viewModel.applyMerchantRefresh(newer))
+    }
+
+    @Test
+    fun orderChangedAfterTheConfirmationOpened_isRefused() = runBlocking {
+        ctxSells("GBP", listOf("5", "500"))
+        setRate("GBP", "20")
+        val viewModel = viewModel()
+        viewModel.openCtxMerchant()
+        viewModel.enter("25")
+        val shown = viewModel.giftCardOrderInfo.value
+
+        viewModel.enter("40")
+
+        assertNull(viewModel.purchaseBlock)
+        assertThrows(CTXSpendException::class.java) { runBlocking { viewModel.purchaseGiftCard("GBP", shown) } }
+        verifyBlocking(api, never()) { purchaseGiftCard(any()) }
+
+        viewModel.enter("25")
+        viewModel.purchaseGiftCard("GBP", shown)
+        assertEquals("25.00", orderSentToCtx().fiatAmount)
     }
 }

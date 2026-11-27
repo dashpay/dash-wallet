@@ -90,6 +90,7 @@ class GiftCardDetailsViewModel @Inject constructor(
 ) : ViewModel() {
     companion object {
         private val log = LoggerFactory.getLogger(GiftCardDetailsViewModel::class.java)
+        private const val CURRENCY_LOOKUP_ATTEMPTS = 3
     }
 
     lateinit var transactionId: Sha256Hash
@@ -100,7 +101,7 @@ class GiftCardDetailsViewModel @Inject constructor(
     private var exchangeRate: ExchangeRate? = null
     private var retries = 3
     private var currencyLookup: Job? = null
-    private var currencyLookupsLeft = 1
+    private var isCurrencyResolved = false
 
     private val _uiState = MutableStateFlow(GiftCardUIState())
     val uiState: StateFlow<GiftCardUIState> = _uiState.asStateFlow()
@@ -126,6 +127,8 @@ class GiftCardDetailsViewModel @Inject constructor(
                         serviceName = metadata.service
                     )
                 }
+                // a lookup cannot tell whose card it is before this arrives
+                lookUpCurrencyIfMissing(_uiState.value.giftCards)
             }
             .launchIn(viewModelScope)
 
@@ -150,15 +153,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                     )
                 }
 
-                if (currencyLookupsLeft > 0 && currencyLookup?.isActive != true &&
-                    giftCards.any { it.currency == null }
-                ) {
-                    currencyLookup = viewModelScope.launch {
-                        if (backfillCurrency(transactionId)) {
-                            currencyLookupsLeft--
-                        }
-                    }
-                }
+                lookUpCurrencyIfMissing(giftCards)
 
                 val needsPolling = giftCards.any { card ->
                     card.number == null && card.merchantUrl.isNullOrEmpty() && card.note != null
@@ -173,14 +168,35 @@ class GiftCardDetailsViewModel @Inject constructor(
             .launchIn(viewModelScope)
     }
 
-    /** Returns false when the lookup failed and is worth repeating. */
-    private suspend fun backfillCurrency(txid: Sha256Hash): Boolean = withContext(Dispatchers.IO) {
-        try {
-            if (metadataProvider.getTransactionMetadata(txid)?.service != ServiceName.CTXSpend) {
-                return@withContext true
+    /** One lookup at a time, a few attempts each, until the currency is settled. */
+    private fun lookUpCurrencyIfMissing(giftCards: List<GiftCard>) {
+        if (isCurrencyResolved || currencyLookup?.isActive == true || giftCards.none { it.currency == null }) {
+            return
+        }
+        currencyLookup = viewModelScope.launch {
+            isCurrencyResolved = withContext(Dispatchers.IO) {
+                repeat(CURRENCY_LOOKUP_ATTEMPTS) { attempt ->
+                    if (backfillCurrency(transactionId)) {
+                        return@withContext true
+                    }
+                    if (attempt < CURRENCY_LOOKUP_ATTEMPTS - 1) {
+                        delay((attempt + 1).seconds)
+                    }
+                }
+                false
+            }
+        }
+    }
+
+    /** True once there is nothing left to look up: the currency is stored, or the card is not a CTX one. */
+    private suspend fun backfillCurrency(txid: Sha256Hash): Boolean {
+        return try {
+            val metadata = metadataProvider.getTransactionMetadata(txid) ?: return false
+            if (metadata.service != ServiceName.CTXSpend) {
+                return true
             }
             if (!ctxSpendRepository.isUserSignedIn()) {
-                return@withContext false
+                return false
             }
             val orderId = giftCardDao.getCardForTransaction(txid).firstOrNull()?.note
             val giftCards = if (orderId != null) {
@@ -188,9 +204,8 @@ class GiftCardDetailsViewModel @Inject constructor(
             } else {
                 ctxSpendRepository.getGiftCardByTxId(txid.toStringBase58())
             }
-            GiftCardCurrency.normalize(giftCards.firstOrNull()?.fiatCurrency)?.let { currency ->
-                giftCardDao.backfillCurrency(txid, currency)
-            }
+            val currency = GiftCardCurrency.normalize(giftCards.firstOrNull()?.fiatCurrency) ?: return false
+            giftCardDao.backfillCurrency(txid, currency)
             true
         } catch (e: CancellationException) {
             throw e

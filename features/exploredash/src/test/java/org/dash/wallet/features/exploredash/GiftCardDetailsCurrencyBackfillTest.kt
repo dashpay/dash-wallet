@@ -74,6 +74,16 @@ class GiftCardDetailsCurrencyBackfillTest {
     private val legacyCard =
         GiftCard(txId = txId, merchantName = "Acme", price = 23.75, number = "1234", note = "order-1")
 
+    private val ctxMetadata = TransactionMetadata(
+        txId = txId,
+        timestamp = 1_000L,
+        value = Coin.COIN,
+        type = TransactionCategory.Sent,
+        taxCategory = TaxCategory.Expense,
+        service = ServiceName.CTXSpend
+    )
+    private val metadata = MutableStateFlow<TransactionMetadata?>(ctxMetadata)
+    private val blankReplies = AtomicInteger()
     private val orderLookups = AtomicInteger()
     private val accessToken = AtomicReference<String?>()
     private lateinit var api: CTXSpendApi
@@ -108,20 +118,13 @@ class GiftCardDetailsCurrencyBackfillTest {
                     id = "order-1",
                     status = "fulfilled",
                     fiatAmount = "23.75",
-                    fiatCurrency = "GBP"
+                    fiatCurrency = if (blankReplies.getAndDecrement() > 0) " " else "GBP"
                 )
             }
         }
         val metadataProvider = mock<TransactionMetadataProvider> {
-            on { observeTransactionMetadata(eq(txId)) } doReturn emptyFlow()
-            onBlocking { getTransactionMetadata(eq(txId)) } doReturn TransactionMetadata(
-                txId = txId,
-                timestamp = 1_000L,
-                value = Coin.COIN,
-                type = TransactionCategory.Sent,
-                taxCategory = TaxCategory.Expense,
-                service = ServiceName.CTXSpend
-            )
+            on { observeTransactionMetadata(eq(txId)) } doReturn metadata
+            onBlocking { getTransactionMetadata(eq(txId)) } doAnswer { metadata.value }
         }
 
         GiftCardDetailsViewModel(
@@ -144,7 +147,7 @@ class GiftCardDetailsCurrencyBackfillTest {
         var change = 0
         while (!done() && System.nanoTime() < deadline) {
             value = listOf(legacyCard.copy(pin = "${change++}"))
-            Thread.yield()
+            Thread.sleep(10)
         }
     }
 
@@ -182,14 +185,42 @@ class GiftCardDetailsCurrencyBackfillTest {
     }
 
     @Test
-    fun failedLookup_isRepeatedWhenTheCardIsSeenAgainWithoutACurrency() {
-        val emissions = MutableStateFlow(listOf(legacyCard))
-        val dao = open(emissions, legacyCard, accessToken = "token", failingLookups = 1)
-
-        emissions.emitUntil { orderLookups.get() >= 2 }
+    fun failedLookup_isRepeatedWhileTheDetailsStayOpen() {
+        val dao = open(legacyCard, accessToken = "token", failingLookups = 1)
 
         verifyBlocking(dao, timeout(5000)) { backfillCurrency(eq(txId), eq("GBP")) }
         assertEquals(2, orderLookups.get())
+    }
+
+    @Test
+    fun replyWithoutACurrency_isAskedAgain() {
+        blankReplies.set(1)
+        val dao = open(legacyCard, accessToken = "token")
+
+        verifyBlocking(dao, timeout(5000)) { backfillCurrency(eq(txId), eq("GBP")) }
+        assertEquals(2, orderLookups.get())
+    }
+
+    @Test
+    fun cardWhoseTransactionIsNotKnownYet_isLookedUpOnceItIs() {
+        metadata.value = null
+        val dao = open(legacyCard, accessToken = "token")
+        verifyBlocking(api, after(300).never()) { getGiftCardByOrderId(any()) }
+
+        metadata.value = ctxMetadata
+
+        verifyBlocking(dao, timeout(5000)) { backfillCurrency(eq(txId), eq("GBP")) }
+    }
+
+    @Test
+    fun cardOfAnotherProvider_isNeverLookedUpAtCtx() {
+        metadata.value = ctxMetadata.copy(service = ServiceName.PiggyCards)
+        val emissions = MutableStateFlow(listOf(legacyCard))
+        open(emissions, legacyCard, accessToken = "token")
+
+        emissions.value = listOf(legacyCard.copy(pin = "1"))
+
+        verifyBlocking(api, after(1500).never()) { getGiftCardByOrderId(any()) }
     }
 
     @Test

@@ -81,6 +81,7 @@ import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.ComposeBottomSheet
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.features.exploredash.R
+import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderType
 import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardInfo
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
 import org.dash.wallet.features.exploredash.ui.dashspend.DashSpendViewModel
@@ -94,7 +95,6 @@ import org.dash.wallet.features.exploredash.utils.GiftCardCurrency
 import org.dash.wallet.features.exploredash.utils.SavingsFormatting
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
 import org.slf4j.LoggerFactory
-import java.math.RoundingMode
 import java.text.NumberFormat
 import javax.inject.Inject
 
@@ -145,6 +145,9 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
         // Optionally handle result here
     }
 
+    // what this sheet shows, and so the only order Confirm may place
+    private var shownOrder: Map<Double, Int> = emptyMap()
+
     private val _uiState = MutableStateFlow(PurchaseConfirmUIState())
     val uiState: StateFlow<PurchaseConfirmUIState> = _uiState.asStateFlow()
 
@@ -181,7 +184,8 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
         val noCentsFormat = GiftCardCurrency.displayFormat(cardCurrency, trimZeroDecimals = true)
         val currencyFormat = GiftCardCurrency.displayFormat(cardCurrency)
 
-        val orderEntries = viewModel.giftCardOrderInfo.value.entries
+        shownOrder = viewModel.giftCardOrderInfo.value
+        val orderEntries = shownOrder.entries
         val orderTotalAmount = orderEntries.sumOf { it.key * it.value }
         // Compute a weighted savings fraction: sum each (denom * qty * (1 - per-denom discount))
         // across line items, then derive the overall discount. A single getGiftCardDiscount call
@@ -220,11 +224,8 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
             }
         }
 
-        val discountedValue = orderTotalAmount - savingsFraction * orderTotalAmount
         val youPayText = currencyFormat.format(
-            discountedValue.toBigDecimal()
-                .setScale(GiftCardCurrency.fractionDigits(cardCurrency), RoundingMode.UP)
-                .toDouble()
+            GiftCardCurrency.discountedTotal(shownOrder, cardCurrency, viewModel::getGiftCardDiscount)
         )
 
         val breakdownLines = breakdown?.lineSequence()?.count() ?: 0
@@ -269,7 +270,10 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
         // what would be ordered. Not during a purchase: its order has been placed by then.
         viewLifecycleOwner.lifecycleScope.launch {
             combine(viewModel.cardCurrencyState, viewModel.giftCardOrderInfo) { _, _ -> }.collect {
-                val isOutdated = viewModel.cardCurrency != cardCurrency ||
+                // a cart of PiggyCards is rebuilt by its screen on recreation; Confirm checks it instead
+                val isOtherOrder = viewModel.selectedProvider == GiftCardProviderType.CTX &&
+                    viewModel.giftCardOrderInfo.value != shownOrder
+                val isOutdated = viewModel.cardCurrency != cardCurrency || isOtherOrder ||
                     viewModel.purchaseBlock == GiftCardPurchaseBlock.NO_AMOUNT
                 if (isOutdated && viewModel.submissionState.value == GiftCardSubmissionState.IDLE) {
                     dismissAllowingStateLoss()
@@ -339,7 +343,7 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
                 }
 
                 val data = try {
-                    viewModel.purchaseGiftCard(uiState.value.currencyCode)
+                    viewModel.purchaseGiftCard(uiState.value.currencyCode, shownOrder)
                 } catch (ex: CTXSpendException) {
                     hideLoading()
                     when {

@@ -43,6 +43,8 @@ import java.util.Locale
 /** The amount in a gift card order is read by a server, so the device locale must not shape it. */
 class CTXSpendOrderAmountTest {
     private val originalLocale = Locale.getDefault()
+    private val originalFormatLocale = Locale.getDefault(Locale.Category.FORMAT)
+    private val originalDisplayLocale = Locale.getDefault(Locale.Category.DISPLAY)
 
     private val locales = listOf(
         Locale.US,
@@ -54,6 +56,8 @@ class CTXSpendOrderAmountTest {
     @After
     fun restoreLocale() {
         Locale.setDefault(originalLocale)
+        Locale.setDefault(Locale.Category.FORMAT, originalFormatLocale)
+        Locale.setDefault(Locale.Category.DISPLAY, originalDisplayLocale)
     }
 
     @Test

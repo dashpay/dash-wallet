@@ -164,6 +164,13 @@ sealed class CardCurrencyState {
     object Unknown : CardCurrencyState()
 }
 
+/** Merchant details from one load. [DashSpendViewModel.applyMerchantRefresh] applies them if it is still current. */
+class MerchantRefresh internal constructor(
+    val merchant: Merchant,
+    internal val load: Int?,
+    internal val provider: GiftCardProviderType?
+)
+
 /** The Dash rate for the card currency. A lookup that found nothing is not the same as one still running. */
 sealed class CardRateState {
     object Loading : CardRateState()
@@ -252,6 +259,9 @@ class DashSpendViewModel @Inject constructor(
     private val _cardCurrencyState = MutableStateFlow<CardCurrencyState>(CardCurrencyState.Loading)
     val cardCurrencyState: StateFlow<CardCurrencyState> = _cardCurrencyState.asStateFlow()
     private var currencyMerchantId: String? = null
+
+    // the details that came with the Known currency; the three are only ever used together
+    private var confirmedMerchant: Merchant? = null
     private var currencyLoad = 0
 
     /** ISO 4217 code the card is priced in. Null for a CTX merchant whose currency is not confirmed. */
@@ -336,7 +346,8 @@ class DashSpendViewModel @Inject constructor(
             _isFixedDenomination.value = null
             _giftCardOrderInfo.value = emptyMap()
         }
-        _giftCardMerchant.value = merchant
+        // a screen that is rebuilt hands in the catalogue row again: it has no limits or mode
+        _giftCardMerchant.value = confirmedDetailsOf(merchant) ?: merchant
         // Save merchant ID to state handle for restoration
         savedStateHandle[MERCHANT_ID_KEY] = merchant?.merchantId
     }
@@ -399,12 +410,18 @@ class DashSpendViewModel @Inject constructor(
             .launchIn(viewModelScope)
     }
 
-    /** [shownCurrency] is the currency the confirmation showed the amount in. */
-    suspend fun purchaseGiftCard(shownCurrency: String): List<GiftCardInfo> = withContext(Dispatchers.IO) {
+    /** [shownCurrency] and [shownOrder] are what the confirmation showed; anything else is refused. */
+    suspend fun purchaseGiftCard(
+        shownCurrency: String,
+        shownOrder: Map<Double, Int>
+    ): List<GiftCardInfo> = withContext(Dispatchers.IO) {
         _giftCardMerchant.value?.merchantId?.let {
+            if (giftCardOrderInfo.value != shownOrder) {
+                throw CTXSpendException("purchaseGiftCard error: the order changed after it was confirmed")
+            }
             ctxSpendConfig.set(CTXSpendConfig.PREFS_LAST_PURCHASE_START, System.currentTimeMillis())
             val giftCardOrderShoppingCart = GiftCardShoppingCart(
-                giftCardOrderInfo.value.map {
+                shownOrder.map {
                     GiftCardOrderItem(
                         it.key,
                         it.value
@@ -673,15 +690,35 @@ class DashSpendViewModel @Inject constructor(
     /** updates merchant details according to the currently selected provider [selectedProvider]
      *
      */
-    suspend fun updateMerchantDetails(merchant: Merchant): Merchant = refreshMerchantDetails(merchant) ?: merchant
+    suspend fun updateMerchantDetails(merchant: Merchant): Merchant =
+        refreshMerchantDetails(merchant)?.merchant ?: merchant
 
     /**
      * Like [updateMerchantDetails], but null when a newer load of a CTX merchant or another
      * provider has taken over: nothing of such an answer may be applied.
      */
-    suspend fun refreshMerchantDetails(merchant: Merchant): Merchant? = withContext(Dispatchers.IO) {
+    suspend fun refreshMerchantDetails(merchant: Merchant): MerchantRefresh? {
         val provider = selectedProvider
         val load = if (provider == GiftCardProviderType.CTX) beginCurrencyLoad(merchant.merchantId) else null
+        return loadMerchantDetails(merchant, provider, load)?.let { MerchantRefresh(it, load, provider) }
+    }
+
+    /** Applies [refresh] unless a newer load, another merchant or another provider has taken over since. */
+    fun applyMerchantRefresh(refresh: MerchantRefresh): Boolean {
+        val isCurrent = refresh.provider == selectedProvider && isCurrentLoad(refresh.load) &&
+            _giftCardMerchant.value?.merchantId == refresh.merchant.merchantId
+        if (isCurrent) {
+            setGiftCardMerchant(refresh.merchant)
+            setIsFixedDenomination(refresh.merchant.fixedDenomination)
+        }
+        return isCurrent
+    }
+
+    private suspend fun loadMerchantDetails(
+        merchant: Merchant,
+        provider: GiftCardProviderType?,
+        load: Int?
+    ): Merchant? = withContext(Dispatchers.IO) {
         var isAnswered = false
         // previously this API call would only be made if we didn't have the min and max card values,
         // but now we need to call this every time to get an updated savings percentage and to see if
@@ -731,7 +768,8 @@ class DashSpendViewModel @Inject constructor(
                     copy.quantities = apiResponse.quantity
                     // last, so that only a response that mapped cleanly names the currency of its limits
                     val currency = GiftCardCurrency.normalize(apiResponse.currency)
-                    if (selectedProvider != provider || (load != null && !finishCurrencyLoad(load, currency))) {
+                    val isAccepted = load == null || finishCurrencyLoad(load, currency, details = copy)
+                    if (selectedProvider != provider || !isAccepted) {
                         return@withContext null
                     }
                 }
@@ -744,7 +782,8 @@ class DashSpendViewModel @Inject constructor(
         if (selectedProvider != provider || !isAccepted) {
             return@withContext null
         }
-        return@withContext merchant
+        // with no answer the currency was kept, and so are the limits and the mode that came with it
+        return@withContext confirmedDetailsOf(merchant) ?: merchant
     }
 
     @Synchronized
@@ -754,8 +793,17 @@ class DashSpendViewModel @Inject constructor(
         }
         currencyMerchantId = merchantId
         currencyLoad++
+        confirmedMerchant = null
         _cardCurrencyState.value = CardCurrencyState.Loading
         return true
+    }
+
+    @Synchronized
+    private fun isCurrentLoad(load: Int?) = load == null || load == currencyLoad
+
+    @Synchronized
+    private fun confirmedDetailsOf(merchant: Merchant?): Merchant? = confirmedMerchant?.takeIf {
+        selectedProvider == GiftCardProviderType.CTX && merchant != null && it.merchantId == merchant.merchantId
     }
 
     /** A currency already known for the same merchant stays in place while it is refreshed. */
@@ -769,7 +817,12 @@ class DashSpendViewModel @Inject constructor(
     }
 
     @Synchronized
-    private fun finishCurrencyLoad(load: Int, currency: String?, isAnswered: Boolean = true): Boolean {
+    private fun finishCurrencyLoad(
+        load: Int,
+        currency: String?,
+        isAnswered: Boolean = true,
+        details: Merchant? = null
+    ): Boolean {
         if (load != currencyLoad) {
             log.info("ignoring a superseded merchant load")
             return false
@@ -788,6 +841,7 @@ class DashSpendViewModel @Inject constructor(
             // amounts chosen in the old currency must not be ordered in the new one
             _giftCardOrderInfo.value = emptyMap()
         }
+        confirmedMerchant = details.takeIf { current is CardCurrencyState.Known }
         _cardCurrencyState.value = current
         return true
     }
