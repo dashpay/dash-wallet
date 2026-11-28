@@ -3,14 +3,19 @@ package de.schildbach.wallet.rates
 import androidx.lifecycle.MutableLiveData
 import de.schildbach.wallet.database.dao.ExchangeRatesDao
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import org.dash.wallet.common.data.CurrencyInfo
 import org.dash.wallet.common.data.ExchangeRatesConfig
 import org.dash.wallet.common.data.ExchangeRatesConfig.Companion.EXCHANGE_RATES_PREVIOUS_RETRIEVAL_TIME
@@ -135,6 +140,24 @@ class ExchangeRatesRepository @Inject constructor(
     // This will return null if not found
     override suspend fun getExchangeRate(currencyCode: String): ExchangeRate? =
         exchangeRatesDao.getExchangeRateForCurrency(currencyCode)
+
+    override suspend fun getFreshExchangeRate(currencyCode: String, maxWaitMillis: Long): ExchangeRate? {
+        if (shouldRefresh()) {
+            withTimeoutOrNull(maxWaitMillis) {
+                coroutineScope {
+                    // listening before the refresh starts, or its end could be missed
+                    val refreshed = async(start = CoroutineStart.UNDISPATCHED) { updateTrigger.first() }
+                    refreshRates()
+                    refreshed.await()
+                }
+            }
+        }
+        val retrieved = config.get(EXCHANGE_RATES_RETRIEVAL_TIME) ?: return null
+        if (System.currentTimeMillis() - retrieved > STALE_DURATION_MS) {
+            return null
+        }
+        return exchangeRatesDao.getExchangeRateForCurrency(currencyCode)
+    }
 
     override suspend fun cleanupObsoleteCurrencies() {
         exchangeRatesDao.delete(CurrencyInfo.obsoleteCurrencyMap.keys)

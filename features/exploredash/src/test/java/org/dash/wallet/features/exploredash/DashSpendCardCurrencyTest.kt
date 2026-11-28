@@ -149,6 +149,7 @@ class DashSpendCardCurrencyTest {
     private val payments = mock<SendPaymentService>()
     private var signedInToCtx = false
     private val sentPayments = mutableListOf<Coin?>()
+    private val freshRates = mutableMapOf<String, ExchangeRate>()
 
     @Before
     fun setUp() {
@@ -216,6 +217,10 @@ class DashSpendCardCurrencyTest {
             on { create(eq(GiftCardProviderType.PiggyCards)) } doReturn piggyCards
         }
         val exchangeRates = mock<ExchangeRatesProvider> {
+            onBlocking { getFreshExchangeRate(any(), any()) } doAnswer {
+                val currency = it.getArgument<String>(0)
+                freshRates[currency] ?: rateFlow(currency).value
+            }
             on { observeExchangeRate(any()) } doAnswer {
                 val currency = it.getArgument<String>(0)
                 rateLookupsStarted += currency
@@ -1548,7 +1553,7 @@ class DashSpendCardCurrencyTest {
             }
         }
 
-        assertEquals(R.string.gift_card_price_unchecked, refusal.resourceString?.resourceId)
+        assertEquals(R.string.exchange_rate_not_found, refusal.resourceString?.resourceId)
         verifyBlocking(payments, never()) {
             payWithDashUrl(any(), anyOrNull(), anyOrNull(), anyOrNull(), anyOrNull(), anyOrNull())
         }
@@ -1963,5 +1968,16 @@ class DashSpendCardCurrencyTest {
         viewModel.now = { Instant.parse("2026-11-28T10:14:00Z") }
         paymentRequestAsksFor(Coin.valueOf(316_666_666))
         assertEquals(Sha256Hash.ZERO_HASH, viewModel.payCtxOrder(shown, "dash:?r=x", order))
+    }
+
+    @Test
+    fun rateFromWhenTheScreenOpened_isNotWhatAMarketMoveIsJudgedBy() = runBlocking {
+        // the screen still holds 30; the market, and with it CTX, has moved to 29: 3.4% more Dash
+        freshRates["GBP"] = ExchangeRate("GBP", "29")
+
+        val (txId, asked) = payOrderCharged("3.27586206")
+
+        assertEquals(Sha256Hash.ZERO_HASH, txId)
+        assertEquals(emptyList<GiftCardPriceChange>(), asked)
     }
 }

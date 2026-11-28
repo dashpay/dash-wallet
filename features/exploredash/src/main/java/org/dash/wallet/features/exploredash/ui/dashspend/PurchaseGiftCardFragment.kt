@@ -76,7 +76,7 @@ fun GiftCardPurchaseBlock.message(context: Context, cardCurrency: String?): Stri
         GiftCardPurchaseBlock.CURRENCY_UNKNOWN -> context.getString(R.string.gift_card_currency_unknown)
         GiftCardPurchaseBlock.NOT_SOLD -> context.getString(R.string.temporarily_unavailable)
         GiftCardPurchaseBlock.RATE_LOADING,
-        GiftCardPurchaseBlock.RATE_MISSING -> context.getString(R.string.gift_card_rate_missing, currency)
+        GiftCardPurchaseBlock.RATE_MISSING -> context.getString(R.string.exchange_rate_not_found)
         GiftCardPurchaseBlock.NO_AMOUNT,
         GiftCardPurchaseBlock.AMOUNT_NOT_OFFERED -> context.getString(R.string.gift_card_error)
         GiftCardPurchaseBlock.AMOUNT_NOT_REPRESENTABLE ->

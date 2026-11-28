@@ -217,7 +217,7 @@ class DuplicateGiftCardSubmissionException(val state: GiftCardSubmissionState) :
 @HiltViewModel
 class DashSpendViewModel @Inject constructor(
     private val walletDataProvider: WalletDataProvider,
-    exchangeRates: ExchangeRatesProvider,
+    private val exchangeRates: ExchangeRatesProvider,
     var configuration: Configuration,
     private val sendPaymentService: SendPaymentService,
     private val repositoryFactory: DashSpendRepositoryFactory,
@@ -235,6 +235,7 @@ class DashSpendViewModel @Inject constructor(
 
     companion object {
         private val log = LoggerFactory.getLogger(DashSpendViewModel::class.java)
+        private const val RATE_REFRESH_WAIT_MS = 5_000L
         private const val MERCHANT_ID_KEY = "merchant_id"
         private const val BALANCE_KEY = "balance"
         private const val SELECTED_PROVIDER_KEY = "selected_provider"
@@ -667,12 +668,16 @@ class DashSpendViewModel @Inject constructor(
         var amount: Coin
     )
 
-    private fun acceptedPrice(shown: GiftCardQuote): AcceptedPrice {
-        val rate = cardExchangeRate
+    // CTX quotes at the rate of the moment, so a rate from when the screen opened would see a
+    // market move as a price change
+    private suspend fun acceptedPrice(shown: GiftCardQuote): AcceptedPrice {
+        val rate = exchangeRates.getFreshExchangeRate(shown.currency, RATE_REFRESH_WAIT_MS)
+            ?.takeIf { it.currencyCode == shown.currency }
+            ?.let(::usableRate)
         val approved = rate?.let { GiftCardPaymentGuard.approvedAmount(shown.total, shown.currency, it) }
         if (rate == null || approved == null) {
-            log.error("gift card not paid: there is no rate to check its price with")
-            throw CTXSpendException(ResourceString(R.string.gift_card_price_unchecked))
+            log.error("gift card not paid: there is no fresh rate to check its price with")
+            throw CTXSpendException(ResourceString(R.string.exchange_rate_not_found))
         }
         return AcceptedPrice(shown.currency, rate, shown.total, approved)
     }
@@ -709,8 +714,15 @@ class DashSpendViewModel @Inject constructor(
      * for, is more than [shown] came to. Then nothing is paid, [priceChange] says so and null
      * is returned.
      */
-    suspend fun payCtxOrder(shown: GiftCardQuote, paymentUri: String, giftCards: List<GiftCardInfo>): Sha256Hash? =
-        payChecked(CheckedOrder(paymentUri, giftCards, acceptedPrice(shown)))
+    suspend fun payCtxOrder(shown: GiftCardQuote, paymentUri: String, giftCards: List<GiftCardInfo>): Sha256Hash? {
+        val accepted = try {
+            acceptedPrice(shown)
+        } catch (e: CTXSpendException) {
+            releaseUnusedSubmission()
+            throw e
+        }
+        return payChecked(CheckedOrder(paymentUri, giftCards, accepted))
+    }
 
     /** Tries the order of [priceChange] again, at the price it names. */
     suspend fun payAcceptedPrice(): Sha256Hash? {

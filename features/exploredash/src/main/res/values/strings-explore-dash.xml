@@ -249,7 +249,6 @@
     <string name="cancel">Cancel</string>
     <string name="gift_card_error">For some reason we were not able to buy a gift card. Please, try again.</string>
     <string name="gift_card_currency_unknown">We could not confirm which currency this gift card is sold in. Check your connection and try again.</string>
-    <string name="gift_card_rate_missing">There is no Dash exchange rate for %1$s, so this gift card cannot be bought right now.</string>
     <string name="gift_card_amount_too_precise">This amount has more decimal places than %1$s allows.</string>
     <string name="gift_card_order_changed">This gift card or its price has changed. Please check it and try again.</string>
     <string name="gift_card_price_unchecked">The price of this gift card could not be checked, so nothing was sent. Please try again.</string>
