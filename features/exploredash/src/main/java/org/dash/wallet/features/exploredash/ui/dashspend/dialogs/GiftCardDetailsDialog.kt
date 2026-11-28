@@ -457,6 +457,7 @@ private fun GiftCardItemCard(
     val hasNumber = !giftCard?.number.isNullOrEmpty()
     val hasPin = !giftCard?.pin.isNullOrEmpty()
     val hasMerchantUrl = !giftCard?.merchantUrl.isNullOrBlank()
+    val isLinkOnlyCard = hasMerchantUrl && !hasNumber
     val challenge = giftCard?.challengeCode
     val isLoading = giftCard != null &&
         !hasNumber &&
@@ -474,10 +475,19 @@ private fun GiftCardItemCard(
         }
 
         // Original purchase row
-        ListItem(
-            label = stringResource(R.string.purchase_original_purchase),
-            trailingText = currencyFormat.format(giftCard?.price ?: 0.0)
-        )
+        if (hasMerchantUrl && !isLinkOnlyCard) {
+            ListItem(
+                label = stringResource(R.string.purchase_original_purchase),
+                trailingText = currencyFormat.format(giftCard?.price ?: 0.0),
+                trailingActionText = stringResource(R.string.purchase_check_current_balance),
+                onTrailingActionClick = onRedeemLink
+            )
+        } else {
+            ListItem(
+                label = stringResource(R.string.purchase_original_purchase),
+                trailingText = currencyFormat.format(giftCard?.price ?: 0.0)
+            )
+        }
 
         if (hasMerchantUrl) {
             if (challenge != null) {
@@ -495,11 +505,13 @@ private fun GiftCardItemCard(
                     }
                 )
             }
-            DashButton(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                text = stringResource(R.string.purchase_redeem_gift_card),
-                onClick = onRedeemLink
-            )
+            if (isLinkOnlyCard) {
+                DashButton(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                    text = stringResource(R.string.purchase_redeem_gift_card),
+                    onClick = onRedeemLink
+                )
+            }
         }
 
         // Error text

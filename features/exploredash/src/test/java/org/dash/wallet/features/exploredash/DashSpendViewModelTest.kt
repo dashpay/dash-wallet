@@ -25,10 +25,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.TestCoroutineScheduler
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.TxId
 import org.dash.wallet.common.data.entity.GiftCard
+import org.dash.wallet.common.data.entity.TransactionMetadata
+import org.dash.wallet.common.money.Coin
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.money.TxIds
 import org.dash.wallet.common.services.BlockchainStateProvider
@@ -38,6 +43,7 @@ import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.UnresolvedPaymentsProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.transactions.TransactionCategory
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProvider
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderDao
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderType
@@ -73,7 +79,14 @@ import org.mockito.kotlin.*
 @ExperimentalCoroutinesApi
 class DashSpendViewModelTest {
     @get:Rule var rule: TestRule = InstantTaskExecutorRule()
-    @get:Rule var mainCoroutineRule = MainCoroutineRule()
+    private val scheduler = TestCoroutineScheduler()
+
+    @get:Rule var mainCoroutineRule = MainCoroutineRule(UnconfinedTestDispatcher(scheduler))
+
+    private companion object {
+        const val POLL_START_MILLIS = 2_000L
+        const val IO_WAIT_MILLIS = 500L
+    }
 
     private val merchantId = "merchant-home-depot"
 
@@ -238,7 +251,11 @@ class DashSpendViewModelTest {
                     fiatAmount = "25.00"
                 )
             }
-            val repository = CTXSpendRepository(api, mock(), mock())
+            val config = mock<CTXSpendConfig> {
+                onBlocking { getSecuredData(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN) } doReturn "token"
+                onBlocking { getSecuredData(CTXSpendConfig.PREFS_KEY_CTX_PAY_EMAIL) } doReturn "user@example.com"
+            }
+            val repository = CTXSpendRepository(api, config, mock())
             val giftCardDao = mock<GiftCardDao>()
 
             val ordered = repository.orderGiftcard("DASH", "USD", GiftCardShoppingCart(25.0, 1), "ctx-source")
@@ -248,8 +265,16 @@ class DashSpendViewModelTest {
             verify(giftCardDao).insertGiftCards(saved.capture())
             assertEquals(1, saved.firstValue.size)
             whenever(giftCardDao.observeCardForTransaction(TxIds.toBytes(txId))).thenReturn(flowOf(saved.firstValue))
+            whenever(giftCardDao.getCardForTransaction(TxIds.toBytes(txId))).thenReturn(saved.firstValue)
             val metadataProvider = mock<TransactionMetadataProvider> {
                 on { observeTransactionMetadata(TxId.wrap(txId)) } doReturn emptyFlow()
+                onBlocking { getTransactionMetadata(TxId.wrap(txId)) } doReturn TransactionMetadata(
+                    TxId.wrap(txId),
+                    0,
+                    Coin.ZERO,
+                    TransactionCategory.Sent,
+                    service = ServiceName.CTXSpend
+                )
             }
             val reopened = GiftCardDetailsViewModel(
                 mock(),
@@ -268,7 +293,9 @@ class DashSpendViewModelTest {
             assertEquals(link, card?.merchantUrl)
             assertEquals("A1B2C3", card?.redeemUrlChallenge)
             // A saved link stops polling, so nothing else would deliver the challenge later.
-            verify(api, never()).getGiftCardByOrderId(any())
+            scheduler.advanceTimeBy(POLL_START_MILLIS)
+            // A poll would reach the API from Dispatchers.IO, which virtual time does not wait for.
+            verify(api, after(IO_WAIT_MILLIS).never()).getGiftCardByOrderId(any())
             verify(api, never()).getGiftCardByTxId(any())
         }
     }
