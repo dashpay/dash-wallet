@@ -27,7 +27,8 @@ data class GiftCardInfo(
     val fiatAmount: String? = "",
     val fiatCurrency: String? = "",
     val paymentUrls: Map<String, String>? = buildMap { },
-    val paymentUrlExpiration: String? = null
+    val paymentUrlExpiration: String? = null,
+    val created: String? = null
 ) {
     override fun toString(): String {
         return "GiftCardInfo(id='$id', merchantName='$merchantName', status=$status, " +

@@ -152,11 +152,14 @@ class ExchangeRatesRepository @Inject constructor(
                 }
             }
         }
+        val now = System.currentTimeMillis()
         val retrieved = config.get(EXCHANGE_RATES_RETRIEVAL_TIME) ?: return null
-        if (System.currentTimeMillis() - retrieved > STALE_DURATION_MS) {
+        if (now - retrieved > STALE_DURATION_MS) {
             return null
         }
+        // a successful refresh need not have renewed this currency's row; -1 is a row without a time
         return exchangeRatesDao.getExchangeRateForCurrency(currencyCode)
+            ?.takeIf { it.retrievalTime == -1L || now - it.retrievalTime <= STALE_DURATION_MS }
     }
 
     override suspend fun cleanupObsoleteCurrencies() {

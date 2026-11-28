@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
@@ -83,6 +84,7 @@ import org.dash.wallet.common.ui.components.Style
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.ComposeBottomSheet
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
+import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderType
 import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardInfo
@@ -296,7 +298,10 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
                 }
                 val isOutdated = viewModel.cardCurrency != cardCurrency || isOtherOrder ||
                     viewModel.purchaseBlock.isAboutTheAmount()
-                if (isOutdated && viewModel.submissionState.value == GiftCardSubmissionState.IDLE) {
+                // nor while its order waits for the buyer's answer to a new price
+                if (isOutdated && viewModel.submissionState.value == GiftCardSubmissionState.IDLE &&
+                    viewModel.priceChange.value == null
+                ) {
                     dismissAllowingStateLoss()
                 }
             }
@@ -323,6 +328,22 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
             viewModel.priceChange.collect { change ->
                 if (change != null && isAdded) {
                     showPriceChange(change)
+                }
+            }
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.droppedPriceChange.collect { change ->
+                if (change != null && isAdded && viewModel.takeDroppedPriceChange(change)) {
+                    showPriceChangeUnpaid()
+                }
+            }
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.paymentFailure.collect { failure ->
+                if (failure != null && isAdded && viewModel.takePaymentFailure(failure)) {
+                    submitPayment { throw failure }
                 }
             }
         }
@@ -602,6 +623,8 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
         }
     }
 
+    private fun showPriceChangeUnpaid() = requireActivity().showPriceChangeUnpaid()
+
     private fun showPriceChange(change: GiftCardPriceChange) {
         hideLoading()
         val activity = requireActivity()
@@ -626,7 +649,13 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
             when {
                 // answered already, or replaced by a newer change
                 viewModel.priceChange.value != change -> Unit
-                result == true -> payAcceptedPrice()
+                // the view model pays, and reports, whatever becomes of this sheet meanwhile
+                result == true -> {
+                    if (isAdded && view != null) {
+                        showLoading()
+                    }
+                    viewModel.acceptPriceChange(change)
+                }
                 else -> {
                     viewModel.declinePriceChange()
                     if (isAdded) {
@@ -637,30 +666,13 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
         }
     }
 
-    private fun payAcceptedPrice() {
-        if (!isAdded || view == null) {
-            // still pending, for the sheet that is on screen
-            return
-        }
-        showLoading()
-        viewLifecycleOwner.lifecycleScope.launch {
-            submitPayment { viewModel.payAcceptedPrice() }
-        }
-    }
-
     private suspend fun createSendingRequestFromDashUri(
         url: String,
         giftCards: List<GiftCardInfo>
     ): String? {
-        val quote = shownQuote
-        return submitPayment {
-            // submission and order recording together, so a destroyed view cannot separate them
-            if (quote != null && viewModel.selectedProvider == GiftCardProviderType.CTX) {
-                viewModel.payCtxOrder(quote, url, giftCards)
-            } else {
-                viewModel.payAndRecordOrder(url, giftCards)
-            }
-        }
+        val quote = checkNotNull(shownQuote)
+        // submission and order recording together, so a destroyed view cannot separate them
+        return submitPayment { viewModel.payOrder(quote, url, giftCards) }
     }
 
     /** [pay] returns null when the order was left unpaid for the buyer to decide on a new price. */
@@ -1155,6 +1167,17 @@ private const val ADAPTIVE_DIALOG_TAG = "adaptive_dialog"
 internal fun Fragment.observePurchaseWithoutSheet(viewModel: DashSpendViewModel) {
     fun hasSheet() = requireActivity().supportFragmentManager.fragments.any { it is PurchaseGiftCardConfirmDialog }
 
+    // leaving the purchase leaves nobody to answer: the order stays unpaid, and the buyer is told
+    viewLifecycleOwner.observeOnDestroy {
+        val activity = activity
+        if (activity != null && !activity.isChangingConfigurations) {
+            viewModel.dropPriceChange()
+            viewModel.droppedPriceChange.value?.takeIf(viewModel::takeDroppedPriceChange)?.let {
+                activity.showPriceChangeUnpaid()
+            }
+        }
+    }
+
     viewLifecycleOwner.lifecycleScope.launch {
         viewModel.paidOrder.collect { order ->
             if (order != null && isAdded && !hasSheet() && viewModel.takePaidOrder(order)) {
@@ -1173,14 +1196,49 @@ internal fun Fragment.observePurchaseWithoutSheet(viewModel: DashSpendViewModel)
     viewLifecycleOwner.lifecycleScope.launch {
         viewModel.priceChange.collect { change ->
             if (change != null && isAdded && !hasSheet()) {
-                viewModel.declinePriceChange()
-                AdaptiveDialog.create(
-                    R.drawable.ic_info_blue,
-                    getString(R.string.gift_card_price_updated_title),
-                    getString(R.string.gift_card_price_changed_unpaid),
-                    getString(R.string.button_close)
-                ).show(requireActivity())
+                viewModel.dropPriceChange()
             }
         }
     }
+
+    viewLifecycleOwner.lifecycleScope.launch {
+        viewModel.droppedPriceChange.collect { change ->
+            if (change != null && isAdded && !hasSheet() && viewModel.takeDroppedPriceChange(change)) {
+                requireActivity().showPriceChangeUnpaid()
+            }
+        }
+    }
+
+    viewLifecycleOwner.lifecycleScope.launch {
+        viewModel.paymentFailure.collect { failure ->
+            if (failure != null && isAdded && !hasSheet() && viewModel.takePaymentFailure(failure)) {
+                requireActivity().showPaymentFailure(failure)
+            }
+        }
+    }
+}
+
+private fun FragmentActivity.showPriceChangeUnpaid() {
+    AdaptiveDialog.create(
+        R.drawable.ic_info_blue,
+        getString(R.string.gift_card_price_updated_title),
+        getString(R.string.gift_card_price_changed_unpaid),
+        getString(R.string.button_close)
+    ).show(this)
+}
+
+// with no sheet left, only whether the payment may be out matters
+private fun FragmentActivity.showPaymentFailure(failure: Exception) {
+    val isPending = failure is PaymentSubmissionPendingException
+    AdaptiveDialog.create(
+        if (isPending) R.drawable.ic_warning else R.drawable.ic_error,
+        getString(if (isPending) R.string.payment_submission_pending_title else R.string.gift_card_purchase_failed),
+        getString(
+            when {
+                isPending -> R.string.payment_submission_pending_message
+                else -> (failure as? CTXSpendException)?.resourceString?.resourceId ?: R.string.gift_card_error
+            }
+        ),
+        getString(R.string.button_close)
+    ).show(this)
 }
