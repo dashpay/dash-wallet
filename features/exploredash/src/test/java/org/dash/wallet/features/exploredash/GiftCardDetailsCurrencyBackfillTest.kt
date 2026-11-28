@@ -223,6 +223,20 @@ class GiftCardDetailsCurrencyBackfillTest {
     }
 
     @Test
+    fun signInArrivingWhileALookupRuns_getsOneMoreLookupWhenThatOneEndsUnresolved() {
+        val dao = open(legacyCard, accessToken = "token", failingLookups = 3)
+        assertEquals(1, orderLookups.get())
+
+        // ignored for now: the lookup is between attempts
+        storedToken.value = "another token"
+        assertEquals(1, orderLookups.get())
+        allAttemptsMade()
+
+        assertEquals(4, orderLookups.get())
+        verifyBlocking(dao) { backfillCurrency(txIdBytes(), eq("GBP")) }
+    }
+
+    @Test
     fun lookupThatKeepsFailing_stopsAfterThreeAttempts() {
         val dao = open(legacyCard, accessToken = "token", failingLookups = 10)
 

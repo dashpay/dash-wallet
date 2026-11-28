@@ -43,7 +43,22 @@ object GiftCardCurrency {
         }
     }
 
-    fun fractionDigits(currencyCode: String): Int = Currency.getInstance(currencyCode).defaultFractionDigits
+    // CTX's own table (spend-api money/currency.go), which is what its prices are rounded by. The
+    // platform's differs: Android gives IQD, RSD, LBP and others no decimals at all.
+    private val NO_DECIMALS = setOf(
+        "BIF", "BYR", "CLP", "DJF", "GNF", "ISK", "JPY", "KMF", "KRW", "PYG", "RWF", "UGX", "VND", "VUV", "XAF",
+        "XOF", "XPF"
+    )
+    private val THREE_DECIMALS = setOf("BHD", "IQD", "JOD", "KWD", "LYD", "OMR", "TND")
+    private const val DEFAULT_DECIMALS = 2
+
+    /** The decimals CTX counts [currencyCode] in. Throws for a code that is not a currency. */
+    fun fractionDigits(currencyCode: String): Int = when (Currency.getInstance(currencyCode).currencyCode) {
+        in NO_DECIMALS -> 0
+        in THREE_DECIMALS -> 3
+        "CLF" -> 4
+        else -> DEFAULT_DECIMALS
+    }
 
     /** False when [amount] has more decimals than the currency has, e.g. 1000.5 JPY. */
     fun isRepresentable(amount: Double, currencyCode: String): Boolean =
@@ -71,6 +86,23 @@ object GiftCardCurrency {
             total + price * BigDecimal(quantity)
         }.setScale(fractionDigits(currencyCode), RoundingMode.UP)
 
+    /**
+     * What CTX charges for [order]: it rounds each card's discount half up to the currency's
+     * smallest unit and takes that off the face value. The fraction is used as the binary double
+     * it is, as CTX does, which is what decides an exact half.
+     */
+    fun ctxTotal(order: Map<Double, Int>, currencyCode: String, discountOf: (Double) -> Double): BigDecimal {
+        val digits = fractionDigits(currencyCode)
+        return order.entries.fold(BigDecimal.ZERO) { total, (value, quantity) ->
+            val face = BigDecimal.valueOf(value).setScale(digits, RoundingMode.HALF_UP)
+            val fraction = BigDecimal(discountOf(value).coerceIn(0.0, 1.0))
+            val discount = (face.unscaledValue().toBigDecimal() * fraction + BigDecimal("0.5"))
+                .setScale(0, RoundingMode.FLOOR)
+                .movePointLeft(digits)
+            total + (face - discount) * BigDecimal(quantity)
+        }.setScale(digits, RoundingMode.UNNECESSARY)
+    }
+
     // Fiat counts in its smallest unit, far finer than any ISO 4217 currency (JPY 0, KWD 3 decimals)
     fun toFiat(amount: Double, currencyCode: String): Fiat =
         Fiat.valueOf(
@@ -86,8 +118,8 @@ object GiftCardCurrency {
         val currency = Currency.getInstance(currencyCode)
         return NumberFormat.getCurrencyInstance().apply {
             this.currency = currency
-            maximumFractionDigits = currency.defaultFractionDigits
-            minimumFractionDigits = if (trimZeroDecimals) 0 else currency.defaultFractionDigits
+            maximumFractionDigits = fractionDigits(currencyCode)
+            minimumFractionDigits = if (trimZeroDecimals) 0 else fractionDigits(currencyCode)
         }
     }
 

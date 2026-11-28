@@ -103,6 +103,7 @@ class GiftCardDetailsViewModel @Inject constructor(
     private var retries = 3
     private var currencyLookup: Job? = null
     private var isCurrencyResolved = false
+    private var isSignInChangePending = false
 
     // replaced in tests, which run the lookup and its pauses on virtual time
     internal var currencyLookupDispatcher: CoroutineDispatcher = Dispatchers.IO
@@ -135,7 +136,7 @@ class GiftCardDetailsViewModel @Inject constructor(
         // signing in to CTX makes the lookup possible without the card changing
         ctxSpendConfig.observeSecureData(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN)
             .distinctUntilChanged()
-            .onEach { lookUpCurrencyIfMissing(_uiState.value.giftCards) }
+            .onEach { lookUpCurrencyIfMissing(_uiState.value.giftCards, isSignInChange = true) }
             .launchIn(viewModelScope)
 
         giftCardDao.observeCardForTransaction(TxIds.toBytes(transactionId))
@@ -175,22 +176,30 @@ class GiftCardDetailsViewModel @Inject constructor(
     }
 
     /** One lookup at a time, a few attempts each, until the currency is settled. */
-    private fun lookUpCurrencyIfMissing(giftCards: List<GiftCard>) {
-        if (isCurrencyResolved || currencyLookup?.isActive == true || giftCards.none { it.currency == null }) {
+    private fun lookUpCurrencyIfMissing(giftCards: List<GiftCard>, isSignInChange: Boolean = false) {
+        if (isCurrencyResolved || giftCards.none { it.currency == null }) {
+            return
+        }
+        if (currencyLookup?.isActive == true) {
+            // the running lookup may have given up on the old session already
+            isSignInChangePending = isSignInChangePending || isSignInChange
             return
         }
         currencyLookup = viewModelScope.launch {
-            isCurrencyResolved = withContext(currencyLookupDispatcher) {
-                repeat(CURRENCY_LOOKUP_ATTEMPTS) { attempt ->
-                    if (backfillCurrency(transactionId)) {
-                        return@withContext true
+            do {
+                isSignInChangePending = false
+                isCurrencyResolved = withContext(currencyLookupDispatcher) {
+                    repeat(CURRENCY_LOOKUP_ATTEMPTS) { attempt ->
+                        if (backfillCurrency(transactionId)) {
+                            return@withContext true
+                        }
+                        if (attempt < CURRENCY_LOOKUP_ATTEMPTS - 1) {
+                            delay((attempt + 1).seconds)
+                        }
                     }
-                    if (attempt < CURRENCY_LOOKUP_ATTEMPTS - 1) {
-                        delay((attempt + 1).seconds)
-                    }
+                    false
                 }
-                false
-            }
+            } while (!isCurrencyResolved && isSignInChangePending)
         }
     }
 

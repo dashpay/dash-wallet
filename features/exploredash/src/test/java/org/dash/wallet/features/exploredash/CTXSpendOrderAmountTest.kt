@@ -113,7 +113,8 @@ class CTXSpendOrderAmountTest {
             cases.forEach { (amount, expected) ->
                 Locale.setDefault(locale)
                 val api = mock<CTXSpendApi> {
-                    onBlocking { purchaseGiftCard(any()) } doReturn GiftCardResponse(id = "order-1", status = "unpaid")
+                    onBlocking { purchaseGiftCard(any()) } doReturn
+                        GiftCardResponse(id = "order-1", status = "unpaid", cardFiatAmount = expected)
                 }
                 val config = mock<CTXSpendConfig> { on { observeSecureData(any()) } doReturn emptyFlow() }
                 val repository = CTXSpendRepository(api, config, TokenAuthenticator(mock(), config))

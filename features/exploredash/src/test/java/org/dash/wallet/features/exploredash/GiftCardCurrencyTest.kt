@@ -29,12 +29,17 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
+import java.math.BigDecimal
+import java.math.MathContext
+import java.math.RoundingMode
 import java.util.Locale
+import kotlin.random.Random
 
 class GiftCardCurrencyTest {
     private val originalLocale = Locale.getDefault()
@@ -90,6 +95,74 @@ class GiftCardCurrencyTest {
         assertEquals("1000", digits(GiftCardCurrency.toFiat(1000.0, "JPY").toCardFormattedString()))
         assertEquals("1234", digits(GiftCardCurrency.toFiat(1.234, "KWD").toCardFormattedString()))
         assertEquals("1900", digits(GiftCardCurrency.toFiat(18.991, "GBP").toCardFormattedString(roundUp = true)))
+    }
+
+    @Test
+    fun fractionDigits_areTheOnesCtxCountsInNotThePlatforms() {
+        // Android's currency data gives all of these no decimals
+        val twoAtCtx = listOf("RSD", "ALL", "LBP", "MMK", "SYP", "YER", "IRR", "LAK", "SOS", "SLL", "KPW", "MGA", "AFN")
+        twoAtCtx.forEach { assertEquals(it, 2, GiftCardCurrency.fractionDigits(it)) }
+        listOf("BHD", "IQD", "JOD", "KWD", "LYD", "OMR", "TND").forEach {
+            assertEquals(it, 3, GiftCardCurrency.fractionDigits(it))
+        }
+        val none = listOf(
+            "BIF", "BYR", "CLP", "DJF", "GNF", "ISK", "JPY", "KMF", "KRW", "PYG", "RWF", "UGX", "VND", "VUV", "XAF",
+            "XOF", "XPF"
+        )
+        none.forEach { assertEquals(it, 0, GiftCardCurrency.fractionDigits(it)) }
+        listOf("USD", "GBP", "EUR", "INR", "CAD").forEach { assertEquals(it, 2, GiftCardCurrency.fractionDigits(it)) }
+        assertEquals(4, GiftCardCurrency.fractionDigits("CLF"))
+        assertThrows(IllegalArgumentException::class.java) { GiftCardCurrency.fractionDigits("NOPE") }
+        // the amount sent to CTX and the format shown go by the same table
+        assertEquals("1.500", GiftCardCurrency.orderAmount(1.5, "IQD"))
+        assertEquals(3, GiftCardCurrency.displayFormat("IQD").maximumFractionDigits)
+        assertEquals(2, GiftCardCurrency.displayFormat("RSD").minimumFractionDigits)
+    }
+
+    @Test
+    fun ctxTotal_isWhatCtxChargedForTheseCards() {
+        // 5.55 at 1.6%: the discount 0.0888 becomes 0.09, where rounding the total up gave 5.47
+        assertEquals("5.46", GiftCardCurrency.ctxTotal(mapOf(5.55 to 1), "GBP") { 160 / 10000.0 }.toPlainString())
+        assertEquals("7.65", GiftCardCurrency.ctxTotal(mapOf(7.89 to 1), "EUR") { 300 / 10000.0 }.toPlainString())
+        assertEquals("95.00", GiftCardCurrency.ctxTotal(mapOf(100.0 to 1), "GBP") { 500 / 10000.0 }.toPlainString())
+        assertEquals("965", GiftCardCurrency.ctxTotal(mapOf(1000.0 to 1), "JPY") { 350 / 10000.0 }.toPlainString())
+        assertEquals("1.211", GiftCardCurrency.ctxTotal(mapOf(1.234 to 1), "KWD") { 190 / 10000.0 }.toPlainString())
+        assertEquals("25.00", GiftCardCurrency.ctxTotal(mapOf(25.0 to 1), "USD") { 0.0 }.toPlainString())
+    }
+
+    // spend-api: Money.Split -> MultiplyBig, on 90-bit floats that round away from zero at every step
+    private fun chargedByCtx(minorUnits: Long, digits: Int, basisPoints: Int): Long {
+        val precision = MathContext(28, RoundingMode.UP)
+        val scale = BigDecimal.TEN.pow(digits)
+        val major = BigDecimal(minorUnits).divide(scale, precision)
+        val share = major.multiply(BigDecimal(basisPoints.toDouble() / 10000), precision)
+        val discount = share.multiply(scale, precision).add(BigDecimal("0.5"), precision).toBigInteger()
+        return minorUnits - discount.toLong()
+    }
+
+    @Test
+    fun ctxTotal_followsTheServerRuleAtEveryCurrencyPrecision() {
+        val random = Random(20261128)
+        mapOf("JPY" to 0, "GBP" to 2, "KWD" to 3).forEach { (currency, digits) ->
+            repeat(20_000) {
+                val minorUnits = random.nextLong(1, 2_000_000)
+                val basisPoints = random.nextInt(0, 5001)
+                val value = BigDecimal(minorUnits).movePointLeft(digits)
+                val total = GiftCardCurrency.ctxTotal(mapOf(value.toDouble() to 1), currency) {
+                    basisPoints.toDouble() / 10000
+                }
+                assertEquals(
+                    "$value $currency at $basisPoints",
+                    chargedByCtx(minorUnits, digits, basisPoints),
+                    total.movePointRight(digits).longValueExact()
+                )
+            }
+        }
+        // exact halves: 0.50 at 1% and at 3%, whose doubles lie on either side of the decimal
+        listOf(100, 300, 500, 2500).forEach { basisPoints ->
+            val total = GiftCardCurrency.ctxTotal(mapOf(0.5 to 1), "GBP") { basisPoints.toDouble() / 10000 }
+            assertEquals("at $basisPoints", chargedByCtx(50, 2, basisPoints), total.movePointRight(2).longValueExact())
+        }
     }
 
     @Test

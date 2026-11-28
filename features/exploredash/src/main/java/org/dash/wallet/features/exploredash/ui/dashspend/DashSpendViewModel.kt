@@ -401,6 +401,7 @@ class DashSpendViewModel @Inject constructor(
             }
             val card = giftCardOrderInfo.value.entries.singleOrNull()
             return when {
+                confirmedDetailsOf(giftCardMerchant.value)?.active == false -> GiftCardPurchaseBlock.NOT_SOLD
                 _cardRateState.value == CardRateState.Loading -> GiftCardPurchaseBlock.RATE_LOADING
                 cardExchangeRate == null -> GiftCardPurchaseBlock.RATE_MISSING
                 card == null || card.value != 1 || !(card.key > 0.0) -> GiftCardPurchaseBlock.NO_AMOUNT
@@ -512,7 +513,18 @@ class DashSpendViewModel @Inject constructor(
     fun currentQuote(): GiftCardQuote? {
         val currency = cardCurrency ?: return null
         val order = giftCardOrderInfo.value
-        return GiftCardQuote(currency, order, GiftCardCurrency.discountedTotal(order, currency, ::getGiftCardDiscount))
+        return GiftCardQuote(currency, order, discountedTotal(order, currency))
+    }
+
+    /** What [order] costs: by CTX's own rounding for its cards, so that what is shown is what it charges. */
+    fun discountedTotal(
+        order: Map<Double, Int>,
+        currencyCode: String,
+        discountOf: (Double) -> Double = ::getGiftCardDiscount
+    ): BigDecimal = if (selectedProvider == GiftCardProviderType.CTX) {
+        GiftCardCurrency.ctxTotal(order, currencyCode, discountOf)
+    } else {
+        GiftCardCurrency.discountedTotal(order, currencyCode, discountOf)
     }
 
     /** [shown] is what the confirmation showed. Any other order, currency or total is refused. */
@@ -545,12 +557,13 @@ class DashSpendViewModel @Inject constructor(
                         }
                         // before the order exists: without a usable rate none is left behind unpaid
                         confirmedPrice = shown to acceptedPrice(shown)
+                        val requestedAt = elapsedRealtime()
                         ctxSpendRepository.orderGiftcard(
                             merchantId = provider!!.sourceId,
                             fiatCurrency = currency,
                             order = giftCardOrderShoppingCart,
                             cryptoCurrency = Constants.DASH_CURRENCY
-                        ).also { cards -> cards.firstOrNull()?.let { orderArrival = it.id to elapsedRealtime() } }
+                        ).also { cards -> cards.firstOrNull()?.let { orderRequest = it.id to requestedAt } }
                     } catch (e: CTXSpendException) {
                         log.error("purchaseGiftCard error: CTXSpendException", e)
                         throw e
@@ -785,7 +798,7 @@ class DashSpendViewModel @Inject constructor(
         val giftCards: List<GiftCardInfo>,
         val accepted: AcceptedPrice,
         val context: GiftCardPurchaseContext?,
-        val arrivedAt: Long
+        val startedAt: Long
     )
 
     @Volatile
@@ -816,12 +829,12 @@ class DashSpendViewModel @Inject constructor(
 
     internal var elapsedRealtime: () -> Long = SystemClock::elapsedRealtime
 
-    // the price Confirm settled on before the order was created, and when that order's answer arrived
+    // the price Confirm settled on before the order was created, and when that order was asked for
     @Volatile
     private var confirmedPrice: Pair<GiftCardQuote, AcceptedPrice>? = null
 
     @Volatile
-    private var orderArrival: Pair<String, Long>? = null
+    private var orderRequest: Pair<String, Long>? = null
 
     /** Pays an order of the provider the buyer confirmed with, CTX orders only at the price [shown]. */
     suspend fun payOrder(shown: GiftCardQuote, paymentUri: String, giftCards: List<GiftCardInfo>): String? {
@@ -841,14 +854,17 @@ class DashSpendViewModel @Inject constructor(
      */
     suspend fun payCtxOrder(shown: GiftCardQuote, paymentUri: String, giftCards: List<GiftCardInfo>): String? {
         val accepted = try {
-            confirmedPrice?.takeIf { it.first == shown }?.second ?: acceptedPrice(shown)
+            // The rate has to be fresh now, when the order is about to be paid, not only at
+            // Confirm. Of the two the lower figure stands: a rate that moved meanwhile asks.
+            val atPayment = acceptedPrice(shown)
+            confirmedPrice?.takeIf { it.first == shown }?.second?.takeIf { it.amount < atPayment.amount } ?: atPayment
         } catch (e: CTXSpendException) {
             releaseUnusedSubmission()
             throw e
         }
         confirmedPrice = null
-        val arrivedAt = orderArrival?.takeIf { it.first == giftCards.first().id }?.second ?: elapsedRealtime()
-        return payChecked(CheckedOrder(paymentUri, giftCards, accepted, purchaseContext.get(), arrivedAt))
+        val startedAt = orderRequest?.takeIf { it.first == giftCards.first().id }?.second ?: elapsedRealtime()
+        return payChecked(CheckedOrder(paymentUri, giftCards, accepted, purchaseContext.get(), startedAt))
     }
 
     /**
@@ -918,17 +934,17 @@ class DashSpendViewModel @Inject constructor(
     }
 
     private fun GiftCardInfo.check(order: CheckedOrder, requested: Coin?) {
-        if (isExpired(order.arrivedAt)) {
+        if (isExpired(order.startedAt)) {
             log.error("gift card {} not paid: its payment expired at {}", id, paymentUrlExpiration)
             throw CTXSpendException(ResourceString(R.string.gift_card_order_expired))
         }
         order.accepted.changeTo(requested)?.let { throw GiftCardPriceChangedException(it.copy(orderId = id)) }
     }
 
-    // Judged by time passed on this device since the answer arrived, against the lifetime CTX gave
-    // the order by its own clock: the phone's wall clock can be wrong. Without both times CTX is
-    // left to turn a late payment down itself.
-    private fun GiftCardInfo.isExpired(arrivedAt: Long): Boolean {
+    // Judged by time passed on this device since the order was asked for, which is before CTX
+    // created it, against the lifetime CTX gave it by its own clock: the phone's wall clock can be
+    // wrong. Without both times CTX is left to turn a late payment down itself.
+    private fun GiftCardInfo.isExpired(startedAt: Long): Boolean {
         val lifetime = try {
             Duration.between(
                 OffsetDateTime.parse(created.orEmpty()),
@@ -937,7 +953,7 @@ class DashSpendViewModel @Inject constructor(
         } catch (e: DateTimeParseException) {
             return false
         }
-        return elapsedRealtime() - arrivedAt > lifetime.toMillis()
+        return elapsedRealtime() - startedAt > lifetime.toMillis()
     }
 
     /**
@@ -1600,7 +1616,9 @@ class DashSpendViewModel @Inject constructor(
                 .append("min: ").append(merchant.minCardPurchase).append("\n")
                 .append("max: ").append(merchant.maxCardPurchase).append("\n")
                 .append("discount: ").append(merchant.savingsFraction).append("\n")
-                .append("denominations type: ").append(merchant.denominationsType).append("\n")
+                // the published merchant keeps its old type when only the type changed
+                .append("denominations type: ")
+                .append((confirmedDetailsOf(merchant) ?: merchant).denominationsType).append("\n")
                 .append("denominations: ").append(merchant.denominations).append("\n")
                 .append("quantities: ").append(merchant.quantities).append("\n")
                 .append("\n")

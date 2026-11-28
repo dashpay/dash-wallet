@@ -67,6 +67,17 @@ class FreshExchangeRateTest {
     }
 
     @Test
+    fun rateFromTheSecondSource_isWaitedForWhenTheFirstFails() {
+        every { source.rates } throws java.io.IOException("offline")
+        every { DashRatesSecondFallback.getInstance().rates } answers {
+            Thread.sleep(300)
+            listOf(ExchangeRate("GBP", "30"))
+        }
+
+        assertEquals("30", freshRate("GBP")?.rate)
+    }
+
+    @Test
     fun refreshThatFailed_leavesNoFreshRate() {
         every { source.rates } throws java.io.IOException("offline")
         every { DashRatesSecondFallback.getInstance().rates } throws java.io.IOException("offline")
