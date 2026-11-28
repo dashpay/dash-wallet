@@ -22,6 +22,13 @@ class RedeemProxyOverrideClaims {
     val isEmpty: Boolean
         get() = holders.isEmpty()
 
+    val latest: Any?
+        get() = holders.lastOrNull()
+
+    fun isOnlyHolder(holder: Any): Boolean {
+        return holders.size == 1 && holder in holders
+    }
+
     fun claim(holder: Any) {
         holders.add(holder)
     }

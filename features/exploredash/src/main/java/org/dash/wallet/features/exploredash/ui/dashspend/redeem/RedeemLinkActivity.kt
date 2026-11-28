@@ -152,6 +152,18 @@ class RedeemLinkActivity : InteractionAwareActivity() {
             }
         }
 
+        // The settings can change before any broadcast, so a remembered answer is only good while they stay empty.
+        private fun hasNoDeviceProxy(context: Context): Boolean {
+            return try {
+                val proxy = context.getSystemService(ConnectivityManager::class.java).defaultProxy
+                val pacUrl = proxy?.pacFileUrl?.takeUnless { it == Uri.EMPTY }?.toString()
+                RedeemLinkPolicy.connectsDirectly(proxy?.host, pacUrl) { listOf(java.net.Proxy.NO_PROXY) }
+            } catch (e: Exception) {
+                log.warn("Proxy settings could not be read: {}", e.javaClass.simpleName)
+                false
+            }
+        }
+
         // getDefaultProxy is what the platform copies into the proxy system properties and what WebView follows:
         // the global proxy, else the active network's, including a PAC script.
         private fun connectsDirectly(context: Context, url: String?, isPageRequest: Boolean = false): Boolean {
@@ -495,7 +507,7 @@ class RedeemLinkActivity : InteractionAwareActivity() {
         }
         blockCleartext {
             // A retry can replace the first view while its wipe is still running; it must not load ahead of it.
-            if (!hasWipedWebData && isShowing(view)) {
+            if (!hasWipedWebData && isShowing(view) && overrideClaims.isOnlyHolder(this)) {
                 wipeWebData {
                     hasWipedWebData = true
                     load.run()
@@ -510,9 +522,10 @@ class RedeemLinkActivity : InteractionAwareActivity() {
     // The proxy broadcast can trail the setting, and this runs before each request a page or worker starts.
     private fun screenRequest(url: Uri?, onProxyFound: Runnable): WebResourceResponse? {
         val verdict = RedeemLinkPolicy.requestVerdict(url?.scheme) {
-            proxyChecks.isDirect(url?.host) {
-                connectsDirectly(this, url?.toString(), isPageRequest = true)
-            }
+            hasNoDeviceProxy(this) &&
+                proxyChecks.isDirect(url?.host) {
+                    connectsDirectly(this, url?.toString(), isPageRequest = true)
+                }
         }
 
         if (verdict == RedeemLinkPolicy.RequestVerdict.ALLOW) {
@@ -610,6 +623,9 @@ class RedeemLinkActivity : InteractionAwareActivity() {
         if (overrideClaims.release(this)) {
             runCatching { ProxyController.getInstance().clearProxyOverride(ContextCompat.getMainExecutor(this)) {} }
             runCatching { ServiceWorkerControllerCompat.getInstance().setServiceWorkerClient(null) }
+        } else {
+            val remaining = (overrideClaims.latest as? RedeemLinkActivity)?.redeemServiceWorkerClient ?: return
+            runCatching { ServiceWorkerControllerCompat.getInstance().setServiceWorkerClient(remaining) }
         }
     }
 
@@ -672,7 +688,8 @@ class RedeemLinkActivity : InteractionAwareActivity() {
     }
 
     private fun openInBrowser() {
-        startExternal(Intent(Intent.ACTION_VIEW, redeemUrl.toUri()).addCategory(Intent.CATEGORY_BROWSABLE))
+        val link = redeemUrl.toUri().normalizeScheme()
+        startExternal(Intent(Intent.ACTION_VIEW, link).addCategory(Intent.CATEGORY_BROWSABLE))
     }
 
     private fun showBlockedNotice() {

@@ -17,6 +17,8 @@
 package org.dash.wallet.features.exploredash.ui.dashspend.redeem
 
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -57,6 +59,30 @@ class RedeemProxyOverrideClaimsTest {
         assertFalse(claims.release(first))
         assertFalse(claims.isEmpty)
         assertTrue(claims.release(second))
+    }
+
+    @Test
+    fun `a screen only wipes on its first load while no other screen holds a claim`() {
+        assertFalse(claims.isOnlyHolder(first))
+
+        claims.claim(first)
+        assertTrue(claims.isOnlyHolder(first))
+
+        claims.claim(second)
+        assertFalse(claims.isOnlyHolder(first))
+        assertFalse(claims.isOnlyHolder(second))
+    }
+
+    @Test
+    fun `the screen that stays takes over from the one that closes`() {
+        claims.claim(first)
+        claims.claim(second)
+
+        claims.release(second)
+        assertSame(first, claims.latest)
+
+        claims.release(first)
+        assertNull(claims.latest)
     }
 
     @Test

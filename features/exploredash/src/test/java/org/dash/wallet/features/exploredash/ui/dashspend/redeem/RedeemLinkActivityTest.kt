@@ -16,7 +16,10 @@
  */
 package org.dash.wallet.features.exploredash.ui.dashspend.redeem
 
+import android.content.Context
 import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.ProxyInfo
 import android.net.Uri
 import android.os.Looper
 import android.webkit.SslErrorHandler
@@ -34,6 +37,7 @@ import org.junit.runner.RunWith
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
@@ -160,7 +164,8 @@ class RedeemLinkActivityTest {
     @Test
     fun `a service worker answer for a replaced page leaves the new page alone`() {
         configureProxy()
-        activity.redeemServiceWorkerClient.shouldInterceptRequest(request("https://example.com/a.js"))
+        val response = activity.redeemServiceWorkerClient.shouldInterceptRequest(request("https://example.com/a.js"))
+        assertEquals(0, response?.data?.available())
         val replacement = WebView(activity)
         activity.webView = replacement
 
@@ -174,7 +179,8 @@ class RedeemLinkActivityTest {
     @Test
     fun `a page answer for a replaced page leaves the new page alone`() {
         configureProxy()
-        activity.redeemWebViewClient.shouldInterceptRequest(view, request("https://example.com/a.js"))
+        val response = activity.redeemWebViewClient.shouldInterceptRequest(view, request("https://example.com/a.js"))
+        assertEquals(0, response?.data?.available())
         val replacement = WebView(activity)
         activity.webView = replacement
 
@@ -194,6 +200,30 @@ class RedeemLinkActivityTest {
         shadowOf(Looper.getMainLooper()).idle()
         assertTrue(activity.isBlockedByProxy)
         assertNull(activity.webView)
+    }
+
+    @Test
+    fun `a device proxy set after a direct answer is seen before any broadcast`() {
+        val url = "https://example.com/a.js"
+        val connectivity = mock<ConnectivityManager>()
+        shadowOf(activity.application).setSystemService(Context.CONNECTIVITY_SERVICE, connectivity)
+        assertNull(activity.redeemWebViewClient.shouldInterceptRequest(view, request(url)))
+        whenever(connectivity.defaultProxy).thenReturn(ProxyInfo.buildDirectProxy("proxy.example.com", 8080))
+
+        val response = activity.redeemWebViewClient.shouldInterceptRequest(view, request(url))
+
+        assertEquals(0, response?.data?.available())
+        shadowOf(Looper.getMainLooper()).idle()
+        assertTrue(activity.isBlockedByProxy)
+    }
+
+    @Test
+    fun `the browser gets the link with a lower case scheme`() {
+        activity.redeemUrl = "HTTPS://spend.ctx.com/gift-cards/abc/redeem"
+
+        activity.showLoadResult(RedeemLinkActivity.LoadResult.UNAVAILABLE)
+
+        assertEquals("https", shadowOf(activity).nextStartedActivity.data?.scheme)
     }
 
     @Test

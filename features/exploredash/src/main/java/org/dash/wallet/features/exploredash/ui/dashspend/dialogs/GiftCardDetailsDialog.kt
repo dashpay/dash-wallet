@@ -256,7 +256,8 @@ private fun GiftCardDetailsContent(
             } else {
                 try {
                     context.startActivity(
-                        Intent(Intent.ACTION_VIEW, url.toUri()).addCategory(Intent.CATEGORY_BROWSABLE)
+                        Intent(Intent.ACTION_VIEW, url.toUri().normalizeScheme())
+                            .addCategory(Intent.CATEGORY_BROWSABLE)
                     )
                 } catch (e: RuntimeException) {
                     Toast.makeText(context, R.string.redeem_link_no_browser, Toast.LENGTH_LONG).show()
