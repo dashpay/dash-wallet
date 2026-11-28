@@ -375,6 +375,8 @@ class TxDisplayCacheService @Inject constructor(
                 // gated on either the changedIds diff below or on the wrapper being
                 // resolvable (see reconcileSwapRows).
                 reconcileSwapRows(newMetadata)
+                // Gift-card rows the same way, for the same reason.
+                reconcileGiftCardRows(newMetadata)
 
                 val changedIds = buildSet<String> {
                     newMetadata.forEach { (id, meta) -> if (meta != oldMetadata[id]) add(id.toString()) }
@@ -634,6 +636,8 @@ class TxDisplayCacheService @Inject constructor(
                 // decoration. Re-derive it from the swap orders before refreshing the
                 // readers, so the list never settles on a plain "Sending" row for a swap.
                 reconcileSwapRows(metadata)
+                // Nor of gift cards: a purchase it inserted is a plain send until now.
+                reconcileGiftCardRows(metadata)
                 _currentPagingSource.value?.invalidate()
             }
             .catch { e -> log.error("display cache refresh bus flow error", e) }
@@ -1522,6 +1526,32 @@ class TxDisplayCacheService @Inject constructor(
         )
     }
 
+    /**
+     * Re-apply the gift-card decoration to every already-cached row whose txid has
+     * DashSpend metadata in [snapshot]. See [planGiftCardRowDecorations]. One Room
+     * read over the gift-card txids, and a write only for rows that differ.
+     */
+    private suspend fun reconcileGiftCardRows(snapshot: Map<TxId, PresentableTxMetadata>) {
+        val giftCardMetadata = snapshot.values.filter { ServiceName.isDashSpend(it.service) }
+        if (giftCardMetadata.isEmpty()) return
+        val existingByRowId = HashMap<String, TxDisplayCacheEntry>(giftCardMetadata.size)
+        for (chunk in giftCardMetadata.map { it.txId.toString() }.chunked(500)) {
+            txDisplayCacheDao.getEntriesByIds(chunk).forEach { existingByRowId[it.rowId] = it }
+        }
+        val decorated = planGiftCardRowDecorations(giftCardMetadata, existingByRowId) { merchant ->
+            walletApplication.getString(TransactionRowView.giftCardTitleRes(merchant), merchant ?: "")
+        }
+        if (decorated.isEmpty()) return
+        txDisplayCacheDao.insertAll(decorated)
+        _currentPagingSource.value?.invalidate()
+        log.info(
+            "gift card row reconcile: re-decorated {} of {} gift card row(s): {}",
+            decorated.size,
+            existingByRowId.size,
+            decorated.take(8).joinToString { it.rowId.take(8) }
+        )
+    }
+
     private fun computeFilterFlags(wrapper: TransactionWrapper): Int {
         val bag = walletData.transactionBag
         var flags = 0
@@ -1615,6 +1645,48 @@ internal fun planSwapRowDecorations(
 }
 
 /**
+ * PURE planner for the GIFT-CARD DECORATION of already-cached display rows, the
+ * host-testable core of [TxDisplayCacheService.reconcileGiftCardRows].
+ *
+ * A gift card purchase's decoration (gift-card icon on the orange halo, the
+ * "Gift card · merchant" title, the Gift Cards filter flag) comes from its
+ * DashSpend metadata alone, the same as [TransactionRowView.fromTransaction]
+ * derives it. It needs no dashj transaction, so this planner also reaches a row
+ * the SDK writer inserted for a transaction the held dashj wallet does not have
+ * (a restored post-cutover wallet), which neither that writer nor
+ * [planMetadataRowDecorations] decorates. Like [planSwapRowDecorations] it runs
+ * on every metadata emission and every display-cache write signal, so it does
+ * not depend on which writer authored the row or on a metadata diff.
+ *
+ * Only the decoration is touched: value, status, time, rate, memo and contact
+ * stay as cached. The filter flags gain the gift-card and sent bits, as
+ * [TxDisplayCacheService]'s own flag computation gives a gift-card row. An
+ * errored row keeps its error shape and a swap row its swap decoration.
+ * Idempotent: a row that already matches is not returned.
+ *
+ * @param giftCardMetadata presentable metadata whose service is a DashSpend one.
+ * @param resolveTitle resolves a merchant name (null when not known yet) to the
+ *        row title; supply [TransactionRowView.giftCardTitleRes] formatted with it.
+ */
+internal fun planGiftCardRowDecorations(
+    giftCardMetadata: Collection<PresentableTxMetadata>,
+    existingByRowId: Map<String, TxDisplayCacheEntry>,
+    resolveTitle: (String?) -> String
+): List<TxDisplayCacheEntry> = giftCardMetadata.mapNotNull { meta ->
+    if (!ServiceName.isDashSpend(meta.service)) return@mapNotNull null
+    val existing = existingByRowId[meta.txId.toString()] ?: return@mapNotNull null
+    if (existing.hasErrors || existing.swapStatus != null) return@mapNotNull null
+    val decorated = existing.copy(
+        title = resolveTitle(meta.title),
+        iconType = TxDisplayCacheEntry.ICON_GIFT_CARD,
+        iconBgType = TxDisplayCacheEntry.BG_ORANGE,
+        service = meta.service,
+        filterFlags = existing.filterFlags or TxDisplayCacheEntry.FLAG_GIFT_CARD or TxDisplayCacheEntry.FLAG_SENT
+    )
+    decorated.takeIf { it != existing }
+}
+
+/**
  * PURE planner for the METADATA DECORATION of already-cached display rows whose
  * transaction the held dashj wallet cannot render — the host-testable core of
  * [TxDisplayCacheService]'s wrapperless metadata re-decoration.
@@ -1632,7 +1704,8 @@ internal fun planSwapRowDecorations(
  * its source of truth, so a removed metadata row clears it), [TxDisplayCacheEntry.service]
  * (never un-classified) and [TxDisplayCacheEntry.customIconId] (the merchant/service
  * icon, rendered from live metadata at display time). Value, direction, icon, title,
- * status, time, rate, contact identity and the filter bucket are never touched.
+ * status, time, rate, contact identity and the filter bucket are never touched
+ * (a gift card's title, icon and filter flag come from [planGiftCardRowDecorations]).
  * Idempotent: a row that already matches is not returned.
  *
  * Stamping `service` here does NOT opt the row out of the SDK planner's later status
@@ -1790,9 +1863,9 @@ internal fun withGiftCardFlagOf(entry: TxDisplayCacheEntry, flags: Int): Int =
  * bucket; the rebuild's title, icon, memo and gift-card flag pass through.
  *
  * This covers a row that is not SDK-stamped, which the freeze above does not
- * reach: the SDK-authority register is per process and is not claimed for a
- * gift-card row. With no cached send to keep, [entry] passes unchanged and the
- * SDK sync pass corrects it. Returns [entry] itself when nothing changes.
+ * reach: the SDK-authority register is per process, so it is empty from a
+ * restart until the first SDK sync pass claims the row. With no cached send to
+ * keep, [entry] passes unchanged and that pass corrects it. Returns [entry] itself when nothing changes.
  * Pure, host-testable.
  */
 internal fun keepGiftCardSend(entry: TxDisplayCacheEntry, existing: TxDisplayCacheEntry?): TxDisplayCacheEntry =

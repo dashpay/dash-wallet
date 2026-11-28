@@ -74,6 +74,19 @@ data class TransactionRowView(
             R.string.transaction_row_conversion
         }
 
+        /**
+         * The row title of a gift card purchase, by the [merchant] name its metadata
+         * carries. Single-sourced so the display-cache gift-card reconciler
+         * ([de.schildbach.wallet.service.planGiftCardRowDecorations]) cannot drift
+         * from the title this renderer produces.
+         */
+        @StringRes
+        fun giftCardTitleRes(merchant: String?): Int = if (merchant.isNullOrEmpty()) {
+            R.string.explore_payment_gift_card
+        } else {
+            R.string.gift_card_tx_title
+        }
+
         fun fromTransactionWrapper(
             txWrapper: TransactionWrapper,
             bag: TransactionBag,
@@ -132,14 +145,7 @@ data class TransactionRowView(
             } else if (ServiceName.isDashSpend(metadata?.service)) {
                 icon = R.drawable.ic_gift_card_tx
                 iconBackground = R.style.TxOrangeBackground
-                title = ResourceString(
-                    if (metadata!!.title.isNullOrEmpty()) {
-                        R.string.explore_payment_gift_card
-                    } else {
-                        R.string.gift_card_tx_title
-                    },
-                    listOf(metadata.title ?: "")
-                )
+                title = ResourceString(giftCardTitleRes(metadata!!.title), listOf(metadata.title ?: ""))
             } else if (metadata?.swapOrder != null) {
                 val swapOrder = metadata.swapOrder!!
                 // solid-circle icon (ic_convert alone is a white glyph and washes out on

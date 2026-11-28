@@ -713,9 +713,9 @@ class CutoverUiDataServiceTest {
             filterFlags = TxDisplayCacheEntry.FLAG_GIFT_CARD or TxDisplayCacheEntry.FLAG_SENT
         )
         assertEquals(expected, plan.updates.single())
-        // The title, icon and gift-card flag are still not the planner's, so the
-        // row is not claimed either.
-        assertTrue(plan.sdkAuthoritative.isEmpty())
+        // The title, icon and gift-card flag are still not the planner's; the
+        // amount is, so the row is claimed.
+        assertEquals(setOf(existing.rowId), plan.sdkAuthoritative)
         // Idempotent: the corrected row is left alone.
         val again = planL1DisplaySync(listOf(sent), mapOf(expected.rowId to expected), emptySet(), resolve, now)
         assertTrue(again.updates.isEmpty())
@@ -750,6 +750,33 @@ class CutoverUiDataServiceTest {
         for (direction in listOf(0, 2)) {
             val other = record(firstByte = 9, net = 3_398_163_022, context = 2, direction = direction)
             assertTrue(planL1DisplaySync(listOf(other), byRowId, emptySet(), resolve, now).updates.isEmpty())
+        }
+    }
+
+    @Test
+    fun syncPlan_giftCardRowIsClaimedOnlyOnADefinitiveSend() {
+        // The claim is what keeps a dashj rebuild's partial debit off the amount.
+        val existing = giftCardCachedAsReceipt(9)
+        val byRowId = mapOf(existing.rowId to existing)
+        val sent = record(firstByte = 9, net = -35_459_933, fee = 226, context = 2, direction = 1)
+
+        val corrected = planL1DisplaySync(listOf(sent), byRowId, emptySet(), resolve, now)
+        assertEquals(setOf(existing.rowId), corrected.sdkAuthoritative)
+        // Still claimed on a later pass that changes nothing (a fresh process re-claims it).
+        val settled = corrected.updates.single()
+        val verified = planL1DisplaySync(listOf(sent), mapOf(settled.rowId to settled), emptySet(), resolve, now)
+        assertTrue(verified.updates.isEmpty())
+        assertEquals(setOf(existing.rowId), verified.sdkAuthoritative)
+
+        // Not from the event feed, nor from a store row that is not a send.
+        val fromEvent = planL1DisplaySync(
+            listOf(sent), byRowId, emptySet(), resolve, now, restampFromDefinitiveRecord = false
+        )
+        assertTrue(fromEvent.sdkAuthoritative.isEmpty())
+        for (direction in listOf(0, 2)) {
+            val other = record(firstByte = 9, net = 3_398_163_022, context = 2, direction = direction)
+            val plan = planL1DisplaySync(listOf(other), byRowId, emptySet(), resolve, now)
+            assertTrue(plan.sdkAuthoritative.isEmpty())
         }
     }
 
@@ -1044,7 +1071,8 @@ class CutoverUiDataServiceTest {
             listOf(r), mapOf(giftCard.rowId to giftCard), emptySet(), resolve, now
         )
         assertEquals(giftCard.copy(valueSatoshis = -40_000_000L), giftCardPlan.updates.single())
-        assertTrue(giftCardPlan.sdkAuthoritative.isEmpty())
+        // Claimed, so a dashj rebuild cannot write a partial debit over that amount.
+        assertEquals(setOf(giftCard.rowId), giftCardPlan.sdkAuthoritative)
         val carved = listOf(
             cacheEntry(rowId = displayHex(9), title = sendingTitle, hasErrors = true),
             cacheEntry(

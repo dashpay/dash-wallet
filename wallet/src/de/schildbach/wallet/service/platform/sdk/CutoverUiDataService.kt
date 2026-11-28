@@ -534,7 +534,8 @@ internal data class L1DisplaySyncPlan(
     /**
      * Every rowId this pass placed under SDK AUTHORITY — the SDK has a definitive
      * `transactions` record for it and the row is not one of the never-touch
-     * carve-outs (service/gift-card/error/CoinJoin group rows). Reported so the
+     * carve-outs (service/swap/error/CoinJoin group rows; a gift-card row is
+     * claimed once the record proves the send, see [isDefinitiveSend]). Reported so the
      * caller can tell the dashj-side display writers
      * ([de.schildbach.wallet.service.TxDisplayCacheService]) never to rewrite these
      * rows' direction/value/title/status — the "SDK-stamped" signal that works for
@@ -588,6 +589,14 @@ internal fun withoutCachedFee(
     }
 
 /**
+ * Whether [record] proves a send: the store's own wallet-wide row
+ * ([definitiveRecord]; a per-account event record does not count), OUTGOING,
+ * with a negative net. Pure.
+ */
+internal fun isDefinitiveSend(record: L1TxUiRecord, definitiveRecord: Boolean): Boolean =
+    definitiveRecord && record.direction == L1TxUiDirection.OUTGOING && record.netAmountDuffs < 0L
+
+/**
  * [entry], a gift-card row, with the amount of the send [record] proves it is.
  * A gift card purchase is always a send, but the dashj-side writer
  * ([de.schildbach.wallet.service.TxDisplayCacheService]) values an SDK-built
@@ -610,9 +619,7 @@ internal fun giftCardRowFromRecord(
     record: L1TxUiRecord,
     definitiveRecord: Boolean
 ): TxDisplayCacheEntry {
-    if (!definitiveRecord || record.direction != L1TxUiDirection.OUTGOING || record.netAmountDuffs >= 0L) {
-        return entry
-    }
+    if (!isDefinitiveSend(record, definitiveRecord)) return entry
     // Zero too: dashj renders a value that is not negative as received, "Processing".
     val cachedAsReceipt = entry.valueSatoshis >= 0L
     if (!cachedAsReceipt && entry.valueSatoshis == record.sentValueWithoutFeeDuffs) return entry
@@ -833,6 +840,10 @@ internal fun planL1DisplaySync(
             val kept = if (existing.hasErrors || (existing.filterFlags and TxDisplayCacheEntry.FLAG_COINJOIN) != 0) {
                 redated
             } else if (existing.swapStatus == null) {
+                // The row now holds the store's amount, so it is claimed like a plain
+                // send: a dashj rebuild that sees only some of the inputs would
+                // otherwise write its smaller debit over it.
+                if (isDefinitiveSend(record, restampFromDefinitiveRecord)) sdkAuthoritative += record.txidHex
                 giftCardRowFromRecord(withoutCachedFee(redated, record, contact), record, restampFromDefinitiveRecord)
             } else {
                 withoutCachedFee(redated, record, contact)
