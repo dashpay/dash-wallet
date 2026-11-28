@@ -534,7 +534,8 @@ internal data class L1DisplaySyncPlan(
     /**
      * Every rowId this pass placed under SDK AUTHORITY — the SDK has a definitive
      * `transactions` record for it and the row is not one of the never-touch
-     * carve-outs (service/gift-card/error/CoinJoin group rows). Reported so the
+     * carve-outs (service/swap/error/CoinJoin group rows; a gift-card row is
+     * claimed once the record proves the send, see [isDefinitiveSend]). Reported so the
      * caller can tell the dashj-side display writers
      * ([de.schildbach.wallet.service.TxDisplayCacheService]) never to rewrite these
      * rows' direction/value/title/status — the "SDK-stamped" signal that works for
@@ -564,7 +565,7 @@ internal const val L1_BLOCK_TIME_SKEW_TOLERANCE_MS = 3L * 60 * 60 * 1000
  * (D-M-01). Rows authored while the store's fee column was NULL hold the
  * fee-included net; once the fee is known
  * ([L1TxUiRecord.sentValueWithoutFeeDuffs]) they take the fee-free value every
- * other row shows. It is the only value edit a service-tagged, swap, gift-card,
+ * other row shows. It is the only value edit a service-tagged, swap,
  * asset-lock or "Internal" row ever takes, so it fires on the exact
  * fee-included figure alone: a row holding anything else (dashj's own fee-free
  * value on an upgraded wallet, a contact amount, a swap's own amount) is left as
@@ -586,6 +587,53 @@ internal fun withoutCachedFee(
     } else {
         entry
     }
+
+/**
+ * Whether [record] proves a send: the store's own wallet-wide row
+ * ([definitiveRecord]; a per-account event record does not count), OUTGOING,
+ * with a negative net. Pure.
+ */
+internal fun isDefinitiveSend(record: L1TxUiRecord, definitiveRecord: Boolean): Boolean =
+    definitiveRecord && record.direction == L1TxUiDirection.OUTGOING && record.netAmountDuffs < 0L
+
+/**
+ * [entry], a gift-card row, with the amount of the send [record] proves it is.
+ * A gift card purchase is always a send, but the dashj-side writer
+ * ([de.schildbach.wallet.service.TxDisplayCacheService]) values an SDK-built
+ * payment from the held dashj wallet, which never saw a coin funded after the
+ * cutover: with the input unrecognised it reports the change output as money
+ * received, "Processing" for good since that wallet no longer syncs
+ * (dashpay/dash-wallet#1745: a 0.3546 purchase shown as + 33.98163). With only
+ * some inputs recognised it reports a debit that is too small.
+ *
+ * The value follows a definitive OUTGOING record with a negative net on every
+ * pass, as a plain row's does, so a net the store walker corrects later still
+ * reaches the row. A row cached as a receipt also loses its secondary status
+ * and moves to the sent filter bucket. The event feed's per-account records
+ * are not definitive ([definitiveRecord] false). The title, icon and gift-card
+ * flag stay the row's own. Idempotent. Returns [entry] itself when nothing
+ * changes. Pure, host-testable.
+ */
+internal fun giftCardRowFromRecord(
+    entry: TxDisplayCacheEntry,
+    record: L1TxUiRecord,
+    definitiveRecord: Boolean
+): TxDisplayCacheEntry {
+    if (!isDefinitiveSend(record, definitiveRecord)) return entry
+    // Zero too: dashj renders a value that is not negative as received, "Processing".
+    val cachedAsReceipt = entry.valueSatoshis >= 0L
+    if (!cachedAsReceipt && entry.valueSatoshis == record.sentValueWithoutFeeDuffs) return entry
+    return entry.copy(
+        valueSatoshis = record.sentValueWithoutFeeDuffs,
+        // A send carries no secondary status.
+        statusText = if (cachedAsReceipt) "" else entry.statusText,
+        filterFlags = if (cachedAsReceipt) {
+            (entry.filterFlags and TxDisplayCacheEntry.FLAG_RECEIVED.inv()) or TxDisplayCacheEntry.FLAG_SENT
+        } else {
+            entry.filterFlags
+        }
+    )
+}
 
 /**
  * [existing] with its time moved back to [record]'s block time when the cached
@@ -629,6 +677,9 @@ internal fun redatedFromBlock(existing: TxDisplayCacheEntry, record: L1TxUiRecor
  *   fee-free value ([L1TxUiRecord.sentValueWithoutFeeDuffs]) once the fee is
  *   known ([withoutCachedFee]) — service-tagged, swap and gift-card rows
  *   included.
+ * - A gift-card row takes the value of a definitive OUTGOING record, and one
+ *   cached as a receipt also the empty status and the sent filter bucket
+ *   ([giftCardRowFromRecord]).
  * Everything else is left byte-identical.
  */
 internal fun planL1DisplaySync(
@@ -783,9 +834,17 @@ internal fun planL1DisplaySync(
         ) {
             // Swap and gift-card rows are sends too, so they also take the fee-only
             // value fix ([withoutCachedFee]) — their title/icon/status stay theirs.
+            // A gift-card row also takes the amount of a definitive OUTGOING record
+            // ([giftCardRowFromRecord]).
             // Error and CoinJoin rows take nothing else.
             val kept = if (existing.hasErrors || (existing.filterFlags and TxDisplayCacheEntry.FLAG_COINJOIN) != 0) {
                 redated
+            } else if (existing.swapStatus == null) {
+                // The row now holds the store's amount, so it is claimed like a plain
+                // send: a dashj rebuild that sees only some of the inputs would
+                // otherwise write its smaller debit over it.
+                if (isDefinitiveSend(record, restampFromDefinitiveRecord)) sdkAuthoritative += record.txidHex
+                giftCardRowFromRecord(withoutCachedFee(redated, record, contact), record, restampFromDefinitiveRecord)
             } else {
                 withoutCachedFee(redated, record, contact)
             }

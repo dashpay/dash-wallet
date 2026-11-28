@@ -308,4 +308,91 @@ class TxDisplayCacheMergeGuardTest {
         assertEquals(TxDisplayCacheEntry.ICON_CONVERT, merged.iconType)
         assertEquals(-5_319_295L, merged.valueSatoshis)
     }
+
+    // ── A gift card purchase is never a receipt (dashpay/dash-wallet#1745) ──
+
+    private val giftCardFlags = TxDisplayCacheEntry.FLAG_GIFT_CARD or TxDisplayCacheEntry.FLAG_SENT
+
+    /** The dashj rebuild of an SDK-built purchase whose input dashj never saw: the change, received. */
+    private val giftCardMisread = entry(
+        title = "Gift card · CVS",
+        valueSatoshis = 3_398_163_022L,
+        iconType = TxDisplayCacheEntry.ICON_GIFT_CARD,
+        iconBgType = TxDisplayCacheEntry.BG_ORANGE,
+        statusText = "Processing",
+        filterFlags = giftCardFlags or TxDisplayCacheEntry.FLAG_RECEIVED,
+        service = "ctxspend"
+    )
+
+    @Test
+    fun giftCardRebuiltAsAReceiptKeepsTheCachedSend() {
+        val cached = giftCardMisread.copy(valueSatoshis = -35_459_707L, statusText = "", filterFlags = giftCardFlags)
+        // Not SDK-authoritative: the register is per process and never holds a gift-card row.
+        assertEquals(cached, merge(giftCardMisread, cached, sdkAuthoritative = false))
+    }
+
+    @Test
+    fun plainSendRebuiltAsAGiftCardReceiptBecomesAGiftCardSend() {
+        // The SDK inserted the row first, as a plain send; the rebuild brings the gift-card
+        // identity but must not bring dashj's receipt with it.
+        val cached = entry(
+            title = sentTitle,
+            valueSatoshis = -35_459_707L,
+            iconType = TxDisplayCacheEntry.ICON_SENT,
+            service = "ctxspend"
+        )
+        // Registered SDK-authoritative while the process that inserted it lives, and
+        // not after a restart: the gift-card decoration lands either way.
+        for (sdkAuthoritative in listOf(true, false)) {
+            val merged = merge(giftCardMisread, cached, sdkAuthoritative)
+            assertEquals("Gift card · CVS", merged.title)
+            assertEquals(TxDisplayCacheEntry.ICON_GIFT_CARD, merged.iconType)
+            assertEquals(TxDisplayCacheEntry.BG_ORANGE, merged.iconBgType)
+            assertEquals(-35_459_707L, merged.valueSatoshis)
+            assertEquals("", merged.statusText)
+            assertEquals(giftCardFlags, merged.filterFlags)
+        }
+    }
+
+    @Test
+    fun sdkAuthoritativeGiftCardRowKeepsItsValueAgainstASmallerDashjDebit() {
+        // dashj recognised only some inputs: a send, but the wrong amount.
+        val cached = giftCardMisread.copy(valueSatoshis = -35_459_707L, statusText = "", filterFlags = giftCardFlags)
+        val rebuild = cached.copy(valueSatoshis = -5_000_000L, title = "Gift card · CVS Pharmacy")
+        val merged = merge(rebuild, cached, sdkAuthoritative = true)
+        assertEquals(-35_459_707L, merged.valueSatoshis)
+        // A later merchant title still lands.
+        assertEquals("Gift card · CVS Pharmacy", merged.title)
+    }
+
+    @Test
+    fun erroredGiftCardRebuildIsNotDecoration() {
+        val cached = entry(title = sentTitle, valueSatoshis = -1_000L, iconType = TxDisplayCacheEntry.ICON_SENT)
+        val errored = giftCardMisread.copy(hasErrors = true)
+        assertFalse(isGiftCardDecorated(errored))
+        assertEquals(TxDisplayCacheEntry.FLAG_SENT, withGiftCardFlagOf(errored, cached.filterFlags))
+    }
+
+    @Test
+    fun giftCardReceiptWithNoCachedSendPassesThrough() {
+        // Nothing to keep: the SDK sync pass corrects the row instead.
+        assertEquals(giftCardMisread, merge(giftCardMisread, null, sdkAuthoritative = false))
+        assertEquals(giftCardMisread, keepGiftCardSend(giftCardMisread, giftCardMisread))
+    }
+
+    @Test
+    fun onlyAGiftCardReceiptIsHeldBack() {
+        val cachedSend = entry(title = sentTitle, valueSatoshis = -1_000L, iconType = TxDisplayCacheEntry.ICON_SENT)
+        // A plain rebuild that flips direction is not this guard's business.
+        val plainReceipt = entry(
+            title = "Received",
+            valueSatoshis = 5_000L,
+            iconType = TxDisplayCacheEntry.ICON_RECEIVED,
+            filterFlags = TxDisplayCacheEntry.FLAG_RECEIVED
+        )
+        assertEquals(plainReceipt, keepGiftCardSend(plainReceipt, cachedSend))
+        // A gift-card rebuild that is already a send passes whole, value included.
+        val giftCardSend = giftCardMisread.copy(valueSatoshis = -2_000L, statusText = "", filterFlags = giftCardFlags)
+        assertEquals(giftCardSend, keepGiftCardSend(giftCardSend, cachedSend))
+    }
 }

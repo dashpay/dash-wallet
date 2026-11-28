@@ -178,4 +178,86 @@ class MetadataRowDecorationTest {
         assertEquals("CrowdNode", settled.service)
         assertEquals("top-up", settled.comment)
     }
+
+    // ── Gift-card decoration of a row the dashj wallet cannot render ──────
+
+    private val giftCardTitle: (String?) -> String = { merchant ->
+        if (merchant.isNullOrEmpty()) "Gift card" else "Gift card · $merchant"
+    }
+
+    private fun giftCardMetadata(merchant: String? = "CVS", service: String? = "ctxspend") =
+        metadata(memo = "", service = service).also { it.title = merchant }
+
+    @Test
+    fun giftCard_sdkPlannedSendBecomesAGiftCardRow() {
+        // Restored post-cutover wallet: the SDK inserted the purchase as a plain send.
+        val existing = sdkPlannedRow()
+        val decorated = planGiftCardRowDecorations(
+            listOf(giftCardMetadata()), mapOf(txHex to existing), giftCardTitle
+        ).single()
+
+        val expected = existing.copy(
+            title = "Gift card · CVS",
+            iconType = TxDisplayCacheEntry.ICON_GIFT_CARD,
+            iconBgType = TxDisplayCacheEntry.BG_ORANGE,
+            service = "ctxspend",
+            filterFlags = TxDisplayCacheEntry.FLAG_SENT or TxDisplayCacheEntry.FLAG_GIFT_CARD
+        )
+        // Value, status, time, rate and memo are the SDK row's own.
+        assertEquals(expected, decorated)
+        // Settled: a second pass writes nothing.
+        assertTrue(
+            planGiftCardRowDecorations(listOf(giftCardMetadata()), mapOf(txHex to decorated), giftCardTitle).isEmpty()
+        )
+    }
+
+    @Test
+    fun giftCard_titleFollowsTheMerchantNameOnceKnown() {
+        val bare = planGiftCardRowDecorations(
+            listOf(giftCardMetadata(merchant = null)), mapOf(txHex to sdkPlannedRow()), giftCardTitle
+        ).single()
+        assertEquals("Gift card", bare.title)
+
+        val named = planGiftCardRowDecorations(
+            listOf(giftCardMetadata()), mapOf(txHex to bare), giftCardTitle
+        ).single()
+        assertEquals(bare.copy(title = "Gift card · CVS"), named)
+    }
+
+    @Test
+    fun giftCard_piggyCardsIsAGiftCardToo() {
+        val decorated = planGiftCardRowDecorations(
+            listOf(giftCardMetadata(service = "piggycards")), mapOf(txHex to sdkPlannedRow()), giftCardTitle
+        ).single()
+        assertEquals(TxDisplayCacheEntry.ICON_GIFT_CARD, decorated.iconType)
+        assertEquals("piggycards", decorated.service)
+    }
+
+    @Test
+    fun giftCard_otherRowsAreLeftAlone() {
+        val giftCard = listOf(giftCardMetadata())
+        // No cached row yet: whichever writer inserts it signals the bus, which re-runs this.
+        assertTrue(planGiftCardRowDecorations(giftCard, emptyMap(), giftCardTitle).isEmpty())
+        // An errored row keeps its error shape, a swap row its swap decoration.
+        val errored = sdkPlannedRow().copy(hasErrors = true, iconType = TxDisplayCacheEntry.ICON_ERROR)
+        assertTrue(planGiftCardRowDecorations(giftCard, mapOf(txHex to errored), giftCardTitle).isEmpty())
+        val swap = sdkPlannedRow().copy(swapStatus = "PENDING")
+        assertTrue(planGiftCardRowDecorations(giftCard, mapOf(txHex to swap), giftCardTitle).isEmpty())
+        // Metadata of another service is not a gift card.
+        val crowdNode = listOf(giftCardMetadata(service = "CrowdNode"))
+        assertTrue(planGiftCardRowDecorations(crowdNode, mapOf(txHex to sdkPlannedRow()), giftCardTitle).isEmpty())
+    }
+
+    @Test
+    fun giftCard_decoratedRowThenFollowsTheStoreRecordAsAGiftCardRow() {
+        // The flag this planner sets is what puts the row on the SDK planner's
+        // gift-card path: the lock event leaves it alone, title included.
+        val resolve: (Int) -> String = { id -> "str:$id" }
+        val pending = sdkPlannedRow().copy(title = resolve(R.string.transaction_row_status_sending))
+        val decorated = planGiftCardRowDecorations(
+            listOf(giftCardMetadata()), mapOf(txHex to pending), giftCardTitle
+        ).single()
+        assertEquals("Gift card · CVS", decorated.title)
+        assertNull(planL1InstantLockRowUpdate(decorated, resolve))
+    }
 }

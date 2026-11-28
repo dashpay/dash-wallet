@@ -109,6 +109,28 @@ interface TxDisplayCacheDao {
     )
     suspend fun updateGroupValueAndCount(rowId: String, valueSatoshis: Long, transactionAmount: Int): Int
 
+    /**
+     * Give the row [rowId] its gift-card decoration, and nothing else. A targeted
+     * UPDATE rather than a read-modify-write upsert: the SDK writer may correct the
+     * row's value, status or direction bucket between a read and a write, and an
+     * upsert of the earlier snapshot would undo that (or re-insert a row a wallet
+     * wipe just deleted). Errored and swap rows keep their own shape. Returns the
+     * number of rows updated.
+     */
+    @Query(
+        "UPDATE tx_display_cache SET title = :title, iconType = :iconType, iconBgType = :iconBgType, " +
+            "service = :service, filterFlags = filterFlags | :addFlags " +
+            "WHERE rowId = :rowId AND hasErrors = 0 AND swapStatus IS NULL"
+    )
+    suspend fun updateGiftCardDecoration(
+        rowId: String,
+        title: String,
+        iconType: Int,
+        iconBgType: Int,
+        service: String?,
+        addFlags: Int
+    ): Int
+
     @Query("DELETE FROM tx_display_cache")
     suspend fun deleteAll()
 
