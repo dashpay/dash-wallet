@@ -189,6 +189,10 @@ class DashSpendCardCurrencyTest {
     private var duringFreshRateLookup: () -> Unit = {}
     private var duringProviderLookup: () -> Unit = {}
 
+    // what the provider table holds at the moment: a catalog sync can repoint a row
+    private var ctxRowNow = ctxRow
+    private var piggyCardsRowNow = piggyCardsRow
+
     private fun merchantResponse(sourceId: String, currency: String?, discount: Int = 0) = GetMerchantResponse(
         id = sourceId,
         denominations = listOf("5", "500"),
@@ -217,14 +221,14 @@ class DashSpendCardCurrencyTest {
             onBlocking { getProvidersByMerchantId(any()) } doReturn listOf(ctxRow, piggyCardsRow)
             onBlocking { getProviderByMerchantId(eq(merchantId), eq(GiftCardProviderType.CTX.name)) } doAnswer {
                 duringProviderLookup()
-                ctxRow
+                ctxRowNow
             }
             onBlocking {
                 getProviderByMerchantId(eq(otherMerchantId), eq(GiftCardProviderType.CTX.name))
             } doReturn otherCtxRow
             onBlocking {
                 getProviderByMerchantId(eq(merchantId), eq(GiftCardProviderType.PiggyCards.name))
-            } doReturn piggyCardsRow
+            } doAnswer { piggyCardsRowNow }
         }
         val repositoryFactory = mock<DashSpendRepositoryFactory> {
             on { create(eq(GiftCardProviderType.CTX)) } doReturn ctx
@@ -2521,7 +2525,7 @@ class DashSpendCardCurrencyTest {
         viewModel.openCtxMerchant(otherMerchant())
         viewModel.enter("25")
         val shownForTheOther = checkNotNull(viewModel.currentQuote())
-        assertEquals(shown.copy(merchantId = otherMerchantId), shownForTheOther)
+        assertEquals(shown.copy(merchantId = otherMerchantId, sourceId = "ctx-source-2"), shownForTheOther)
 
         val refusal = assertThrows(CTXSpendException::class.java) {
             runBlocking { viewModel.purchaseGiftCard(shown) }
@@ -2547,6 +2551,61 @@ class DashSpendCardCurrencyTest {
         assertEquals(R.string.gift_card_order_changed, refusal.resourceString?.resourceId)
         verifyBlocking(api, never()) { purchaseGiftCard(any()) }
         verifyBlocking(piggyCards, never()) { orderGiftcard(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun ctxRowRepointedAfterTheQuote_isNotOrderedFrom() = runBlocking {
+        val viewModel = viewModel()
+        val shown = viewModel.shownFor100Pounds()
+        assertEquals("ctx-source", shown.sourceId)
+        ctxRowNow = ctxRow.copy(sourceId = "ctx-source-9")
+
+        val refusal = assertThrows(CTXSpendException::class.java) {
+            runBlocking { viewModel.purchaseGiftCard(shown) }
+        }
+
+        assertEquals(R.string.gift_card_order_changed, refusal.resourceString?.resourceId)
+        verifyBlocking(api, never()) { purchaseGiftCard(any()) }
+
+        ctxRowNow = ctxRow
+        viewModel.purchaseGiftCard(shown)
+        assertEquals("ctx-source", orderSentToCtx().merchantId)
+    }
+
+    @Test
+    fun piggyCardsRowRepointedAfterTheQuote_isNotOrderedFrom() = runBlocking {
+        piggyCards.stub {
+            onBlocking { orderGiftcard(any(), any(), any(), any()) } doReturn emptyList()
+            onBlocking { getMerchant(eq("piggycards-source")) } doReturn UpdatedMerchantDetails(
+                id = "piggycards-source",
+                denominations = listOf(10.0, 200.0),
+                denominationsType = "min-max",
+                savingsPercentage = 700,
+                redeemType = "barcode",
+                enabled = true
+            )
+        }
+        setRate("USD", "25")
+        val viewModel = viewModel()
+        viewModel.selectedProvider = GiftCardProviderType.PiggyCards
+        viewModel.setGiftCardMerchant(merchant())
+        viewModel.setIsFixedDenomination(false)
+        viewModel.setGiftCardOrderQuantities(mapOf(25.0 to 1))
+
+        // before its details were answered a cart is bought from the row as it is
+        assertNull(viewModel.currentQuote()?.sourceId)
+        viewModel.buy()
+        verifyBlocking(piggyCards) { orderGiftcard(any(), any(), any(), eq("piggycards-source")) }
+
+        viewModel.updateMerchantDetails(merchant())
+        viewModel.setGiftCardOrderQuantities(mapOf(25.0 to 1))
+        val shown = checkNotNull(viewModel.currentQuote())
+        assertEquals("piggycards-source", shown.sourceId)
+        piggyCardsRowNow = piggyCardsRow.copy(sourceId = "piggycards-source-9")
+
+        assertThrows(CTXSpendException::class.java) { runBlocking { viewModel.purchaseGiftCard(shown) } }
+        verifyBlocking(piggyCards, never()) { orderGiftcard(any(), any(), any(), eq("piggycards-source-9")) }
+        verifyBlocking(piggyCards, times(1)) { orderGiftcard(any(), any(), any(), any()) }
     }
 
     @Test
