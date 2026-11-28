@@ -53,18 +53,18 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.view.updateLayoutParams
+import androidx.fragment.app.DialogFragment
+import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.uri.BitcoinURIParseException
@@ -93,6 +93,7 @@ import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardPurchaseBlock
 import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardPurchaseMode
 import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardQuote
 import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardSubmissionState
+import org.dash.wallet.features.exploredash.ui.dashspend.PaidOrder
 import org.dash.wallet.features.exploredash.ui.dashspend.message
 import org.dash.wallet.features.exploredash.ui.explore.MerchantLogo
 import org.dash.wallet.features.exploredash.utils.GiftCardCurrency
@@ -166,24 +167,27 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        // first: a payment started from an earlier instance of this sheet ends here, whatever
+        // has become of the cart since
+        observePurchaseOutcome()
 
         val merchant = viewModel.giftCardMerchant.value
         if (merchant == null) {
             log.warn("PurchaseGiftCardConfirmDialog: No merchant available, dismissing dialog")
-            dismiss()
+            dismissUnlessPurchaseOutstanding()
             return
         }
 
         val cardCurrency = viewModel.cardCurrency
         if (cardCurrency == null) {
             log.warn("PurchaseGiftCardConfirmDialog: card currency unknown, dismissing dialog")
-            dismiss()
+            dismissUnlessPurchaseOutstanding()
             return
         }
         val quote = viewModel.currentQuote()
         if (quote == null || viewModel.purchaseBlock.isAboutTheAmount()) {
             log.warn("PurchaseGiftCardConfirmDialog: nothing to buy, dismissing dialog")
-            dismiss()
+            dismissUnlessPurchaseOutstanding()
             return
         }
         shownQuote = quote
@@ -296,12 +300,28 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
                 }
             }
         }
+    }
+
+    private fun dismissUnlessPurchaseOutstanding() {
+        if (!viewModel.isPurchaseOutstanding) {
+            dismiss()
+        }
+    }
+
+    private fun observePurchaseOutcome() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.paidOrder.collect { order ->
+                if (order != null && isAdded && viewModel.takePaidOrder(order)) {
+                    enterAmountViewModel.clearSavedState()
+                    showGiftCardDetailsDialog(order)
+                }
+            }
+        }
 
         viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.paidOrder.collect { txId ->
-                if (txId != null && isAdded && viewModel.takePaidOrder(txId)) {
-                    enterAmountViewModel.clearSavedState()
-                    showGiftCardDetailsDialog(txId)
+            viewModel.priceChange.collect { change ->
+                if (change != null && isAdded) {
+                    showPriceChange(change)
                 }
             }
         }
@@ -310,6 +330,7 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
         // knowing a purchase is outstanding instead of offering Confirm again.
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.submissionState.collect { state ->
+                isCancelable = state != GiftCardSubmissionState.IN_PROGRESS
                 _uiState.update {
                     it.copy(
                         isLoading = state == GiftCardSubmissionState.IN_PROGRESS,
@@ -574,11 +595,12 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
         }
     }
 
-    // also asked from the payment itself, which runs off the main thread and outlives this sheet
-    private suspend fun acceptsHigherPrice(change: GiftCardPriceChange): Boolean = withContext(Dispatchers.Main) {
-        if (!isAdded) {
-            return@withContext false
-        }
+    private fun showPriceChange(change: GiftCardPriceChange) {
+        hideLoading()
+        val activity = requireActivity()
+        // one restored with the activity has lost its listener, and its buttons would do nothing
+        (activity.supportFragmentManager.findFragmentByTag(ADAPTIVE_DIALOG_TAG) as? DialogFragment)
+            ?.dismissAllowingStateLoss()
         val fiatFormat = GiftCardCurrency.displayFormat(change.currency)
         val dashFormat = viewModel.dashFormat.noCode()
         AdaptiveDialog.create(
@@ -593,24 +615,51 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
             ),
             getString(R.string.button_cancel),
             getString(R.string.gift_card_price_updated_pay)
-        ).showAsync(requireActivity()) == true
+        ).show(activity) { result ->
+            when {
+                // answered already, or replaced by a newer change
+                viewModel.priceChange.value != change -> Unit
+                result == true -> payAcceptedPrice()
+                else -> {
+                    viewModel.declinePriceChange()
+                    if (isAdded) {
+                        dismissAllowingStateLoss()
+                    }
+                }
+            }
+        }
+    }
+
+    private fun payAcceptedPrice() {
+        if (!isAdded || view == null) {
+            // still pending, for the sheet that is on screen
+            return
+        }
+        showLoading()
+        viewLifecycleOwner.lifecycleScope.launch {
+            submitPayment { viewModel.payAcceptedPrice() }
+        }
     }
 
     private suspend fun createSendingRequestFromDashUri(
         url: String,
         giftCards: List<GiftCardInfo>
     ): Sha256Hash? {
-        return try {
+        val quote = shownQuote
+        return submitPayment {
             // submission and order recording together, so a destroyed view cannot separate them
-            if (viewModel.selectedProvider == GiftCardProviderType.CTX) {
-                viewModel.payCtxOrder(checkNotNull(shownQuote), url, giftCards, ::acceptsHigherPrice) ?: run {
-                    hideLoading()
-                    dismissAllowingStateLoss()
-                    null
-                }
+            if (quote != null && viewModel.selectedProvider == GiftCardProviderType.CTX) {
+                viewModel.payCtxOrder(quote, url, giftCards)
             } else {
                 viewModel.payAndRecordOrder(url, giftCards)
             }
+        }
+    }
+
+    /** [pay] returns null when the order was left unpaid for the buyer to decide on a new price. */
+    private suspend fun submitPayment(pay: suspend () -> Sha256Hash?): Sha256Hash? {
+        return try {
+            pay()
         } catch (ex: CTXSpendException) {
             log.error("purchaseGiftCard error: the order was not paid", ex)
             hideLoading()
@@ -744,9 +793,10 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
         this@PurchaseGiftCardConfirmDialog.dismissAllowingStateLoss()
     }
 
-    private fun showGiftCardDetailsDialog(txId: Sha256Hash) {
+    private fun showGiftCardDetailsDialog(order: PaidOrder) {
+        val txId = order.txId
         if (isAdded) {
-            if (viewModel.giftCardOrderInfo.value.entries.sumOf { it.value } > 1) {
+            if (order.isMultipleCards) {
                 GiftCardOrderDetailsDialog.newInstance(txId).show(requireActivity()).also {
                     val navController = findNavController()
                     navController.popBackStack(navController.graph.startDestinationId, false)
@@ -1057,4 +1107,43 @@ private fun PurchaseGiftCardConfirmExpandedPreview() {
             youPayText = "$247.00"
         )
     )
+}
+
+private const val ADAPTIVE_DIALOG_TAG = "adaptive_dialog"
+
+/**
+ * For the purchase screens: a payment can end, or stop at a new price, when no confirmation
+ * sheet is left to say so.
+ */
+internal fun Fragment.observePurchaseWithoutSheet(viewModel: DashSpendViewModel) {
+    fun hasSheet() = requireActivity().supportFragmentManager.fragments.any { it is PurchaseGiftCardConfirmDialog }
+
+    viewLifecycleOwner.lifecycleScope.launch {
+        viewModel.paidOrder.collect { order ->
+            if (order != null && isAdded && !hasSheet() && viewModel.takePaidOrder(order)) {
+                val details = if (order.isMultipleCards) {
+                    GiftCardOrderDetailsDialog.newInstance(order.txId)
+                } else {
+                    GiftCardDetailsDialog.newInstance(order.txId)
+                }
+                details.show(requireActivity())
+                val navController = findNavController()
+                navController.popBackStack(navController.graph.startDestinationId, false)
+            }
+        }
+    }
+
+    viewLifecycleOwner.lifecycleScope.launch {
+        viewModel.priceChange.collect { change ->
+            if (change != null && isAdded && !hasSheet()) {
+                viewModel.declinePriceChange()
+                AdaptiveDialog.create(
+                    R.drawable.ic_info_blue,
+                    getString(R.string.gift_card_price_updated_title),
+                    getString(R.string.gift_card_price_changed_unpaid),
+                    getString(R.string.button_close)
+                ).show(requireActivity())
+            }
+        }
+    }
 }

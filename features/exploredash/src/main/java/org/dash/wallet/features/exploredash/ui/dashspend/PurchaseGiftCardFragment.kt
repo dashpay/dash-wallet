@@ -56,6 +56,7 @@ import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderType
 import org.dash.wallet.features.exploredash.data.explore.model.Merchant
 import org.dash.wallet.features.exploredash.databinding.FragmentPurchaseCtxspendGiftCardBinding
 import org.dash.wallet.features.exploredash.ui.dashspend.dialogs.PurchaseGiftCardConfirmDialog
+import org.dash.wallet.features.exploredash.ui.dashspend.dialogs.observePurchaseWithoutSheet
 import org.dash.wallet.features.exploredash.ui.explore.ExploreViewModel
 import org.dash.wallet.features.exploredash.utils.CTXSpendConstants.DEFAULT_DISCOUNT_AS_DOUBLE
 import org.dash.wallet.features.exploredash.utils.GiftCardCurrency
@@ -116,6 +117,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        observePurchaseWithoutSheet(viewModel)
         binding.titleBar.setNavigationOnClickListener {
             enterAmountViewModel.clearSavedState()
             findNavController().popBackStack()

@@ -1222,9 +1222,6 @@ class SendCoinsTaskRunnerBIP70Test {
         assertNull(replacement.getTransaction(txId!!))
     }
 
-    // ==================== a wipe between confirmation and signing ====================
-
-    /** A second copy of the funded wallet: anything that wrongly pays from it can. */
     @Test
     fun `the amount of the fetched payment request is offered for approval before anything is signed`() = runBlocking {
         // Given: a request that asks for more than the URI that led to it
@@ -1267,6 +1264,35 @@ class SendCoinsTaskRunnerBIP70Test {
         assertNull(createdTxId)
     }
 
+    @Test
+    fun `the amount of a plain address payment is offered for approval before anything is signed`() = runBlocking {
+        val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
+        var offered: Coin? = null
+        var createdTxId: Sha256Hash? = null
+
+        val thrown = try {
+            sendCoinsTaskRunner.payWithDashUrl(
+                "dash:$testAddress?amount=0.01",
+                "TestService",
+                approveAmount = {
+                    offered = it
+                    throw IllegalArgumentException("refused")
+                }
+            ) { createdTxId = it }
+            null
+        } catch (e: Exception) {
+            e
+        }
+
+        assertEquals(Coin.parseCoin("0.01"), offered)
+        assertTrue("expected the caller's refusal, got $thrown", thrown is IllegalArgumentException)
+        verify(exactly = 0) { securityFunctions.deriveKey(any(), any()) }
+        assertNull(createdTxId)
+    }
+
+    // ==================== a wipe between confirmation and signing ====================
+
+    /** A second copy of the funded wallet: anything that wrongly pays from it can. */
     private fun loadFundedReplacement(): Wallet =
         javaClass.getResourceAsStream("coinjoin.wallet").use { WalletProtobufSerializer().readWallet(it) }
 

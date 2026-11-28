@@ -71,6 +71,7 @@ import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardPurchaseBlock
 import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardQuote
 import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardShoppingCart
 import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardSubmissionState
+import org.dash.wallet.features.exploredash.ui.dashspend.PaidOrder
 import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
 import org.dash.wallet.features.exploredash.utils.GiftCardCurrency
 import org.dash.wallet.features.exploredash.utils.GiftCardPaymentGuard
@@ -101,6 +102,7 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verifyBlocking
 import java.io.IOException
 import java.math.BigDecimal
+import java.time.Instant
 import java.util.Locale
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -1424,10 +1426,19 @@ class DashSpendCardCurrencyTest {
         assertEquals(BigDecimal("95.00"), shown.total)
         val asked = mutableListOf<GiftCardPriceChange>()
 
-        val txId = viewModel.payCtxOrder(shown, "dash:?r=https://ctx.example/pay", viewModel.purchaseGiftCard(shown)) {
-            asked += it
-            acceptsHigherPrice
+        var txId = viewModel.payCtxOrder(shown, "dash:?r=https://ctx.example/pay", viewModel.purchaseGiftCard(shown))
+        while (txId == null) {
+            // what the sheet does with the question the view model holds
+            asked += viewModel.priceChange.value ?: break
+            assertTrue("asked about the same order over and over", asked.size < 4)
+            assertEquals(GiftCardSubmissionState.IDLE, viewModel.submissionState.value)
+            if (!acceptsHigherPrice) {
+                viewModel.declinePriceChange()
+                break
+            }
+            txId = viewModel.payAcceptedPrice()
         }
+        assertNull(viewModel.priceChange.value)
         return txId to asked
     }
 
@@ -1500,8 +1511,10 @@ class DashSpendCardCurrencyTest {
         viewModel.enter("100")
         val shown = checkNotNull(viewModel.currentQuote())
         val order = listOf(GiftCardInfo("order-1", cryptoAmount = "3.5"))
+        assertTrue(viewModel.tryStartSubmission())
 
-        assertNull(viewModel.payCtxOrder(shown, "dash:?r=https://ctx.example/pay", order) { false })
+        assertNull(viewModel.payCtxOrder(shown, "dash:?r=https://ctx.example/pay", order))
+        viewModel.declinePriceChange()
 
         assertEquals(GiftCardSubmissionState.IDLE, viewModel.submissionState.value)
         verifyBlocking(giftCardDao, never()) { insertGiftCard(any()) }
@@ -1531,7 +1544,7 @@ class DashSpendCardCurrencyTest {
         val refusal = assertThrows(CTXSpendException::class.java) {
             runBlocking {
                 val order = listOf(GiftCardInfo("order-1", cryptoAmount = "3.1"))
-                viewModel.payCtxOrder(shown, "dash:?r=x", order) { true }
+                viewModel.payCtxOrder(shown, "dash:?r=x", order)
             }
         }
 
@@ -1565,9 +1578,14 @@ class DashSpendCardCurrencyTest {
         viewModel.enter("100")
         val shown = checkNotNull(viewModel.currentQuote())
 
-        assertNull(viewModel.priceChange(shown, GiftCardInfo("order-1", cryptoAmount = "2.5")))
-        val higher = viewModel.priceChange(shown, GiftCardInfo("order-2", cryptoAmount = "2.6"))
-        assertEquals(Coin.valueOf(260_000_000), higher?.charged)
+        paymentRequestAsksFor(Coin.valueOf(250_000_000))
+
+        val paid = listOf(GiftCardInfo("order-1", cryptoAmount = "2.5", fiatAmount = "100.00"))
+        assertEquals(Sha256Hash.ZERO_HASH, viewModel.payCtxOrder(shown, "dash:?r=x", paid))
+
+        val higher = listOf(GiftCardInfo("order-2", cryptoAmount = "2.6", fiatAmount = "100.00"))
+        assertNull(viewModel.payCtxOrder(shown, "dash:?r=x", higher))
+        assertEquals(Coin.valueOf(260_000_000), viewModel.priceChange.value?.charged)
     }
 
     @Test
@@ -1804,7 +1822,7 @@ class DashSpendCardCurrencyTest {
             paymentRequestAsksFor(invoiced)
 
             val refusal = assertThrows(CTXSpendException::class.java) {
-                runBlocking { viewModel.payCtxOrder(shown, "dash:?r=x", order) { true } }
+                runBlocking { viewModel.payCtxOrder(shown, "dash:?r=x", order) }
             }
 
             assertEquals(R.string.gift_card_price_unchecked, refusal.resourceString?.resourceId)
@@ -1838,9 +1856,112 @@ class DashSpendCardCurrencyTest {
         val recorded = argumentCaptor<List<GiftCard>>()
         verifyBlocking(giftCardDao) { insertGiftCards(recorded.capture()) }
         assertEquals(listOf("order-1"), recorded.firstValue.map { it.note })
-        assertEquals(txId, viewModel.paidOrder.value)
-        assertTrue(viewModel.takePaidOrder(txId))
-        assertFalse(viewModel.takePaidOrder(txId))
+        val paid = PaidOrder(txId, isMultipleCards = false)
+        assertEquals(paid, viewModel.paidOrder.value)
+        // a sheet opened for the next purchase must not make this one vanish
+        viewModel.beginNewPurchase()
+        assertEquals(paid, viewModel.paidOrder.value)
+        assertTrue(viewModel.isPurchaseOutstanding)
+        assertTrue(viewModel.takePaidOrder(paid))
+        assertFalse(viewModel.takePaidOrder(paid))
         assertNull(viewModel.paidOrder.value)
+    }
+
+    @Test
+    fun paidCartOfSeveralCards_getsTheOrderDetailsEvenAfterTheCartWasReset() = runBlocking {
+        paymentRequestAsksFor(Coin.COIN)
+        val viewModel = viewModel()
+        viewModel.selectedProvider = GiftCardProviderType.PiggyCards
+        viewModel.setGiftCardOrderQuantities(mapOf(25.0 to 2, 50.0 to 1))
+        val cards = listOf(GiftCardInfo("order-1", fiatAmount = "25"), GiftCardInfo("order-2", fiatAmount = "50"))
+
+        val txId = viewModel.payAndRecordOrder("dash:?r=x", cards)
+        viewModel.resetSelectedDenomination()
+
+        assertEquals(PaidOrder(txId, isMultipleCards = true), viewModel.paidOrder.value)
+    }
+
+    @Test
+    fun higherPrice_isHeldAsAQuestionWithNothingPaidAndNothingWaiting() = runBlocking {
+        ctxSells("GBP", listOf("5", "500"), discount = 500)
+        setRate("GBP", "30")
+        paymentRequestAsksFor(Coin.valueOf(326_666_667))
+        val viewModel = viewModel()
+        viewModel.openCtxMerchant()
+        viewModel.enter("100")
+        val shown = checkNotNull(viewModel.currentQuote())
+        val order = listOf(GiftCardInfo("order-1", cryptoAmount = "3.16666666", fiatAmount = "95.00"))
+        assertTrue(viewModel.tryStartSubmission())
+
+        // returns by itself: no answer is awaited while the payment is under way
+        assertNull(viewModel.payCtxOrder(shown, "dash:?r=x", order))
+
+        val change = checkNotNull(viewModel.priceChange.value)
+        assertEquals("order-1", change.orderId)
+        assertEquals(Coin.valueOf(326_666_667), change.charged)
+        assertEquals(GiftCardSubmissionState.IDLE, viewModel.submissionState.value)
+        assertEquals(emptyList<Coin?>(), sentPayments)
+        verifyBlocking(giftCardDao, never()) { insertGiftCards(any()) }
+        // what a sheet rebuilt after recreation finds
+        assertTrue(viewModel.isPurchaseOutstanding)
+        assertEquals(change, viewModel.priceChange.value)
+
+        assertEquals(Sha256Hash.ZERO_HASH, viewModel.payAcceptedPrice())
+
+        assertEquals(listOf<Coin?>(Coin.valueOf(326_666_667)), sentPayments)
+        val recorded = argumentCaptor<List<GiftCard>>()
+        verifyBlocking(giftCardDao) { insertGiftCards(recorded.capture()) }
+        assertEquals(listOf("order-1"), recorded.firstValue.map { it.note })
+        assertNull(viewModel.priceChange.value)
+        assertNull(viewModel.payAcceptedPrice())
+    }
+
+    @Test
+    fun expiredOrder_isNotPaid() = runBlocking {
+        ctxSells("GBP", listOf("5", "500"), discount = 500)
+        setRate("GBP", "30")
+        paymentRequestAsksFor(Coin.valueOf(316_666_666))
+        val viewModel = viewModel()
+        viewModel.openCtxMerchant()
+        viewModel.enter("100")
+        val shown = checkNotNull(viewModel.currentQuote())
+        val order = listOf(
+            GiftCardInfo(
+                "order-1",
+                cryptoAmount = "3.16666666",
+                fiatAmount = "95.00",
+                paymentUrlExpiration = "2026-11-28T10:15:00+00:00"
+            )
+        )
+
+        viewModel.now = { Instant.parse("2026-11-28T10:15:01Z") }
+        val refusal = assertThrows(CTXSpendException::class.java) {
+            runBlocking { viewModel.payCtxOrder(shown, "dash:?r=x", order) }
+        }
+        assertEquals(R.string.gift_card_order_expired, refusal.resourceString?.resourceId)
+        assertEquals(emptyList<Coin?>(), sentPayments)
+        assertEquals(GiftCardSubmissionState.IDLE, viewModel.submissionState.value)
+
+        // it can also run out while the payment request is being fetched
+        var fetched = false
+        viewModel.now = { Instant.parse(if (fetched) "2026-11-28T10:15:01Z" else "2026-11-28T10:14:00Z") }
+        payments.stub {
+            onBlocking {
+                payWithDashUrl(any(), anyOrNull(), anyOrNull(), anyOrNull(), anyOrNull(), anyOrNull())
+            } doSuspendableAnswer {
+                fetched = true
+                it.getArgument<(suspend (Coin?) -> Unit)?>(4)?.invoke(Coin.valueOf(316_666_666))
+                sentPayments += Coin.valueOf(316_666_666)
+                mock<Transaction>()
+            }
+        }
+        assertThrows(CTXSpendException::class.java) {
+            runBlocking { viewModel.payCtxOrder(shown, "dash:?r=x", order) }
+        }
+        assertEquals(emptyList<Coin?>(), sentPayments)
+
+        viewModel.now = { Instant.parse("2026-11-28T10:14:00Z") }
+        paymentRequestAsksFor(Coin.valueOf(316_666_666))
+        assertEquals(Sha256Hash.ZERO_HASH, viewModel.payCtxOrder(shown, "dash:?r=x", order))
     }
 }

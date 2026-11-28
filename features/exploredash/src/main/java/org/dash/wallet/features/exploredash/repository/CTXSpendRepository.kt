@@ -216,7 +216,8 @@ class CTXSpendRepository @Inject constructor(
                 redeemUrl = response.redeemUrl,
                 fiatAmount = response.fiatAmount,
                 fiatCurrency = response.fiatCurrency?.takeIf { it.isNotBlank() } ?: fiatCurrency,
-                paymentUrls = response.paymentUrls
+                paymentUrls = response.paymentUrls,
+                paymentUrlExpiration = response.paymentUrlExpiration
             )
         )
     }

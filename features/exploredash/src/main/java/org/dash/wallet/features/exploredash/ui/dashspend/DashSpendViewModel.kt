@@ -85,6 +85,9 @@ import org.dash.wallet.features.exploredash.utils.PiggyCardsConstants.SUPPORT_PI
 import org.dash.wallet.features.exploredash.utils.PiggyCardsTestMerchants
 import org.slf4j.LoggerFactory
 import java.math.BigDecimal
+import java.time.Instant
+import java.time.OffsetDateTime
+import java.time.format.DateTimeParseException
 import javax.inject.Inject
 
 data class DashSpendState(
@@ -184,10 +187,14 @@ data class GiftCardPriceChange(
     val shownTotal: BigDecimal,
     val shown: Coin,
     val chargedTotal: BigDecimal,
-    val charged: Coin
+    val charged: Coin,
+    val orderId: String = ""
 )
 
-private class GiftCardPriceDeclinedException : Exception("the higher price was declined")
+private class GiftCardPriceChangedException(val change: GiftCardPriceChange) : Exception("the price changed")
+
+/** The payment of a purchase, and which details screen it gets. */
+data class PaidOrder(val txId: Sha256Hash, val isMultipleCards: Boolean)
 
 class MerchantRefresh internal constructor(
     val merchant: Merchant,
@@ -611,20 +618,24 @@ class DashSpendViewModel @Inject constructor(
             log.info("not resetting submission state, a purchase is still in progress")
             return
         }
-        _paidOrder.value = null
         _submissionState.value = GiftCardSubmissionState.IDLE
     }
 
-    private val _paidOrder = MutableStateFlow<Sha256Hash?>(null)
+    private val _paidOrder = MutableStateFlow<PaidOrder?>(null)
 
     /**
      * The payment of a purchase whose details have not been shown yet. The payment outlives the
      * sheet that started it, so whichever sheet is on screen when it ends shows them.
      */
-    val paidOrder: StateFlow<Sha256Hash?> = _paidOrder.asStateFlow()
+    val paidOrder: StateFlow<PaidOrder?> = _paidOrder.asStateFlow()
 
-    /** True for the one caller that gets to show the details of [txId]. */
-    fun takePaidOrder(txId: Sha256Hash): Boolean = _paidOrder.compareAndSet(txId, null)
+    /** True for the one caller that gets to show the details of [order]. */
+    fun takePaidOrder(order: PaidOrder): Boolean = _paidOrder.compareAndSet(order, null)
+
+    /** A sheet rebuilt meanwhile has something to wait for or to show, whatever else has changed. */
+    val isPurchaseOutstanding: Boolean
+        get() = _submissionState.value == GiftCardSubmissionState.IN_PROGRESS ||
+            _paidOrder.value != null || _priceChange.value != null
 
     /**
      * Claims the right to submit, atomically, returning false when a purchase is already under
@@ -679,48 +690,81 @@ class DashSpendViewModel @Inject constructor(
         return GiftCardPriceChange(currency, total, amount, requestedTotal, requested)
     }
 
-    /**
-     * The higher price CTX asks for [giftCard] than [shown] came to, or null when it is paid as shown.
-     * Refuses when the two cannot be compared.
-     */
-    internal fun priceChange(shown: GiftCardQuote, giftCard: GiftCardInfo): GiftCardPriceChange? =
-        acceptedPrice(shown).changeTo(GiftCardPaymentGuard.dashAmount(giftCard.cryptoAmount))
+    private class CheckedOrder(val paymentUri: String, val giftCards: List<GiftCardInfo>, val accepted: AcceptedPrice)
+
+    @Volatile
+    private var orderAwaitingAnswer: CheckedOrder? = null
+    private val _priceChange = MutableStateFlow<GiftCardPriceChange?>(null)
 
     /**
-     * Pays a CTX order. Both the Dash the order quotes and the Dash its payment request asks for
-     * are checked against [shown]; [acceptsHigherPrice] is asked when one is higher than the buyer
-     * has agreed to. Returns null, with nothing paid, when a higher price is declined.
+     * A CTX order that was not paid because it costs more than the buyer agreed to. Kept here,
+     * not asked from within the payment, so the question survives the screen that shows it.
      */
-    suspend fun payCtxOrder(
-        shown: GiftCardQuote,
-        paymentUri: String,
-        giftCards: List<GiftCardInfo>,
-        acceptsHigherPrice: suspend (GiftCardPriceChange) -> Boolean
-    ): Sha256Hash? {
-        val accepted = acceptedPrice(shown)
-        suspend fun accepts(requested: Coin?): Boolean {
-            val change = accepted.changeTo(requested) ?: return true
-            if (!acceptsHigherPrice(change)) {
-                log.info("gift card {} not paid: the higher price was declined", giftCards.first().id)
-                return false
-            }
-            accepted.total = change.chargedTotal
-            accepted.amount = change.charged
-            return true
-        }
+    val priceChange: StateFlow<GiftCardPriceChange?> = _priceChange.asStateFlow()
 
-        if (!accepts(GiftCardPaymentGuard.dashAmount(giftCards.first().cryptoAmount))) {
+    internal var now: () -> Instant = Instant::now
+
+    /**
+     * Pays a CTX order unless the Dash the order quotes, or the Dash its payment request asks
+     * for, is more than [shown] came to. Then nothing is paid, [priceChange] says so and null
+     * is returned.
+     */
+    suspend fun payCtxOrder(shown: GiftCardQuote, paymentUri: String, giftCards: List<GiftCardInfo>): Sha256Hash? =
+        payChecked(CheckedOrder(paymentUri, giftCards, acceptedPrice(shown)))
+
+    /** Tries the order of [priceChange] again, at the price it names. */
+    suspend fun payAcceptedPrice(): Sha256Hash? {
+        val order = orderAwaitingAnswer
+        val change = _priceChange.value
+        if (order == null || change == null) {
             return null
         }
-        return try {
-            payAndRecordOrder(paymentUri, giftCards) { invoiced ->
-                if (!accepts(invoiced)) {
-                    throw GiftCardPriceDeclinedException()
-                }
-            }
-        } catch (e: GiftCardPriceDeclinedException) {
-            null
+        declinePriceChange()
+        if (!tryStartSubmission()) {
+            throw DuplicateGiftCardSubmissionException(_submissionState.value)
         }
+        order.accepted.total = change.chargedTotal
+        order.accepted.amount = change.charged
+        return payChecked(order)
+    }
+
+    /** Leaves the order of [priceChange] unpaid. */
+    fun declinePriceChange() {
+        orderAwaitingAnswer = null
+        _priceChange.value = null
+    }
+
+    private suspend fun payChecked(order: CheckedOrder): Sha256Hash? {
+        val giftCard = order.giftCards.first()
+        return try {
+            giftCard.check(order.accepted, GiftCardPaymentGuard.dashAmount(giftCard.cryptoAmount))
+            payAndRecordOrder(order.paymentUri, order.giftCards) { invoiced ->
+                giftCard.check(order.accepted, invoiced)
+            }
+        } catch (e: GiftCardPriceChangedException) {
+            log.info("gift card {} not paid: it costs more than was agreed to", giftCard.id)
+            orderAwaitingAnswer = order
+            _priceChange.value = e.change
+            null
+        } finally {
+            releaseUnusedSubmission()
+        }
+    }
+
+    private fun GiftCardInfo.check(accepted: AcceptedPrice, requested: Coin?) {
+        if (isExpired()) {
+            log.error("gift card {} not paid: its payment expired at {}", id, paymentUrlExpiration)
+            throw CTXSpendException(ResourceString(R.string.gift_card_order_expired))
+        }
+        accepted.changeTo(requested)?.let { throw GiftCardPriceChangedException(it.copy(orderId = id)) }
+    }
+
+    // CTX turns a late payment down itself; a time that cannot be read is left for it to judge
+    private fun GiftCardInfo.isExpired(): Boolean = try {
+        paymentUrlExpiration?.takeIf { it.isNotBlank() }
+            ?.let { OffsetDateTime.parse(it).toInstant().isBefore(now()) } ?: false
+    } catch (e: DateTimeParseException) {
+        false
     }
 
     /**
@@ -748,8 +792,12 @@ class DashSpendViewModel @Inject constructor(
         // still running; reading the wallet once the invoice arrives would pay from that one.
         val authorizedWallet = walletDataProvider.wallet
             ?: throw IllegalStateException("there is no wallet to pay for this purchase from")
+        // the cart is the screen's to reset, so which details to show is settled now
+        val isMultipleCards = _giftCardOrderInfo.value.values.sum() > 1
         return withContext(NonCancellable) {
-            payAndRecordOrderFrom(authorizedWallet, paymentUri, giftCards, approveAmount)
+            payAndRecordOrderFrom(authorizedWallet, paymentUri, giftCards, approveAmount).also {
+                _paidOrder.value = PaidOrder(it, isMultipleCards)
+            }
         }
     }
 
@@ -782,7 +830,6 @@ class DashSpendViewModel @Inject constructor(
                 recordedTxId = newTxId
             }
             _submissionState.value = GiftCardSubmissionState.COMPLETED
-            _paidOrder.value = txId
             txId
         } catch (ex: PaymentSubmissionPendingException) {
             // The merchant may hold this payment, so the purchase stays blocked for good.
