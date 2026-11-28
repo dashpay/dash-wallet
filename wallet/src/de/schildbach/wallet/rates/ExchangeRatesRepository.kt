@@ -46,6 +46,11 @@ class ExchangeRatesRepository @Inject constructor(
     private val exchangeRatesClients: Deque<ExchangeRatesClient> = ArrayDeque()
 
     private var lastUpdated: Long = 0
+
+    // What the last successful refresh returned, and when. Rows are only ever replaced, so one
+    // for a currency the source has dropped stays in the table at its old rate.
+    @Volatile
+    private var lastRefresh: Pair<Set<String>, Long>? = null
     @JvmField
     var isLoading = MutableLiveData<Boolean>()
     @JvmField
@@ -96,6 +101,7 @@ class ExchangeRatesRepository @Inject constructor(
                     previousRates.addAll(exchangeRatesDao.getAll())
                     exchangeRatesDao.insertAll(rates)
                     lastUpdated = System.currentTimeMillis()
+                    lastRefresh = rates.mapTo(HashSet()) { it.currencyCode } to lastUpdated
                     populateExchangeRatesStack()
                     hasError.postValue(false)
                     config.set(EXCHANGE_RATES_RETRIEVAL_FAILURE, false)
@@ -152,8 +158,8 @@ class ExchangeRatesRepository @Inject constructor(
                 }
             }
         }
-        val retrieved = config.get(EXCHANGE_RATES_RETRIEVAL_TIME) ?: return null
-        if (System.currentTimeMillis() - retrieved > STALE_DURATION_MS) {
+        val (refreshedCurrencies, refreshedAt) = lastRefresh ?: return null
+        if (System.currentTimeMillis() - refreshedAt > STALE_DURATION_MS || currencyCode !in refreshedCurrencies) {
             return null
         }
         return exchangeRatesDao.getExchangeRateForCurrency(currencyCode)

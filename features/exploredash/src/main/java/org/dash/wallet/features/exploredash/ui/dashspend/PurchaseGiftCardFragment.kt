@@ -79,6 +79,7 @@ fun GiftCardPurchaseBlock.message(context: Context, cardCurrency: String?): Stri
         GiftCardPurchaseBlock.CURRENCY_LOADING,
         GiftCardPurchaseBlock.CURRENCY_UNKNOWN -> context.getString(R.string.gift_card_currency_unknown)
         GiftCardPurchaseBlock.NOT_SOLD -> context.getString(R.string.temporarily_unavailable)
+        GiftCardPurchaseBlock.SIGNED_OUT -> context.getString(R.string.token_expired_title)
         GiftCardPurchaseBlock.RATE_LOADING,
         GiftCardPurchaseBlock.RATE_MISSING -> context.getString(R.string.exchange_rate_not_found)
         GiftCardPurchaseBlock.NO_AMOUNT,
@@ -317,21 +318,33 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
         binding.fixedDenomText.isVisible = false
         binding.minValue.isVisible = false
         binding.maxValue.isVisible = false
-        binding.composeContainer.isVisible = isUnknown
-        if (isUnknown) {
+        // a merchant CTX no longer has gets no button: trying again would change nothing
+        val isSignedOut = viewModel.purchaseBlock == GiftCardPurchaseBlock.SIGNED_OUT
+        binding.composeContainer.isVisible = isUnknown || isSignedOut
+        if (isUnknown || isSignedOut) {
             binding.composeContainer.setContent {
                 DashWalletTheme {
                     DashButton(
                         modifier = Modifier.padding(20.dp),
-                        text = stringResource(R.string.try_again),
+                        text = stringResource(
+                            if (isSignedOut) R.string.log_in_to_ctxspend_account else R.string.try_again
+                        ),
                         style = Style.FilledBlue,
                         size = Size.Large,
-                        onClick = { retryMerchant() }
+                        onClick = { if (isSignedOut) signInAgain() else retryMerchant() }
                     )
                 }
             }
         }
         setDiscountHint()
+    }
+
+    // back to the merchant, where Buy asks a signed-out user to sign in
+    private fun signInAgain() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.endCtxSession()
+            findNavController().popBackStack()
+        }
     }
 
     private fun retryMerchant() {
