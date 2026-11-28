@@ -198,7 +198,9 @@ data class GiftCardQuote(
     val total: BigDecimal,
     // whose cards these are: two merchants can sell the same order at the same price
     val merchantId: String? = null,
-    val provider: GiftCardProviderType? = null
+    val provider: GiftCardProviderType? = null,
+    // the provider's own id of the merchant whose details were accepted, null before any were
+    val sourceId: String? = null
 )
 
 /** Merchant details from one load. [DashSpendViewModel.applyMerchantRefresh] applies them if it is still current. */
@@ -520,14 +522,21 @@ class DashSpendViewModel @Inject constructor(
     fun currentQuote(): GiftCardQuote? {
         val currency = cardCurrency ?: return null
         val order = giftCardOrderInfo.value
+        val merchantId = _giftCardMerchant.value?.merchantId
+        val provider = selectedProvider
         return GiftCardQuote(
             currency,
             order,
             discountedTotal(order, currency),
-            _giftCardMerchant.value?.merchantId,
-            selectedProvider
+            merchantId,
+            provider,
+            acceptedSourceIds[merchantId to provider]
         )
     }
+
+    // which of a provider's merchants the accepted details describe; a catalog sync can repoint the row
+    private val acceptedSourceIds =
+        java.util.concurrent.ConcurrentHashMap<Pair<String?, GiftCardProviderType?>, String>()
 
     /** What [order] costs: by CTX's own rounding for its cards, so that what is shown is what it charges. */
     fun discountedTotal(
@@ -563,6 +572,13 @@ class DashSpendViewModel @Inject constructor(
             )
             val provider = giftCardProviderDao.getProviderByMerchantId(quotedMerchantId, quotedProvider.name)
             refuseUnlessStillOffered(shown)
+            // PiggyCards can be bought from before its details were answered, as it always could
+            val sourceId = shown.sourceId
+                ?: provider?.sourceId.takeIf { quotedProvider == GiftCardProviderType.PiggyCards }
+            if (sourceId == null || provider?.sourceId != sourceId) {
+                log.error("purchaseGiftCard error: the provider's merchant is not the one that was quoted")
+                throw CTXSpendException(ResourceString(R.string.gift_card_order_changed))
+            }
             when (quotedProvider) {
                 GiftCardProviderType.CTX -> {
                     try {
@@ -581,7 +597,7 @@ class DashSpendViewModel @Inject constructor(
                         }
                         val requestedAt = elapsedRealtime()
                         ctxSpendRepository.orderGiftcard(
-                            merchantId = provider!!.sourceId,
+                            merchantId = sourceId,
                             fiatCurrency = currency,
                             order = giftCardOrderShoppingCart,
                             cryptoCurrency = Constants.DASH_CURRENCY
@@ -604,7 +620,7 @@ class DashSpendViewModel @Inject constructor(
                     try {
                         piggyCardsRepository.orderGiftcard(
                             cryptoCurrency = Constants.DASH_CURRENCY,
-                            merchantId = provider!!.sourceId,
+                            merchantId = sourceId,
                             order = giftCardOrderShoppingCart,
                             fiatCurrency = Constants.USD_CURRENCY
                         )
@@ -1160,11 +1176,12 @@ class DashSpendViewModel @Inject constructor(
         var isAnswered = false
         var isNothingOffered = false
         var isSignedOut = false
+        var answeredSourceId: String? = null
         // previously this API call would only be made if we didn't have the min and max card values,
         // but now we need to call this every time to get an updated savings percentage and to see if
         // the merchant is enabled
         val response = try {
-            getMerchant(merchant, selectedProvider!!.name)
+            getMerchant(merchant, selectedProvider!!.name) { answeredSourceId = it }
         } catch (ex: CancellationException) {
             throw ex
         } catch (ex: UnusableMerchantDetailsException) {
@@ -1228,6 +1245,7 @@ class DashSpendViewModel @Inject constructor(
                     if (selectedProvider != provider || !isAccepted) {
                         return@withContext null
                     }
+                    answeredSourceId?.let { acceptedSourceIds[merchant.merchantId to provider] = it }
                 }
             }
         } catch (e: Exception) {
@@ -1363,9 +1381,14 @@ class DashSpendViewModel @Inject constructor(
         return merchant
     }
 
-    private suspend fun getMerchant(merchant: Merchant, provider: String): UpdatedMerchantDetails? {
+    private suspend fun getMerchant(
+        merchant: Merchant,
+        provider: String,
+        onSourceId: (String) -> Unit
+    ): UpdatedMerchantDetails? {
         val giftCardProvider = giftCardProviderDao.getProviderByMerchantId(merchant.merchantId!!, provider)
         return giftCardProvider?.let {
+            onSourceId(it.sourceId)
             // check for PiggyCards test cards
             if (SUPPORT_PIGGY_CARDS_TEST_MERCHANT && it.provider == GiftCardProviderType.PiggyCards.name) {
                 val sourceId = merchant.sourceId!!
