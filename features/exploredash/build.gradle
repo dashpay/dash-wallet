@@ -104,6 +104,7 @@ dependencies {
     api 'androidx.paging:paging-runtime-ktx:3.1.1'
     implementation "io.coil-kt:coil:$coilVersion"
     implementation "io.coil-kt:coil-compose:$coilVersion"
+    implementation 'androidx.webkit:webkit:1.14.0'
     //noinspection GradleDependency
     implementation "com.google.zxing:core:$zxingVersion"
 
