@@ -190,8 +190,8 @@ class DashSpendCardCurrencyTest {
     private var duringProviderLookup: () -> Unit = {}
 
     // what the provider table holds at the moment: a catalog sync can repoint a row
-    private var ctxRowNow = ctxRow
-    private var piggyCardsRowNow = piggyCardsRow
+    private var ctxRowNow: GiftCardProvider? = ctxRow
+    private var piggyCardsRowNow: GiftCardProvider? = piggyCardsRow
 
     private fun merchantResponse(sourceId: String, currency: String?, discount: Int = 0) = GetMerchantResponse(
         id = sourceId,
@@ -2587,6 +2587,42 @@ class DashSpendCardCurrencyTest {
         assertEquals("ctx-source-2", shown.sourceId)
         viewModel.purchaseGiftCard(shown)
         assertEquals("ctx-source-2", orderSentToCtx().merchantId)
+    }
+
+    @Test
+    fun ctxRowRepointedOrRemovedWhileTheRateWasLookedUp_isNotOrderedFrom() {
+        listOf(ctxRow.copy(sourceId = "ctx-source-9"), null).forEach { rowAfterTheSync ->
+            reset(api)
+            ctxRowNow = ctxRow
+            val viewModel = viewModel()
+            val shown = runBlocking { viewModel.shownFor100Pounds() }
+            duringFreshRateLookup = { ctxRowNow = rowAfterTheSync }
+
+            val refusal = assertThrows(CTXSpendException::class.java) {
+                runBlocking { viewModel.purchaseGiftCard(shown) }
+            }
+
+            assertEquals(R.string.gift_card_order_changed, refusal.resourceString?.resourceId)
+            assertEquals("the row was read before the lookup too", rowAfterTheSync, ctxRowNow)
+            verifyBlocking(api, never()) { purchaseGiftCard(any()) }
+        }
+    }
+
+    @Test
+    fun piggyCardsWithoutARow_isNotOrderedFrom() = runBlocking {
+        piggyCards.stub { onBlocking { orderGiftcard(any(), any(), any(), any()) } doReturn emptyList() }
+        setRate("USD", "25")
+        piggyCardsRowNow = null
+        val viewModel = viewModel()
+        viewModel.selectedProvider = GiftCardProviderType.PiggyCards
+        viewModel.setGiftCardMerchant(merchant())
+        viewModel.setIsFixedDenomination(false)
+        viewModel.setGiftCardOrderQuantities(mapOf(25.0 to 1))
+
+        val refusal = assertThrows(CTXSpendException::class.java) { runBlocking { viewModel.buy() } }
+
+        assertEquals(R.string.gift_card_order_changed, refusal.resourceString?.resourceId)
+        verifyBlocking(piggyCards, never()) { orderGiftcard(any(), any(), any(), any()) }
     }
 
     @Test
