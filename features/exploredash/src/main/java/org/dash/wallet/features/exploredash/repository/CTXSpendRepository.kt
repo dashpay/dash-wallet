@@ -18,8 +18,13 @@
 package org.dash.wallet.features.exploredash.repository
 
 import com.google.gson.Gson
+import com.google.gson.JsonParseException
+import com.google.gson.stream.MalformedJsonException
 import kotlinx.coroutines.flow.Flow
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.ResourceString
+import org.dash.wallet.features.exploredash.R
+import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.DenominationType
 import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.GetMerchantResponse
 import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.GiftCardResponse
 import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.LoginRequest
@@ -27,11 +32,14 @@ import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.PurchaseGif
 import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.VerifyEmailRequest
 import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardInfo
 import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardStatus
+import org.dash.wallet.features.exploredash.data.dashspend.model.UnusableMerchantDetailsException
 import org.dash.wallet.features.exploredash.data.dashspend.model.UpdatedMerchantDetails
 import org.dash.wallet.features.exploredash.network.authenticator.TokenAuthenticator
 import org.dash.wallet.features.exploredash.network.service.ctxspend.CTXSpendApi
 import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardShoppingCart
 import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
+import org.dash.wallet.features.exploredash.utils.GiftCardCurrency
+import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.util.UUID
 import java.util.concurrent.TimeUnit
@@ -105,6 +113,7 @@ class CTXSpendRepository @Inject constructor(
 ) : DashSpendRepository {
     companion object {
         private val REFRESH_TOKEN_EXPIRATION = TimeUnit.DAYS.toMillis(90)
+        private val log = LoggerFactory.getLogger(CTXSpendRepository::class.java)
     }
     private val giftCardMap = hashMapOf<String, GetMerchantResponse>()
 
@@ -166,13 +175,34 @@ class CTXSpendRepository @Inject constructor(
         order: GiftCardShoppingCart,
         merchantId: String
     ): List<GiftCardInfo> {
-        val fiatAmount = order.first().valueAsString
+        val fiatAmount = GiftCardCurrency.orderAmount(order.first().value, fiatCurrency)
         val response = purchaseGiftCard(
             merchantId = merchantId,
             fiatAmount = fiatAmount,
             fiatCurrency = fiatCurrency,
             cryptoCurrency = cryptoCurrency
         )
+        // the Dash quoted in this response is paid as it stands, so it must be for the card ordered
+        val ordered = GiftCardCurrency.normalize(fiatCurrency)
+        // read the way a merchant's currency is: " gbp " is GBP, and what is no currency is not the one ordered
+        listOfNotNull(response.fiatCurrency, response.cardFiatCurrency)
+            .firstOrNull { it.isNotBlank() && GiftCardCurrency.normalize(it) != ordered }
+            ?.let { reported ->
+                log.error("gift card order came back in {} but {} was ordered", reported, fiatCurrency)
+                throw CTXSpendException(ResourceString(R.string.gift_card_error))
+            }
+        // CTX always names the face amount, so an answer without one is not taken on trust
+        if (response.cardFiatAmount?.trim()?.toBigDecimalOrNull()?.compareTo(fiatAmount.toBigDecimal()) != 0) {
+            log.error("gift card order came back for {} but {} was ordered", response.cardFiatAmount, fiatAmount)
+            throw CTXSpendException(ResourceString(R.string.gift_card_error))
+        }
+        // USD is what CTX always sold, so only there may an answer leave the currency out
+        if (!fiatCurrency.equals(Constants.USD_CURRENCY, ignoreCase = true) &&
+            response.fiatCurrency.isNullOrBlank() && response.cardFiatCurrency.isNullOrBlank()
+        ) {
+            log.error("gift card order for {} came back without a currency", fiatCurrency)
+            throw CTXSpendException(ResourceString(R.string.gift_card_error))
+        }
 
         return listOf(
             GiftCardInfo(
@@ -187,8 +217,10 @@ class CTXSpendRepository @Inject constructor(
                 rate = response.rate,
                 redeemUrl = response.redeemUrl,
                 fiatAmount = response.fiatAmount,
-                fiatCurrency = response.fiatCurrency,
-                paymentUrls = response.paymentUrls
+                fiatCurrency = GiftCardCurrency.normalize(response.fiatCurrency) ?: fiatCurrency,
+                paymentUrls = response.paymentUrls,
+                paymentUrlExpiration = response.paymentUrlExpiration,
+                created = response.created
             )
         )
     }
@@ -272,17 +304,42 @@ class CTXSpendRepository @Inject constructor(
     }
 
     override suspend fun getMerchant(merchantId: String): UpdatedMerchantDetails? {
-        val response = api.getMerchant(merchantId)
+        val response = try {
+            api.getMerchant(merchantId)
+        } catch (e: JsonParseException) {
+            // CTX answered, with a body that cannot be decoded
+            throw UnusableMerchantDetailsException(e)
+        } catch (e: MalformedJsonException) {
+            throw UnusableMerchantDetailsException(e)
+        }
         return response?.let {
             giftCardMap[merchantId] = it
-            UpdatedMerchantDetails(
-                id = response.id,
-                savingsPercentage = response.discount,
-                denominationsType = response.denominationsType,
-                denominations = response.denominations.map { denom -> denom.toDouble() },
-                redeemType = response.redeemType,
-                enabled = response.enabled
-            )
+            if (response.denominations.isEmpty()) {
+                throw UnusableMerchantDetailsException(IllegalStateException("no denominations"), true)
+            }
+            try {
+                // read as decimals: toDouble() takes "NaN", and toFiat() would round 10.00001 into 10
+                val currency = GiftCardCurrency.normalize(response.currency)
+                val amounts = response.denominations.map { denom -> denom.trim().toBigDecimal() }
+                require(amounts.all { amount -> GiftCardCurrency.isCardAmount(amount, currency) })
+                // a range is a minimum and a maximum; anything else cannot be bought from
+                val isRange = response.denominationsType == DenominationType.MinMax.value ||
+                    response.denominationsType == DenominationType.MinMaxMajor.value
+                require(!isRange || (amounts.size == 2 && amounts[0] <= amounts[1]))
+                UpdatedMerchantDetails(
+                    id = response.id,
+                    savingsPercentage = response.discount,
+                    denominationsType = response.denominationsType,
+                    denominations = amounts.map { amount -> amount.toDouble() },
+                    redeemType = response.redeemType,
+                    enabled = response.enabled,
+                    currency = response.currency
+                ).also { details ->
+                    require(details.denominations.any { it > 0.0 })
+                }
+            } catch (e: Exception) {
+                throw UnusableMerchantDetailsException(e)
+            }
         }
     }
 

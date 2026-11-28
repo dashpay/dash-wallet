@@ -34,7 +34,8 @@ data class GiftCard(
     var merchantUrl: String? = null, // holds claimLink or redeemUrl
     var note: String? = null, // holds order number
     var index: Int = 0,
-    var redeemUrlChallenge: String? = null
+    var redeemUrlChallenge: String? = null,
+    var currency: String? = null // ISO 4217 code that price is in; null means USD
 ) {
     companion object {
         /**
@@ -51,10 +52,11 @@ data class GiftCard(
             merchantUrl: String? = null,
             note: String? = null,
             index: Int = 0,
-            redeemUrlChallenge: String? = null
+            redeemUrlChallenge: String? = null,
+            currency: String? = null
         ) = GiftCard(
             TxId.wrap(txId), merchantName, price, number, pin, barcodeValue,
-            barcodeFormat, merchantUrl, note, index, redeemUrlChallenge
+            barcodeFormat, merchantUrl, note, index, redeemUrlChallenge, currency
         )
     }
 
@@ -75,7 +77,8 @@ data class GiftCard(
         merchantUrl: String? = this.merchantUrl,
         note: String? = this.note,
         index: Int = this.index,
-        redeemUrlChallenge: String? = this.redeemUrlChallenge
+        redeemUrlChallenge: String? = this.redeemUrlChallenge,
+        currency: String? = this.currency
     ) = copy(
         txId = txId,
         merchantName = merchantName,
@@ -87,6 +90,7 @@ data class GiftCard(
         merchantUrl = merchantUrl,
         note = note,
         index = index,
-        redeemUrlChallenge = redeemUrlChallenge
+        redeemUrlChallenge = redeemUrlChallenge,
+        currency = currency
     )
 }

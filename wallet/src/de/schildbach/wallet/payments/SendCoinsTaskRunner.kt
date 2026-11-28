@@ -977,6 +977,7 @@ class SendCoinsTaskRunner @Inject constructor(
         serviceName: String?,
         recovery: PaymentRecoveryMetadata?,
         session: WalletSession?,
+        approveAmount: (suspend (Dash?) -> Unit)?,
         onTransactionCreated: (suspend (String) -> Unit)?
     ): Transaction {
         // The wallet the caller confirmed the payment on ([session], taken before the caller's own
@@ -989,7 +990,7 @@ class SendCoinsTaskRunner @Inject constructor(
             pendingPaymentVerifier.awaitRestored()
             ensureStillOwned(wallet, "paying it")
             val paymentIntent = paymentIntentParser.parse(dashUri, false)
-            createPaymentRequest(wallet, paymentIntent, serviceName, recovery, onTransactionCreated)
+            createPaymentRequest(wallet, paymentIntent, serviceName, recovery, approveAmount, onTransactionCreated)
         }
     }
 
@@ -998,8 +999,12 @@ class SendCoinsTaskRunner @Inject constructor(
         serviceName: String?,
         recovery: PaymentRecoveryMetadata?,
         session: WalletSession?,
+        approveAmount: (suspend (Dash?) -> Unit)?,
         onTransactionCreated: (suspend (String) -> Unit)?
-    ): TxInfo = sentTxInfo(payWithDashUrlTx(dashUri, serviceName, recovery, session, onTransactionCreated), walletData)
+    ): TxInfo = sentTxInfo(
+        payWithDashUrlTx(dashUri, serviceName, recovery, session, approveAmount, onTransactionCreated),
+        walletData
+    )
 
     /**
      * Fetches a BIP70/BIP270 payment request from the given URL.
@@ -1076,17 +1081,20 @@ class SendCoinsTaskRunner @Inject constructor(
         basePaymentIntent: PaymentIntent,
         serviceName: String?,
         recovery: PaymentRecoveryMetadata? = null,
+        approveAmount: (suspend (Dash?) -> Unit)? = null,
         onTransactionCreated: (suspend (String) -> Unit)? = null
     ): Transaction {
         val requestUrl = basePaymentIntent.paymentRequestUrl
         if (requestUrl != null) {
             val paymentIntent = fetchPaymentRequest(basePaymentIntent)
+            approveAmount?.invoke(paymentIntent.amount?.let { Dash(it.value) })
             // The payee answers when it likes, and the gift card flow runs this NonCancellable,
             // so leaving the screen does not end the wait: a wipe can start, or finish and
             // install a replacement, before the invoice arrives.
             ensureStillOwned(wallet, "selecting coins")
             return directPayViaSdk(wallet, paymentIntent, serviceName, recovery, onTransactionCreated)
         } else {
+            approveAmount?.invoke(basePaymentIntent.amount?.let { Dash(it.value) })
             ensureStillOwned(wallet, "selecting coins")
             if (sdkL1SendService.cutoverCommitted()) {
                 return payPlainIntentViaSdk(wallet, basePaymentIntent, serviceName, recovery, onTransactionCreated)

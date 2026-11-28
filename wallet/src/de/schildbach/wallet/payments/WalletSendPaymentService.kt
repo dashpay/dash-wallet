@@ -24,6 +24,7 @@ import org.bitcoinj.core.TransactionOutput
 import org.bitcoinj.wallet.CoinSelector
 import org.bitcoinj.wallet.SendRequest
 import org.bitcoinj.wallet.Wallet
+import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.services.PaymentRecoveryMetadata
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.WalletSession
@@ -73,6 +74,7 @@ interface WalletSendPaymentService : SendPaymentService {
         serviceName: String?,
         recovery: PaymentRecoveryMetadata? = null,
         session: WalletSession? = null,
+        approveAmount: (suspend (Dash?) -> Unit)? = null,
         onTransactionCreated: (suspend (String) -> Unit)? = null
     ): Transaction
 }

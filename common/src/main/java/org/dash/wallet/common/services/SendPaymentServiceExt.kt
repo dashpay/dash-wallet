@@ -17,6 +17,8 @@
 
 package org.dash.wallet.common.services
 
+import org.dash.wallet.common.money.Dash
+
 /**
  * Neutral counterpart of dashj's `InsufficientMoneyException` for feature/integration
  * modules: thrown by [payAndGetTxId] when the wallet balance can't cover the payment.
@@ -60,10 +62,11 @@ suspend fun SendPaymentService.payAndGetTxId(
     serviceName: String?,
     recovery: PaymentRecoveryMetadata? = null,
     session: WalletSession? = null,
+    approveAmount: (suspend (Dash?) -> Unit)? = null,
     onTransactionCreated: (suspend (String) -> Unit)? = null
 ): String {
     val transaction = try {
-        payWithDashUrl(dashUri, serviceName, recovery, session, onTransactionCreated)
+        payWithDashUrl(dashUri, serviceName, recovery, session, approveAmount, onTransactionCreated)
     } catch (e: Exception) {
         if (e.isInsufficientMoney && e !is InsufficientFundsException) {
             throw InsufficientFundsException(e.message, e)

@@ -17,6 +17,7 @@
 
 package org.dash.wallet.features.exploredash.ui.dashspend
 
+import android.content.Context
 import android.os.Bundle
 import android.view.View
 import androidx.compose.foundation.background
@@ -26,6 +27,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
@@ -36,37 +38,76 @@ import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.money.Dash
-import org.dash.wallet.common.money.FiatValue
+import org.dash.wallet.common.money.Fiat
 import org.dash.wallet.common.money.dashToFiat
-import org.dash.wallet.common.money.fiatToDash
+import org.dash.wallet.common.money.toCoin
+import org.dash.wallet.common.money.toFiat
+import org.dash.wallet.common.money.toFiatValue
+import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.components.LocalDashColors
+import org.dash.wallet.common.ui.components.Size
+import org.dash.wallet.common.ui.components.Style
 import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.common.ui.viewBinding
-import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
-import org.dash.wallet.common.util.discountBy
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.toBigDecimal
-import org.dash.wallet.common.util.toFormattedString
-import org.dash.wallet.common.util.toFormattedStringRoundUp
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderType
 import org.dash.wallet.features.exploredash.data.explore.model.Merchant
 import org.dash.wallet.features.exploredash.databinding.FragmentPurchaseCtxspendGiftCardBinding
 import org.dash.wallet.features.exploredash.ui.dashspend.dialogs.PurchaseGiftCardConfirmDialog
+import org.dash.wallet.features.exploredash.ui.dashspend.dialogs.observePurchaseWithoutSheet
 import org.dash.wallet.features.exploredash.ui.explore.ExploreViewModel
 import org.dash.wallet.features.exploredash.utils.CTXSpendConstants.DEFAULT_DISCOUNT_AS_DOUBLE
+import org.dash.wallet.features.exploredash.utils.GiftCardCurrency
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
+import org.dash.wallet.features.exploredash.utils.toCardFormattedString
 import org.slf4j.LoggerFactory
-import java.text.NumberFormat
 import java.util.Currency
 
 fun min(a: Dash, b: Dash?): Dash {
     return if (b == null || a < b) a else b
 }
+
+fun GiftCardPurchaseBlock.message(context: Context, cardCurrency: String?): String {
+    val currency = cardCurrency.orEmpty()
+    return when (this) {
+        GiftCardPurchaseBlock.CURRENCY_LOADING,
+        GiftCardPurchaseBlock.CURRENCY_UNKNOWN -> context.getString(R.string.gift_card_currency_unknown)
+        GiftCardPurchaseBlock.NOT_SOLD -> context.getString(R.string.temporarily_unavailable)
+        GiftCardPurchaseBlock.SIGNED_OUT -> context.getString(R.string.token_expired_title)
+        GiftCardPurchaseBlock.RATE_LOADING,
+        GiftCardPurchaseBlock.RATE_MISSING -> context.getString(R.string.exchange_rate_not_found)
+        GiftCardPurchaseBlock.NO_AMOUNT,
+        GiftCardPurchaseBlock.AMOUNT_NOT_OFFERED -> context.getString(R.string.gift_card_error)
+        GiftCardPurchaseBlock.AMOUNT_NOT_REPRESENTABLE ->
+            context.getString(R.string.gift_card_amount_too_precise, currency)
+    }
+}
+
+/**
+ * The entry is shared by the whole activity. The next screen must not get the card's amount or
+ * currency, nor this screen's reasons to disable Continue.
+ */
+internal fun EnterAmountViewModel.leaveGiftCardPurchase() {
+    clearSavedState()
+    resetCurrency(clearAmount = true)
+    blockContinue = false
+    fiatDecimalsLimit = null
+}
+
+/** Blocks that pass by themselves, or that the disabled Continue button already explains. */
+private val GiftCardPurchaseBlock.isSilent: Boolean
+    get() = this == GiftCardPurchaseBlock.CURRENCY_LOADING || this == GiftCardPurchaseBlock.RATE_LOADING ||
+        isAboutTheAmount
+
+/** The limits shown under the entry and the unselected cards say what is wrong. */
+private val GiftCardPurchaseBlock.isAboutTheAmount: Boolean
+    get() = this == GiftCardPurchaseBlock.NO_AMOUNT || this == GiftCardPurchaseBlock.AMOUNT_NOT_OFFERED
 
 @AndroidEntryPoint
 class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gift_card) {
@@ -78,19 +119,21 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
     private val viewModel by exploreViewModels<DashSpendViewModel>()
     private val exploreViewModel by exploreViewModels<ExploreViewModel>()
     private val enterAmountViewModel by activityViewModels<EnterAmountViewModel>()
-    private val fixedAmountFormat = NumberFormat.getCurrencyInstance().apply {
-        this.currency = Currency.getInstance(Constants.USD_CURRENCY)
-        minimumFractionDigits = 0
-    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        observePurchaseWithoutSheet(viewModel)
         binding.titleBar.setNavigationOnClickListener {
             enterAmountViewModel.clearSavedState()
             findNavController().popBackStack()
         }
 
         setPaymentHeader()
+
+        if (savedInstanceState == null) {
+            // nothing chosen on another purchase screen may show up on this one
+            viewModel.clearOrderSelection()
+        }
 
         // Try to restore from saved state first
         val savedMerchantId = viewModel.getSavedMerchantId()
@@ -116,29 +159,39 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
             }
         }
 
-        viewModel.isFixedDenomination.observe(viewLifecycleOwner) { isFixed ->
-            if (isFixed == null) {
-                // Not resolved yet
-                return@observe
-            }
-
-            if (isFixed) {
-                setupMerchantDenominations()
-            } else {
-                setupEnterAmountFragment()
-                setCardPurchaseLimits()
-            }
+        viewModel.isFixedDenomination.observe(viewLifecycleOwner) {
+            renderPurchaseUi()
         }
 
-        enterAmountViewModel.onContinueDashEvent.observe(viewLifecycleOwner) {
-            PurchaseGiftCardConfirmDialog().show(requireActivity())
+        viewModel.cardCurrencyState.observe(viewLifecycleOwner) {
+            renderPurchaseUi()
+        }
+
+        // the range type can change without the merchant on screen counting as changed
+        viewModel.acceptedDetailsVersion.observe(viewLifecycleOwner) {
+            enterAmountViewModel.fiatDecimalsLimit = viewModel.entryDecimals
+        }
+
+        enterAmountViewModel.onContinueEvent.observe(viewLifecycleOwner) { (_, fiat) ->
+            if (fiat.currencyCode == viewModel.cardCurrency && viewModel.purchaseBlock == null) {
+                PurchaseGiftCardConfirmDialog().show(requireActivity())
+            }
         }
 
         enterAmountViewModel.fiatAmountValue.observe(viewLifecycleOwner) {
             viewModel.giftCardMerchant.value?.let { merchant ->
                 if (!merchant.fixedDenomination) {
-                    showCardPurchaseLimits()
-                    viewModel.setGiftCardOrderInfo(it, viewModel.getFirstCardQuantity())
+                    if (viewModel.setEnteredAmount(it)) {
+                        showCardPurchaseLimits()
+                    } else if (!it.isZero) {
+                        // The amount screen fell back to another currency. Its digits must not be
+                        // re-read as the card's currency, so the entry is rebuilt empty. Posted:
+                        // this runs inside the entry fragment's own callback.
+                        view?.post { renderPurchaseUi() }
+                    } else {
+                        viewModel.cardCurrency?.let { code -> enterAmountViewModel.selectedCurrencyCode = code }
+                    }
+                    updateView()
                 }
             }
         }
@@ -154,19 +207,14 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
                 )
 
                 // Refresh merchant-dependent values
-                if (viewModel.isFixedDenomination.value != null) {
-                    if (it.fixedDenomination) {
-                        setupMerchantDenominations()
-                    } else {
-                        setCardPurchaseLimits()
-                    }
-                }
+                renderPurchaseUi()
 
                 // Update discount display
                 setDiscountHint()
 
                 // Check if merchant is still active
                 setMerchantEnabled()
+                updateView()
             }
         }
 
@@ -174,17 +222,27 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
             setDiscountHint()
         }
 
-        viewModel.usdExchangeRate.observe(viewLifecycleOwner) { rate ->
-            viewModel.balance.value?.let { balance -> updateBalanceLabel(balance, rate) }
-            setCardPurchaseLimits()
-            setDiscountHint()
-            enterAmountViewModel.setMinAmount(viewModel.minCardPurchaseDash, true)
-            enterAmountViewModel.setMaxAmount(
-                min(
-                    viewModel.maxCardPurchaseDash,
-                    viewModel.balanceWithDiscount
-                )
-            )
+        viewModel.usdExchangeRate.observe(viewLifecycleOwner) {
+            if (viewModel.selectedProvider == GiftCardProviderType.CTX) {
+                viewModel.balance.value?.let { balance -> updateBalanceLabel(balance) }
+            } else {
+                onRateChanged()
+            }
+        }
+
+        enterAmountViewModel.selectedExchangeRate.observe(viewLifecycleOwner) {
+            val cardCurrency = viewModel.cardCurrency
+            if (cardCurrency != null && viewModel.isFixedDenomination.value == false &&
+                enterAmountViewModel.selectedCurrencyCode != cardCurrency
+            ) {
+                // the entry went back to the wallet's currency, with or without a rate for it
+                view?.post { renderPurchaseUi() }
+            }
+            updateEntryVisibility()
+        }
+
+        viewModel.cardRateState.observe(viewLifecycleOwner) {
+            onRateChanged()
         }
 
         viewModel.isNetworkAvailable.observe(viewLifecycleOwner) { isConnected ->
@@ -196,40 +254,153 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
         }
 
         viewLifecycleOwner.observeOnDestroy {
-            viewModel.resetSelectedDenomination()
+            // a rotation keeps the order, which an open confirmation dialog is showing
+            if (activity?.isChangingConfigurations != true) {
+                viewModel.resetSelectedDenomination()
+                enterAmountViewModel.leaveGiftCardPurchase()
+            }
         }
     }
 
-    private fun setupEnterAmountFragment() {
-        val fragment = EnterAmountFragment.newInstanceDash(
+    private fun onRateChanged() {
+        viewModel.balance.value?.let { balance -> updateBalanceLabel(balance) }
+        setCardPurchaseLimits()
+        setDiscountHint()
+        enterAmountViewModel.setMinAmount(viewModel.minCardPurchaseDash, true)
+        enterAmountViewModel.setMaxAmount(
+            min(
+                viewModel.maxCardPurchaseDash,
+                viewModel.balanceWithDiscount
+            )
+        )
+        updateView()
+    }
+
+    /** Builds the amount entry or the denominations once the card currency and the mode are known. */
+    private fun renderPurchaseUi() {
+        if (view == null || !isAdded) {
+            return
+        }
+        val cardCurrency = viewModel.cardCurrency
+        val isFixed = viewModel.isFixedDenomination.value
+        if (cardCurrency == null || isFixed == null) {
+            showNoPurchaseUi()
+            return
+        }
+
+        if (isFixed) {
+            setupMerchantDenominations(cardCurrency)
+        } else {
+            setupEnterAmountFragment(cardCurrency)
+            setCardPurchaseLimits()
+        }
+        setDiscountHint()
+        updateView()
+    }
+
+    /**
+     * The amount entry only learns its currency symbol from a rate and shows "$" or the symbol of
+     * the wallet's currency until then, so it stays hidden until it holds the card currency's rate.
+     */
+    private fun updateEntryVisibility() {
+        if (view == null || !isAdded) {
+            return
+        }
+        val cardCurrency = viewModel.cardCurrency
+        val entryCurrency = enterAmountViewModel.selectedExchangeRate.value?.currencyCode
+        binding.enterAmountFragmentPlaceholder.isVisible = cardCurrency != null &&
+            viewModel.isFixedDenomination.value == false && entryCurrency == cardCurrency
+    }
+
+    private fun showNoPurchaseUi() {
+        val isUnknown = viewModel.purchaseBlock == GiftCardPurchaseBlock.CURRENCY_UNKNOWN
+        binding.enterAmountFragmentPlaceholder.isVisible = false
+        binding.fixedDenomText.isVisible = false
+        binding.minValue.isVisible = false
+        binding.maxValue.isVisible = false
+        // a merchant CTX no longer has gets no button: trying again would change nothing
+        val isSignedOut = viewModel.purchaseBlock == GiftCardPurchaseBlock.SIGNED_OUT
+        binding.composeContainer.isVisible = isUnknown || isSignedOut
+        if (isUnknown || isSignedOut) {
+            binding.composeContainer.setContent {
+                DashWalletTheme {
+                    DashButton(
+                        modifier = Modifier.padding(20.dp),
+                        text = stringResource(
+                            if (isSignedOut) R.string.log_in_to_ctxspend_account else R.string.try_again
+                        ),
+                        style = Style.FilledBlue,
+                        size = Size.Large,
+                        onClick = { if (isSignedOut) signInAgain() else retryMerchant() }
+                    )
+                }
+            }
+        }
+        setDiscountHint()
+    }
+
+    // back to the merchant, where Buy asks a signed-out user to sign in
+    private fun signInAgain() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.endCtxSession()
+            findNavController().popBackStack()
+        }
+    }
+
+    private fun retryMerchant() {
+        val merchant = viewModel.giftCardMerchant.value ?: return
+        viewLifecycleOwner.lifecycleScope.launch { setupMerchant(merchant) }
+    }
+
+    private fun setupEnterAmountFragment(cardCurrency: String) {
+        enterAmountViewModel.fiatDecimalsLimit = viewModel.entryDecimals
+        updateEntryVisibility()
+        binding.composeContainer.isVisible = false
+        binding.fixedDenomText.isVisible = false
+
+        val existing = childFragmentManager
+            .findFragmentById(R.id.enter_amount_fragment_placeholder) as? EnterAmountFragment
+        val entered = enterAmountViewModel.fiatAmount.value?.toFiatValue()
+        // After a rotation the order still holds what the entry shows. After the process died it
+        // is empty, and so is an entry left in another currency: both start again.
+        val isOrdered = entered == null || entered.isZero ||
+            (viewModel.giftCardOrderInfo.value.isNotEmpty() && viewModel.getFirstCardValueAsFiat() == entered)
+        if (existing != null && enterAmountViewModel.selectedCurrencyCode == cardCurrency && isOrdered) {
+            enterAmountFragment = existing
+            return
+        }
+
+        // an amount typed for another merchant or currency is cleared, never carried over
+        enterAmountViewModel.selectedCurrencyCode = cardCurrency
+        enterAmountViewModel.clearSavedState()
+        viewModel.resetSelectedDenomination()
+
+        val fragment = EnterAmountFragment.newInstance(
             dashToFiat = false,
             showCurrencySelector = false,
             isMaxButtonVisible = false,
             isCurrencyOptionsPickerVisible = false,
             showAmountResultContainer = false,
-            faitCurrencyCode = Constants.USD_CURRENCY
+            faitCurrencyCode = cardCurrency
         )
 
         fragment.setViewDetails(continueText = getString(R.string.button_continue))
 
+        // replace: a fragment restored after recreation or left by another currency must go
         childFragmentManager
             .beginTransaction()
             .setReorderingAllowed(true)
-            .add(R.id.enter_amount_fragment_placeholder, fragment)
+            .replace(R.id.enter_amount_fragment_placeholder, fragment)
             .commitNow()
         enterAmountFragment = fragment
-
-        binding.enterAmountFragmentPlaceholder.isVisible = true
-        binding.composeContainer.isVisible = false
-        binding.fixedDenomText.isVisible = false
-        updateView()
     }
 
-    private fun setupMerchantDenominations() {
+    private fun setupMerchantDenominations(cardCurrency: String) {
         binding.enterAmountFragmentPlaceholder.isVisible = false
         binding.composeContainer.isVisible = true
         binding.fixedDenomText.isVisible = true
-        binding.fixedDenomText.text = fixedAmountFormat.format(0)
+        val selected = viewModel.giftCardOrderInfo.value.keys.firstOrNull() ?: 0.0
+        binding.fixedDenomText.text = formatFixedAmount(selected, cardCurrency)
 
         binding.composeContainer.setContent {
             DashWalletTheme {
@@ -266,14 +437,19 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
             }
         } ?: return
 
+        if (viewModel.purchaseBlock?.takeUnless { it.isAboutTheAmount } != null) {
+            setDiscountHint()
+            return
+        }
+
         val amountFiat = enterAmountViewModel.fiatAmountValue.value
         amountFiat?.let {
             val isBlockchainReplaying = viewModel.isBlockchainReplaying.value
             if (!viewModel.withinLimits(amountFiat)) {
                 binding.minValue.text =
-                    getString(R.string.purchase_gift_card_min, viewModel.minCardPurchaseFiat.toFormattedString())
+                    getString(R.string.purchase_gift_card_min, viewModel.minCardPurchaseFiat.toCardFormattedString())
                 binding.maxValue.text =
-                    getString(R.string.purchase_gift_card_max, viewModel.maxCardPurchaseFiat.toFormattedString())
+                    getString(R.string.purchase_gift_card_max, viewModel.maxCardPurchaseFiat.toCardFormattedString())
                 // don't show min/max values if blockchain is replaying
                 binding.minValue.isVisible = !isBlockchainReplaying
                 binding.maxValue.isVisible = !isBlockchainReplaying
@@ -299,51 +475,65 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
             binding.discountValue.isVisible = false
             return
         }
+        val block = viewModel.purchaseBlock
+        val purchaseAmount = viewModel.getFirstCardValueAsFiat()
+        if (block != null || purchaseAmount == null) {
+            val message = block?.takeUnless { it.isSilent }?.message(requireContext(), viewModel.cardCurrency)
+            binding.discountValue.isVisible = message != null
+            if (message != null) {
+                binding.discountValue.setTextColor(resources.getColor(R.color.error_red, null))
+                binding.discountValue.text = message
+            }
+            if (block?.isAboutTheAmount != true) {
+                binding.minValue.isVisible = false
+                binding.maxValue.isVisible = false
+            }
+            return
+        }
         val savingsFraction = if (merchant.fixedDenomination) {
-            viewModel.getGiftCardDiscount(viewModel.getFirstCardValueAsFiat().toBigDecimal().toDouble())
+            viewModel.getGiftCardDiscount(purchaseAmount.toBigDecimal().toDouble())
         } else {
             merchant.savingsFraction
         }
 
         // do not show discount if the entered value is zero or the discount is zero
-        if (savingsFraction == DEFAULT_DISCOUNT_AS_DOUBLE ||
-            viewModel.getFirstCardValueAsFiat().isZero
-        ) {
+        if (savingsFraction == DEFAULT_DISCOUNT_AS_DOUBLE || purchaseAmount.isZero) {
             binding.discountValue.isVisible = false
             return
         }
 
         // only show the discount
         binding.discountValue.isVisible = !viewModel.isBlockchainReplaying.value
-        val selectedRate = viewModel.usdExchangeRate.value
 
-        if (selectedRate == null) {
-            binding.discountValue.setTextColor(resources.getColor(R.color.error_red, null))
-            binding.discountValue.text = getString(R.string.exchange_rate_not_found)
-            return
-        }
-
-        if (exceedsBalance()) {
+        if (viewModel.exceedsBalance()) {
             showBalanceError(true)
             return
         }
 
-        if (!viewModel.withinLimits(viewModel.getFirstCardValueAsFiat())) {
+        if (!viewModel.withinLimits(purchaseAmount)) {
             binding.discountValue.isVisible = false
             return
         }
 
         binding.discountValue.setTextColor(resources.getColor(R.color.content_primary, null))
-        val purchaseAmount = viewModel.getFirstCardValueAsFiat()
-        val discountedAmount = purchaseAmount.discountBy(savingsFraction)
+        val discountedAmount = Fiat.parseFiat(
+            purchaseAmount.currencyCode,
+            viewModel.discountedTotal(
+                mapOf(purchaseAmount.toBigDecimal().toDouble() to 1),
+                purchaseAmount.currencyCode
+            ) { savingsFraction }.toPlainString()
+        )
 
         binding.discountValue.text = getString(
             R.string.purchase_gift_card_discount_hint,
-            purchaseAmount.toFormattedString(),
-            discountedAmount.toFormattedStringRoundUp(),
+            purchaseAmount.toCardFormattedString(),
+            discountedAmount.toCardFormattedString(),
             GenericUtils.formatPercent(savingsFraction)
         )
     }
+
+    private fun formatFixedAmount(amount: Double, cardCurrency: String): String =
+        GiftCardCurrency.displayFormat(cardCurrency, trimZeroDecimals = true).format(amount)
 
     private fun showBalanceError(show: Boolean) {
         if (view == null || !isAdded) {
@@ -366,19 +556,18 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
         binding.paymentHeaderView.setPreposition(getString(R.string.purchase_gift_card_at))
         binding.paymentHeaderView.setOnShowHideBalanceClicked {
             binding.paymentHeaderView.triggerRevealBalance()
-            viewModel.balance.value?.let { balance ->
-                updateBalanceLabel(balance, viewModel.usdExchangeRate.value)
-            }
+            viewModel.balance.value?.let { balance -> updateBalanceLabel(balance) }
         }
 
         viewModel.balance.observe(viewLifecycleOwner) { balance ->
-            updateBalanceLabel(balance, viewModel.usdExchangeRate.value)
+            updateBalanceLabel(balance)
         }
     }
 
-    private fun updateBalanceLabel(balance: Dash, rate: org.dash.wallet.common.data.entity.ExchangeRate?) {
+    private fun updateBalanceLabel(balance: Dash) {
+        val exchangeRate = viewModel.balanceExchangeRate
         var balanceText = viewModel.dashFormat.format(balance).toString()
-        rate?.let { balanceText += " ~ ${it.dashToFiat(balance).toFormattedString()}" }
+        exchangeRate?.let { balanceText += " ~ ${exchangeRate.coinToFiat(balance.toCoin()).toCardFormattedString()}" }
         binding.paymentHeaderView.setBalanceValue(balanceText)
     }
 
@@ -398,34 +587,25 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
         viewModel.setGiftCardMerchant(merchant)
 
         lifecycleScope.launch {
-            val updatedMerchant = viewModel.updateMerchantDetails(merchant)
+            // null: a newer load has taken over, and its details, currency and mode go together
+            val refresh = viewModel.refreshMerchantDetails(merchant) ?: return@launch
 
+            // a slow answer for a merchant the user has left must not replace the current one
+            if (viewModel.giftCardMerchant.value?.merchantId != merchant.merchantId) {
+                return@launch
+            }
             if (setMerchantEnabled()) {
-                viewModel.setGiftCardMerchant(updatedMerchant)
-                viewModel.setIsFixedDenomination(updatedMerchant.fixedDenomination)
+                viewModel.applyMerchantRefresh(refresh)
             }
         }
-    }
-
-    private fun exceedsBalance(): Boolean {
-        val rate = viewModel.usdExchangeRate.value ?: return false
-
-        val balanceWithDiscount = viewModel.balanceWithDiscount ?: return false
-
-        var paymentValue = viewModel.getFirstCardValueAsFiat()
-        // this is called when the after a purchase with the user's selected currency, not USD
-        if (paymentValue.currencyCode != Constants.USD_CURRENCY) {
-            paymentValue = FiatValue.valueOf(Constants.USD_CURRENCY, paymentValue.value)
-        }
-        val amountDash = rate.fiatToDash(paymentValue)
-
-        return amountDash.isGreaterThan(balanceWithDiscount)
     }
 
     @Composable
     private fun DenominationsBottomContainer() {
         val merchant = viewModel.giftCardMerchant.collectAsState().value ?: return
         val isReplaying = viewModel.isBlockchainReplaying.collectAsStateWithLifecycle()
+        val cardRate = viewModel.cardRateState.collectAsStateWithLifecycle()
+        val cardCurrency = viewModel.cardCurrency ?: return
 
         val colors = LocalDashColors.current
         Box(
@@ -443,22 +623,30 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
             MerchantDenominations(
                 modifier = Modifier.padding(20.dp),
                 denominations = merchant.denominations,
-                currency = Currency.getInstance(Constants.USD_CURRENCY),
+                currency = Currency.getInstance(cardCurrency),
                 selectedDenomination = selectedDenomination.value.keys.firstOrNull()?.toBigDecimal()?.toDouble(),
-                canContinue = !exceedsBalance() && !isReplaying.value,
+                // cardRate is read so that a rate arriving re-evaluates the checks
+                canContinue = cardRate.value.isUsable() && viewModel.purchaseBlock == null &&
+                    !viewModel.exceedsBalance() && !isReplaying.value,
                 onDenominationSelected = { denomination ->
-                    val fiat = FiatValue.parseFiat(Constants.USD_CURRENCY, denomination.toString())
+                    val fiat = GiftCardCurrency.toFiat(denomination, cardCurrency).toFiatValue()
                     val quantity = selectedDenomination.value.values.firstOrNull() ?: 1
                     viewModel.setGiftCardOrderInfo(fiat, quantity)
-                    binding.fixedDenomText.text = fixedAmountFormat.format(denomination)
+                    binding.fixedDenomText.text = formatFixedAmount(denomination, cardCurrency)
                     setDiscountHint()
                 },
                 onContinue = {
-                    PurchaseGiftCardConfirmDialog().show(requireActivity())
+                    if (viewModel.purchaseBlock == null) {
+                        PurchaseGiftCardConfirmDialog().show(requireActivity())
+                    }
                 }
             )
         }
     }
+
+    /** Only CTX has a card rate; any other provider is checked against the USD rate by the balance check. */
+    private fun CardRateState.isUsable() =
+        this is CardRateState.Available || viewModel.selectedProvider != GiftCardProviderType.CTX
 
     // taken from SendCoinsFragment.updateView
     private fun updateView() {
@@ -466,6 +654,6 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
         enterAmountFragment?.setError(
             if (isReplaying) getString(R.string.send_coins_fragment_hint_replaying) else ""
         )
-        enterAmountViewModel.blockContinue = isReplaying
+        enterAmountViewModel.blockContinue = isReplaying || viewModel.purchaseBlock != null
     }
 }

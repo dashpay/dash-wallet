@@ -106,6 +106,8 @@ class EnterAmountViewModel @Inject constructor(
     val fiatAmount: LiveData<Fiat>
         get() = _fiatAmount
 
+    /** The fiat decimals the keypad takes on a screen where that is not the usual two. */
+    var fiatDecimalsLimit: Int? = null
     /** Neutral mirror of [fiatAmount] for modules that don't depend on dashj. Kept in sync in [init]. */
     private val _fiatAmountValue = MutableLiveData<FiatValue>()
     val fiatAmountValue: LiveData<FiatValue>
@@ -193,9 +195,13 @@ class EnterAmountViewModel @Inject constructor(
         return walletUIConfig.getExchangeCurrencyCode()
     }
 
-    fun resetCurrency() {
+    fun resetCurrency(clearAmount: Boolean = false) {
         viewModelScope.launch {
             _selectedCurrencyCode.value = walletUIConfig.getExchangeCurrencyCode()
+            if (clearAmount) {
+                // after the currency: the cleared amount must not stay in the one that was left
+                clearSavedState()
+            }
         }
     }
 

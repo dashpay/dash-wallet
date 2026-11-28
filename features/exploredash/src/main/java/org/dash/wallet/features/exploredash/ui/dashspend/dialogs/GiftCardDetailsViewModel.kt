@@ -54,6 +54,7 @@ import org.dash.wallet.features.exploredash.repository.CTXSpendException
 import org.dash.wallet.features.exploredash.repository.CTXSpendRepository
 import org.dash.wallet.features.exploredash.repository.PiggyCardsRepository
 import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
+import org.dash.wallet.features.exploredash.utils.GiftCardCurrency
 import org.slf4j.LoggerFactory
 import java.time.Instant
 import java.time.LocalDateTime
@@ -91,6 +92,7 @@ class GiftCardDetailsViewModel @Inject constructor(
 ) : ViewModel() {
     companion object {
         private val log = LoggerFactory.getLogger(GiftCardDetailsViewModel::class.java)
+        private const val CURRENCY_LOOKUP_ATTEMPTS = 3
     }
 
     lateinit var transactionId: String
@@ -99,6 +101,12 @@ class GiftCardDetailsViewModel @Inject constructor(
     private var tickerJob: Job? = null
 
     private var retries = 3
+    private var currencyLookup: Job? = null
+    private var isCurrencyResolved = false
+    private var isLookupWantedAgain = false
+
+    // replaced in tests, which run the lookup and its pauses on virtual time
+    internal var currencyLookupDispatcher: CoroutineDispatcher = Dispatchers.IO
 
     private val _uiState = MutableStateFlow(GiftCardUIState())
     val uiState: StateFlow<GiftCardUIState> = _uiState.asStateFlow()
@@ -120,7 +128,15 @@ class GiftCardDetailsViewModel @Inject constructor(
                         serviceName = metadata.service
                     )
                 }
+                // a lookup cannot tell whose card it is before this arrives
+                lookUpCurrencyIfMissing(_uiState.value.giftCards)
             }
+            .launchIn(viewModelScope)
+
+        // signing in to CTX makes the lookup possible without the card changing
+        ctxSpendConfig.observeSecureData(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN)
+            .distinctUntilChanged()
+            .onEach { lookUpCurrencyIfMissing(_uiState.value.giftCards) }
             .launchIn(viewModelScope)
 
         giftCardDao.observeCardForTransaction(TxIds.toBytes(transactionId))
@@ -144,6 +160,8 @@ class GiftCardDetailsViewModel @Inject constructor(
                     )
                 }
 
+                lookUpCurrencyIfMissing(giftCards)
+
                 val needsPolling = giftCards.any { card ->
                     card.number == null && card.merchantUrl.isNullOrEmpty() && card.note != null
                 }
@@ -155,6 +173,68 @@ class GiftCardDetailsViewModel @Inject constructor(
                 }
             }
             .launchIn(viewModelScope)
+    }
+
+    /** One lookup at a time, a few attempts each, until the currency is settled. */
+    private fun lookUpCurrencyIfMissing(giftCards: List<GiftCard>) {
+        if (isCurrencyResolved || giftCards.none { it.currency == null }) {
+            return
+        }
+        if (currencyLookup?.isActive == true) {
+            // the running lookup may already have read what this trigger has just changed
+            isLookupWantedAgain = true
+            return
+        }
+        currencyLookup = viewModelScope.launch {
+            do {
+                isLookupWantedAgain = false
+                isCurrencyResolved = withContext(currencyLookupDispatcher) {
+                    repeat(CURRENCY_LOOKUP_ATTEMPTS) { attempt ->
+                        if (backfillCurrency(transactionId)) {
+                            return@withContext true
+                        }
+                        if (attempt < CURRENCY_LOOKUP_ATTEMPTS - 1) {
+                            delay((attempt + 1).seconds)
+                        }
+                    }
+                    false
+                }
+            } while (!isCurrencyResolved && isLookupWantedAgain)
+        }
+    }
+
+    /** True once there is nothing left to look up: the currency is stored, or the card is not a CTX one. */
+    private suspend fun backfillCurrency(txid: String): Boolean {
+        return try {
+            // until the service is known the card may still turn out to be a CTX one
+            val service = metadataProvider.getTransactionMetadata(txid)?.service ?: return false
+            if (service != ServiceName.CTXSpend) {
+                return true
+            }
+            if (!ctxSpendRepository.isUserSignedIn()) {
+                return false
+            }
+            val orderId = giftCardDao.getCardForTransaction(TxIds.toBytes(txid)).firstOrNull()?.note
+            val giftCards = if (orderId != null) {
+                ctxSpendRepository.getGiftCard(orderId)
+            } else {
+                ctxSpendRepository.getGiftCardByTxId(TxIds.toBase58(txid))
+            }
+            val currency = GiftCardCurrency.normalize(giftCards.firstOrNull()?.fiatCurrency) ?: return false
+            giftCardDao.backfillCurrency(TxIds.toBytes(txid), currency)
+            true
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // the answer holds the card's number and PIN, so nothing an error might quote from it is logged
+            log.warn(
+                "could not look up the currency of the gift card of {}: {} {}",
+                txid,
+                e.javaClass.simpleName,
+                (e as? CTXSpendException)?.errorCode ?: ""
+            )
+            false
+        }
     }
 
     // for testing/debugging only
@@ -238,7 +318,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                             GiftCardStatus.FULFILLED -> {
                                 if (!giftCard.cardNumber.isNullOrEmpty()) {
                                     updateGiftCard(0, giftCard.cardNumber, giftCard.cardPin)
-                                    log.info("CTXSpend: saving barcode for: ${giftCard.barcodeUrl}")
+                                    log.info("CTXSpend: saving the barcode of order {}", giftCard.id)
                                     saveBarcode(giftCard.cardNumber, 0)
                                     val startPurchaseTime =
                                         ctxSpendConfig.get(CTXSpendConfig.PREFS_LAST_PURCHASE_START) ?: -1
@@ -477,7 +557,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                                     }
                                     if (!giftCard.cardNumber.isNullOrEmpty()) {
                                         updateGiftCard(cardIndex, giftCard.cardNumber, giftCard.cardPin)
-                                        log.info("PiggyCards: saving barcode for: ${giftCard.barcodeUrl}")
+                                        log.info("PiggyCards: saving the barcode of card {} of {}", cardIndex, txid)
                                         giftCard.barcodeUrl?.let {
                                             if (!saveBarcodeUrl(it, cardIndex)) {
                                                 saveBarcode(giftCard.cardNumber, BarcodeFormat.CODE_128, cardIndex)
@@ -609,7 +689,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                 )
             }.join()
         } catch (ex: Exception) {
-            log.error("Failed to save barcode for $giftCardNumber", ex)
+            log.error("Failed to save the barcode of card {} of {}", index, transactionId, ex)
         }
     }
 
@@ -624,7 +704,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                 )
             }.join()
         } catch (ex: Exception) {
-            log.error("Failed to save barcode for $giftCardNumber", ex)
+            log.error("Failed to save the barcode of card {} of {}", index, transactionId, ex)
         }
     }
 
@@ -674,11 +754,17 @@ class GiftCardDetailsViewModel @Inject constructor(
                 }.join()
                 true
             } else {
-                log.error("ScanBarcode returned null: $barcodeUrl")
+                log.error("ScanBarcode returned null for card {} of {}", index, transactionId)
                 false
             }
         } catch (ex: Exception) {
-            log.error("Failed to resize and decode barcode: $barcodeUrl", ex)
+            // the URL holds the card number, and an image loader's error can quote the URL
+            log.error(
+                "Failed to resize and decode the barcode of card {} of {}: {}",
+                index,
+                transactionId,
+                ex.javaClass.simpleName
+            )
             false
         }
     }

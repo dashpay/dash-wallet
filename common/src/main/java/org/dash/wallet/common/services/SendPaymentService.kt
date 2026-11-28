@@ -120,6 +120,9 @@ interface SendPaymentService {
      * it is submitted.
      *
      * @param recovery facts to keep with a payment whose submission result may turn out unknown
+     * @param approveAmount invoked with the amount about to be paid, null when the request names
+     *   none, once a payment request has been fetched and before coins are selected. Throwing
+     *   ends the payment with nothing signed, reserved or sent.
      * @param onTransactionCreated invoked with the hex transaction id once the transaction is
      *   built and signed, before it is submitted wherever the payment path allows it, so a caller
      *   can persist anything it will need to recover the payment later. Runs while the payment is
@@ -137,6 +140,7 @@ interface SendPaymentService {
         serviceName: String?,
         recovery: PaymentRecoveryMetadata? = null,
         session: WalletSession? = null,
+        approveAmount: (suspend (Dash?) -> Unit)? = null,
         onTransactionCreated: (suspend (String) -> Unit)? = null
     ): TxInfo
 }
