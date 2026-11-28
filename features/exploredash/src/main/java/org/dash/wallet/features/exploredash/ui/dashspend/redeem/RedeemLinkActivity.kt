@@ -174,6 +174,7 @@ class RedeemLinkActivity : InteractionAwareActivity() {
     private var loadProgress by mutableIntStateOf(0)
     private var hasError by mutableStateOf(false)
     private var isBlockedByProxy by mutableStateOf(false)
+    private var hasWipedWebData = false
     private var jsDialog: AlertDialog? = null
     private var hasCommittedPage = false
     private var jsDialogCount = 0
@@ -326,7 +327,7 @@ class RedeemLinkActivity : InteractionAwareActivity() {
 
         redeemUrl = url
 
-        if (!loadRedeemPage(wipeData = true)) {
+        if (loadRedeemPage() != LoadResult.STARTED) {
             openInBrowser()
             finish()
             return
@@ -424,11 +425,16 @@ class RedeemLinkActivity : InteractionAwareActivity() {
         }
     }
 
-    private fun loadRedeemPage(wipeData: Boolean): Boolean {
-        if (!canIsolate() || !connectsDirectly(this, redeemUrl)) {
-            return false
+    private enum class LoadResult { STARTED, BLOCKED_BY_PROXY, UNAVAILABLE }
+
+    private fun loadRedeemPage(): LoadResult {
+        if (!canIsolate()) {
+            return LoadResult.UNAVAILABLE
         }
-        val view = createWebView() ?: return false
+        if (!connectsDirectly(this, redeemUrl)) {
+            return LoadResult.BLOCKED_BY_PROXY
+        }
+        val view = createWebView() ?: return LoadResult.UNAVAILABLE
         webView?.let { destroyWebView(it) }
         webView = view
 
@@ -449,13 +455,17 @@ class RedeemLinkActivity : InteractionAwareActivity() {
             }
         }
         blockCleartext {
-            if (wipeData && isShowing(view)) {
-                wipeWebData(load)
+            // A retry can replace the first view while its wipe is still running; it must not load ahead of it.
+            if (!hasWipedWebData && isShowing(view)) {
+                wipeWebData {
+                    hasWipedWebData = true
+                    load.run()
+                }
             } else {
                 load.run()
             }
         }
-        return true
+        return LoadResult.STARTED
     }
 
     // Setup callbacks can arrive after the screen was closed but before onDestroy has run.
@@ -478,11 +488,13 @@ class RedeemLinkActivity : InteractionAwareActivity() {
     }
 
     private fun retry() {
-        if (!connectsDirectly(this, redeemUrl)) {
-            showBlockedByProxy()
-        } else if (!loadRedeemPage(wipeData = false)) {
-            openInBrowser()
-            finish()
+        when (loadRedeemPage()) {
+            LoadResult.STARTED -> Unit
+            LoadResult.BLOCKED_BY_PROXY -> showBlockedByProxy()
+            LoadResult.UNAVAILABLE -> {
+                openInBrowser()
+                finish()
+            }
         }
     }
 
