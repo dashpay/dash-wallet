@@ -1542,7 +1542,19 @@ class TxDisplayCacheService @Inject constructor(
             walletApplication.getString(TransactionRowView.giftCardTitleRes(merchant), merchant ?: "")
         }
         if (decorated.isEmpty()) return
-        txDisplayCacheDao.insertAll(decorated)
+        // The rows read above only select what to decorate. Each write is a targeted
+        // update of the decoration columns, so a concurrent SDK correction or a
+        // wallet wipe is never overwritten by that snapshot.
+        for (row in decorated) {
+            txDisplayCacheDao.updateGiftCardDecoration(
+                rowId = row.rowId,
+                title = row.title,
+                iconType = row.iconType,
+                iconBgType = row.iconBgType,
+                service = row.service,
+                addFlags = GIFT_CARD_ROW_FLAGS
+            )
+        }
         _currentPagingSource.value?.invalidate()
         log.info(
             "gift card row reconcile: re-decorated {} of {} gift card row(s): {}",
@@ -1644,6 +1656,9 @@ internal fun planSwapRowDecorations(
     decorated.takeIf { it != existing }
 }
 
+/** The filter flags every gift-card row carries: a purchase is a send. */
+internal const val GIFT_CARD_ROW_FLAGS = TxDisplayCacheEntry.FLAG_GIFT_CARD or TxDisplayCacheEntry.FLAG_SENT
+
 /**
  * PURE planner for the GIFT-CARD DECORATION of already-cached display rows, the
  * host-testable core of [TxDisplayCacheService.reconcileGiftCardRows].
@@ -1681,7 +1696,7 @@ internal fun planGiftCardRowDecorations(
         iconType = TxDisplayCacheEntry.ICON_GIFT_CARD,
         iconBgType = TxDisplayCacheEntry.BG_ORANGE,
         service = meta.service,
-        filterFlags = existing.filterFlags or TxDisplayCacheEntry.FLAG_GIFT_CARD or TxDisplayCacheEntry.FLAG_SENT
+        filterFlags = existing.filterFlags or GIFT_CARD_ROW_FLAGS
     )
     decorated.takeIf { it != existing }
 }
