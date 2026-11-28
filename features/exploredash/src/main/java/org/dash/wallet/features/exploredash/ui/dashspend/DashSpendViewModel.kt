@@ -545,8 +545,11 @@ class DashSpendViewModel @Inject constructor(
         val shownCurrency = shown.currency
         val shownOrder = shown.order
         _giftCardMerchant.value?.merchantId?.let {
-            if (currentQuote() != shown) {
-                log.error("purchaseGiftCard error: the order or its price changed after it was confirmed")
+            refuseUnlessStillOffered(shown)
+            // from here the merchant and provider are the quoted ones: the selection stays writable
+            val quotedMerchantId = shown.merchantId
+            val quotedProvider = shown.provider
+            if (quotedMerchantId == null || quotedProvider == null) {
                 throw CTXSpendException(ResourceString(R.string.gift_card_order_changed))
             }
             ctxSpendConfig.set(CTXSpendConfig.PREFS_LAST_PURCHASE_START, System.currentTimeMillis())
@@ -558,8 +561,9 @@ class DashSpendViewModel @Inject constructor(
                     )
                 }
             )
-            val provider = giftCardProviderDao.getProviderByMerchantId(it, selectedProvider!!.name)
-            when (selectedProvider) {
+            val provider = giftCardProviderDao.getProviderByMerchantId(quotedMerchantId, quotedProvider.name)
+            refuseUnlessStillOffered(shown)
+            when (quotedProvider) {
                 GiftCardProviderType.CTX -> {
                     try {
                         val currency = cardCurrency
@@ -570,8 +574,9 @@ class DashSpendViewModel @Inject constructor(
                         }
                         // before the order exists: without a usable rate none is left behind unpaid
                         confirmedPrice = shown to acceptedPrice(shown)
-                        if (currentQuote() != shown || purchaseBlock != null) {
-                            log.error("purchaseGiftCard error: the offer changed while the rate was looked up")
+                        refuseUnlessStillOffered(shown)
+                        if (purchaseBlock != null) {
+                            log.error("purchaseGiftCard error: the offer was withdrawn while the rate was looked up")
                             throw CTXSpendException(ResourceString(R.string.gift_card_order_changed))
                         }
                         val requestedAt = elapsedRealtime()
@@ -617,12 +622,16 @@ class DashSpendViewModel @Inject constructor(
                         )
                     }
                 }
-
-                null -> {
-                    throw IllegalArgumentException("no giftcard provider")
-                }
             }.also { cards -> cards.firstOrNull()?.let { orderedCards = it.id to shownOrder.values.sum() } }
         } ?: throw CTXSpendException("purchaseGiftCard error: no merchant")
+    }
+
+    /** Called after every wait on the way to an order: nothing is ordered once the selection is another. */
+    private fun refuseUnlessStillOffered(shown: GiftCardQuote) {
+        if (currentQuote() != shown) {
+            log.error("purchaseGiftCard error: the order or its price changed after it was confirmed")
+            throw CTXSpendException(ResourceString(R.string.gift_card_order_changed))
+        }
     }
 
     private val _submissionState = MutableStateFlow(GiftCardSubmissionState.IDLE)

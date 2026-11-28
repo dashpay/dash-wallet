@@ -187,6 +187,7 @@ class DashSpendCardCurrencyTest {
     }
 
     private var duringFreshRateLookup: () -> Unit = {}
+    private var duringProviderLookup: () -> Unit = {}
 
     private fun merchantResponse(sourceId: String, currency: String?, discount: Int = 0) = GetMerchantResponse(
         id = sourceId,
@@ -214,7 +215,10 @@ class DashSpendCardCurrencyTest {
         val ctx = CTXSpendRepository(api, config, TokenAuthenticator(mock(), config))
         val providerDao = mock<GiftCardProviderDao> {
             onBlocking { getProvidersByMerchantId(any()) } doReturn listOf(ctxRow, piggyCardsRow)
-            onBlocking { getProviderByMerchantId(eq(merchantId), eq(GiftCardProviderType.CTX.name)) } doReturn ctxRow
+            onBlocking { getProviderByMerchantId(eq(merchantId), eq(GiftCardProviderType.CTX.name)) } doAnswer {
+                duringProviderLookup()
+                ctxRow
+            }
             onBlocking {
                 getProviderByMerchantId(eq(otherMerchantId), eq(GiftCardProviderType.CTX.name))
             } doReturn otherCtxRow
@@ -2527,6 +2531,22 @@ class DashSpendCardCurrencyTest {
 
         viewModel.purchaseGiftCard(shownForTheOther)
         assertEquals("ctx-source-2", orderSentToCtx().merchantId)
+    }
+
+    @Test
+    fun providerSwitchedWhileItsRowWasLookedUp_ordersFromNeither() = runBlocking {
+        piggyCards.stub { onBlocking { orderGiftcard(any(), any(), any(), any()) } doReturn emptyList() }
+        val viewModel = viewModel()
+        val shown = viewModel.shownFor100Pounds()
+        duringProviderLookup = { viewModel.selectedProvider = GiftCardProviderType.PiggyCards }
+
+        val refusal = assertThrows(CTXSpendException::class.java) {
+            runBlocking { viewModel.purchaseGiftCard(shown) }
+        }
+
+        assertEquals(R.string.gift_card_order_changed, refusal.resourceString?.resourceId)
+        verifyBlocking(api, never()) { purchaseGiftCard(any()) }
+        verifyBlocking(piggyCards, never()) { orderGiftcard(any(), any(), any(), any()) }
     }
 
     @Test
