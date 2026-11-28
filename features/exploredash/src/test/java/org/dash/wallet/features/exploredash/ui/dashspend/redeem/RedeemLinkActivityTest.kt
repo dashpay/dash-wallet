@@ -158,6 +158,33 @@ class RedeemLinkActivityTest {
     }
 
     @Test
+    fun `a service worker answer for a replaced page leaves the new page alone`() {
+        configureProxy()
+        activity.redeemServiceWorkerClient.shouldInterceptRequest(request("https://example.com/a.js"))
+        val replacement = WebView(activity)
+        activity.webView = replacement
+
+        shadowOf(Looper.getMainLooper()).idle()
+
+        assertSame(replacement, activity.webView)
+        assertFalse(activity.isBlockedByProxy)
+        assertFalse(RedeemLinkActivity.overrideClaims.isEmpty)
+    }
+
+    @Test
+    fun `a page answer for a replaced page leaves the new page alone`() {
+        configureProxy()
+        activity.redeemWebViewClient.shouldInterceptRequest(view, request("https://example.com/a.js"))
+        val replacement = WebView(activity)
+        activity.webView = replacement
+
+        shadowOf(Looper.getMainLooper()).idle()
+
+        assertSame(replacement, activity.webView)
+        assertFalse(activity.isBlockedByProxy)
+    }
+
+    @Test
     fun `a page request under a new proxy is dropped and closes the page`() {
         configureProxy()
 
