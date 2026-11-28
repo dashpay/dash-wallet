@@ -20,6 +20,7 @@ import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import java.net.Proxy
 import java.net.URI
+import java.net.URISyntaxException
 
 object RedeemLinkPolicy {
     private const val MIN_SDK_INT = 26
@@ -28,12 +29,6 @@ object RedeemLinkPolicy {
     private val redeemPath = Regex("^/+gift-cards/[A-Za-z0-9_-]+/redeem$")
     private val subframeOnlyUrls = setOf("about:blank", "about:srcdoc")
     private val contactSchemes = setOf("mailto", "tel")
-
-    enum class LoadResult(val leavesForBrowser: Boolean) {
-        STARTED(false),
-        BLOCKED_BY_PROXY(false),
-        UNAVAILABLE(true)
-    }
 
     enum class RequestVerdict { ALLOW, DROP, BLOCKED_BY_PROXY }
 
@@ -93,9 +88,26 @@ object RedeemLinkPolicy {
         }
     }
 
+    // A host java.net.URI cannot hold says nothing about a proxy, so such a request follows the device settings alone.
+    fun requestConnectsDirectly(
+        url: String?,
+        proxyHost: String?,
+        pacUrl: String?,
+        selectProxies: (URI) -> List<Proxy>?
+    ): Boolean {
+        val lookup = proxyLookupUri(url) ?: return proxyHost.isNullOrBlank() && pacUrl.isNullOrBlank()
+        return connectsDirectly(proxyHost, pacUrl) { selectProxies(lookup) }
+    }
+
     // A proxy selector only looks at the scheme and host, and java.net.URI rejects characters a link may hold.
     fun proxyLookupUri(url: String?): URI? {
-        return url?.toHttpUrlOrNull()?.let { URI(it.scheme, it.host, null, null) }
+        val link = url?.toHttpUrlOrNull() ?: return null
+
+        return try {
+            URI(link.scheme, link.host, null, null)
+        } catch (e: URISyntaxException) {
+            null
+        }
     }
 
     fun normalizeChallenge(challenge: String?): String? {

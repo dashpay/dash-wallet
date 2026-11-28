@@ -317,10 +317,32 @@ class RedeemLinkPolicyTest {
     }
 
     @Test
-    fun `a proxy found on opening or retrying keeps the buyer on the redeem screen`() {
-        assertFalse(RedeemLinkPolicy.LoadResult.BLOCKED_BY_PROXY.leavesForBrowser)
-        assertFalse(RedeemLinkPolicy.LoadResult.STARTED.leavesForBrowser)
-        assertTrue(RedeemLinkPolicy.LoadResult.UNAVAILABLE.leavesForBrowser)
+    fun `a request host that java URI rejects is not taken for a proxy`() {
+        listOf("https://img_cdn.example.com/a.png", "https://a.1b/a.png").forEach { url ->
+            assertNull(url, RedeemLinkPolicy.proxyLookupUri(url))
+            assertTrue(url, RedeemLinkPolicy.requestConnectsDirectly(url, null, null) { error("no lookup") })
+            assertTrue(url, RedeemLinkPolicy.requestConnectsDirectly(url, " ", "") { error("no lookup") })
+        }
+    }
+
+    @Test
+    fun `a request host that java URI rejects still follows the device proxy settings`() {
+        val url = "https://img_cdn.example.com/a.png"
+
+        assertFalse(RedeemLinkPolicy.requestConnectsDirectly(url, "proxy.example.com", null) { error("no lookup") })
+        assertFalse(
+            RedeemLinkPolicy.requestConnectsDirectly(url, null, "https://example.com/proxy.pac") { error("no lookup") }
+        )
+    }
+
+    @Test
+    fun `a request is looked up by its own host`() {
+        val proxied = listOf(Proxy(Proxy.Type.HTTP, InetSocketAddress.createUnresolved("proxy.example.com", 8080)))
+        val select = { uri: URI -> if (uri.host == "cdn.example.com") proxied else listOf(Proxy.NO_PROXY) }
+
+        assertFalse(RedeemLinkPolicy.requestConnectsDirectly("https://cdn.example.com/a.png", null, null, select))
+        assertTrue(RedeemLinkPolicy.requestConnectsDirectly("https://www.example.com/a.png", null, null, select))
+        assertFalse(RedeemLinkPolicy.requestConnectsDirectly("https://www.example.com/a.png", null, null) { null })
     }
 
     @Test

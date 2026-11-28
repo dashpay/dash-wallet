@@ -29,10 +29,12 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.view.MotionEvent
 import android.view.ViewGroup
 import android.webkit.ConsoleMessage
 import android.webkit.CookieManager
+import android.webkit.DownloadListener
 import android.webkit.JsPromptResult
 import android.webkit.JsResult
 import android.webkit.PermissionRequest
@@ -49,6 +51,7 @@ import android.webkit.WebViewClient
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.annotation.RequiresApi
+import androidx.annotation.VisibleForTesting
 import androidx.appcompat.app.AlertDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -107,6 +110,7 @@ import org.dash.wallet.features.exploredash.utils.CTXSpendConstants
 import org.slf4j.LoggerFactory
 import java.io.ByteArrayInputStream
 import java.net.ProxySelector
+import java.net.URI
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -116,13 +120,15 @@ class RedeemLinkActivity : InteractionAwareActivity() {
         private const val EXTRA_CHALLENGE = "extra_challenge"
         private const val EXTRA_MERCHANT_NAME = "extra_merchant_name"
         private const val MAX_JS_DIALOGS = 3
+        private const val PROXY_CHECK_TTL_MILLIS = 1000L
 
         // Apps cannot listen on a loopback port below 1024, so a request sent here fails before any data leaves.
         private const val CLEARTEXT_SINK = "127.0.0.1:9"
 
         // The proxy override and the stored web data are shared by every WebView in the process, so only the
         // last screen to close lifts the override and wipes; an earlier one would cut into a newer claim.
-        private val overrideClaims = RedeemProxyOverrideClaims()
+        @VisibleForTesting
+        internal val overrideClaims = RedeemProxyOverrideClaims()
         private val log = LoggerFactory.getLogger(RedeemLinkActivity::class.java)
 
         fun canOpenInApp(context: Context, url: String?, ctxBaseUrl: String): Boolean {
@@ -144,12 +150,18 @@ class RedeemLinkActivity : InteractionAwareActivity() {
 
         // getDefaultProxy is what the platform copies into the proxy system properties and what WebView follows:
         // the global proxy, else the active network's, including a PAC script.
-        private fun connectsDirectly(context: Context, url: String?): Boolean {
+        private fun connectsDirectly(context: Context, url: String?, isPageRequest: Boolean = false): Boolean {
             return try {
                 val proxy = context.getSystemService(ConnectivityManager::class.java).defaultProxy
                 val pacUrl = proxy?.pacFileUrl?.takeUnless { it == Uri.EMPTY }?.toString()
-                RedeemLinkPolicy.connectsDirectly(proxy?.host, pacUrl) {
-                    RedeemLinkPolicy.proxyLookupUri(url)?.let { ProxySelector.getDefault()?.select(it) }
+                val select = { uri: URI -> ProxySelector.getDefault()?.select(uri) }
+
+                if (isPageRequest) {
+                    RedeemLinkPolicy.requestConnectsDirectly(url, proxy?.host, pacUrl, select)
+                } else {
+                    RedeemLinkPolicy.connectsDirectly(proxy?.host, pacUrl) {
+                        RedeemLinkPolicy.proxyLookupUri(url)?.let(select)
+                    }
                 }
             } catch (e: Exception) {
                 log.warn("Proxy settings could not be read: {}", e.javaClass.simpleName)
@@ -168,17 +180,24 @@ class RedeemLinkActivity : InteractionAwareActivity() {
 
     @Inject lateinit var walletData: WalletDataProvider
 
-    private lateinit var redeemUrl: String
-    private var webView by mutableStateOf<WebView?>(null)
+    @VisibleForTesting
+    internal lateinit var redeemUrl: String
+
+    @VisibleForTesting
+    internal var webView by mutableStateOf<WebView?>(null)
     private var host by mutableStateOf<String?>(null)
     private var loadProgress by mutableIntStateOf(0)
-    private var hasError by mutableStateOf(false)
-    private var isBlockedByProxy by mutableStateOf(false)
+    @VisibleForTesting
+    internal var hasError by mutableStateOf(false)
+
+    @VisibleForTesting
+    internal var isBlockedByProxy by mutableStateOf(false)
     private var hasWipedWebData = false
     private var jsDialog: AlertDialog? = null
     private var hasCommittedPage = false
     private var jsDialogCount = 0
     private var downloadNoticeShown = false
+    private val proxyChecks = RedeemProxyCheckCache(PROXY_CHECK_TTL_MILLIS) { SystemClock.elapsedRealtime() }
 
     // Auto-logout can be switched off, and then nothing else closes this screen when the device locks.
     private val screenOffReceiver = object : BroadcastReceiver() {
@@ -189,6 +208,7 @@ class RedeemLinkActivity : InteractionAwareActivity() {
 
     private val proxyChangeReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
+            proxyChecks.clear()
             // The broadcast is sticky, so it also arrives once on registration.
             if (isFinishing || !::redeemUrl.isInitialized || connectsDirectly(context, redeemUrl)) {
                 return
@@ -197,7 +217,8 @@ class RedeemLinkActivity : InteractionAwareActivity() {
         }
     }
 
-    private val redeemWebViewClient = object : WebViewClient() {
+    @VisibleForTesting
+    internal val redeemWebViewClient = object : WebViewClient() {
         override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
             val url = request.url?.toString()
 
@@ -210,7 +231,7 @@ class RedeemLinkActivity : InteractionAwareActivity() {
                     request.hasGesture() && RedeemLinkPolicy.isContactLink(url) -> openContactLink(request.url)
                     request.hasGesture() -> showBlockedNotice()
                     // A redirect chain that ends here leaves a blank view; give the user Retry / Open in browser.
-                    !hasCommittedPage -> hasError = true
+                    !hasCommittedPage -> failInitialLoad(view)
                 }
             }
             return true
@@ -219,7 +240,9 @@ class RedeemLinkActivity : InteractionAwareActivity() {
         override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
             // The proxy broadcast can trail the setting, and this runs before each request the page starts.
             val verdict = RedeemLinkPolicy.requestVerdict(request.url?.scheme) {
-                connectsDirectly(this@RedeemLinkActivity, request.url?.toString())
+                proxyChecks.isDirect(request.url?.host) {
+                    connectsDirectly(this@RedeemLinkActivity, request.url?.toString(), isPageRequest = true)
+                }
             }
 
             if (verdict == RedeemLinkPolicy.RequestVerdict.ALLOW) {
@@ -248,7 +271,7 @@ class RedeemLinkActivity : InteractionAwareActivity() {
         // Once a page has committed, the WebView's own error page keeps Back working.
         override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
             if (request.isForMainFrame && !hasCommittedPage) {
-                hasError = true
+                failInitialLoad(view)
             }
         }
 
@@ -266,7 +289,7 @@ class RedeemLinkActivity : InteractionAwareActivity() {
         override fun onReceivedSslError(view: WebView, handler: SslErrorHandler, error: SslError) {
             handler.cancel()
             if (!hasCommittedPage) {
-                hasError = true
+                failInitialLoad(view)
             }
         }
 
@@ -275,6 +298,16 @@ class RedeemLinkActivity : InteractionAwareActivity() {
             discardWebView(view)
             hasError = true
             return true
+        }
+    }
+
+    @VisibleForTesting
+    internal val redeemDownloadListener = DownloadListener { _, _, _, _, _ ->
+        if (!hasCommittedPage) {
+            webView?.let { failInitialLoad(it) }
+        } else if (!downloadNoticeShown) {
+            downloadNoticeShown = true
+            showBlockedNotice()
         }
     }
 
@@ -424,14 +457,17 @@ class RedeemLinkActivity : InteractionAwareActivity() {
         }
     }
 
-    private fun loadRedeemPage(): RedeemLinkPolicy.LoadResult {
+    @VisibleForTesting
+    internal enum class LoadResult { STARTED, BLOCKED_BY_PROXY, UNAVAILABLE }
+
+    private fun loadRedeemPage(): LoadResult {
         if (!canIsolate()) {
-            return RedeemLinkPolicy.LoadResult.UNAVAILABLE
+            return LoadResult.UNAVAILABLE
         }
         if (!connectsDirectly(this, redeemUrl)) {
-            return RedeemLinkPolicy.LoadResult.BLOCKED_BY_PROXY
+            return LoadResult.BLOCKED_BY_PROXY
         }
-        val view = createWebView() ?: return RedeemLinkPolicy.LoadResult.UNAVAILABLE
+        val view = createWebView() ?: return LoadResult.UNAVAILABLE
         webView?.let { destroyWebView(it) }
         webView = view
 
@@ -462,7 +498,7 @@ class RedeemLinkActivity : InteractionAwareActivity() {
                 load.run()
             }
         }
-        return RedeemLinkPolicy.LoadResult.STARTED
+        return LoadResult.STARTED
     }
 
     // Setup callbacks can arrive after the screen was closed but before onDestroy has run.
@@ -470,6 +506,7 @@ class RedeemLinkActivity : InteractionAwareActivity() {
         return !isFinishing && !isDestroyed && view === webView
     }
 
+    // A failed first load leaves nothing to show, so its view and the shared proxy override go with it.
     private fun failInitialLoad(view: WebView) {
         view.stopLoading()
         hasError = true
@@ -485,13 +522,18 @@ class RedeemLinkActivity : InteractionAwareActivity() {
     }
 
     private fun openRedeemPage() {
-        val result = loadRedeemPage()
+        showLoadResult(loadRedeemPage())
+    }
 
-        if (result.leavesForBrowser) {
-            openInBrowser()
-            finish()
-        } else if (result == RedeemLinkPolicy.LoadResult.BLOCKED_BY_PROXY) {
-            showBlockedByProxy()
+    @VisibleForTesting
+    internal fun showLoadResult(result: LoadResult) {
+        when (result) {
+            LoadResult.STARTED -> Unit
+            LoadResult.BLOCKED_BY_PROXY -> showBlockedByProxy()
+            LoadResult.UNAVAILABLE -> {
+                openInBrowser()
+                finish()
+            }
         }
     }
 
@@ -518,14 +560,7 @@ class RedeemLinkActivity : InteractionAwareActivity() {
             CookieManager.getInstance().setAcceptThirdPartyCookies(view, false)
             view.webViewClient = redeemWebViewClient
             view.webChromeClient = redeemWebChromeClient
-            view.setDownloadListener { _, _, _, _, _ ->
-                if (!hasCommittedPage) {
-                    hasError = true
-                } else if (!downloadNoticeShown) {
-                    downloadNoticeShown = true
-                    showBlockedNotice()
-                }
-            }
+            view.setDownloadListener(redeemDownloadListener)
             view
         } catch (e: Exception) {
             log.warn("WebView is not available: {}", e.javaClass.simpleName)
