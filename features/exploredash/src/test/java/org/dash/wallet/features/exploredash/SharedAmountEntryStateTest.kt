@@ -72,6 +72,6 @@ class SharedAmountEntryStateTest {
 
         assertEquals("Receive must be able to continue", true, canContinue)
         assertEquals("EUR", entry.selectedCurrencyCode)
-        assertEquals(Fiat.valueOf("KWD", 0), entry.fiatAmount.value)
+        assertEquals("nothing is left in the card's currency", Fiat.valueOf("EUR", 0), entry.fiatAmount.value)
     }
 }

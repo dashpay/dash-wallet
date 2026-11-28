@@ -247,7 +247,7 @@ class DashSpendSubmissionStateTest {
         val transaction = mockk<TxInfo>(relaxed = true)
         every { transaction.txId } returns ZERO_TX_ID
         coEvery { sendPaymentService.payWithDashUrl(any(), any(), any(), any(), any(), any()) } coAnswers {
-            arg<(suspend (String) -> Unit)?>(4)?.invoke(ZERO_TX_ID)
+            checkNotNull(arg<(suspend (String) -> Unit)?>(5)) { "no transaction callback" }.invoke(ZERO_TX_ID)
             transaction
         }
         coEvery { transactionMetadata.markGiftCardTransaction(any(), any(), any()) } throws

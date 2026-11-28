@@ -26,7 +26,8 @@ object GiftCardPaymentGuard {
     /** Up to this much more than the confirmed amount is paid without asking again. */
     const val SILENT_INCREASE_BASIS_POINTS = 50L
     private const val BASIS_POINTS = 10_000L
-    private val plainDecimal = Regex("\\d+(\\.\\d{1,8})?")
+    private const val DUFF_DECIMALS = 8
+    private val plainDecimal = Regex("\\d+(\\.\\d{1,$DUFF_DECIMALS})?")
 
     /** The Dash that [total] comes to at [rate], rounded down, or null when it cannot be told. */
     fun approvedAmount(total: BigDecimal, currency: String, rate: ExchangeRate): Coin? = try {
@@ -39,8 +40,11 @@ object GiftCardPaymentGuard {
 
     /** The Dash amount a provider quoted as text, or null unless it is a positive number of duffs. */
     fun dashAmount(quoted: String?): Coin? = try {
-        quoted?.trim()?.takeIf(plainDecimal::matches)?.let(Coin::parseCoin)?.takeIf { it.isPositive }
-    } catch (e: IllegalArgumentException) {
+        // exact or not at all: a lenient parser would turn a figure beyond the duff range into another
+        quoted?.trim()?.takeIf(plainDecimal::matches)
+            ?.let { Coin.valueOf(BigDecimal(it).movePointRight(DUFF_DECIMALS).longValueExact()) }
+            ?.takeIf { it.isPositive }
+    } catch (e: ArithmeticException) {
         null
     }
 
