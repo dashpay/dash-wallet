@@ -123,7 +123,7 @@ class DashSpendSubmissionStateTest {
 
     /** Submits a payment whose result never came back, leaving the purchase unresolved. */
     private suspend fun submitAmbiguously(viewModel: DashSpendViewModel) {
-        coEvery { sendPaymentService.payWithDashUrl(any(), any(), any(), any(), any()) } answers {
+        coEvery { sendPaymentService.payWithDashUrl(any(), any(), any(), any(), any(), any()) } answers {
             // the verifier quarantines and persists the payment before the submission fails, so
             // the record is already on disk by the time the screen hears about it
             unresolvedOnDisk.value = true
@@ -159,7 +159,7 @@ class DashSpendSubmissionStateTest {
         val viewModel = createViewModel()
         val transaction = mockk<Transaction>(relaxed = true)
         every { transaction.txId } returns Sha256Hash.ZERO_HASH
-        coEvery { sendPaymentService.payWithDashUrl(any(), any(), any(), any(), any()) } returns transaction
+        coEvery { sendPaymentService.payWithDashUrl(any(), any(), any(), any(), any(), any()) } returns transaction
 
         viewModel.payAndRecordOrder(paymentUri, emptyList())
         assertEquals(GiftCardSubmissionState.COMPLETED, viewModel.submissionState.value)
@@ -273,7 +273,7 @@ class DashSpendSubmissionStateTest {
             assertEquals(GiftCardSubmissionState.PENDING, expected.state)
         }
 
-        coVerify(exactly = 0) { sendPaymentService.payWithDashUrl(any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { sendPaymentService.payWithDashUrl(any(), any(), any(), any(), any(), any()) }
     }
 
     // --- the purchase is bound to the wallet it was confirmed on ------------------------------
@@ -294,7 +294,7 @@ class DashSpendSubmissionStateTest {
         val transaction = mockk<Transaction>(relaxed = true)
         every { transaction.txId } returns Sha256Hash.ZERO_HASH
         coEvery {
-            sendPaymentService.payWithDashUrl(any(), any(), any(), captureNullable(origins), any())
+            sendPaymentService.payWithDashUrl(any(), any(), any(), captureNullable(origins), any(), any())
         } returns transaction
 
         // When
@@ -317,6 +317,6 @@ class DashSpendSubmissionStateTest {
             // a null origin would let the payment adopt whatever wallet is installed later
         }
 
-        coVerify(exactly = 0) { sendPaymentService.payWithDashUrl(any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { sendPaymentService.payWithDashUrl(any(), any(), any(), any(), any(), any()) }
     }
 }

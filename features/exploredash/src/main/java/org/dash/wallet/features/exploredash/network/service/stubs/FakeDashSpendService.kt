@@ -72,11 +72,13 @@ class FakeDashSpendService @Inject constructor(
         serviceName: String?,
         recovery: PaymentRecoveryMetadata?,
         originWallet: Wallet?,
+        approveAmount: (suspend (Coin?) -> Unit)?,
         onTransactionCreated: (suspend (Sha256Hash) -> Unit)?
     ): Transaction {
         return if (dashUri.startsWith(DASH_SPEND_SCHEMA)) {
             val uri = Uri.parse(dashUri)
             val amount = Coin.valueOf(uri.getQueryParameter("amount")?.toLong() ?: 0)
+            approveAmount?.invoke(amount)
             val transaction = realService.sendCoins(
                 Address.fromBase58(walletDataProvider.networkParameters, "yiCvnqNp53bjCReThnPx8ttuhM7JXUUyfQ"),
                 amount
@@ -87,7 +89,14 @@ class FakeDashSpendService @Inject constructor(
             onTransactionCreated?.invoke(transaction.txId)
             transaction
         } else {
-            realService.payWithDashUrl(dashUri, serviceName, recovery, originWallet, onTransactionCreated)
+            realService.payWithDashUrl(
+                dashUri,
+                serviceName,
+                recovery,
+                originWallet,
+                approveAmount,
+                onTransactionCreated
+            )
         }
     }
 

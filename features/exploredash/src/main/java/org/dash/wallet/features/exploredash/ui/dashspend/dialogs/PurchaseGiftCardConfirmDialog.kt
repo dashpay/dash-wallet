@@ -57,12 +57,14 @@ import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.uri.BitcoinURIParseException
@@ -291,6 +293,15 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
                     viewModel.purchaseBlock.isAboutTheAmount()
                 if (isOutdated && viewModel.submissionState.value == GiftCardSubmissionState.IDLE) {
                     dismissAllowingStateLoss()
+                }
+            }
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.paidOrder.collect { txId ->
+                if (txId != null && isAdded && viewModel.takePaidOrder(txId)) {
+                    enterAmountViewModel.clearSavedState()
+                    showGiftCardDetailsDialog(txId)
                 }
             }
         }
@@ -555,24 +566,22 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
                     }
                     return@launch
                 }
-                val transactionId = createSendingRequestFromDashUri(dashPaymentUrl, data)
-                transactionId?.let {
-                    enterAmountViewModel.clearSavedState()
-                    showGiftCardDetailsDialog(it)
-                }
+                // the details are shown from paidOrder: this sheet may be gone by the time it is paid
+                createSendingRequestFromDashUri(dashPaymentUrl, data)
             } finally {
                 viewModel.releaseUnusedSubmission()
             }
         }
     }
 
-    private suspend fun acceptsHigherPrice(change: GiftCardPriceChange): Boolean {
+    // also asked from the payment itself, which runs off the main thread and outlives this sheet
+    private suspend fun acceptsHigherPrice(change: GiftCardPriceChange): Boolean = withContext(Dispatchers.Main) {
         if (!isAdded) {
-            return false
+            return@withContext false
         }
         val fiatFormat = GiftCardCurrency.displayFormat(change.currency)
         val dashFormat = viewModel.dashFormat.noCode()
-        return AdaptiveDialog.create(
+        AdaptiveDialog.create(
             R.drawable.ic_info_blue,
             getString(R.string.gift_card_price_updated_title),
             getString(
@@ -632,7 +641,9 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
             // found, and its inputs are released if it never appears. Don't let the user retry now.
             log.warn("purchaseGiftCard submission result unknown for {}", ex.txId, ex)
             // payAndRecordOrder has already recorded the order against this transaction id.
-            enterAmountViewModel.clearSavedState()
+            if (isAdded) {
+                enterAmountViewModel.clearSavedState()
+            }
             showPaymentPending()
             null
         } catch (ex: DuplicateGiftCardSubmissionException) {

@@ -187,6 +187,8 @@ data class GiftCardPriceChange(
     val charged: Coin
 )
 
+private class GiftCardPriceDeclinedException : Exception("the higher price was declined")
+
 class MerchantRefresh internal constructor(
     val merchant: Merchant,
     internal val load: Int?,
@@ -609,8 +611,20 @@ class DashSpendViewModel @Inject constructor(
             log.info("not resetting submission state, a purchase is still in progress")
             return
         }
+        _paidOrder.value = null
         _submissionState.value = GiftCardSubmissionState.IDLE
     }
+
+    private val _paidOrder = MutableStateFlow<Sha256Hash?>(null)
+
+    /**
+     * The payment of a purchase whose details have not been shown yet. The payment outlives the
+     * sheet that started it, so whichever sheet is on screen when it ends shows them.
+     */
+    val paidOrder: StateFlow<Sha256Hash?> = _paidOrder.asStateFlow()
+
+    /** True for the one caller that gets to show the details of [txId]. */
+    fun takePaidOrder(txId: Sha256Hash): Boolean = _paidOrder.compareAndSet(txId, null)
 
     /**
      * Claims the right to submit, atomically, returning false when a purchase is already under
@@ -634,28 +648,48 @@ class DashSpendViewModel @Inject constructor(
         _submissionState.compareAndSet(GiftCardSubmissionState.IN_PROGRESS, GiftCardSubmissionState.IDLE)
     }
 
+    /** What the buyer has agreed to pay: the price shown, or a higher one accepted since. */
+    private class AcceptedPrice(
+        val currency: String,
+        val rate: org.bitcoinj.utils.ExchangeRate,
+        var total: BigDecimal,
+        var amount: Coin
+    )
+
+    private fun acceptedPrice(shown: GiftCardQuote): AcceptedPrice {
+        val rate = cardExchangeRate
+        val approved = rate?.let { GiftCardPaymentGuard.approvedAmount(shown.total, shown.currency, it) }
+        if (rate == null || approved == null) {
+            log.error("gift card not paid: there is no rate to check its price with")
+            throw CTXSpendException(ResourceString(R.string.gift_card_price_unchecked))
+        }
+        return AcceptedPrice(shown.currency, rate, shown.total, approved)
+    }
+
+    /** The higher price [requested] is, or null when it is paid as accepted. Refuses when it names no amount. */
+    private fun AcceptedPrice.changeTo(requested: Coin?): GiftCardPriceChange? {
+        if (requested == null || !requested.isPositive) {
+            log.error("gift card not paid: CTX named no Dash amount to check")
+            throw CTXSpendException(ResourceString(R.string.gift_card_price_unchecked))
+        }
+        if (!GiftCardPaymentGuard.isHigher(amount, requested)) {
+            return null
+        }
+        val requestedTotal = BigDecimal.valueOf(rate.coinToFiat(requested).value, Fiat.SMALLEST_UNIT_EXPONENT)
+        return GiftCardPriceChange(currency, total, amount, requestedTotal, requested)
+    }
+
     /**
      * The higher price CTX asks for [giftCard] than [shown] came to, or null when it is paid as shown.
      * Refuses when the two cannot be compared.
      */
-    internal fun priceChange(shown: GiftCardQuote, giftCard: GiftCardInfo): GiftCardPriceChange? {
-        val rate = cardExchangeRate
-        val approved = rate?.let { GiftCardPaymentGuard.approvedAmount(shown.total, shown.currency, it) }
-        val charged = GiftCardPaymentGuard.dashAmount(giftCard.cryptoAmount)
-        if (rate == null || approved == null || charged == null) {
-            log.error("gift card {} not paid: its price could not be checked", giftCard.id)
-            throw CTXSpendException(ResourceString(R.string.gift_card_price_unchecked))
-        }
-        if (!GiftCardPaymentGuard.isHigher(approved, charged)) {
-            return null
-        }
-        val chargedTotal = BigDecimal.valueOf(rate.coinToFiat(charged).value, Fiat.SMALLEST_UNIT_EXPONENT)
-        return GiftCardPriceChange(shown.currency, shown.total, approved, chargedTotal, charged)
-    }
+    internal fun priceChange(shown: GiftCardQuote, giftCard: GiftCardInfo): GiftCardPriceChange? =
+        acceptedPrice(shown).changeTo(GiftCardPaymentGuard.dashAmount(giftCard.cryptoAmount))
 
     /**
-     * Pays a CTX order, asking [acceptsHigherPrice] first when CTX charges more than [shown].
-     * Returns null, with nothing paid, when the higher price is declined.
+     * Pays a CTX order. Both the Dash the order quotes and the Dash its payment request asks for
+     * are checked against [shown]; [acceptsHigherPrice] is asked when one is higher than the buyer
+     * has agreed to. Returns null, with nothing paid, when a higher price is declined.
      */
     suspend fun payCtxOrder(
         shown: GiftCardQuote,
@@ -663,12 +697,30 @@ class DashSpendViewModel @Inject constructor(
         giftCards: List<GiftCardInfo>,
         acceptsHigherPrice: suspend (GiftCardPriceChange) -> Boolean
     ): Sha256Hash? {
-        val change = priceChange(shown, giftCards.first())
-        if (change != null && !acceptsHigherPrice(change)) {
-            log.info("gift card {} not paid: the higher price was declined", giftCards.first().id)
+        val accepted = acceptedPrice(shown)
+        suspend fun accepts(requested: Coin?): Boolean {
+            val change = accepted.changeTo(requested) ?: return true
+            if (!acceptsHigherPrice(change)) {
+                log.info("gift card {} not paid: the higher price was declined", giftCards.first().id)
+                return false
+            }
+            accepted.total = change.chargedTotal
+            accepted.amount = change.charged
+            return true
+        }
+
+        if (!accepts(GiftCardPaymentGuard.dashAmount(giftCards.first().cryptoAmount))) {
             return null
         }
-        return payAndRecordOrder(paymentUri, giftCards)
+        return try {
+            payAndRecordOrder(paymentUri, giftCards) { invoiced ->
+                if (!accepts(invoiced)) {
+                    throw GiftCardPriceDeclinedException()
+                }
+            }
+        } catch (e: GiftCardPriceDeclinedException) {
+            null
+        }
     }
 
     /**
@@ -687,7 +739,8 @@ class DashSpendViewModel @Inject constructor(
      */
     suspend fun payAndRecordOrder(
         paymentUri: String,
-        giftCards: List<GiftCardInfo>
+        giftCards: List<GiftCardInfo>,
+        approveAmount: (suspend (Coin?) -> Unit)? = null
     ): Sha256Hash {
         // The wallet the user has just confirmed this purchase on, taken before the first
         // suspension. Everything below outlives the screen, and the invoice fetch alone can take
@@ -696,14 +749,15 @@ class DashSpendViewModel @Inject constructor(
         val authorizedWallet = walletDataProvider.wallet
             ?: throw IllegalStateException("there is no wallet to pay for this purchase from")
         return withContext(NonCancellable) {
-            payAndRecordOrderFrom(authorizedWallet, paymentUri, giftCards)
+            payAndRecordOrderFrom(authorizedWallet, paymentUri, giftCards, approveAmount)
         }
     }
 
     private suspend fun payAndRecordOrderFrom(
         authorizedWallet: Wallet,
         paymentUri: String,
-        giftCards: List<GiftCardInfo>
+        giftCards: List<GiftCardInfo>,
+        approveAmount: (suspend (Coin?) -> Unit)? = null
     ): Sha256Hash {
         // Read the durable record here rather than trust the flow above: this runs on a claim that
         // may have been taken moments after the view model was built, before the store had been
@@ -723,11 +777,12 @@ class DashSpendViewModel @Inject constructor(
 
         var recordedTxId: Sha256Hash? = null
         return try {
-            val txId = createSendingRequestFromDashUri(paymentUri, authorizedWallet) { newTxId ->
+            val txId = createSendingRequestFromDashUri(paymentUri, authorizedWallet, approveAmount) { newTxId ->
                 saveGiftCardDummy(newTxId, giftCards)
                 recordedTxId = newTxId
             }
             _submissionState.value = GiftCardSubmissionState.COMPLETED
+            _paidOrder.value = txId
             txId
         } catch (ex: PaymentSubmissionPendingException) {
             // The merchant may hold this payment, so the purchase stays blocked for good.
@@ -751,6 +806,7 @@ class DashSpendViewModel @Inject constructor(
     suspend fun createSendingRequestFromDashUri(
         paymentUri: String,
         originWallet: Wallet? = null,
+        approveAmount: (suspend (Coin?) -> Unit)? = null,
         onTransactionCreated: (suspend (Sha256Hash) -> Unit)? = null
     ): Sha256Hash = withContext(Dispatchers.IO) {
         // Snapshot before suspending. The selection lives on the navigation-scoped view model and
@@ -771,6 +827,7 @@ class DashSpendViewModel @Inject constructor(
             // so recovery can restore the expense category and merchant icon after committing.
             PaymentRecoveryMetadata(isGiftCardPurchase = true, merchantIconUrl = merchantIconUrl),
             originWallet = originWallet,
+            approveAmount = approveAmount,
             onTransactionCreated = onTransactionCreated
         )
         log.info("ctx spend transaction: ${transaction.txId}")

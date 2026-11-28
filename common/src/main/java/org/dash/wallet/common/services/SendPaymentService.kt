@@ -78,6 +78,9 @@ interface SendPaymentService {
      *   wallet only, and the payment is refused if a wipe has taken it away since. Null means the
      *   wallet installed when this is called, which is right for a caller that has not waited on
      *   anything since the user confirmed.
+     * @param approveAmount invoked with the amount about to be paid, null when the request names
+     *   none, once a payment request has been fetched and before coins are selected. Throwing
+     *   ends the payment with nothing signed or sent.
      * @param onTransactionCreated invoked once the transaction is built and signed, before it is
      *   submitted, so a caller can persist anything it will need to recover the payment later.
      *   Runs while the payment is still recoverable: after this point the transaction may reach
@@ -88,6 +91,7 @@ interface SendPaymentService {
         serviceName: String?,
         recovery: PaymentRecoveryMetadata? = null,
         originWallet: Wallet? = null,
+        approveAmount: (suspend (Coin?) -> Unit)? = null,
         onTransactionCreated: (suspend (Sha256Hash) -> Unit)? = null
     ): Transaction
     fun isFeeTooHigh(tx: Transaction): Boolean

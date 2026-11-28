@@ -225,6 +225,7 @@ class SendCoinsTaskRunner @Inject constructor(
         serviceName: String?,
         recovery: PaymentRecoveryMetadata?,
         originWallet: Wallet?,
+        approveAmount: (suspend (Coin?) -> Unit)?,
         onTransactionCreated: (suspend (Sha256Hash) -> Unit)?
     ): Transaction {
         // Taken before anything here can suspend. The barrier and the invoice fetch can each take
@@ -236,7 +237,7 @@ class SendCoinsTaskRunner @Inject constructor(
         return withContext(Dispatchers.IO) {
             pendingPaymentVerifier.awaitRestored()
             val paymentIntent = paymentIntentParser.parse(dashUri, false)
-            createPaymentRequest(wallet, paymentIntent, serviceName, recovery, onTransactionCreated)
+            createPaymentRequest(wallet, paymentIntent, serviceName, recovery, approveAmount, onTransactionCreated)
         }
     }
 
@@ -353,11 +354,13 @@ class SendCoinsTaskRunner @Inject constructor(
         basePaymentIntent: PaymentIntent,
         serviceName: String?,
         recovery: PaymentRecoveryMetadata? = null,
+        approveAmount: (suspend (Coin?) -> Unit)? = null,
         onTransactionCreated: (suspend (Sha256Hash) -> Unit)? = null
     ): Transaction {
         val requestUrl = basePaymentIntent.paymentRequestUrl
         if (requestUrl != null) {
             val paymentIntent = fetchPaymentRequest(basePaymentIntent)
+            approveAmount?.invoke(paymentIntent.amount)
             // The payee answers when it likes, and the gift card flow runs this NonCancellable,
             // so leaving the screen does not end the wait: a wipe can start, or finish and
             // install a replacement, before the invoice arrives.
@@ -365,6 +368,7 @@ class SendCoinsTaskRunner @Inject constructor(
             val sendRequest = createRequestFromPaymentIntent(wallet, paymentIntent)
             return sendPayment(wallet, paymentIntent, sendRequest, serviceName, recovery, onTransactionCreated)
         } else {
+            approveAmount?.invoke(basePaymentIntent.amount)
             // Nothing is fetched here, but the barrier, and whatever the caller awaited after it
             // took the wallet, can each take long enough for a wipe.
             ensureStillOwned(wallet, "selecting coins")

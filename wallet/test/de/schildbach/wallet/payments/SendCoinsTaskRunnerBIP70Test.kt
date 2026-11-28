@@ -1225,6 +1225,48 @@ class SendCoinsTaskRunnerBIP70Test {
     // ==================== a wipe between confirmation and signing ====================
 
     /** A second copy of the funded wallet: anything that wrongly pays from it can. */
+    @Test
+    fun `the amount of the fetched payment request is offered for approval before anything is signed`() = runBlocking {
+        // Given: a request that asks for more than the URI that led to it
+        val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
+        val invoiced = Coin.parseCoin("0.02")
+        val posts = AtomicInteger()
+        mockWebServer.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse =
+                if (request.method == "POST") {
+                    posts.incrementAndGet()
+                    ackResponse()
+                } else {
+                    paymentRequestResponse(testAddress, invoiced)
+                }
+        }
+        val bip72Uri = "dash:$testAddress?amount=0.01&r=${mockWebServer.url("/request")}"
+        var offered: Coin? = null
+        var createdTxId: Sha256Hash? = null
+
+        // When: the caller refuses it
+        val thrown = try {
+            sendCoinsTaskRunner.payWithDashUrl(
+                bip72Uri,
+                "TestService",
+                approveAmount = {
+                    offered = it
+                    throw IllegalArgumentException("refused")
+                }
+            ) { createdTxId = it }
+            null
+        } catch (e: Exception) {
+            e
+        }
+
+        // Then
+        assertEquals(invoiced, offered)
+        assertTrue("expected the caller's refusal, got $thrown", thrown is IllegalArgumentException)
+        assertEquals(0, posts.get())
+        verify(exactly = 0) { securityFunctions.deriveKey(any(), any()) }
+        assertNull(createdTxId)
+    }
+
     private fun loadFundedReplacement(): Wallet =
         javaClass.getResourceAsStream("coinjoin.wallet").use { WalletProtobufSerializer().readWallet(it) }
 

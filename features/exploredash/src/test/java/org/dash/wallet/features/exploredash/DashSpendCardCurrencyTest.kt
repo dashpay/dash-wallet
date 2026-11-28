@@ -73,6 +73,7 @@ import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardShoppingCart
 import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardSubmissionState
 import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
 import org.dash.wallet.features.exploredash.utils.GiftCardCurrency
+import org.dash.wallet.features.exploredash.utils.GiftCardPaymentGuard
 import org.dash.wallet.features.exploredash.utils.PiggyCardsTestMerchants
 import org.dash.wallet.features.exploredash.utils.toCardFormattedString
 import org.junit.After
@@ -90,6 +91,7 @@ import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.doSuspendableAnswer
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
@@ -144,6 +146,7 @@ class DashSpendCardCurrencyTest {
     private val giftCardDao = mock<GiftCardDao>()
     private val payments = mock<SendPaymentService>()
     private var signedInToCtx = false
+    private val sentPayments = mutableListOf<Coin?>()
 
     @Before
     fun setUp() {
@@ -1395,7 +1398,8 @@ class DashSpendCardCurrencyTest {
     private suspend fun payOrderCharged(
         dash: String?,
         cardAmount: String? = "100.00",
-        acceptsHigherPrice: Boolean = false
+        acceptsHigherPrice: Boolean = false,
+        invoiced: Coin? = null
     ): Pair<Sha256Hash?, List<GiftCardPriceChange>> {
         ctxSells("GBP", listOf("5", "500"), discount = 500)
         api.stub {
@@ -1406,16 +1410,12 @@ class DashSpendCardCurrencyTest {
                     cardFiatAmount = cardAmount,
                     cardFiatCurrency = "GBP",
                     cryptoAmount = dash,
+                    fiatAmount = "95.00",
                     fiatCurrency = "GBP"
                 )
             }
         }
-        val transaction = mock<Transaction> { on { txId } doReturn Sha256Hash.ZERO_HASH }
-        payments.stub {
-            onBlocking {
-                payWithDashUrl(any(), anyOrNull(), anyOrNull(), anyOrNull(), anyOrNull())
-            } doReturn transaction
-        }
+        paymentRequestAsksFor(invoiced ?: dash?.let(GiftCardPaymentGuard::dashAmount))
         setRate("GBP", "30")
         val viewModel = viewModel()
         viewModel.openCtxMerchant()
@@ -1431,8 +1431,31 @@ class DashSpendCardCurrencyTest {
         return txId to asked
     }
 
+    /** The wallet's side of a payment: the fetched request asks for [amount], and is paid unless refused. */
+    private fun paymentRequestAsksFor(amount: Coin?) {
+        val transaction = mock<Transaction> { on { txId } doReturn Sha256Hash.ZERO_HASH }
+        sentPayments.clear()
+        payments.stub {
+            onBlocking {
+                payWithDashUrl(any(), anyOrNull(), anyOrNull(), anyOrNull(), anyOrNull(), anyOrNull())
+            } doSuspendableAnswer {
+                it.getArgument<(suspend (Coin?) -> Unit)?>(4)?.invoke(amount)
+                it.getArgument<(suspend (Sha256Hash) -> Unit)?>(5)?.invoke(Sha256Hash.ZERO_HASH)
+                sentPayments += amount
+                transaction
+            }
+        }
+    }
+
     private fun assertPaid(times: Int) = verifyBlocking(payments, times(times)) {
-        payWithDashUrl(eq("dash:?r=https://ctx.example/pay"), anyOrNull(), anyOrNull(), anyOrNull(), anyOrNull())
+        payWithDashUrl(
+            eq("dash:?r=https://ctx.example/pay"),
+            anyOrNull(),
+            anyOrNull(),
+            anyOrNull(),
+            anyOrNull(),
+            anyOrNull()
+        )
     }
 
     @Test
@@ -1514,7 +1537,7 @@ class DashSpendCardCurrencyTest {
 
         assertEquals(R.string.gift_card_price_unchecked, refusal.resourceString?.resourceId)
         verifyBlocking(payments, never()) {
-            payWithDashUrl(any(), anyOrNull(), anyOrNull(), anyOrNull(), anyOrNull())
+            payWithDashUrl(any(), anyOrNull(), anyOrNull(), anyOrNull(), anyOrNull(), anyOrNull())
         }
     }
 
@@ -1714,5 +1737,110 @@ class DashSpendCardCurrencyTest {
         val refreshed = viewModel.updateMerchantDetailsForAllProviders(merchant)
 
         assertEquals(500, refreshed.savingsPercentage)
+    }
+
+    @Test
+    fun paymentRequestForWhatWasShownOrLess_isPaidWithoutAsking() = runBlocking {
+        listOf(316_666_666L, 300_000_000L, 318_249_999L).forEach { duffs ->
+            reset(payments)
+
+            val (txId, asked) = payOrderCharged("3.16666666", invoiced = Coin.valueOf(duffs))
+
+            assertEquals("$duffs", Sha256Hash.ZERO_HASH, txId)
+            assertEquals("$duffs", emptyList<GiftCardPriceChange>(), asked)
+            assertEquals(listOf<Coin?>(Coin.valueOf(duffs)), sentPayments)
+        }
+    }
+
+    @Test
+    fun paymentRequestForMoreThanShown_isPaidOnlyWhenAccepted() = runBlocking {
+        val invoiced = Coin.valueOf(326_666_667)
+
+        val (declinedTxId, asked) = payOrderCharged("3.16666666", invoiced = invoiced)
+
+        assertNull(declinedTxId)
+        assertEquals(listOf(invoiced), asked.map { it.charged })
+        assertEquals(listOf(Coin.valueOf(316_666_666)), asked.map { it.shown })
+        assertEquals(emptyList<Coin?>(), sentPayments)
+
+        val (acceptedTxId, askedAgain) = payOrderCharged("3.16666666", acceptsHigherPrice = true, invoiced = invoiced)
+
+        assertEquals(Sha256Hash.ZERO_HASH, acceptedTxId)
+        assertEquals(1, askedAgain.size)
+        assertEquals(listOf<Coin?>(invoiced), sentPayments)
+    }
+
+    @Test
+    fun higherPriceAcceptedOnce_coversThePaymentRequestForTheSameAmount() = runBlocking {
+        val (txId, asked) = payOrderCharged("3.26666667", acceptsHigherPrice = true)
+
+        assertEquals(Sha256Hash.ZERO_HASH, txId)
+        assertEquals(1, asked.size)
+        assertEquals(listOf<Coin?>(Coin.valueOf(326_666_667)), sentPayments)
+    }
+
+    @Test
+    fun paymentRequestAboveTheAcceptedPrice_isAskedAboutAgain() = runBlocking {
+        // 3.5 is more than 0.5% above the 3.26666667 accepted a moment earlier
+        val invoiced = Coin.valueOf(350_000_000)
+        val (txId, asked) = payOrderCharged("3.26666667", acceptsHigherPrice = true, invoiced = invoiced)
+
+        assertEquals(Sha256Hash.ZERO_HASH, txId)
+        assertEquals(listOf(Coin.valueOf(326_666_667), Coin.valueOf(350_000_000)), asked.map { it.charged })
+        assertEquals(listOf(Coin.valueOf(316_666_666), Coin.valueOf(326_666_667)), asked.map { it.shown })
+    }
+
+    @Test
+    fun paymentRequestWithoutAnAmount_isNotPaid() = runBlocking {
+        ctxSells("GBP", listOf("5", "500"), discount = 500)
+        setRate("GBP", "30")
+        val viewModel = viewModel()
+        viewModel.openCtxMerchant()
+        viewModel.enter("100")
+        val shown = checkNotNull(viewModel.currentQuote())
+        val order = listOf(GiftCardInfo("order-1", cryptoAmount = "3.16666666"))
+
+        listOf(null, Coin.ZERO).forEach { invoiced ->
+            paymentRequestAsksFor(invoiced)
+
+            val refusal = assertThrows(CTXSpendException::class.java) {
+                runBlocking { viewModel.payCtxOrder(shown, "dash:?r=x", order) { true } }
+            }
+
+            assertEquals(R.string.gift_card_price_unchecked, refusal.resourceString?.resourceId)
+            assertEquals(emptyList<Coin?>(), sentPayments)
+            assertEquals(GiftCardSubmissionState.IDLE, viewModel.submissionState.value)
+        }
+    }
+
+    @Test
+    fun piggyCardsPayment_isNotChecked() = runBlocking {
+        paymentRequestAsksFor(Coin.valueOf(999_000_000))
+        val viewModel = viewModel()
+        viewModel.selectedProvider = GiftCardProviderType.PiggyCards
+
+        viewModel.payAndRecordOrder("dash:?r=x", emptyList())
+
+        verifyBlocking(payments) {
+            payWithDashUrl(any(), anyOrNull(), anyOrNull(), anyOrNull(), eq(null), anyOrNull())
+        }
+    }
+
+    @Test
+    fun paidOrder_isRecordedAndHandedToOneSheetWhicheverStartedIt() = runBlocking {
+        paymentRequestAsksFor(Coin.COIN)
+        val viewModel = viewModel()
+        viewModel.selectedProvider = GiftCardProviderType.CTX
+        assertNull(viewModel.paidOrder.value)
+
+        val txId = viewModel.payAndRecordOrder("dash:?r=x", listOf(GiftCardInfo("order-1", fiatAmount = "10")))
+
+        val recorded = argumentCaptor<List<GiftCard>>()
+        verifyBlocking(giftCardDao) { insertGiftCards(recorded.capture()) }
+        assertEquals(listOf("order-1"), recorded.firstValue.map { it.note })
+        assertEquals(txId, viewModel.paidOrder.value)
+        assertTrue(viewModel.takePaidOrder(txId))
+        assertFalse(viewModel.takePaidOrder(txId))
+        assertNull(viewModel.paidOrder.value)
     }
 }
