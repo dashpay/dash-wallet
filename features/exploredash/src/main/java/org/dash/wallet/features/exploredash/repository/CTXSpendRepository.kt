@@ -39,7 +39,6 @@ import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardShoppingCart
 import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
 import org.dash.wallet.features.exploredash.utils.GiftCardCurrency
 import org.slf4j.LoggerFactory
-import java.io.EOFException
 import java.io.IOException
 import java.util.UUID
 import java.util.concurrent.TimeUnit
@@ -189,6 +188,12 @@ class CTXSpendRepository @Inject constructor(
                 log.error("gift card order came back in {} but {} was ordered", reported, fiatCurrency)
                 throw CTXSpendException(ResourceString(R.string.gift_card_error))
             }
+        if (!response.cardFiatAmount.isNullOrBlank() &&
+            response.cardFiatAmount.trim().toBigDecimalOrNull()?.compareTo(fiatAmount.toBigDecimal()) != 0
+        ) {
+            log.error("gift card order came back for {} but {} was ordered", response.cardFiatAmount, fiatAmount)
+            throw CTXSpendException(ResourceString(R.string.gift_card_error))
+        }
         // USD is what CTX always sold, so only there may an answer leave the currency out
         if (!fiatCurrency.equals(Constants.USD_CURRENCY, ignoreCase = true) &&
             response.fiatCurrency.isNullOrBlank() && response.cardFiatCurrency.isNullOrBlank()
@@ -297,15 +302,17 @@ class CTXSpendRepository @Inject constructor(
     override suspend fun getMerchant(merchantId: String): UpdatedMerchantDetails? {
         val response = try {
             api.getMerchant(merchantId)
-        } catch (e: Exception) {
-            // CTX answered, with a body that is empty, cut short or not what it should be
-            if (e is JsonParseException || e is MalformedJsonException || e is EOFException) {
-                throw UnusableMerchantDetailsException(e)
-            }
-            throw e
+        } catch (e: JsonParseException) {
+            // CTX answered, with a body that cannot be decoded
+            throw UnusableMerchantDetailsException(e)
+        } catch (e: MalformedJsonException) {
+            throw UnusableMerchantDetailsException(e)
         }
         return response?.let {
             giftCardMap[merchantId] = it
+            if (response.denominations.isEmpty()) {
+                throw UnusableMerchantDetailsException(IllegalStateException("no denominations"), true)
+            }
             try {
                 // read as decimals: toDouble() takes "NaN", and toFiat() would round 10.00001 into 10
                 val currency = GiftCardCurrency.normalize(response.currency)

@@ -86,6 +86,7 @@ import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardInfo
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
 import org.dash.wallet.features.exploredash.ui.dashspend.DashSpendViewModel
 import org.dash.wallet.features.exploredash.ui.dashspend.DuplicateGiftCardSubmissionException
+import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardPriceChange
 import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardPurchaseBlock
 import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardPurchaseMode
 import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardQuote
@@ -278,9 +279,14 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
                 viewModel.giftCardMerchant,
                 viewModel.acceptedDetailsVersion
             ) { _, _, _, _ -> }.collect {
-                // a cart of PiggyCards is rebuilt by its screen on recreation; Confirm checks it instead
-                val isOtherOrder = viewModel.selectedProvider == GiftCardProviderType.CTX &&
-                    viewModel.currentQuote() != quote
+                // a cart of PiggyCards is rebuilt by its screen on recreation, so only a new price
+                // of the same cart closes its sheet; Confirm checks the cart itself
+                val current = viewModel.currentQuote()
+                val isOtherOrder = if (viewModel.selectedProvider == GiftCardProviderType.CTX) {
+                    current != quote
+                } else {
+                    current?.order == quote.order && current.total.compareTo(quote.total) != 0
+                }
                 val isOutdated = viewModel.cardCurrency != cardCurrency || isOtherOrder ||
                     viewModel.purchaseBlock.isAboutTheAmount()
                 if (isOutdated && viewModel.submissionState.value == GiftCardSubmissionState.IDLE) {
@@ -366,6 +372,9 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
                                     getString(ex.resourceString!!.resourceId),
                                     getString(R.string.button_close)
                                 ).show(requireActivity())
+                                if (ex.resourceString?.resourceId == R.string.gift_card_order_changed) {
+                                    dismissAllowingStateLoss()
+                                }
                             }
                         }
                         ex.isNetworkError -> {
@@ -557,13 +566,54 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
         }
     }
 
+    private suspend fun acceptsHigherPrice(change: GiftCardPriceChange): Boolean {
+        if (!isAdded) {
+            return false
+        }
+        val fiatFormat = GiftCardCurrency.displayFormat(change.currency)
+        val dashFormat = viewModel.dashFormat.noCode()
+        return AdaptiveDialog.create(
+            R.drawable.ic_info_blue,
+            getString(R.string.gift_card_price_updated_title),
+            getString(
+                R.string.gift_card_price_updated_message,
+                fiatFormat.format(change.chargedTotal),
+                dashFormat.format(change.charged),
+                fiatFormat.format(change.shownTotal),
+                dashFormat.format(change.shown)
+            ),
+            getString(R.string.button_cancel),
+            getString(R.string.gift_card_price_updated_pay)
+        ).showAsync(requireActivity()) == true
+    }
+
     private suspend fun createSendingRequestFromDashUri(
         url: String,
         giftCards: List<GiftCardInfo>
     ): Sha256Hash? {
         return try {
             // submission and order recording together, so a destroyed view cannot separate them
-            viewModel.payAndRecordOrder(url, giftCards)
+            if (viewModel.selectedProvider == GiftCardProviderType.CTX) {
+                viewModel.payCtxOrder(checkNotNull(shownQuote), url, giftCards, ::acceptsHigherPrice) ?: run {
+                    hideLoading()
+                    dismissAllowingStateLoss()
+                    null
+                }
+            } else {
+                viewModel.payAndRecordOrder(url, giftCards)
+            }
+        } catch (ex: CTXSpendException) {
+            log.error("purchaseGiftCard error: the order was not paid", ex)
+            hideLoading()
+            if (isAdded) {
+                AdaptiveDialog.create(
+                    R.drawable.ic_error,
+                    getString(R.string.gift_card_purchase_failed),
+                    getString(ex.resourceString?.resourceId ?: R.string.gift_card_error),
+                    getString(R.string.button_close)
+                ).show(requireActivity())
+            }
+            null
         } catch (x: InsufficientMoneyException) {
             hideLoading()
             log.error("purchaseGiftCard InsufficientMoneyException", x)

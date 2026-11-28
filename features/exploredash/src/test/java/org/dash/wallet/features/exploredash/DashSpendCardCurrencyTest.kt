@@ -31,7 +31,9 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
+import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.Fiat
+import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.entity.ExchangeRate
@@ -43,12 +45,15 @@ import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.UnresolvedPaymentsProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.ui.enter_amount.AmountInputRules
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProvider
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderDao
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderType
 import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.GetMerchantResponse
 import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.GiftCardResponse
 import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.PurchaseGiftCardRequest
+import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardInfo
+import org.dash.wallet.features.exploredash.data.dashspend.model.UpdatedMerchantDetails
 import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
 import org.dash.wallet.features.exploredash.data.explore.MerchantDao
 import org.dash.wallet.features.exploredash.data.explore.model.Merchant
@@ -56,16 +61,19 @@ import org.dash.wallet.features.exploredash.network.authenticator.TokenAuthentic
 import org.dash.wallet.features.exploredash.network.service.ctxspend.CTXSpendApi
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
 import org.dash.wallet.features.exploredash.repository.CTXSpendRepository
-import org.dash.wallet.features.exploredash.repository.DashSpendRepository
 import org.dash.wallet.features.exploredash.repository.DashSpendRepositoryFactory
+import org.dash.wallet.features.exploredash.repository.PiggyCardsRepository
 import org.dash.wallet.features.exploredash.ui.dashspend.CardCurrencyState
 import org.dash.wallet.features.exploredash.ui.dashspend.CardRateState
 import org.dash.wallet.features.exploredash.ui.dashspend.DashSpendViewModel
+import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardPriceChange
 import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardPurchaseBlock
 import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardQuote
 import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardShoppingCart
+import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardSubmissionState
 import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
 import org.dash.wallet.features.exploredash.utils.GiftCardCurrency
+import org.dash.wallet.features.exploredash.utils.PiggyCardsTestMerchants
 import org.dash.wallet.features.exploredash.utils.toCardFormattedString
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -78,6 +86,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TestRule
 import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.doReturn
@@ -86,6 +95,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.reset
 import org.mockito.kotlin.stub
+import org.mockito.kotlin.times
 import org.mockito.kotlin.verifyBlocking
 import java.io.IOException
 import java.math.BigDecimal
@@ -130,8 +140,10 @@ class DashSpendCardCurrencyTest {
     private val rateLookups = mutableMapOf<String, Flow<ExchangeRate?>>()
     private val rateLookupsStarted = mutableListOf<String>()
     private val api = mock<CTXSpendApi>()
-    private val piggyCards = mock<DashSpendRepository>()
+    private val piggyCards = mock<PiggyCardsRepository>()
     private val giftCardDao = mock<GiftCardDao>()
+    private val payments = mock<SendPaymentService>()
+    private var signedInToCtx = false
 
     @Before
     fun setUp() {
@@ -177,9 +189,15 @@ class DashSpendCardCurrencyTest {
     }
 
     private fun viewModel(): DashSpendViewModel {
-        val config = mock<CTXSpendConfig> { on { observeSecureData(any()) } doReturn emptyFlow() }
+        val config = mock<CTXSpendConfig> {
+            on { observeSecureData(any()) } doReturn emptyFlow()
+            onBlocking { getSecuredData(eq(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN)) } doAnswer {
+                "token".takeIf { signedInToCtx }
+            }
+        }
         val ctx = CTXSpendRepository(api, config, TokenAuthenticator(mock(), config))
         val providerDao = mock<GiftCardProviderDao> {
+            onBlocking { getProvidersByMerchantId(any()) } doReturn listOf(ctxRow, piggyCardsRow)
             onBlocking { getProviderByMerchantId(eq(merchantId), eq(GiftCardProviderType.CTX.name)) } doReturn ctxRow
             onBlocking {
                 getProviderByMerchantId(eq(otherMerchantId), eq(GiftCardProviderType.CTX.name))
@@ -201,10 +219,13 @@ class DashSpendCardCurrencyTest {
         }
 
         return DashSpendViewModel(
-            mock<WalletDataProvider> { on { observeSpendableBalance() } doReturn flowOf(Coin.COIN) },
+            mock<WalletDataProvider> {
+                on { observeSpendableBalance() } doReturn flowOf(Coin.COIN)
+                on { wallet } doReturn mock<Wallet>()
+            },
             exchangeRates,
             mock<Configuration>(),
-            mock<SendPaymentService>(),
+            payments,
             repositoryFactory,
             mock<TransactionMetadataProvider>(),
             giftCardDao,
@@ -215,7 +236,10 @@ class DashSpendCardCurrencyTest {
             mock<MerchantDao>(),
             mock<CTXSpendConfig>(),
             mock<BlockchainStateProvider> { on { observeState() } doReturn emptyFlow() },
-            mock<UnresolvedPaymentsProvider> { on { observeUnresolvedGiftCardPurchase() } doReturn flowOf(false) }
+            mock<UnresolvedPaymentsProvider> {
+                on { observeUnresolvedGiftCardPurchase() } doReturn flowOf(false)
+                onBlocking { hasUnresolvedGiftCardPurchase() } doReturn false
+            }
         )
     }
 
@@ -1237,8 +1261,7 @@ class DashSpendCardCurrencyTest {
     fun answerThatCannotBeDecoded_blocksAMerchantThatHadACurrency() {
         listOf<Exception>(
             com.google.gson.JsonSyntaxException("Expected BEGIN_OBJECT but was STRING"),
-            com.google.gson.stream.MalformedJsonException("Unterminated object"),
-            java.io.EOFException("End of input at line 1 column 1 path $")
+            com.google.gson.stream.MalformedJsonException("Unterminated object")
         ).forEach { failure ->
             reset(api)
             ctxSells("GBP", listOf("5", "500"))
@@ -1366,5 +1389,330 @@ class DashSpendCardCurrencyTest {
 
         assertTrue(viewModel.acceptedDetailsVersion.value != shown)
         assertEquals(0.02, viewModel.getGiftCardDiscount(100.0), 0.0)
+    }
+
+    /** A GBP 100 card at 5% off, confirmed at GBP 95.00 = 3.16666666 Dash, that CTX charges [dash] for. */
+    private suspend fun payOrderCharged(
+        dash: String?,
+        cardAmount: String? = "100.00",
+        acceptsHigherPrice: Boolean = false
+    ): Pair<Sha256Hash?, List<GiftCardPriceChange>> {
+        ctxSells("GBP", listOf("5", "500"), discount = 500)
+        api.stub {
+            onBlocking { purchaseGiftCard(any()) } doAnswer {
+                GiftCardResponse(
+                    id = "order-1",
+                    status = "unpaid",
+                    cardFiatAmount = cardAmount,
+                    cardFiatCurrency = "GBP",
+                    cryptoAmount = dash,
+                    fiatCurrency = "GBP"
+                )
+            }
+        }
+        val transaction = mock<Transaction> { on { txId } doReturn Sha256Hash.ZERO_HASH }
+        payments.stub {
+            onBlocking {
+                payWithDashUrl(any(), anyOrNull(), anyOrNull(), anyOrNull(), anyOrNull())
+            } doReturn transaction
+        }
+        setRate("GBP", "30")
+        val viewModel = viewModel()
+        viewModel.openCtxMerchant()
+        viewModel.enter("100")
+        val shown = checkNotNull(viewModel.currentQuote())
+        assertEquals(BigDecimal("95.00"), shown.total)
+        val asked = mutableListOf<GiftCardPriceChange>()
+
+        val txId = viewModel.payCtxOrder(shown, "dash:?r=https://ctx.example/pay", viewModel.purchaseGiftCard(shown)) {
+            asked += it
+            acceptsHigherPrice
+        }
+        return txId to asked
+    }
+
+    private fun assertPaid(times: Int) = verifyBlocking(payments, times(times)) {
+        payWithDashUrl(eq("dash:?r=https://ctx.example/pay"), anyOrNull(), anyOrNull(), anyOrNull(), anyOrNull())
+    }
+
+    @Test
+    fun ctxChargesWhatWasShownOrLess_isPaidWithoutAsking() = runBlocking {
+        listOf("3.16666666", "3.00000000", "3.18249999").forEach { dash ->
+            reset(payments)
+
+            val (txId, asked) = payOrderCharged(dash)
+
+            assertEquals(dash, Sha256Hash.ZERO_HASH, txId)
+            assertEquals(dash, emptyList<GiftCardPriceChange>(), asked)
+            assertPaid(1)
+        }
+    }
+
+    @Test
+    fun ctxChargesMoreThanShown_isPaidOnlyWhenAccepted() = runBlocking {
+        // GBP 98.00 at the same rate
+        val (declinedTxId, asked) = payOrderCharged("3.26666667")
+
+        assertNull(declinedTxId)
+        assertEquals(1, asked.size)
+        assertEquals(Coin.valueOf(316_666_666), asked.single().shown)
+        assertEquals(Coin.valueOf(326_666_667), asked.single().charged)
+        assertEquals(BigDecimal("95.00"), asked.single().shownTotal)
+        assertEquals(0, BigDecimal("98.0000001").compareTo(asked.single().chargedTotal))
+        assertPaid(0)
+
+        val (acceptedTxId, askedAgain) = payOrderCharged("3.26666667", acceptsHigherPrice = true)
+
+        assertEquals(Sha256Hash.ZERO_HASH, acceptedTxId)
+        assertEquals(1, askedAgain.size)
+        assertPaid(1)
+    }
+
+    @Test
+    fun declinedHigherPrice_leavesTheOrderUnpaidAndThePurchaseOpen() = runBlocking {
+        ctxSells("GBP", listOf("5", "500"), discount = 500)
+        setRate("GBP", "30")
+        val viewModel = viewModel()
+        viewModel.openCtxMerchant()
+        viewModel.enter("100")
+        val shown = checkNotNull(viewModel.currentQuote())
+        val order = listOf(GiftCardInfo("order-1", cryptoAmount = "3.5"))
+
+        assertNull(viewModel.payCtxOrder(shown, "dash:?r=https://ctx.example/pay", order) { false })
+
+        assertEquals(GiftCardSubmissionState.IDLE, viewModel.submissionState.value)
+        verifyBlocking(giftCardDao, never()) { insertGiftCard(any()) }
+        assertPaid(0)
+    }
+
+    @Test
+    fun chargeThatCannotBeChecked_isNotPaid() = runBlocking {
+        listOf(null, "", "0", "abc").forEach { dash ->
+            val refusal = assertThrows(CTXSpendException::class.java) { runBlocking { payOrderCharged(dash) } }
+
+            assertEquals("$dash", R.string.gift_card_price_unchecked, refusal.resourceString?.resourceId)
+        }
+        assertPaid(0)
+    }
+
+    @Test
+    fun chargeWithoutARate_isNotPaid() = runBlocking {
+        ctxSells("GBP", listOf("5", "500"), discount = 500)
+        setRate("GBP", "30")
+        val viewModel = viewModel()
+        viewModel.openCtxMerchant()
+        viewModel.enter("100")
+        val shown = checkNotNull(viewModel.currentQuote())
+        rateFlow("GBP").value = null
+
+        val refusal = assertThrows(CTXSpendException::class.java) {
+            runBlocking {
+                val order = listOf(GiftCardInfo("order-1", cryptoAmount = "3.1"))
+                viewModel.payCtxOrder(shown, "dash:?r=x", order) { true }
+            }
+        }
+
+        assertEquals(R.string.gift_card_price_unchecked, refusal.resourceString?.resourceId)
+        verifyBlocking(payments, never()) {
+            payWithDashUrl(any(), anyOrNull(), anyOrNull(), anyOrNull(), anyOrNull())
+        }
+    }
+
+    @Test
+    fun orderForAnotherCardAmount_isRefused() = runBlocking {
+        listOf("110.00", "abc").forEach { answered ->
+            assertThrows(CTXSpendException::class.java) {
+                runBlocking { payOrderCharged("3.16666666", cardAmount = answered) }
+            }
+        }
+        assertPaid(0)
+
+        // the same amount written another way, or left out as before CTX reported it
+        reset(payments)
+        assertEquals(Sha256Hash.ZERO_HASH, payOrderCharged("3.16666666", cardAmount = "100").first)
+        assertEquals(Sha256Hash.ZERO_HASH, payOrderCharged("3.16666666", cardAmount = null).first)
+    }
+
+    @Test
+    fun usdOrderWithOnlyTheDashAmount_isCheckedTheSameWay() = runBlocking {
+        ctxSells("USD", listOf("5", "500"), discount = 0)
+        setRate("USD", "40")
+        val viewModel = viewModel()
+        viewModel.openCtxMerchant()
+        viewModel.enter("100")
+        val shown = checkNotNull(viewModel.currentQuote())
+
+        assertNull(viewModel.priceChange(shown, GiftCardInfo("order-1", cryptoAmount = "2.5")))
+        val higher = viewModel.priceChange(shown, GiftCardInfo("order-2", cryptoAmount = "2.6"))
+        assertEquals(Coin.valueOf(260_000_000), higher?.charged)
+    }
+
+    @Test
+    fun refusalsAtConfirm_carryAMessageForTheUser() = runBlocking {
+        ctxSells("GBP", listOf("5", "500"))
+        setRate("GBP", "20")
+        val viewModel = viewModel()
+        viewModel.openCtxMerchant()
+        viewModel.enter("100")
+        val shown = checkNotNull(viewModel.currentQuote())
+        viewModel.enter("50")
+
+        val refusal = assertThrows(CTXSpendException::class.java) { runBlocking { viewModel.purchaseGiftCard(shown) } }
+
+        assertEquals(R.string.gift_card_order_changed, refusal.resourceString?.resourceId)
+    }
+
+    @Test
+    fun changedRangeType_reachesTheKeypadWithoutTheMerchantChanging() = runBlocking {
+        ctxSells("GBP", listOf("5", "500"))
+        setRate("GBP", "20")
+        val viewModel = viewModel()
+        val merchant = viewModel.openCtxMerchant()
+        val shownMerchant = viewModel.giftCardMerchant.value
+        val version = viewModel.acceptedDetailsVersion.value
+        assertEquals(2, viewModel.entryDecimals)
+
+        reset(api)
+        ctxSells("GBP", listOf("5", "500"), denominationsType = "min-max-major")
+        viewModel.refreshMerchantDetails(merchant)?.let(viewModel::applyMerchantRefresh)
+
+        // nothing the merchant flow would announce
+        assertEquals(shownMerchant, viewModel.giftCardMerchant.value)
+        assertTrue(viewModel.acceptedDetailsVersion.value != version)
+        assertEquals(0, viewModel.entryDecimals)
+    }
+
+    @Test
+    fun cutShortAnswer_countsAsNoAnswerAndKeepsTheCurrency() = runBlocking {
+        ctxSells("GBP", listOf("5", "500"))
+        setRate("GBP", "20")
+        val viewModel = viewModel()
+        val merchant = viewModel.openCtxMerchant()
+
+        reset(api)
+        api.stub { onBlocking { getMerchant(any()) } doAnswer { throw java.io.EOFException("End of input") } }
+        viewModel.refreshMerchantDetails(merchant)
+
+        assertEquals(CardCurrencyState.Known("GBP"), viewModel.cardCurrencyState.value)
+    }
+
+    @Test
+    fun merchantThatOffersNoCard_isNotSoldRatherThanUnreachable() = runBlocking {
+        // what CTX answers while no discount is on offer
+        ctxSells("USD", emptyList(), denominationsType = "")
+        setRate("USD", "25")
+        val viewModel = viewModel()
+
+        viewModel.openCtxMerchant()
+
+        assertEquals(CardCurrencyState.Unknown, viewModel.cardCurrencyState.value)
+        assertEquals(GiftCardPurchaseBlock.NOT_SOLD, viewModel.purchaseBlock)
+        viewModel.setGiftCardOrderQuantities(mapOf(25.0 to 1))
+        assertPurchaseRefused(viewModel)
+
+        // sold again
+        reset(api)
+        ctxSells("USD", listOf("5", "500"))
+        viewModel.openCtxMerchant()
+        assertEquals(CardCurrencyState.Known("USD"), viewModel.cardCurrencyState.value)
+        assertNull(viewModel.purchaseBlock)
+    }
+
+    @Test
+    fun unreadableAnswer_isStillACurrencyThatCouldNotBeConfirmed() = runBlocking {
+        ctxSells("USD", listOf("abc"))
+        val viewModel = viewModel()
+
+        viewModel.openCtxMerchant()
+
+        assertEquals(GiftCardPurchaseBlock.CURRENCY_UNKNOWN, viewModel.purchaseBlock)
+    }
+
+    @Test
+    fun ctxTrouble_doesNotKeepThePiggyCardsRowFromBeingRefreshed() = runBlocking {
+        ctxSells("USD", emptyList(), denominationsType = "")
+        signedInToCtx = true
+        val piggyCardsAnswer = UpdatedMerchantDetails(
+            id = "piggycards-source",
+            denominations = listOf(10.0, 200.0),
+            denominationsType = "min-max",
+            savingsPercentage = 700,
+            redeemType = "barcode",
+            enabled = false
+        )
+        piggyCards.stub {
+            onBlocking { isUserSignedIn() } doReturn true
+            onBlocking { getMerchant(eq("piggycards-source")) } doReturn piggyCardsAnswer
+            // debug builds only ask PiggyCards about its test merchants, and this way
+            onBlocking { getMerchant(eq("piggycards-source"), any()) } doReturn piggyCardsAnswer
+        }
+        val viewModel = viewModel()
+        val testMerchant = merchant().apply { merchantId = PiggyCardsTestMerchants.ALL.first().merchantId }
+
+        val refreshed = viewModel.updateMerchantDetailsForAllProviders(testMerchant)
+
+        val row = refreshed.giftCardProviders.single { it.provider == GiftCardProviderType.PiggyCards.name }
+        assertEquals(700, row.savingsPercentage)
+        assertFalse(row.active)
+        assertEquals(700, refreshed.savingsPercentage)
+    }
+
+    @Test
+    fun piggyCardsPriceChange_isAnnouncedSoAnOpenSheetCanClose() = runBlocking {
+        var discount = 0.10
+        piggyCards.stub {
+            on { getGiftCardDiscount(any(), any()) } doAnswer { discount }
+            onBlocking { getMerchant(any()) } doAnswer {
+                discount = 0.05
+                null
+            }
+        }
+        val viewModel = viewModel()
+        viewModel.selectedProvider = GiftCardProviderType.PiggyCards
+        viewModel.setGiftCardMerchant(merchant())
+        viewModel.setGiftCardOrderQuantities(mapOf(25.0 to 2))
+        val shown = checkNotNull(viewModel.currentQuote())
+        val version = viewModel.acceptedDetailsVersion.value
+
+        viewModel.refreshMerchantDetails(merchant())
+
+        assertTrue(viewModel.acceptedDetailsVersion.value != version)
+        assertEquals(shown.order, viewModel.currentQuote()?.order)
+        assertEquals(BigDecimal("47.50"), viewModel.currentQuote()?.total)
+        assertEquals(BigDecimal("45.00"), shown.total)
+    }
+
+    @Test
+    fun entryDecimals_followTheCardCurrencyAndTheRangeType() = runBlocking {
+        ctxSells("KWD", listOf("1", "50"))
+        setRate("KWD", "9")
+        val viewModel = viewModel()
+
+        viewModel.openCtxMerchant()
+        assertEquals(3, viewModel.entryDecimals)
+        val keypadDecimals = AmountInputRules.maxDecimals(false, viewModel.entryDecimals)
+        assertTrue(AmountInputRules.acceptsDigit("1.23", '.', keypadDecimals))
+
+        reset(api)
+        ctxSells("JPY", listOf("500", "50000"))
+        viewModel.openCtxMerchant()
+        assertEquals(0, viewModel.entryDecimals)
+
+        reset(api)
+        ctxSells("USD", listOf("1", "500"), denominationsType = "min-max-major")
+        viewModel.openCtxMerchant()
+        assertEquals(0, viewModel.entryDecimals)
+    }
+
+    @Test
+    fun noProviderReached_leavesTheMerchantAsItIs() = runBlocking {
+        api.stub { onBlocking { getMerchant(any()) } doAnswer { throw java.io.IOException("offline") } }
+        signedInToCtx = true
+        val viewModel = viewModel()
+        val merchant = merchant().apply { savingsPercentage = 500 }
+
+        val refreshed = viewModel.updateMerchantDetailsForAllProviders(merchant)
+
+        assertEquals(500, refreshed.savingsPercentage)
     }
 }

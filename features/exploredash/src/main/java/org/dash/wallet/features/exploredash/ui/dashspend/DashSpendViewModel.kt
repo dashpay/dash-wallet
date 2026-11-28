@@ -58,7 +58,9 @@ import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.common.services.*
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.Constants
+import org.dash.wallet.common.util.ResourceString
 import org.dash.wallet.common.util.toBigDecimal
+import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProvider
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderDao
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderType
@@ -77,6 +79,7 @@ import org.dash.wallet.features.exploredash.repository.PiggyCardsRepository
 import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
 import org.dash.wallet.features.exploredash.utils.CTXSpendConstants
 import org.dash.wallet.features.exploredash.utils.GiftCardCurrency
+import org.dash.wallet.features.exploredash.utils.GiftCardPaymentGuard
 import org.dash.wallet.features.exploredash.utils.PiggyCardsConstants
 import org.dash.wallet.features.exploredash.utils.PiggyCardsConstants.SUPPORT_PIGGY_CARDS_TEST_MERCHANT
 import org.dash.wallet.features.exploredash.utils.PiggyCardsTestMerchants
@@ -143,6 +146,9 @@ enum class GiftCardPurchaseBlock {
     CURRENCY_LOADING,
     CURRENCY_UNKNOWN,
 
+    /** The merchant answered that it sells no card right now. */
+    NOT_SOLD,
+
     /** The rate has not been looked up yet. */
     RATE_LOADING,
 
@@ -172,6 +178,15 @@ sealed class CardCurrencyState {
 data class GiftCardQuote(val currency: String, val order: Map<Double, Int>, val total: BigDecimal)
 
 /** Merchant details from one load. [DashSpendViewModel.applyMerchantRefresh] applies them if it is still current. */
+/** CTX asks [charged] for an order whose confirmed price came to [shown]. */
+data class GiftCardPriceChange(
+    val currency: String,
+    val shownTotal: BigDecimal,
+    val shown: Coin,
+    val chargedTotal: BigDecimal,
+    val charged: Coin
+)
+
 class MerchantRefresh internal constructor(
     val merchant: Merchant,
     internal val load: Int?,
@@ -271,7 +286,7 @@ class DashSpendViewModel @Inject constructor(
 
     private val _acceptedDetailsVersion = MutableStateFlow(0)
 
-    /** Changes whenever the accepted CTX details do, and with them what an order costs. */
+    /** Changes whenever the details that price an order may have changed. */
     val acceptedDetailsVersion: StateFlow<Int> = _acceptedDetailsVersion.asStateFlow()
 
     // the details that came with the Known currency; the three are only ever used together
@@ -285,8 +300,15 @@ class DashSpendViewModel @Inject constructor(
     val isWholeAmountOnly: Boolean
         get() = confirmedDetailsOf(giftCardMerchant.value)?.sellsWholeAmountsOnly() == true
 
+    /** The decimals an amount of the CTX merchant's cards can have, or null while that is unknown. */
+    val entryDecimals: Int?
+        get() = cardCurrency?.let { if (isWholeAmountOnly) 0 else GiftCardCurrency.fractionDigits(it) }
+
     private fun Merchant.sellsWholeAmountsOnly() = denominationsType == DenominationType.MinMaxMajor.value
     private var currencyLoad = 0
+
+    @Volatile
+    private var isNothingOffered = false
 
     /** ISO 4217 code the card is priced in. Null for a CTX merchant whose currency is not confirmed. */
     val cardCurrency: String?
@@ -334,7 +356,11 @@ class DashSpendViewModel @Inject constructor(
             val currency = when (val state = _cardCurrencyState.value) {
                 is CardCurrencyState.Known -> state.code
                 CardCurrencyState.Loading -> return GiftCardPurchaseBlock.CURRENCY_LOADING
-                CardCurrencyState.Unknown -> return GiftCardPurchaseBlock.CURRENCY_UNKNOWN
+                CardCurrencyState.Unknown -> return if (isNothingOffered) {
+                    GiftCardPurchaseBlock.NOT_SOLD
+                } else {
+                    GiftCardPurchaseBlock.CURRENCY_UNKNOWN
+                }
             }
             val card = giftCardOrderInfo.value.entries.singleOrNull()
             return when {
@@ -451,7 +477,8 @@ class DashSpendViewModel @Inject constructor(
         val shownOrder = shown.order
         _giftCardMerchant.value?.merchantId?.let {
             if (currentQuote() != shown) {
-                throw CTXSpendException("purchaseGiftCard error: the order or its price changed after it was confirmed")
+                log.error("purchaseGiftCard error: the order or its price changed after it was confirmed")
+                throw CTXSpendException(ResourceString(R.string.gift_card_order_changed))
             }
             ctxSpendConfig.set(CTXSpendConfig.PREFS_LAST_PURCHASE_START, System.currentTimeMillis())
             val giftCardOrderShoppingCart = GiftCardShoppingCart(
@@ -469,10 +496,8 @@ class DashSpendViewModel @Inject constructor(
                         val currency = cardCurrency
                         val block = purchaseBlock
                         if (currency == null || block != null || currency != shownCurrency) {
-                            throw CTXSpendException(
-                                "purchaseGiftCard error: blocked, $block, shown in $shownCurrency",
-                                ServiceName.CTXSpend
-                            )
+                            log.error("purchaseGiftCard error: blocked, {}, shown in {}", block, shownCurrency)
+                            throw CTXSpendException(ResourceString(R.string.gift_card_order_changed))
                         }
                         ctxSpendRepository.orderGiftcard(
                             merchantId = provider!!.sourceId,
@@ -607,6 +632,43 @@ class DashSpendViewModel @Inject constructor(
     /** Gives back a claim that never reached submission, so the user can try again. */
     fun releaseUnusedSubmission() {
         _submissionState.compareAndSet(GiftCardSubmissionState.IN_PROGRESS, GiftCardSubmissionState.IDLE)
+    }
+
+    /**
+     * The higher price CTX asks for [giftCard] than [shown] came to, or null when it is paid as shown.
+     * Refuses when the two cannot be compared.
+     */
+    internal fun priceChange(shown: GiftCardQuote, giftCard: GiftCardInfo): GiftCardPriceChange? {
+        val rate = cardExchangeRate
+        val approved = rate?.let { GiftCardPaymentGuard.approvedAmount(shown.total, shown.currency, it) }
+        val charged = GiftCardPaymentGuard.dashAmount(giftCard.cryptoAmount)
+        if (rate == null || approved == null || charged == null) {
+            log.error("gift card {} not paid: its price could not be checked", giftCard.id)
+            throw CTXSpendException(ResourceString(R.string.gift_card_price_unchecked))
+        }
+        if (!GiftCardPaymentGuard.isHigher(approved, charged)) {
+            return null
+        }
+        val chargedTotal = BigDecimal.valueOf(rate.coinToFiat(charged).value, Fiat.SMALLEST_UNIT_EXPONENT)
+        return GiftCardPriceChange(shown.currency, shown.total, approved, chargedTotal, charged)
+    }
+
+    /**
+     * Pays a CTX order, asking [acceptsHigherPrice] first when CTX charges more than [shown].
+     * Returns null, with nothing paid, when the higher price is declined.
+     */
+    suspend fun payCtxOrder(
+        shown: GiftCardQuote,
+        paymentUri: String,
+        giftCards: List<GiftCardInfo>,
+        acceptsHigherPrice: suspend (GiftCardPriceChange) -> Boolean
+    ): Sha256Hash? {
+        val change = priceChange(shown, giftCards.first())
+        if (change != null && !acceptsHigherPrice(change)) {
+            log.info("gift card {} not paid: the higher price was declined", giftCards.first().id)
+            return null
+        }
+        return payAndRecordOrder(paymentUri, giftCards)
     }
 
     /**
@@ -754,6 +816,7 @@ class DashSpendViewModel @Inject constructor(
         load: Int?
     ): Merchant? = withContext(Dispatchers.IO) {
         var isAnswered = false
+        var isNothingOffered = false
         // previously this API call would only be made if we didn't have the min and max card values,
         // but now we need to call this every time to get an updated savings percentage and to see if
         // the merchant is enabled
@@ -764,10 +827,16 @@ class DashSpendViewModel @Inject constructor(
         } catch (ex: UnusableMerchantDetailsException) {
             log.error("merchant ${merchant.merchantId} answered with details that cannot be read", ex)
             isAnswered = true
+            isNothingOffered = ex.isNothingOffered
             null
         } catch (ex: Exception) {
             log.error("failed to get merchant ${merchant.merchantId}", ex)
             null
+        }
+
+        if (load == null) {
+            // PiggyCards keeps its prices with the answer itself, so what a cart costs may be new
+            _acceptedDetailsVersion.value++
         }
 
         try {
@@ -812,7 +881,12 @@ class DashSpendViewModel @Inject constructor(
             log.warn("updated merchant details contains unexpected data:", e)
         }
 
-        val isAccepted = load == null || finishCurrencyLoad(load, null, isAnswered = isAnswered || response != null)
+        val isAccepted = load == null || finishCurrencyLoad(
+            load,
+            null,
+            isAnswered = isAnswered || response != null,
+            isNothingOffered = isNothingOffered
+        )
         if (selectedProvider != provider || !isAccepted) {
             return@withContext null
         }
@@ -869,7 +943,8 @@ class DashSpendViewModel @Inject constructor(
         load: Int,
         currency: String?,
         isAnswered: Boolean = true,
-        details: Merchant? = null
+        details: Merchant? = null,
+        isNothingOffered: Boolean = false
     ): Boolean {
         if (load != currencyLoad) {
             log.info("ignoring a superseded merchant load")
@@ -889,6 +964,7 @@ class DashSpendViewModel @Inject constructor(
             // amounts chosen in the old currency must not be ordered in the new one
             _giftCardOrderInfo.value = emptyMap()
         }
+        this.isNothingOffered = isNothingOffered && current == CardCurrencyState.Unknown
         confirmedMerchant = details.takeIf { current is CardCurrencyState.Known }
         if (details?.fixedDenomination == true && _giftCardOrderInfo.value.keys.any { !details.offers(it) }) {
             // the card that was selected is no longer sold
@@ -953,34 +1029,46 @@ class DashSpendViewModel @Inject constructor(
         val providers = giftCardProviderDao.getProvidersByMerchantId(merchant.merchantId!!)
         val merchantResponseList = arrayListOf<UpdatedMerchantDetails>()
         val providerResponseList = arrayListOf<GiftCardProvider>()
+        var failure: Exception? = null
         providers.forEach { provider ->
-            val details: UpdatedMerchantDetails? = when (provider.provider) {
-                "CTX" -> {
-                    if (ctxSpendRepository.isUserSignedIn()) {
-                        ctxSpendRepository.getMerchant(provider.sourceId)
-                    } else {
-                        null
+            // one provider's trouble must not keep the other's row from being refreshed
+            val details: UpdatedMerchantDetails? = try {
+                when (provider.provider) {
+                    "CTX" -> {
+                        if (ctxSpendRepository.isUserSignedIn()) {
+                            ctxSpendRepository.getMerchant(provider.sourceId)
+                        } else {
+                            null
+                        }
                     }
-                }
 
-                "PiggyCards" -> {
-                    if (piggyCardsRepository.isUserSignedIn()) {
-                        if (SUPPORT_PIGGY_CARDS_TEST_MERCHANT) {
-                            PiggyCardsTestMerchants.ALL.find { it.merchantId == merchant.merchantId }?.let { testData ->
-                                (piggyCardsRepository as PiggyCardsRepository).getMerchant(
-                                    provider.sourceId,
-                                    DenominationType.fromString(testData.providerDenominationsType)
-                                )
+                    "PiggyCards" -> {
+                        if (piggyCardsRepository.isUserSignedIn()) {
+                            if (SUPPORT_PIGGY_CARDS_TEST_MERCHANT) {
+                                PiggyCardsTestMerchants.ALL.find {
+                                    it.merchantId == merchant.merchantId
+                                }?.let { testData ->
+                                    (piggyCardsRepository as PiggyCardsRepository).getMerchant(
+                                        provider.sourceId,
+                                        DenominationType.fromString(testData.providerDenominationsType)
+                                    )
+                                }
+                            } else {
+                                piggyCardsRepository.getMerchant(provider.sourceId)
                             }
                         } else {
-                            piggyCardsRepository.getMerchant(provider.sourceId)
+                            null
                         }
-                    } else {
-                        null
                     }
-                }
 
-                else -> null
+                    else -> null
+                }
+            } catch (ex: CancellationException) {
+                throw ex
+            } catch (ex: Exception) {
+                log.error("failed to get merchant {} from {}", merchant.merchantId, provider.provider, ex)
+                failure = ex
+                null
             }
 
             if (details != null) {
@@ -999,6 +1087,10 @@ class DashSpendViewModel @Inject constructor(
             } else {
                 providerResponseList.add(provider)
             }
+        }
+        if (merchantResponseList.isEmpty()) {
+            // nothing was learned, so the merchant stays as it is
+            failure?.let { throw it }
         }
         return Pair(merchantResponseList, providerResponseList)
     }
@@ -1289,16 +1381,21 @@ class DashSpendViewModel @Inject constructor(
             return
         }
         val rate = cardExchangeRate
-        minCardPurchaseCoin = rate?.fiatToCoin(minCardPurchaseFiat) ?: Coin.ZERO
-        maxCardPurchaseCoin = rate?.fiatToCoin(maxCardPurchaseFiat) ?: Coin.ZERO
+        minCardPurchaseCoin = rate?.coinFor(minCardPurchaseFiat) ?: Coin.ZERO
+        maxCardPurchaseCoin = rate?.coinFor(maxCardPurchaseFiat) ?: Coin.ZERO
     }
+
+    // the currency can change on another thread between reading the rate and the amount
+    private fun org.bitcoinj.utils.ExchangeRate.coinFor(amount: Fiat): Coin? =
+        takeIf { it.fiat.currencyCode == amount.currencyCode }?.fiatToCoin(amount)
 
     /** True when the wallet cannot cover the selected card, or cannot tell because there is no rate. */
     fun exceedsBalance(): Boolean {
         val rate = cardExchangeRate ?: return true
         val paymentValue = getFirstCardValueAsFiat() ?: return true
+        val payment = rate.coinFor(paymentValue) ?: return true
         val balanceWithDiscount = balanceWithDiscount ?: return false
-        return rate.fiatToCoin(paymentValue).isGreaterThan(balanceWithDiscount)
+        return payment.isGreaterThan(balanceWithDiscount)
     }
 
     fun logError(ctxSpendException: Throwable, message: String) {

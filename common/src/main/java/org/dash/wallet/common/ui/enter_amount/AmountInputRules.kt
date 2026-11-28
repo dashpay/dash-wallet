@@ -17,29 +17,14 @@
 
 package org.dash.wallet.common.ui.enter_amount
 
-import java.util.Currency
-
 /** How many decimals the amount keypad accepts. */
 object AmountInputRules {
     private const val DASH_DECIMALS = 8
-    private const val DEFAULT_FIAT_DECIMALS = 2
+    private const val FIAT_DECIMALS = 2
 
-    // Fiat cannot hold more
-    private const val MAX_FIAT_DECIMALS = 4
-
-    /** The fraction digits of the fiat currency being typed (JPY 0, USD 2, KWD 3), or of Dash. */
-    fun maxDecimals(isDashAmount: Boolean, fiatCurrencyCode: String?, fiatLimit: Int? = null): Int {
-        if (isDashAmount) {
-            return DASH_DECIMALS
-        }
-        val digits = try {
-            Currency.getInstance(fiatCurrencyCode).defaultFractionDigits
-        } catch (e: Exception) {
-            DEFAULT_FIAT_DECIMALS
-        }
-        val decimals = if (digits < 0) DEFAULT_FIAT_DECIMALS else minOf(digits, MAX_FIAT_DECIMALS)
-        return minOf(decimals, fiatLimit ?: decimals)
-    }
+    /** [fiatLimit] is for a screen whose fiat amounts do not have the usual two decimals. */
+    fun maxDecimals(isDashAmount: Boolean, fiatLimit: Int? = null): Int =
+        if (isDashAmount) DASH_DECIMALS else fiatLimit ?: FIAT_DECIMALS
 
     fun acceptsDigit(input: String, decimalSeparator: Char, maxDecimals: Int): Boolean {
         val separatorIndex = input.indexOf(decimalSeparator)

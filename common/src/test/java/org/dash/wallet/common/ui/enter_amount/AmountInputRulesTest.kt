@@ -22,8 +22,8 @@ import org.junit.Test
 
 class AmountInputRulesTest {
     /** Presses the keys the way the keypad does: digits, and '.' for the separator key. */
-    private fun type(keys: String, currencyCode: String?, isDashAmount: Boolean = false): String {
-        val maxDecimals = AmountInputRules.maxDecimals(isDashAmount, currencyCode)
+    private fun type(keys: String, fiatLimit: Int? = null, isDashAmount: Boolean = false): String {
+        val maxDecimals = AmountInputRules.maxDecimals(isDashAmount, fiatLimit)
         val input = StringBuilder()
         keys.forEach { key ->
             if (key == '.') {
@@ -38,52 +38,25 @@ class AmountInputRulesTest {
     }
 
     @Test
-    fun twoDecimalCurrencies_stopAtTwoDecimalsAsBefore() {
-        assertEquals("12.34", type("12.3456", "USD"))
-        assertEquals("12.34", type("12.3456", "EUR"))
-        assertEquals("12.34", type("12.3.456", "GBP"))
+    fun withoutALimit_fiatStopsAtTwoDecimalsWhateverTheCurrency() {
+        // Send and Receive never set a limit, also when the wallet's currency is yen or dinar
+        assertEquals("12.34", type("12.3456"))
+        assertEquals("12.34", type("12.3.456"))
     }
 
     @Test
-    fun kuwaitiDinar_takesAThirdDecimal() {
-        assertEquals("1.234", type("1.2345", "KWD"))
-        assertEquals("1.234", type("1.2345", "BHD"))
-        assertEquals("1.234", type("1.2345", "OMR"))
+    fun dash_takesEightDecimalsWhateverTheLimit() {
+        assertEquals("0.12345678", type("0.123456789", isDashAmount = true))
+        assertEquals("0.12345678", type("0.123456789", fiatLimit = 0, isDashAmount = true))
     }
 
     @Test
-    fun yen_ignoresTheSeparatorKey() {
-        assertEquals("1500", type("15.00", "JPY"))
+    fun limitOfThree_takesAThirdDecimal() {
+        assertEquals("1.234", type("1.2345", fiatLimit = 3))
     }
 
     @Test
-    fun dash_takesEightDecimals() {
-        assertEquals("0.12345678", type("0.123456789", "USD", isDashAmount = true))
-    }
-
-    @Test
-    fun unknownCurrency_fallsBackToTwoDecimals() {
-        assertEquals(2, AmountInputRules.maxDecimals(false, "NOPE"))
-        assertEquals(2, AmountInputRules.maxDecimals(false, null))
-        // XXX reports -1 fraction digits
-        assertEquals(2, AmountInputRules.maxDecimals(false, "XXX"))
-    }
-
-    @Test
-    fun valueLongerThanTheLimit_takesNoDigitUntilItIsShortened() {
-        // what switching from Dash to yen can leave on the keypad
-        val maxDecimals = AmountInputRules.maxDecimals(false, "JPY")
-
-        assertEquals(false, AmountInputRules.acceptsDigit("1234.50", '.', maxDecimals))
-        assertEquals(false, AmountInputRules.acceptsDigit("1234.", '.', maxDecimals))
-        assertEquals(true, AmountInputRules.acceptsDigit("1234", '.', maxDecimals))
-    }
-
-    @Test
-    fun callerLimit_canOnlyLowerTheFiatDecimals() {
-        assertEquals(0, AmountInputRules.maxDecimals(false, "USD", fiatLimit = 0))
-        assertEquals(2, AmountInputRules.maxDecimals(false, "USD", fiatLimit = 5))
-        assertEquals(2, AmountInputRules.maxDecimals(false, "USD", fiatLimit = null))
-        assertEquals(8, AmountInputRules.maxDecimals(true, "USD", fiatLimit = 0))
+    fun limitOfZero_ignoresTheSeparatorKey() {
+        assertEquals("1500", type("15.00", fiatLimit = 0))
     }
 }

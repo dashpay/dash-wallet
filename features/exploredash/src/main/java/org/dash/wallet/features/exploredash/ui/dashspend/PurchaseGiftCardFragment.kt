@@ -73,6 +73,7 @@ fun GiftCardPurchaseBlock.message(context: Context, cardCurrency: String?): Stri
     return when (this) {
         GiftCardPurchaseBlock.CURRENCY_LOADING,
         GiftCardPurchaseBlock.CURRENCY_UNKNOWN -> context.getString(R.string.gift_card_currency_unknown)
+        GiftCardPurchaseBlock.NOT_SOLD -> context.getString(R.string.temporarily_unavailable)
         GiftCardPurchaseBlock.RATE_LOADING,
         GiftCardPurchaseBlock.RATE_MISSING -> context.getString(R.string.gift_card_rate_missing, currency)
         GiftCardPurchaseBlock.NO_AMOUNT,
@@ -157,6 +158,11 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
 
         viewModel.cardCurrencyState.observe(viewLifecycleOwner) {
             renderPurchaseUi()
+        }
+
+        // the range type can change without the merchant on screen counting as changed
+        viewModel.acceptedDetailsVersion.observe(viewLifecycleOwner) {
+            enterAmountViewModel.fiatDecimalsLimit = viewModel.entryDecimals
         }
 
         enterAmountViewModel.onContinueEvent.observe(viewLifecycleOwner) { (_, fiat) ->
@@ -328,7 +334,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
     }
 
     private fun setupEnterAmountFragment(cardCurrency: String) {
-        enterAmountViewModel.fiatDecimalsLimit = if (viewModel.isWholeAmountOnly) 0 else null
+        enterAmountViewModel.fiatDecimalsLimit = viewModel.entryDecimals
         updateEntryVisibility()
         binding.composeContainer.isVisible = false
         binding.fixedDenomText.isVisible = false

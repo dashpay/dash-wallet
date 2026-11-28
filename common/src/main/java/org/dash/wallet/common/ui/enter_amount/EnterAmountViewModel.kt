@@ -93,7 +93,7 @@ class EnterAmountViewModel @Inject constructor(
     val fiatAmount: LiveData<Fiat>
         get() = _fiatAmount
 
-    /** Fewer decimals than the fiat currency has, for a caller that takes whole amounts only. */
+    /** The fiat decimals the keypad takes on a screen where that is not the usual two. */
     var fiatDecimalsLimit: Int? = null
 
     private val _callerBlocksContinue = MutableLiveData(false)
