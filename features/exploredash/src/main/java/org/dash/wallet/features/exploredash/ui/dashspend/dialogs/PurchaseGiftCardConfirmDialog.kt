@@ -320,11 +320,14 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
     }
 
     private fun observePurchaseOutcome() {
+        // taken only while resumed: the details dialog waits for that, and a recreation first would lose it
         viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.paidOrder.collect { order ->
-                if (order != null && isAdded && viewModel.takePaidOrder(order)) {
-                    enterAmountViewModel.clearSavedState()
-                    showGiftCardDetailsDialog(order)
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                viewModel.paidOrder.collect { order ->
+                    if (order != null && isAdded && viewModel.takePaidOrder(order)) {
+                        enterAmountViewModel.clearSavedState()
+                        showGiftCardDetailsDialog(order)
+                    }
                 }
             }
         }
@@ -1198,16 +1201,18 @@ internal fun Fragment.observePurchaseWithoutSheet(viewModel: DashSpendViewModel)
     }
 
     viewLifecycleOwner.lifecycleScope.launch {
-        viewModel.paidOrder.collect { order ->
-            if (order != null && isAdded && !hasSheet() && viewModel.takePaidOrder(order)) {
-                val details = if (order.isMultipleCards) {
-                    GiftCardOrderDetailsDialog.newInstance(order.txId)
-                } else {
-                    GiftCardDetailsDialog.newInstance(order.txId)
+        viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            viewModel.paidOrder.collect { order ->
+                if (order != null && isAdded && !hasSheet() && viewModel.takePaidOrder(order)) {
+                    val details = if (order.isMultipleCards) {
+                        GiftCardOrderDetailsDialog.newInstance(order.txId)
+                    } else {
+                        GiftCardDetailsDialog.newInstance(order.txId)
+                    }
+                    details.show(requireActivity())
+                    val navController = findNavController()
+                    navController.popBackStack(navController.graph.startDestinationId, false)
                 }
-                details.show(requireActivity())
-                val navController = findNavController()
-                navController.popBackStack(navController.graph.startDestinationId, false)
             }
         }
     }
