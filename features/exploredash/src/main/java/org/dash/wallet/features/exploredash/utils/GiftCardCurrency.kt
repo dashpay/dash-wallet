@@ -43,7 +43,22 @@ object GiftCardCurrency {
         }
     }
 
-    fun fractionDigits(currencyCode: String): Int = Currency.getInstance(currencyCode).defaultFractionDigits
+    // CTX's own table (spend-api money/currency.go), which is what its prices are rounded by. The
+    // platform's differs: Android gives IQD, RSD, LBP and others no decimals at all.
+    private val NO_DECIMALS = setOf(
+        "BIF", "BYR", "CLP", "DJF", "GNF", "ISK", "JPY", "KMF", "KRW", "PYG", "RWF", "UGX", "VND", "VUV", "XAF",
+        "XOF", "XPF"
+    )
+    private val THREE_DECIMALS = setOf("BHD", "IQD", "JOD", "KWD", "LYD", "OMR", "TND")
+    private const val DEFAULT_DECIMALS = 2
+
+    /** The decimals CTX counts [currencyCode] in. Throws for a code that is not a currency. */
+    fun fractionDigits(currencyCode: String): Int = when (Currency.getInstance(currencyCode).currencyCode) {
+        in NO_DECIMALS -> 0
+        in THREE_DECIMALS -> 3
+        "CLF" -> 4
+        else -> DEFAULT_DECIMALS
+    }
 
     /** False when [amount] has more decimals than the currency has, e.g. 1000.5 JPY. */
     fun isRepresentable(amount: Double, currencyCode: String): Boolean =
@@ -103,8 +118,8 @@ object GiftCardCurrency {
         val currency = Currency.getInstance(currencyCode)
         return NumberFormat.getCurrencyInstance().apply {
             this.currency = currency
-            maximumFractionDigits = currency.defaultFractionDigits
-            minimumFractionDigits = if (trimZeroDecimals) 0 else currency.defaultFractionDigits
+            maximumFractionDigits = fractionDigits(currencyCode)
+            minimumFractionDigits = if (trimZeroDecimals) 0 else fractionDigits(currencyCode)
         }
     }
 

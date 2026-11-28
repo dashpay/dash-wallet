@@ -2377,4 +2377,20 @@ class DashSpendCardCurrencyTest {
         viewModel.selectedProvider = GiftCardProviderType.PiggyCards
         assertEquals(BigDecimal("5.47"), viewModel.discountedTotal(mapOf(5.55 to 1), "USD") { 0.016 })
     }
+
+    @Test
+    fun rateThatMovedTheOtherWaySinceConfirm_lowersWhatIsPaidWithoutAsking() = runBlocking {
+        paymentRequestAsksFor(Dash.valueOf(316_666_666))
+        val viewModel = viewModel()
+        val shown = viewModel.shownFor100Pounds()
+        val order = viewModel.purchaseGiftCard(shown)
+
+        // at 40 the 95 pounds come to 2.375 Dash, and CTX still asks what they came to at 30
+        freshRates["GBP"] = ExchangeRate("GBP", "40")
+        val charged = order.map { it.copy(cryptoAmount = "3.16666666") }
+
+        assertNull(viewModel.payCtxOrder(shown, "dash:?r=x", charged))
+        assertEquals(Dash.valueOf(237_500_000), viewModel.priceChange.value?.shown)
+        assertEquals(emptyList<Dash?>(), sentPayments)
+    }
 }

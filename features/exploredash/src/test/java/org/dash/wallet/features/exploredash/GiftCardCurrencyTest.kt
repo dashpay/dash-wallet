@@ -29,6 +29,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.mockito.kotlin.any
@@ -94,6 +95,28 @@ class GiftCardCurrencyTest {
         assertEquals("1000", digits(GiftCardCurrency.toFiat(1000.0, "JPY").toCardFormattedString()))
         assertEquals("1234", digits(GiftCardCurrency.toFiat(1.234, "KWD").toCardFormattedString()))
         assertEquals("1900", digits(GiftCardCurrency.toFiat(18.991, "GBP").toCardFormattedString(roundUp = true)))
+    }
+
+    @Test
+    fun fractionDigits_areTheOnesCtxCountsInNotThePlatforms() {
+        // Android's currency data gives all of these no decimals
+        val twoAtCtx = listOf("RSD", "ALL", "LBP", "MMK", "SYP", "YER", "IRR", "LAK", "SOS", "SLL", "KPW", "MGA", "AFN")
+        twoAtCtx.forEach { assertEquals(it, 2, GiftCardCurrency.fractionDigits(it)) }
+        listOf("BHD", "IQD", "JOD", "KWD", "LYD", "OMR", "TND").forEach {
+            assertEquals(it, 3, GiftCardCurrency.fractionDigits(it))
+        }
+        val none = listOf(
+            "BIF", "BYR", "CLP", "DJF", "GNF", "ISK", "JPY", "KMF", "KRW", "PYG", "RWF", "UGX", "VND", "VUV", "XAF",
+            "XOF", "XPF"
+        )
+        none.forEach { assertEquals(it, 0, GiftCardCurrency.fractionDigits(it)) }
+        listOf("USD", "GBP", "EUR", "INR", "CAD").forEach { assertEquals(it, 2, GiftCardCurrency.fractionDigits(it)) }
+        assertEquals(4, GiftCardCurrency.fractionDigits("CLF"))
+        assertThrows(IllegalArgumentException::class.java) { GiftCardCurrency.fractionDigits("NOPE") }
+        // the amount sent to CTX and the format shown go by the same table
+        assertEquals("1.500", GiftCardCurrency.orderAmount(1.5, "IQD"))
+        assertEquals(3, GiftCardCurrency.displayFormat("IQD").maximumFractionDigits)
+        assertEquals(2, GiftCardCurrency.displayFormat("RSD").minimumFractionDigits)
     }
 
     @Test
