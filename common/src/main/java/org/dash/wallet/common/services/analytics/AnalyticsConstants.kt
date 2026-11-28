@@ -282,6 +282,7 @@ object AnalyticsConstants {
         const val DISCOUNT_AMOUNT = "dashspend__discount_amount"
         const val MERCHANT_NAME = "dashspend__merchant_name"
         const val HOW_TO_USE = "dashspend__btn_how_to_use"
+        const val REDEEM_LINK = "dashspend__btn_redeem_link"
         const val FILTER_GIFT_CARD = "home_transaction_filter_gift_card"
         const val DETAILS_GIFT_CARD = "home_transaction_details_gift_card"
     }
