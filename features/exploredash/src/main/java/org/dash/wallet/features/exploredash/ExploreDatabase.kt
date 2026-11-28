@@ -25,8 +25,9 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import androidx.sqlite.db.SupportSQLiteDatabase
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import net.lingala.zip4j.ZipFile
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProvider
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderDao
@@ -74,11 +75,13 @@ abstract class ExploreDatabase : RoomDatabase() {
         private val log = LoggerFactory.getLogger(ExploreDatabase::class.java)
         private var instance: ExploreDatabase? = null
 
+        // Held only while a file is opened or swapped in, never during a download
+        private val swapMutex = Mutex()
+
         suspend fun getAppDatabase(context: Context, exploreConfig: ExploreConfig): ExploreDatabase {
-            if (instance == null) {
-                instance = open(context, exploreConfig)
+            return swapMutex.withLock {
+                instance ?: open(context, exploreConfig).also { instance = it }
             }
-            return instance!!
         }
 
         suspend fun updateDatabase(
@@ -256,10 +259,7 @@ abstract class ExploreDatabase : RoomDatabase() {
         }
 
         private suspend fun clearLocalTimestamp(exploreConfig: ExploreConfig) {
-            val prefs = exploreConfig.exploreDatabasePrefs.first()
-            if (prefs.localDbTimestamp != 0L) {
-                exploreConfig.saveExploreDatabasePrefs(prefs.copy(localDbTimestamp = 0L))
-            }
+            exploreConfig.updateExploreDatabasePrefs { it.copy(localDbTimestamp = 0L) }
         }
 
         private suspend fun update(
@@ -282,6 +282,14 @@ abstract class ExploreDatabase : RoomDatabase() {
             val staging = preloadAndOpen(dbBuilder, repository, dbUpdateFile)
             staging.close()
 
+            return swapMutex.withLock { promoteAndOpen(context, repository, exploreConfig) }
+        }
+
+        private suspend fun promoteAndOpen(
+            context: Context,
+            repository: ExploreRepository,
+            exploreConfig: ExploreConfig
+        ): ExploreDatabase {
             promoteStagingToProduction(context)
             // Recorded only once the new data is the production database, so a failed update is
             // downloaded again. It comes before open() because a recovery there resets the timestamp.

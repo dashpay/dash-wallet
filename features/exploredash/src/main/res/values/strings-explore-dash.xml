@@ -82,6 +82,8 @@
     <string name="explore_radius">Radius</string>
     <string name="explore_location">Location</string>
     <string name="explore_country">Country</string>
+    <string name="explore_all_countries">All countries</string>
+    <string name="explore_country_selected">%1$s: %2$s</string>
     <string name="explore_current_location">Current Location</string>
     <string name="explore_location_settings">Current Location Settings</string>
     <string name="explore_reset_filters">Reset Filters</string>
@@ -280,7 +282,7 @@
     <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">Create a DashSpend account or log in to the existing one</string>
     <string name="temporarily_unavailable">Temporarily unavailable</string>
     <string name="country_availability">This card works only in the United States</string>
-    <string name="country_availability_in">This card works only in %1$s</string>
+    <string name="country_availability_in">Works only in: %1$s</string>
     <string name="token_expired_title">Your session expired</string>
     <string name="token_expired_message">It looks like you haven’t used DashSpend in a while. For security reasons, you’ve been logged out.\n\nPlease sign in again to continue exploring where to spend your Dash.</string>
 

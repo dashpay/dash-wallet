@@ -67,6 +67,7 @@ open class ExploreConfig @Inject constructor(
         const val PREFERENCES_NAME = "explore"
 
         val LOCAL_DB_TIMESTAMP = longPreferencesKey("local_db_timestamp")
+        val LOCAL_DB_TIMESTAMP_V5 = longPreferencesKey("local_db_timestamp_v5")
         val LAST_SYNC_TIMESTAMP = longPreferencesKey("last_sync_timestamp")
         val PRELOADED_ON_TIMESTAMP = longPreferencesKey("preloaded_on")
         val FAILED_SYNC_ATTEMPTS = intPreferencesKey("failed_sync_attempts")
@@ -79,17 +80,16 @@ open class ExploreConfig @Inject constructor(
         val EXPLORE_DATABASE_NAME = stringPreferencesKey("explore_database_name")
     }
 
-    open val exploreDatabasePrefs: Flow<ExploreDatabasePrefs> = data
-        .map { prefs ->
-            ExploreDatabasePrefs(
-                localDbTimestamp = prefs[LOCAL_DB_TIMESTAMP] ?: 0,
-                lastSyncTimestamp = prefs[LAST_SYNC_TIMESTAMP] ?: 0,
-                preloadedOnTimestamp = prefs[PRELOADED_ON_TIMESTAMP] ?: 0,
-                failedSyncAttempts = prefs[FAILED_SYNC_ATTEMPTS] ?: 0,
-                preloadedTestDb = prefs[PRELOADED_TEST_DB] ?: false,
-                localDbSchemaVersion = prefs[LOCAL_DB_SCHEMA_VERSION] ?: 0
-            )
-        }
+    open val exploreDatabasePrefs: Flow<ExploreDatabasePrefs> = data.map { prefs -> prefs.toDatabasePrefs() }
+
+    private fun Preferences.toDatabasePrefs() = ExploreDatabasePrefs(
+        localDbTimestamp = this[LOCAL_DB_TIMESTAMP_V5] ?: 0,
+        lastSyncTimestamp = this[LAST_SYNC_TIMESTAMP] ?: 0,
+        preloadedOnTimestamp = this[PRELOADED_ON_TIMESTAMP] ?: 0,
+        failedSyncAttempts = this[FAILED_SYNC_ATTEMPTS] ?: 0,
+        preloadedTestDb = this[PRELOADED_TEST_DB] ?: false,
+        localDbSchemaVersion = this[LOCAL_DB_SCHEMA_VERSION] ?: 0
+    )
 
     open val selectedCountry: Flow<String?> = data.map { prefs -> prefs[SELECTED_COUNTRY] }
 
@@ -100,8 +100,16 @@ open class ExploreConfig @Inject constructor(
     }
 
     open suspend fun saveExploreDatabasePrefs(databasePrefs: ExploreDatabasePrefs) {
+        updateExploreDatabasePrefs { databasePrefs }
+    }
+
+    /** Reads and writes in one step, so two writers cannot undo each other's fields. */
+    open suspend fun updateExploreDatabasePrefs(transform: (ExploreDatabasePrefs) -> ExploreDatabasePrefs) {
         context.dataStore.edit { prefs ->
-            prefs[LOCAL_DB_TIMESTAMP] = databasePrefs.localDbTimestamp
+            val databasePrefs = transform(prefs.toDatabasePrefs())
+            prefs[LOCAL_DB_TIMESTAMP_V5] = databasePrefs.localDbTimestamp
+            // A build that reads the version 4 file finds no data of its own here and loads it again
+            prefs[LOCAL_DB_TIMESTAMP] = 0
             prefs[LAST_SYNC_TIMESTAMP] = databasePrefs.lastSyncTimestamp
             prefs[PRELOADED_ON_TIMESTAMP] = databasePrefs.preloadedOnTimestamp
             prefs[FAILED_SYNC_ATTEMPTS] = databasePrefs.failedSyncAttempts

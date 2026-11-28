@@ -37,6 +37,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import java.util.Locale
 
 /**
  * Gift card rows carry a country; pay-with-Dash rows and rows from a database older than
@@ -82,13 +83,14 @@ class MerchantCountryQueryTest {
         paymentMethod: String,
         country: String,
         currency: String,
-        territory: String
+        territory: String,
+        name: String = "$id merchant"
     ) {
         database.openHelper.writableDatabase.execSQL(
             "INSERT INTO merchant " +
                 "(merchantId, name, type, paymentMethod, territory, active, redeemType, latitude, longitude, " +
                 "country, currency) " +
-                "VALUES ('$id', '$id merchant', '$type', '$paymentMethod', '$territory', 1, 'barcode', 10.0, 10.0, " +
+                "VALUES ('$id', '$name', '$type', '$paymentMethod', '$territory', 1, 'barcode', 10.0, 10.0, " +
                 "$country, $currency)"
         )
     }
@@ -121,6 +123,100 @@ class MerchantCountryQueryTest {
 
     private suspend fun counted(type: String, query: String, country: String): Int =
         dataSource.getMerchantsResultCount(query, "", type, "", DenomOption.Both, "", GeoBounds.noBounds, country)
+
+    private suspend fun PagingSource<Int, MerchantInfo>.sameNamedInOrder(): List<String> {
+        val page = load(PagingSource.LoadParams.Refresh(null, 100, false)) as PagingSource.LoadResult.Page
+        return page.data.map { it.merchant!!.merchantId!! }.filter { it.endsWith("-same") }
+    }
+
+    private fun insertSameNamedMerchants(type: String) {
+        for (country in listOf("FR", "US", "GB", "DE")) {
+            insert("${country.lowercase()}-same", type, "gift card", "'$country'", "''", "Texas", "Same")
+        }
+        insert("none-same", type, "gift card", "NULL", "NULL", "Texas", "Same")
+    }
+
+    private suspend fun sameNamedListed(
+        type: String,
+        query: String,
+        sortOption: SortOption,
+        bounds: GeoBounds = GeoBounds.noBounds,
+        territory: String = ""
+    ): List<String> =
+        dataSource.observeMerchantsPaging(
+            query,
+            territory,
+            type,
+            "",
+            DenomOption.Both,
+            "",
+            bounds,
+            sortOption,
+            10.0,
+            10.0,
+            false,
+            ""
+        ).sameNamedInOrder()
+
+    private fun <T> withDeviceCountry(country: String, block: suspend () -> T): T {
+        val previous = Locale.getDefault()
+        Locale.setDefault(Locale("en", country))
+        return try {
+            runBlocking { block() }
+        } finally {
+            Locale.setDefault(previous)
+        }
+    }
+
+    private val britishDeviceOrder = listOf("gb-same", "us-same", "none-same", "de-same", "fr-same")
+    private val otherDeviceOrder = listOf("us-same", "none-same", "de-same", "fr-same", "gb-same")
+
+    @Test
+    fun sameNamedMerchants_listTheDeviceCountryFirstThenUsThenByCode() {
+        insertSameNamedMerchants("online")
+        for (query in listOf("", "Same")) {
+            for (type in listOf(MerchantType.ONLINE, "")) {
+                for (sortOption in listOf(SortOption.Name, SortOption.Discount)) {
+                    val case = "query '$query', type '$type', $sortOption"
+                    assertEquals(
+                        case,
+                        britishDeviceOrder,
+                        withDeviceCountry("GB") { sameNamedListed(type, query, sortOption) }
+                    )
+                    assertEquals(
+                        case,
+                        otherDeviceOrder,
+                        withDeviceCountry("JP") { sameNamedListed(type, query, sortOption) }
+                    )
+                }
+                assertEquals(
+                    "the count must match the list for query '$query', type '$type'",
+                    runBlocking { listed(type, query, "") }.size,
+                    runBlocking { counted(type, query, "") }
+                )
+            }
+        }
+    }
+
+    @Test
+    fun sameNamedStores_keepThatOrderNearbyAndInATerritory() {
+        insertSameNamedMerchants("physical")
+        val around = GeoBounds(11.0, 11.0, 9.0, 9.0, 10.0, 10.0)
+        for (query in listOf("", "Same")) {
+            assertEquals(
+                britishDeviceOrder,
+                withDeviceCountry("GB") { sameNamedListed(MerchantType.PHYSICAL, query, SortOption.Name, around) }
+            )
+            assertEquals(
+                otherDeviceOrder,
+                withDeviceCountry("JP") { sameNamedListed(MerchantType.PHYSICAL, query, SortOption.Name, around) }
+            )
+            assertEquals(
+                britishDeviceOrder,
+                withDeviceCountry("GB") { sameNamedListed("", query, SortOption.Name, territory = "Texas") }
+            )
+        }
+    }
 
     private fun onlineOf(ids: List<String>) = ids.filter { it.endsWith("-online") }.sorted()
 
@@ -196,11 +292,11 @@ class MerchantCountryQueryTest {
 
         assertEquals(
             stores,
-            dao.pagingGetByCoordinates(types, "", "", "", 11.0, 11.0, 9.0, 9.0, 0, 10.0, 10.0).ids()
+            dao.pagingGetByCoordinates(types, "", "", "", 11.0, 11.0, 9.0, 9.0, 0, 10.0, 10.0, "").ids()
         )
         assertEquals(
             stores,
-            dao.pagingSearchByCoordinates("merchant*", types, "", "", "", 11.0, 11.0, 9.0, 9.0, 0, 10.0, 10.0).ids()
+            dao.pagingSearchByCoordinates("merchant*", types, "", "", "", 11.0, 11.0, 9.0, 9.0, 0, 10.0, 10.0, "").ids()
         )
         assertEquals(4, dao.getByCoordinatesResultCount(types, "", "", "", 11.0, 11.0, 9.0, 9.0))
         assertEquals(4, dao.searchByCoordinatesResultCount("merchant*", types, "", "", "", 11.0, 11.0, 9.0, 9.0))

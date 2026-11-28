@@ -424,17 +424,19 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
 
         binding.countryBtn.setOnClickListener {
             val names = countryNames
+            val allCountries = getString(R.string.explore_all_countries)
             OptionPickerDialog(
                 getString(R.string.explore_country),
-                names.keys.map { IconifiedViewItem(it) },
-                // Nothing is marked while every country shows
-                names.values.indexOf(shownCountry),
+                listOf(IconifiedViewItem(allCountries)) + names.keys.map { IconifiedViewItem(it) },
+                names.values.indexOf(shownCountry) + 1,
                 useCheckMark = true
             ) { item, _, dialog ->
                 dialog.dismiss()
                 // The picker's index counts within its search results, so the name identifies the pick
-                names[item.title]?.let { country ->
+                val country = names[item.title]
+                if (country != null || item.title == allCountries) {
                     pickedCountry = country
+                    isCountryReset = country == null
                     showCountry()
                     checkResetButton()
                 }
@@ -446,8 +448,11 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
         get() = pickedCountry ?: if (isCountryReset) "" else viewModel.selectedCountry.value
 
     private fun showCountry() {
-        binding.countryName.text = shownCountry.ifEmpty { null }?.let { Locale("", it).displayCountry }
-            ?: getString(R.string.explore_option_all)
+        val name = shownCountry.ifEmpty { null }?.let { Locale("", it).displayCountry }
+            ?: getString(R.string.explore_all_countries)
+        binding.countryName.text = name
+        binding.countryBtn.contentDescription =
+            getString(R.string.explore_country_selected, getString(R.string.explore_country), name)
     }
 
     private val hasCountryChoice: Boolean

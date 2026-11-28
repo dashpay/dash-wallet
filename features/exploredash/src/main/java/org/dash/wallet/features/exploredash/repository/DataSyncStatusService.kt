@@ -24,4 +24,7 @@ interface DataSyncStatusService {
     suspend fun setObservedLastError()
     fun hasObservedLastError(): Flow<Boolean>
     fun getSyncProgressFlow(): Flow<Resource<Double>>
+
+    /** Changes each time a sync has replaced the explore database with a new file. */
+    fun getCatalogGeneration(): Flow<Int>
 }

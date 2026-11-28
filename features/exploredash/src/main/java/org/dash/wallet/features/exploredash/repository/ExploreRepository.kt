@@ -25,7 +25,6 @@ import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.StorageReference
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.tasks.await
 import net.lingala.zip4j.ZipFile
 import org.dash.wallet.common.util.Constants
@@ -190,12 +189,8 @@ class GCExploreDatabase @Inject constructor(
 
     override suspend fun finalizeUpdate() {
         log.info("finalizing update: $updateTimestampCache")
-        val prefs = exploreConfig.exploreDatabasePrefs.first()
-        exploreConfig.saveExploreDatabasePrefs(
-            prefs.copy(
-                localDbTimestamp = updateTimestampCache,
-                localDbSchemaVersion = ExploreDatabase.VERSION
-            )
-        )
+        exploreConfig.updateExploreDatabasePrefs {
+            it.copy(localDbTimestamp = updateTimestampCache, localDbSchemaVersion = ExploreDatabase.VERSION)
+        }
     }
 }

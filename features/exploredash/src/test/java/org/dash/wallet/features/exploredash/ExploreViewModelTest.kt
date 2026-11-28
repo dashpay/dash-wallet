@@ -309,6 +309,7 @@ class ExploreViewModelTest {
             val dataSyncStatus =
                 mock<DataSyncStatusService> {
                     on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0)) }
+                    on { getCatalogGeneration() } doReturn flowOf(0)
                     on { hasObservedLastError() } doReturn flow { emit(false) }
                 }
             val analyticsService = mock<AnalyticsService>()
@@ -380,6 +381,7 @@ class ExploreViewModelTest {
             val dataSyncStatus =
                 mock<DataSyncStatusService> {
                     on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0)) }
+                    on { getCatalogGeneration() } doReturn flowOf(0)
                     on { hasObservedLastError() } doReturn flow { emit(false) }
                 }
             val analyticsService = mock<AnalyticsService>()
@@ -444,6 +446,7 @@ class ExploreViewModelTest {
             val dataSyncStatus =
                 mock<DataSyncStatusService> {
                     on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0)) }
+                    on { getCatalogGeneration() } doReturn flowOf(0)
                     on { hasObservedLastError() } doReturn flow { emit(false) }
                 }
             val analyticsService = mock<AnalyticsService>()
@@ -520,6 +523,7 @@ class ExploreViewModelTest {
             val dataSyncStatus =
                 mock<DataSyncStatusService> {
                     on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0)) }
+                    on { getCatalogGeneration() } doReturn flowOf(0)
                     on { hasObservedLastError() } doReturn flow { emit(false) }
                 }
             val analyticsService = mock<AnalyticsService>()
@@ -580,6 +584,7 @@ class ExploreViewModelTest {
             val dataSyncStatus =
                 mock<DataSyncStatusService> {
                     on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0)) }
+                    on { getCatalogGeneration() } doReturn flowOf(0)
                     on { hasObservedLastError() } doReturn flow { emit(false) }
                 }
 
@@ -645,6 +650,7 @@ class ExploreViewModelTest {
             val dataSyncStatus =
                 mock<DataSyncStatusService> {
                     on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0)) }
+                    on { getCatalogGeneration() } doReturn flowOf(0)
                     on { hasObservedLastError() } doReturn flow { emit(false) }
                 }
 
@@ -706,6 +712,7 @@ class ExploreViewModelTest {
         }
         val dataSyncStatus = mock<DataSyncStatusService> {
             on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0)) }
+            on { getCatalogGeneration() } doReturn flowOf(0)
             on { hasObservedLastError() } doReturn flow { emit(false) }
         }
         return ExploreViewModel(
@@ -873,6 +880,7 @@ class ExploreViewModelTest {
             val dataSyncStatus =
                 mock<DataSyncStatusService> {
                     on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0)) }
+                    on { getCatalogGeneration() } doReturn flowOf(0)
                     on { hasObservedLastError() } doReturn flow { emit(false) }
                 }
 
@@ -954,6 +962,7 @@ class ExploreViewModelTest {
             val dataSyncStatus =
                 mock<DataSyncStatusService> {
                     on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0)) }
+                    on { getCatalogGeneration() } doReturn flowOf(0)
                     on { hasObservedLastError() } doReturn flow { emit(false) }
                 }
 
@@ -1009,6 +1018,7 @@ class ExploreViewModelTest {
             val dataSource = mock<ExploreDataSource>()
             val dataSyncStatus = mock<DataSyncStatusService> {
                 on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0)) }
+                on { getCatalogGeneration() } doReturn flowOf(0)
                 on { hasObservedLastError() } doReturn flow { emit(false) }
             }
             val analyticsService = mock<AnalyticsService>()
@@ -1047,6 +1057,7 @@ class ExploreViewModelTest {
         }
         val dataSyncStatus = mock<DataSyncStatusService> {
             on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0)) }
+            on { getCatalogGeneration() } doReturn flowOf(0)
             on { hasObservedLastError() } doReturn flow { emit(false) }
         }
         return ExploreViewModel(
@@ -1184,8 +1195,12 @@ class ExploreViewModelTest {
         }
     }
 
-    private fun syncStatusOf(progress: Flow<Resource<Double>>) = mock<DataSyncStatusService> {
+    private fun syncStatusOf(
+        progress: Flow<Resource<Double>>,
+        catalogGeneration: Flow<Int> = flowOf(0)
+    ) = mock<DataSyncStatusService> {
         on { getSyncProgressFlow() } doReturn progress
+        on { getCatalogGeneration() } doReturn catalogGeneration
         on { hasObservedLastError() } doReturn flow { emit(false) }
     }
 
@@ -1289,9 +1304,10 @@ class ExploreViewModelTest {
     }
 
     @Test
-    fun finishedSync_readsTheListCountAndMapAgain() {
+    fun onlyASyncThatReplacedTheDatabase_readsTheListCountAndMapAgain() {
         runBlocking {
             val progress = MutableStateFlow(Resource.loading(50.0))
+            val catalogGeneration = MutableStateFlow(0)
             val dataSource = mock<ExploreDataSource> {
                 onBlocking { getMerchantCountries() } doReturn listOf("US")
                 onBlocking {
@@ -1311,7 +1327,7 @@ class ExploreViewModelTest {
             val viewModel = ExploreViewModel(
                 dataSource,
                 locationMock,
-                syncStatusOf(progress),
+                syncStatusOf(progress, catalogGeneration),
                 networkState,
                 mockPreferences,
                 mock<AnalyticsService>()
@@ -1331,11 +1347,23 @@ class ExploreViewModelTest {
                 any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()
             )
 
+            // The sync found the local data up to date: the list on screen stays as it is
             progress.value = Resource.success(100.0)
             kotlinx.coroutines.delay(1000)
 
+            verify(dataSource, times(1))
+                .getMerchantsResultCount(any(), any(), any(), any(), any(), any(), any(), any())
+            verify(dataSource, times(1))
+                .observePhysicalMerchants(any(), any(), any(), any(), any(), any(), any(), any())
+            verify(dataSource, times(1)).observeMerchantsPaging(
+                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()
+            )
+
+            catalogGeneration.value = 1
+            kotlinx.coroutines.delay(1000)
+
             assertEquals("", viewModel.selectedCountry.value)
-            verify(dataSource, times(2)).getMerchantCountries()
+            verify(dataSource, times(3)).getMerchantCountries()
             verify(dataSource, times(2))
                 .getMerchantsResultCount(any(), any(), any(), any(), any(), any(), any(), any())
             verify(dataSource, times(2))

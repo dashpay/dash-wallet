@@ -333,6 +333,10 @@ class ExploreViewModel @Inject constructor(
         return if (mode == FilterMode.Online || mode == FilterMode.All) selectedCountry.value else ""
     }
 
+    /** The country the current list is narrowed to, or blank when it shows every country. */
+    val appliedCountry: String
+        get() = if (exploreTopic == ExploreTopic.Merchants) getCountryFilter(_filterMode.value) else ""
+
     // null forgets the choice, so every country shows again
     fun setCountry(country: String?) {
         viewModelScope.launch { exploreConfig.setSelectedCountry(country) }
@@ -396,16 +400,16 @@ class ExploreViewModel @Inject constructor(
 
         this.exploreTopic = exploreTopic
 
-        // A finished sync may have replaced the database, so everything on screen is read again
+        // Lists are read again only when a sync has replaced the database: a reload clears the
+        // list and scrolls it to the top, which a sync that found nothing new must not do.
         this.catalogJob?.cancel()
         this.catalogJob = syncStatusService.getSyncProgressFlow()
             .map { it.status == Status.SUCCESS }
             .distinctUntilChanged()
-            .onEach { isSynced ->
+            .combine(syncStatusService.getCatalogGeneration()) { _, generation -> generation }
+            .onEach { generation ->
                 reloadCountries()
-                if (isSynced) {
-                    catalogGeneration.value++
-                }
+                catalogGeneration.value = generation
             }
             .launchIn(viewModelWorkerScope)
 

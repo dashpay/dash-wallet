@@ -73,6 +73,10 @@ class ExploreDatabaseTest {
                 prefsState = invocation.arguments[0] as ExploreDatabasePrefs
                 timestamp = prefsState.localDbTimestamp
             }
+            onBlocking { updateExploreDatabasePrefs(any()) } doAnswer { invocation ->
+                prefsState = invocation.getArgument<(ExploreDatabasePrefs) -> ExploreDatabasePrefs>(0)(prefsState)
+                timestamp = prefsState.localDbTimestamp
+            }
         }
         ensureFixturesExist()
     }
@@ -138,8 +142,8 @@ class ExploreDatabaseTest {
             }
         }
 
-        private fun createPopulatedVersion4(file: File) {
-            createExploreDatabaseVersion4(file) { v4 ->
+        private fun createPopulatedVersion4(file: File, tables: Map<String, String> = mapOf()) {
+            createExploreDatabaseVersion4(file, tables) { v4 ->
                 v4.execSQL("INSERT INTO merchant (name) VALUES ('dummy merchant')")
                 v4.execSQL("INSERT INTO atm (name) VALUES ('dummy atm')")
             }
@@ -219,6 +223,9 @@ class ExploreDatabaseTest {
             onBlocking { saveExploreDatabasePrefs(any()) } doAnswer { invocation ->
                 prefs = invocation.arguments[0] as ExploreDatabasePrefs
             }
+            onBlocking { updateExploreDatabasePrefs(any()) } doAnswer { invocation ->
+                prefs = invocation.getArgument<(ExploreDatabasePrefs) -> ExploreDatabasePrefs>(0)(prefs)
+            }
             // No obsolete db name to migrate from.
             onBlocking { get<String>(any()) } doReturn null
         }
@@ -276,7 +283,41 @@ class ExploreDatabaseTest {
         onBlocking { saveExploreDatabasePrefs(any()) } doAnswer { invocation ->
             prefsState = invocation.arguments[0] as ExploreDatabasePrefs
         }
+        onBlocking { updateExploreDatabasePrefs(any()) } doAnswer { invocation ->
+            prefsState = invocation.getArgument<(ExploreDatabasePrefs) -> ExploreDatabasePrefs>(0)(prefsState)
+        }
         onBlocking { get<String>(any()) } doReturn null
+    }
+
+    /** Stages a version 5 update file whose gift card merchants are in the given countries. */
+    private fun stageUpdateWithCountries(repository: GCExploreDatabase, vararg countries: String) {
+        val innerName = "countries-inner-${System.nanoTime()}"
+        val room = Room.databaseBuilder(appContext, ExploreDatabase::class.java, innerName)
+            .allowMainThreadQueries()
+            .build()
+        try {
+            val db = room.openHelper.writableDatabase
+            for (country in countries) {
+                db.execSQL("INSERT INTO merchant (name, merchantId, country) VALUES ('Shop', '$country', '$country')")
+            }
+            db.execSQL("INSERT INTO atm (name) VALUES ('dummy atm')")
+        } finally {
+            room.close()
+        }
+        zipExploreDb(appContext.getDatabasePath(innerName), repository.getUpdateFile())
+        appContext.deleteDatabase(innerName)
+    }
+
+    @Test
+    fun updateWithSeveralCountries_listsThemAll() = runTest {
+        val config = updateConfig()
+        val repository = GCExploreDatabase(appContext, config, mock(), mock())
+        stageUpdateWithCountries(repository, "US", "GB")
+
+        ExploreDatabase.updateDatabase(appContext, repository, config)
+
+        val dao = ExploreDatabase.getAppDatabase(appContext, config).merchantDao()
+        assertEquals(listOf("GB", "US"), withContext(Dispatchers.IO) { dao.getCountries() }.sorted())
     }
 
     private fun stageUpdateFile(repository: GCExploreDatabase): Long {
@@ -339,9 +380,14 @@ class ExploreDatabaseTest {
     }
 
     @Test
-    fun version4UpdateFile_isMigratedWhenLoaded() = runTest {
+    fun version4UpdateFile_isMigratedWhenLoaded() = version4UpdateFileIsMigrated(mapOf())
+
+    @Test
+    fun publishedVersion4UpdateFile_isMigratedWhenLoaded() = version4UpdateFileIsMigrated(PUBLISHED_VERSION_4_TABLES)
+
+    private fun version4UpdateFileIsMigrated(tables: Map<String, String>) = runTest {
         val inner = appContext.getDatabasePath("explore-v4-inner")
-        createPopulatedVersion4(inner)
+        createPopulatedVersion4(inner, tables)
         val v4File = File(appContext.cacheDir, "explore-v4.zip")
         zipExploreDb(inner, v4File)
         appContext.deleteDatabase(inner.name)
@@ -357,8 +403,14 @@ class ExploreDatabaseTest {
     }
 
     @Test
-    fun version4LocalDb_isMigratedInPlaceAndKeepsItsRows() = runTest {
-        createPopulatedVersion4(appContext.getDatabasePath("explore-database"))
+    fun version4LocalDb_isMigratedInPlaceAndKeepsItsRows() = version4LocalDbIsMigrated(mapOf())
+
+    @Test
+    fun publishedVersion4LocalDb_isMigratedInPlaceAndKeepsItsRows() =
+        version4LocalDbIsMigrated(PUBLISHED_VERSION_4_TABLES)
+
+    private fun version4LocalDbIsMigrated(tables: Map<String, String>) = runTest {
+        createPopulatedVersion4(appContext.getDatabasePath("explore-database"), tables)
         // A build that reads version 4 wrote this timestamp; the version marker is from an earlier
         // run of this build. Neither says the migrated rows are the version 5 data.
         prefsState = ExploreDatabasePrefs(

@@ -24,6 +24,7 @@ import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProvider
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderDao
 import org.dash.wallet.features.exploredash.data.explore.model.*
 import org.dash.wallet.features.exploredash.ui.explore.DenomOption
+import java.util.Locale
 import javax.inject.Inject
 
 interface ExploreDataSource {
@@ -207,6 +208,7 @@ open class MerchantAtmDataSource @Inject constructor(
         onlineFirst: Boolean,
         country: String
     ): PagingSource<Int, MerchantInfo> {
+        val homeCountry = Locale.getDefault().country
         val denominationType = if (denomType == DenomOption.Both) {
             ""
         } else if (denomType == DenomOption.Fixed) {
@@ -232,7 +234,8 @@ open class MerchantAtmDataSource @Inject constructor(
                         country,
                         sortByDiscount,
                         userLat,
-                        userLng
+                        userLng,
+                        homeCountry
                     )
                 } else {
                     merchantDao.pagingGetGrouped(
@@ -243,7 +246,8 @@ open class MerchantAtmDataSource @Inject constructor(
                         country,
                         sortByDiscount,
                         userLat,
-                        userLng
+                        userLng,
+                        homeCountry
                     )
                 }
             }
@@ -265,7 +269,8 @@ open class MerchantAtmDataSource @Inject constructor(
                         bounds.westLng,
                         sortOption.ordinal,
                         userLat,
-                        userLng
+                        userLng,
+                        homeCountry
                     )
                 } else {
                     merchantDao.pagingGetByCoordinates(
@@ -279,7 +284,8 @@ open class MerchantAtmDataSource @Inject constructor(
                         bounds.westLng,
                         sortOption.ordinal,
                         userLat,
-                        userLng
+                        userLng,
+                        homeCountry
                     )
                 }
             }
@@ -308,7 +314,8 @@ open class MerchantAtmDataSource @Inject constructor(
                         userLat,
                         userLng,
                         onlineOrder,
-                        physicalOrder
+                        physicalOrder,
+                        homeCountry
                     )
                 } else {
                     merchantDao.pagingGetByTerritory(
@@ -322,7 +329,8 @@ open class MerchantAtmDataSource @Inject constructor(
                         userLat,
                         userLng,
                         onlineOrder,
-                        physicalOrder
+                        physicalOrder,
+                        homeCountry
                     )
                 }
             }

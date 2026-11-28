@@ -27,6 +27,7 @@ import org.dash.wallet.features.exploredash.data.explore.model.MerchantInfo
 
 @Dao
 interface MerchantDao : BaseDao<Merchant> {
+    // Paged lists order same-named merchants by country: homeCountry first, then US, then by code.
     // Sorting by distance is approximate - it's done using "flat-earth" Pythagorean formula.
     // It's good enough for our purposes, but if there is a need to display the distance
     // in UI it should be done using map APIs.
@@ -82,7 +83,10 @@ interface MerchantDao : BaseDao<Merchant> {
         ORDER BY
             CASE WHEN :sortOption = 0 THEN merchant.name END COLLATE NOCASE ASC,
             CASE WHEN :sortOption = 1 THEN (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) END ASC,
-            CASE WHEN :sortOption = 2 THEN (SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId) END DESC
+            CASE WHEN :sortOption = 2 THEN (SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId) END DESC,
+            merchant.name COLLATE NOCASE ASC,
+            CASE WHEN merchant.country = :homeCountry THEN 0 WHEN merchant.country = 'US' THEN 1 ELSE 2 END,
+            merchant.country
     """
     )
     fun pagingGetByCoordinates(
@@ -96,7 +100,8 @@ interface MerchantDao : BaseDao<Merchant> {
         westLng: Double,
         sortOption: Int,
         anchorLat: Double,
-        anchorLng: Double
+        anchorLng: Double,
+        homeCountry: String
     ): PagingSource<Int, MerchantInfo>
 
     @Query(
@@ -146,7 +151,10 @@ interface MerchantDao : BaseDao<Merchant> {
         ORDER BY
             CASE WHEN :sortOption = 0 THEN merchant.name END COLLATE NOCASE ASC,
             CASE WHEN :sortOption = 1 THEN (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) END ASC,
-            CASE WHEN :sortOption = 2 THEN (SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId) END DESC
+            CASE WHEN :sortOption = 2 THEN (SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId) END DESC,
+            merchant.name COLLATE NOCASE ASC,
+            CASE WHEN merchant.country = :homeCountry THEN 0 WHEN merchant.country = 'US' THEN 1 ELSE 2 END,
+            merchant.country
     """
     )
     fun pagingSearchByCoordinates(
@@ -161,7 +169,8 @@ interface MerchantDao : BaseDao<Merchant> {
         westLng: Double,
         sortOption: Int,
         anchorLat: Double,
-        anchorLng: Double
+        anchorLng: Double,
+        homeCountry: String
     ): PagingSource<Int, MerchantInfo>
 
     @Query(
@@ -215,7 +224,10 @@ interface MerchantDao : BaseDao<Merchant> {
             END,
             CASE WHEN :sortOption = 0 THEN merchant.name END COLLATE NOCASE ASC,
             CASE WHEN :sortOption = 1 THEN (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) END ASC,
-            CASE WHEN :sortOption = 2 THEN (SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId) END DESC
+            CASE WHEN :sortOption = 2 THEN (SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId) END DESC,
+            merchant.name COLLATE NOCASE ASC,
+            CASE WHEN merchant.country = :homeCountry THEN 0 WHEN merchant.country = 'US' THEN 1 ELSE 2 END,
+            merchant.country
     """
     )
     fun pagingGetByTerritory(
@@ -229,7 +241,8 @@ interface MerchantDao : BaseDao<Merchant> {
         anchorLat: Double,
         anchorLng: Double,
         onlineOrder: Int,
-        physicalOrder: Int
+        physicalOrder: Int,
+        homeCountry: String
     ): PagingSource<Int, MerchantInfo>
 
     @Query(
@@ -278,7 +291,10 @@ interface MerchantDao : BaseDao<Merchant> {
             END,
             CASE WHEN :sortOption = 0 THEN merchant.name END COLLATE NOCASE ASC,
             CASE WHEN :sortOption = 1 THEN (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) END ASC,
-            CASE WHEN :sortOption = 2 THEN (SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId) END DESC
+            CASE WHEN :sortOption = 2 THEN (SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId) END DESC,
+            merchant.name COLLATE NOCASE ASC,
+            CASE WHEN merchant.country = :homeCountry THEN 0 WHEN merchant.country = 'US' THEN 1 ELSE 2 END,
+            merchant.country
     """
     )
     fun pagingSearchByTerritory(
@@ -293,7 +309,8 @@ interface MerchantDao : BaseDao<Merchant> {
         anchorLat: Double,
         anchorLng: Double,
         onlineOrder: Int,
-        physicalOrder: Int
+        physicalOrder: Int,
+        homeCountry: String
     ): PagingSource<Int, MerchantInfo>
 
     @Query(
@@ -336,7 +353,10 @@ interface MerchantDao : BaseDao<Merchant> {
         HAVING (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) = MIN((latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng))
         ORDER BY
             CASE WHEN :sortByDiscount = 0 THEN name END COLLATE NOCASE ASC,
-            CASE WHEN :sortByDiscount = 1 THEN (SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId) END DESC
+            CASE WHEN :sortByDiscount = 1 THEN (SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId) END DESC,
+            merchant.name COLLATE NOCASE ASC,
+            CASE WHEN merchant.country = :homeCountry THEN 0 WHEN merchant.country = 'US' THEN 1 ELSE 2 END,
+            merchant.country
     """
     )
     fun pagingGetGrouped(
@@ -347,7 +367,8 @@ interface MerchantDao : BaseDao<Merchant> {
         country: String,
         sortByDiscount: Boolean,
         anchorLat: Double,
-        anchorLng: Double
+        anchorLng: Double,
+        homeCountry: String
     ): PagingSource<Int, MerchantInfo>
 
     @Query(
@@ -387,7 +408,10 @@ interface MerchantDao : BaseDao<Merchant> {
         HAVING (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) = MIN((latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng))
         ORDER BY
             CASE WHEN :sortByDiscount = 0 THEN merchant.name END COLLATE NOCASE ASC,
-            CASE WHEN :sortByDiscount = 1 THEN (SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId) END DESC
+            CASE WHEN :sortByDiscount = 1 THEN (SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId) END DESC,
+            merchant.name COLLATE NOCASE ASC,
+            CASE WHEN merchant.country = :homeCountry THEN 0 WHEN merchant.country = 'US' THEN 1 ELSE 2 END,
+            merchant.country
     """
     )
     fun pagingSearchGrouped(
@@ -399,7 +423,8 @@ interface MerchantDao : BaseDao<Merchant> {
         country: String,
         sortByDiscount: Boolean,
         anchorLat: Double,
-        anchorLng: Double
+        anchorLng: Double,
+        homeCountry: String
     ): PagingSource<Int, MerchantInfo>
 
     @Query(

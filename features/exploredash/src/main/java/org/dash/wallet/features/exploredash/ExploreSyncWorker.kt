@@ -105,12 +105,13 @@ class ExploreSyncWorker @AssistedInject constructor(
                     // forces migrations on an old user_version and risks crashing.
                     if (localDbTimestamp == 0L || localDbTimestamp < preloadedDbTimestamp) {
                         ExploreDatabase.updateDatabase(appContext, exploreRepository, exploreConfig)
-                        // Re-read prefs after updateDatabase: finalizeUpdate has written the new
-                        // localDbTimestamp and schema version, so the snapshot captured at the
-                        // start of doWork() is stale and saving it would undo that write.
-                        val latestPrefs = exploreConfig.exploreDatabasePrefs.first()
-                        databasePrefs = latestPrefs.copy(preloadedOnTimestamp = preloadedDbTimestamp)
-                        exploreConfig.saveExploreDatabasePrefs(databasePrefs)
+                        syncStatus.setCatalogReplaced()
+                        // The snapshot from the start of doWork() is stale by now: finalizeUpdate
+                        // has written the new timestamp and schema version.
+                        exploreConfig.updateExploreDatabasePrefs {
+                            it.copy(preloadedOnTimestamp = preloadedDbTimestamp)
+                        }
+                        databasePrefs = exploreConfig.exploreDatabasePrefs.first()
                         localDbTimestamp = databasePrefs.localDbTimestampFor(ExploreDatabase.VERSION)
                     }
                 }
@@ -122,16 +123,15 @@ class ExploreSyncWorker @AssistedInject constructor(
                 if (localDbTimestamp >= remoteDataTimestamp) {
                     log.info("explore db is up to date, nothing to sync")
                     syncStatus.setSyncProgress(100.0)
-                    databasePrefs = databasePrefs.copy(failedSyncAttempts = 0)
-
-                    if (databasePrefs.lastSyncTimestamp <= 0) {
-                        // Some devices might have this as 0 due to the bug. Need to update
-                        // manually
+                    exploreConfig.updateExploreDatabasePrefs { prefs ->
+                        // Some devices might have lastSyncTimestamp as 0 due to the bug. Need to
+                        // update manually
                         // TODO: this can be removed after some time
-                        databasePrefs = databasePrefs.copy(lastSyncTimestamp = remoteDataTimestamp)
+                        prefs.copy(
+                            failedSyncAttempts = 0,
+                            lastSyncTimestamp = prefs.lastSyncTimestamp.takeIf { it > 0 } ?: remoteDataTimestamp
+                        )
                     }
-
-                    exploreConfig.saveExploreDatabasePrefs(databasePrefs)
 
                     addPiggyCardsTestMerchantIfNeeded()
                     return@withContext Result.success()
@@ -143,6 +143,7 @@ class ExploreSyncWorker @AssistedInject constructor(
                 syncStatus.setSyncProgress(80.0)
 
                 ExploreDatabase.updateDatabase(appContext, exploreRepository, exploreConfig)
+                syncStatus.setCatalogReplaced()
             }
 
             log.info("sync explore db finished, took $timeInMillis ms")
@@ -161,16 +162,11 @@ class ExploreSyncWorker @AssistedInject constructor(
             )
             log.error("sync explore db crashed ${ex.message}", ex)
             syncStatus.setSyncError(ex)
-            // Read again: a finished update has already recorded its timestamp and schema version
-            val latestPrefs = exploreConfig.exploreDatabasePrefs.first()
-            exploreConfig.saveExploreDatabasePrefs(
-                latestPrefs.copy(failedSyncAttempts = latestPrefs.failedSyncAttempts + 1)
-            )
+            exploreConfig.updateExploreDatabasePrefs { it.copy(failedSyncAttempts = it.failedSyncAttempts + 1) }
             return@withContext Result.failure()
         }
 
-        databasePrefs = exploreConfig.exploreDatabasePrefs.first()
-        exploreConfig.saveExploreDatabasePrefs(databasePrefs.copy(failedSyncAttempts = 0))
+        exploreConfig.updateExploreDatabasePrefs { it.copy(failedSyncAttempts = 0) }
         return@withContext Result.success()
     }
 
