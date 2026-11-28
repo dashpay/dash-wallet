@@ -122,7 +122,7 @@ class RedeemLinkActivity : InteractionAwareActivity() {
 
         // The proxy override and the stored web data are shared by every WebView in the process, so only the
         // last screen to close lifts the override and wipes; an earlier one would cut into a newer claim.
-        private var cleartextBlockUsers = 0
+        private val overrideClaims = RedeemProxyOverrideClaims()
         private val log = LoggerFactory.getLogger(RedeemLinkActivity::class.java)
 
         fun canOpenInApp(context: Context, url: String?, ctxBaseUrl: String): Boolean {
@@ -179,7 +179,6 @@ class RedeemLinkActivity : InteractionAwareActivity() {
     private var hasCommittedPage = false
     private var jsDialogCount = 0
     private var downloadNoticeShown = false
-    private var blocksCleartext = false
 
     // Auto-logout can be switched off, and then nothing else closes this screen when the device locks.
     private val screenOffReceiver = object : BroadcastReceiver() {
@@ -218,10 +217,22 @@ class RedeemLinkActivity : InteractionAwareActivity() {
         }
 
         override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
-            if (request.url?.scheme.equals("http", ignoreCase = true)) {
-                return WebResourceResponse("text/plain", "utf-8", ByteArrayInputStream(ByteArray(0)))
+            // The proxy broadcast can trail the setting, and this runs before each request the page starts.
+            val verdict = RedeemLinkPolicy.requestVerdict(request.url?.scheme) {
+                connectsDirectly(this@RedeemLinkActivity, request.url?.toString())
             }
-            return super.shouldInterceptRequest(view, request)
+
+            if (verdict == RedeemLinkPolicy.RequestVerdict.ALLOW) {
+                return super.shouldInterceptRequest(view, request)
+            }
+            if (verdict == RedeemLinkPolicy.RequestVerdict.BLOCKED_BY_PROXY) {
+                Handler(Looper.getMainLooper()).post {
+                    if (isShowing(view)) {
+                        showBlockedByProxy()
+                    }
+                }
+            }
+            return WebResourceResponse("text/plain", "utf-8", ByteArrayInputStream(ByteArray(0)))
         }
 
         override fun doUpdateVisitedHistory(view: WebView, url: String?, isReload: Boolean) {
@@ -327,12 +338,6 @@ class RedeemLinkActivity : InteractionAwareActivity() {
 
         redeemUrl = url
 
-        if (loadRedeemPage() != LoadResult.STARTED) {
-            openInBrowser()
-            finish()
-            return
-        }
-
         val challenge = RedeemLinkPolicy.normalizeChallenge(intent.getStringExtra(EXTRA_CHALLENGE))
         val merchantName = intent.getStringExtra(EXTRA_MERCHANT_NAME)
 
@@ -352,7 +357,7 @@ class RedeemLinkActivity : InteractionAwareActivity() {
                             onCopyChallenge = { code ->
                                 code.copy(this@RedeemLinkActivity, "challenge code", sensitive = true)
                             },
-                            onRetry = { retry() },
+                            onRetry = { openRedeemPage() },
                             onOpenInBrowser = { openInBrowser() }
                         )
                     }
@@ -373,6 +378,7 @@ class RedeemLinkActivity : InteractionAwareActivity() {
                 }
             }
         )
+        openRedeemPage()
     }
 
     // Only a touch on this window lifts the dialog and notice limits, so a page cannot reset them by navigating.
@@ -401,16 +407,9 @@ class RedeemLinkActivity : InteractionAwareActivity() {
         webView = null
 
         view?.let { destroyWebView(it) }
-        if (blocksCleartext) {
-            cleartextBlockUsers--
-        }
-        if (cleartextBlockUsers == 0) {
-            if (isFinishing && canIsolate()) {
-                runCatching { wipeWebData {} }
-            }
-            if (blocksCleartext) {
-                runCatching { ProxyController.getInstance().clearProxyOverride(ContextCompat.getMainExecutor(this)) {} }
-            }
+        liftCleartextBlock()
+        if (overrideClaims.isEmpty && isFinishing && canIsolate()) {
+            runCatching { wipeWebData {} }
         }
         super.onDestroy()
     }
@@ -425,16 +424,14 @@ class RedeemLinkActivity : InteractionAwareActivity() {
         }
     }
 
-    private enum class LoadResult { STARTED, BLOCKED_BY_PROXY, UNAVAILABLE }
-
-    private fun loadRedeemPage(): LoadResult {
+    private fun loadRedeemPage(): RedeemLinkPolicy.LoadResult {
         if (!canIsolate()) {
-            return LoadResult.UNAVAILABLE
+            return RedeemLinkPolicy.LoadResult.UNAVAILABLE
         }
         if (!connectsDirectly(this, redeemUrl)) {
-            return LoadResult.BLOCKED_BY_PROXY
+            return RedeemLinkPolicy.LoadResult.BLOCKED_BY_PROXY
         }
-        val view = createWebView() ?: return LoadResult.UNAVAILABLE
+        val view = createWebView() ?: return RedeemLinkPolicy.LoadResult.UNAVAILABLE
         webView?.let { destroyWebView(it) }
         webView = view
 
@@ -465,7 +462,7 @@ class RedeemLinkActivity : InteractionAwareActivity() {
                 load.run()
             }
         }
-        return LoadResult.STARTED
+        return RedeemLinkPolicy.LoadResult.STARTED
     }
 
     // Setup callbacks can arrive after the screen was closed but before onDestroy has run.
@@ -487,14 +484,14 @@ class RedeemLinkActivity : InteractionAwareActivity() {
         hasError = true
     }
 
-    private fun retry() {
-        when (loadRedeemPage()) {
-            LoadResult.STARTED -> Unit
-            LoadResult.BLOCKED_BY_PROXY -> showBlockedByProxy()
-            LoadResult.UNAVAILABLE -> {
-                openInBrowser()
-                finish()
-            }
+    private fun openRedeemPage() {
+        val result = loadRedeemPage()
+
+        if (result.leavesForBrowser) {
+            openInBrowser()
+            finish()
+        } else if (result == RedeemLinkPolicy.LoadResult.BLOCKED_BY_PROXY) {
+            showBlockedByProxy()
         }
     }
 
@@ -545,11 +542,15 @@ class RedeemLinkActivity : InteractionAwareActivity() {
             .removeImplicitRules()
             .build()
 
-        if (!blocksCleartext) {
-            blocksCleartext = true
-            cleartextBlockUsers++
-        }
+        overrideClaims.claim(this)
         ProxyController.getInstance().setProxyOverride(config, ContextCompat.getMainExecutor(this), onBlocked)
+    }
+
+    // The override sends HTTPS direct for every WebView in the process, so it only stays while a page is up.
+    private fun liftCleartextBlock() {
+        if (overrideClaims.release(this)) {
+            runCatching { ProxyController.getInstance().clearProxyOverride(ContextCompat.getMainExecutor(this)) {} }
+        }
     }
 
     private fun wipeWebData(onWiped: Runnable) {
@@ -561,6 +562,7 @@ class RedeemLinkActivity : InteractionAwareActivity() {
             webView = null
             runCatching { view.clearCache(true) }
             destroyWebView(view)
+            liftCleartextBlock()
         }
     }
 

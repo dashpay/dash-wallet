@@ -315,4 +315,37 @@ class RedeemLinkPolicyTest {
         assertFalse(RedeemLinkPolicy.isContactLink("mailto"))
         assertFalse(RedeemLinkPolicy.isContactLink(null))
     }
+
+    @Test
+    fun `a proxy found on opening or retrying keeps the buyer on the redeem screen`() {
+        assertFalse(RedeemLinkPolicy.LoadResult.BLOCKED_BY_PROXY.leavesForBrowser)
+        assertFalse(RedeemLinkPolicy.LoadResult.STARTED.leavesForBrowser)
+        assertTrue(RedeemLinkPolicy.LoadResult.UNAVAILABLE.leavesForBrowser)
+    }
+
+    @Test
+    fun `a page request is refused once a proxy is configured`() {
+        assertEquals(
+            RedeemLinkPolicy.RequestVerdict.BLOCKED_BY_PROXY,
+            RedeemLinkPolicy.requestVerdict("https") { false }
+        )
+        assertEquals(
+            RedeemLinkPolicy.RequestVerdict.BLOCKED_BY_PROXY,
+            RedeemLinkPolicy.requestVerdict("HTTPS") { false }
+        )
+        assertEquals(RedeemLinkPolicy.RequestVerdict.ALLOW, RedeemLinkPolicy.requestVerdict("https") { true })
+    }
+
+    @Test
+    fun `a plain http request is dropped whatever the proxy settings are`() {
+        assertEquals(RedeemLinkPolicy.RequestVerdict.DROP, RedeemLinkPolicy.requestVerdict("http") { true })
+        assertEquals(RedeemLinkPolicy.RequestVerdict.DROP, RedeemLinkPolicy.requestVerdict("HTTP") { false })
+    }
+
+    @Test
+    fun `a request that never reaches the network is not held to the proxy settings`() {
+        assertEquals(RedeemLinkPolicy.RequestVerdict.ALLOW, RedeemLinkPolicy.requestVerdict("data") { false })
+        assertEquals(RedeemLinkPolicy.RequestVerdict.ALLOW, RedeemLinkPolicy.requestVerdict("blob") { false })
+        assertEquals(RedeemLinkPolicy.RequestVerdict.ALLOW, RedeemLinkPolicy.requestVerdict(null) { false })
+    }
 }

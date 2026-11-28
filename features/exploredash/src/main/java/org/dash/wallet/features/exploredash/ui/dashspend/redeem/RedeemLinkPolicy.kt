@@ -29,6 +29,14 @@ object RedeemLinkPolicy {
     private val subframeOnlyUrls = setOf("about:blank", "about:srcdoc")
     private val contactSchemes = setOf("mailto", "tel")
 
+    enum class LoadResult(val leavesForBrowser: Boolean) {
+        STARTED(false),
+        BLOCKED_BY_PROXY(false),
+        UNAVAILABLE(true)
+    }
+
+    enum class RequestVerdict { ALLOW, DROP, BLOCKED_BY_PROXY }
+
     fun canOpenInApp(url: String?, sdkInt: Int, ctxBaseUrl: String): Boolean {
         if (url == null || sdkInt < MIN_SDK_INT || url.contains('\\') || url != url.trim()) {
             return false
@@ -75,6 +83,14 @@ object RedeemLinkPolicy {
         }
         val selected = selectProxies()
         return !selected.isNullOrEmpty() && selected.all { it.type() == Proxy.Type.DIRECT }
+    }
+
+    fun requestVerdict(scheme: String?, connectsDirectly: () -> Boolean): RequestVerdict {
+        return when {
+            scheme.equals("http", ignoreCase = true) -> RequestVerdict.DROP
+            scheme.equals("https", ignoreCase = true) && !connectsDirectly() -> RequestVerdict.BLOCKED_BY_PROXY
+            else -> RequestVerdict.ALLOW
+        }
     }
 
     // A proxy selector only looks at the scheme and host, and java.net.URI rejects characters a link may hold.
