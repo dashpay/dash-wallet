@@ -62,6 +62,7 @@ import org.dash.wallet.features.exploredash.ui.dashspend.CardCurrencyState
 import org.dash.wallet.features.exploredash.ui.dashspend.CardRateState
 import org.dash.wallet.features.exploredash.ui.dashspend.DashSpendViewModel
 import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardPurchaseBlock
+import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardQuote
 import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardShoppingCart
 import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
 import org.dash.wallet.features.exploredash.utils.GiftCardCurrency
@@ -87,6 +88,7 @@ import org.mockito.kotlin.reset
 import org.mockito.kotlin.stub
 import org.mockito.kotlin.verifyBlocking
 import java.io.IOException
+import java.math.BigDecimal
 import java.util.Locale
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -158,10 +160,11 @@ class DashSpendCardCurrencyTest {
         giftCardProviders = listOf(otherCtxRow)
     }
 
-    private fun merchantResponse(sourceId: String, currency: String?) = GetMerchantResponse(
+    private fun merchantResponse(sourceId: String, currency: String?, discount: Int = 0) = GetMerchantResponse(
         id = sourceId,
         denominations = listOf("5", "500"),
         denominationsType = "min-max",
+        userDiscount = discount,
         currency = currency
     )
 
@@ -216,13 +219,18 @@ class DashSpendCardCurrencyTest {
         )
     }
 
-    private fun ctxSells(currency: String?, denominations: List<String>, denominationsType: String = "min-max") {
+    private fun ctxSells(
+        currency: String?,
+        denominations: List<String>,
+        denominationsType: String = "min-max",
+        discount: Int = 500
+    ) {
         api.stub {
             onBlocking { getMerchant(eq("ctx-source")) } doReturn GetMerchantResponse(
                 id = "ctx-source",
                 denominations = denominations,
                 denominationsType = denominationsType,
-                userDiscount = 500,
+                userDiscount = discount,
                 currency = currency
             )
             onBlocking { purchaseGiftCard(any()) } doAnswer {
@@ -248,7 +256,8 @@ class DashSpendCardCurrencyTest {
     }
 
     /** Confirm on a sheet that shows the currency the card is in right now. */
-    private suspend fun DashSpendViewModel.buy() = purchaseGiftCard(cardCurrency ?: "USD", giftCardOrderInfo.value)
+    private suspend fun DashSpendViewModel.buy() =
+        purchaseGiftCard(currentQuote() ?: GiftCardQuote("USD", giftCardOrderInfo.value, BigDecimal.ZERO))
 
     private fun DashSpendViewModel.enter(amount: String) {
         setGiftCardOrderInfo(Fiat.parseFiat(cardCurrency!!, amount), 1)
@@ -859,8 +868,8 @@ class DashSpendCardCurrencyTest {
         // even with an amount, a sheet that showed pounds cannot buy in euros
         viewModel.enter("25")
         assertNull(viewModel.purchaseBlock)
-        val liveOrder = viewModel.giftCardOrderInfo.value
-        assertThrows(CTXSpendException::class.java) { runBlocking { viewModel.purchaseGiftCard("GBP", liveOrder) } }
+        val inPounds = viewModel.currentQuote()!!.copy(currency = "GBP")
+        assertThrows(CTXSpendException::class.java) { runBlocking { viewModel.purchaseGiftCard(inPounds) } }
         verifyBlocking(api, never()) { purchaseGiftCard(any()) }
     }
 
@@ -958,9 +967,9 @@ class DashSpendCardCurrencyTest {
                 if (answers.getAndIncrement() == 0) {
                     firstLoadStarted.countDown()
                     check(releaseFirstLoad.await(5, TimeUnit.SECONDS))
-                    merchantResponse("ctx-source", "GBP")
+                    merchantResponse("ctx-source", "GBP", discount = 900)
                 } else {
-                    merchantResponse("ctx-source", "EUR")
+                    merchantResponse("ctx-source", "EUR", discount = 300)
                 }
             }
         }
@@ -978,6 +987,10 @@ class DashSpendCardCurrencyTest {
         assertEquals(500.0, newer?.merchant?.maxCardPurchase)
         assertNull("the older answer must not be applied", firstLoad.await())
         assertEquals(CardCurrencyState.Known("EUR"), viewModel.cardCurrencyState.value)
+        // the older answer reached the repository last, and must not price the confirmation either
+        assertEquals(0.03, viewModel.getGiftCardDiscount(100.0), 0.0)
+        viewModel.enter("100")
+        assertEquals("97.00", viewModel.currentQuote()?.total?.toPlainString())
     }
 
     @Test
@@ -1138,16 +1151,164 @@ class DashSpendCardCurrencyTest {
         val viewModel = viewModel()
         viewModel.openCtxMerchant()
         viewModel.enter("25")
-        val shown = viewModel.giftCardOrderInfo.value
+        val shown = viewModel.currentQuote()!!
 
         viewModel.enter("40")
 
         assertNull(viewModel.purchaseBlock)
-        assertThrows(CTXSpendException::class.java) { runBlocking { viewModel.purchaseGiftCard("GBP", shown) } }
+        assertThrows(CTXSpendException::class.java) { runBlocking { viewModel.purchaseGiftCard(shown) } }
         verifyBlocking(api, never()) { purchaseGiftCard(any()) }
 
         viewModel.enter("25")
-        viewModel.purchaseGiftCard("GBP", shown)
+        viewModel.purchaseGiftCard(shown)
         assertEquals("25.00", orderSentToCtx().fiatAmount)
+    }
+
+    @Test
+    fun discountLoweredAfterTheConfirmationOpened_isRefused() = runBlocking {
+        ctxSells("GBP", listOf("5", "500"), discount = 1000)
+        setRate("GBP", "20")
+        val viewModel = viewModel()
+        val merchant = viewModel.openCtxMerchant()
+        viewModel.enter("100")
+        val shown = viewModel.currentQuote()!!
+        assertEquals("90.00", shown.total.toPlainString())
+
+        // same currency, card and quantity; only what it costs is new
+        reset(api)
+        ctxSells("GBP", listOf("5", "500"), discount = 200)
+        viewModel.updateMerchantDetails(merchant)
+
+        assertEquals(mapOf(100.0 to 1), viewModel.giftCardOrderInfo.value)
+        assertNull(viewModel.purchaseBlock)
+        assertEquals("98.00", viewModel.currentQuote()?.total?.toPlainString())
+        assertThrows(CTXSpendException::class.java) { runBlocking { viewModel.purchaseGiftCard(shown) } }
+        verifyBlocking(api, never()) { purchaseGiftCard(any()) }
+    }
+
+    @Test
+    fun fixedCardNoLongerSold_isUnselected() = runBlocking {
+        ctxSells("GBP", listOf("10", "20", "50"), denominationsType = "fixed")
+        setRate("GBP", "20")
+        val viewModel = viewModel()
+        val merchant = viewModel.openCtxMerchant()
+        viewModel.setIsFixedDenomination(true)
+        viewModel.enter("20")
+        assertNull(viewModel.purchaseBlock)
+
+        viewModel.setGiftCardOrderQuantities(mapOf(30.0 to 1))
+        assertEquals("never on the list", GiftCardPurchaseBlock.AMOUNT_NOT_OFFERED, viewModel.purchaseBlock)
+        assertPurchaseRefused(viewModel)
+
+        viewModel.enter("20")
+        reset(api)
+        ctxSells("GBP", listOf("10", "50"), denominationsType = "fixed")
+        viewModel.updateMerchantDetails(merchant)
+
+        assertEquals(CardCurrencyState.Known("GBP"), viewModel.cardCurrencyState.value)
+        assertTrue(viewModel.giftCardOrderInfo.value.isEmpty())
+        assertPurchaseRefused(viewModel)
+    }
+
+    @Test
+    fun amountOutsideTheAcceptedRange_isBlocked() = runBlocking {
+        ctxSells("GBP", listOf("5", "500"))
+        setRate("GBP", "20")
+        val viewModel = viewModel()
+        val merchant = viewModel.openCtxMerchant()
+        viewModel.enter("300")
+        assertNull(viewModel.purchaseBlock)
+
+        reset(api)
+        ctxSells("GBP", listOf("5", "200"))
+        viewModel.updateMerchantDetails(merchant)
+
+        // the entry still shows 300, so the order keeps it and the block says why it cannot be bought
+        assertEquals(mapOf(300.0 to 1), viewModel.giftCardOrderInfo.value)
+        assertEquals(GiftCardPurchaseBlock.AMOUNT_NOT_OFFERED, viewModel.purchaseBlock)
+        assertPurchaseRefused(viewModel)
+        viewModel.enter("4.99")
+        assertEquals(GiftCardPurchaseBlock.AMOUNT_NOT_OFFERED, viewModel.purchaseBlock)
+        viewModel.enter("200")
+        assertNull(viewModel.purchaseBlock)
+    }
+
+    @Test
+    fun answerThatCannotBeDecoded_blocksAMerchantThatHadACurrency() {
+        listOf<Exception>(
+            com.google.gson.JsonSyntaxException("Expected BEGIN_OBJECT but was STRING"),
+            com.google.gson.stream.MalformedJsonException("Unterminated object")
+        ).forEach { failure ->
+            reset(api)
+            ctxSells("GBP", listOf("5", "500"))
+            setRate("GBP", "20")
+            val viewModel = viewModel()
+            val merchant = runBlocking { viewModel.openCtxMerchant() }
+            viewModel.enter("25")
+
+            api.stub { onBlocking { getMerchant(any()) } doAnswer { throw failure } }
+            runBlocking { viewModel.updateMerchantDetails(merchant) }
+
+            assertEquals("$failure", CardCurrencyState.Unknown, viewModel.cardCurrencyState.value)
+            assertTrue(viewModel.giftCardOrderInfo.value.isEmpty())
+        }
+    }
+
+    @Test
+    fun denominationsFinerThanTheCurrency_leaveTheCurrencyUnknown() {
+        listOf(
+            "USD" to listOf("5", "10.00001"),
+            "USD" to listOf("5.001", "500"),
+            "JPY" to listOf("500", "1000.5"),
+            "KWD" to listOf("1", "1.2345"),
+            "USD" to listOf("5", "92233720369")
+        ).forEach { (currency, denominations) ->
+            reset(api)
+            ctxSells(currency, denominations)
+            val viewModel = viewModel()
+
+            runBlocking { viewModel.openCtxMerchant() }
+
+            assertEquals("$currency $denominations", CardCurrencyState.Unknown, viewModel.cardCurrencyState.value)
+        }
+        reset(api)
+        ctxSells("KWD", listOf("1.000", "1.234"))
+        val viewModel = viewModel()
+        runBlocking { viewModel.openCtxMerchant() }
+        assertEquals(CardCurrencyState.Known("KWD"), viewModel.cardCurrencyState.value)
+    }
+
+    @Test
+    fun ctxLoadStillRunningWhenTheProviderChanges_cannotTouchThePiggyCardsCart() = runBlocking {
+        ctxSells("GBP", listOf("5", "500"))
+        setRate("GBP", "20")
+        val viewModel = viewModel()
+        viewModel.openCtxMerchant()
+        val refreshStarted = CountDownLatch(1)
+        val releaseRefresh = CountDownLatch(1)
+        api.stub {
+            onBlocking { getMerchant(eq("ctx-source")) } doAnswer {
+                refreshStarted.countDown()
+                check(releaseRefresh.await(5, TimeUnit.SECONDS))
+                merchantResponse("ctx-source", "EUR")
+            }
+        }
+        val refresh = async(Dispatchers.Default) { viewModel.refreshMerchantDetails(merchant()) }
+        val cart = mapOf(25.0 to 2, 50.0 to 1)
+        try {
+            assertTrue(refreshStarted.await(5, TimeUnit.SECONDS))
+            viewModel.selectedProvider = GiftCardProviderType.PiggyCards
+            viewModel.setGiftCardOrderQuantities(cart)
+        } finally {
+            releaseRefresh.countDown()
+        }
+
+        assertNull(refresh.await())
+        assertEquals(cart, viewModel.giftCardOrderInfo.value)
+
+        // back at CTX nothing of the abandoned load is left
+        viewModel.selectedProvider = GiftCardProviderType.CTX
+        assertEquals(CardCurrencyState.Loading, viewModel.cardCurrencyState.value)
+        assertNull(viewModel.cardCurrency)
     }
 }

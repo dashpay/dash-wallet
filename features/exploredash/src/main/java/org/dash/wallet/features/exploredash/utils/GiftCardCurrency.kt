@@ -28,6 +28,9 @@ import java.util.Locale
 
 /** Money rules for the currency a gift card is priced in: the merchant's, not always USD. */
 object GiftCardCurrency {
+    private const val DISCOUNT_DECIMALS = 10
+    private val MAX_FIAT = BigDecimal(Long.MAX_VALUE).movePointLeft(Fiat.SMALLEST_UNIT_EXPONENT)
+
     /** Upper-case ISO 4217 code, or null when [code] is blank or not a currency with minor units. */
     fun normalize(code: String?): String? {
         val candidate = code?.trim()?.uppercase(Locale.ROOT).orEmpty()
@@ -51,14 +54,22 @@ object GiftCardCurrency {
             .setScale(fractionDigits(currencyCode), RoundingMode.UNNECESSARY)
             .toPlainString()
 
+    /** Whether a merchant can sell a card of [amount]: within the currency's decimals and what Fiat holds. */
+    fun isCardAmount(amount: BigDecimal, currencyCode: String?): Boolean {
+        val decimals = currencyCode?.let(::fractionDigits) ?: Fiat.SMALLEST_UNIT_EXPONENT
+        return amount.signum() >= 0 && amount.stripTrailingZeros().scale() <= decimals && amount < MAX_FIAT
+    }
+
     /** What [order] (card value to quantity) costs after each card's discount, rounded up once. */
     fun discountedTotal(order: Map<Double, Int>, currencyCode: String, discountOf: (Double) -> Double): BigDecimal =
         order.entries.fold(BigDecimal.ZERO) { total, (value, quantity) ->
-            val price = BigDecimal.valueOf(value) * (BigDecimal.ONE - BigDecimal.valueOf(discountOf(value)))
+            // a provider's discount is a few decimals; anything beyond is noise from its Double sums
+            val discount = BigDecimal.valueOf(discountOf(value)).setScale(DISCOUNT_DECIMALS, RoundingMode.HALF_UP)
+            val price = BigDecimal.valueOf(value) * (BigDecimal.ONE - discount)
             total + price * BigDecimal(quantity)
         }.setScale(fractionDigits(currencyCode), RoundingMode.UP)
 
-    // Fiat counts in 1/10000 units, enough for every ISO 4217 currency (JPY 0, KWD 3 decimals)
+    // Fiat counts in its smallest unit, far finer than any ISO 4217 currency (JPY 0, KWD 3 decimals)
     fun toFiat(amount: Double, currencyCode: String): Fiat =
         Fiat.valueOf(
             currencyCode,

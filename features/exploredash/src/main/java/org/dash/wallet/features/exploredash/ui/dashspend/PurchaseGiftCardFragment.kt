@@ -75,7 +75,8 @@ fun GiftCardPurchaseBlock.message(context: Context, cardCurrency: String?): Stri
         GiftCardPurchaseBlock.CURRENCY_UNKNOWN -> context.getString(R.string.gift_card_currency_unknown)
         GiftCardPurchaseBlock.RATE_LOADING,
         GiftCardPurchaseBlock.RATE_MISSING -> context.getString(R.string.gift_card_rate_missing, currency)
-        GiftCardPurchaseBlock.NO_AMOUNT -> context.getString(R.string.gift_card_error)
+        GiftCardPurchaseBlock.NO_AMOUNT,
+        GiftCardPurchaseBlock.AMOUNT_NOT_OFFERED -> context.getString(R.string.gift_card_error)
         GiftCardPurchaseBlock.AMOUNT_NOT_REPRESENTABLE ->
             context.getString(R.string.gift_card_amount_too_precise, currency)
     }
@@ -94,7 +95,11 @@ internal fun EnterAmountViewModel.leaveGiftCardPurchase() {
 /** Blocks that pass by themselves, or that the disabled Continue button already explains. */
 private val GiftCardPurchaseBlock.isSilent: Boolean
     get() = this == GiftCardPurchaseBlock.CURRENCY_LOADING || this == GiftCardPurchaseBlock.RATE_LOADING ||
-        this == GiftCardPurchaseBlock.NO_AMOUNT
+        isAboutTheAmount
+
+/** The limits shown under the entry and the unselected cards say what is wrong. */
+private val GiftCardPurchaseBlock.isAboutTheAmount: Boolean
+    get() = this == GiftCardPurchaseBlock.NO_AMOUNT || this == GiftCardPurchaseBlock.AMOUNT_NOT_OFFERED
 
 @AndroidEntryPoint
 class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gift_card) {
@@ -405,7 +410,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
             }
         } ?: return
 
-        if (viewModel.purchaseBlock?.takeIf { it != GiftCardPurchaseBlock.NO_AMOUNT } != null) {
+        if (viewModel.purchaseBlock?.takeUnless { it.isAboutTheAmount } != null) {
             setDiscountHint()
             return
         }
@@ -451,7 +456,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
                 binding.discountValue.setTextColor(resources.getColor(R.color.error_red, null))
                 binding.discountValue.text = message
             }
-            if (block != GiftCardPurchaseBlock.NO_AMOUNT) {
+            if (block?.isAboutTheAmount != true) {
                 binding.minValue.isVisible = false
                 binding.maxValue.isVisible = false
             }

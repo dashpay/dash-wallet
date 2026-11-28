@@ -18,6 +18,8 @@
 package org.dash.wallet.features.exploredash.repository
 
 import com.google.gson.Gson
+import com.google.gson.JsonParseException
+import com.google.gson.stream.MalformedJsonException
 import kotlinx.coroutines.flow.Flow
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.ResourceString
@@ -292,21 +294,30 @@ class CTXSpendRepository @Inject constructor(
     }
 
     override suspend fun getMerchant(merchantId: String): UpdatedMerchantDetails? {
-        val response = api.getMerchant(merchantId)
+        val response = try {
+            api.getMerchant(merchantId)
+        } catch (e: JsonParseException) {
+            // CTX answered, with a body that cannot be decoded
+            throw UnusableMerchantDetailsException(e)
+        } catch (e: MalformedJsonException) {
+            throw UnusableMerchantDetailsException(e)
+        }
         return response?.let {
             giftCardMap[merchantId] = it
             try {
+                // read as decimals: toDouble() takes "NaN", and toFiat() would round 10.00001 into 10
+                val currency = GiftCardCurrency.normalize(response.currency)
+                val amounts = response.denominations.map { denom -> denom.trim().toBigDecimal() }
+                require(amounts.all { amount -> GiftCardCurrency.isCardAmount(amount, currency) })
                 UpdatedMerchantDetails(
                     id = response.id,
                     savingsPercentage = response.discount,
                     denominationsType = response.denominationsType,
-                    denominations = response.denominations.map { denom -> denom.toDouble() },
+                    denominations = amounts.map { amount -> amount.toDouble() },
                     redeemType = response.redeemType,
                     enabled = response.enabled,
                     currency = response.currency
                 ).also { details ->
-                    // "NaN" and "-5" are numbers to toDouble(), but not amounts a card can have
-                    require(details.denominations.all { it.isFinite() && it >= 0.0 })
                     require(details.denominations.any { it > 0.0 })
                 }
             } catch (e: Exception) {

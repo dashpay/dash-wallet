@@ -23,7 +23,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import org.bitcoinj.core.Coin
@@ -88,6 +87,7 @@ class GiftCardDetailsCurrencyBackfillTest {
     private val blankReplies = AtomicInteger()
     private val orderLookups = AtomicInteger()
     private val accessToken = AtomicReference<String?>()
+    private val storedToken = MutableStateFlow<String?>(null)
     private lateinit var api: CTXSpendApi
 
     private fun open(card: GiftCard, accessToken: String?, failingLookups: Int = 0): GiftCardDao =
@@ -105,12 +105,13 @@ class GiftCardDetailsCurrencyBackfillTest {
             onBlocking { backfillCurrency(any(), any()) } doReturn 1
         }
         val config = mock<CTXSpendConfig> {
-            on { observeSecureData(any()) } doReturn emptyFlow()
+            on { observeSecureData(any()) } doReturn storedToken
             onBlocking { getSecuredData(eq(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN)) } doAnswer {
                 this@GiftCardDetailsCurrencyBackfillTest.accessToken.get()
             }
         }
         this.accessToken.set(accessToken)
+        storedToken.value = accessToken
         api = mock<CTXSpendApi> {
             onBlocking { getGiftCardByOrderId(eq("order-1")) } doAnswer {
                 if (orderLookups.incrementAndGet() <= failingLookups) {
@@ -178,6 +179,30 @@ class GiftCardDetailsCurrencyBackfillTest {
 
         accessToken.set("token")
         emissions.value = listOf(legacyCard.copy(pin = "1"))
+
+        verifyBlocking(dao) { backfillCurrency(eq(txId), eq("GBP")) }
+    }
+
+    @Test
+    fun signingIn_looksTheCurrencyUpWithoutTheCardChanging() {
+        val dao = open(legacyCard, accessToken = null)
+        allAttemptsMade()
+        assertEquals(0, orderLookups.get())
+
+        accessToken.set("token")
+        storedToken.value = "token"
+
+        verifyBlocking(dao) { backfillCurrency(eq(txId), eq("GBP")) }
+    }
+
+    @Test
+    fun cardWhoseServiceIsNotRecordedYet_staysPending() {
+        metadata.value = ctxMetadata.copy(service = null)
+        val dao = open(legacyCard, accessToken = "token")
+        allAttemptsMade()
+        assertEquals(0, orderLookups.get())
+
+        metadata.value = ctxMetadata
 
         verifyBlocking(dao) { backfillCurrency(eq(txId), eq("GBP")) }
     }

@@ -88,6 +88,7 @@ import org.dash.wallet.features.exploredash.ui.dashspend.DashSpendViewModel
 import org.dash.wallet.features.exploredash.ui.dashspend.DuplicateGiftCardSubmissionException
 import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardPurchaseBlock
 import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardPurchaseMode
+import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardQuote
 import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardSubmissionState
 import org.dash.wallet.features.exploredash.ui.dashspend.message
 import org.dash.wallet.features.exploredash.ui.explore.MerchantLogo
@@ -145,8 +146,8 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
         // Optionally handle result here
     }
 
-    // what this sheet shows, and so the only order Confirm may place
-    private var shownOrder: Map<Double, Int> = emptyMap()
+    // what this sheet shows, and so the only order, currency and total Confirm may buy
+    private var shownQuote: GiftCardQuote? = null
 
     private val _uiState = MutableStateFlow(PurchaseConfirmUIState())
     val uiState: StateFlow<PurchaseConfirmUIState> = _uiState.asStateFlow()
@@ -176,15 +177,17 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
             dismiss()
             return
         }
-        if (viewModel.purchaseBlock == GiftCardPurchaseBlock.NO_AMOUNT) {
+        val quote = viewModel.currentQuote()
+        if (quote == null || viewModel.purchaseBlock.isAboutTheAmount()) {
             log.warn("PurchaseGiftCardConfirmDialog: nothing to buy, dismissing dialog")
             dismiss()
             return
         }
+        shownQuote = quote
+        val shownOrder = quote.order
         val noCentsFormat = GiftCardCurrency.displayFormat(cardCurrency, trimZeroDecimals = true)
         val currencyFormat = GiftCardCurrency.displayFormat(cardCurrency)
 
-        shownOrder = viewModel.giftCardOrderInfo.value
         val orderEntries = shownOrder.entries
         val orderTotalAmount = orderEntries.sumOf { it.key * it.value }
         // Compute a weighted savings fraction: sum each (denom * qty * (1 - per-denom discount))
@@ -225,7 +228,7 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
         }
 
         val youPayText = currencyFormat.format(
-            GiftCardCurrency.discountedTotal(shownOrder, cardCurrency, viewModel::getGiftCardDiscount)
+            quote.total
         )
 
         val breakdownLines = breakdown?.lineSequence()?.count() ?: 0
@@ -269,12 +272,16 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
         // The amounts on this sheet are fixed when it opens, so it closes once they are no longer
         // what would be ordered. Not during a purchase: its order has been placed by then.
         viewLifecycleOwner.lifecycleScope.launch {
-            combine(viewModel.cardCurrencyState, viewModel.giftCardOrderInfo) { _, _ -> }.collect {
+            combine(
+                viewModel.cardCurrencyState,
+                viewModel.giftCardOrderInfo,
+                viewModel.giftCardMerchant
+            ) { _, _, _ -> }.collect {
                 // a cart of PiggyCards is rebuilt by its screen on recreation; Confirm checks it instead
                 val isOtherOrder = viewModel.selectedProvider == GiftCardProviderType.CTX &&
-                    viewModel.giftCardOrderInfo.value != shownOrder
+                    viewModel.currentQuote() != quote
                 val isOutdated = viewModel.cardCurrency != cardCurrency || isOtherOrder ||
-                    viewModel.purchaseBlock == GiftCardPurchaseBlock.NO_AMOUNT
+                    viewModel.purchaseBlock.isAboutTheAmount()
                 if (isOutdated && viewModel.submissionState.value == GiftCardSubmissionState.IDLE) {
                     dismissAllowingStateLoss()
                 }
@@ -303,6 +310,9 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
             viewModel.beginNewPurchase()
         }
     }
+
+    private fun GiftCardPurchaseBlock?.isAboutTheAmount() =
+        this == GiftCardPurchaseBlock.NO_AMOUNT || this == GiftCardPurchaseBlock.AMOUNT_NOT_OFFERED
 
     private fun showPurchaseBlocked(block: GiftCardPurchaseBlock) {
         AdaptiveDialog.create(
@@ -343,7 +353,7 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
                 }
 
                 val data = try {
-                    viewModel.purchaseGiftCard(uiState.value.currencyCode, shownOrder)
+                    viewModel.purchaseGiftCard(checkNotNull(shownQuote))
                 } catch (ex: CTXSpendException) {
                     hideLoading()
                     when {

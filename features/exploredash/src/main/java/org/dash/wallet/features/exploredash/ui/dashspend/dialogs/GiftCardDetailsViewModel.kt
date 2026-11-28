@@ -135,6 +135,12 @@ class GiftCardDetailsViewModel @Inject constructor(
             }
             .launchIn(viewModelScope)
 
+        // signing in to CTX makes the lookup possible without the card changing
+        ctxSpendConfig.observeSecureData(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN)
+            .distinctUntilChanged()
+            .onEach { lookUpCurrencyIfMissing(_uiState.value.giftCards) }
+            .launchIn(viewModelScope)
+
         giftCardDao.observeCardForTransaction(transactionId)
             .filterNotNull()
             .distinctUntilChanged()
@@ -194,8 +200,9 @@ class GiftCardDetailsViewModel @Inject constructor(
     /** True once there is nothing left to look up: the currency is stored, or the card is not a CTX one. */
     private suspend fun backfillCurrency(txid: Sha256Hash): Boolean {
         return try {
-            val metadata = metadataProvider.getTransactionMetadata(txid) ?: return false
-            if (metadata.service != ServiceName.CTXSpend) {
+            // until the service is known the card may still turn out to be a CTX one
+            val service = metadataProvider.getTransactionMetadata(txid)?.service ?: return false
+            if (service != ServiceName.CTXSpend) {
                 return true
             }
             if (!ctxSpendRepository.isUserSignedIn()) {
