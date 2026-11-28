@@ -2554,6 +2554,42 @@ class DashSpendCardCurrencyTest {
     }
 
     @Test
+    fun olderRefreshOfARepointedRowFinishingLast_leavesTheSourceOfTheAcceptedDetails() = runBlocking {
+        val firstLoadStarted = CountDownLatch(1)
+        val releaseFirstLoad = CountDownLatch(1)
+        val wasReleased = AtomicBoolean()
+        ctxSells("GBP", listOf("5", "500"))
+        api.stub {
+            onBlocking { getMerchant(eq("ctx-source")) } doAnswer {
+                firstLoadStarted.countDown()
+                wasReleased.set(releaseFirstLoad.await(5, TimeUnit.SECONDS))
+                merchantResponse("ctx-source", "GBP")
+            }
+            onBlocking { getMerchant(eq("ctx-source-2")) } doReturn merchantResponse("ctx-source-2", "GBP")
+        }
+        setRate("GBP", "30")
+        val viewModel = viewModel()
+        viewModel.selectedProvider = GiftCardProviderType.CTX
+        viewModel.setGiftCardMerchant(merchant())
+        val firstLoad = async(Dispatchers.Default) { viewModel.refreshMerchantDetails(merchant()) }
+        try {
+            assertTrue(firstLoadStarted.await(5, TimeUnit.SECONDS))
+            ctxRowNow = ctxRow.copy(sourceId = "ctx-source-2")
+            viewModel.refreshMerchantDetails(merchant())
+        } finally {
+            releaseFirstLoad.countDown()
+        }
+        assertNull(firstLoad.await())
+        assertTrue("the first load was never released", wasReleased.get())
+        viewModel.enter("25")
+
+        val shown = checkNotNull(viewModel.currentQuote())
+        assertEquals("ctx-source-2", shown.sourceId)
+        viewModel.purchaseGiftCard(shown)
+        assertEquals("ctx-source-2", orderSentToCtx().merchantId)
+    }
+
+    @Test
     fun ctxRowRepointedAfterTheQuote_isNotOrderedFrom() = runBlocking {
         val viewModel = viewModel()
         val shown = viewModel.shownFor100Pounds()

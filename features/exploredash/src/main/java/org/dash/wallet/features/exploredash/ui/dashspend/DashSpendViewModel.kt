@@ -334,6 +334,10 @@ class DashSpendViewModel @Inject constructor(
 
     // the details that came with the Known currency; the three are only ever used together
     private var confirmedMerchant: Merchant? = null
+
+    // CTX's own id of the merchant [confirmedMerchant] was answered for; they change together
+    @Volatile
+    private var confirmedSourceId: String? = null
         set(value) {
             field = value
             _acceptedDetailsVersion.value++
@@ -530,11 +534,16 @@ class DashSpendViewModel @Inject constructor(
             discountedTotal(order, currency),
             merchantId,
             provider,
-            acceptedSourceIds[merchantId to provider]
+            if (provider == GiftCardProviderType.CTX) {
+                confirmedSourceId.takeIf { confirmedDetailsOf(_giftCardMerchant.value) != null }
+            } else {
+                acceptedSourceIds[merchantId to provider]
+            }
         )
     }
 
-    // which of a provider's merchants the accepted details describe; a catalog sync can repoint the row
+    // Which of a provider's merchants the accepted details describe; a catalog sync can repoint
+    // the row. CTX's is kept with its details ([confirmedSourceId]), under the same lock.
     private val acceptedSourceIds =
         java.util.concurrent.ConcurrentHashMap<Pair<String?, GiftCardProviderType?>, String>()
 
@@ -1241,11 +1250,14 @@ class DashSpendViewModel @Inject constructor(
                     copy.quantities = apiResponse.quantity
                     // last, so that only a response that mapped cleanly names the currency of its limits
                     val currency = GiftCardCurrency.normalize(apiResponse.currency)
-                    val isAccepted = load == null || finishCurrencyLoad(load, currency, details = copy)
+                    val isAccepted = load == null ||
+                        finishCurrencyLoad(load, currency, details = copy, sourceId = answeredSourceId)
                     if (selectedProvider != provider || !isAccepted) {
                         return@withContext null
                     }
-                    answeredSourceId?.let { acceptedSourceIds[merchant.merchantId to provider] = it }
+                    if (load == null) {
+                        answeredSourceId?.let { acceptedSourceIds[merchant.merchantId to provider] = it }
+                    }
                 }
             }
         } catch (e: Exception) {
@@ -1274,6 +1286,7 @@ class DashSpendViewModel @Inject constructor(
         currencyMerchantId = merchantId
         currencyLoad++
         confirmedMerchant = null
+        confirmedSourceId = null
         _cardCurrencyState.value = CardCurrencyState.Loading
         return true
     }
@@ -1283,6 +1296,7 @@ class DashSpendViewModel @Inject constructor(
         currencyMerchantId = null
         currencyLoad++
         confirmedMerchant = null
+        confirmedSourceId = null
         _cardCurrencyState.value = CardCurrencyState.Loading
     }
 
@@ -1317,7 +1331,8 @@ class DashSpendViewModel @Inject constructor(
         isAnswered: Boolean = true,
         details: Merchant? = null,
         isNothingOffered: Boolean = false,
-        isSignedOut: Boolean = false
+        isSignedOut: Boolean = false,
+        sourceId: String? = null
     ): Boolean {
         if (load != currencyLoad) {
             log.info("ignoring a superseded merchant load")
@@ -1341,6 +1356,7 @@ class DashSpendViewModel @Inject constructor(
         this.isNothingOffered = isNothingOffered && current == CardCurrencyState.Unknown
         this.isSignedOut = isSignedOut && current == CardCurrencyState.Unknown
         confirmedMerchant = details.takeIf { current is CardCurrencyState.Known }
+        confirmedSourceId = sourceId.takeIf { confirmedMerchant != null }
         if (details?.fixedDenomination == true && _giftCardOrderInfo.value.keys.any { !details.offers(it) }) {
             // the card that was selected is no longer sold
             _giftCardOrderInfo.value = emptyMap()
