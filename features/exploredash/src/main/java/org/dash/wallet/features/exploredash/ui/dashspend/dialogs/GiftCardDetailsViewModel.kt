@@ -103,7 +103,7 @@ class GiftCardDetailsViewModel @Inject constructor(
     private var retries = 3
     private var currencyLookup: Job? = null
     private var isCurrencyResolved = false
-    private var isSignInChangePending = false
+    private var isLookupWantedAgain = false
 
     // replaced in tests, which run the lookup and its pauses on virtual time
     internal var currencyLookupDispatcher: CoroutineDispatcher = Dispatchers.IO
@@ -136,7 +136,7 @@ class GiftCardDetailsViewModel @Inject constructor(
         // signing in to CTX makes the lookup possible without the card changing
         ctxSpendConfig.observeSecureData(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN)
             .distinctUntilChanged()
-            .onEach { lookUpCurrencyIfMissing(_uiState.value.giftCards, isSignInChange = true) }
+            .onEach { lookUpCurrencyIfMissing(_uiState.value.giftCards) }
             .launchIn(viewModelScope)
 
         giftCardDao.observeCardForTransaction(TxIds.toBytes(transactionId))
@@ -176,18 +176,18 @@ class GiftCardDetailsViewModel @Inject constructor(
     }
 
     /** One lookup at a time, a few attempts each, until the currency is settled. */
-    private fun lookUpCurrencyIfMissing(giftCards: List<GiftCard>, isSignInChange: Boolean = false) {
+    private fun lookUpCurrencyIfMissing(giftCards: List<GiftCard>) {
         if (isCurrencyResolved || giftCards.none { it.currency == null }) {
             return
         }
         if (currencyLookup?.isActive == true) {
-            // the running lookup may have given up on the old session already
-            isSignInChangePending = isSignInChangePending || isSignInChange
+            // the running lookup may already have read what this trigger has just changed
+            isLookupWantedAgain = true
             return
         }
         currencyLookup = viewModelScope.launch {
             do {
-                isSignInChangePending = false
+                isLookupWantedAgain = false
                 isCurrencyResolved = withContext(currencyLookupDispatcher) {
                     repeat(CURRENCY_LOOKUP_ATTEMPTS) { attempt ->
                         if (backfillCurrency(transactionId)) {
@@ -199,7 +199,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                     }
                     false
                 }
-            } while (!isCurrencyResolved && isSignInChangePending)
+            } while (!isCurrencyResolved && isLookupWantedAgain)
         }
     }
 
