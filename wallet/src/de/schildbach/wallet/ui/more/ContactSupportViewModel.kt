@@ -18,6 +18,8 @@ package de.schildbach.wallet.ui.more
 
 import android.net.Uri
 import android.os.PowerManager
+import androidx.annotation.MainThread
+import androidx.annotation.VisibleForTesting
 import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import com.google.common.base.Charsets
@@ -26,8 +28,20 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.dao.TransactionMetadataDocumentDao
+import de.schildbach.wallet.service.DashjDiagnosticSyncState
 import de.schildbach.wallet.service.PackageInfoProvider
+import de.schildbach.wallet.service.platform.sdk.DashSdkService
+import de.schildbach.wallet.service.platform.sdk.DashSdkServiceImpl
+import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
+import de.schildbach.wallet.service.platform.sdk.ParityReport
+import de.schildbach.wallet.service.platform.sdk.PARITY_BREAKDOWN_REPORT_TIMEOUT_MS
+import de.schildbach.wallet.service.platform.sdk.ReportParityBreakdown
+import de.schildbach.wallet.service.platform.sdk.parityBreakdownReportSection
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.util.CrashReporter
+import de.schildbach.wallet.util.NativeLogBridge
+import de.schildbach.wallet.util.StartupBreadcrumbs
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -40,7 +54,6 @@ import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.WalletTransaction
 import org.dash.wallet.common.BuildConfig
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.WalletDataProvider
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.io.FileInputStream
@@ -49,7 +62,11 @@ import java.io.FileWriter
 import java.io.IOException
 import java.io.OutputStreamWriter
 import java.io.Writer
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.util.TreeSet
+import java.util.concurrent.TimeUnit
 import java.util.zip.GZIPOutputStream
 import javax.inject.Inject
 
@@ -60,6 +77,7 @@ enum class ReportGenerationStatus {
     StackTrace,
     DeviceInfo,
     Packages,
+    ParityBreakdown,
     Logs,
     WalletDump,
     BackgroundTraces,
@@ -67,29 +85,140 @@ enum class ReportGenerationStatus {
     Complete
 }
 
+/**
+ * Whether the report gets `dashJ-kotlin-parity-log.txt`: the dashj sync
+ * diagnostic is on, it ran this launch (parity history exists), or a
+ * breakdown applies to this report (the cutover is committed and the user
+ * shares the application log — [ReportParityBreakdown.NOT_SHARED] is not
+ * applicable, so it never attaches the parity log on its own).
+ */
+internal fun shouldAttachParityLog(
+    diagnosticEnabled: Boolean,
+    hasParityHistory: Boolean,
+    breakdown: ReportParityBreakdown
+): Boolean = diagnosticEnabled || hasParityHistory || breakdown.applicable
+
 @HiltViewModel
 class ContactSupportViewModel @Inject constructor(
     private val configuration: Configuration,
     private val application: WalletApplication,
-    walletDataProvider: WalletDataProvider,
     private val packageInfoProvider: PackageInfoProvider,
-    private val transactionMetadataDocumentDao: TransactionMetadataDocumentDao
+    private val transactionMetadataDocumentDao: TransactionMetadataDocumentDao,
+    private val dashPayConfig: DashPayConfig,
+    private val dashjDiagnosticSyncState: DashjDiagnosticSyncState,
+    private val l1ShadowSyncService: L1ShadowSyncService,
+    private val sdkService: DashSdkService
 ) : ViewModel() {
     companion object {
         private val log = LoggerFactory.getLogger(ContactSupportViewModel::class.java)
         private const val MAX_LOGS_SIZE = 12 * 1024 * 1024
         private const val MAX_WALLET_DUMP_SIZE = 4 * 1024 * 1024
         private const val MAX_WALLET_LOG_SIZE = 4 * 1024 * 1024
+
+        /**
+         * Per-crate tail budget for the SDK's tracing run.log (+ its
+         * rotation) attached to the report — see the collection block in
+         * [createReport]. Two crates are swept (platform_wallet, dash_spv),
+         * so the SDK's total contribution stays at the 4 MB it was when only
+         * one was collected.
+         */
+        private const val MAX_SDK_RUN_LOG_TAIL = 2L * 1024 * 1024
+
+        /**
+         * Caps for the app's own logcat ([collectLogcat]). Two independent
+         * limits on purpose: `-t` bounds what logcat reads, the byte cap
+         * bounds what a device with unusually long lines can hand back.
+         */
+        private const val MAX_LOGCAT_LINES = 20_000
+        private const val MAX_LOGCAT_TAIL = 2L * 1024 * 1024
+        private const val LOGCAT_TIMEOUT_SECS = 20L
     }
 
-    val wallet: Wallet? = walletDataProvider.wallet
+    /**
+     * The wallet the report describes, or null. Read once when the dialog
+     * opens and again when the report is generated, so a wallet that loaded
+     * meanwhile is included. See [refreshWallet].
+     */
+    @Volatile
+    var wallet: Wallet? = null
+        private set
+
+    /** [wallet] is null because a safe-mode retry was still loading it. */
+    @Volatile
+    private var walletSkippedForRetry = false
+
+    /** The launch was degraded when [wallet] was taken (and no retry was running). */
+    @Volatile
+    private var walletLoadDegraded = false
+
     var contextualData: String? = null
     var stackTrace: String? = null
     var isCrash: Boolean = false
     private val _status = MutableStateFlow(ReportGenerationStatus.NotStarted)
     val status = _status.asStateFlow()
 
+    init {
+        refreshWallet()
+    }
+
+    /**
+     * Takes the wallet without waiting for a safe-mode retry. This view model
+     * is created on the main thread, and the recovery screen offers the report
+     * while a retry loads the wallet; reading it then waits for the retry's
+     * parse (minutes on a large wallet: an input-dispatch ANR on the main
+     * thread, a report that never comes on the IO thread). So mid-retry the
+     * report goes without the wallet sections and says why. Otherwise the
+     * wallet is read as before, which does not wait for a degraded launch: a
+     * wallet assigned before a failed publish or initialisation is exactly
+     * what a crash report needs.
+     *
+     * MAIN THREAD ONLY, which is what makes the check-then-read safe: a retry
+     * starts on the main thread (it sets the flag, then installs its gate),
+     * so no retry can start between the two reads here. Off the main thread
+     * one could, and the wallet read would then wait for the whole parse
+     * (review, #1594). Outside a retry neither read waits on the main thread:
+     * a background start's deferred load finished before the first activity
+     * was created (onActivityPreCreated), and the only other gate is a retry's.
+     * (A retry clears the flag inside its own main-thread completion, after
+     * the parse, so a read there finds the load done and does not wait.)
+     * The degraded state for the "no wallet" message is taken here for the
+     * same reason.
+     */
+    @MainThread
+    private fun refreshWallet() {
+        val retrying = application.isSafeModeRetryInProgress
+        walletSkippedForRetry = retrying
+        wallet = if (retrying) null else application.wallet
+        walletLoadDegraded = !retrying && application.isWalletLoadDegraded
+    }
+
+    /** [refreshWallet] from any caller, run on the main thread. */
+    @VisibleForTesting
+    internal suspend fun snapshotWallet() = withContext(Dispatchers.Main.immediate) {
+        refreshWallet()
+    }
+
     suspend fun createReport(
+        userIssueDescription: String,
+        collectDeviceInfo: Boolean,
+        collectInstalledPackages: Boolean,
+        collectApplicationLog: Boolean,
+        collectWalletDump: Boolean
+    ): Pair<String, ArrayList<Uri>> {
+        // A retry may have loaded the wallet since the dialog opened. Taken on
+        // the main thread, serialized with a retry's start (see refreshWallet);
+        // everything else is generated on IO.
+        snapshotWallet()
+        return generateReport(
+            userIssueDescription,
+            collectDeviceInfo,
+            collectInstalledPackages,
+            collectApplicationLog,
+            collectWalletDump
+        )
+    }
+
+    private suspend fun generateReport(
         userIssueDescription: String,
         collectDeviceInfo: Boolean,
         collectInstalledPackages: Boolean,
@@ -158,8 +287,20 @@ class ContactSupportViewModel @Inject constructor(
             }
         }
 
+        // A fresh dashj ↔ SDK parity breakdown for the parity log, computed
+        // BEFORE the logs are copied so its ParityBreakdown block is in the
+        // attached wallet.log too. Bounded (it falls back to the last stored
+        // result with the reason) and never fails the report. It lists txids
+        // and amounts, so only when the user shares the application log.
+        val parityBreakdown = parityBreakdownForReport(collectApplicationLog)
+
         if (collectApplicationLog) {
             _status.value = ReportGenerationStatus.Logs
+            // Top up wallet.log with whatever the native SDK has logged since
+            // the bridge's last poll, so the attached log includes the tail of
+            // the session and not just up-to-one-interval-old native output.
+            // Blocking is fine here (Dispatchers.IO) and it never throws.
+            NativeLogBridge.drainNow()
             val logDir = File(application.filesDir, "log")
             var totalLogsSize = 0L
             if (logDir.exists()) {
@@ -206,6 +347,79 @@ class ContactSupportViewModel @Inject constructor(
                     }
                 }
             }
+
+            // The SDK's Rust `tracing` output goes to its OWN files
+            // (files/sdk-logs/<crate>/run.log — see
+            // DashSdkServiceImpl.enableSdkFileLogging), outside the logback
+            // dir swept above, so they are attached explicitly. Tail-capped:
+            // the newest bytes carry the recent sessions, and the
+            // session-start rotation's run.log.1 fills in when the live file
+            // is still young.
+            //
+            // dash_spv is swept alongside platform_wallet because sync
+            // stalls surface ONLY there: masternode/filter/header progress,
+            // peer disconnects and the qrinfo request state all live in the
+            // SPV log, and a report that omits it cannot diagnose a wallet
+            // that never finishes syncing. Each crate gets its own budget so
+            // a chatty one cannot starve the other.
+            try {
+                val sdkRoot = File(application.filesDir, DashSdkServiceImpl.SDK_LOG_DIR_NAME)
+                for (crate in listOf("platform_wallet", "dash_spv")) {
+                    val sdkLogDir = File(sdkRoot, crate)
+                    var tailBudget = MAX_SDK_RUN_LOG_TAIL
+                    for (name in listOf("run.log", "run.log.1")) {
+                        if (tailBudget <= 0L) break
+                        val source = File(sdkLogDir, name)
+                        if (!source.isFile || source.length() == 0L) continue
+                        val copied =
+                            copyTail(source, File(reportDir, "sdk-$crate-$name"), tailBudget)
+                        if (copied != null) {
+                            attachments.add(
+                                FileProvider.getUriForFile(
+                                    application,
+                                    application.packageName + ".file_attachment",
+                                    copied
+                                )
+                            )
+                            tailBudget -= copied.length()
+                        }
+                    }
+                }
+            } catch (x: Exception) {
+                log.info("problem attaching the SDK run.log", x)
+            }
+
+            // THE APP'S OWN LOGCAT. wallet.log carries only what this app
+            // logs through slf4j, so an entire class of evidence has never
+            // reached a support report: the framework's own warnings about
+            // THIS process. `SQLiteConnectionPool` refusing the SDK database,
+            // ART's GC and "Suspending all threads took", StrictMode, the
+            // ANR and low-memory notices — all logged under our pid, none of
+            // them ours to write.
+            //
+            // That gap is not hypothetical. Section 34's database-lock lead —
+            // a primary-connection wait on dash-sdk.db immediately before a
+            // filter stall — is visible ONLY here, which means no tester
+            // bundle we have collected could ever have shown it, on any
+            // device, including both of the reference installs.
+            //
+            // Android has restricted `logcat` to the caller's own process
+            // since Jelly Bean, so this needs no permission and can expose no
+            // other app's data. `--pid` makes that explicit rather than
+            // implicit.
+            runCatching { collectLogcat(reportDir) }
+                .onSuccess { file ->
+                    if (file != null) {
+                        attachments.add(
+                            FileProvider.getUriForFile(
+                                application,
+                                application.packageName + ".file_attachment", file
+                            )
+                        )
+                        log.info("attached {} bytes of this process's logcat", file.length())
+                    }
+                }
+                .onFailure { log.info("problem attaching logcat", it) }
         }
 
         if (collectWalletDump) {
@@ -292,16 +506,238 @@ class ContactSupportViewModel @Inject constructor(
             }
         }
 
+        // dashJ ↔ Kotlin SDK parity diagnostic: attach only when the Tools
+        // "dashj sync (diagnostic)" toggle is on, or the diagnostic ran at
+        // some point this launch (parity history exists). Fully additive —
+        // with the flag off and never used, no file is added.
+        try {
+            val diagnosticEnabled = dashPayConfig.getDashjSyncDiagnostic()
+            val parityHistory = dashjDiagnosticSyncState.parityHistory()
+            if (shouldAttachParityLog(diagnosticEnabled, parityHistory.isNotEmpty(), parityBreakdown)) {
+                val parityLogFile = File(reportDir, "dashJ-kotlin-parity-log.txt")
+                FileWriter(parityLogFile).use { writer ->
+                    writer.write(buildDashjKotlinParityLog(diagnosticEnabled, parityHistory, parityBreakdown))
+                }
+                attachments.add(
+                    FileProvider.getUriForFile(
+                        application, application.packageName + ".file_attachment",
+                        parityLogFile
+                    )
+                )
+            }
+        } catch (x: Exception) {
+            log.info("problem writing the dashJ-kotlin parity log attachment", x)
+        }
+
+        // Launch-stage breadcrumbs: which numbered startup stage the current —
+        // and, crucially, the previous CRASHED — launch reached. This is the
+        // launch-crash diagnostic for installs with no adb and no usable
+        // Crashlytics stack (e.g. a native crash or an LMK kill leaves no Java
+        // trace at all). Tiny text, inlined into the report body.
+        try {
+            text.append("\n\n\n=== launch breadcrumbs ===\n\n")
+            text.append(StartupBreadcrumbs.reportText())
+        } catch (x: Exception) {
+            text.append(x.toString()).append('\n')
+        }
+
         text.append("\n\nPUT ADDITIONAL COMMENTS TO THE TOP. DOWN HERE NOBODY WILL NOTICE.")
         log.info("create report: {}", watch)
         _status.value = ReportGenerationStatus.Finishing
         return@withContext Pair(text.toString(), attachments)
     }
 
+    /**
+     * Copies the LAST [maxBytes] of [source] into [dest] (whole file when it
+     * fits). Returns [dest], or null when nothing could be copied — never
+     * throws, so a mid-write rotation or permission hiccup cannot sink the
+     * report.
+     */
+    /**
+     * This process's own logcat, tail-capped, or null when nothing could be
+     * read.
+     *
+     * Deliberately NOT the whole buffer: `-t` asks logcat for the most recent
+     * lines only, so the cost is bounded before a single byte crosses the
+     * pipe, and the byte cap below bounds it again for a device whose lines
+     * are unusually long.
+     *
+     * `main` and `crash` are the two buffers that carry app entries — `crash`
+     * holds the fatal exception that `main` may have lost to rotation, which
+     * is exactly the case a support report is sent about.
+     *
+     * Never throws and never blocks the report for long: the process is given
+     * a hard [LOGCAT_TIMEOUT_SECS] and destroyed if it outstays it. A report
+     * without logcat is worth far more than a report that never finishes.
+     */
+    private fun collectLogcat(reportDir: File): File? {
+        val dest = File(reportDir, "logcat.txt")
+        var process: Process? = null
+        return try {
+            process = ProcessBuilder(
+                "logcat", "-d", "-v", "time",
+                "-b", "main", "-b", "crash",
+                "-t", MAX_LOGCAT_LINES.toString(),
+                "--pid=${android.os.Process.myPid()}"
+            ).redirectErrorStream(true).start()
+
+            var written = 0L
+            FileOutputStream(dest).use { out ->
+                process.inputStream.use { input ->
+                    val buffer = ByteArray(8192)
+                    while (written < MAX_LOGCAT_TAIL) {
+                        val read = input.read(buffer)
+                        if (read <= 0) break
+                        val take = minOf(read.toLong(), MAX_LOGCAT_TAIL - written).toInt()
+                        out.write(buffer, 0, take)
+                        written += take
+                    }
+                }
+            }
+            if (!process.waitFor(LOGCAT_TIMEOUT_SECS, TimeUnit.SECONDS)) {
+                log.info("logcat did not exit within {}s — taking what it produced", LOGCAT_TIMEOUT_SECS)
+            }
+            if (written > 0L) dest else { dest.delete(); null }
+        } catch (t: Throwable) {
+            log.info("could not read this process's logcat: {}", t.toString())
+            runCatching { dest.delete() }
+            null
+        } finally {
+            runCatching { process?.destroy() }
+        }
+    }
+
+    private fun copyTail(source: File, dest: File, maxBytes: Long): File? {
+        return try {
+            FileInputStream(source).use { fis ->
+                val length = source.length()
+                if (length > maxBytes) {
+                    var toSkip = length - maxBytes
+                    while (toSkip > 0) {
+                        val skipped = fis.skip(toSkip)
+                        if (skipped <= 0) break
+                        toSkip -= skipped
+                    }
+                }
+                FileOutputStream(dest).use { fos -> fis.copyTo(fos) }
+            }
+            if (dest.length() > 0) dest else null
+        } catch (e: IOException) {
+            log.info("could not tail-copy {}: {}", source, e.toString())
+            null
+        }
+    }
+
     fun subject(): CharSequence {
         @Suppress("ktlint:standard:wrapping")
         return (Constants.REPORT_SUBJECT_BEGIN + packageInfoProvider.versionName + " "
                 + if (isCrash) Constants.REPORT_SUBJECT_CRASH else Constants.REPORT_SUBJECT_ISSUE)
+    }
+
+    /**
+     * The content of the `dashJ-kotlin-parity-log.txt` support-log attachment:
+     * the current diagnostic state (percent + verdict), the SDK wallet's
+     * unspent/total TXO counts (500-input standard-tx cap check), the latest
+     * [ParityReport] from the L1 shadow harness, the transaction-level
+     * breakdown computed for this report ([parityBreakdownForReport]), and the
+     * recent parity history recorded by [DashjDiagnosticSyncState.recordParity].
+     */
+    private fun buildDashjKotlinParityLog(
+        diagnosticEnabled: Boolean,
+        parityHistory: List<DashjDiagnosticSyncState.ParityHistoryEntry>,
+        parityBreakdown: ReportParityBreakdown
+    ): String {
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss z", Locale.US)
+        fun formatReport(r: ParityReport): String =
+            "reportTime=${dateFormat.format(Date(r.timestampMs))}" +
+                " estimated sdk=${r.sdkDuffs} dashj=${r.dashjDuffs}" +
+                " confirmed sdk=${r.sdkConfirmedDuffs} dashj=${r.dashjAvailableDuffs}" +
+                " tx sdk=${r.sdkTxCount} dashj=${r.dashjTxCount}" +
+                " sdkSynced=${r.sdkSynced}"
+
+        val snapshot = dashjDiagnosticSyncState.state.value
+        val latest = l1ShadowSyncService.latestParity.value
+        val text = StringBuilder()
+        text.append("=== dashJ / Kotlin SDK parity log ===\n")
+        text.append("generated: ").append(dateFormat.format(Date())).append('\n')
+        text.append("network: ").append(Constants.NETWORK_PARAMETERS.id).append('\n')
+        text.append("app version: ").append(packageInfoProvider.versionName).append('\n')
+        text.append("dashj version: ")
+            .append(de.schildbach.wallet_test.BuildConfig.DASHJ_VERSION).append('\n')
+        text.append("SDK AAR version: ")
+            .append(de.schildbach.wallet_test.BuildConfig.DASH_SDK_VERSION).append('\n')
+        text.append("diagnostic enabled now: ").append(diagnosticEnabled).append('\n')
+        text.append("diagnostic state: active=").append(snapshot.active)
+            .append(" percent=").append(snapshot.percent)
+            .append(" verdict=").append(snapshot.parity)
+            .append(" stage=").append(snapshot.stageName)
+            .append('\n')
+        // TXO counts straight from the SDK's own Room DB (dash-sdk.db).
+        // Support-relevant because a standard transaction is capped at 500
+        // inputs: a wallet whose UNSPENT-TXO count approaches/exceeds 500
+        // cannot spend its full balance in one standard tx, which this line
+        // lets support spot without any SDK change. The AAR's TxoDao has no
+        // unspent-count query, so this is a raw COUNT over the same `txos`
+        // table the DAO reads (isSpent = 0 mirrors observeUnspent). Blocking
+        // is fine — createReport runs on Dispatchers.IO. Fail-soft: the line
+        // is simply omitted when the SDK DB is not started or the query fails.
+        try {
+            sdkService.databaseOrNull()?.let { db ->
+                fun countQuery(sql: String): Long? =
+                    db.query(sql, null).use { c -> if (c.moveToFirst()) c.getLong(0) else null }
+                val unspent = countQuery("SELECT COUNT(*) FROM txos WHERE isSpent = 0")
+                val total = countQuery("SELECT COUNT(*) FROM txos")
+                if (unspent != null && total != null) {
+                    text.append("unspent TXOs: ").append(unspent)
+                        .append(" (total: ").append(total).append(")\n")
+                }
+            }
+        } catch (x: Exception) {
+            log.info("problem reading the SDK TXO counts for the parity log", x)
+        }
+
+        text.append("\n--- latest parity report ---\n")
+        text.append(latest?.let { formatReport(it) } ?: "none").append('\n')
+
+        text.append(parityBreakdownReportSection(parityBreakdown) { dateFormat.format(Date(it)) })
+
+        text.append("\n--- parity history (oldest first, up to 50 entries) ---\n")
+        if (parityHistory.isEmpty()) {
+            text.append("none\n")
+        } else {
+            parityHistory.forEach { entry ->
+                text.append(dateFormat.format(Date(entry.recordedAtMs)))
+                    .append(" percent=").append(entry.percent)
+                    .append(" verdict=").append(entry.verdict)
+                entry.report?.let { text.append(' ').append(formatReport(it)) }
+                text.append('\n')
+            }
+        }
+        return text.toString()
+    }
+
+    /**
+     * The breakdown for the parity log ([L1ShadowSyncService.parityBreakdownForReport]):
+     * waits up to [PARITY_BREAKDOWN_REPORT_TIMEOUT_MS] under its own progress
+     * step. Whatever goes wrong, the report goes on without it, with the
+     * reason.
+     *
+     * The breakdown lists txids and amounts — application-log material — so
+     * when the user unticks "Append application log" it is neither computed
+     * nor shown ([ReportParityBreakdown.NOT_SHARED]), whatever else is shared.
+     */
+    @VisibleForTesting
+    internal suspend fun parityBreakdownForReport(collectApplicationLog: Boolean): ReportParityBreakdown {
+        if (!collectApplicationLog) return ReportParityBreakdown.NOT_SHARED
+        return try {
+            _status.value = ReportGenerationStatus.ParityBreakdown
+            l1ShadowSyncService.parityBreakdownForReport()
+        } catch (x: CancellationException) {
+            throw x
+        } catch (x: Exception) {
+            log.info("problem computing the parity breakdown for the report", x)
+            ReportParityBreakdown(stored = null, notRefreshedReason = "failed (${x.javaClass.simpleName}: ${x.message})")
+        }
     }
 
     @Throws(IOException::class)
@@ -386,7 +822,12 @@ class ContactSupportViewModel @Inject constructor(
                 Transaction.SORT_TX_BY_UPDATE_TIME
             )
             walletDump + txDump
-        } ?: "No wallet loaded"
+        } ?: when {
+            walletSkippedForRetry -> "No wallet loaded: a safe-mode retry was still loading it"
+            walletLoadDegraded ->
+                "No wallet loaded: degraded launch (the load failed, or safe mode skipped it and no retry has finished)"
+            else -> "No wallet loaded"
+        }
     }
 
     @Throws(IOException::class)

@@ -26,8 +26,12 @@ import de.schildbach.wallet.database.dao.TransactionMetadataChangeCacheDao
 import de.schildbach.wallet.database.dao.TransactionMetadataDocumentDao
 import de.schildbach.wallet.database.dao.TransactionRecordsDao
 import de.schildbach.wallet.database.entity.TransactionMetadataCacheItem
+import de.schildbach.wallet.service.platform.sdk.SdkTxMetadataSource
+import de.schildbach.wallet.service.platform.sdk.SdkTxPresence
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.*
+import kotlin.coroutines.AbstractCoroutineContextElement
+import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.flow.*
 import okhttp3.*
 import org.bitcoinj.coinjoin.utils.CoinJoinTransactionType
@@ -35,8 +39,9 @@ import org.bitcoinj.core.*
 import org.bitcoinj.core.Address
 import org.bitcoinj.script.ScriptPattern
 import org.bitcoinj.utils.Fiat
-import org.bitcoinj.utils.MonetaryFormat
-import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.money.MonetaryFormat
+import de.schildbach.wallet.util.toSha256Hash
+import de.schildbach.wallet.util.toTxId
 import org.dash.wallet.common.data.*
 import org.dash.wallet.common.data.entity.AddressMetadata
 import org.dash.wallet.common.data.entity.ExchangeRate
@@ -45,7 +50,7 @@ import org.dash.wallet.common.data.entity.IconBitmap
 import org.dash.wallet.common.data.entity.TransactionMetadata
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.transactions.TransactionCategory
-import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
+import de.schildbach.wallet.transactions.TransactionUtils.isEntirelySelf
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
 import org.dash.wallet.integrations.maya.data.SwapOrderDao
@@ -55,30 +60,55 @@ import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.util.concurrent.Executors
 import javax.inject.Inject
+import de.schildbach.wallet.transactions.fromTransaction
+import de.schildbach.wallet.util.toNeutralCoin
+import de.schildbach.wallet.util.toNeutralFiat
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class WalletTransactionMetadataProvider @Inject constructor(
     private val transactionMetadataDao: TransactionMetadataDao,
     private val addressMetadataDao: AddressMetadataDao,
     private val iconBitmapDao: IconBitmapDao,
-    private val walletData: WalletDataProvider,
+    private val walletData: de.schildbach.wallet.data.WalletData,
     private val giftCardDao: GiftCardDao,
     private val transactionRecordsDao: TransactionRecordsDao,
     private val swapOrderDao: SwapOrderDao,
     private val transactionMetadataChangeCacheDao: TransactionMetadataChangeCacheDao,
     private val transactionMetadataDocumentDao: TransactionMetadataDocumentDao,
-    private val dashPayConfig: DashPayConfig
+    private val dashPayConfig: DashPayConfig,
+    private val sdkTxMetadataSource: SdkTxMetadataSource
 ) : TransactionMetadataProvider {
     companion object {
         private val log = LoggerFactory.getLogger(WalletTransactionMetadataProvider::class.java)
+    }
+
+    /**
+     * SDK store rows prefetched by [withBatchedImport] for the txids it was given.
+     * Carried in the coroutine context, so it is scoped to that one batch and its
+     * caller, never shared with concurrent callers. A txid in [requested] but not
+     * in [rows] is known to be absent from the SDK store.
+     */
+    private class PreparedSdkRows(
+        val requested: Set<TxId>,
+        val rows: Map<TxId, TransactionMetadata>
+    ) : AbstractCoroutineContextElement(Key) {
+        companion object Key : CoroutineContext.Key<PreparedSdkRows>
     }
 
     private val syncScope = CoroutineScope(
         Executors.newFixedThreadPool(5).asCoroutineDispatcher()
     )
 
-    private suspend fun insertTransactionMetadata(txId: Sha256Hash, isSyncingPlatform: Boolean): TransactionMetadata? {
-        val walletTx = walletData.wallet!!.getTransaction(txId)
+    /**
+     * Creates the metadata row for [txId] and returns it. The row comes from the
+     * dashj wallet's Transaction when it holds the tx, else from the SDK store
+     * ([insertSdkTransactionMetadata]); either way the fetched platform metadata
+     * documents fill memo, rate, service, tax category and sent time. Null when
+     * neither holds the tx. [isSyncingPlatform] keeps a platform sync from
+     * queueing values for upload back to platform.
+     */
+    private suspend fun insertTransactionMetadata(txId: TxId, isSyncingPlatform: Boolean): TransactionMetadata? {
+        val walletTx = walletData.wallet!!.getTransaction(txId.toSha256Hash())
         Context.propagate(walletData.wallet!!.context)
         walletTx?.run {
             val txValue = getValue(walletData.wallet!!) ?: Coin.ZERO
@@ -113,7 +143,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
                 // if we are pulling from platform, then update the tx object
                 exchangeRate = org.bitcoinj.utils.ExchangeRate(Fiat.parseFiat(code, rate))
             } else if (exchangeRate != null) {
-                rate = exchangeRate?.fiat?.let { MonetaryFormat.FIAT.noCode().format(it).toString() }
+                rate = exchangeRate?.fiat?.let { MonetaryFormat.FIAT.noCode().format(it.toNeutralFiat()).toString() }
                 code = exchangeRate?.fiat?.currencyCode
                 hasChanges = true
             }
@@ -127,7 +157,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
             val metadata = TransactionMetadata(
                 txId,
                 updateTime,
-                txValue,
+                txValue.toNeutralCoin(),
                 TransactionCategory.fromTransaction(type, txValue, isInternal),
                 taxCategory = platformTaxCategory?.let { TaxCategory.fromValue(it) },
                 currencyCode = code,
@@ -148,40 +178,87 @@ class WalletTransactionMetadataProvider @Inject constructor(
             }
             log.info("txmetadata: inserting $metadata")
 
-            val platformIconUrl = transactionMetadataDocumentDao.getTransactionIconUrl(txId)
-
-            if (!platformIconUrl.isNullOrEmpty()) {
-                try {
-                    updateIcon(txId, platformIconUrl)
-                } catch (ex: Exception) {
-                    log.error("Failed to make an http call for icon: $platformIconUrl")
-                }
-            }
-
-            val giftCardNumber = transactionMetadataDocumentDao.getGiftCardNumber(txId)
-            val giftCardPin = transactionMetadataDocumentDao.getGiftCardPin(txId)
-            val merchantName = transactionMetadataDocumentDao.getMerchantName(txId)
-            val giftCardPrice = transactionMetadataDocumentDao.getOriginalPrice(txId)
-            val barcodeValue = transactionMetadataDocumentDao.getBarcodeValue(txId)
-            val barcodeFormat = transactionMetadataDocumentDao.getBarcodeFormat(txId)
-            val merchantUrl = transactionMetadataDocumentDao.getMerchantUrl(txId)
-
-            val giftCard = GiftCard(
-                txId,
-                merchantName ?: "",
-                giftCardPrice ?: 0.0,
-                giftCardNumber,
-                giftCardPin,
-                barcodeValue,
-                barcodeFormat?.let { BarcodeFormat.valueOf(it) },
-                merchantUrl
-            )
-            insertOrUpdateGiftCard(giftCard)
+            importPlatformIconAndGiftCard(txId)
 
             return metadata
         }
 
-        return null
+        return insertSdkTransactionMetadata(txId)
+    }
+
+    /**
+     * Insert path for a transaction the dashj wallet does not hold but the Kotlin
+     * SDK's store does: a DashPay one-way-contact receive found by the SDK's contact
+     * backfill, or any transaction after the cutover. The row's txid, value, type and
+     * time come from the SDK store; memo, exchange rate, service, tax category and
+     * sent time come from the fetched platform metadata documents, exactly as for a
+     * dashj transaction. Without this the row was never created, and the metadata was
+     * DROPPED (2026-10-02, topple testnet, tx e5169bfc).
+     *
+     * Nothing goes to the change cache: that cache publishes values a local dashj
+     * transaction carried and platform lacked, and the SDK store holds no memo or rate.
+     */
+    private suspend fun insertSdkTransactionMetadata(txId: TxId): TransactionMetadata? {
+        val prepared = currentCoroutineContext()[PreparedSdkRows]
+        val sdkRow = if (prepared != null && txId in prepared.requested) {
+            prepared.rows[txId]
+        } else {
+            sdkTxMetadataSource.defaultMetadataFor(txId)
+        } ?: return null
+
+        val platformSentTimestamp = transactionMetadataDocumentDao.getSentTimestamp(txId)
+        val platformMemo = transactionMetadataDocumentDao.getTransactionMemo(txId)
+        val platformService = transactionMetadataDocumentDao.getTransactionService(txId)
+        val platformTaxCategory = transactionMetadataDocumentDao.getTransactionTaxCategory(txId)
+        val platformRate = transactionMetadataDocumentDao.getTransactionExchangeRate(txId)
+            ?.takeIf { it.rate != null }
+
+        val metadata = sdkRow.copy(
+            timestamp = platformSentTimestamp ?: sdkRow.timestamp,
+            taxCategory = platformTaxCategory?.let { TaxCategory.fromValue(it) },
+            currencyCode = platformRate?.currencyCode,
+            rate = platformRate?.rate,
+            memo = platformMemo ?: "",
+            service = platformService
+        )
+        transactionMetadataDao.insert(metadata)
+        log.info("txmetadata for {} has no wallet tx, inserted a row from the SDK store", txId)
+
+        importPlatformIconAndGiftCard(txId)
+        return metadata
+    }
+
+    /** The icon and gift card parts of the platform metadata documents for [txId]. */
+    private suspend fun importPlatformIconAndGiftCard(txId: TxId) {
+        val platformIconUrl = transactionMetadataDocumentDao.getTransactionIconUrl(txId)
+
+        if (!platformIconUrl.isNullOrEmpty()) {
+            try {
+                updateIcon(txId, platformIconUrl)
+            } catch (ex: Exception) {
+                log.error("Failed to make an http call for icon: $platformIconUrl")
+            }
+        }
+
+        val giftCardNumber = transactionMetadataDocumentDao.getGiftCardNumber(txId)
+        val giftCardPin = transactionMetadataDocumentDao.getGiftCardPin(txId)
+        val merchantName = transactionMetadataDocumentDao.getMerchantName(txId)
+        val giftCardPrice = transactionMetadataDocumentDao.getOriginalPrice(txId)
+        val barcodeValue = transactionMetadataDocumentDao.getBarcodeValue(txId)
+        val barcodeFormat = transactionMetadataDocumentDao.getBarcodeFormat(txId)
+        val merchantUrl = transactionMetadataDocumentDao.getMerchantUrl(txId)
+
+        val giftCard = GiftCard(
+            txId,
+            merchantName ?: "",
+            giftCardPrice ?: 0.0,
+            giftCardNumber,
+            giftCardPin,
+            barcodeValue,
+            barcodeFormat?.let { BarcodeFormat.valueOf(it) },
+            merchantUrl
+        )
+        insertOrUpdateGiftCard(giftCard)
     }
 
     private suspend fun shouldSaveToCache(): Boolean {
@@ -197,23 +274,68 @@ class WalletTransactionMetadataProvider @Inject constructor(
         return shouldSaveToCache
     }
 
+    /**
+     * Runs [update] on the metadata row for [txId], creating the row first when
+     * there is none: from the dashj wallet or the SDK store, else from
+     * [fallbackMetadata]. When none of those yields a row the change is dropped
+     * and logged as DROPPED.
+     */
     private suspend fun updateAndInsertIfNotExist(
-        txId: Sha256Hash,
+        txId: TxId,
         isSyncingPlatform: Boolean,
+        fallbackMetadata: TransactionMetadata? = null,
         update: suspend (TransactionMetadata) -> Unit
     ) {
         val existing = transactionMetadataDao.load(txId)
 
         if (existing != null) {
-            log.info("txmetadata for $txId exists, only do update")
+            // Per-transaction: DEBUG. On a 33k-tx wallet this line alone ran
+            // to thousands per metadata re-merge (Phase 1a item 5).
+            log.debug("txmetadata for {} exists, only do update", txId)
             update(existing)
         } else {
             log.info("txmetadata for $txId does not exist, perform insert, then update")
-            insertTransactionMetadata(txId, isSyncingPlatform)?.let { update(it) }
+            // insertTransactionMetadata derives the row from the dashj wallet
+            // Transaction, else from the SDK store, and returns null only when
+            // neither holds the tx (or the SDK is not running). Fall back to the
+            // caller-supplied minimal row so the edit still persists in the same
+            // table under the same TxId key.
+            val inserted = insertTransactionMetadata(txId, isSyncingPlatform)
+                ?: fallbackMetadata?.also {
+                    log.info("txmetadata for $txId has no wallet tx, inserting SDK fallback row")
+                    transactionMetadataDao.insert(it)
+                }
+            if (inserted == null) {
+                // The metadata is dropped here. Never silent: this is precisely
+                // how fetched platform metadata went missing without a trace.
+                log.warn(
+                    "txmetadata for {} DROPPED — no wallet tx, not in the SDK store, and no fallback row; " +
+                        "any platform metadata for this transaction will not be displayed",
+                    txId
+                )
+            }
+            inserted?.let { update(it) }
         }
     }
 
-    override suspend fun importTransactionMetadata(txId: Sha256Hash) {
+    /**
+     * Prefetches, in one SDK batch, the store rows for the txids in [txIds] that
+     * have no metadata row and are not in the dashj wallet — the ones whose import
+     * would otherwise each run the SDK lookup and its wallet-wide walker work.
+     * [block] then reads them from the coroutine context ([PreparedSdkRows]).
+     */
+    override suspend fun <T> withBatchedImport(txIds: Collection<TxId>, block: suspend () -> T): T {
+        val wallet = walletData.wallet
+        val needSdk = txIds.toSet().filter { txId ->
+            wallet?.getTransaction(txId.toSha256Hash()) == null && !transactionMetadataDao.exists(txId)
+        }
+        if (needSdk.isEmpty()) return block()
+        val rows = sdkTxMetadataSource.defaultMetadataFor(needSdk)
+        log.info("txmetadata batch: prefetched {} of {} SDK store row(s)", rows.size, needSdk.size)
+        return withContext(PreparedSdkRows(needSdk.toSet(), rows)) { block() }
+    }
+
+    override suspend fun importTransactionMetadata(txId: TxId) {
         updateAndInsertIfNotExist(txId, false) { }
     }
 
@@ -221,8 +343,13 @@ class WalletTransactionMetadataProvider @Inject constructor(
         transactionMetadataDao.insert(transactionMetadata)
     }
 
-    override suspend fun setTransactionTaxCategory(txId: Sha256Hash, taxCategory: TaxCategory, isSyncingPlatform: Boolean) {
-        updateAndInsertIfNotExist(txId, isSyncingPlatform) {
+    override suspend fun setTransactionTaxCategory(
+        txId: TxId,
+        taxCategory: TaxCategory,
+        isSyncingPlatform: Boolean,
+        fallbackMetadata: TransactionMetadata?
+    ) {
+        updateAndInsertIfNotExist(txId, isSyncingPlatform, fallbackMetadata) {
             transactionMetadataDao.updateTaxCategory(txId, taxCategory)
             if (!isSyncingPlatform && shouldSaveToCache()) {
                 transactionMetadataChangeCacheDao.insertTaxCategory(txId, taxCategory)
@@ -231,7 +358,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
     }
 
     override suspend fun setTransactionSentTime(
-        txId: Sha256Hash,
+        txId: TxId,
         timestamp: Long,
         isSyncingPlatform: Boolean
     ) {
@@ -244,12 +371,20 @@ class WalletTransactionMetadataProvider @Inject constructor(
     }
 
     override suspend fun syncPlatformMetadata(
-        txId: Sha256Hash,
+        txId: TxId,
         metadata: TransactionMetadata,
         giftCard: GiftCard?,
         iconUrl: String?
     ) {
-        updateAndInsertIfNotExist(txId, true) { existing ->
+        // Pass the platform row as the fallback. Without it, a transaction the
+        // HELD dashj wallet does not hold — post-cutover that is essentially
+        // every transaction on an SDK-owned wallet — took the
+        // insertTransactionMetadata() == null branch, found no fallback, and the
+        // fetched metadata was DISCARDED before reaching the table the UI reads.
+        // The wallet fetched thousands of documents and displayed none of them
+        // (field report, 11.10.93). Same defect class as the CSV exporter and the
+        // "Past" upload gate: a read that still assumed dashj owns the wallet.
+        updateAndInsertIfNotExist(txId, true, fallbackMetadata = metadata) { existing ->
             val updated = existing.copy(
                 // txId and value are kept the same
                 txId = existing.txId,
@@ -265,6 +400,21 @@ class WalletTransactionMetadataProvider @Inject constructor(
             )
 
             transactionMetadataDao.update(updated)
+            // What actually landed in the UI-visible table, per field. This is
+            // the boundary where fetched platform metadata becomes displayable,
+            // so a memo that is on the network but absent on screen is either
+            // logged here as applied (=> a render problem) or never reaches
+            // here (=> a sync problem). Memo length only; never its text.
+            // DEBUG since Phase 1a item 5: per-transaction, and a full re-merge
+            // on the reference install wrote 12,646 of these in 23 seconds.
+            log.debug(
+                "platform metadata merged for {}: memo={} rate={} service={} taxCategory={}",
+                txId,
+                updated.memo.length.takeIf { it > 0 }?.let { "$it chars" } ?: "none",
+                updated.rate?.let { "$it ${updated.currencyCode}" } ?: "none",
+                updated.service ?: "none",
+                updated.taxCategory?.name ?: "none"
+            )
         }
 
         if (giftCard != null) {
@@ -280,11 +430,11 @@ class WalletTransactionMetadataProvider @Inject constructor(
         }
     }
 
-    override suspend fun setTransactionType(txId: Sha256Hash, type: Int, isSyncingPlatform: Boolean) {
+    override suspend fun setTransactionType(txId: TxId, type: Int, isSyncingPlatform: Boolean) {
         TODO("Not yet implemented")
     }
 
-    override suspend fun setTransactionExchangeRate(txId: Sha256Hash, exchangeRate: ExchangeRate, isSyncingPlatform: Boolean) {
+    override suspend fun setTransactionExchangeRate(txId: TxId, exchangeRate: ExchangeRate, isSyncingPlatform: Boolean) {
         if (exchangeRate.rate != null) {
             updateAndInsertIfNotExist(txId, isSyncingPlatform) {
                 transactionMetadataDao.updateExchangeRate(
@@ -303,8 +453,13 @@ class WalletTransactionMetadataProvider @Inject constructor(
         }
     }
 
-    override suspend fun setTransactionMemo(txId: Sha256Hash, memo: String, isSyncingPlatform: Boolean) {
-        updateAndInsertIfNotExist(txId, isSyncingPlatform) {
+    override suspend fun setTransactionMemo(
+        txId: TxId,
+        memo: String,
+        isSyncingPlatform: Boolean,
+        fallbackMetadata: TransactionMetadata?
+    ) {
+        updateAndInsertIfNotExist(txId, isSyncingPlatform, fallbackMetadata) {
             transactionMetadataDao.updateMemo(txId, memo)
             if (!isSyncingPlatform && shouldSaveToCache()) {
                 transactionMetadataChangeCacheDao.insertMemo(txId, memo)
@@ -312,7 +467,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
         }
     }
 
-    override suspend fun setTransactionService(txId: Sha256Hash, service: String, isSyncingPlatform: Boolean) {
+    override suspend fun setTransactionService(txId: TxId, service: String, isSyncingPlatform: Boolean) {
         updateAndInsertIfNotExist(txId, isSyncingPlatform) {
             transactionMetadataDao.updateService(txId, service)
             if (!isSyncingPlatform && shouldSaveToCache()) {
@@ -321,7 +476,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
         }
     }
 
-    override suspend fun markGiftCardTransaction(txId: Sha256Hash, service: String, iconUrl: String?) {
+    override suspend fun markGiftCardTransaction(txId: TxId, service: String, iconUrl: String?) {
         var transactionMetadata: TransactionMetadata
         updateAndInsertIfNotExist(txId, false) {
             transactionMetadata = it.copy(
@@ -347,7 +502,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
         }
     }
 
-    override suspend fun forgetTransaction(txId: Sha256Hash): Boolean {
+    override suspend fun forgetTransaction(txId: TxId): Boolean {
         // Fail closed: only proceed when a wallet is available AND says it does not hold the
         // transaction. Without a wallet we cannot tell "never broadcast" from "cannot check
         // right now", and deleting on a guess would discard the memo, tax category and cards of
@@ -358,11 +513,35 @@ class WalletTransactionMetadataProvider @Inject constructor(
             log.warn("not forgetting {}: no wallet available to confirm the transaction is absent", txId)
             return false
         }
-        if (wallet.getTransaction(txId) != null) {
+        if (wallet.getTransaction(txId.toSha256Hash()) != null) {
             // Settled: the records describe a real transaction, so there is nothing to discard
             // now or later.
             log.warn("refusing to forget {}: the wallet holds this transaction", txId)
             return true
+        }
+        // The dashj wallet is not the only record: a transaction the SDK found on its own has
+        // real metadata too (see importTransactionMetadata), so the SDK store holding it is the
+        // same proof. Only a positive "absent" lets the cleanup go ahead: a store that is not
+        // open, or a lookup that failed, says nothing about the transaction.
+        val sdkPresence = try {
+            sdkTxMetadataSource.presenceOf(txId)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("not forgetting {}: the SDK store could not be checked", txId, e)
+            return false
+        }
+        when (sdkPresence) {
+            SdkTxPresence.HELD -> {
+                log.warn("refusing to forget {}: the SDK store holds this transaction", txId)
+                return true
+            }
+            SdkTxPresence.UNAVAILABLE -> {
+                // Deferred, not settled, as with no wallet above.
+                log.warn("not forgetting {}: the SDK store is not available to confirm absence", txId)
+                return false
+            }
+            SdkTxPresence.ABSENT -> Unit
         }
 
         // one Room transaction: a partial cleanup would strand rows with nothing left to retry it
@@ -375,7 +554,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
         // Room's @Update rewrites every column, so a caller passing a partially-populated
         // GiftCard would otherwise null out fields it didn't set (number/pin/note/...).
         // Merge against the stored row so we only ever fill in values, never erase them.
-        val existing = giftCardDao.getCardForTransaction(giftCard.txId).find { it.index == giftCard.index }
+        val existing = giftCardDao.getCardForTransaction(giftCard.txId.bytes).find { it.index == giftCard.index }
         val merged = if (existing == null) {
             giftCard
         } else {
@@ -401,6 +580,8 @@ class WalletTransactionMetadataProvider @Inject constructor(
 
         // for now, only save the first card
         if (merged.index == 0) {
+            // use the merged values: the incoming card may be partially populated and
+            // must not overwrite fields the stored row already has with nulls
             transactionMetadataChangeCacheDao.insertGiftCardData(
                 merged.txId,
                 merged.number,
@@ -415,22 +596,22 @@ class WalletTransactionMetadataProvider @Inject constructor(
         }
     }
 
-    override suspend fun updateGiftCardBarcode(txId: Sha256Hash, index: Int, barcodeValue: String, barcodeFormat: BarcodeFormat) {
-        giftCardDao.updateBarcode(txId, index, barcodeValue, barcodeFormat)
+    override suspend fun updateGiftCardBarcode(txId: TxId, index: Int, barcodeValue: String, barcodeFormat: BarcodeFormat) {
+        giftCardDao.updateBarcode(txId.bytes, index, barcodeValue, barcodeFormat)
         if (index == 0) {
             transactionMetadataChangeCacheDao.insertBarcode(txId, barcodeValue, barcodeFormat.toString(), index)
         }
     }
 
-    override fun syncTransactionBlocking(tx: Transaction) {
+    fun syncTransactionBlocking(tx: Transaction) {
         runBlocking {
             syncTransaction(tx)
         }
     }
 
-    override suspend fun syncTransaction(tx: Transaction) {
+    suspend fun syncTransaction(tx: Transaction) {
         log.info("sync transaction metadata: ${tx.txId}")
-        val metadata = transactionMetadataDao.load(tx.txId)
+        val metadata = transactionMetadataDao.load(tx.txId.toTxId())
         if (metadata != null) {
             // it does exist.  Check what is missing in the table vs the transaction
             log.info("sync transaction metadata exists: ${tx.txId}")
@@ -444,17 +625,31 @@ class WalletTransactionMetadataProvider @Inject constructor(
                             metadata.rate
                         )
                     )
+                    // The whole point of publishing a rate is that it survives a
+                    // restore onto another device. Log the APPLY, not just that
+                    // metadata existed: a row showing a live rate instead of the
+                    // historical one is indistinguishable in a support log from
+                    // one that never had metadata at all.
+                    log.info(
+                        "metadata APPLIED rate {} {} to tx {}",
+                        metadata.rate, metadata.currencyCode, tx.txId
+                    )
                 } catch (e: Exception) {
                     log.error("Failed to parse exchange rate for metadata: {}. Error: {}", metadata, e.message, e)
                 }
+            } else if (metadata.rate != null && tx.exchangeRate != null) {
+                // Not a defect — the transaction already carried a local rate
+                // (this device sent it). Logged so "no apply" is never
+                // ambiguous between "already had one" and "nothing stored".
+                log.info("metadata rate SKIPPED for tx {} — transaction already has one", tx.txId)
             } else if (metadata.rate == null && exchangeRate != null) {
                 transactionMetadataDao.updateExchangeRate(
-                    tx.txId,
+                    tx.txId.toTxId(),
                     exchangeRate.fiat.currencyCode,
                     exchangeRate.fiat.value.toString()
                 )
                 transactionMetadataChangeCacheDao.insertExchangeRate(
-                    tx.txId,
+                    tx.txId.toTxId(),
                     exchangeRate.fiat.currencyCode,
                     exchangeRate.fiat.value.toString()
                 )
@@ -463,25 +658,35 @@ class WalletTransactionMetadataProvider @Inject constructor(
             // sync transaction memo
             if (metadata.memo.isNotBlank() && tx.memo == null) {
                 tx.memo = metadata.memo
+                // Same reasoning as the rate above: a memo that was published
+                // but never reaches the transaction is invisible in a support
+                // log unless the apply itself is recorded. Length only — the
+                // memo is private user text and never goes in the log.
+                log.info(
+                    "metadata APPLIED memo ({} chars) to tx {}",
+                    metadata.memo.length, tx.txId
+                )
+            } else if (metadata.memo.isNotBlank() && tx.memo != null) {
+                log.info("metadata memo SKIPPED for tx {} — transaction already has one", tx.txId)
             } else if (metadata.memo.isBlank() && tx.memo != null) {
-                setTransactionMemo(tx.txId, tx.memo!!)
+                setTransactionMemo(tx.txId.toTxId(), tx.memo!!)
             }
 
             // sync service name
             if (metadata.service == null) {
-                val addressMetadata = getAddressMetadata(tx.txId)
+                val addressMetadata = getAddressMetadata(tx.txId.toTxId())
                 if (addressMetadata?.service != null) {
-                    setTransactionService(tx.txId, addressMetadata.service)
+                    setTransactionService(tx.txId.toTxId(), addressMetadata.service)
                 }
             }
         } else {
             // it does not exist, so import everything from the transaction
             log.info("sync transaction metadata not exists: ${tx.txId}")
-            insertTransactionMetadata(tx.txId, false)
+            insertTransactionMetadata(tx.txId.toTxId(), false)
         }
     }
 
-    override suspend fun getTransactionMetadata(txId: Sha256Hash): TransactionMetadata? {
+    override suspend fun getTransactionMetadata(txId: TxId): TransactionMetadata? {
         var transactionMetadata = transactionMetadataDao.load(txId)
         if (transactionMetadata == null) {
             insertTransactionMetadata(txId, false)
@@ -497,13 +702,13 @@ class WalletTransactionMetadataProvider @Inject constructor(
     /**
      * obtains the default tax category for transfers
      */
-    private suspend fun getDefaultTaxCategory(txId: Sha256Hash): TaxCategory? {
+    private suspend fun getDefaultTaxCategory(txId: TxId): TaxCategory? {
         val addressMetadata = getAddressMetadata(txId)
         return addressMetadata?.taxCategory
     }
 
-    private suspend fun getAddressMetadata(txId: Sha256Hash): AddressMetadata? {
-        val tx = walletData.wallet!!.getTransaction(txId)
+    private suspend fun getAddressMetadata(txId: TxId): AddressMetadata? {
+        val tx = walletData.wallet!!.getTransaction(txId.toSha256Hash())
         tx?.run {
             // outgoing transaction, check inputs
             for (input in inputs) {
@@ -571,7 +776,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
         return metadataList
     }
     
-    override fun observePresentableMetadata(): Flow<Map<Sha256Hash, PresentableTxMetadata>> {
+    override fun observePresentableMetadata(): Flow<Map<TxId, PresentableTxMetadata>> {
         return iconBitmapDao.observeBitmaps()
             .distinctUntilChanged()
             .map { rows ->
@@ -585,11 +790,12 @@ class WalletTransactionMetadataProvider @Inject constructor(
                     giftCardDao.observeGiftCards().distinctUntilChanged(),
                     swapOrderDao.observeOrders().distinctUntilChanged(),
                     transactionMetadataDao.observePresentableMetadata().distinctUntilChanged()
-                ) { giftCards, swapOrders, metadataList ->
+                ) { giftCardList, swapOrders, metadataList ->
                     // combine() re-runs with the same cached metadata instances when only
                     // gift cards or swap orders emit, so decorate copies — mutating in place
                     // would also mutate previously emitted maps and hide the change from
                     // downstream diffing (TxDisplayCacheService).
+                    val giftCards = giftCardList.groupBy { it.txId }
                     metadataList.mapValues { (txId, metadata) ->
                         metadata.copy().also { presentable ->
                             presentable.customIconId?.let { iconId ->
@@ -607,7 +813,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
             }
     }
 
-    override suspend fun getIcon(iconId: Sha256Hash): Bitmap? {
+    override suspend fun getIcon(iconId: TxId): Bitmap? {
         iconBitmapDao.getBitmap(iconId)?.let {
             return BitmapFactory.decodeByteArray(it.imageData, 0, it.imageData.size)
         }
@@ -651,11 +857,11 @@ class WalletTransactionMetadataProvider @Inject constructor(
         }
     }
 
-    override suspend fun exists(txId: Sha256Hash): Boolean {
+    override suspend fun exists(txId: TxId): Boolean {
         return transactionMetadataDao.exists(txId)
     }
 
-    override fun observeTransactionMetadata(txId: Sha256Hash): Flow<TransactionMetadata?> {
+    override fun observeTransactionMetadata(txId: TxId): Flow<TransactionMetadata?> {
         return transactionMetadataDao.observe(txId)
             .distinctUntilChanged()
             .map { transactionMetadata ->
@@ -667,7 +873,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
             }
     }
 
-    private fun updateIcon(txId: Sha256Hash, iconUrl: String) {
+    private fun updateIcon(txId: TxId, iconUrl: String) {
         val request = Request.Builder().url(iconUrl).get().build()
         Constants.HTTP_CLIENT.newCall(request).enqueue(object: Callback {
             override fun onFailure(call: Call, e: IOException) {
@@ -680,7 +886,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
                         try {
                             val originalImageData = it.bytes()
                             // Calculate hash from original image data to have it unified across platforms
-                            val imageHash = Sha256Hash.of(originalImageData)
+                            val imageHash = TxId.of(originalImageData)
 
                             val bitmap = BitmapFactory.decodeByteArray(originalImageData, 0, originalImageData.size)
                             val icon = resizeIcon(bitmap)
@@ -732,7 +938,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
             return
         }
 
-        val existingGiftCard = giftCardDao.getCardForTransaction(giftCard.txId).find { it.index == giftCard.index}
+        val existingGiftCard = giftCardDao.getCardForTransaction(giftCard.txId.bytes).find { it.index == giftCard.index}
 
         if (existingGiftCard == null) {
             giftCardDao.insertGiftCard(giftCard)

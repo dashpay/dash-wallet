@@ -29,22 +29,23 @@ import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
-import org.bitcoinj.core.Coin
-import org.bitcoinj.core.Sha256Hash
-import org.bitcoinj.core.Transaction
-import org.bitcoinj.utils.Fiat
-import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.data.entity.GiftCard
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.money.FiatValue
+import org.dash.wallet.common.money.toDash
+import org.dash.wallet.common.money.toFiatValue
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.UnresolvedPaymentsProvider
+import org.dash.wallet.common.services.WalletSession
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.transactions.TxInfo
 import org.dash.wallet.common.ui.enter_amount.AmountInputRules
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProvider
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderDao
@@ -148,7 +149,8 @@ class DashSpendCardCurrencyTest {
     private val giftCardDao = mock<GiftCardDao>()
     private val payments = mock<SendPaymentService>()
     private var signedInToCtx = false
-    private val sentPayments = mutableListOf<Coin?>()
+    private val sentPayments = mutableListOf<Dash?>()
+    private val zeroTxId = "00".repeat(32)
     private val freshRates = mutableMapOf<String, ExchangeRate>()
 
     @Before
@@ -230,8 +232,7 @@ class DashSpendCardCurrencyTest {
 
         return DashSpendViewModel(
             mock<WalletDataProvider> {
-                on { observeSpendableBalance() } doReturn flowOf(Coin.COIN)
-                on { wallet } doReturn mock<Wallet>()
+                on { observeTotalBalance() } doReturn flowOf(Dash.COIN)
             },
             exchangeRates,
             mock<Configuration>(),
@@ -294,7 +295,7 @@ class DashSpendCardCurrencyTest {
         purchaseGiftCard(currentQuote() ?: GiftCardQuote("USD", giftCardOrderInfo.value, BigDecimal.ZERO))
 
     private fun DashSpendViewModel.enter(amount: String) {
-        setGiftCardOrderInfo(Fiat.parseFiat(cardCurrency!!, amount), 1)
+        setGiftCardOrderInfo(FiatValue.parseFiat(cardCurrency!!, amount), 1)
     }
 
     private fun orderSentToCtx(): PurchaseGiftCardRequest {
@@ -320,16 +321,16 @@ class DashSpendCardCurrencyTest {
         viewModel.openCtxMerchant()
 
         assertEquals("GBP", viewModel.cardCurrency)
-        assertEquals(Fiat.parseFiat("GBP", "5"), viewModel.minCardPurchaseFiat)
-        assertEquals(Fiat.parseFiat("GBP", "500.50"), viewModel.maxCardPurchaseFiat)
+        assertEquals(FiatValue.parseFiat("GBP", "5"), viewModel.minCardPurchaseFiat)
+        assertEquals(FiatValue.parseFiat("GBP", "500.50"), viewModel.maxCardPurchaseFiat)
         // limits in Dash come from the GBP rate, not the USD one
-        assertEquals(Coin.parseCoin("0.25"), viewModel.minCardPurchaseCoin)
-        assertEquals(Coin.parseCoin("25.025"), viewModel.maxCardPurchaseCoin)
+        assertEquals(Dash.parse("0.25"), viewModel.minCardPurchaseDash)
+        assertEquals(Dash.parse("25.025"), viewModel.maxCardPurchaseDash)
         assertEquals("50050", digits(viewModel.maxCardPurchaseFiat.toCardFormattedString()))
         assertTrue(viewModel.maxCardPurchaseFiat.toCardFormattedString().contains("£"))
 
         viewModel.enter("19.99")
-        assertEquals(Fiat.parseFiat("GBP", "19.99"), viewModel.getFirstCardValueAsFiat())
+        assertEquals(FiatValue.parseFiat("GBP", "19.99"), viewModel.getFirstCardValueAsFiat())
         assertNull(viewModel.purchaseBlock)
         assertFalse(viewModel.exceedsBalance())
 
@@ -352,10 +353,10 @@ class DashSpendCardCurrencyTest {
         assertEquals(listOf(1000.0, 5000.0, 10000.0), merchant.denominations)
         assertEquals("¥1,000", GiftCardCurrency.displayFormat("JPY", trimZeroDecimals = true).format(1000.0))
         assertEquals("¥1,000", GiftCardCurrency.displayFormat("JPY").format(1000.0))
-        assertEquals(Fiat.parseFiat("JPY", "10000"), viewModel.maxCardPurchaseFiat)
+        assertEquals(FiatValue.parseFiat("JPY", "10000"), viewModel.maxCardPurchaseFiat)
         assertEquals("10000", digits(viewModel.maxCardPurchaseFiat.toCardFormattedString()))
 
-        viewModel.setGiftCardOrderInfo(GiftCardCurrency.toFiat(merchant.denominations[1], "JPY"), 1)
+        viewModel.setGiftCardOrderInfo(GiftCardCurrency.toFiat(merchant.denominations[1], "JPY").toFiatValue(), 1)
         assertNull(viewModel.purchaseBlock)
         viewModel.buy()
 
@@ -385,13 +386,13 @@ class DashSpendCardCurrencyTest {
 
         viewModel.openCtxMerchant()
 
-        assertEquals(Fiat.parseFiat("KWD", "1.5"), viewModel.minCardPurchaseFiat)
-        assertEquals(Fiat.parseFiat("KWD", "150.125"), viewModel.maxCardPurchaseFiat)
+        assertEquals(FiatValue.parseFiat("KWD", "1.5"), viewModel.minCardPurchaseFiat)
+        assertEquals(FiatValue.parseFiat("KWD", "150.125"), viewModel.maxCardPurchaseFiat)
         assertEquals("150125", digits(viewModel.maxCardPurchaseFiat.toCardFormattedString()))
         assertEquals("1500", digits(GiftCardCurrency.displayFormat("KWD").format(1.5)))
 
         viewModel.enter("12.345")
-        assertEquals(Fiat.parseFiat("KWD", "12.345"), viewModel.getFirstCardValueAsFiat())
+        assertEquals(FiatValue.parseFiat("KWD", "12.345"), viewModel.getFirstCardValueAsFiat())
         assertNull(viewModel.purchaseBlock)
         viewModel.buy()
 
@@ -444,7 +445,7 @@ class DashSpendCardCurrencyTest {
         assertEquals(GiftCardPurchaseBlock.RATE_MISSING, viewModel.purchaseBlock)
         assertNull(viewModel.cardExchangeRate)
         assertTrue("an unknown Dash cost must not pass the balance check", viewModel.exceedsBalance())
-        assertEquals(Coin.ZERO, viewModel.maxCardPurchaseCoin)
+        assertEquals(Dash.ZERO, viewModel.maxCardPurchaseDash)
         assertPurchaseRefused(viewModel)
 
         setRate("GBP", "50")
@@ -556,18 +557,18 @@ class DashSpendCardCurrencyTest {
         viewModel.openCtxMerchant()
 
         assertEquals("USD", viewModel.cardCurrency)
-        assertEquals(Fiat.parseFiat("USD", "5"), viewModel.minCardPurchaseFiat)
-        assertEquals(Fiat.parseFiat("USD", "500"), viewModel.maxCardPurchaseFiat)
-        assertEquals(Coin.parseCoin("0.2"), viewModel.minCardPurchaseCoin)
-        assertEquals(Coin.parseCoin("20"), viewModel.maxCardPurchaseCoin)
+        assertEquals(FiatValue.parseFiat("USD", "5"), viewModel.minCardPurchaseFiat)
+        assertEquals(FiatValue.parseFiat("USD", "500"), viewModel.maxCardPurchaseFiat)
+        assertEquals(Dash.parse("0.2"), viewModel.minCardPurchaseDash)
+        assertEquals(Dash.parse("20"), viewModel.maxCardPurchaseDash)
         assertEquals("500", digits(viewModel.minCardPurchaseFiat.toCardFormattedString()))
         assertEquals("$25.00", GiftCardCurrency.displayFormat("USD").format(25.0))
         assertEquals("$25", GiftCardCurrency.displayFormat("USD", trimZeroDecimals = true).format(25.0))
 
         viewModel.enter("25")
-        assertEquals(Fiat.parseFiat("USD", "25"), viewModel.getFirstCardValueAsFiat())
-        assertTrue(viewModel.withinLimits(Fiat.parseFiat("USD", "25")))
-        assertFalse(viewModel.withinLimits(Fiat.parseFiat("USD", "501")))
+        assertEquals(FiatValue.parseFiat("USD", "25"), viewModel.getFirstCardValueAsFiat())
+        assertTrue(viewModel.withinLimits(FiatValue.parseFiat("USD", "25")))
+        assertFalse(viewModel.withinLimits(FiatValue.parseFiat("USD", "501")))
         assertNull(viewModel.purchaseBlock)
         // 25 USD is 1 DASH, which the 1 DASH balance covers once the 5% discount is applied
         assertFalse(viewModel.exceedsBalance())
@@ -622,7 +623,7 @@ class DashSpendCardCurrencyTest {
 
         // the user moves on while the payment is still being recorded
         viewModel.setGiftCardMerchant(otherMerchant())
-        viewModel.saveGiftCardDummy(Sha256Hash.ZERO_HASH, ordered)
+        viewModel.saveGiftCardDummy(zeroTxId, ordered)
 
         val saved = argumentCaptor<List<GiftCard>>()
         verifyBlocking(giftCardDao) { insertGiftCards(saved.capture()) }
@@ -778,13 +779,13 @@ class DashSpendCardCurrencyTest {
         val viewModel = viewModel()
         viewModel.openCtxMerchant()
 
-        assertTrue(viewModel.setEnteredAmount(Fiat.parseFiat("GBP", "25")))
-        assertEquals(Fiat.parseFiat("GBP", "25"), viewModel.getFirstCardValueAsFiat())
+        assertTrue(viewModel.setEnteredAmount(FiatValue.parseFiat("GBP", "25")))
+        assertEquals(FiatValue.parseFiat("GBP", "25"), viewModel.getFirstCardValueAsFiat())
 
-        assertFalse(viewModel.setEnteredAmount(Fiat.parseFiat("USD", "40")))
+        assertFalse(viewModel.setEnteredAmount(FiatValue.parseFiat("USD", "40")))
 
         assertTrue(viewModel.giftCardOrderInfo.value.isEmpty())
-        assertEquals(Fiat.parseFiat("GBP", "0"), viewModel.getFirstCardValueAsFiat())
+        assertEquals(FiatValue.parseFiat("GBP", "0"), viewModel.getFirstCardValueAsFiat())
     }
 
     @Test
@@ -856,7 +857,7 @@ class DashSpendCardCurrencyTest {
         assertPurchaseRefused(viewModel)
 
         // CTX is sent one card, so a total over several must not be confirmed
-        viewModel.setGiftCardOrderInfo(Fiat.parseFiat("GBP", "25"), 2)
+        viewModel.setGiftCardOrderInfo(FiatValue.parseFiat("GBP", "25"), 2)
         assertEquals(GiftCardPurchaseBlock.NO_AMOUNT, viewModel.purchaseBlock)
         viewModel.setGiftCardOrderQuantities(mapOf(25.0 to 1, 50.0 to 1))
         assertEquals(GiftCardPurchaseBlock.NO_AMOUNT, viewModel.purchaseBlock)
@@ -1357,8 +1358,8 @@ class DashSpendCardCurrencyTest {
 
         assertEquals(CardCurrencyState.Known("USD"), viewModel.cardCurrencyState.value)
         assertFalse(merchant.fixedDenomination)
-        assertEquals(Fiat.parseFiat("USD", "1"), viewModel.minCardPurchaseFiat)
-        assertEquals(Fiat.parseFiat("USD", "500"), viewModel.maxCardPurchaseFiat)
+        assertEquals(FiatValue.parseFiat("USD", "1"), viewModel.minCardPurchaseFiat)
+        assertEquals(FiatValue.parseFiat("USD", "500"), viewModel.maxCardPurchaseFiat)
         assertTrue(viewModel.isWholeAmountOnly)
 
         viewModel.enter("25.50")
@@ -1406,8 +1407,8 @@ class DashSpendCardCurrencyTest {
         dash: String?,
         cardAmount: String? = "100.00",
         acceptsHigherPrice: Boolean = false,
-        invoiced: Coin? = null
-    ): Pair<Sha256Hash?, List<GiftCardPriceChange>> {
+        invoiced: Dash? = null
+    ): Pair<String?, List<GiftCardPriceChange>> {
         ctxSells("GBP", listOf("5", "500"), discount = 500)
         api.stub {
             onBlocking { purchaseGiftCard(any()) } doAnswer {
@@ -1422,7 +1423,7 @@ class DashSpendCardCurrencyTest {
                 )
             }
         }
-        paymentRequestAsksFor(invoiced ?: dash?.let(GiftCardPaymentGuard::dashAmount))
+        paymentRequestAsksFor(invoiced ?: dash?.let(GiftCardPaymentGuard::dashAmount)?.toDash())
         setRate("GBP", "30")
         val viewModel = viewModel()
         viewModel.openCtxMerchant()
@@ -1448,15 +1449,15 @@ class DashSpendCardCurrencyTest {
     }
 
     /** The wallet's side of a payment: the fetched request asks for [amount], and is paid unless refused. */
-    private fun paymentRequestAsksFor(amount: Coin?) {
-        val transaction = mock<Transaction> { on { txId } doReturn Sha256Hash.ZERO_HASH }
+    private fun paymentRequestAsksFor(amount: Dash?) {
+        val transaction = mock<TxInfo> { on { txId } doReturn zeroTxId }
         sentPayments.clear()
         payments.stub {
             onBlocking {
                 payWithDashUrl(any(), anyOrNull(), anyOrNull(), anyOrNull(), anyOrNull(), anyOrNull())
             } doSuspendableAnswer {
-                it.getArgument<(suspend (Coin?) -> Unit)?>(4)?.invoke(amount)
-                it.getArgument<(suspend (Sha256Hash) -> Unit)?>(5)?.invoke(Sha256Hash.ZERO_HASH)
+                it.getArgument<(suspend (Dash?) -> Unit)?>(4)?.invoke(amount)
+                it.getArgument<(suspend (String) -> Unit)?>(5)?.invoke(zeroTxId)
                 sentPayments += amount
                 transaction
             }
@@ -1481,7 +1482,7 @@ class DashSpendCardCurrencyTest {
 
             val (txId, asked) = payOrderCharged(dash)
 
-            assertEquals(dash, Sha256Hash.ZERO_HASH, txId)
+            assertEquals(dash, zeroTxId, txId)
             assertEquals(dash, emptyList<GiftCardPriceChange>(), asked)
             assertPaid(1)
         }
@@ -1494,15 +1495,15 @@ class DashSpendCardCurrencyTest {
 
         assertNull(declinedTxId)
         assertEquals(1, asked.size)
-        assertEquals(Coin.valueOf(316_666_666), asked.single().shown)
-        assertEquals(Coin.valueOf(326_666_667), asked.single().charged)
+        assertEquals(Dash.valueOf(316_666_666), asked.single().shown)
+        assertEquals(Dash.valueOf(326_666_667), asked.single().charged)
         assertEquals(BigDecimal("95.00"), asked.single().shownTotal)
         assertEquals(0, BigDecimal("98.0000001").compareTo(asked.single().chargedTotal))
         assertPaid(0)
 
         val (acceptedTxId, askedAgain) = payOrderCharged("3.26666667", acceptsHigherPrice = true)
 
-        assertEquals(Sha256Hash.ZERO_HASH, acceptedTxId)
+        assertEquals(zeroTxId, acceptedTxId)
         assertEquals(1, askedAgain.size)
         assertPaid(1)
     }
@@ -1570,8 +1571,8 @@ class DashSpendCardCurrencyTest {
 
         // the same amount written another way, or left out as before CTX reported it
         reset(payments)
-        assertEquals(Sha256Hash.ZERO_HASH, payOrderCharged("3.16666666", cardAmount = "100").first)
-        assertEquals(Sha256Hash.ZERO_HASH, payOrderCharged("3.16666666", cardAmount = null).first)
+        assertEquals(zeroTxId, payOrderCharged("3.16666666", cardAmount = "100").first)
+        assertEquals(zeroTxId, payOrderCharged("3.16666666", cardAmount = null).first)
     }
 
     @Test
@@ -1583,14 +1584,14 @@ class DashSpendCardCurrencyTest {
         viewModel.enter("100")
         val shown = checkNotNull(viewModel.currentQuote())
 
-        paymentRequestAsksFor(Coin.valueOf(250_000_000))
+        paymentRequestAsksFor(Dash.valueOf(250_000_000))
 
         val paid = listOf(GiftCardInfo("order-1", cryptoAmount = "2.5", fiatAmount = "100.00"))
-        assertEquals(Sha256Hash.ZERO_HASH, viewModel.payCtxOrder(shown, "dash:?r=x", paid))
+        assertEquals(zeroTxId, viewModel.payCtxOrder(shown, "dash:?r=x", paid))
 
         val higher = listOf(GiftCardInfo("order-2", cryptoAmount = "2.6", fiatAmount = "100.00"))
         assertNull(viewModel.payCtxOrder(shown, "dash:?r=x", higher))
-        assertEquals(Coin.valueOf(260_000_000), viewModel.priceChange.value?.charged)
+        assertEquals(Dash.valueOf(260_000_000), viewModel.priceChange.value?.charged)
     }
 
     @Test
@@ -1767,50 +1768,50 @@ class DashSpendCardCurrencyTest {
         listOf(316_666_666L, 300_000_000L, 318_249_999L).forEach { duffs ->
             reset(payments)
 
-            val (txId, asked) = payOrderCharged("3.16666666", invoiced = Coin.valueOf(duffs))
+            val (txId, asked) = payOrderCharged("3.16666666", invoiced = Dash.valueOf(duffs))
 
-            assertEquals("$duffs", Sha256Hash.ZERO_HASH, txId)
+            assertEquals("$duffs", zeroTxId, txId)
             assertEquals("$duffs", emptyList<GiftCardPriceChange>(), asked)
-            assertEquals(listOf<Coin?>(Coin.valueOf(duffs)), sentPayments)
+            assertEquals(listOf<Dash?>(Dash.valueOf(duffs)), sentPayments)
         }
     }
 
     @Test
     fun paymentRequestForMoreThanShown_isPaidOnlyWhenAccepted() = runBlocking {
-        val invoiced = Coin.valueOf(326_666_667)
+        val invoiced = Dash.valueOf(326_666_667)
 
         val (declinedTxId, asked) = payOrderCharged("3.16666666", invoiced = invoiced)
 
         assertNull(declinedTxId)
         assertEquals(listOf(invoiced), asked.map { it.charged })
-        assertEquals(listOf(Coin.valueOf(316_666_666)), asked.map { it.shown })
-        assertEquals(emptyList<Coin?>(), sentPayments)
+        assertEquals(listOf(Dash.valueOf(316_666_666)), asked.map { it.shown })
+        assertEquals(emptyList<Dash?>(), sentPayments)
 
         val (acceptedTxId, askedAgain) = payOrderCharged("3.16666666", acceptsHigherPrice = true, invoiced = invoiced)
 
-        assertEquals(Sha256Hash.ZERO_HASH, acceptedTxId)
+        assertEquals(zeroTxId, acceptedTxId)
         assertEquals(1, askedAgain.size)
-        assertEquals(listOf<Coin?>(invoiced), sentPayments)
+        assertEquals(listOf<Dash?>(invoiced), sentPayments)
     }
 
     @Test
     fun higherPriceAcceptedOnce_coversThePaymentRequestForTheSameAmount() = runBlocking {
         val (txId, asked) = payOrderCharged("3.26666667", acceptsHigherPrice = true)
 
-        assertEquals(Sha256Hash.ZERO_HASH, txId)
+        assertEquals(zeroTxId, txId)
         assertEquals(1, asked.size)
-        assertEquals(listOf<Coin?>(Coin.valueOf(326_666_667)), sentPayments)
+        assertEquals(listOf<Dash?>(Dash.valueOf(326_666_667)), sentPayments)
     }
 
     @Test
     fun paymentRequestAboveTheAcceptedPrice_isAskedAboutAgain() = runBlocking {
         // 3.5 is more than 0.5% above the 3.26666667 accepted a moment earlier
-        val invoiced = Coin.valueOf(350_000_000)
+        val invoiced = Dash.valueOf(350_000_000)
         val (txId, asked) = payOrderCharged("3.26666667", acceptsHigherPrice = true, invoiced = invoiced)
 
-        assertEquals(Sha256Hash.ZERO_HASH, txId)
-        assertEquals(listOf(Coin.valueOf(326_666_667), Coin.valueOf(350_000_000)), asked.map { it.charged })
-        assertEquals(listOf(Coin.valueOf(316_666_666), Coin.valueOf(326_666_667)), asked.map { it.shown })
+        assertEquals(zeroTxId, txId)
+        assertEquals(listOf(Dash.valueOf(326_666_667), Dash.valueOf(350_000_000)), asked.map { it.charged })
+        assertEquals(listOf(Dash.valueOf(316_666_666), Dash.valueOf(326_666_667)), asked.map { it.shown })
     }
 
     @Test
@@ -1823,7 +1824,7 @@ class DashSpendCardCurrencyTest {
         val shown = checkNotNull(viewModel.currentQuote())
         val order = listOf(GiftCardInfo("order-1", cryptoAmount = "3.16666666"))
 
-        listOf(null, Coin.ZERO).forEach { invoiced ->
+        listOf(null, Dash.ZERO).forEach { invoiced ->
             paymentRequestAsksFor(invoiced)
 
             val refusal = assertThrows(CTXSpendException::class.java) {
@@ -1831,14 +1832,14 @@ class DashSpendCardCurrencyTest {
             }
 
             assertEquals(R.string.gift_card_price_unchecked, refusal.resourceString?.resourceId)
-            assertEquals(emptyList<Coin?>(), sentPayments)
+            assertEquals(emptyList<Dash?>(), sentPayments)
             assertEquals(GiftCardSubmissionState.IDLE, viewModel.submissionState.value)
         }
     }
 
     @Test
     fun piggyCardsPayment_isNotChecked() = runBlocking {
-        paymentRequestAsksFor(Coin.valueOf(999_000_000))
+        paymentRequestAsksFor(Dash.valueOf(999_000_000))
         val viewModel = viewModel()
         viewModel.selectedProvider = GiftCardProviderType.PiggyCards
 
@@ -1851,7 +1852,7 @@ class DashSpendCardCurrencyTest {
 
     @Test
     fun paidOrder_isRecordedAndHandedToOneSheetWhicheverStartedIt() = runBlocking {
-        paymentRequestAsksFor(Coin.COIN)
+        paymentRequestAsksFor(Dash.COIN)
         val viewModel = viewModel()
         viewModel.selectedProvider = GiftCardProviderType.CTX
         assertNull(viewModel.paidOrder.value)
@@ -1874,7 +1875,7 @@ class DashSpendCardCurrencyTest {
 
     @Test
     fun paidCartOfSeveralCards_getsTheOrderDetailsEvenAfterTheCartWasReset() = runBlocking {
-        paymentRequestAsksFor(Coin.COIN)
+        paymentRequestAsksFor(Dash.COIN)
         val viewModel = viewModel()
         viewModel.selectedProvider = GiftCardProviderType.PiggyCards
         viewModel.setGiftCardOrderQuantities(mapOf(25.0 to 2, 50.0 to 1))
@@ -1887,10 +1888,36 @@ class DashSpendCardCurrencyTest {
     }
 
     @Test
+    fun acceptedHigherPrice_isPaidFromTheWalletTheOrderWasConfirmedOn() = runBlocking {
+        ctxSells("GBP", listOf("5", "500"), discount = 500)
+        setRate("GBP", "30")
+        paymentRequestAsksFor(Dash.valueOf(326_666_667))
+        val confirmedOn = WalletSession("confirmed on")
+        payments.stub { on { currentWalletSession() } doReturn confirmedOn }
+        val viewModel = viewModel()
+        viewModel.openCtxMerchant()
+        viewModel.enter("100")
+        val shown = checkNotNull(viewModel.currentQuote())
+        val order = listOf(GiftCardInfo("order-1", cryptoAmount = "3.16666666", fiatAmount = "95.00"))
+        assertTrue(viewModel.tryStartSubmission())
+        assertNull(viewModel.payCtxOrder(shown, "dash:?r=x", order))
+
+        // a wipe installs another wallet while the question is on screen
+        payments.stub { on { currentWalletSession() } doReturn WalletSession("replacement") }
+        assertEquals(zeroTxId, viewModel.payAcceptedPrice())
+
+        val sessions = argumentCaptor<WalletSession>()
+        verifyBlocking(payments, times(2)) {
+            payWithDashUrl(any(), anyOrNull(), anyOrNull(), sessions.capture(), anyOrNull(), anyOrNull())
+        }
+        assertEquals(listOf(confirmedOn, confirmedOn), sessions.allValues)
+    }
+
+    @Test
     fun higherPrice_isHeldAsAQuestionWithNothingPaidAndNothingWaiting() = runBlocking {
         ctxSells("GBP", listOf("5", "500"), discount = 500)
         setRate("GBP", "30")
-        paymentRequestAsksFor(Coin.valueOf(326_666_667))
+        paymentRequestAsksFor(Dash.valueOf(326_666_667))
         val viewModel = viewModel()
         viewModel.openCtxMerchant()
         viewModel.enter("100")
@@ -1903,17 +1930,17 @@ class DashSpendCardCurrencyTest {
 
         val change = checkNotNull(viewModel.priceChange.value)
         assertEquals("order-1", change.orderId)
-        assertEquals(Coin.valueOf(326_666_667), change.charged)
+        assertEquals(Dash.valueOf(326_666_667), change.charged)
         assertEquals(GiftCardSubmissionState.IDLE, viewModel.submissionState.value)
-        assertEquals(emptyList<Coin?>(), sentPayments)
+        assertEquals(emptyList<Dash?>(), sentPayments)
         verifyBlocking(giftCardDao, never()) { insertGiftCards(any()) }
         // what a sheet rebuilt after recreation finds
         assertTrue(viewModel.isPurchaseOutstanding)
         assertEquals(change, viewModel.priceChange.value)
 
-        assertEquals(Sha256Hash.ZERO_HASH, viewModel.payAcceptedPrice())
+        assertEquals(zeroTxId, viewModel.payAcceptedPrice())
 
-        assertEquals(listOf<Coin?>(Coin.valueOf(326_666_667)), sentPayments)
+        assertEquals(listOf<Dash?>(Dash.valueOf(326_666_667)), sentPayments)
         val recorded = argumentCaptor<List<GiftCard>>()
         verifyBlocking(giftCardDao) { insertGiftCards(recorded.capture()) }
         assertEquals(listOf("order-1"), recorded.firstValue.map { it.note })
@@ -1925,7 +1952,7 @@ class DashSpendCardCurrencyTest {
     fun expiredOrder_isNotPaid() = runBlocking {
         ctxSells("GBP", listOf("5", "500"), discount = 500)
         setRate("GBP", "30")
-        paymentRequestAsksFor(Coin.valueOf(316_666_666))
+        paymentRequestAsksFor(Dash.valueOf(316_666_666))
         val viewModel = viewModel()
         viewModel.openCtxMerchant()
         viewModel.enter("100")
@@ -1944,7 +1971,7 @@ class DashSpendCardCurrencyTest {
             runBlocking { viewModel.payCtxOrder(shown, "dash:?r=x", order) }
         }
         assertEquals(R.string.gift_card_order_expired, refusal.resourceString?.resourceId)
-        assertEquals(emptyList<Coin?>(), sentPayments)
+        assertEquals(emptyList<Dash?>(), sentPayments)
         assertEquals(GiftCardSubmissionState.IDLE, viewModel.submissionState.value)
 
         // it can also run out while the payment request is being fetched
@@ -1955,19 +1982,19 @@ class DashSpendCardCurrencyTest {
                 payWithDashUrl(any(), anyOrNull(), anyOrNull(), anyOrNull(), anyOrNull(), anyOrNull())
             } doSuspendableAnswer {
                 fetched = true
-                it.getArgument<(suspend (Coin?) -> Unit)?>(4)?.invoke(Coin.valueOf(316_666_666))
-                sentPayments += Coin.valueOf(316_666_666)
-                mock<Transaction>()
+                it.getArgument<(suspend (Dash?) -> Unit)?>(4)?.invoke(Dash.valueOf(316_666_666))
+                sentPayments += Dash.valueOf(316_666_666)
+                mock<TxInfo>()
             }
         }
         assertThrows(CTXSpendException::class.java) {
             runBlocking { viewModel.payCtxOrder(shown, "dash:?r=x", order) }
         }
-        assertEquals(emptyList<Coin?>(), sentPayments)
+        assertEquals(emptyList<Dash?>(), sentPayments)
 
         viewModel.now = { Instant.parse("2026-11-28T10:14:00Z") }
-        paymentRequestAsksFor(Coin.valueOf(316_666_666))
-        assertEquals(Sha256Hash.ZERO_HASH, viewModel.payCtxOrder(shown, "dash:?r=x", order))
+        paymentRequestAsksFor(Dash.valueOf(316_666_666))
+        assertEquals(zeroTxId, viewModel.payCtxOrder(shown, "dash:?r=x", order))
     }
 
     @Test
@@ -1977,7 +2004,7 @@ class DashSpendCardCurrencyTest {
 
         val (txId, asked) = payOrderCharged("3.27586206")
 
-        assertEquals(Sha256Hash.ZERO_HASH, txId)
+        assertEquals(zeroTxId, txId)
         assertEquals(emptyList<GiftCardPriceChange>(), asked)
     }
 }

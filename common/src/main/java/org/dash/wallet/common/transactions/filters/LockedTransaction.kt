@@ -17,24 +17,20 @@
 
 package org.dash.wallet.common.transactions.filters
 
-import org.bitcoinj.core.Sha256Hash
-import org.bitcoinj.core.Transaction
-import org.bitcoinj.core.TransactionConfidence
+import org.dash.wallet.common.transactions.TxInfo
 
-class LockedTransaction(private val topUpTxId: Sha256Hash? = null): TransactionFilter {
+class LockedTransaction(topUpTxId: String? = null) : TransactionFilter {
     constructor() : this(null)
 
-    override fun matches(tx: Transaction): Boolean {
-        val confidence = tx.confidence
-        val type = confidence.confidenceType
-        val isLocked = confidence.isTransactionLocked ||
-                type == TransactionConfidence.ConfidenceType.BUILDING ||
-                (type == TransactionConfidence.ConfidenceType.PENDING && confidence.numBroadcastPeers() > 1)
+    // TxInfo.txId is always lowercase hex (Sha256Hash.toString()); normalize the caller's id
+    // so a mixed-case argument can't silently fail to match.
+    private val topUpTxId: String? = topUpTxId?.lowercase()
 
+    override fun matches(tx: TxInfo): Boolean {
         return if (topUpTxId != null) {
-            tx.txId == topUpTxId && isLocked
+            tx.txId == topUpTxId && tx.isLocked
         } else {
-            isLocked
+            tx.isLocked
         }
     }
 }

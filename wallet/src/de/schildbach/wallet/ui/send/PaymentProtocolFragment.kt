@@ -21,6 +21,7 @@ import android.os.Bundle
 import android.view.View
 import android.view.animation.AnimationUtils
 import androidx.core.net.toUri
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -28,6 +29,7 @@ import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.data.PaymentIntent
 import de.schildbach.wallet.livedata.Status
+import org.dash.wallet.common.services.SendEngineNotSyncedException
 import de.schildbach.wallet.ui.transactions.TransactionResultActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentPaymentProtocolBinding
@@ -35,17 +37,48 @@ import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.core.Transaction
-import org.bitcoinj.protocols.payments.PaymentProtocolException
-import org.bitcoinj.utils.MonetaryFormat
-import org.bitcoinj.wallet.SendRequest
+import org.dash.wallet.common.payments.bip70.PaymentProtocolException
+import org.dash.wallet.common.money.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.services.AuthenticationManager
+import org.dash.wallet.common.services.PaymentStillConfirmingException
 import org.dash.wallet.common.services.PaymentSubmissionPendingException
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.toFormattedString
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
+import de.schildbach.wallet.util.format
+import de.schildbach.wallet.util.setAmount
+import de.schildbach.wallet.util.setFiatAmount
+import de.schildbach.wallet.util.toDashjFiat
+import de.schildbach.wallet.util.toDashjCoin
+import de.schildbach.wallet.util.toNeutralCoin
+import de.schildbach.wallet.util.toNeutralFiat
+import de.schildbach.wallet.util.toTxId
+import de.schildbach.wallet.util.toSha256Hash
+import de.schildbach.wallet.util.toFormattedString
+
+internal enum class PayTapAction { SUBMIT, REBUILD, REPORT, IGNORE }
+
+/**
+ * What an authenticated tap on Pay does. A tap submits only the preview it was made on: a tap on
+ * a refused preview ([tappedOnPayable] false) can rebuild it, and the rebuilt payment, with its
+ * real fee, needs a tap of its own. Two taps on a refused preview each start an authentication;
+ * without this the second answer submitted what the first had rebuilt (thepastaclaw on #1714).
+ */
+internal fun payTapAction(
+    tappedOnPayable: Boolean,
+    canSendPayment: Boolean,
+    canRetryPreview: Boolean,
+    building: Boolean
+): PayTapAction = when {
+    canSendPayment -> if (tappedOnPayable) PayTapAction.SUBMIT else PayTapAction.IGNORE
+    canRetryPreview -> PayTapAction.REBUILD
+    // an earlier tap's rebuild is running: its result is shown when it ends
+    building -> PayTapAction.IGNORE
+    else -> PayTapAction.REPORT
+}
 
 @AndroidEntryPoint
 class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
@@ -90,30 +123,59 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
     }
 
     private fun authenticateOrConfirm() {
-        if (userAuthorizedDuring && (!config.spendingConfirmationEnabled || viewModel.baseSendRequest == null)) {
-            confirmWhenAuthorizedAndNoException()
+        // What this tap was on, read now: the authentication below answers later, and by then
+        // an earlier tap may have rebuilt a refused preview (thepastaclaw on #1714).
+        val tappedOnPayable = viewModel.canSendPayment
+        if (userAuthorizedDuring && (!config.spendingConfirmationEnabled || !tappedOnPayable)) {
+            confirmWhenAuthorizedAndNoException(tappedOnPayable)
         } else {
             val thresholdAmount = Coin.parseCoin(config.biometricLimit.toString())
-            val amount = viewModel.finalPaymentIntent!!.amount
-            authManager.authenticate(requireActivity(), !amount.isLessThan(thresholdAmount)) { pin ->
-                pin?.let { confirmWhenAuthorizedAndNoException() }
+            val amount = viewModel.finalPaymentIntent?.amount ?: return
+            authManager.authenticate(requireActivity(), !amount.toDashjCoin().isLessThan(thresholdAmount)) { pin ->
+                pin?.let { confirmWhenAuthorizedAndNoException(tappedOnPayable) }
             }
         }
     }
 
-    private fun confirmWhenAuthorizedAndNoException() {
-        if (viewModel.finalPaymentIntent!!.expired) {
-            showRequestExpiredMessage()
+    private fun confirmWhenAuthorizedAndNoException(tappedOnPayable: Boolean) {
+        // An authentication answers later. A retry started by an earlier tap may have failed
+        // its fetch by then, which drops the request: there is nothing left to pay or rebuild.
+        val request = viewModel.finalPaymentIntent ?: run {
+            log.info("pay tap ignored: the payment request is gone")
+            return
+        }
+        if (request.expired) {
+            // Resending the earlier payment of an expired request is pointless; its outcome is
+            // still unknown, and that is what the screen says.
+            if (viewModel.isResubmission) showSubmissionPending() else showRequestExpiredMessage()
             return
         }
 
-        if (viewModel.baseSendRequest != null) {
-            lifecycleScope.launch {
-                viewModel.sendPayment()
-            }
-        } else {
-            handleSendRequestException()
+        val action = payTapAction(
+            tappedOnPayable = tappedOnPayable,
+            canSendPayment = viewModel.canSendPayment,
+            canRetryPreview = viewModel.canRetryPreview,
+            building = viewModel.sendRequestLiveData.value?.status == Status.LOADING
+        )
+        when (action) {
+            PayTapAction.SUBMIT -> lifecycleScope.launch { viewModel.sendPayment() }
+            // Refused only because the wallet was still syncing when the screen opened: build
+            // again. A success shows the payment with its real fee to confirm; a failure is
+            // reported by the observer.
+            PayTapAction.REBUILD -> viewModel.retryPreview()
+            PayTapAction.REPORT -> handleSendRequestException()
+            PayTapAction.IGNORE -> log.info("pay tap ignored: the preview changed after it")
         }
+    }
+
+    private fun showSubmissionPending() {
+        // The merchant may have received the payment; the wallet keeps checking the network in
+        // the background. Paying again with a new transaction could pay twice.
+        binding.errorView.title = R.string.payment_submission_pending_title
+        binding.errorView.message = R.string.payment_submission_pending_message
+        binding.errorView.hideConfirmButton()
+        binding.errorView.hideCancelButton()
+        binding.viewFlipper.displayedChild = VIEW_ERROR
     }
 
     private fun showRequestExpiredMessage() {
@@ -124,24 +186,34 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
     }
 
     private fun initObservers() {
-        viewModel.exchangeRateData.observe(viewLifecycleOwner) {
-            if (viewModel.finalPaymentIntent != null && it != null) {
-                displayRequest(viewModel.finalPaymentIntent!!, null)
+        // A retry's failed fetch drops the request on another thread, so each observer reads it
+        // once: a second read may find it gone.
+        viewModel.exchangeRateData.observe(viewLifecycleOwner) { rate ->
+            val request = viewModel.finalPaymentIntent
+            if (request != null && rate != null) {
+                displayRequest(request)
             }
         }
         viewModel.sendRequestLiveData.observe(viewLifecycleOwner) {
+            val request = viewModel.finalPaymentIntent
             when (it.status) {
                 Status.LOADING -> {
                     binding.viewFlipper.displayedChild = VIEW_LOADING
                 }
                 Status.SUCCESS -> {
-                    displayRequest(viewModel.finalPaymentIntent!!, it!!.data!!)
-                    binding.viewFlipper.displayedChild = VIEW_PAYMENT
+                    // No request: a later fetch failed, and its error is on its way here.
+                    if (request != null) {
+                        viewModel.consumeRetryResult()
+                        displayRequest(request)
+                        binding.viewFlipper.displayedChild = VIEW_PAYMENT
+                    }
                 }
                 Status.ERROR -> {
-                    if (it.exception is PaymentProtocolException.Expired) {
+                    if (it.exception is PaymentSubmissionPendingException) {
+                        showSubmissionPending()
+                    } else if (it.exception is PaymentProtocolException.Expired) {
                         showRequestExpiredMessage()
-                    } else if (viewModel.finalPaymentIntent == null) {
+                    } else if (request == null) {
                         // server error
                         binding.errorView.title = R.string.payment_request_unable_to_connect
                         binding.errorView.message = R.string.payment_request_please_try_again
@@ -151,11 +223,14 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
                         }
                         binding.viewFlipper.displayedChild = VIEW_ERROR
                     } else {
-                        // sendRequest creating error (eg InsufficientMoneyException)
-                        displayRequest(viewModel.finalPaymentIntent!!, null)
+                        // preview build error (eg insufficient funds)
+                        displayRequest(request)
                         binding.viewFlipper.displayedChild = VIEW_PAYMENT
-                        if (userAuthorizedDuring && (viewModel.baseSendRequest == null)) {
+                        if (userAuthorizedDuring && !viewModel.canSendPayment) {
+                            viewModel.consumeRetryResult()
                             handleSendRequestException()
+                        } else {
+                            reportRetryFailureIfOwed()
                         }
                     }
                 }
@@ -213,6 +288,31 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        reportRetryFailureIfOwed()
+    }
+
+    /**
+     * Shows the failure of a build the user asked for again ([PaymentProtocolViewModel.retryPreview]),
+     * once. Only while resumed: the dialog is shown when the activity is resumed, so a failure
+     * taken while the screen was paused was lost if the screen was recreated before that. Left
+     * with the ViewModel, the screen that resumes shows it (thepastaclaw on #1714).
+     */
+    private fun reportRetryFailureIfOwed() {
+        if (!isResumed || viewModel.finalPaymentIntent == null) return
+        val result = viewModel.sendRequestLiveData.value ?: return
+        if (result.status != Status.ERROR ||
+            result.exception is PaymentSubmissionPendingException ||
+            result.exception is PaymentProtocolException.Expired
+        ) {
+            return
+        }
+        if (viewModel.consumeRetryResult() && !viewModel.canSendPayment) {
+            handleSendRequestException()
+        }
+    }
+
     private fun handleSendRequestException() {
         val resource = viewModel.sendRequestLiveData.value!!
         log.error("unable to handle payment request ${resource.exception?.message ?: resource.message}")
@@ -220,7 +320,23 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
             is InsufficientMoneyException -> {
                 showInsufficientMoneyDialog()
             }
-            else -> {
+            // An earlier payment is still unresolved and its inputs could not be kept out of
+            // this one: nothing was built, and it lifts once that payment is confirmed.
+            is PaymentStillConfirmingException -> {
+                showErrorDialog(getString(R.string.payment_still_confirming))
+            }
+            // The wallet has not caught up with the chain: the same copy as the send screen,
+            // never the engine's text.
+            is SendEngineNotSyncedException -> {
+                showErrorDialog(getString(R.string.send_coins_fragment_hint_replaying))
+            }
+            // The SDK build reports a shortfall as a native error whose
+            // message carries key-wallet's "Insufficient funds" text
+            // (same predicate as isSendAllShortfall) — same dialog as
+            // dashj's InsufficientMoneyException.
+            else -> if (resource.exception?.message?.contains("Insufficient funds", ignoreCase = true) == true) {
+                showInsufficientMoneyDialog()
+            } else {
                 val exception = resource.exception
                 val message = if (exception == null) {
                     resource.message
@@ -252,20 +368,24 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
         ).show(requireActivity())
     }
 
-    private fun displayRequest(paymentIntent: PaymentIntent, sendRequest: SendRequest?) {
+    private fun displayRequest(paymentIntent: PaymentIntent) {
         val amount = paymentIntent.amount
         val amountStr = MonetaryFormat.BTC.noCode().format(amount).toString()
 
-        val fiatAmount = viewModel.exchangeRate?.coinToFiat(amount)
+        val fiatAmount = viewModel.exchangeRate?.coinToFiat(amount.toDashjCoin())
         val fiatAmountStr = fiatAmount?.toFormattedString() ?: getString(R.string.transaction_row_rate_not_available)
-        val txFee = if (sendRequest != null) sendRequest.tx.fee else PaymentProtocolViewModel.FAKE_FEE_FOR_EXCEPTIONS
+        // The exact fee of the payment the preview shows, or none: a fee that cannot be known is
+        // shown as not available, never invented (review 4303472428).
+        val txFee = viewModel.displayFee
+        val notAvailable = getString(R.string.transaction_row_rate_not_available)
 
         binding.paymentRequest.amount.inputValue.text = amountStr
         binding.paymentRequest.amount.fiatValue.text = fiatAmountStr
-        binding.paymentRequest.transactionFee.text = txFee.toPlainString()
-        binding.paymentRequest.totalAmount.text = amount.add(txFee).toPlainString()
+        binding.paymentRequest.transactionFee.text = txFee?.toPlainString() ?: notAvailable
+        binding.paymentRequest.totalAmount.text = txFee?.let { amount.toDashjCoin().add(it).toPlainString() } ?: notAvailable
 
         binding.paymentRequest.memo.text = paymentIntent.memo
+        binding.paymentRequest.resendNotice.isVisible = viewModel.isResubmission
         if (paymentIntent.payeeVerifiedBy != null) {
             binding.paymentRequest.securedBy.text = getString(R.string.dialog_confirm_secured_by)
             binding.paymentRequest.payeeSecuredBy.text = paymentIntent.payeeVerifiedBy

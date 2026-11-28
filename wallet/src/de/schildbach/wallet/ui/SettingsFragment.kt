@@ -25,6 +25,7 @@ import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.annotation.StringRes
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
@@ -39,17 +40,19 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.WalletBalanceWidgetProvider
 import de.schildbach.wallet.service.work.BaseWorker
-import de.schildbach.wallet.ui.coinjoin.CoinJoinActivity
 import de.schildbach.wallet.ui.main.MainActivity
+import de.schildbach.wallet.ui.more.AnalyticsSaveFailure
 import de.schildbach.wallet.ui.more.RescanBlockchainDialogFragment
 import de.schildbach.wallet.ui.more.SettingsScreen
 import de.schildbach.wallet.ui.more.SettingsViewModel
 import de.schildbach.wallet.ui.more.TransactionMetadataSettingsViewModel
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import org.bitcoinj.wallet.Wallet
+import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.services.SystemActionsService
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
@@ -106,20 +109,6 @@ class SettingsFragment : Fragment() {
                         findNavController().navigate(R.id.settings_to_about)
                     },
                     onNotificationsClick = { systemActions.openNotificationSettings()  },
-                    onCoinJoinClick = {
-                        lifecycleScope.launch {
-                            val shouldShowFirstTimeInfo = viewModel.shouldShowCoinJoinInfo()
-
-                            if (shouldShowFirstTimeInfo) {
-                                viewModel.setCoinJoinInfoShown()
-                            }
-
-                            val intent = Intent(requireContext(), CoinJoinActivity::class.java)
-                            intent.putExtra(CoinJoinActivity.FIRST_TIME_EXTRA, shouldShowFirstTimeInfo)
-                            viewModel.logEvent(AnalyticsConstants.Settings.COINJOIN)
-                            startActivity(intent)
-                        }
-                    },
                     onTransactionMetadataClick = {
                         lifecycleScope.launch {
                             if (viewModel.isTransactionMetadataInfoShown()) {
@@ -139,27 +128,50 @@ class SettingsFragment : Fragment() {
                             }
                         }
                     },
-                    onBatteryOptimizationClick = { batteryOptimization() }
+                    onBatteryOptimizationClick = { batteryOptimization() },
+                    onAnalyticsToggle = { viewModel.setAnalyticsEnabled(it) },
+                    onAnalyticsInfoClick = { showAnalyticsInfo() }
                 )
                 }
             }
         }
     }
 
+    private var isSavingTransactionMetadata = false
+
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun setupTransactionMetadataObservers() {
+        // The field outlives the view; a rebuilt view must not inherit a
+        // "saving" its publish observer may never clear.
+        isSavingTransactionMetadata = false
         lifecycleScope.launch {
             transactionMetadataSettingsViewModel.loadLastWorkId()
         }
 
-        transactionMetadataSettingsViewModel.lastSaveWorkId.filterNotNull().observe(viewLifecycleOwner) { workId ->
-            transactionMetadataSettingsViewModel.observePublishOperation(workId).observe(viewLifecycleOwner) {
-                val progress = it.data?.progress?.let { data -> BaseWorker.extractProgress(data) } ?: 0
-                setTransactionMetadataText(progress != 100 && progress != -1, progress)
+        transactionMetadataSettingsViewModel.uiState
+            .map { it.lastSaveWorkId }
+            .filterNotNull()
+            .distinctUntilChanged()
+            .observe(viewLifecycleOwner) { workId ->
+                transactionMetadataSettingsViewModel.observePublishOperation(workId).observe(viewLifecycleOwner) {
+                    val progress = it.data?.progress?.let { data -> BaseWorker.extractProgress(data) } ?: 0
+                    // Only running work is saving. A cancelled Resource carries no
+                    // WorkInfo, so its progress reads 0 and looked like "still saving".
+                    isSavingTransactionMetadata = it.status == Status.LOADING && progress != 100 && progress != -1
+                    setTransactionMetadataText(isSavingTransactionMetadata, progress)
+                }
             }
-        }
 
-        setTransactionMetadataText(isSaving = false, saveProgress = -1)
+        // lastSaveDate arrives from DataStore after the view is built and moves
+        // when a publish completes; reading it once showed a blank row forever.
+        transactionMetadataSettingsViewModel.uiState
+            .map { it.lastSaveDate }
+            .distinctUntilChanged()
+            .observe(viewLifecycleOwner) {
+                if (!isSavingTransactionMetadata) {
+                    setTransactionMetadataText(isSaving = false, saveProgress = -1)
+                }
+            }
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -168,7 +180,7 @@ class SettingsFragment : Fragment() {
             val subtitle = if (isSaving) {
                 getString(R.string.transaction_metadata_saving_to_network, saveProgress)
             } else {
-                val lastSavedDate = transactionMetadataSettingsViewModel.lastSaveDate.value
+                val lastSavedDate = transactionMetadataSettingsViewModel.uiState.value.lastSaveDate
                 when {
                     lastSavedDate > 0  -> {
                         getString(
@@ -223,9 +235,34 @@ class SettingsFragment : Fragment() {
         lifecycleScope.launch {
             walletUIConfig.set(WalletUIConfig.SELECTED_CURRENCY, code)
             val walletApplication = requireActivity().application as WalletApplication
-            val balance = walletApplication.wallet!!.getBalance(Wallet.BalanceType.ESTIMATED)
+            // Through the seam (not wallet.getBalance directly): cutover-aware.
+            val balance = walletApplication.getWalletBalance()
             WalletBalanceWidgetProvider.updateWidgets(requireContext(), balance)
         }
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        viewModel.analyticsSaveFailures.observe(viewLifecycleOwner) { failure ->
+            // The switch is back on the saved value, so toggling it again retries.
+            Toast.makeText(
+                requireContext(),
+                when (failure) {
+                    AnalyticsSaveFailure.TURNING_ON -> R.string.settings_analytics_save_failed_on
+                    AnalyticsSaveFailure.TURNING_OFF -> R.string.settings_analytics_save_failed_off
+                },
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
+    private fun showAnalyticsInfo() {
+        AdaptiveDialog.create(
+            R.drawable.ic_info_blue,
+            getString(R.string.settings_analytics_info_title),
+            getString(R.string.settings_analytics_info_message),
+            getString(R.string.button_okay)
+        ).show(requireActivity())
     }
 
     private fun batteryOptimization() {

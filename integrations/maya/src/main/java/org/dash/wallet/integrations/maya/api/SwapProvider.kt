@@ -22,8 +22,8 @@ import androidx.annotation.StringRes
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.data.ResponseResource
+import org.dash.wallet.common.money.FiatValue
 import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.integrations.maya.model.AccountDataUIModel
 import org.dash.wallet.integrations.maya.model.BuyOrder
@@ -81,7 +81,7 @@ interface SwapProvider {
      */
     fun setSwapDirection(direction: SwapDirection) {}
 
-    fun observePoolList(fiatExchangeRate: Fiat): Flow<List<PoolInfo>>
+    fun observePoolList(fiatExchangeRate: FiatValue): Flow<List<PoolInfo>>
 
     /**
      * Returns the list of vault/inbound addresses for every chain the provider supports.
@@ -113,10 +113,14 @@ interface SwapProvider {
      * builds and broadcasts the DASH transaction. Both backends ultimately delegate
      * to [MayaBlockchainApi] to construct the DASH tx — the only difference is which
      * web API the refresh hits.
+     *
+     * [onDepositing] runs once the refresh is done, right before the deposit is built and
+     * broadcast, and not at all when the commit stops earlier (nothing can have been sent then).
      */
     suspend fun commitSwapTransaction(
         tradeId: String,
-        swapTradeUIModel: SwapTradeUIModel
+        swapTradeUIModel: SwapTradeUIModel,
+        onDepositing: suspend () -> Unit = {}
     ): ResponseResource<SwapTradeUIModel>
 
     /**
@@ -163,7 +167,7 @@ interface SwapProvider {
     /** Stub-friendly user-accounts probe; today only Maya returns a single placeholder. */
     suspend fun getUserAccounts(currency: String): List<AccountDataUIModel>
 
-    fun applyPoolPrices(pools: List<PoolInfo>, usdToFiat: Fiat)
+    fun applyPoolPrices(pools: List<PoolInfo>, usdToFiat: FiatValue)
 
     /**
      * Map a raw provider error (the message from a failed quote/swap) to a friendly, localized

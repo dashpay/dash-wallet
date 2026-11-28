@@ -19,10 +19,9 @@ package org.dash.wallet.integrations.maya.payments.parsers
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.bitcoinj.core.AddressFormatException
-import org.bitcoinj.core.NetworkParameters
 import org.dash.wallet.common.R
 import org.dash.wallet.common.data.PaymentIntent
+import org.dash.wallet.common.payments.parsers.AddressFormatException
 import org.dash.wallet.common.payments.parsers.Bech32AddressParser
 import org.dash.wallet.common.payments.parsers.PaymentIntentParserException
 import org.dash.wallet.common.util.ResourceString
@@ -34,12 +33,11 @@ open class Bech32PaymentIntentParser(
     prefix: String,
     length: Int,
     asset: String,
-    shortAsset: String? = null,
-    params: NetworkParameters? = null
-) : MayaPaymentIntentParser(currency, uriPrefix, asset, shortAsset, params) {
+    shortAsset: String? = null
+) : MayaPaymentIntentParser(currency, uriPrefix, asset, shortAsset) {
 
     private val log = LoggerFactory.getLogger(Bech32PaymentIntentParser::class.java)
-    private val addressParser = Bech32AddressParser(prefix, length, null)
+    private val addressParser = Bech32AddressParser(prefix, length)
     override suspend fun parse(input: String): PaymentIntent = withContext(Dispatchers.Default) {
         if (input.startsWith("$uriPrefix:") || input.startsWith("${uriPrefix.uppercase()}:")) {
             try {
@@ -72,7 +70,7 @@ open class Bech32PaymentIntentParser(
         } else if (addressParser.exactMatch(input)) {
             try {
                 return@withContext createPaymentIntent(input.lowercase())
-            } catch (ex: AddressFormatException) {
+            } catch (ex: Exception) {
                 log.info("got invalid address", ex)
                 throw PaymentIntentParserException(
                     ex,

@@ -55,6 +55,15 @@ class ContactSearchResultsAdapter(private val listener: Listener,
         const val CONTACT_NO_RESULTS = 4
         const val CONTACTS_SUGGESTIONS_HEADER = 5
         const val CONTACT_SUGGESTION_ROW = 6
+
+        /**
+         * Header of the PENDING OUTGOING section — requests WE sent that have
+         * not been reciprocated. Distinct from [CONTACT_REQUEST_HEADER], which
+         * heads the INCOMING pending set; the two never hold the same request
+         * (their filters are `requestSent && !requestReceived` and
+         * `requestReceived && !requestSent`).
+         */
+        const val CONTACT_REQUEST_SENT_HEADER = 7
     }
 
     class ViewItem(val usernameSearchResult: UsernameSearchResult?, val viewType: Int, val sortOrder: Int = 0, val requestCount: Int = 0)
@@ -81,6 +90,10 @@ class ContactSearchResultsAdapter(private val listener: Listener,
             CONTACT_REQUEST_HEADER -> {
                 val binding = ContactRequestHeaderRowBinding.inflate(inflater, parent, false)
                 ContactRequestHeaderViewHolder(binding)
+            }
+            CONTACT_REQUEST_SENT_HEADER -> {
+                val binding = ContactRequestHeaderRowBinding.inflate(inflater, parent, false)
+                ContactRequestSentHeaderViewHolder(binding)
             }
             CONTACT_HEADER -> {
                 val binding = ContactHeaderRowBinding.inflate(inflater, parent, false)
@@ -120,13 +133,19 @@ class ContactSearchResultsAdapter(private val listener: Listener,
         val item = results[position]
         return when (item.viewType) {
             CONTACT -> {
-                if (item.usernameSearchResult!!.type == UsernameSearchResult.Type.CONTACT_ESTABLISHED) {
-                    PlatformUtils.longHashFromEncodedString(item.usernameSearchResult.toContactRequest!!.toUserId)
-                } else {
-                    PlatformUtils.longHashFromEncodedString(item.usernameSearchResult.fromContactRequest!!.userId)
-                }
+                // A PENDING OUTGOING row has no fromContactRequest at all, so
+                // the id has to come from whichever request exists. (The old
+                // `fromContactRequest!!` was safe only because such rows were
+                // filtered out before they could reach the list.)
+                val result = item.usernameSearchResult!!
+                PlatformUtils.longHashFromEncodedString(
+                    result.toContactRequest?.toUserId
+                        ?: result.fromContactRequest?.userId
+                        ?: result.dashPayProfile.userId
+                )
             }
             CONTACT_REQUEST_HEADER -> 1L
+            CONTACT_REQUEST_SENT_HEADER -> 7L
             CONTACT_HEADER -> 2L
             CONTACT_NO_RESULTS -> 3L
             CONTACTS_SUGGESTIONS_HEADER -> 4L
@@ -144,6 +163,8 @@ class ContactSearchResultsAdapter(private val listener: Listener,
                         itemClickListener, listener, networkAvailable)
             }
             CONTACT_REQUEST_HEADER -> (holder as ContactRequestHeaderViewHolder).bind(results[position].requestCount)
+            CONTACT_REQUEST_SENT_HEADER ->
+                (holder as ContactRequestSentHeaderViewHolder).bind(results[position].requestCount)
             CONTACT_HEADER -> (holder as ContactHeaderViewHolder).bind()
             CONTACT_NO_RESULTS -> (holder as ContactsNoResultsViewHolder).bind()
             CONTACTS_SUGGESTIONS_HEADER -> (holder as ContactsSuggestionsHeaderViewHolder).bind(query)
@@ -215,6 +236,22 @@ class ContactSearchResultsAdapter(private val listener: Listener,
                     onViewAllRequestsListener.invoke()
                 }
             }
+        }
+    }
+
+    /**
+     * Heads the PENDING OUTGOING section. Reuses the incoming header's layout
+     * but never offers "view all": that screen (ContactsScreenMode.VIEW_REQUESTS)
+     * is the incoming-request inbox, and outgoing-pending rows are not part
+     * of it.
+     */
+    inner class ContactRequestSentHeaderViewHolder(val binding: ContactRequestHeaderRowBinding) :
+            RecyclerView.ViewHolder(binding.root) {
+
+        fun bind(requestCount: Int) {
+            binding.contactRequestHeader.text = itemView.resources
+                .getString(R.string.contacts_pending_sent_requests_count, requestCount)
+            binding.viewAllContacts.isVisible = false
         }
     }
 

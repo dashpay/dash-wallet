@@ -23,9 +23,12 @@ import android.os.Bundle
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.freshReceiveAddressOffMain
+import kotlinx.coroutines.launch
 import de.schildbach.wallet.integration.android.BitcoinIntegration
 import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet.ui.send.SendCoinsActivity
@@ -38,6 +41,7 @@ import org.dash.wallet.common.ui.BaseAlertDialogBuilder
 import org.dash.wallet.common.ui.formatString
 import org.dash.wallet.integrations.coinbase.CoinbaseConstants
 import org.dash.wallet.integrations.uphold.ui.UpholdPortalFragment
+import org.dash.wallet.common.services.ReceiveAddressUnavailableException
 
 /**
  * The only purpose of this Activity is to handle all so called Wallet Uris
@@ -55,7 +59,11 @@ class WalletUriHandlerActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        wallet = (application as WalletApplication).wallet
+        // Degraded first (see LockScreenActivity.onCreate): during a safe-mode
+        // retry reading the wallet would wait on the main thread for the
+        // retry's parse. A degraded launch has no usable wallet either way.
+        val walletApplication = application as WalletApplication
+        wallet = if (walletApplication.isWalletLoadDegraded) null else walletApplication.wallet
         walletUriResultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             var resultIntent: Intent? = null
             if (result.resultCode == Activity.RESULT_OK) {
@@ -76,6 +84,7 @@ class WalletUriHandlerActivity : AppCompatActivity() {
     }
 
     private fun handleIntent(intent: Intent) {
+        if (redirectDegradedWallet(application as WalletApplication)) return
         if (wallet == null) {
             setResult(RESULT_CANCELED)
             finish()
@@ -172,11 +181,24 @@ class WalletUriHandlerActivity : AppCompatActivity() {
     }
 
     private val positiveBtnClickCreateAddress = {
-        val address = wallet!!.freshReceiveAddress()
-        val requestData = intent.data
-        val result = WalletUri.createAddressResult(requestData, address.toString(), appName)
-        setResult(RESULT_OK, result)
-        finish()
+        // OFF THE MAIN THREAD: this runs from a dialog click on Main, and
+        // dashj's freshReceiveAddress() forces a synchronous full-wallet
+        // save (measured 1.2s at 215 friend chains) — see
+        // freshReceiveAddressOffMain.
+        lifecycleScope.launch {
+            try {
+                val address = (application as WalletApplication).freshReceiveAddressOffMain()
+                val requestData = intent.data
+                val result = WalletUri.createAddressResult(requestData, address.toString(), appName)
+                setResult(RESULT_OK, result)
+            } catch (ex: ReceiveAddressUnavailableException) {
+                // Handing the calling app the held dashj chain's frozen address
+                // would have it advertise an already-paid address on our behalf
+                // (SR-03). Decline instead; the caller can ask again.
+                setResult(RESULT_CANCELED)
+            }
+            finish()
+        }
+        Unit
     }
 }
-

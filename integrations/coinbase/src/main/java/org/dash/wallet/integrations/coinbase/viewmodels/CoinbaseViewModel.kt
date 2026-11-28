@@ -29,8 +29,8 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import org.bitcoinj.core.Coin
 import org.dash.wallet.common.data.ResponseResource
+import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -119,7 +119,7 @@ class CoinbaseViewModel @Inject constructor(
         _uiState.update { it.copy(isSessionExpired = false) }
     }
 
-    suspend fun isInputGreaterThanLimit(amountInDash: Coin): Boolean {
+    suspend fun isInputGreaterThanLimit(amountInDash: Dash): Boolean {
         return coinBaseRepository.isInputGreaterThanLimit(amountInDash)
     }
 

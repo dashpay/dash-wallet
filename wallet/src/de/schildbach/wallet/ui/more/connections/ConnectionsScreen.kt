@@ -47,6 +47,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.flow.StateFlow
 import org.dash.wallet.common.ui.components.DashButton
@@ -73,6 +74,8 @@ fun ConnectionsScreen(
     onBackClick: () -> Unit = {},
     onScanClick: () -> Unit = {},
     onConnectionClick: (DAppConnection) -> Unit = {},
+    onDisconnectClick: (DAppConnection) -> Unit = {},
+    onReconnectClick: () -> Unit = {},
     onTabSelected: (ConnectionsTab) -> Unit = {},
     onDismissSharedKeys: () -> Unit = {},
     onRevokeSharedKeys: () -> Unit = {},
@@ -86,6 +89,8 @@ fun ConnectionsScreen(
         onBackClick = onBackClick,
         onScanClick = onScanClick,
         onConnectionClick = onConnectionClick,
+        onDisconnectClick = onDisconnectClick,
+        onReconnectClick = onReconnectClick,
         onTabSelected = onTabSelected,
         onDismissSharedKeys = onDismissSharedKeys,
         onRevokeSharedKeys = onRevokeSharedKeys,
@@ -100,6 +105,8 @@ private fun ConnectionsScreenContent(
     onBackClick: () -> Unit = {},
     onScanClick: () -> Unit = {},
     onConnectionClick: (DAppConnection) -> Unit = {},
+    onDisconnectClick: (DAppConnection) -> Unit = {},
+    onReconnectClick: () -> Unit = {},
     onTabSelected: (ConnectionsTab) -> Unit = {},
     onDismissSharedKeys: () -> Unit = {},
     onRevokeSharedKeys: () -> Unit = {},
@@ -181,9 +188,25 @@ private fun ConnectionsScreenContent(
                             .padding(40.dp)
                     )
                 } else {
+                    val action = uiState.selectedTab.rowAction
+                    val details = uiState.selectedConnection
                     Menu {
                         shown.forEach { connection ->
-                            ConnectionListItem(connection = connection, onClick = { onConnectionClick(connection) })
+                            // As in its details sheet, Disconnect waits for the connection's details to load.
+                            val loading = details != null && details.isLoading &&
+                                details.connectionId == connection.id && details.scope == connection.scope
+                            ConnectionListItem(
+                                connection = connection,
+                                action = action,
+                                isActionEnabled = !loading,
+                                onClick = { onConnectionClick(connection) },
+                                onActionClick = {
+                                    when (action) {
+                                        ConnectionRowAction.DISCONNECT -> onDisconnectClick(connection)
+                                        ConnectionRowAction.RECONNECT -> onReconnectClick()
+                                    }
+                                }
+                            )
                         }
                     }
                 }
@@ -399,15 +422,53 @@ private fun ConnectionsNoUsernameState(
     }
 }
 
-/** Figma 40058:22554 ("List - Merchant details"): the app name over its website. */
+/** The small button that ends each Connections row (Figma 40058:22554, 40060:40153). */
+internal enum class ConnectionRowAction { DISCONNECT, RECONNECT }
+
+/**
+ * Active rows disconnect, as their details sheet does. Disconnected and Expired rows offer a new login instead;
+ * older (legacy-only) connections sit under Disconnected and are removed from their details sheet.
+ */
+internal val ConnectionsTab.rowAction: ConnectionRowAction
+    get() = when (this) {
+        ConnectionsTab.ACTIVE -> ConnectionRowAction.DISCONNECT
+        ConnectionsTab.DISCONNECTED, ConnectionsTab.EXPIRED -> ConnectionRowAction.RECONNECT
+    }
+
+/**
+ * Figma 40058:22554 / 40060:40153 ("List - Merchant details - Var 2"): the app name over its website, with a
+ * small Disconnect or Reconnect button. The row opens the details sheet; the button is its own control.
+ */
 @Composable
 private fun ConnectionListItem(
     connection: DAppConnection,
-    onClick: () -> Unit
+    action: ConnectionRowAction,
+    isActionEnabled: Boolean,
+    onClick: () -> Unit,
+    onActionClick: () -> Unit
 ) {
     ListItem(
         title = connection.name,
+        titleStyle = MyTheme.Typography.BodyLargeMedium.copy(lineHeight = 21.sp),
         subtitle = connection.url.ifBlank { null },
+        trailingContent = {
+            DashButton(
+                text = stringResource(
+                    when (action) {
+                        ConnectionRowAction.DISCONNECT -> R.string.dash_connect_disconnect_action
+                        ConnectionRowAction.RECONNECT -> R.string.dash_connect_reconnect
+                    }
+                ),
+                style = when (action) {
+                    ConnectionRowAction.DISCONNECT -> Style.TintedGray
+                    ConnectionRowAction.RECONNECT -> Style.TintedBlue
+                },
+                size = Size.Small,
+                stretch = false,
+                isEnabled = isActionEnabled,
+                onClick = onActionClick
+            )
+        },
         onClick = onClick
     )
 }
@@ -485,6 +546,21 @@ private fun ConnectionsScreenDisconnectedPreview() {
 
 @Composable
 @Preview
+private fun ConnectionsScreenDisconnectedTabPreview() {
+    ConnectionsScreenContent(
+        uiState = ConnectionsUIState(
+            recordsStatus = ConnectionRecordsStatus.READY,
+            connections = listOf(
+                previewConnection(ConnectionStatus.DISCONNECTED),
+                previewConnection(ConnectionStatus.APPROVED).copy(id = "2", name = "Older app", legacyOnly = true)
+            ),
+            selectedTab = ConnectionsTab.DISCONNECTED
+        )
+    )
+}
+
+@Composable
+@Preview
 private fun ConnectionsScreenExpiredTabPreview() {
     ConnectionsScreenContent(
         uiState = ConnectionsUIState(
@@ -496,9 +572,34 @@ private fun ConnectionsScreenExpiredTabPreview() {
 }
 
 @Composable
+@Preview
+private fun ConnectionsScreenExpiredRowPreview() {
+    ConnectionsScreenContent(
+        uiState = ConnectionsUIState(
+            recordsStatus = ConnectionRecordsStatus.READY,
+            connections = listOf(previewConnection(ConnectionStatus.EXPIRED)),
+            selectedTab = ConnectionsTab.EXPIRED
+        )
+    )
+}
+
+@Composable
 @Preview(showBackground = true)
 private fun ConnectionListItemPreview() {
     Menu {
-        ConnectionListItem(connection = previewConnection(ConnectionStatus.ACTIVE), onClick = {})
+        ConnectionListItem(
+            connection = previewConnection(ConnectionStatus.ACTIVE),
+            action = ConnectionRowAction.DISCONNECT,
+            isActionEnabled = true,
+            onClick = {},
+            onActionClick = {}
+        )
+        ConnectionListItem(
+            connection = previewConnection(ConnectionStatus.DISCONNECTED),
+            action = ConnectionRowAction.RECONNECT,
+            isActionEnabled = true,
+            onClick = {},
+            onActionClick = {}
+        )
     }
 }

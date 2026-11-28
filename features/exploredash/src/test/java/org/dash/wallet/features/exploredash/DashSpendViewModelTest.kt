@@ -25,9 +25,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
-import org.bitcoinj.core.Coin
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.NetworkStateInt
@@ -130,7 +130,7 @@ class DashSpendViewModelTest {
         }
 
         return DashSpendViewModel(
-            mock<WalletDataProvider> { on { observeSpendableBalance() } doReturn flowOf(Coin.ZERO) },
+            mock<WalletDataProvider> { on { observeTotalBalance() } doReturn flowOf(Dash.ZERO) },
             mock<ExchangeRatesProvider> { on { observeExchangeRate(any()) } doReturn emptyFlow() },
             mock<Configuration>(),
             mock<SendPaymentService>(),
@@ -143,7 +143,10 @@ class DashSpendViewModelTest {
             SavedStateHandle(),
             mock<MerchantDao>(),
             mock<CTXSpendConfig>(),
-            mock<BlockchainStateProvider> { on { observeState() } doReturn emptyFlow() },
+            mock<BlockchainStateProvider> {
+                on { observeState() } doReturn emptyFlow()
+                on { observeFirstSyncDone() } doReturn emptyFlow()
+            },
             // nothing outstanding: these tests are about merchant details, and the view model
             // refuses to start a purchase until this says so explicitly
             mock<UnresolvedPaymentsProvider> {

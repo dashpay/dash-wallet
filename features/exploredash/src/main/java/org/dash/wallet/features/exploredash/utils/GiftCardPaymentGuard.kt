@@ -17,8 +17,8 @@
 
 package org.dash.wallet.features.exploredash.utils
 
-import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.ExchangeRate
+import org.dash.wallet.common.money.Coin
+import org.dash.wallet.common.money.ExchangeRate
 import java.math.BigDecimal
 
 /** Compares the Dash a gift card provider asks for with the Dash the confirmed price came to. */

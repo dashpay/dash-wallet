@@ -1,0 +1,45 @@
+# CodeRabbit configuration — https://docs.coderabbit.ai/reference/configuration
+# Read from the head branch of the PR under review, so keep this file on the
+# branches you want reviewed (merging it into master propagates it forward).
+language: en-US
+
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  high_level_summary: true
+  review_status: true
+  sequence_diagrams: false
+  poem: false
+
+  auto_review:
+    enabled: true
+    drafts: false
+    auto_incremental_review: true
+    # Reviews always happen for PRs into the default branch (master).
+    # These regexes add the SDK phase integration branches.
+    base_branches:
+      - "feat/kotlin-sdk-phase-.*"
+      - "feat/kotlin-sdk-phase\\d+"
+
+  path_filters:
+    - "!**/build/**"
+    - "!**/*.apk"
+    - "!**/*.aab"
+    - "!gradle/wrapper/**"
+    - "!**/res/values-*/strings.xml"
+    - "!market/**"
+    - "!fastlane/**"
+
+  path_instructions:
+    - path: "**/*ViewModel.kt"
+      instructions: >-
+        ViewModels follow MVVM with a single UIState data class exposed as a
+        StateFlow (private _uiState, public uiState via asStateFlow()), not
+        multiple separate flows or LiveData. They are annotated @HiltViewModel
+        with constructor injection.
+    - path: "**/*.kt"
+      instructions: >-
+        Flag force non-null assertions (!!) and unsafe casts in production code.
+        Prefer StateFlow over LiveData in new code. Code should match the
+        surrounding file's naming, comment density, and idiom; ktlint formatting
+        is enforced separately by CI.

@@ -17,7 +17,9 @@
 
 package org.dash.wallet.features.exploredash.utils
 
-import org.bitcoinj.utils.Fiat
+import org.dash.wallet.common.money.Fiat
+import org.dash.wallet.common.money.FiatValue
+import org.dash.wallet.common.money.toFiat
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.toFormattedString
 import java.math.BigDecimal
@@ -93,6 +95,8 @@ object GiftCardCurrency {
     fun savedCardFormat(savedCurrency: String?): NumberFormat =
         displayFormat(normalize(savedCurrency) ?: Constants.USD_CURRENCY)
 }
+
+fun FiatValue.toCardFormattedString(roundUp: Boolean = false): String = toFiat().toCardFormattedString(roundUp)
 
 fun Fiat.toCardFormattedString(roundUp: Boolean = false): String {
     val format = Constants.SEND_PAYMENT_LOCAL_FORMAT.noCode()

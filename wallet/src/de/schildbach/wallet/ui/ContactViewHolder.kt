@@ -86,7 +86,16 @@ class ContactViewHolder(val binding: DashpayContactRowBinding, val isSuggestion:
             }
 
             override fun invited() {
+                // PENDING OUTGOING. The state was already modelled but never
+                // made VISIBLE (a recycled holder arrives GONE from none()),
+                // so a row in this state rendered blank. It shows the pending
+                // marker and NOTHING actionable: a request we sent carries
+                // only OUR xpub, so we hold no key material to derive their
+                // payment addresses from and cannot pay them — unlike an
+                // incoming request, which does give us theirs (see
+                // [inviteReceived]).
                 contactRowBinding.relationState.displayedChild = 1
+                contactRowBinding.relationState.visibility = View.VISIBLE
             }
 
             override fun inviteReceived() {

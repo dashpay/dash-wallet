@@ -29,6 +29,7 @@ import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet.ui.OnboardingActivity
+import de.schildbach.wallet.ui.isInviteAlreadyUsedError
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -209,13 +210,33 @@ class InviteHandler(val activity: FragmentActivity, private val analytics: Analy
         identityRepository: IdentityRepository
     ): Boolean {
         // handle errors
-        var exception: ConcensusException
-        if (blockchainIdentityData.creationStateErrorMessage.also {
-            val errorMetadata = ConcensusErrorMetadata(it!!)
-                exception = ConcensusException.Companion.create(errorMetadata)
-        } != null) {
+        val errorMessage = blockchainIdentityData.creationStateErrorMessage
+        if (errorMessage != null) {
+            // Post-cutover errors are plain exception messages (e.g.
+            // "IllegalStateException: L1 invite claim failed: ..."), not dashj
+            // consensus-error metadata. Parse defensively, as
+            // CreateIdentityService does: a parse failure must fall through to
+            // the generic retry instead of aborting the Retry tap.
+            val exception: ConcensusException? = try {
+                ConcensusException.create(ConcensusErrorMetadata(errorMessage))
+            } catch (e: Exception) {
+                null
+            }
 
             when {
+                // Shielded double-claim surfaces as a plain
+                // IllegalStateException("Invite has already been used") from
+                // CreateIdentityService.claim*Invitation — it does NOT parse to an
+                // IdentityAssetLockTransactionOutPointAlreadyExistsException (that's the
+                // dashj L1 outpoint-collision type), so without this it fell through to a
+                // generic "unknown reason". Match the message and show the same
+                // already-claimed dialog the L1 path uses.
+                isInviteAlreadyUsedError(blockchainIdentityData.creationStateErrorMessage) -> {
+                    showInviteAlreadyClaimedDialog(blockchainIdentityData.invite!!)
+                    identityRepository.clearBlockchainIdentityData()
+                    return true
+                }
+
                 exception is IdentityAssetLockTransactionOutPointAlreadyExistsException -> {
                     showInviteAlreadyClaimedDialog(blockchainIdentityData.invite!!)
                     // now erase the blockchain data

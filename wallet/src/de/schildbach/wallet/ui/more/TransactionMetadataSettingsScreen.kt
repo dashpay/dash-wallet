@@ -69,12 +69,12 @@ fun TransactionMetadataSettingsScreen(
     val scrollState = rememberScrollState()
     val dateFormat = SimpleDateFormat.getDateInstance(SimpleDateFormat.MEDIUM)
 
-    val filterState by viewModel.filterState.collectAsState()
-    val lastSaveWorkId by viewModel.lastSaveWorkId.collectAsState()
-    val lastSaveDate by viewModel.lastSaveDate.collectAsState()
-    val futureSaveDate by viewModel.futureSaveDate.collectAsState()
-    val hasPastTransactionsToSave by viewModel.hasPastTransactionsToSave.collectAsState()
-    val publishingState by viewModel.observePublishOperation(lastSaveWorkId ?: "").collectAsState(Resource.canceled())
+    val uiState by viewModel.uiState.collectAsState()
+    val filterState = uiState.settings
+    val lastSaveDate = uiState.lastSaveDate
+    val futureSaveDate = uiState.futureSaveDate
+    val hasPastTransactionsToSave = uiState.hasPastTransactionsToSave
+    val publishingState by viewModel.observePublishOperation(uiState.lastSaveWorkId ?: "").collectAsState(Resource.canceled())
     val isSaving = BaseWorker.extractProgress(publishingState.data?.progress) != -1
     val currentDate = Date(System.currentTimeMillis())
 
@@ -127,16 +127,13 @@ fun TransactionMetadataSettingsScreen(
                         stringResource(R.string.transaction_metadata_past_syncing, dateFormat.format(currentDate))
                     } else if (hasPastTransactionsToSave) {
                         stringResource(R.string.transaction_metadata_past_subtitle, dateFormat.format(currentDate))
-                    } else if (lastSaveDate != 0L) {
+                    } else if (lastSaveDate > 0L) {
                         stringResource(
                             R.string.transaction_metadata_past_already_saved,
                             dateFormat.format(Date(lastSaveDate))
                         )
                     } else {
-                        stringResource(
-                            R.string.transaction_metadata_past_already_saved_none,
-                            dateFormat.format(Date(lastSaveDate))
-                        )
+                        stringResource(R.string.transaction_metadata_past_already_saved_none)
                     },
                     enabled = hasPastTransactionsToSave && !isSaving
                 )
@@ -147,7 +144,7 @@ fun TransactionMetadataSettingsScreen(
                         viewModel.updatePreferences(filterState.copy(saveToNetwork = it))
                     },
                     title = stringResource(R.string.transaction_metadata_future_title),
-                    subtitle = if (futureSaveDate != 0L) {
+                    subtitle = if (futureSaveDate > 0L) {
                         stringResource(
                             R.string.transaction_metadata_future_subtitle,
                             dateFormat.format(Date(futureSaveDate))
@@ -303,12 +300,15 @@ fun CardSection(content: @Composable ColumnScope.() -> Unit) {
 @Composable
 fun TransactionMetadataScreenPreview() {
     val viewModel = object: TransactionMetadataSettingsPreviewViewModel {
-        override val filterState: StateFlow<TransactionMetadataSettings>
-            = MutableStateFlow(TransactionMetadataSettings(savePastTxToNetwork = true, saveToNetwork = true, modified = true))
-        override val hasPastTransactionsToSave: StateFlow<Boolean> = MutableStateFlow(true)
-        override val lastSaveWorkId = MutableStateFlow(UUID.randomUUID().toString())
-        override val lastSaveDate: StateFlow<Long> = MutableStateFlow(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(2))
-        override val futureSaveDate: StateFlow<Long> = MutableStateFlow(System.currentTimeMillis())
+        override val uiState: StateFlow<TransactionMetadataSettingsUIState> = MutableStateFlow(
+            TransactionMetadataSettingsUIState(
+                settings = TransactionMetadataSettings(savePastTxToNetwork = true, saveToNetwork = true, modified = true),
+                lastSaveWorkId = UUID.randomUUID().toString(),
+                lastSaveDate = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(2),
+                futureSaveDate = System.currentTimeMillis(),
+                hasPastTransactionsToSave = true
+            )
+        )
         override fun updatePreferences(settings: TransactionMetadataSettings) {}
         override fun observePublishOperation(workId: String): Flow<Resource<WorkInfo>>  = MutableStateFlow(Resource.canceled())
     }

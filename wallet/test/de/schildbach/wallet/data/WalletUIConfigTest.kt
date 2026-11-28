@@ -39,7 +39,7 @@ import java.io.File
 
 /** Exercises the real preference store, including a failure before preferences can be decoded. */
 @RunWith(RobolectricTestRunner::class)
-@Config(application = Application::class, sdk = [28], manifest = Config.NONE)
+@Config(application = Application::class, sdk = [29], manifest = Config.NONE)
 class WalletUIConfigTest {
     @get:Rule
     val temporaryFolder = TemporaryFolder()

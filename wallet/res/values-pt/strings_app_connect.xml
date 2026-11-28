@@ -11,7 +11,7 @@
     <string name="dash_st_purchase_title">Comprar tokens?</string>
     <string name="dash_st_key_setup">Configurar chave de assinatura</string>
     <string name="dash_st_key_setup_title">Configurar assinatura de compras?</string>
-    <string name="dash_st_key_setup_warning">Esta carteira precisa de uma chave de assinatura de compras. Configurá-la registra na sua identidade uma chave controlada pela carteira e cobra uma taxa de rede em créditos da Platform. Isso não compra tokens. Você vai revisar e aprovar a compra separadamente depois.</string>
+    <string name="dash_st_key_setup_warning">A assinatura de compras precisa ser configurada nesta carteira. A configuração restaura o acesso a uma chave existente controlada pela carteira ou, se necessário, registra uma nova chave na sua identidade. Uma taxa de rede em créditos da Platform só é cobrada se uma nova chave for registrada. Isso não compra tokens. Você vai revisar e aprovar a compra separadamente depois.</string>
     <string name="dash_connect_records_unavailable">Registros de conexão indisponíveis</string>
     <string name="dash_connect_records_unavailable_message">Não foi possível ler seus registros de conexão salvos. O acesso de aplicativos existente ainda pode estar ativo. Nenhum acesso foi revogado.</string>
     <string name="dash_connect_records_retry">Tentar novamente</string>

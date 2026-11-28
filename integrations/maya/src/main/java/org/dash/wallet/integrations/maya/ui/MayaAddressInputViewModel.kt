@@ -13,6 +13,7 @@ import kotlinx.coroutines.launch
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.integrations.ExchangeIntegration
 import org.dash.wallet.common.integrations.ExchangeIntegrationProvider
+import org.dash.wallet.common.payments.parsers.AddressNetwork
 import org.dash.wallet.common.payments.parsers.AddressParser
 import org.dash.wallet.common.ui.address_input.AddressSource
 import org.dash.wallet.integrations.maya.api.SwapProvider
@@ -76,7 +77,9 @@ class MayaAddressInputViewModel @Inject constructor(
             )
         }
 
-    private val dashAddressParser = AddressParser.getDashAddressParser(walletDataProvider.networkParameters)
+    private val dashAddressParser = AddressParser.getDashAddressParser(
+        AddressNetwork.fromId(walletDataProvider.networkId)
+    )
 
     /**
      * True when the input is a checksum-valid DASH address on this wallet's network. A Dash

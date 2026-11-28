@@ -19,8 +19,7 @@ package org.dash.wallet.common.services
 import android.graphics.Bitmap
 import com.google.zxing.BarcodeFormat
 import kotlinx.coroutines.flow.Flow
-import org.bitcoinj.core.Sha256Hash
-import org.bitcoinj.core.Transaction
+import org.dash.wallet.common.data.TxId
 import org.dash.wallet.common.data.PresentableTxMetadata
 import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.data.entity.ExchangeRate
@@ -29,39 +28,70 @@ import org.dash.wallet.common.data.entity.TransactionMetadata
 
 interface TransactionMetadataProvider {
     suspend fun setTransactionMetadata(transactionMetadata: TransactionMetadata)
-    suspend fun importTransactionMetadata(txId: Sha256Hash)
+    /**
+     * Creates the metadata row for [txId] if it has none, from the wallet's own
+     * record of the transaction (the dashj wallet, else the SDK store) and the
+     * fetched platform metadata documents. A no-op when the row exists.
+     */
+    suspend fun importTransactionMetadata(txId: TxId)
 
-    suspend fun setTransactionTaxCategory(txId: Sha256Hash, taxCategory: TaxCategory, isSyncingPlatform: Boolean = false)
-    suspend fun setTransactionType(txId: Sha256Hash, type: Int, isSyncingPlatform: Boolean = false)
-    suspend fun setTransactionExchangeRate(txId: Sha256Hash, exchangeRate: ExchangeRate, isSyncingPlatform: Boolean = false)
-    suspend fun setTransactionMemo(txId: Sha256Hash, memo: String, isSyncingPlatform: Boolean = false)
-    suspend fun setTransactionService(txId: Sha256Hash, service: String, isSyncingPlatform: Boolean = false)
-    suspend fun setTransactionSentTime(txId: Sha256Hash, timestamp: Long, isSyncingPlatform: Boolean = false)
+    /**
+     * @param fallbackMetadata a minimal row to create when the tx has no existing metadata
+     *   AND no dashj wallet Transaction to derive one from (an SDK-only tx). Ignored when a
+     *   row already exists or the dashj wallet holds the tx. Lets user edits persist for
+     *   transactions the dashj wallet does not hold.
+     */
+    suspend fun setTransactionTaxCategory(
+        txId: TxId,
+        taxCategory: TaxCategory,
+        isSyncingPlatform: Boolean = false,
+        fallbackMetadata: TransactionMetadata? = null
+    )
+    suspend fun setTransactionType(txId: TxId, type: Int, isSyncingPlatform: Boolean = false)
+    suspend fun setTransactionExchangeRate(txId: TxId, exchangeRate: ExchangeRate, isSyncingPlatform: Boolean = false)
+    suspend fun setTransactionMemo(
+        txId: TxId,
+        memo: String,
+        isSyncingPlatform: Boolean = false,
+        fallbackMetadata: TransactionMetadata? = null
+    )
+    suspend fun setTransactionService(txId: TxId, service: String, isSyncingPlatform: Boolean = false)
+    suspend fun setTransactionSentTime(txId: TxId, timestamp: Long, isSyncingPlatform: Boolean = false)
+    /**
+     * Merges metadata fetched from platform into the row for [txId], creating the
+     * row first when needed (see [importTransactionMetadata]; [metadata] itself is
+     * the last-resort row). Non-empty platform fields win; txid and value are kept.
+     * Stores [giftCard] and fetches [iconUrl] when given.
+     */
     suspend fun syncPlatformMetadata(
-        txId: Sha256Hash,
+        txId: TxId,
         metadata: TransactionMetadata,
         giftCard: GiftCard?,
         iconUrl: String?
     )
 
     /**
-     * Checks for missing data in the metadata cache vs the Transaction and ensures that both
-     * are the same.
-     *
-     * @param tx The transaction to sync with the transaction metadata cache
+     * Runs [block], which will import metadata for [txIds] one at a time (for
+     * example a platform metadata sync), with any per-transaction lookup work
+     * for those txids done once for the whole batch. Purely an optimization:
+     * the result is the same as running [block] alone, which is the default.
      */
-    suspend fun syncTransaction(tx: Transaction)
-    fun syncTransactionBlocking(tx: Transaction)
+    suspend fun <T> withBatchedImport(txIds: Collection<TxId>, block: suspend () -> T): T = block()
 
-    suspend fun getTransactionMetadata(txId: Sha256Hash): TransactionMetadata?
-    fun observeTransactionMetadata(txId: Sha256Hash): Flow<TransactionMetadata?>
+    /**
+     * The metadata row for [txId], creating it first when the wallet holds the
+     * transaction but has no row (see [importTransactionMetadata]). A missing tax
+     * category is filled from address metadata. Null when no row can be made.
+     */
+    suspend fun getTransactionMetadata(txId: TxId): TransactionMetadata?
+    fun observeTransactionMetadata(txId: TxId): Flow<TransactionMetadata?>
 
     /**
      * Mark a transaction as DashSpend gift card expense with an icon
      */
-    suspend fun markGiftCardTransaction(txId: Sha256Hash, service: String, iconUrl: String?)
+    suspend fun markGiftCardTransaction(txId: TxId, service: String, iconUrl: String?)
     suspend fun updateGiftCardMetadata(giftCard: GiftCard)
-    suspend fun updateGiftCardBarcode(txId: Sha256Hash, index: Int, barcodeValue: String, barcodeFormat: BarcodeFormat)
+    suspend fun updateGiftCardBarcode(txId: TxId, index: Int, barcodeValue: String, barcodeFormat: BarcodeFormat)
 
     /**
      * Discards everything recorded locally about a transaction: its metadata, any gift cards
@@ -75,12 +105,12 @@ interface TransactionMetadataProvider {
      *   because the transaction turned out to be real; false when the cleanup could not be
      *   attempted and the caller should keep the payment and retry later.
      */
-    suspend fun forgetTransaction(txId: Sha256Hash): Boolean
+    suspend fun forgetTransaction(txId: TxId): Boolean
 
     suspend fun getAllTransactionMetadata(): List<TransactionMetadata>
 
-    fun observePresentableMetadata(): Flow<Map<Sha256Hash, PresentableTxMetadata>>
-    suspend fun getIcon(iconId: Sha256Hash): Bitmap?
+    fun observePresentableMetadata(): Flow<Map<TxId, PresentableTxMetadata>>
+    suspend fun getIcon(iconId: TxId): Bitmap?
 
     // Address methods
     /**
@@ -135,7 +165,7 @@ interface TransactionMetadataProvider {
     /**
      * check if the tx metadata table has metadata for the given tx.
      */
-    suspend fun exists(txId: Sha256Hash): Boolean
+    suspend fun exists(txId: TxId): Boolean
 
     // Reset methods
     suspend fun clear()

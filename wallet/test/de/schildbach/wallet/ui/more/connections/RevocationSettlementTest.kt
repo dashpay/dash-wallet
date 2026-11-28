@@ -10,7 +10,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(application = Application::class, sdk = [28], manifest = Config.NONE)
+@Config(application = Application::class, sdk = [29], manifest = Config.NONE)
 class RevocationSettlementTest {
     private fun partial() = JSONObject().put("id", "grant").put("state", "partialRevocation")
         .put("permanentRevocationConfirmed", false).put("unrecordedKeyIds", JSONArray(listOf(7, 9)))

@@ -16,40 +16,30 @@
  */
 package de.schildbach.wallet.ui.send
 
-import android.app.Application
-import androidx.arch.core.executor.testing.InstantTaskExecutorRule
-import de.schildbach.wallet.Constants
+import dagger.hilt.android.testing.HiltAndroidTest
+import dagger.hilt.android.testing.HiltTestApplication
+import de.schildbach.wallet.data.WalletData
+import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.payments.SendCoinsTaskRunner
-import de.schildbach.wallet.util.viewModels.MainCoroutineRule
+import de.schildbach.wallet.service.platform.sdk.SdkDeferredPayment
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.verify
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeout
-import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
-import org.bitcoinj.core.Context
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
-import org.bitcoinj.wallet.SendRequest
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.PaymentIntent
-import de.schildbach.wallet.livedata.Resource
-import de.schildbach.wallet.livedata.Status
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.PaymentSubmissionPendingException
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
-import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -61,23 +51,15 @@ import org.robolectric.annotation.Config
  * from different inputs, and the payee can broadcast both. This screen keeps its own record of
  * having sent in a fragment-scoped view model, which process death takes with it and which was
  * never there when the invoice is opened again, so the stored record has to be asked.
+ *
+ * On this branch the preview already holds an SDK reservation for the payment, so the question is
+ * asked before that reservation is submitted, and the reservation is given back when the invoice
+ * is already paid for.
  */
-@ExperimentalCoroutinesApi
+@HiltAndroidTest
 @RunWith(RobolectricTestRunner::class)
-@Config(application = Application::class, sdk = [28], manifest = Config.NONE)
+@Config(application = HiltTestApplication::class, sdk = [29], manifest = Config.NONE)
 class PaymentProtocolDuplicateSubmissionTest {
-    @get:Rule
-    val instantTaskExecutorRule = InstantTaskExecutorRule()
-
-    @get:Rule
-    val mainCoroutineRule = MainCoroutineRule()
-
-    private lateinit var viewModel: PaymentProtocolViewModel
-    private lateinit var sendCoinsTaskRunner: SendCoinsTaskRunner
-
-    private val address: Address =
-        Address.fromString(Constants.NETWORK_PARAMETERS, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
-    private val amount: Coin = Coin.parseCoin("0.25")
 
     /** The SHA-256 the parser takes over the serialized PaymentRequest. */
     private val requestHash = ByteArray(32) { it.toByte() }
@@ -85,115 +67,340 @@ class PaymentProtocolDuplicateSubmissionTest {
     private val earlierSubmission: Sha256Hash =
         Sha256Hash.wrap("00000000000000000000000000000000000000000000000000000000000000a1")
 
-    @Before
-    fun setUp() {
-        Context.propagate(Context.getOrCreate(Constants.NETWORK_PARAMETERS))
+    private val payment = SdkDeferredPayment("bb".repeat(32), byteArrayOf(1, 2, 3), 260L, null)
 
+    private fun armedViewModel(runner: SendCoinsTaskRunner): PaymentProtocolViewModel {
         val wallet = mockk<Wallet>(relaxed = true)
-        every { wallet.context } returns Context.get()
-
-        val walletData = mockk<WalletDataProvider>(relaxed = true)
-        every { walletData.wallet } returns wallet
-
-        val walletUIConfig = mockk<WalletUIConfig>(relaxed = true)
-        every { walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY) } returns emptyFlow()
-
-        sendCoinsTaskRunner = mockk(relaxed = true)
-        coEvery { sendCoinsTaskRunner.awaitPaymentReadiness() } returns Unit
-        every {
-            sendCoinsTaskRunner.createSendRequest(any(), any<PaymentIntent>(), any(), any())
-        } returns SendRequest.to(address, amount)
-        coEvery { sendCoinsTaskRunner.sendDirectPayment(any(), any(), any(), any()) } returns
-            Transaction(Constants.NETWORK_PARAMETERS)
-
-        viewModel = PaymentProtocolViewModel(
+        val walletData = mockk<WalletData>(relaxed = true) { every { this@mockk.wallet } returns wallet }
+        val walletUIConfig = mockk<WalletUIConfig> {
+            every { observe(WalletUIConfig.SELECTED_CURRENCY) } returns emptyFlow()
+        }
+        val viewModel = PaymentProtocolViewModel(
             walletData,
             mockk<Configuration>(relaxed = true),
             mockk<ExchangeRatesProvider>(relaxed = true),
-            sendCoinsTaskRunner,
+            runner,
             walletUIConfig
         )
 
-        val intent = PaymentIntent(
+        // a real intent: paymentRequestHash is a field, which a mock cannot stand in for
+        val address = org.bitcoinj.core.Address.fromString(
+            de.schildbach.wallet.Constants.NETWORK_PARAMETERS,
+            "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL"
+        )
+        val finalIntent = PaymentIntent(
             PaymentIntent.Standard.BIP70,
-            null, null,
-            arrayOf(PaymentIntent.Output(amount, org.bitcoinj.script.ScriptBuilder.createOutputScript(address))),
+            "Test Merchant",
             null,
+            arrayOf(
+                PaymentIntent.Output(
+                    org.dash.wallet.common.money.Coin.valueOf(25_000_000L),
+                    org.bitcoinj.script.ScriptBuilder.createOutputScript(address).program
+                )
+            ),
+            "Test payment",
             "https://merchant.example/pay",
             null,
             "https://merchant.example/request",
             requestHash,
-            null, null
+            null,
+            null
         )
-        // initPaymentIntent kicks off the request fetch on its own scope, and that lands on
-        // finalPaymentIntent when it finishes. Let it settle before planting the values this test
-        // depends on, or it overwrites them part way through.
-        coEvery { sendCoinsTaskRunner.fetchPaymentRequest(any()) } returns intent
-        runBlocking {
-            viewModel.initPaymentIntent(intent)
-            withTimeout(5_000) {
-                while (viewModel.sendRequestLiveData.value == null) {
-                    delay(10)
-                }
-            }
+        val baseIntent = mockk<PaymentIntent>(relaxed = true) {
+            every { isExtendedBy(any(), any(), any()) } returns true
         }
-        viewModel.finalPaymentIntent = intent
-        viewModel.baseSendRequest = SendRequest.to(address, amount)
+        coEvery { runner.fetchPaymentRequest(any()) } returns finalIntent
+        // nothing paid before: the preview builds a new payment
+        coEvery { runner.findAbandonedSubmission(any(), any()) } returns null
+        coEvery { runner.buildDeferredBip70Payment(any(), any()) } returns payment
+
+        viewModel.requestPaymentRequest(baseIntent)
+        awaitCondition("deferred preview armed") { viewModel.deferredPayment != null }
+        return viewModel
     }
 
-    private fun awaitAck(): Resource<Transaction> = runBlocking {
-        withTimeout(5_000) {
-            var value = viewModel.directPaymentAckLiveData.value
-            while (value == null || value.status == Status.LOADING) {
-                delay(10)
-                value = viewModel.directPaymentAckLiveData.value
-            }
-            value
+    private fun awaitCondition(what: String, timeoutMs: Long = 5_000, condition: () -> Boolean) {
+        val deadline = System.currentTimeMillis() + timeoutMs
+        val mainLooper = org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper())
+        while (!condition()) {
+            check(System.currentTimeMillis() < deadline) { "timed out waiting for: $what" }
+            Thread.sleep(20)
+            mainLooper.idle()
         }
+    }
+
+    private fun awaitOutcome(viewModel: PaymentProtocolViewModel) = awaitCondition("payment outcome") {
+        val status = viewModel.directPaymentAckLiveData.value?.status
+        status == Status.SUCCESS || status == Status.ERROR
     }
 
     @Test
-    fun `an invoice with a submission still outstanding is not paid again`() = runBlocking {
-        coEvery { sendCoinsTaskRunner.findUnresolvedSubmission(requestHash) } returns earlierSubmission
+    fun `an invoice with a submission still outstanding is not paid again`() {
+        val runner = mockk<SendCoinsTaskRunner>(relaxed = true)
+        coEvery { runner.findUnresolvedSubmission(any<PaymentIntent>()) } returns earlierSubmission
+        val viewModel = armedViewModel(runner)
 
         viewModel.sendPayment()
-        val ack = awaitAck()
+        awaitOutcome(viewModel)
 
         // the screen shows the outcome that is already outstanding rather than starting another
+        val ack = viewModel.directPaymentAckLiveData.value!!
         assertEquals(Status.ERROR, ack.status)
-        assertTrue(
-            "expected the pending outcome, got ${ack.exception}",
-            ack.exception is PaymentSubmissionPendingException
-        )
-        assertEquals(earlierSubmission, (ack.exception as PaymentSubmissionPendingException).txId)
+        assertTrue("expected the pending outcome, got ${ack.exception}", ack.exception is PaymentSubmissionPendingException)
+        assertEquals(earlierSubmission.toString(), (ack.exception as PaymentSubmissionPendingException).txId)
 
-        // nothing was built, so there is no second transaction for the payee to broadcast
-        coVerify(exactly = 0) { sendCoinsTaskRunner.sendDirectPayment(any(), any(), any(), any()) }
-    }
-
-    @Test
-    fun `an invoice with nothing outstanding is paid as usual`() = runBlocking {
-        coEvery { sendCoinsTaskRunner.findUnresolvedSubmission(any()) } returns null
-
-        viewModel.sendPayment()
-        val ack = awaitAck()
-
-        assertEquals(Status.SUCCESS, ack.status)
-        coVerify(exactly = 1) { sendCoinsTaskRunner.sendDirectPayment(any(), any(), any(), any()) }
-    }
-
-    @Test
-    fun `the invoice is checked before any transaction is built`() = runBlocking {
-        coEvery { sendCoinsTaskRunner.findUnresolvedSubmission(requestHash) } returns earlierSubmission
-
-        viewModel.sendPayment()
-        awaitAck()
-
-        // coin selection is what puts a second payment on different inputs, so the question has to
-        // be asked before the request is created, not after. Matched on signInputs = true: the
-        // screen's own amount preview builds an unsigned request and is deliberately not gated.
-        verify(exactly = 0) {
-            sendCoinsTaskRunner.createSendRequest(any(), any<PaymentIntent>(), eq(true), any())
+        runBlocking {
+            // nothing was submitted, so there is no second transaction for the payee to broadcast,
+            // and the preview's reservation was given back
+            coVerify(exactly = 0) { runner.sendPrebuiltDirectPayment(any(), any(), any(), any(), any(), any()) }
+            coVerify(exactly = 1) { runner.releaseDeferredPayment(payment, any()) }
         }
+    }
+
+    @Test
+    fun `an invoice with nothing outstanding is paid as usual`() {
+        val runner = mockk<SendCoinsTaskRunner>(relaxed = true)
+        coEvery { runner.findUnresolvedSubmission(any<PaymentIntent>()) } returns null
+        val liveTx = mockk<Transaction>(relaxed = true)
+        coEvery { runner.sendPrebuiltDirectPayment(any(), any(), any()) } returns liveTx
+        val viewModel = armedViewModel(runner)
+
+        viewModel.sendPayment()
+        awaitOutcome(viewModel)
+
+        assertEquals(Status.SUCCESS, viewModel.directPaymentAckLiveData.value?.status)
+        runBlocking {
+            coVerify(exactly = 1) { runner.sendPrebuiltDirectPayment(payment, any(), any()) }
+            coVerify(exactly = 0) { runner.releaseDeferredPayment(any(), any()) }
+        }
+    }
+
+    @Test
+    fun `the taken reservation is released when the outstanding-submission lookup fails`() {
+        // The preview's reservation has already left deferredPaymentRef when the store is read, so
+        // onCleared() can no longer reach it: this screen is its only owner until the runner takes
+        // it over, and a failed read must give it back rather than strand its locked inputs.
+        val runner = mockk<SendCoinsTaskRunner>(relaxed = true)
+        coEvery { runner.findUnresolvedSubmission(any<PaymentIntent>()) } throws IllegalStateException("store unreadable")
+        val viewModel = armedViewModel(runner)
+
+        viewModel.sendPayment()
+        awaitOutcome(viewModel)
+
+        assertEquals(Status.ERROR, viewModel.directPaymentAckLiveData.value?.status)
+        runBlocking {
+            coVerify(exactly = 0) { runner.sendPrebuiltDirectPayment(any(), any(), any(), any(), any(), any()) }
+            coVerify(exactly = 1) { runner.releaseDeferredPayment(payment, any()) }
+        }
+    }
+
+    @Test
+    fun `a preview's reservation is released through the wallet it was built on`() {
+        // B2: released through whatever wallet is installed by then, a preview left open across a
+        // wipe would unlock outpoints in, and release them from the engine of, the replacement
+        val runner = mockk<SendCoinsTaskRunner>(relaxed = true)
+        val viewModel = armedViewModel(runner)
+        val origin = viewModel.wallet
+
+        // previewed again (a retry): the previous reservation goes back first
+        viewModel.requestPaymentRequest(
+            mockk<PaymentIntent>(relaxed = true) { every { isExtendedBy(any(), any(), any()) } returns true }
+        )
+        awaitCondition("previous reservation released") {
+            runCatching { coVerify(atLeast = 1) { runner.releaseDeferredPayment(payment, any()) } }.isSuccess
+        }
+
+        runBlocking {
+            coVerify(exactly = 0) { runner.releaseDeferredPayment(any(), match { it !== origin }) }
+            coVerify(atLeast = 1) { runner.releaseDeferredPayment(payment, match { it === origin }) }
+        }
+    }
+
+    // --- review 9fa90c30ccf1: an abandoned invoice is paid again with T1 itself ----------------
+
+    @Test
+    fun `reopening an invoice whose earlier payment was released resubmits it and builds nothing`() {
+        val runner = mockk<SendCoinsTaskRunner>(relaxed = true)
+        val earlier = de.schildbach.wallet.data.PendingDirectPayment(
+            earlierSubmission, byteArrayOf(1, 2, 3), "https://merchant.example/pay", "Merchant",
+            System.currentTimeMillis(), abandoned = true
+        )
+        coEvery { runner.findAbandonedSubmission(any(), any()) } returns earlier
+        coEvery { runner.knownFeeOf(any(), any()) } returns null
+        val liveTx = mockk<Transaction>(relaxed = true)
+        coEvery { runner.resubmitAbandonedPayment(any(), any()) } returns liveTx
+        val viewModel = resubmissionViewModel(runner)
+
+        assertTrue(viewModel.isResubmission)
+        assertTrue(viewModel.canSendPayment)
+        // review 4303472428: an old record with no stored fee, and a fee that cannot be rebuilt,
+        // shows the fee and total as not available, never the placeholder as if it were real
+        assertNull("no invented fee on an armed resubmission", viewModel.displayFee)
+        viewModel.sendPayment()
+        awaitOutcome(viewModel)
+
+        assertEquals(Status.SUCCESS, viewModel.directPaymentAckLiveData.value?.status)
+        runBlocking {
+            coVerify(exactly = 0) { runner.buildDeferredBip70Payment(any(), any()) }
+            coVerify(exactly = 0) { runner.sendPrebuiltDirectPayment(any(), any(), any(), any(), any(), any()) }
+            coVerify(exactly = 1) { runner.resubmitAbandonedPayment(any(), any()) }
+        }
+    }
+
+    @Test
+    fun `a fresh preview after an armed resubmission sends the new payment, not the old one`() {
+        // review 4305506849: the preview released the previous reservation but kept the
+        // resubmission arm, so a re-preview that found no earlier payment still confirmed as a
+        // resubmission, failed, and stranded the reservation it had just built
+        val runner = mockk<SendCoinsTaskRunner>(relaxed = true)
+        val earlier = de.schildbach.wallet.data.PendingDirectPayment(
+            earlierSubmission, byteArrayOf(1, 2, 3), "https://merchant.example/pay", "Merchant",
+            System.currentTimeMillis(), abandoned = true, feeDuffs = 1_234L
+        )
+        coEvery { runner.findAbandonedSubmission(any(), any()) } returns earlier
+        val viewModel = resubmissionViewModel(runner)
+        assertTrue(viewModel.isResubmission)
+
+        // previewed again: nothing paid before any more, so a new payment is built
+        coEvery { runner.findAbandonedSubmission(any(), any()) } returns null
+        coEvery { runner.findUnresolvedSubmission(any<PaymentIntent>()) } returns null
+        coEvery { runner.buildDeferredBip70Payment(any(), any()) } returns payment
+        viewModel.requestPaymentRequest(
+            mockk<PaymentIntent>(relaxed = true) { every { isExtendedBy(any(), any(), any()) } returns true }
+        )
+        awaitCondition("fresh preview armed") { viewModel.deferredPayment != null }
+
+        assertEquals("no longer a resubmission", false, viewModel.isResubmission)
+        assertEquals(Coin.valueOf(payment.feeDuffs), viewModel.displayFee)
+        viewModel.sendPayment()
+        awaitOutcome(viewModel)
+
+        runBlocking {
+            coVerify(exactly = 0) { runner.resubmitAbandonedPayment(any(), any()) }
+            coVerify(exactly = 1) { runner.sendPrebuiltDirectPayment(any(), any(), any(), any(), any(), any()) }
+        }
+    }
+
+    @Test
+    fun `a resubmission shows the fee stored with its record`() {
+        val runner = mockk<SendCoinsTaskRunner>(relaxed = true)
+        val earlier = de.schildbach.wallet.data.PendingDirectPayment(
+            earlierSubmission, byteArrayOf(1, 2, 3), "https://merchant.example/pay", "Merchant",
+            System.currentTimeMillis(), abandoned = true, feeDuffs = 1_234L
+        )
+        coEvery { runner.findAbandonedSubmission(any(), any()) } returns earlier
+        // the wallet can no longer rebuild it: the stored fee is what is shown
+        coEvery { runner.knownFeeOf(any(), any()) } returns null
+        val viewModel = resubmissionViewModel(runner)
+
+        assertTrue(viewModel.canSendPayment)
+        assertEquals(Coin.valueOf(1_234L), viewModel.displayFee)
+    }
+
+    private fun resubmissionViewModel(runner: SendCoinsTaskRunner): PaymentProtocolViewModel {
+        val wallet = mockk<Wallet>(relaxed = true)
+        val walletData = mockk<WalletData>(relaxed = true) { every { this@mockk.wallet } returns wallet }
+        val walletUIConfig = mockk<WalletUIConfig> {
+            every { observe(WalletUIConfig.SELECTED_CURRENCY) } returns emptyFlow()
+        }
+        val viewModel = PaymentProtocolViewModel(
+            walletData,
+            mockk<Configuration>(relaxed = true),
+            mockk<ExchangeRatesProvider>(relaxed = true),
+            runner,
+            walletUIConfig
+        )
+        val address = org.bitcoinj.core.Address.fromString(
+            de.schildbach.wallet.Constants.NETWORK_PARAMETERS,
+            "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL"
+        )
+        val finalIntent = PaymentIntent(
+            PaymentIntent.Standard.BIP70, "Test Merchant", null,
+            arrayOf(
+                PaymentIntent.Output(
+                    org.dash.wallet.common.money.Coin.valueOf(25_000_000L),
+                    org.bitcoinj.script.ScriptBuilder.createOutputScript(address).program
+                )
+            ),
+            "Test payment", "https://merchant.example/pay", null, "https://merchant.example/request",
+            requestHash, null, null
+        )
+        val baseIntent = mockk<PaymentIntent>(relaxed = true) {
+            every { isExtendedBy(any(), any(), any()) } returns true
+        }
+        coEvery { runner.fetchPaymentRequest(any()) } returns finalIntent
+        viewModel.requestPaymentRequest(baseIntent)
+        awaitCondition("resubmission armed") { viewModel.isResubmission }
+        return viewModel
+    }
+
+    // --- a0d31d8245b5: an expired invoice with a submission outstanding -----------------------
+
+    /** A real serialized BIP70 PaymentRequest that expired an hour ago. */
+    private fun expiredPaymentRequestBytes(): ByteArray {
+        val address = org.bitcoinj.core.Address.fromString(
+            de.schildbach.wallet.Constants.NETWORK_PARAMETERS,
+            "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL"
+        )
+        val now = System.currentTimeMillis() / 1000
+        val details = org.dash.wallet.common.payments.bip70.Protos.PaymentDetails.newBuilder()
+            .setNetwork("test")
+            .setTime(now - 7_200)
+            .setExpires(now - 3_600)
+            .setMemo("expired invoice")
+            .setPaymentUrl("https://merchant.example/pay")
+            .addOutputs(
+                org.dash.wallet.common.payments.bip70.Protos.Output.newBuilder()
+                    .setAmount(25_000_000L)
+                    .setScript(
+                        com.google.protobuf.ByteString.copyFrom(
+                            org.bitcoinj.script.ScriptBuilder.createOutputScript(address).program
+                        )
+                    )
+            )
+            .build()
+        return org.dash.wallet.common.payments.bip70.Protos.PaymentRequest.newBuilder()
+            .setPaymentDetailsVersion(1)
+            .setSerializedPaymentDetails(details.toByteString())
+            .build()
+            .toByteArray()
+    }
+
+    @Test
+    fun `reopening an expired invoice with an outstanding submission shows it as pending`() {
+        val runner = mockk<SendCoinsTaskRunner>(relaxed = true)
+        val serialized = expiredPaymentRequestBytes()
+        val expectedHash = java.security.MessageDigest.getInstance("SHA-256").digest(serialized)
+        // what fetchPaymentRequest really throws: the real parser on the real bytes
+        coEvery { runner.fetchPaymentRequest(any()) } coAnswers {
+            org.dash.wallet.common.payments.parsers.DashPaymentIntentParser(
+                org.dash.wallet.common.payments.parsers.AddressNetwork.fromId(
+                    de.schildbach.wallet.Constants.NETWORK_PARAMETERS.id
+                )
+            ).parse(
+                java.io.ByteArrayInputStream(serialized),
+                org.dash.wallet.common.payments.bip70.PaymentProtocol.MIMETYPE_PAYMENTREQUEST
+            )
+        }
+        coEvery { runner.findUnresolvedSubmission(any<ByteArray>()) } returns null
+        coEvery { runner.findUnresolvedSubmission(match<ByteArray> { it.contentEquals(expectedHash) }) } returns earlierSubmission
+        val walletData = mockk<WalletData>(relaxed = true) { every { this@mockk.wallet } returns mockk(relaxed = true) }
+        val walletUIConfig = mockk<WalletUIConfig> {
+            every { observe(WalletUIConfig.SELECTED_CURRENCY) } returns emptyFlow()
+        }
+        val viewModel = PaymentProtocolViewModel(
+            walletData,
+            mockk<Configuration>(relaxed = true),
+            mockk<ExchangeRatesProvider>(relaxed = true),
+            runner,
+            walletUIConfig
+        )
+
+        viewModel.requestPaymentRequest(mockk(relaxed = true))
+        awaitCondition("the fetch outcome") { viewModel.sendRequestLiveData.value?.status == Status.ERROR }
+
+        val failure = viewModel.sendRequestLiveData.value!!.exception
+        assertTrue("expected the pending outcome, got $failure", failure is PaymentSubmissionPendingException)
+        assertEquals(earlierSubmission.toString(), (failure as PaymentSubmissionPendingException).txId)
     }
 }

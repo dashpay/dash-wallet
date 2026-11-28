@@ -60,6 +60,16 @@ interface DashPayContactRequestDao {
 
     @Query("SELECT COUNT(*) FROM dashpay_contact_request WHERE toUserId = :userId")
     fun observeReceivedRequestsCount(userId: String): Flow<Int>
+
+    /**
+     * Emits on every write to the contact-request table, whatever the write was
+     * and whoever owns the rows — Room re-runs the query on each invalidation.
+     * For observers that need to re-derive something from the table as a whole
+     * and have no identity id to scope by yet.
+     */
+    @Query("SELECT COUNT(*) FROM dashpay_contact_request")
+    fun observeCount(): Flow<Int>
+
     @Query("DELETE FROM dashpay_contact_request")
     suspend fun clear()
 }

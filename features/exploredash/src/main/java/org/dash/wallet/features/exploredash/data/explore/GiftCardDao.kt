@@ -19,15 +19,17 @@ package org.dash.wallet.features.exploredash.data.explore
 
 import androidx.room.Dao
 import androidx.room.Insert
-import androidx.room.MapInfo
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
 import com.google.zxing.BarcodeFormat
 import kotlinx.coroutines.flow.Flow
-import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.data.entity.GiftCard
 
+/**
+ * txId query parameters are the raw 32 bytes of the transaction id (`Sha256Hash.bytes` /
+ * `TxIds.toBytes(hex)`) — the same BLOB the Room type converter stores for [GiftCard.txId].
+ */
 @Dao
 interface GiftCardDao {
     @Insert
@@ -40,36 +42,35 @@ interface GiftCardDao {
     suspend fun updateGiftCardRow(giftCard: GiftCard): Int
 
     @Query("SELECT currency FROM gift_cards WHERE txId = :txId AND `index` = :index")
-    suspend fun getCurrency(txId: Sha256Hash, index: Int): String?
+    suspend fun getCurrency(txId: ByteArray, index: Int): String?
 
     /** Rewrites the row. A caller that read it before its currency was filled in does not erase it. */
     @Transaction
     suspend fun updateGiftCard(giftCard: GiftCard): Int {
-        val currency = giftCard.currency ?: getCurrency(giftCard.txId, giftCard.index)
+        val currency = giftCard.currency ?: getCurrency(giftCard.txId.bytes, giftCard.index)
         return updateGiftCardRow(giftCard.copy(currency = currency))
     }
 
     @Query("UPDATE gift_cards SET currency = :currency WHERE txId = :txId AND currency IS NULL")
-    suspend fun backfillCurrency(txId: Sha256Hash, currency: String): Int
+    suspend fun backfillCurrency(txId: ByteArray, currency: String): Int
 
     @Query("SELECT COUNT(*) FROM gift_cards WHERE txId = :txId")
-    suspend fun getCardCountForTransaction(txId: Sha256Hash): Int
+    suspend fun getCardCountForTransaction(txId: ByteArray): Int
 
     @Query("SELECT * FROM gift_cards WHERE txId = :txId ORDER BY `index` ASC")
-    suspend fun getCardForTransaction(txId: Sha256Hash): List<GiftCard>
+    suspend fun getCardForTransaction(txId: ByteArray): List<GiftCard>
 
     @Query("SELECT * FROM gift_cards WHERE txId = :txId ORDER BY `index` ASC")
-    fun observeCardForTransaction(txId: Sha256Hash): Flow<List<GiftCard>>
+    fun observeCardForTransaction(txId: ByteArray): Flow<List<GiftCard>>
 
     @Query(
         """
-        UPDATE gift_cards SET barcodeValue = :value, barcodeFormat = :barcodeFormat 
+        UPDATE gift_cards SET barcodeValue = :value, barcodeFormat = :barcodeFormat
         WHERE txId = :txId AND `index` = :index
     """
     )
-    suspend fun updateBarcode(txId: Sha256Hash, index: Int, value: String, barcodeFormat: BarcodeFormat)
+    suspend fun updateBarcode(txId: ByteArray, index: Int, value: String, barcodeFormat: BarcodeFormat)
 
-    @MapInfo(keyColumn = "txId")
     @Query("SELECT * FROM gift_cards ORDER BY `index` ASC")
-    fun observeGiftCards(): Flow<Map<Sha256Hash, List<GiftCard>>>
+    fun observeGiftCards(): Flow<List<GiftCard>>
 }

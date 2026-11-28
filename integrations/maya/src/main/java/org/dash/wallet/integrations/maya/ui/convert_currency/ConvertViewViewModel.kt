@@ -20,26 +20,28 @@ package org.dash.wallet.integrations.maya.ui.convert_currency
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
-import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.Fiat
-import org.bitcoinj.utils.MonetaryFormat
-import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.ExchangeRate
+import org.dash.wallet.common.getDashBalance
+import org.dash.wallet.common.getEstimatedDashBalance
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.money.FiatValue
+import org.dash.wallet.common.money.MoneyFormat
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.toBigDecimal
-import org.dash.wallet.common.util.toCoin
+import org.dash.wallet.common.util.toDash
 import org.dash.wallet.integrations.maya.api.SwapProvider
 import org.dash.wallet.integrations.maya.model.AccountDataUIModel
 import org.dash.wallet.integrations.maya.model.Amount
@@ -79,7 +81,7 @@ class ConvertViewViewModel @Inject constructor(
      * Held as explicit intent rather than inferred by comparing the entered amount with the
      * balance: with the picker on fiat or crypto, [amount] is anchored on that currency, and the
      * trip back to DASH loses precision twice — [GenericUtils.toScaledBigDecimal] rounds the
-     * entered value to 8 decimals, and [toCoin] then *truncates* the recomputed DASH value. The
+     * entered value to 8 decimals, and [toDash] then *truncates* the recomputed DASH value. The
      * result lands a satoshi or more below the balance, so an equality test quietly downgraded a
      * fiat-entered Max to a partial swap. Persisted so it survives a configuration change.
      *
@@ -91,6 +93,13 @@ class ConvertViewViewModel @Inject constructor(
         set(value) {
             savedStateHandle[KEY_MAX_SELECTED] = value
         }
+
+    /**
+     * [pendingConversionResult] as it changes, for the screen that presents it. The key is only
+     * ever set (to null when cleared), never removed: removing it would detach this flow.
+     */
+    val pendingConversionResults: StateFlow<MayaTransactionParams?> =
+        savedStateHandle.getStateFlow<MayaTransactionParams?>(KEY_PENDING_RESULT, null)
 
     /**
      * The parameters of a conversion-result sheet the user hasn't acknowledged yet. The lock
@@ -111,14 +120,15 @@ class ConvertViewViewModel @Inject constructor(
      */
     fun clearSavedState() {
         savedStateHandle.remove<Amount>(KEY_AMOUNT)
-        savedStateHandle.remove<MayaTransactionParams>(KEY_PENDING_RESULT)
+        // Set to null, not removed, so [pendingConversionResults] stays attached.
+        savedStateHandle[KEY_PENDING_RESULT] = null
         savedStateHandle.remove<Boolean>(KEY_MAX_SELECTED)
     }
     var destinationCurrency: String? = null
     var destinationAddress: String? = null
     lateinit var account: AccountDataUIModel
     val amount = Amount()
-    private val dashFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
+    private val dashFormat = MoneyFormat().withLocale(GenericUtils.getDeviceLocale())
         .noCode().minDecimals(6).optionalDecimals()
     val cryptoFormat: DecimalFormat = DecimalFormat(
         "0.########",
@@ -147,8 +157,8 @@ class ConvertViewViewModel @Inject constructor(
     var maxForDashWalletAmount: String = "0"
     val onContinueEvent = SingleLiveEvent<SwapRequest>()
 
-    private var minAllowedSwapDashCoin: Coin = Coin.ZERO
-    private var maxForDashCoinBaseAccount: Coin = Coin.ZERO
+    private var minAllowedSwapDashCoin: Dash = Dash.ZERO
+    private var maxForDashCoinBaseAccount: Dash = Dash.ZERO
 
     private val _selectedCryptoCurrencyAccount = MutableLiveData<AccountDataUIModel?>()
     val selectedCryptoCurrencyAccount: LiveData<AccountDataUIModel?>
@@ -168,12 +178,12 @@ class ConvertViewViewModel @Inject constructor(
     val enteredAmount: LiveData<String>
         get() = _enteredAmount
 
-    private val _enteredConvertDashAmount = MutableLiveData<Coin>()
-    val enteredConvertDashAmount: LiveData<Coin>
+    private val _enteredConvertDashAmount = MutableLiveData<Dash>()
+    val enteredConvertDashAmount: LiveData<Dash>
         get() = _enteredConvertDashAmount
 
-    private val _enteredConvertFiatAmount = MutableLiveData<Fiat>()
-    val enteredConvertFiatAmount: LiveData<Fiat>
+    private val _enteredConvertFiatAmount = MutableLiveData<FiatValue>()
+    val enteredConvertFiatAmount: LiveData<FiatValue>
         get() = _enteredConvertFiatAmount
 
     private val _enteredConvertCryptoAmount = MutableLiveData<Pair<String, String>>()
@@ -233,7 +243,7 @@ class ConvertViewViewModel @Inject constructor(
                     .div(BigDecimal(1_0000_0000))
                 minAllowedSwapAmount =
                     minAmount.fiat.setScale(GenericUtils.getCurrencyDigits(), RoundingMode.HALF_UP).toString()
-                minAllowedSwapDashCoin = minAmount.dash.toCoin()
+                minAllowedSwapDashCoin = minAmount.dash.toDash()
             }
         }
     }
@@ -267,9 +277,9 @@ class ConvertViewViewModel @Inject constructor(
         val bd = cleanedValue.setScale(8, RoundingMode.HALF_UP)
 
         val coin = try {
-            Coin.parseCoin(bd.toString())
+            Dash.parse(bd.toString())
         } catch (x: Exception) {
-            Coin.ZERO
+            Dash.ZERO
         }
 
         minAllowedSwapDashCoin = coin
@@ -279,9 +289,9 @@ class ConvertViewViewModel @Inject constructor(
                 .setScale(8, RoundingMode.HALF_UP)
 
         val maxCoinValue = try {
-            Coin.parseCoin(value.toString())
+            Dash.parse(value.toString())
         } catch (x: Exception) {
-            Coin.ZERO
+            Dash.ZERO
         }
 
         maxForDashCoinBaseAccount = maxCoinValue
@@ -294,9 +304,9 @@ class ConvertViewViewModel @Inject constructor(
 
     fun updateAmounts() {
         val dashValue = try {
-            Coin.parseCoin(amount.dash.toString())
+            Dash.parse(amount.dash.toString())
         } catch (e: Exception) {
-            Coin.ZERO
+            Dash.ZERO
         }
         _enteredConvertDashAmount.value = dashValue
 
@@ -304,7 +314,7 @@ class ConvertViewViewModel @Inject constructor(
             val cryptoCurrency = amount.crypto.setScale(8, RoundingMode.HALF_UP).toString()
             _enteredConvertCryptoAmount.value = Pair(cryptoCurrency, it.coinbaseAccount.currency)
         }
-        val fiatValue = Fiat.parseFiat(
+        val fiatValue = FiatValue.parseFiat(
             selectedLocalCurrencyCode,
             amount.fiat.setScale(2, RoundingMode.HALF_UP).toString()
         )
@@ -322,12 +332,12 @@ class ConvertViewViewModel @Inject constructor(
     fun checkEnteredAmountValue(): SwapValueErrorType {
         val coin = try {
             if (dashToCrypto.value == true) {
-                Coin.parseCoin(maxForDashWalletAmount.replace(',', '.'))
+                Dash.parse(maxForDashWalletAmount.replace(',', '.'))
             } else {
                 maxForDashCoinBaseAccount
             }
         } catch (x: Exception) {
-            Coin.ZERO
+            Dash.ZERO
         }
 
         _enteredConvertDashAmount.value?.let {
@@ -362,7 +372,7 @@ class ConvertViewViewModel @Inject constructor(
     fun clear() {
         _selectedCryptoCurrencyAccount.value = null
         _dashToCrypto.value = false
-        _enteredConvertDashAmount.value = Coin.ZERO
+        _enteredConvertDashAmount.value = Dash.ZERO
         _enteredConvertCryptoAmount.value = Pair("", "")
         maxAmountSelected = false
         savedStateHandle.remove<Amount>(KEY_AMOUNT)
@@ -381,10 +391,11 @@ class ConvertViewViewModel @Inject constructor(
                         // ([maxAmountSelected]) rather than inferring it: a fiat- or
                         // crypto-anchored Max doesn't survive the round trip back to DASH as an
                         // exact match. The comparison stays as a fallback for a full balance the
-                        // user typed in by hand.
+                        // user typed in by hand. getEstimatedDashBalance() is null until the
+                        // wallet is loaded; comparing against null is simply "not a sweep",
+                        // the same way getMaxAmount()/selectMaxAmount() treat it.
                         maxAmountSelected ||
-                            amount.dash.toCoin() ==
-                            walletDataProvider.wallet!!.getBalance(Wallet.BalanceType.ESTIMATED),
+                            amount.dash.toDash() == walletDataProvider.getEstimatedDashBalance(),
                         address,
                         it.currency,
                         it.asset,
@@ -395,7 +406,7 @@ class ConvertViewViewModel @Inject constructor(
         }
     }
 
-    private fun getFiatAmount(currencyInputType: CurrencyInputType): Pair<Fiat?, Coin?> {
+    private fun getFiatAmount(currencyInputType: CurrencyInputType): Pair<FiatValue?, Dash?> {
         selectedCryptoCurrencyAccount.value?.let { account ->
             val fiatAmount = selectedLocalExchangeRate.value?.let { rate ->
                 when (currencyInputType) {
@@ -404,11 +415,11 @@ class ConvertViewViewModel @Inject constructor(
                             account.currencyToCryptoCurrencyExchangeRate
                         val bd = cleanedValue.setScale(8, RoundingMode.HALF_UP)
 
-                        Fiat.parseFiat(rate.fiat.currencyCode, bd.toString())
+                        FiatValue.parseFiat(rate.currencyCode, bd.toString())
                     }
 
                     CurrencyInputType.Fiat -> {
-                        Fiat.parseFiat(rate.fiat.currencyCode, enteredConvertAmount)
+                        FiatValue.parseFiat(rate.currencyCode, enteredConvertAmount)
                     }
 
                     else -> {
@@ -416,16 +427,16 @@ class ConvertViewViewModel @Inject constructor(
                             account.currencyToDashExchangeRate
                         val bd = cleanedValue.setScale(8, RoundingMode.HALF_UP)
 
-                        Fiat.parseFiat(rate.fiat.currencyCode, bd.toString())
+                        FiatValue.parseFiat(rate.currencyCode, bd.toString())
                     }
                 }
             }
 
             val bd = toDashValue(enteredConvertAmount, account)
             val coin = try {
-                Coin.parseCoin(bd.toString())
+                Dash.parse(bd.toString())
             } catch (x: Exception) {
-                Coin.ZERO
+                Dash.ZERO
             }
             return Pair(fiatAmount, coin)
         }
@@ -447,14 +458,13 @@ class ConvertViewViewModel @Inject constructor(
         return convertedValue
     }
 
-    private fun updateDashWalletBalance(balance: Coin = walletDataProvider.getWalletBalance()) {
+    private fun updateDashWalletBalance(balance: Dash = walletDataProvider.getDashBalance()) {
         maxForDashWalletAmount = dashFormat.minDecimals(0)
             .optionalDecimals(0, 8).format(balance).toString()
     }
 
     fun getMaxAmount(): Amount? {
-        return walletDataProvider.wallet?.let {
-            val balance = it.getBalance(Wallet.BalanceType.ESTIMATED)
+        return walletDataProvider.getEstimatedDashBalance()?.let { balance ->
             amount.copy().apply { dash = balance.toBigDecimal() }
         }
     }
@@ -471,7 +481,7 @@ class ConvertViewViewModel @Inject constructor(
      * recompute) so the picker's currency still drives what's displayed and logged.
      */
     fun selectMaxAmount(displayType: CurrencyInputType) {
-        val balance = walletDataProvider.wallet?.getBalance(Wallet.BalanceType.ESTIMATED) ?: return
+        val balance = walletDataProvider.getEstimatedDashBalance() ?: return
         amount.dash = balance.toBigDecimal()
         amount.anchoredType = displayType
         savedStateHandle[KEY_AMOUNT] = amount.copy()

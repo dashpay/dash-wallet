@@ -18,12 +18,11 @@
 package de.schildbach.wallet.transactions.coinjoin
 
 import org.bitcoinj.core.NetworkParameters
-import org.bitcoinj.core.Transaction
 import org.bitcoinj.wallet.WalletEx
 import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.common.transactions.TransactionWrapperFactory
+import org.dash.wallet.common.transactions.TxInfo
 import java.time.LocalDate
-import java.time.ZoneId
 
 class CoinJoinTxWrapperFactory(val params: NetworkParameters, val wallet: WalletEx) : TransactionWrapperFactory {
     private val wrapperMap = hashMapOf<LocalDate, CoinJoinMixingTxSet>()
@@ -31,8 +30,8 @@ class CoinJoinTxWrapperFactory(val params: NetworkParameters, val wallet: Wallet
         get() = wrapperMap.values.toList()
     override val averageTransactions: Long = Long.MAX_VALUE
 
-    override fun tryInclude(tx: Transaction): Pair<Boolean, TransactionWrapper?> {
-        val localDate = tx.updateTime.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
+    override fun tryInclude(tx: TxInfo): Pair<Boolean, TransactionWrapper?> {
+        val localDate = tx.groupDate
         val wrapper = wrapperMap[localDate]
 
         return if (wrapper != null) {

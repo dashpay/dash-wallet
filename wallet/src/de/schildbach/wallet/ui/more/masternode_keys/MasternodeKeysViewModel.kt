@@ -49,7 +49,7 @@ import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.bitcoinj.wallet.authentication.AuthenticationKeyStatus
 import org.bitcoinj.wallet.authentication.AuthenticationKeyUsage
 import org.bouncycastle.util.encoders.Base64
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.slf4j.LoggerFactory
 import java.lang.Integer.max
 import java.util.*
@@ -57,7 +57,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class MasternodeKeysViewModel @Inject constructor(
-    private val walletData: WalletDataProvider,
+    private val walletData: WalletData,
     private val clipboardManager: ClipboardManager,
     private val securityFunctions: SecurityFunctions
 ) : ViewModel() {

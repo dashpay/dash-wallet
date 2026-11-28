@@ -1,0 +1,29 @@
+<!-- "timer" / "stopwatch" icon of the "Transfers take different times" sheet
+     (Figma 1740:16412, node 2451:4145) — blue filled stopwatch, white hand. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="19dp"
+    android:height="23dp"
+    android:viewportWidth="21.3718"
+    android:viewportHeight="25.5">
+  <path
+      android:pathData="M10.6859,24.25C15.8972,24.25 20.1218,20.0254 20.1218,14.8141C20.1218,9.6028 15.8972,5.37821 10.6859,5.37821C5.4746,5.37821 1.25,9.6028 1.25,14.8141C1.25,20.0254 5.4746,24.25 10.6859,24.25Z"
+      android:fillColor="#008DE4"
+      android:strokeColor="#008DE4"
+      android:strokeWidth="2.5"
+      android:strokeLineCap="round"
+      android:strokeLineJoin="round"/>
+  <path
+      android:pathData="M14.2225,11.2674L10.6859,14.814"
+      android:fillColor="#00000000"
+      android:strokeColor="#FFFFFF"
+      android:strokeWidth="2.5"
+      android:strokeLineCap="round"
+      android:strokeLineJoin="round"/>
+  <path
+      android:pathData="M7.73718,1.25H13.6346"
+      android:fillColor="#00000000"
+      android:strokeColor="#008DE4"
+      android:strokeWidth="2.5"
+      android:strokeLineCap="round"
+      android:strokeLineJoin="round"/>
+</vector>

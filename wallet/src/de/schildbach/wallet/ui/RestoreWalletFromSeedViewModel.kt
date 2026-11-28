@@ -16,6 +16,7 @@
 
 package de.schildbach.wallet.ui
 
+import de.schildbach.wallet.WalletApplication.WalletInstallResult
 import android.content.Intent
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -37,11 +38,23 @@ import org.bitcoinj.crypto.HDKeyDerivation
 import org.bitcoinj.crypto.MnemonicException
 import org.bitcoinj.wallet.DeterministicSeed
 import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.data.BlockchainServiceConfig
 import org.slf4j.LoggerFactory
 import java.util.*
 import javax.inject.Inject
 
 data class RecoveryData(val pin: String?, val requiresReset: Boolean)
+
+enum class SeedRestoreResult {
+    RESTORED,
+    INVALID_SEED,
+
+    /** The app refused the replacement (see WalletApplication.isWalletReplacementRefused); nothing was written. */
+    REFUSED,
+
+    /** Another onboarding screen installed a wallet first; nothing was written. */
+    WALLET_ALREADY_INSTALLED
+}
 
 @HiltViewModel
 class RestoreWalletFromSeedViewModel @Inject constructor(
@@ -49,7 +62,8 @@ class RestoreWalletFromSeedViewModel @Inject constructor(
     private val walletFactory: WalletFactory,
     private val configuration: Configuration,
     private val securityFunctions: SecurityFunctions,
-    private val dashPayConfig: DashPayConfig
+    private val dashPayConfig: DashPayConfig,
+    private val blockchainServiceConfig: BlockchainServiceConfig
 ) : ViewModel() {
 
     private val log = LoggerFactory.getLogger(RestoreWalletFromSeedViewModel::class.java)
@@ -188,19 +202,42 @@ class RestoreWalletFromSeedViewModel @Inject constructor(
         return words.map { it.lowercase(Locale.getDefault()) }
     }
 
-    suspend fun restoreWalletFromSeed(words: List<String>): Boolean = withContext(Dispatchers.IO) {
+    suspend fun restoreWalletFromSeed(
+        words: List<String>,
+        forgotPinRecovery: Boolean = false
+    ): SeedRestoreResult = withContext(Dispatchers.IO) {
         if (isSeedValid(words)) {
+            // Before any restore work: a wipe marker refuses the replacement.
+            if (walletApplication.isWalletReplacementRefused) {
+                log.warn("seed restore refused before it began: a wallet reset is unfinished or unverified")
+                return@withContext SeedRestoreResult.REFUSED
+            }
             val creationTime = selectedCreationDate.value
-            val wallet = walletFactory.restoreFromSeed(Constants.NETWORK_PARAMETERS, normalize(words), creationTime)
-            walletApplication.setWallet(wallet)
+            val wallet = walletFactory.restoreFromSeed(Constants.NETWORK_PARAMETERS, normalize(words))
+            // Forgot-PIN recovery replaces the installed wallet on purpose; an
+            // onboarding restore must not (see WalletApplication.installWallet).
+            when (walletApplication.installWallet(wallet, forgotPinRecovery)) {
+                WalletInstallResult.ALREADY_INSTALLED -> {
+                    log.warn("restored wallet dropped: another onboarding screen installed a wallet first")
+                    return@withContext SeedRestoreResult.WALLET_ALREADY_INSTALLED
+                }
+                WalletInstallResult.REFUSED -> {
+                    log.warn("restored wallet refused: a wallet reset is unfinished or unverified")
+                    return@withContext SeedRestoreResult.REFUSED
+                }
+                WalletInstallResult.INSTALLED -> Unit
+            }
+            // Only once the replacement is accepted: a refused wallet must not
+            // overwrite the existing wallet's persisted scan-start date.
+            creationTime?.let { blockchainServiceConfig.setWalletCreationDate(it) }
             log.info("successfully restored wallet from seed")
             configuration.disarmBackupSeedReminder()
             configuration.isRestoringBackup = true
             viewModelScope.launch { dashPayConfig.disableNotifications() }
             walletApplication.resetBlockchainState()
-            true
+            SeedRestoreResult.RESTORED
         } else {
-            false
+            SeedRestoreResult.INVALID_SEED
         }
     }
 

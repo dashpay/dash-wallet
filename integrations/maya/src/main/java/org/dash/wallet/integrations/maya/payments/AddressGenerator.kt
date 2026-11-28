@@ -17,12 +17,29 @@
 package org.dash.wallet.integrations.maya.payments
 
 import com.google.common.io.BaseEncoding
-import org.bitcoinj.core.Base58
-import org.bitcoinj.core.ECKey
-import org.bitcoinj.core.Sha256Hash
+import org.dash.wallet.common.payments.parsers.Base58
 import org.dash.wallet.common.payments.parsers.Bech32
 import java.io.ByteArrayOutputStream
 import java.math.BigInteger
+import java.security.MessageDigest
+import java.security.SecureRandom
+
+/**
+ * Random per-session stand-in for the bitcoinj `ECKey` the example-address helpers used to
+ * derive from: [pubKey] is 33 random compressed-pubkey-shaped bytes and [pubKeyHash] a 20-byte
+ * payload derived from it. The addresses built from these are format-valid and checksummed but
+ * intentionally not derivable from any real private key — they are indicative only and funds
+ * must never be sent to them.
+ */
+class SessionExampleKey {
+    val pubKey: ByteArray = ByteArray(33).also {
+        SecureRandom().nextBytes(it)
+        it[0] = if (it[0].toInt() and 1 == 0) 0x02 else 0x03
+    }
+
+    /** 20-byte payload standing in for `HASH160(pubKey)`. */
+    val pubKeyHash: ByteArray = AddressGenerator.deriveBytes(pubKey, "HASH160", 20)
+}
 
 /**
  * Low-level encoders backing [MayaCryptoCurrency.getNewExampleAddress]. Each helper turns a
@@ -34,6 +51,12 @@ import java.math.BigInteger
 internal object AddressGenerator {
     fun hex(bytes: ByteArray): String = bytes.joinToString("") { "%02x".format(it) }
 
+    /** Single SHA-256 (mirrors `Sha256Hash.hash`). */
+    fun sha256(data: ByteArray): ByteArray = MessageDigest.getInstance("SHA-256").digest(data)
+
+    /** Double SHA-256 (mirrors `Sha256Hash.hashTwice`) — the Base58Check checksum hash. */
+    fun sha256Twice(data: ByteArray): ByteArray = sha256(sha256(data))
+
     /**
      * Deterministically expand [key]'s public key into [count] bytes for chains whose address
      * payload is not a 20-byte HASH160 (EVM's 20-byte keccak hash, 32-byte account hashes on
@@ -41,11 +64,14 @@ internal object AddressGenerator {
      * different chains never share the same-looking payload: SHA256(pubkey ‖ context ‖ counter)
      * blocks are concatenated until [count] bytes are available.
      */
-    fun deriveBytes(key: ECKey, context: String, count: Int): ByteArray {
+    fun deriveBytes(key: SessionExampleKey, context: String, count: Int): ByteArray =
+        deriveBytes(key.pubKey, context, count)
+
+    fun deriveBytes(pubKey: ByteArray, context: String, count: Int): ByteArray {
         val out = ByteArrayOutputStream(count)
         var counter = 0
         while (out.size() < count) {
-            out.write(Sha256Hash.hash(key.pubKey + context.toByteArray() + byteArrayOf(counter.toByte())))
+            out.write(sha256(pubKey + context.toByteArray() + byteArrayOf(counter.toByte())))
             counter++
         }
         return out.toByteArray().copyOf(count)
@@ -58,7 +84,7 @@ internal object AddressGenerator {
      */
     fun base58Check(prefix: ByteArray, payload: ByteArray): String {
         val data = prefix + payload
-        val checksum = Sha256Hash.hashTwice(data).copyOfRange(0, 4)
+        val checksum = sha256Twice(data).copyOfRange(0, 4)
         return Base58.encode(data + checksum)
     }
 
@@ -85,7 +111,7 @@ internal object AddressGenerator {
     /** XRP classic address: version 0x00 + 20-byte account id + 4-byte checksum, ripple Base58. */
     fun rippleBase58Check(accountId: ByteArray): String {
         val payload = byteArrayOf(0) + accountId
-        val data = payload + Sha256Hash.hashTwice(payload).copyOfRange(0, 4)
+        val data = payload + sha256Twice(payload).copyOfRange(0, 4)
         var num = BigInteger(1, data)
         val base = BigInteger.valueOf(58)
         val sb = StringBuilder()

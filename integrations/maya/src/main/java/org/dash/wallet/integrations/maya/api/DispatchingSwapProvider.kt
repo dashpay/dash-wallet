@@ -25,8 +25,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.data.ResponseResource
+import org.dash.wallet.common.money.FiatValue
 import org.dash.wallet.integrations.maya.model.AccountDataUIModel
 import org.dash.wallet.integrations.maya.model.BuyOrder
 import org.dash.wallet.integrations.maya.model.InboundAddress
@@ -146,7 +146,7 @@ class DispatchingSwapProvider @Inject constructor(
 
     override suspend fun reset() = active.reset()
 
-    override fun observePoolList(fiatExchangeRate: Fiat): Flow<List<PoolInfo>> =
+    override fun observePoolList(fiatExchangeRate: FiatValue): Flow<List<PoolInfo>> =
         active.observePoolList(fiatExchangeRate)
 
     override suspend fun getInboundAddresses(): List<InboundAddress> =
@@ -166,8 +166,9 @@ class DispatchingSwapProvider @Inject constructor(
 
     override suspend fun commitSwapTransaction(
         tradeId: String,
-        swapTradeUIModel: SwapTradeUIModel
-    ): ResponseResource<SwapTradeUIModel> = active.commitSwapTransaction(tradeId, swapTradeUIModel)
+        swapTradeUIModel: SwapTradeUIModel,
+        onDepositing: suspend () -> Unit
+    ): ResponseResource<SwapTradeUIModel> = active.commitSwapTransaction(tradeId, swapTradeUIModel, onDepositing)
 
     override suspend fun createBuyOrder(
         sellAsset: String,
@@ -187,7 +188,7 @@ class DispatchingSwapProvider @Inject constructor(
     override suspend fun getUserAccounts(currency: String): List<AccountDataUIModel> =
         active.getUserAccounts(currency)
 
-    override fun applyPoolPrices(pools: List<PoolInfo>, usdToFiat: Fiat) {
+    override fun applyPoolPrices(pools: List<PoolInfo>, usdToFiat: FiatValue) {
         active.applyPoolPrices(pools, usdToFiat)
     }
 

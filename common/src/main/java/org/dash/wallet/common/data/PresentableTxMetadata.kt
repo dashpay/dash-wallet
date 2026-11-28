@@ -19,14 +19,14 @@ package org.dash.wallet.common.data
 
 import android.graphics.Bitmap
 import androidx.room.Ignore
-import org.bitcoinj.core.Sha256Hash
+import org.dash.wallet.common.data.TxId
 import org.dash.wallet.common.data.entity.SwapOrder
 
 data class PresentableTxMetadata(
-    var txId: Sha256Hash,
+    var txId: TxId,
     var memo: String = "",
     var service: String? = null,
-    var customIconId: Sha256Hash? = null
+    var customIconId: TxId? = null
 ) {
     @Ignore var icon: Bitmap? = null
     @Ignore var title: String? = null

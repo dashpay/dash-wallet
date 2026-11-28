@@ -65,13 +65,14 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.bitcoinj.core.InsufficientMoneyException
-import org.bitcoinj.core.Sha256Hash
-import org.bitcoinj.uri.BitcoinURIParseException
 import org.dash.wallet.common.data.ServiceName
+import org.dash.wallet.common.payments.parsers.isPaymentUriParseError
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.DirectPayException
+import org.dash.wallet.common.services.InsufficientFundsException
+import org.dash.wallet.common.services.PaymentStillConfirmingException
 import org.dash.wallet.common.services.PaymentSubmissionPendingException
+import org.dash.wallet.common.services.SendEngineNotSyncedException
 import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.EnterAmount
 import org.dash.wallet.common.ui.components.LocalDashColors
@@ -337,6 +338,12 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
                         submissionBlocked = state != GiftCardSubmissionState.IDLE
                     )
                 }
+                // The restrictions showLoading() applies, for a dialog rebuilt while a purchase is
+                // under way too (review 4307041834): its own flow, which would lift them, ended
+                // with the previous view, so they follow the purchase state here.
+                val purchasing = state == GiftCardSubmissionState.IN_PROGRESS
+                dialog?.setCancelable(!purchasing)
+                dialog?.setCanceledOnTouchOutside(!purchasing)
             }
         }
     }
@@ -644,7 +651,7 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
     private suspend fun createSendingRequestFromDashUri(
         url: String,
         giftCards: List<GiftCardInfo>
-    ): Sha256Hash? {
+    ): String? {
         val quote = shownQuote
         return submitPayment {
             // submission and order recording together, so a destroyed view cannot separate them
@@ -657,7 +664,7 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
     }
 
     /** [pay] returns null when the order was left unpaid for the buyer to decide on a new price. */
-    private suspend fun submitPayment(pay: suspend () -> Sha256Hash?): Sha256Hash? {
+    private suspend fun submitPayment(pay: suspend () -> String?): String? {
         return try {
             pay()
         } catch (ex: CTXSpendException) {
@@ -672,7 +679,7 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
                 ).show(requireActivity())
             }
             null
-        } catch (x: InsufficientMoneyException) {
+        } catch (x: InsufficientFundsException) {
             hideLoading()
             log.error("purchaseGiftCard InsufficientMoneyException", x)
             if (isAdded) {
@@ -694,6 +701,36 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
                 enterAmountViewModel.clearSavedState()
             }
             showPaymentPending()
+            null
+        } catch (ex: PaymentStillConfirmingException) {
+            // An earlier payment's outcome is still unknown and its inputs could not be kept out
+            // of this one. Nothing was sent; the order rows recorded for it are discarded by
+            // payAndRecordOrder like any other unsent payment.
+            log.warn("purchaseGiftCard refused, an earlier payment is still being confirmed", ex)
+            hideLoading()
+            if (isAdded) {
+                AdaptiveDialog.create(
+                    R.drawable.ic_warning,
+                    getString(R.string.payment_submission_pending_title),
+                    getString(R.string.payment_still_confirming),
+                    getString(R.string.button_close)
+                ).show(requireActivity())
+            }
+            null
+        } catch (ex: SendEngineNotSyncedException) {
+            // The wallet has not caught up with the chain. Nothing was sent, payAndRecordOrder
+            // discards the order rows, and the same purchase works once the sync finishes: say
+            // that, not "contact support".
+            log.warn("purchaseGiftCard refused, the wallet is not synced yet", ex)
+            hideLoading()
+            if (isAdded) {
+                AdaptiveDialog.create(
+                    R.drawable.ic_error,
+                    getString(R.string.send_coins_error_msg),
+                    getString(R.string.send_coins_fragment_hint_replaying),
+                    getString(R.string.button_close)
+                ).show(requireActivity())
+            }
             null
         } catch (ex: DuplicateGiftCardSubmissionException) {
             // A purchase is already submitted or unresolved for this order. Do not start another.
@@ -730,7 +767,7 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
             if (isAdded) {
                 val message = getString(
                     when {
-                        ex.cause is BitcoinURIParseException &&
+                        ex.cause?.isPaymentUriParseError == true &&
                             ex.message?.contains("mismatched network") == true ->
                             R.string.gift_card_error_wrong_network
                         else -> R.string.gift_card_error

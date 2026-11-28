@@ -2,6 +2,6 @@
 <resources>
 
     <item name="address_book_content" type="layout">@layout/address_book_twopanes</item>
-    <item name="network_monitor_content" type="layout">@layout/network_monitor_twopanes</item>
+    <item name="network_monitor_content" type="layout">@layout/network_monitor_onepane</item>
 
 </resources>

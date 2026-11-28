@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.ui
 
+import de.schildbach.wallet.WalletApplication.WalletInstallResult
 import androidx.lifecycle.ViewModel
 import android.content.Intent
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -54,15 +55,32 @@ class OnboardingViewModel @Inject constructor(
     internal val finishUnecryptedWalletUpgradeAction = SingleLiveEvent<Unit>()
     internal val startActivityAction = SingleLiveEvent<Intent>()
 
+    /** The app refused the new wallet (see WalletApplication.isWalletReplacementRefused). */
+    internal val walletReplacementRefusedAction = SingleLiveEvent<Unit>()
+
+    /** Another onboarding screen installed a wallet first; this create was dropped. */
+    internal val walletAlreadyInstalledAction = SingleLiveEvent<Unit>()
+
     fun createNewWallet(seedWordCount: Int) {
         analytics.logEvent(AnalyticsConstants.Onboarding.NEW_WALLET, mapOf())
         viewModelScope.launch {
-            withContext(Dispatchers.IO) {
+            val installed = withContext(Dispatchers.IO) {
                 walletApplication.initEnvironmentIfNeeded()
-        val wallet = walletFactory.create(Constants.NETWORK_PARAMETERS, seedWordCount)
+                val wallet = walletFactory.create(Constants.NETWORK_PARAMETERS, seedWordCount)
                 log.info("successfully created new wallet")
-                walletApplication.setWallet(wallet)
-                configuration.armBackupSeedReminder()
+                walletApplication.installWallet(wallet, false).also { result ->
+                    if (result == WalletInstallResult.INSTALLED) configuration.armBackupSeedReminder()
+                }
+            }
+            if (installed == WalletInstallResult.ALREADY_INSTALLED) {
+                log.warn("new wallet dropped: another onboarding screen installed a wallet first")
+                walletAlreadyInstalledAction.call(Unit)
+                return@launch
+            }
+            if (installed == WalletInstallResult.REFUSED) {
+                log.warn("new wallet refused: a wallet reset is unfinished or unverified")
+                walletReplacementRefusedAction.call(Unit)
+                return@launch
             }
             analytics.logEvent(AnalyticsConstants.Invites.NEW_WALLET, mapOf())
             finishCreateNewWalletAction.call(Unit)
@@ -76,6 +94,8 @@ class OnboardingViewModel @Inject constructor(
             if (!walletApplication.isWalletUpgradedToBIP44) {
                 walletApplication.wallet!!.addKeyChain(Constants.BIP44_PATH)
             }
+            // mixing was removed from the app, but the CoinJoin keychain is still provisioned
+            // so that funds mixed by older versions (or other wallets sharing this seed) stay visible
             (walletApplication.wallet as WalletEx).initializeCoinJoin(0)
             configuration.armBackupSeedReminder()
 

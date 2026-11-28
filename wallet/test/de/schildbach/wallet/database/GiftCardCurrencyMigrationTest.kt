@@ -22,7 +22,7 @@ import android.database.sqlite.SQLiteDatabase
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.runBlocking
-import org.bitcoinj.core.Sha256Hash
+import org.dash.wallet.common.data.TxId
 import org.dash.wallet.common.data.entity.GiftCard
 import org.json.JSONObject
 import org.junit.After
@@ -40,14 +40,14 @@ import java.io.File
  * file, so a migration that left the schema different from the entities would fail here.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(application = android.app.Application::class, sdk = [28], manifest = Config.NONE)
+@Config(application = android.app.Application::class, sdk = [29], manifest = Config.NONE)
 class GiftCardCurrencyMigrationTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
     private val dbName = "gift-card-currency-migration"
-    private val legacyTxId: Sha256Hash =
-        Sha256Hash.wrap("00000000000000000000000000000000000000000000000000000000000000a1")
-    private val newTxId: Sha256Hash =
-        Sha256Hash.wrap("00000000000000000000000000000000000000000000000000000000000000b2")
+    private val legacyTxId: TxId =
+        TxId.wrap("00000000000000000000000000000000000000000000000000000000000000a1")
+    private val newTxId: TxId =
+        TxId.wrap("00000000000000000000000000000000000000000000000000000000000000b2")
     private var db: AppDatabase? = null
 
     @After
@@ -88,18 +88,18 @@ class GiftCardCurrencyMigrationTest {
 
     private fun openMigrated(): AppDatabase =
         Room.databaseBuilder(context, AppDatabase::class.java, dbName)
-            .addMigrations(AppDatabaseMigrations.migration21to22)
+            .addMigrations(AppDatabaseMigrations.migration21to22, AppDatabaseMigrations.migration22to23)
             .allowMainThreadQueries()
             .build()
             .also { db = it }
 
     @Test
-    fun migration21to22_keepsGiftCardsAndLeavesTheirCurrencyUnset() = runBlocking {
+    fun migrationTo23_keepsGiftCardsAndLeavesTheirCurrencyUnset() = runBlocking {
         createVersion21WithOneGiftCard()
 
         val dao = openMigrated().giftCardDao()
 
-        val legacy = dao.getCardForTransaction(legacyTxId).single()
+        val legacy = dao.getCardForTransaction(legacyTxId.bytes).single()
         assertEquals("Acme", legacy.merchantName)
         assertEquals(23.75, legacy.price, 0.0)
         assertEquals("1234", legacy.number)
@@ -113,12 +113,12 @@ class GiftCardCurrencyMigrationTest {
         val dao = openMigrated().giftCardDao()
         dao.insertGiftCard(GiftCard(txId = newTxId, merchantName = "Acme UK", price = 19.0, currency = "GBP"))
 
-        assertEquals("GBP", dao.getCardForTransaction(newTxId).single().currency)
+        assertEquals("GBP", dao.getCardForTransaction(newTxId.bytes).single().currency)
 
-        assertEquals(1, dao.backfillCurrency(legacyTxId, "EUR"))
-        assertEquals(0, dao.backfillCurrency(newTxId, "EUR"))
+        assertEquals(1, dao.backfillCurrency(legacyTxId.bytes, "EUR"))
+        assertEquals(0, dao.backfillCurrency(newTxId.bytes, "EUR"))
 
-        assertEquals("EUR", dao.getCardForTransaction(legacyTxId).single().currency)
-        assertEquals("GBP", dao.getCardForTransaction(newTxId).single().currency)
+        assertEquals("EUR", dao.getCardForTransaction(legacyTxId.bytes).single().currency)
+        assertEquals("GBP", dao.getCardForTransaction(newTxId.bytes).single().currency)
     }
 }

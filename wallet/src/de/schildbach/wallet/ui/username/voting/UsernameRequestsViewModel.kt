@@ -30,6 +30,7 @@ import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.database.entity.UsernameVote
 import de.schildbach.wallet.service.DashSystemService
 import de.schildbach.wallet.service.platform.PlatformSyncService
+import de.schildbach.wallet.service.platform.sdk.SdkMasternodeQueries
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.work.BroadcastUsernameVotesOperation
 import de.schildbach.wallet.ui.username.adapters.UsernameRequestGroupView
@@ -63,7 +64,7 @@ import org.bitcoinj.evolution.SimplifiedMasternodeListManager
 import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.bitcoinj.wallet.authentication.AuthenticationKeyStatus
 import org.bitcoinj.wallet.authentication.AuthenticationKeyUsage
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dashj.platform.dpp.identifier.Identifier
@@ -120,9 +121,10 @@ class UsernameRequestsViewModel @Inject constructor(
     private val usernameVoteDao: UsernameVoteDao,
     private val importedMasternodeKeyDao: ImportedMasternodeKeyDao,
     private val platformSyncService: PlatformSyncService,
-    private val walletDataProvider: WalletDataProvider,
+    private val walletDataProvider: WalletData,
     private val walletApplication: WalletApplication,
     private val dashSystemService: DashSystemService,
+    private val sdkMasternodeQueries: SdkMasternodeQueries,
     private val analytics: AnalyticsService
 ): ViewModel() {
     companion object {
@@ -134,6 +136,14 @@ class UsernameRequestsViewModel @Inject constructor(
         get() = _currentWorkId
     private val workerJob = SupervisorJob()
     private val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
+
+    override fun onCleared() {
+        // viewModelScope is cancelled by the framework, but the IO worker
+        // scope is ours to stop — its launchIn collectors never complete on
+        // their own and would outlive the screen.
+        workerJob.cancel()
+        super.onCleared()
+    }
 
     private val _uiState = MutableStateFlow(UsernameRequestsUIState())
     val uiState: StateFlow<UsernameRequestsUIState> = _uiState.asStateFlow()
@@ -153,6 +163,39 @@ class UsernameRequestsViewModel @Inject constructor(
 
     private val masternodeListManager: SimplifiedMasternodeListManager
         get() = dashSystemService.system.masternodeListManager
+
+    /**
+     * A masternode controlled by an imported voting key — the minimal data
+     * the voting flows actually use: the proTxHash (vote broadcast + identity
+     * derivation + dedup) and a display string for the key-management list.
+     */
+    private data class VotingMasternode(val proTxHash: Sha256Hash, val displayAddress: String)
+
+    /**
+     * Masternodes whose voting key hash160 is [votingKeyPubKeyHash] — dashj
+     * list FIRST (pre-cutover behavior unchanged, including the service IP as
+     * the display string); when dashj has nothing (post-cutover its DML is
+     * permanently empty), fall back to the SDK's DML lookup, which yields
+     * proTxHashes only — the display string is then the proTxHash hex (kept
+     * unique, since [de.schildbach.wallet.ui.username.voting.AddVotingKeysFragment]
+     * deletes entries keyed by this string).
+     */
+    private fun masternodesByVotingKey(votingKeyPubKeyHash: ByteArray): List<VotingMasternode> {
+        val dashjEntries = try {
+            masternodeListManager.listAtChainTip.getMasternodesByVotingKey(KeyId.fromBytes(votingKeyPubKeyHash))
+        } catch (e: Exception) {
+            log.warn("dashj masternode-by-voting-key lookup failed; trying SDK", e)
+            listOf()
+        }
+        if (dashjEntries.isNotEmpty()) {
+            return dashjEntries.map {
+                VotingMasternode(it.proTxHash, it.service.socketAddress.address.hostAddress!!)
+            }
+        }
+        return sdkMasternodeQueries.proTxHashesByVotingKey(votingKeyPubKeyHash).map {
+            VotingMasternode(it, it.toString())
+        }
+    }
 
     private val _addedKeys = MutableStateFlow(listOf<ECKey>())
     private val _masternodes =  MutableStateFlow<List<ImportedMasternodeKey>>(listOf())
@@ -253,12 +296,12 @@ class UsernameRequestsViewModel @Inject constructor(
             if ((it.type == AuthenticationKeyChain.KeyChainType.MASTERNODE_VOTING ||
                 it.type == AuthenticationKeyChain.KeyChainType.MASTERNODE_OWNER) &&
                 it.status == AuthenticationKeyStatus.CURRENT) {
-                val entries = masternodeListManager.listAtChainTip.getMasternodesByVotingKey(KeyId.fromBytes(it.key.pubKeyHash))
+                val entries = masternodesByVotingKey(it.key.pubKeyHash)
                 entries.forEach { masternode ->
                     importedMasternodeKeyDao.insert(
                         ImportedMasternodeKey(
                             masternode.proTxHash,
-                            masternode.service.socketAddress.address.hostAddress!!,
+                            masternode.displayAddress,
                             it.key.privKeyBytes,
                             it.key.pubKey,
                             it.key.pubKeyHash
@@ -415,10 +458,7 @@ class UsernameRequestsViewModel @Inject constructor(
     }
 
     fun verifyMasterVotingKey(key: ECKey): Boolean {
-        return masternodeListManager
-            .listAtChainTip
-            .getMasternodesByVotingKey(KeyId.fromBytes(key.pubKeyHash))
-            .isNotEmpty()
+        return masternodesByVotingKey(key.pubKeyHash).isNotEmpty()
     }
 
     fun getKeyFromWIF(key: String): ECKey? {
@@ -433,12 +473,12 @@ class UsernameRequestsViewModel @Inject constructor(
         if (!_addedKeys.value.contains(key)) {
             _addedKeys.value += key
         }
-        val entries = masternodeListManager.listAtChainTip.getMasternodesByVotingKey(KeyId.fromBytes(key.pubKeyHash))
+        val entries = masternodesByVotingKey(key.pubKeyHash)
         entries.forEach {
             importedMasternodeKeyDao.insert(
                 ImportedMasternodeKey(
                     it.proTxHash,
-                    it.service.socketAddress.address.hostAddress!!,
+                    it.displayAddress,
                     key.privKeyBytes,
                     key.pubKey,
                     key.pubKeyHash
@@ -451,7 +491,7 @@ class UsernameRequestsViewModel @Inject constructor(
      * returns true if we have all masternodes for this voting key
      */
     suspend fun hasKey(key: ECKey): Boolean {
-        val entries = masternodeListManager.listAtChainTip.getMasternodesByVotingKey(KeyId.fromBytes(key.pubKeyHash))
+        val entries = masternodesByVotingKey(key.pubKeyHash)
         val count = entries.count {
             importedMasternodeKeyDao.contains(it.proTxHash)
         }

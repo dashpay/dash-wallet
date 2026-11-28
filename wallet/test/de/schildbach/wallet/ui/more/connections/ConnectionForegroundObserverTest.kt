@@ -17,7 +17,7 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(application = Application::class, sdk = [28, 34])
+@Config(application = Application::class, sdk = [29, 34])
 class ConnectionForegroundObserverTest {
     private class Owner : LifecycleOwner {
         val registry = LifecycleRegistry(this)

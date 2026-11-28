@@ -35,10 +35,10 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
-import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.ExchangeRate
-import org.bitcoinj.utils.Fiat
-import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.money.Coin
+import org.dash.wallet.common.money.ExchangeRate
+import org.dash.wallet.common.money.Fiat
+import org.dash.wallet.common.money.MonetaryFormat
 import org.dash.wallet.common.R
 import org.dash.wallet.common.databinding.AmountViewBinding
 import org.dash.wallet.common.util.Constants

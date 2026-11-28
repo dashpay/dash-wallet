@@ -25,16 +25,18 @@ import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
-import org.bitcoinj.core.Address
-import org.bitcoinj.core.InsufficientMoneyException
-import org.bitcoinj.utils.Fiat
-import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.currentReceiveAddressStringOffMain
 import org.dash.wallet.common.data.ResponseResource
+import org.dash.wallet.common.money.FiatValue
+import org.dash.wallet.common.services.InsufficientFundsException
+import org.dash.wallet.common.services.PaymentSubmissionPendingException
+import org.dash.wallet.common.services.ReceiveAddressUnavailableException
 import org.dash.wallet.common.services.SendPaymentService
+import org.dash.wallet.common.services.WalletSession
 import org.dash.wallet.common.util.toBigDecimal
-import org.dash.wallet.common.util.toCoin
-import org.dash.wallet.common.util.toFiat
+import org.dash.wallet.common.util.toDash
+import org.dash.wallet.common.util.toFiatValue
 import org.dash.wallet.integrations.maya.api.MayaBlockchainApi
 import org.dash.wallet.integrations.maya.api.MayaException
 import org.dash.wallet.integrations.maya.api.MayaWebApi
@@ -138,7 +140,7 @@ class SwapKitApiAggregator @Inject constructor(
     // its own background refresh: observePoolList is not re-invoked when the direction changes, so
     // [setSwapDirection] must kick the refresh itself. Null until observePoolList first runs.
     @Volatile
-    private var lastFiatExchangeRate: Fiat? = null
+    private var lastFiatExchangeRate: FiatValue? = null
 
     // When the Maya/NEAR classification was last fetched from /tokens; gates the
     // CLASSIFICATION_TTL_MS reuse window. 0 = never (forces a fetch). Volatile for the
@@ -230,7 +232,7 @@ class SwapKitApiAggregator @Inject constructor(
         }
     }
 
-    override fun observePoolList(fiatExchangeRate: Fiat): Flow<List<PoolInfo>> {
+    override fun observePoolList(fiatExchangeRate: FiatValue): Flow<List<PoolInfo>> {
         lastFiatExchangeRate = fiatExchangeRate
         if (shouldRefresh()) {
             responseScope.launch {
@@ -246,7 +248,7 @@ class SwapKitApiAggregator @Inject constructor(
         return poolListLastUpdated == 0L || now - poolListLastUpdated > UPDATE_FREQ_MS
     }
 
-    private suspend fun refreshPools(fiatExchangeRate: Fiat) {
+    private suspend fun refreshPools(fiatExchangeRate: FiatValue) {
         val reachable = webApi.getSwapTo(SwapKitConstants.DASH_ASSET)
         if (reachable.isEmpty()) {
             log.info("swapkit /swapTo returned no assets — leaving pool list as is")
@@ -283,9 +285,9 @@ class SwapKitApiAggregator @Inject constructor(
             val priceUsdFiat = if (priceUsd > 0.0) {
                 val priceBd = BigDecimal.valueOf(priceUsd)
                 usdPriceCache[identifier] = priceBd
-                priceBd.toFiat(MayaConstants.DEFAULT_EXCHANGE_CURRENCY)
+                priceBd.toFiatValue(MayaConstants.DEFAULT_EXCHANGE_CURRENCY)
             } else {
-                Fiat.valueOf(MayaConstants.DEFAULT_EXCHANGE_CURRENCY, 0)
+                FiatValue.valueOf(MayaConstants.DEFAULT_EXCHANGE_CURRENCY, 0)
             }
             PoolInfo(asset = identifier, status = "Available").also {
                 it.assetPriceFiat = priceUsdFiat
@@ -424,7 +426,7 @@ class SwapKitApiAggregator @Inject constructor(
                     if (p.priceUsd > 0.0) {
                         val priceBd = BigDecimal.valueOf(p.priceUsd)
                         freshUsdPrices[p.asset] = priceBd
-                        pool.assetPriceFiat = priceBd.toFiat(MayaConstants.DEFAULT_EXCHANGE_CURRENCY)
+                        pool.assetPriceFiat = priceBd.toFiatValue(MayaConstants.DEFAULT_EXCHANGE_CURRENCY)
                     }
                     pool.mayaOnly = p.mayaOnly
                     pool.nearOnly = p.nearOnly
@@ -628,8 +630,9 @@ class SwapKitApiAggregator @Inject constructor(
     }
 
     override suspend fun getSwapInfo(swapRequest: SwapQuoteRequest): ResponseResource<SwapTradeUIModel> {
-        val wallet = walletDataProvider.wallet
-            ?: return ResponseResource.Failure(MayaException("wallet not loaded"), false, 0, null)
+        if (!walletDataProvider.walletLoaded) {
+            return ResponseResource.Failure(MayaException("wallet not loaded"), false, 0, null)
+        }
         // A max ("empty wallet") sell sweeps the balance and the miner fee comes out of the
         // sweep's single output, so the deposit delivers balance − fee. The amount quoted here
         // is what NEAR Intents expects, and it refuses any deposit below it (auto-refunding
@@ -641,25 +644,34 @@ class SwapKitApiAggregator @Inject constructor(
         // guarded again in buildAndSendDepositTx before broadcasting. The receive address is
         // only a size stand-in for the estimate; the real deposit address is also P2PKH.
         val effectiveAmount = if (swapRequest.maximum) {
-            val balance = wallet.getBalance(Wallet.BalanceType.ESTIMATED)
-            val sweep = try {
-                sendPaymentService.estimateNetworkFee(
-                    walletDataProvider.currentReceiveAddress(),
-                    balance,
-                    emptyWallet = true
-                )
+            // MEASURED through the SDK builder (MayaBlockchainApi.maxSwapDepositAmount),
+            // not estimated by dashj: post-cutover the dashj engine is held, and
+            // incoming SDK transactions never reach its wallet, so its coin set is
+            // frozen at cutover time — a sweep estimate from it either throws
+            // (funds received since the cutover are invisible to it) or prices the
+            // wrong transaction shape. The SDK figure is biased HIGH so the deposit
+            // can never come in under the quote.
+            val maxDeposit = try {
+                blockchainApi.maxSwapDepositAmount()
             } catch (e: Exception) {
-                log.error("swapkit max sell: sweep fee estimation failed", e)
+                log.error("swapkit max sell: deposit fee measurement failed", e)
                 return ResponseResource.Failure(e, false, 0, e.message)
             }
+            if (maxDeposit.duffs <= 0L) {
+                return ResponseResource.Failure(
+                    MayaException("balance too low to cover a swap deposit and its fee"),
+                    false,
+                    0,
+                    null
+                )
+            }
             log.info(
-                "swapkit max sell: quoting sweep output {} (balance {}, fee {})",
-                sweep.amountToSend.toFriendlyString(),
-                balance.toFriendlyString(),
-                sweep.fee
+                "swapkit max sell: quoting the measured max deposit {} (balance {})",
+                maxDeposit.toFriendlyString(),
+                walletDataProvider.getWalletBalance().toFriendlyString()
             )
             swapRequest.amount.copy().apply {
-                dash = sweep.amountToSend.toBigDecimal()
+                dash = maxDeposit.toBigDecimal()
                 anchoredType = swapRequest.amount.anchoredType
             }
         } else {
@@ -673,7 +685,15 @@ class SwapKitApiAggregator @Inject constructor(
         // until funded and still wallet-owned, so any NEAR refund is recoverable. Safe now
         // that disableBuildTx=true skips SwapKit's per-address balance check — the only
         // reason the max-balance address was originally required.
-        val sourceAddress = walletDataProvider.currentReceiveAddress().toBase58()
+        val sourceAddress = try {
+            walletDataProvider.currentReceiveAddressStringOffMain()
+        } catch (ex: ReceiveAddressUnavailableException) {
+            // Reporting the held dashj chain's frozen address as the source would
+            // both leak an already-paid address to SwapKit and make any NEAR
+            // refund land there (SR-03). Fail the quote the same way a missing
+            // wallet does.
+            return ResponseResource.Failure(MayaException("receive address unavailable"), false, 0, null)
+        }
 
         val quote = webApi.getQuote(
             SwapKitQuoteRequest(
@@ -856,7 +876,11 @@ class SwapKitApiAggregator @Inject constructor(
         // quote createBuyOrder would, but stop before /v3/swap (no deposit address is created).
         // The converted DASH lands in the wallet, so the destination is our own receive address;
         // the caller passes the asset's example address as the refund/source address.
-        val destinationAddress = walletDataProvider.currentReceiveAddress().toBase58()
+        val destinationAddress = try {
+            walletDataProvider.currentReceiveAddressStringOffMain()
+        } catch (ex: ReceiveAddressUnavailableException) {
+            return ResponseResource.Failure(MayaException("receive address unavailable"), false, 0, null)
+        }
         return when (
             val result = requestBuyRoute(sellAsset, sellAmount, refundAddress, destinationAddress)
         ) {
@@ -907,8 +931,12 @@ class SwapKitApiAggregator @Inject constructor(
 
     override suspend fun commitSwapTransaction(
         tradeId: String,
-        swapTradeUIModel: SwapTradeUIModel
+        swapTradeUIModel: SwapTradeUIModel,
+        onDepositing: suspend () -> Unit
     ): ResponseResource<SwapTradeUIModel> {
+        // The wallet the user confirmed on, before the route refresh below waits (review
+        // 4304575003): the deposit is refused, with nothing sent, if a wipe replaces it meanwhile.
+        val session = sendPaymentService.currentWalletSession()
         // Refresh the route via SwapKit (routeId expires after 60s) and then hand off
         // to the existing DASH-tx builder.
         val refreshed = getSwapInfo(
@@ -923,6 +951,7 @@ class SwapKitApiAggregator @Inject constructor(
         )
         return if (refreshed is ResponseResource.Success) {
             val model = refreshed.value
+            onDepositing()
             // A MAYAChain vault deposit is matched to its swap *only* by the OP_RETURN memo;
             // sending DASH to a Maya vault without it strands the funds. So the discriminator
             // is NOT just the provider name (which substring-matching can miss — SwapKit may
@@ -935,13 +964,13 @@ class SwapKitApiAggregator @Inject constructor(
                 // Maya route: DASH → Asgard vault with the swap memo as an OP_RETURN. If a Maya
                 // route ever arrives without a memo the builder fabricates "=:ASSET:DEST" and
                 // its 80-byte guard fails loudly — a recoverable error, never a silent loss.
-                blockchainApi.buildAndSendSwapTx(model)
+                blockchainApi.buildAndSendSwapTx(model, session)
             } else {
                 // NEAR Intents (or any non-Maya provider) with no memo: a plain DASH deposit to
                 // the one-time SwapKit deposit address — no MAYAChain OP_RETURN memo. Using the
                 // Maya builder here would fabricate a Maya-format memo and overflow the 80-byte
                 // OP_RETURN limit for long token identifiers such as TRON.USDT-<contract>.
-                buildAndSendDepositTx(model)
+                buildAndSendDepositTx(model, session)
             }
         } else {
             refreshed
@@ -968,21 +997,23 @@ class SwapKitApiAggregator @Inject constructor(
      * 80-byte OP_RETURN limit.
      */
     private suspend fun buildAndSendDepositTx(
-        swapTradeUIModel: SwapTradeUIModel
+        swapTradeUIModel: SwapTradeUIModel,
+        session: WalletSession?
     ): ResponseResource<SwapTradeUIModel> {
         return try {
-            val params = walletDataProvider.networkParameters
-            val depositAddress = Address.fromBase58(params, swapTradeUIModel.vaultAddress)
             // Deposit amount = sellAmount + swap fee, matching the total shown in the
             // preview (amount + feeAmount) and the Maya vault path
             // (MayaBlockchainApi.buildAndSendSwapTx). The DASH mining fee is funded
-            // separately by the wallet's coin selection. emptyWallet (maximum) ignores
-            // this value and sweeps the balance instead.
-            val amount = if (!swapTradeUIModel.maximum) {
-                swapTradeUIModel.amount.dash + swapTradeUIModel.feeAmount.dash
-            } else {
-                swapTradeUIModel.amount.dash
-            }.setScale(8, RoundingMode.HALF_UP).toCoin()
+            // separately by the wallet's coin selection. A MAX sell is ALSO a
+            // fixed-amount send: its quote is already `spendable − fee reserve`
+            // (MayaBlockchainApi.maxSwapDepositAmount, re-measured by the commit-time
+            // getSwapInfo refresh), so the deposit pays exactly the quoted amount and
+            // the reserve's unused remainder returns as change.
+            val amount = swapKitDepositAmountDash(
+                sellAmountDash = swapTradeUIModel.amount.dash,
+                feeAmountDash = swapTradeUIModel.feeAmount.dash,
+                maximum = swapTradeUIModel.maximum
+            ).toDash()
 
             // NEAR Intents UTXO deposits carry no memo. Warn if SwapKit unexpectedly
             // returned one so we notice if a provider ever starts requiring it.
@@ -990,22 +1021,19 @@ class SwapKitApiAggregator @Inject constructor(
                 log.warn("non-Maya deposit route returned a memo; not encoding it: {}", swapTradeUIModel.memo)
             }
 
-            // A max sell was quoted for (balance − estimated sweep fee) in getSwapInfo. If the
-            // spendable balance dropped since, the sweep's output would come in below the quoted
-            // amount, and NEAR Intents refuses under-delivery — the deposit would sit for ~1h
-            // and refund minus a 0.001 DASH fee. Abort with a recoverable error instead of
-            // broadcasting a doomed deposit. A balance that grew simply over-delivers, which
-            // NEAR accepts.
+            // A max sell was quoted for (spendable − fee reserve) in getSwapInfo. If the
+            // spendable balance dropped since, the fixed-amount build would come up short
+            // at fee — abort with a clearer, recoverable error BEFORE building instead of
+            // letting coin selection fail. NEAR Intents refuses under-delivery (the
+            // deposit would sit for ~1h and refund minus a 0.001 DASH fee), but a
+            // fixed-amount send cannot under-deliver — it either pays exactly the quoted
+            // amount or is refused whole. A balance that grew just leaves more change.
             if (swapTradeUIModel.maximum) {
-                val sweep = sendPaymentService.estimateNetworkFee(
-                    depositAddress,
-                    walletDataProvider.wallet!!.getBalance(Wallet.BalanceType.ESTIMATED),
-                    emptyWallet = true
-                )
-                if (sweep.amountToSend.isLessThan(amount)) {
+                val maxDeposit = blockchainApi.maxSwapDepositAmount()
+                if (maxDeposit.isLessThan(amount)) {
                     log.warn(
-                        "swapkit max sell aborted: sweep would deliver {} < quoted {}",
-                        sweep.amountToSend.toFriendlyString(),
+                        "swapkit max sell aborted: {} now depositable < quoted {}",
+                        maxDeposit.toFriendlyString(),
                         amount.toFriendlyString()
                     )
                     return ResponseResource.Failure(
@@ -1017,16 +1045,30 @@ class SwapKitApiAggregator @Inject constructor(
                 }
             }
 
-            log.info("swapkit deposit: {} to {}", amount.toFriendlyString(), depositAddress)
-            val sentTransaction = sendPaymentService.sendCoins(
-                depositAddress,
+            // Broadcast through the neutral (dashj-free) send facade: base58 address
+            // string + Dash amount, returning the created transaction's hex txId.
+            // NEVER emptyWallet, max included: the changeless send-all drain produced a
+            // transaction with NO wallet-owned output, which compact block filters can
+            // never match — it never reached CONTEXT_IN_BLOCK and its spent inputs
+            // counted spendable forever (mainnet a5c99aec…/1f608a9a…; see
+            // mayaMaxFeeReserveDuffs in SdkL1SendService). The fixed amount above plus
+            // the withheld fee reserve keeps a change output, exactly like the Maya
+            // vault route (MayaBlockchainApiImpl), which was moved off the drain first.
+            log.info("swapkit deposit: {} to {}", amount.toFriendlyString(), swapTradeUIModel.vaultAddress)
+            val sentTxId = sendPaymentService.sendCoins(
+                swapTradeUIModel.vaultAddress,
                 amount,
-                emptyWallet = swapTradeUIModel.maximum
+                session = session
             )
-            swapTradeUIModel.txid = sentTransaction.txId
+            swapTradeUIModel.txid = sentTxId
             ResponseResource.Success(swapTradeUIModel)
-        } catch (e: InsufficientMoneyException) {
+        } catch (e: InsufficientFundsException) {
             ResponseResource.Failure(e, false, 0, e.message)
+        } catch (e: PaymentSubmissionPendingException) {
+            // The deposit may be on the network. Keep the exception as the throwable so the
+            // preview screen reports "may have been sent" and withholds a retry.
+            log.error("swapkit deposit outcome unknown; it may have been sent, NOT retryable", e)
+            ResponseResource.Failure(e, false, 0, null)
         } catch (e: Exception) {
             log.error("failed to build/send swapkit deposit transaction", e)
             ResponseResource.Failure(e, false, 0, e.message)
@@ -1230,7 +1272,7 @@ class SwapKitApiAggregator @Inject constructor(
     // `…AmountTooSmall`-family code; SwapKitErrors owns that vocabulary.
     override fun isAmountTooLowError(error: String?): Boolean = SwapKitErrors.isAmountTooLow(error)
 
-    override fun applyPoolPrices(pools: List<PoolInfo>, usdToFiat: Fiat) {
+    override fun applyPoolPrices(pools: List<PoolInfo>, usdToFiat: FiatValue) {
         // usdToFiat is the wallet's "1 USD in SELECTED_CURRENCY" rate. Unlike Maya
         // (which recomputes USD from balance_cacao/balance_asset each pass), the
         // SwapKit aggregator caches USD prices in usdPriceCache at refresh time
@@ -1247,7 +1289,7 @@ class SwapKitApiAggregator @Inject constructor(
                 log.info("no USD price for {}", pool.asset)
                 return@forEach
             }
-            pool.assetPriceFiat = priceUsd.multiply(fiatPerUsd).toFiat(usdToFiat.currencyCode)
+            pool.assetPriceFiat = priceUsd.multiply(fiatPerUsd).toFiatValue(usdToFiat.currencyCode)
             log.info("$priceUsd, ${pool.assetPriceFiat} -> ${pool.asset}")
         }
     }
@@ -1283,3 +1325,28 @@ private class HydratedSnapshot(
     val usdPrices: Map<String, BigDecimal>,
     val routes: Map<String, RouteProvider>
 )
+
+/**
+ * The exact DASH amount a SwapKit deposit pays its deposit address, as a
+ * FIXED-amount, change-leaving send (never an `emptyWallet` drain — a
+ * changeless send-all has no wallet-owned output, so compact block filters
+ * never match it and it never settles; mainnet `a5c99aec…`/`1f608a9a…`):
+ *
+ * - ordinary sell: [sellAmountDash] + [feeAmountDash] — the total shown in
+ *   the preview, mirroring the Maya vault path;
+ * - MAX sell: exactly [sellAmountDash], which the quote already set to
+ *   `spendable − fee reserve` ([MayaBlockchainApi.maxSwapDepositAmount]) —
+ *   the amount reported downstream and the amount actually sent are equal
+ *   by construction, and the reserve's unused remainder returns as change.
+ *
+ * Pure — extracted for host-JVM testing.
+ */
+internal fun swapKitDepositAmountDash(
+    sellAmountDash: BigDecimal,
+    feeAmountDash: BigDecimal,
+    maximum: Boolean
+): BigDecimal = if (!maximum) {
+    sellAmountDash + feeAmountDash
+} else {
+    sellAmountDash
+}.setScale(8, RoundingMode.HALF_UP)

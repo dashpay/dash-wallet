@@ -17,9 +17,9 @@
 
 package org.dash.wallet.features.exploredash
 
-import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.ExchangeRate
-import org.bitcoinj.utils.Fiat
+import org.dash.wallet.common.money.Coin
+import org.dash.wallet.common.money.ExchangeRate
+import org.dash.wallet.common.money.Fiat
 import org.dash.wallet.features.exploredash.utils.GiftCardPaymentGuard
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

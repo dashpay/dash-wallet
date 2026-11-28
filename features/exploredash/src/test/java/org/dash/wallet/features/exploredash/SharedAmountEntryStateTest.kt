@@ -21,9 +21,9 @@ import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.lifecycle.SavedStateHandle
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.emptyFlow
-import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.data.WalletUIConfig
+import org.dash.wallet.common.money.Coin
+import org.dash.wallet.common.money.Fiat
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.features.exploredash.ui.dashspend.leaveGiftCardPurchase

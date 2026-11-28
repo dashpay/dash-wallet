@@ -25,12 +25,12 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import org.bitcoinj.core.Coin
-import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.TaxCategory
+import org.dash.wallet.common.data.TxId
 import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.common.data.entity.TransactionMetadata
+import org.dash.wallet.common.money.Coin
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.transactions.TransactionCategory
 import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.GiftCardResponse
@@ -45,6 +45,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TestRule
 import org.mockito.kotlin.any
+import org.mockito.kotlin.argThat
 import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.eq
@@ -68,8 +69,10 @@ class GiftCardDetailsCurrencyBackfillTest {
 
     @get:Rule var mainCoroutineRule = MainCoroutineRule(dispatcher)
 
-    private val txId: Sha256Hash =
-        Sha256Hash.wrap("00000000000000000000000000000000000000000000000000000000000000a1")
+    private val txId: TxId =
+        TxId.wrap("00000000000000000000000000000000000000000000000000000000000000a1")
+
+    private fun txIdBytes() = argThat<ByteArray> { contentEquals(txId.bytes) }
 
     // already delivered, so nothing polls for it
     private val legacyCard =
@@ -100,8 +103,8 @@ class GiftCardDetailsCurrencyBackfillTest {
         failingLookups: Int = 0
     ): GiftCardDao {
         val dao = mock<GiftCardDao> {
-            on { observeCardForTransaction(eq(txId)) } doReturn emissions
-            onBlocking { getCardForTransaction(eq(txId)) } doReturn listOf(card)
+            on { observeCardForTransaction(txIdBytes()) } doReturn emissions
+            onBlocking { getCardForTransaction(txIdBytes()) } doReturn listOf(card)
             onBlocking { backfillCurrency(any(), any()) } doReturn 1
         }
         val config = mock<CTXSpendConfig> {
@@ -140,7 +143,7 @@ class GiftCardDetailsCurrencyBackfillTest {
             mock(),
             mock(),
             config
-        ).apply { currencyLookupDispatcher = dispatcher }.init(txId)
+        ).apply { currencyLookupDispatcher = dispatcher }.init(txId.toString())
         return dao
     }
 
@@ -150,7 +153,7 @@ class GiftCardDetailsCurrencyBackfillTest {
     fun cardWithoutACurrency_isBackfilledWhenItsDetailsOpen() {
         val dao = open(legacyCard, accessToken = "token")
 
-        verifyBlocking(dao) { backfillCurrency(eq(txId), eq("GBP")) }
+        verifyBlocking(dao) { backfillCurrency(txIdBytes(), eq("GBP")) }
     }
 
     @Test
@@ -180,7 +183,7 @@ class GiftCardDetailsCurrencyBackfillTest {
         accessToken.set("token")
         emissions.value = listOf(legacyCard.copy(pin = "1"))
 
-        verifyBlocking(dao) { backfillCurrency(eq(txId), eq("GBP")) }
+        verifyBlocking(dao) { backfillCurrency(txIdBytes(), eq("GBP")) }
     }
 
     @Test
@@ -192,7 +195,7 @@ class GiftCardDetailsCurrencyBackfillTest {
         accessToken.set("token")
         storedToken.value = "token"
 
-        verifyBlocking(dao) { backfillCurrency(eq(txId), eq("GBP")) }
+        verifyBlocking(dao) { backfillCurrency(txIdBytes(), eq("GBP")) }
     }
 
     @Test
@@ -204,7 +207,7 @@ class GiftCardDetailsCurrencyBackfillTest {
 
         metadata.value = ctxMetadata
 
-        verifyBlocking(dao) { backfillCurrency(eq(txId), eq("GBP")) }
+        verifyBlocking(dao) { backfillCurrency(txIdBytes(), eq("GBP")) }
     }
 
     @Test
@@ -215,7 +218,7 @@ class GiftCardDetailsCurrencyBackfillTest {
 
         allAttemptsMade()
 
-        verifyBlocking(dao) { backfillCurrency(eq(txId), eq("GBP")) }
+        verifyBlocking(dao) { backfillCurrency(txIdBytes(), eq("GBP")) }
         assertEquals(2, orderLookups.get())
     }
 
@@ -236,7 +239,7 @@ class GiftCardDetailsCurrencyBackfillTest {
 
         allAttemptsMade()
 
-        verifyBlocking(dao) { backfillCurrency(eq(txId), eq("GBP")) }
+        verifyBlocking(dao) { backfillCurrency(txIdBytes(), eq("GBP")) }
         assertEquals(2, orderLookups.get())
     }
 
@@ -250,7 +253,7 @@ class GiftCardDetailsCurrencyBackfillTest {
 
         metadata.value = ctxMetadata
 
-        verifyBlocking(dao) { backfillCurrency(eq(txId), eq("GBP")) }
+        verifyBlocking(dao) { backfillCurrency(txIdBytes(), eq("GBP")) }
     }
 
     @Test
@@ -269,7 +272,7 @@ class GiftCardDetailsCurrencyBackfillTest {
     fun successfulLookup_isNotRepeated() {
         val emissions = MutableStateFlow(listOf(legacyCard))
         val dao = open(emissions, legacyCard, accessToken = "token")
-        verifyBlocking(dao) { backfillCurrency(eq(txId), eq("GBP")) }
+        verifyBlocking(dao) { backfillCurrency(txIdBytes(), eq("GBP")) }
 
         emissions.value = listOf(legacyCard.copy(pin = "1"))
         emissions.value = listOf(legacyCard.copy(pin = "2"))

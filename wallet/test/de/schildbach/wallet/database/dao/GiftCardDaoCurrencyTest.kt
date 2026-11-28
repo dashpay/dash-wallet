@@ -21,7 +21,7 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import de.schildbach.wallet.database.AppDatabase
 import kotlinx.coroutines.runBlocking
-import org.bitcoinj.core.Sha256Hash
+import org.dash.wallet.common.data.TxId
 import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
 import org.junit.After
@@ -37,13 +37,13 @@ import org.robolectric.annotation.Config
  * whole row back. The currency can be filled in between that read and that write.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(application = android.app.Application::class, sdk = [28], manifest = Config.NONE)
+@Config(application = android.app.Application::class, sdk = [29], manifest = Config.NONE)
 class GiftCardDaoCurrencyTest {
     private lateinit var db: AppDatabase
     private lateinit var dao: GiftCardDao
 
-    private val txId: Sha256Hash =
-        Sha256Hash.wrap("00000000000000000000000000000000000000000000000000000000000000a1")
+    private val txId: TxId =
+        TxId.wrap("00000000000000000000000000000000000000000000000000000000000000a1")
 
     @Before
     fun setUp() {
@@ -62,12 +62,12 @@ class GiftCardDaoCurrencyTest {
     @Test
     fun `a row read before the backfill does not erase the currency when written back`() = runBlocking {
         dao.insertGiftCard(GiftCard(txId = txId, merchantName = "Acme", price = 23.75, note = "order-1"))
-        val readBeforeBackfill = dao.getCardForTransaction(txId).single()
+        val readBeforeBackfill = dao.getCardForTransaction(txId.bytes).single()
 
-        assertEquals(1, dao.backfillCurrency(txId, "GBP"))
+        assertEquals(1, dao.backfillCurrency(txId.bytes, "GBP"))
         assertEquals(1, dao.updateGiftCard(readBeforeBackfill.copy(number = "1234")))
 
-        val saved = dao.getCardForTransaction(txId).single()
+        val saved = dao.getCardForTransaction(txId.bytes).single()
         assertEquals("GBP", saved.currency)
         assertEquals("1234", saved.number)
     }
@@ -76,17 +76,17 @@ class GiftCardDaoCurrencyTest {
     fun `an update that names a currency sets it`() = runBlocking {
         dao.insertGiftCard(GiftCard(txId = txId, merchantName = "Acme", price = 23.75, currency = "GBP"))
 
-        dao.updateGiftCard(dao.getCardForTransaction(txId).single().copy(currency = "EUR"))
+        dao.updateGiftCard(dao.getCardForTransaction(txId.bytes).single().copy(currency = "EUR"))
 
-        assertEquals("EUR", dao.getCardForTransaction(txId).single().currency)
+        assertEquals("EUR", dao.getCardForTransaction(txId.bytes).single().currency)
     }
 
     @Test
     fun `the backfill leaves a known currency alone`() = runBlocking {
         dao.insertGiftCard(GiftCard(txId = txId, merchantName = "Acme", price = 23.75, currency = "EUR"))
 
-        assertEquals(0, dao.backfillCurrency(txId, "GBP"))
+        assertEquals(0, dao.backfillCurrency(txId.bytes, "GBP"))
 
-        assertEquals("EUR", dao.getCardForTransaction(txId).single().currency)
+        assertEquals("EUR", dao.getCardForTransaction(txId.bytes).single().currency)
     }
 }

@@ -18,9 +18,10 @@ package org.dash.wallet.integrations.coinbase.model
 
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
-import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.data.entity.ExchangeRate
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.money.FiatValue
+import org.dash.wallet.common.money.fiatToDash
 import org.dash.wallet.common.util.toFormattedString
 import java.math.BigDecimal
 import java.math.RoundingMode
@@ -43,15 +44,14 @@ data class CoinBaseUserAccountDataUIModel(
 
 fun CoinBaseUserAccountDataUIModel.getCoinBaseExchangeRateConversion(
     currentExchangeRate: ExchangeRate
-): Pair<String, Coin> {
+): Pair<String, Dash> {
     val cleanedValue =
         this.coinbaseAccount.availableBalance.value.toBigDecimal() /
             this.currencyToCryptoCurrencyExchangeRate
     val bd = cleanedValue.setScale(8, RoundingMode.HALF_UP)
 
-    val currencyRate = org.bitcoinj.utils.ExchangeRate(Coin.COIN, currentExchangeRate.fiat)
-    val fiatAmount = Fiat.parseFiat(currencyRate.fiat.currencyCode, bd.toString())
-    val dashAmount = currencyRate.fiatToCoin(fiatAmount)
+    val fiatAmount = FiatValue.parseFiat(currentExchangeRate.currencyCode, bd.toString())
+    val dashAmount = currentExchangeRate.fiatToDash(fiatAmount)
 
     return Pair(fiatAmount.toFormattedString(), dashAmount)
 }

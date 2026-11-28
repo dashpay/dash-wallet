@@ -36,9 +36,8 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
-import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.ExchangeRate
-import org.bitcoinj.utils.Fiat
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.money.FiatValue
 import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.MyTheme
@@ -75,7 +74,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
 
     private val binding by viewBinding(FragmentConvertCurrencyBinding::bind)
     private val viewModel by coinbaseViewModels<ConvertViewViewModel>()
-    private val format = Constants.SEND_PAYMENT_LOCAL_FORMAT.noCode()
+    private val format = Constants.SEND_PAYMENT_LOCAL_MONEY_FORMAT.noCode()
     private val decimalSeparator =
         DecimalFormatSymbols.getInstance(GenericUtils.getDeviceLocale()).decimalSeparator
     private var maxAmountSelected: Boolean = false
@@ -211,9 +210,9 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
                         } else {
                             val bd = viewModel.toDashValue(valueToBind, userAccountData, true)
                             val coin = try {
-                                Coin.parseCoin(bd.toString())
+                                Dash.parse(bd.toString())
                             } catch (x: Exception) {
-                                Coin.ZERO
+                                Dash.ZERO
                             }
                             if (coin.isZero) {
                                 0.toBigDecimal()
@@ -229,9 +228,9 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
                         } else {
                             val bd = viewModel.toDashValue(valueToBind, userAccountData)
                             val coin = try {
-                                Coin.parseCoin(bd.toString())
+                                Dash.parse(bd.toString())
                             } catch (x: Exception) {
-                                Coin.ZERO
+                                Dash.ZERO
                             }
                             if (coin.isZero) {
                                 0.toBigDecimal()
@@ -354,7 +353,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
                 value.append(number)
                 val formattedValue = GenericUtils.formatFiatWithoutComma(value.toString())
 
-                Coin.parseCoin(formattedValue)
+                Dash.parse(formattedValue)
             } catch (e: Exception) {
                 value.deleteCharAt(value.length - 1)
             }
@@ -368,7 +367,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
         val lengthOfDecimalPart = balance.length - balance.indexOf(decimalSeparator)
         val spannableString = if (viewModel.selectedLocalCurrencyCode == currencyCode) {
             val cleanedValue = GenericUtils.formatFiatWithoutComma(balance)
-            val fiatAmount = Fiat.parseFiat(viewModel.selectedLocalCurrencyCode, cleanedValue)
+            val fiatAmount = FiatValue.parseFiat(viewModel.selectedLocalCurrencyCode, cleanedValue)
             val localCurrencySymbol =
                 GenericUtils.getLocalCurrencySymbol(viewModel.selectedLocalCurrencyCode)
 
@@ -411,9 +410,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
 
         if (hasBalance) {
             viewModel.selectedCryptoCurrencyAccount.value?.let {
-                viewModel.selectedLocalExchangeRate.value?.let {
-                    ExchangeRate(Coin.COIN, it.fiat)
-                }?.let { _ ->
+                viewModel.selectedLocalExchangeRate.value?.let { _ ->
                     val dashAmount = when {
                         (
                             it.coinbaseAccount.currency == currencyCode &&
@@ -422,9 +419,9 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
                             val bd =
                                 viewModel.toDashValue(balance, it, true)
                             try {
-                                Coin.parseCoin(bd.toString())
+                                Dash.parse(bd.toString())
                             } catch (x: Exception) {
-                                Coin.ZERO
+                                Dash.ZERO
                             }
                         }
                         (
@@ -435,9 +432,9 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
                             val bd =
                                 viewModel.toDashValue(balance, it)
                             try {
-                                Coin.parseCoin(bd.toString())
+                                Dash.parse(bd.toString())
                             } catch (x: Exception) {
-                                Coin.ZERO
+                                Dash.ZERO
                             }
                         }
 
@@ -445,9 +442,9 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
                             // DASH
                             val formattedValue = GenericUtils.formatFiatWithoutComma(balance)
                             try {
-                                Coin.parseCoin(formattedValue)
+                                Dash.parse(formattedValue)
                             } catch (x: Exception) {
-                                Coin.ZERO
+                                Dash.ZERO
                             }
                         }
                     }
@@ -456,7 +453,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
                 }
             }
         } else {
-            viewModel.setEnteredConvertDashAmount(Coin.ZERO)
+            viewModel.setEnteredConvertDashAmount(Dash.ZERO)
         }
 
         checkTheUserEnteredValue(hasBalance)

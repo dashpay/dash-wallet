@@ -31,7 +31,7 @@ import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.bitcoinj.wallet.AuthenticationKeyChainGroup
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
-import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
+import de.schildbach.wallet.transactions.TransactionUtils.isEntirelySelf
 import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
 

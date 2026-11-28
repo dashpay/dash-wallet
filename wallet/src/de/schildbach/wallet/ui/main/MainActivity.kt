@@ -36,7 +36,9 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.os.bundleOf
 import androidx.fragment.app.FragmentManager
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.findNavController
 import com.google.common.collect.ImmutableList
 import dagger.hilt.android.AndroidEntryPoint
@@ -44,14 +46,20 @@ import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.livedata.SeriousError
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.service.platform.sdk.SdkTransparentUsernameCreation
+import de.schildbach.wallet.service.platform.sdk.ShieldedInviteOverageTopUp
+import de.schildbach.wallet.service.platform.work.ShieldedInviteOverageWorker
 import de.schildbach.wallet.ui.*
-import de.schildbach.wallet.ui.coinjoin.CoinJoinLevelViewModel
 import de.schildbach.wallet.ui.dashpay.*
 import de.schildbach.wallet.ui.invite.InviteHandler
 import de.schildbach.wallet.ui.invite.InviteSendContactRequestDialog
 import de.schildbach.wallet.ui.more.connections.ConnectionsFragment
 import de.schildbach.wallet.ui.more.connections.protocol.DashConnectUri
 import de.schildbach.wallet.ui.main.MainActivityExt.checkLowStorageAlert
+import de.schildbach.wallet.ui.cutover.CutoverSyncNoticeDialogFragment
+import de.schildbach.wallet.ui.cutover.SdkBindPendingDialogFragment
+import de.schildbach.wallet.ui.migration.MixedFundsMigrationDialogFragment
+import de.schildbach.wallet.ui.migration.MixedFundsMigrationViewModel
 import de.schildbach.wallet.ui.main.MainActivityExt.checkTimeSkew
 import de.schildbach.wallet.ui.main.MainActivityExt.handleFirebaseAction
 import de.schildbach.wallet.ui.main.MainActivityExt.requestDisableBatteryOptimisation
@@ -59,16 +67,14 @@ import de.schildbach.wallet.ui.main.MainActivityExt.setupBottomNavigation
 import de.schildbach.wallet.ui.main.MainActivityExt.showFiatCurrencyChangeDetectedDialog
 import de.schildbach.wallet.ui.main.MainActivityExt.showStaleRatesToast
 import de.schildbach.wallet.ui.more.ContactSupportDialogFragment
-import de.schildbach.wallet.ui.more.MixDashFirstDialogFragment
 import de.schildbach.wallet.ui.util.InputParser
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog
 import de.schildbach.wallet.util.CrashReporter
 import de.schildbach.wallet.util.Nfc
+import de.schildbach.wallet.util.StartupBreadcrumbs
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityMainBinding
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.bitcoinj.crypto.ChildNumber
 import org.bitcoinj.wallet.DerivationPathFactory
 import org.bitcoinj.wallet.WalletEx
@@ -93,6 +99,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         const val EXTRA_RESET_BLOCKCHAIN = "reset_blockchain"
         private const val EXTRA_INVITE = "extra_invite"
         private const val EXTRA_NAVIGATION_DESTINATION = "extra_destination"
+        private const val EXTRA_NAVIGATION_ARGS = "extra_destination_args"
 
         fun createIntent(context: Context): Intent {
             return Intent(context, MainActivity::class.java).apply {
@@ -108,6 +115,11 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             }
         }
 
+        /** [createIntent] variant passing [args] to the destination as its fragment arguments. */
+        fun createIntent(context: Context, @NavigationRes destination: Int, args: Bundle): Intent {
+            return createIntent(context, destination).putExtra(EXTRA_NAVIGATION_ARGS, args)
+        }
+
         fun createIntent(context: Context, invite: InvitationLinkData): Intent {
             return Intent(context, MainActivity::class.java).apply {
                 putExtra(EXTRA_NAVIGATION_DESTINATION, R.id.walletFragment)
@@ -119,15 +131,40 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
     private val baseAlertDialogBuilder = BaseAlertDialogBuilder(this)
     val viewModel: MainViewModel by viewModels()
-    private val createIdentityViewModel: CreateIdentityViewModel by viewModels()
-    private val coinJoinViewModel: CoinJoinLevelViewModel by viewModels()
     private val inviteHandlerViewModel: InviteHandlerViewModel by viewModels()
+    private val mixedFundsMigrationViewModel: MixedFundsMigrationViewModel by viewModels()
     @Inject
     lateinit var config: Configuration
+    @Inject
+    lateinit var transparentUsernameCreation: SdkTransparentUsernameCreation
+    @Inject
+    lateinit var shieldedInviteOverageTopUp: ShieldedInviteOverageTopUp
     private lateinit var binding: ActivityMainBinding
     private var isRestoringBackup = false
     private var showBackupWalletDialog = false
     private var retryCreationIfInProgress = true
+
+    /**
+     * The post-upgrade mixed-funds sheet fired while the lock screen was up;
+     * shown as soon as it comes down (a sheet rendered under the PIN screen
+     * is invisible).
+     */
+    private var pendingMixedFundsMigration = false
+
+    /** Same lock-screen deferral for the one-time post-upgrade sync explainer. */
+    private var pendingCutoverUpgradeNotice = false
+
+    /**
+     * Same deferral for the "SDK setup pending" sheet, and it needs one more
+     * than the others do.
+     *
+     * Its trigger is a StateFlow, not an event: if the blocker arrives while
+     * the lock screen is up, or while showOnce refuses on saved fragment state,
+     * the collector drops it — and an UNCHANGED StateFlow value never emits
+     * again, so nothing retries for the rest of the session. The bind can then
+     * stay blocked with no foreground explanation and no retry surface at all.
+     */
+    private var pendingSdkBindPendingSheet = false
     var composeHostFrameLayout: ComposeHostFrameLayout? = null
 
     val requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { _ ->
@@ -135,6 +172,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     }
 
     private var timeChangeReceiverRegistered = false
+
     private val timeChangeReceiver = object: BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == Intent.ACTION_TIME_CHANGED) {
@@ -147,9 +185,12 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         }
     }
 
+    // Runs only with a usable wallet: LockScreenActivity finishes the activity
+    // otherwise (a direct launch on a fresh install, a degraded launch, a
+    // safe-mode retry still loading), and the callbacks below check
+    // finishedForNoWallet for that case.
     override fun onCreateWithWallet(savedInstanceState: Bundle?) {
         super.onCreateWithWallet(savedInstanceState)
-
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) {
             // no-op on API 35+, where edge-to-edge is enforced
             window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
@@ -159,6 +200,19 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         this.setupBottomNavigation(viewModel)
+
+        // The UI is up — recorded immediately, as evidence in the support
+        // report. The launch was already declared COMPLETE at the end of
+        // Application.onCreate (see StartupBreadcrumbs.markLaunchComplete);
+        // neither this marker nor the delayed one below decides that.
+        StartupBreadcrumbs.markMainUiShown()
+        // Belt and braces: after SURVIVAL_DELAY_MS on screen, re-clear the
+        // crash-loop strike counters. Cheap, and it means a healthy session
+        // leaves clean state behind even if the trail file is later lost.
+        binding.root.postDelayed(
+            { StartupBreadcrumbs.markLaunchSurvived() },
+            StartupBreadcrumbs.SURVIVAL_DELAY_MS
+        )
 
         initViewModel()
 
@@ -174,6 +228,30 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             // Add BIP44 support and PIN if missing
             upgradeWalletKeyChains(Constants.BIP44_PATH, false)
             upgradeWalletCoinJoin(false)
+        }
+
+        // A shielded invite claim whose note exceeded the exit denomination
+        // persists a pending OVERAGE record (the remainder must end up on the
+        // claimed identity). The worker is normally enqueued right after the
+        // claim, but if the app died in between, this launch check is what
+        // resumes it — WorkManager KEEP makes the re-enqueue idempotent.
+        lifecycleScope.launch {
+            try {
+                // Retro-fit first: a COMPLETED claim whose overage was never
+                // recorded (the S22 gap) gets its record minted from persisted
+                // state — one-shot, marker-guarded. Then the normal pending
+                // check drains whatever record exists.
+                val reconciled = shieldedInviteOverageTopUp.reconcileCompletedClaim()
+                if (reconciled || shieldedInviteOverageTopUp.hasPending()) {
+                    log.info(
+                        "invite overage work found at launch (reconciled={}) — enqueueing its worker",
+                        reconciled
+                    )
+                    ShieldedInviteOverageWorker.enqueue(application)
+                }
+            } catch (e: Exception) {
+                log.warn("pending invite-overage check failed at launch", e)
+            }
         }
 
         viewModel.currencyChangeDetected.observe(
@@ -198,10 +276,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
     override fun onStart() {
         super.onStart()
-
-        if (finishedWithoutWallet) {
-            return
-        }
+        if (finishedForNoWallet) return
 
         if (!lockScreenDisplayed && config.showNotificationsExplainer) {
             explainPushNotifications()
@@ -219,11 +294,38 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             if (it != null) {
                 if (retryCreationIfInProgress && it.creationInProgress) {
                     retryCreationIfInProgress = false
-                    // should this be executed after syncing is finished?
-                    if (it.usingInvite) {
-                        startService(CreateIdentityService.createIntentForRetryFromInvite(this, false))
-                    } else {
-                        startService(CreateIdentityService.createIntentForRetry(this, false))
+                    val usingInvite = it.usingInvite
+                    // POST-CUTOVER the SDK executor + RestoreIdentityWorker own
+                    // resumption of an in-progress creation. This legacy dashj
+                    // retry (CreateIdentityService) must NOT fire then: post-cutover
+                    // it throws InsufficientMoney and stamps a spurious error on
+                    // the home tile even though the SDK path is completing fine.
+                    // Gate it on the COMMITTED cutover (the same signal the create
+                    // routing uses). Pre-cutover this is unchanged — the dashj
+                    // retry still fires. retryCreationIfInProgress is cleared above
+                    // so this never lingers or re-fires.
+                    lifecycleScope.launch {
+                        // Read strictly (review 4299080469, reopened): an unreadable state is not
+                        // "not committed". Unknown skips the legacy retry, which post-cutover would
+                        // drive a registered SDK identity through the dashj path; a later start retries.
+                        val cutoverCommitted = transparentUsernameCreation.cutoverStateOrUnknown()
+                        if (cutoverCommitted == null) {
+                            log.warn("cutover state unknown on creation retry; not retrying through dashj")
+                            return@launch
+                        }
+                        if (cutoverCommitted) {
+                            log.info(
+                                "cutover committed — skipping legacy dashj creation retry; " +
+                                    "the SDK executor + RestoreIdentityWorker own resumption"
+                            )
+                            return@launch
+                        }
+                        // should this be executed after syncing is finished?
+                        if (usingInvite) {
+                            startService(CreateIdentityService.createIntentForRetryFromInvite(this@MainActivity, false))
+                        } else {
+                            startService(CreateIdentityService.createIntentForRetry(this@MainActivity, false))
+                        }
                     }
                 }
                 setupBottomNavigation(viewModel)
@@ -231,13 +333,41 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         }
 
         viewModel.showCreateUsernameEvent.observe(this) {
-            lifecycleScope.launch {
-                val shouldShowMixDashDialog = withContext(Dispatchers.IO) { createIdentityViewModel.shouldShowMixDash() }
-                if (coinJoinViewModel.isMixing || !shouldShowMixDashDialog) {
-                    startActivity(Intent(this@MainActivity, CreateUsernameActivity::class.java))
-                } else {
-                    MixDashFirstDialogFragment().show(this@MainActivity) {
-                        startActivity(Intent(this@MainActivity, CreateUsernameActivity::class.java))
+            startActivity(Intent(this@MainActivity, CreateUsernameActivity::class.java))
+        }
+        viewModel.showMixedFundsMigration.observe(this) {
+            if (lockScreenDisplayed) {
+                pendingMixedFundsMigration = true
+            } else {
+                MixedFundsMigrationDialogFragment.showOnce(this)
+            }
+        }
+        viewModel.showCutoverUpgradeNotice.observe(this) {
+            if (lockScreenDisplayed) {
+                pendingCutoverUpgradeNotice = true
+            } else {
+                // Same contract as the lock-screen path: a refused showing stays
+                // pending rather than being dropped.
+                pendingCutoverUpgradeNotice = !CutoverSyncNoticeDialogFragment.showOnce(this)
+            }
+        }
+        // "SDK setup pending": while the SDK wallet bind is blocked, say so
+        // every time the user returns to the app (the collector restarts on
+        // STARTED, and the StateFlow replays the current blocker), and take
+        // the sheet down the moment the bind succeeds.
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.sdkBindBlocker.collect { blocker ->
+                    if (blocker == null) {
+                        pendingSdkBindPendingSheet = false
+                        SdkBindPendingDialogFragment.dismissIfShown(this@MainActivity)
+                    } else if (lockScreenDisplayed) {
+                        pendingSdkBindPendingSheet = true
+                    } else {
+                        // Clear ONLY on a real showing — showOnce also refuses
+                        // while the fragment manager has saved state.
+                        pendingSdkBindPendingSheet =
+                            !SdkBindPendingDialogFragment.showOnce(this@MainActivity)
                     }
                 }
             }
@@ -295,24 +425,35 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
     override fun onResume() {
         super.onResume()
-
-        if (finishedWithoutWallet) {
-            // onCreateWithWallet() never ran and checkWalletEncryptionDialog() below
-            // dereferences the wallet
-            return
-        }
-
+        if (finishedForNoWallet) return // viewModel reads the wallet when created
         turnOnAutoLogout()
         checkTimeSkew(viewModel)
         checkLowStorageAlert()
         checkWalletEncryptionDialog()
         viewModel.detectUserCountry()
         viewModel.startBlockchainService()
+        // A showing refused earlier (saved fragment state, or the lock screen)
+        // is retried here, where the activity is provably resumed.
+        if (pendingCutoverUpgradeNotice && !lockScreenDisplayed) {
+            pendingCutoverUpgradeNotice = !CutoverSyncNoticeDialogFragment.showOnce(this)
+        }
+        retrySdkBindPendingSheet()
+        // The periodic contact-request poll is scoped to the blockchain service
+        // and can stall across service teardown/restart; force a throttled
+        // refresh here so returning to the home screen promptly surfaces new
+        // contact requests and acceptances without opening the Contacts screen.
+        viewModel.refreshContactsOnResume()
     }
 
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
-        handleIntent(intent!!)
+        intent ?: return
+        if (finishedForNoWallet) return
+        // Keep getIntent() in step with what is actually being handled: the
+        // activity replays getIntent() when it is recreated, so the extras
+        // handleIntent consumes must be consumed from that same instance.
+        setIntent(intent)
+        handleIntent(intent)
     }
 
     // BIP44 Wallet Upgrade Dialog Dismissed (Ok button pressed)
@@ -325,8 +466,18 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     }
 
     override fun handleBackNavigation() {
-        if (!lockScreenDisplayed && !goBack()) {
-            super.handleBackNavigation()
+        val navController = findNavController(R.id.nav_host_fragment)
+        val action = homeBackAction(
+            lockScreenDisplayed,
+            supportFragmentManager.backStackEntryCount,
+            navCanPop = navController.previousBackStackEntry != null,
+            isTaskRoot = isTaskRoot
+        )
+        when (action) {
+            HomeBackAction.IGNORE, HomeBackAction.CONSUME -> Unit
+            HomeBackAction.POP_FRAGMENT -> goBack()
+            HomeBackAction.POP_NAVIGATION -> navController.popBackStack()
+            HomeBackAction.FINISH -> super.handleBackNavigation()
         }
     }
 
@@ -346,9 +497,20 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         // TODO: can we remove this?
     }
 
+    /**
+     * Only an identity that is actually being created from an invite blocks a
+     * new one. Any other stored invite is replaced by [invite] and re-validated,
+     * so a wallet that already has a username gets "you already have a
+     * username" (and the invite is discarded) rather than "DashPay is currently
+     * processing an invite" — which a stale stored invite used to trigger on
+     * every link opened afterwards. A claim that stopped on "invite already
+     * used" is dead, so it is cleared first and does not block [invite].
+     */
     private fun handleInvite(invite: InvitationLinkData) {
         lifecycleScope.launch {
-            inviteHandlerViewModel.setInvitationLink(invite, false)
+            if (!inviteHandlerViewModel.receiveInvite(invite, false)) {
+                InviteHandler(this@MainActivity, viewModel.analytics).showInviteWhileProcessingInviteInProgressDialog()
+            }
         }
     }
 
@@ -393,18 +555,19 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         }
         if (intent.hasExtra(EXTRA_INVITE)) {
             val invite = intent.extras!!.getParcelable<InvitationLinkData>(EXTRA_INVITE)!!
-            if (inviteHandlerViewModel.invitation.value == null) {
-                handleInvite(invite)
-            } else {
-                // TODO: this is not the correct message, we are not onboarding
-                InviteHandler(this, viewModel.analytics).showInviteWhileProcessingInviteInProgressDialog()
-            }
+            // Consume the invite so it is handled exactly once. Android
+            // redelivers the launching intent every time the task is
+            // recreated (relaunch from Recents, process death, config
+            // change); without this, an invite the user already dealt with
+            // is re-armed on each of those and re-runs validation.
+            intent.removeExtra(EXTRA_INVITE)
+            handleInvite(invite)
         }
         if (intent.hasExtra(EXTRA_NAVIGATION_DESTINATION)) {
             try {
                 val destination = intent.extras!!.getInt(EXTRA_NAVIGATION_DESTINATION)
                 val navController = findNavController(R.id.nav_host_fragment)
-                navController.navigate(destination)
+                navController.navigate(destination, intent.getBundleExtra(EXTRA_NAVIGATION_ARGS))
             } catch (e: IllegalStateException) {
                 // swallow for now, this happens when the MainActivity is first created?
             }
@@ -579,12 +742,27 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
     override fun onDestroy() {
         super.onDestroy()
-
-        // onCreateWithWallet() does not run when the activity is finished for having no wallet,
-        // so the receiver may never have been registered
         if (timeChangeReceiverRegistered) {
             unregisterReceiver(timeChangeReceiver)
         }
+    }
+
+    /**
+     * Re-drive a "SDK setup pending" sheet whose showing was refused earlier.
+     *
+     * Re-reads the blocker rather than trusting the flag alone: the bind can
+     * heal while the sheet is pending, and the collector that would dismiss it
+     * only restarts at STARTED — so without this check a resume could raise a
+     * sheet for an already-bound wallet and then take it straight back down.
+     */
+    private fun retrySdkBindPendingSheet() {
+        if (!pendingSdkBindPendingSheet) return
+        if (viewModel.sdkBindBlocker.value == null) {
+            pendingSdkBindPendingSheet = false
+            return
+        }
+        if (lockScreenDisplayed) return
+        pendingSdkBindPendingSheet = !SdkBindPendingDialogFragment.showOnce(this)
     }
 
     override fun onLockScreenDeactivated() {
@@ -593,6 +771,32 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             explainPushNotifications()
         }
         showStaleRatesToast()
+
+        if (pendingCutoverUpgradeNotice) {
+            // Clear ONLY on a real showing: showOnce refuses while the fragment
+            // manager has saved state, and clearing first lost the one-time
+            // explainer outright (2026-09-16 emulator upgrade test).
+            pendingCutoverUpgradeNotice = !CutoverSyncNoticeDialogFragment.showOnce(this)
+        }
+
+        retrySdkBindPendingSheet()
+
+        if (pendingMixedFundsMigration || mixedFundsMigrationViewModel.uiState.value.inProgress) {
+            pendingMixedFundsMigration = false
+            // Even with a call still running, closed "could not confirm"
+            // guidance is not re-presented automatically (the acknowledgement
+            // shouldPresentPrompt() honours applies here too).
+            lifecycleScope.launch {
+                if (mixedFundsMigrationViewModel.shouldRepresentAfterUnlock()) {
+                    MixedFundsMigrationDialogFragment.showOnce(this@MainActivity)
+                }
+            }
+        } else {
+            // The lock screen may have torn the mixed-funds sheet down before
+            // the user chose; if no choice has been recorded yet the ViewModel
+            // re-fires the prompt (no-op otherwise).
+            viewModel.recheckMixedFundsMigrationPrompt()
+        }
     }
 
     override fun onLockScreenActivated() {

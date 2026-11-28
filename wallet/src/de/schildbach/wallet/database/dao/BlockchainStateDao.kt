@@ -33,8 +33,19 @@ abstract class BlockchainStateDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     protected abstract suspend fun insert(blockchainState: BlockchainState)
 
-    suspend fun saveState(blockchainState: BlockchainState) {
-        if (blockchainState.replaying && blockchainState.percentageSync == 100) {
+    /**
+     * [clearReplayAtHundredPercent]: the dashj-era rule that a row at 100% is
+     * no longer replaying. Right ONLY for the writer whose percent IS the scan
+     * position — dashj's `updateBlockchainState`, which opts in. Every other
+     * writer preserves the flag it was handed: the SDK writer's display
+     * percent reaches 100 at the iOS aggregate threshold while the engine may
+     * still be replaying (plan §34/§35) and carries the flag from a lifecycle
+     * signal of its own, and an impediment-only rewrite of that same row
+     * (`updateImpediments`, on every connectivity callback) must not end the
+     * replay it did not touch (review, 2026-09-23). Hence default false.
+     */
+    suspend fun saveState(blockchainState: BlockchainState, clearReplayAtHundredPercent: Boolean = false) {
+        if (clearReplayAtHundredPercent && blockchainState.replaying && blockchainState.percentageSync == 100) {
             blockchainState.replaying = false
         }
         insert(blockchainState)

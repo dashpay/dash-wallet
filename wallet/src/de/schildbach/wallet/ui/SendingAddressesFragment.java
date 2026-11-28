@@ -164,7 +164,8 @@ public final class SendingAddressesFragment extends FancyListFragment
                         @Override
                         public void run() {
                             if (paymentIntent.hasAddress()) {
-                                final Address address = paymentIntent.getAddress(Constants.NETWORK_PARAMETERS);
+                                final String addressString = paymentIntent.getAddress(Constants.ADDRESS_NETWORK);
+                                final Address address = Address.fromBase58(Constants.NETWORK_PARAMETERS, addressString);
                                 if (!wallet.isPubKeyHashMine(address.getHash160()))
                                     EditAddressBookEntryFragment.edit(getFragmentManager(), address);
                                 else {
@@ -330,7 +331,7 @@ public final class SendingAddressesFragment extends FancyListFragment
     }
 
     private void handleSend(final String address) {
-        SendCoinsActivity.Companion.start(activity, PaymentIntent.fromAddress(address, null, Constants.NETWORK_PARAMETERS));
+        SendCoinsActivity.Companion.start(activity, PaymentIntent.fromAddress(address, null, Constants.ADDRESS_NETWORK));
     }
 
     private void handleRemove(final String address) {

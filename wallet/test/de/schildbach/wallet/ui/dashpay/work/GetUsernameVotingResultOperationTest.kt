@@ -124,7 +124,7 @@ class GetUsernameVotingResultOperationTest {
         
         // Then: Verify the calculation uses actual VOTING_PERIOD_MILLIS and current time
         // Formula: UsernameRequest.VOTING_PERIOD_MILLIS + votingStartedAt + 1min - System.currentTimeMillis()
-        val expectedDelay = UsernameRequest.VOTING_PERIOD_MILLIS + votingStartedAt + TimeUnit.MINUTES.toMillis(1) - currentTime
+        val expectedDelay = UsernameRequest.VOTING_PERIOD_MILLIS + votingStartedAt + BUFFER_MINUTES - currentTime
         assertEquals("Delay calculation should follow the exact calculateDelay formula", expectedDelay, delay)
     }
 

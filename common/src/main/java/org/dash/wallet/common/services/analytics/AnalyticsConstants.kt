@@ -83,7 +83,6 @@ object AnalyticsConstants {
         const val RESCAN_BLOCKCHAIN_DISMISS = "settings_rescan"
         const val ABOUT = "settings_about"
         const val ABOUT_SUPPORT = "settings_about_contact_support"
-        const val COINJOIN = "settings_coinjoin"
     }
 
     object Tools {
@@ -92,8 +91,8 @@ object AnalyticsConstants {
     }
 
     object SendReceive {
-        const val SEND_TX = "send_tx" // also include amount sent
-        const val SEND_TX_CONTACT = "send_tx_to_contact"  // also include amount sent
+        const val SEND_TX = "send_tx"
+        const val SEND_TX_CONTACT = "send_tx_to_contact"
         const val SCAN_TO_SEND = "send_scan_to_send"
         const val SEND_TO_ADDRESS = "send_to_address"
         const val SHOW_QR_CODE = "receive_show_qr_code"
@@ -342,18 +341,6 @@ object AnalyticsConstants {
         const val TRANSFER_ERROR_CLOSE = "coinbase_transfer_error_b_close"
 
         const val QUOTE_CONFIRM = "coinbase_buy_quote_b_confirm"
-    }
-
-    object CoinJoinPrivacy {
-        const val COINJOIN_START_MIXING = "settings_coinjoin_btn_start_mixing"
-        const val COINJOIN_STOP_MIXING = "settings_coinjoin_btn_stop_mixing"
-        const val COINJOIN_MIXING_SUCCESS = "settings_coinjoin_mixed_success"
-        const val COINJOIN_MIXING_FAIL = "settings_coinjoin_mixed_fail"
-        const val USERNAME_PRIVACY_BTN_CONTINUE = "username_privacy_btn_continue"
-        const val USERNAME_PRIVACY_WIFI_BTN_CONTINUE = "username_privacy_wifi_btn_continue"
-        const val USERNAME_PRIVACY_WIFI_BTN_CANCEL = "username_privacy_wifi_btn_cancel"
-        const val USERNAME_PRIVACY_CONFIRMATION_BTN_CONFIRM = "username_privacy_confirm_btn_confirm"
-        const val USERNAME_PRIVACY_CONFIRMATION_BTN_CANCEL = "username_privacy_confirm_btn_cancel"
     }
 
     object UsernameVoting {

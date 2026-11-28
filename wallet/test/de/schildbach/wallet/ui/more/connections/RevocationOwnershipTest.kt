@@ -22,7 +22,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(application = Application::class, sdk = [28], manifest = Config.NONE,
+@Config(application = Application::class, sdk = [29], manifest = Config.NONE,
     shadows = [AppConnectKeyStateTest.ShadowSdkEnums::class])
 class RevocationOwnershipTest {
     private val service = mockk<PlatformService>(relaxed = true)

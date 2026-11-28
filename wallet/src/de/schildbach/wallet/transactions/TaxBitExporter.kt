@@ -16,7 +16,7 @@
 
 package de.schildbach.wallet.transactions
 
-import org.bitcoinj.wallet.Wallet
+import org.dash.wallet.common.transactions.TxInfo
 import org.dash.wallet.common.services.TransactionMetadataProvider
 
 /**
@@ -24,10 +24,10 @@ import org.dash.wallet.common.services.TransactionMetadataProvider
  */
 class TaxBitExporter(
     transactionMetadataProvider: TransactionMetadataProvider,
-    wallet: Wallet,
+    transactions: Collection<TxInfo>,
 ) : CSVExporter(
     transactionMetadataProvider,
-    wallet,
+    transactions,
     listOf("Income", "Expense", "Transfer-in", "Transfer-out")
 ) {
 

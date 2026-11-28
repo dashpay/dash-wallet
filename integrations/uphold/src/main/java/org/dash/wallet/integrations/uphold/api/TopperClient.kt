@@ -25,7 +25,6 @@ import io.jsonwebtoken.io.Decoders
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
-import org.bitcoinj.core.Address
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.get
 import org.dash.wallet.integrations.uphold.data.SupportedTopperAssets
@@ -79,7 +78,7 @@ class TopperClient @Inject constructor(
 
     fun getOnRampUrl(
         desiredSourceAsset: String,
-        receiverAddress: Address,
+        receiverAddress: String,
         walletName: String
     ): String {
         val currency = if (isSupportedAsset(desiredSourceAsset)) {
@@ -127,7 +126,7 @@ class TopperClient @Inject constructor(
     private fun generateToken(
         privateKey: ByteArray,
         sourceAsset: String,
-        receiverAddress: Address,
+        receiverAddress: String,
         walletName: String
     ): String {
         val seq = ASN1Sequence.getInstance(privateKey)
@@ -155,7 +154,7 @@ class TopperClient @Inject constructor(
             .claim(
                 "target",
                 mapOf(
-                    "address" to receiverAddress.toString(),
+                    "address" to receiverAddress,
                     "asset" to "DASH",
                     "network" to "dash",
                     "priority" to "fast",

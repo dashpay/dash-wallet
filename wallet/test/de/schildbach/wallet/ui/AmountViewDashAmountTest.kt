@@ -20,9 +20,9 @@ package de.schildbach.wallet.ui
 import android.view.ContextThemeWrapper
 import androidx.test.core.app.ApplicationProvider
 import de.schildbach.wallet_test.R
-import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.ExchangeRate
-import org.bitcoinj.utils.Fiat
+import org.dash.wallet.common.money.Coin
+import org.dash.wallet.common.money.ExchangeRate
+import org.dash.wallet.common.money.Fiat
 import org.dash.wallet.common.ui.enter_amount.AmountView
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -36,7 +36,7 @@ import org.robolectric.annotation.Config
  * saved fiat amount back after the screen is rebuilt, must never change it.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(application = android.app.Application::class, sdk = [28])
+@Config(application = android.app.Application::class, sdk = [29])
 class AmountViewDashAmountTest {
     private fun amountView(dashPrice: Fiat): AmountView {
         val context = ContextThemeWrapper(ApplicationProvider.getApplicationContext(), R.style.My_Theme)

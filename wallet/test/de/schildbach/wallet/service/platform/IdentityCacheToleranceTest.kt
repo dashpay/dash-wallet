@@ -47,6 +47,24 @@ class IdentityCacheToleranceTest {
     }
 
     @Test
+    fun classifier_matchesTheOwnIdentityRefreshFailure_asObservedOnDevice() {
+        // Verbatim message from the S21 2026-08-02 incident: dashj's
+        // BlockchainIdentity.updateIdentity() (a plain cached identities.get on
+        // our OWN identity, run only on the full-update path
+        // updateContactRequests(true)) hit the same encoder gap on the wallet's
+        // own contract-bound keys 4/5. IdentityRepository.updateIdentity now
+        // routes through the tolerant fetch, whose classifier must match this
+        // exact shape.
+        assertTrue(
+            isLegacyIdentityCacheCborFailure(
+                IllegalArgumentException(
+                    "No converter for org.dashj.platform.dpp.identity.SingleContractDocumentType@ade9a86"
+                )
+            )
+        )
+    }
+
+    @Test
     fun classifier_ignoresUnrelatedFailures() {
         assertFalse(isLegacyIdentityCacheCborFailure(IllegalArgumentException("bad id")))
         assertFalse(isLegacyIdentityCacheCborFailure(IllegalStateException("No converter for X")))

@@ -25,6 +25,7 @@ import org.dashj.platform.dpp.identity.Identity
 import org.dash.wallet.common.data.entity.BlockchainState
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
+import org.dash.wallet.common.data.TxId
 import org.dashj.platform.dashpay.IdentityStatus
 import org.dashj.platform.dashpay.UsernameStatus
 import org.dashj.platform.sdk.KeyType
@@ -77,6 +78,23 @@ class BlockchainStateRoomConverters {
     fun toSha256Hash(bytes: ByteArray?): Sha256Hash? {
         return bytes?.let { Sha256Hash.wrap(it) }
     }
+
+    @TypeConverter
+    fun fromTxId(hash: TxId?): ByteArray? {
+        return hash?.bytes
+    }
+
+    @TypeConverter
+    fun toTxId(bytes: ByteArray?): TxId? {
+        return bytes?.let { TxId.wrap(it) }
+    }
+
+    @TypeConverter
+    fun toNeutralCoin(value: Long): org.dash.wallet.common.money.Coin =
+        org.dash.wallet.common.money.Coin.valueOf(value)
+
+    @TypeConverter
+    fun fromNeutralCoin(coin: org.dash.wallet.common.money.Coin?): Long = coin?.value ?: 0L
 
     @TypeConverter
     fun toUsernameStatus(value: Int): UsernameStatus {
