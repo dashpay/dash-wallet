@@ -289,7 +289,8 @@ class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
 
         fun maxDecimals() = AmountInputRules.maxDecimals(
             binding.amountView.dashToFiat,
-            binding.amountView.exchangeRate?.fiat?.currencyCode ?: viewModel.selectedCurrencyCode
+            binding.amountView.exchangeRate?.fiat?.currencyCode ?: viewModel.selectedCurrencyCode,
+            viewModel.fiatDecimalsLimit
         )
 
         override fun onNumber(number: Int) {

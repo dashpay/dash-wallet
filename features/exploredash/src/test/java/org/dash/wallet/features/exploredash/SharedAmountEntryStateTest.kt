@@ -63,9 +63,12 @@ class SharedAmountEntryStateTest {
         // what the purchase screen does to the entry while it is open
         entry.selectedCurrencyCode = "KWD"
         entry.blockContinue = true
+        entry.fiatDecimalsLimit = 0
         assertEquals(false, canContinue)
 
         entry.leaveGiftCardPurchase()
+
+        assertEquals(null, entry.fiatDecimalsLimit)
 
         assertEquals("Receive must be able to continue", true, canContinue)
         assertEquals("EUR", entry.selectedCurrencyCode)

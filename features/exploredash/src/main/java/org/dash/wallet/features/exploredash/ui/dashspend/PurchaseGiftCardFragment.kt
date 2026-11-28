@@ -90,6 +90,7 @@ internal fun EnterAmountViewModel.leaveGiftCardPurchase() {
     clearSavedState()
     resetCurrency()
     blockContinue = false
+    fiatDecimalsLimit = null
 }
 
 /** Blocks that pass by themselves, or that the disabled Continue button already explains. */
@@ -327,6 +328,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
     }
 
     private fun setupEnterAmountFragment(cardCurrency: String) {
+        enterAmountViewModel.fiatDecimalsLimit = if (viewModel.isWholeAmountOnly) 0 else null
         updateEntryVisibility()
         binding.composeContainer.isVisible = false
         binding.fixedDenomText.isVisible = false

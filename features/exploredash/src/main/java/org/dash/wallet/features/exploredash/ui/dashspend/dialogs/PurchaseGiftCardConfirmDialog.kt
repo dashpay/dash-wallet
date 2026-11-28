@@ -275,8 +275,9 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
             combine(
                 viewModel.cardCurrencyState,
                 viewModel.giftCardOrderInfo,
-                viewModel.giftCardMerchant
-            ) { _, _, _ -> }.collect {
+                viewModel.giftCardMerchant,
+                viewModel.acceptedDetailsVersion
+            ) { _, _, _, _ -> }.collect {
                 // a cart of PiggyCards is rebuilt by its screen on recreation; Confirm checks it instead
                 val isOtherOrder = viewModel.selectedProvider == GiftCardProviderType.CTX &&
                     viewModel.currentQuote() != quote

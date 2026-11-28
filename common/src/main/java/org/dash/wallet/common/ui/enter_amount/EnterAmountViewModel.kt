@@ -93,6 +93,9 @@ class EnterAmountViewModel @Inject constructor(
     val fiatAmount: LiveData<Fiat>
         get() = _fiatAmount
 
+    /** Fewer decimals than the fiat currency has, for a caller that takes whole amounts only. */
+    var fiatDecimalsLimit: Int? = null
+
     private val _callerBlocksContinue = MutableLiveData(false)
     var blockContinue: Boolean
         get() = _callerBlocksContinue.value ?: false

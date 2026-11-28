@@ -28,7 +28,7 @@ object AmountInputRules {
     private const val MAX_FIAT_DECIMALS = 4
 
     /** The fraction digits of the fiat currency being typed (JPY 0, USD 2, KWD 3), or of Dash. */
-    fun maxDecimals(isDashAmount: Boolean, fiatCurrencyCode: String?): Int {
+    fun maxDecimals(isDashAmount: Boolean, fiatCurrencyCode: String?, fiatLimit: Int? = null): Int {
         if (isDashAmount) {
             return DASH_DECIMALS
         }
@@ -37,7 +37,8 @@ object AmountInputRules {
         } catch (e: Exception) {
             DEFAULT_FIAT_DECIMALS
         }
-        return if (digits < 0) DEFAULT_FIAT_DECIMALS else minOf(digits, MAX_FIAT_DECIMALS)
+        val decimals = if (digits < 0) DEFAULT_FIAT_DECIMALS else minOf(digits, MAX_FIAT_DECIMALS)
+        return minOf(decimals, fiatLimit ?: decimals)
     }
 
     fun acceptsDigit(input: String, decimalSeparator: Char, maxDecimals: Int): Boolean {

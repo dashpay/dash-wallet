@@ -78,4 +78,12 @@ class AmountInputRulesTest {
         assertEquals(false, AmountInputRules.acceptsDigit("1234.", '.', maxDecimals))
         assertEquals(true, AmountInputRules.acceptsDigit("1234", '.', maxDecimals))
     }
+
+    @Test
+    fun callerLimit_canOnlyLowerTheFiatDecimals() {
+        assertEquals(0, AmountInputRules.maxDecimals(false, "USD", fiatLimit = 0))
+        assertEquals(2, AmountInputRules.maxDecimals(false, "USD", fiatLimit = 5))
+        assertEquals(2, AmountInputRules.maxDecimals(false, "USD", fiatLimit = null))
+        assertEquals(8, AmountInputRules.maxDecimals(true, "USD", fiatLimit = 0))
+    }
 }

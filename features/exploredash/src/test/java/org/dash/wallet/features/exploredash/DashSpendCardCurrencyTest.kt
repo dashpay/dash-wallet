@@ -1237,7 +1237,8 @@ class DashSpendCardCurrencyTest {
     fun answerThatCannotBeDecoded_blocksAMerchantThatHadACurrency() {
         listOf<Exception>(
             com.google.gson.JsonSyntaxException("Expected BEGIN_OBJECT but was STRING"),
-            com.google.gson.stream.MalformedJsonException("Unterminated object")
+            com.google.gson.stream.MalformedJsonException("Unterminated object"),
+            java.io.EOFException("End of input at line 1 column 1 path $")
         ).forEach { failure ->
             reset(api)
             ctxSells("GBP", listOf("5", "500"))
@@ -1310,5 +1311,60 @@ class DashSpendCardCurrencyTest {
         viewModel.selectedProvider = GiftCardProviderType.CTX
         assertEquals(CardCurrencyState.Loading, viewModel.cardCurrencyState.value)
         assertNull(viewModel.cardCurrency)
+    }
+
+    @Test
+    fun wholeAmountRangeMerchant_isSoldWithItsTwoValuesAndWholeAmountsOnly() = runBlocking {
+        // what CTX sends for "min-max-major": the same (min, max) pair, in whole units
+        ctxSells("USD", listOf("1", "500"), denominationsType = "min-max-major")
+        setRate("USD", "25")
+        val viewModel = viewModel()
+
+        val merchant = viewModel.openCtxMerchant()
+
+        assertEquals(CardCurrencyState.Known("USD"), viewModel.cardCurrencyState.value)
+        assertFalse(merchant.fixedDenomination)
+        assertEquals(Fiat.parseFiat("USD", "1"), viewModel.minCardPurchaseFiat)
+        assertEquals(Fiat.parseFiat("USD", "500"), viewModel.maxCardPurchaseFiat)
+        assertTrue(viewModel.isWholeAmountOnly)
+
+        viewModel.enter("25.50")
+        assertEquals(GiftCardPurchaseBlock.AMOUNT_NOT_REPRESENTABLE, viewModel.purchaseBlock)
+        assertPurchaseRefused(viewModel)
+
+        viewModel.enter("25")
+        assertNull(viewModel.purchaseBlock)
+        viewModel.buy()
+        assertEquals("25.00", orderSentToCtx().fiatAmount)
+    }
+
+    @Test
+    fun ordinaryRangeMerchant_stillTakesFractions() = runBlocking {
+        ctxSells("USD", listOf("1", "500"))
+        setRate("USD", "25")
+        val viewModel = viewModel()
+        viewModel.openCtxMerchant()
+
+        viewModel.enter("25.50")
+
+        assertFalse(viewModel.isWholeAmountOnly)
+        assertNull(viewModel.purchaseBlock)
+    }
+
+    @Test
+    fun acceptedDetailsVersion_changesWithEveryAcceptedAnswer() = runBlocking {
+        ctxSells("GBP", listOf("5", "500"), discount = 1000)
+        setRate("GBP", "20")
+        val viewModel = viewModel()
+        val merchant = viewModel.openCtxMerchant()
+        val shown = viewModel.acceptedDetailsVersion.value
+
+        // not applied to the screen, as when the merchant turns out to be disabled
+        reset(api)
+        ctxSells("GBP", listOf("5", "500"), discount = 200)
+        viewModel.refreshMerchantDetails(merchant)
+
+        assertTrue(viewModel.acceptedDetailsVersion.value != shown)
+        assertEquals(0.02, viewModel.getGiftCardDiscount(100.0), 0.0)
     }
 }

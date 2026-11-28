@@ -269,8 +269,23 @@ class DashSpendViewModel @Inject constructor(
     val cardCurrencyState: StateFlow<CardCurrencyState> = _cardCurrencyState.asStateFlow()
     private var currencyMerchantId: String? = null
 
+    private val _acceptedDetailsVersion = MutableStateFlow(0)
+
+    /** Changes whenever the accepted CTX details do, and with them what an order costs. */
+    val acceptedDetailsVersion: StateFlow<Int> = _acceptedDetailsVersion.asStateFlow()
+
     // the details that came with the Known currency; the three are only ever used together
     private var confirmedMerchant: Merchant? = null
+        set(value) {
+            field = value
+            _acceptedDetailsVersion.value++
+        }
+
+    /** The accepted CTX merchant sells whole amounts only ("min-max-major"). */
+    val isWholeAmountOnly: Boolean
+        get() = confirmedDetailsOf(giftCardMerchant.value)?.sellsWholeAmountsOnly() == true
+
+    private fun Merchant.sellsWholeAmountsOnly() = denominationsType == DenominationType.MinMaxMajor.value
     private var currencyLoad = 0
 
     /** ISO 4217 code the card is priced in. Null for a CTX merchant whose currency is not confirmed. */
@@ -328,6 +343,8 @@ class DashSpendViewModel @Inject constructor(
                 card == null || card.value != 1 || !(card.key > 0.0) -> GiftCardPurchaseBlock.NO_AMOUNT
                 !GiftCardCurrency.isRepresentable(card.key, currency) ->
                     GiftCardPurchaseBlock.AMOUNT_NOT_REPRESENTABLE
+                // CTX refuses an order with a fractional amount at such a merchant
+                isWholeAmountOnly && card.key % 1.0 != 0.0 -> GiftCardPurchaseBlock.AMOUNT_NOT_REPRESENTABLE
                 confirmedDetailsOf(giftCardMerchant.value)?.offers(card.key) != true ->
                     GiftCardPurchaseBlock.AMOUNT_NOT_OFFERED
                 else -> null

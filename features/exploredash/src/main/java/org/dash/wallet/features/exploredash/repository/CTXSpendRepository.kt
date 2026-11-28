@@ -39,6 +39,7 @@ import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardShoppingCart
 import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
 import org.dash.wallet.features.exploredash.utils.GiftCardCurrency
 import org.slf4j.LoggerFactory
+import java.io.EOFException
 import java.io.IOException
 import java.util.UUID
 import java.util.concurrent.TimeUnit
@@ -296,11 +297,12 @@ class CTXSpendRepository @Inject constructor(
     override suspend fun getMerchant(merchantId: String): UpdatedMerchantDetails? {
         val response = try {
             api.getMerchant(merchantId)
-        } catch (e: JsonParseException) {
-            // CTX answered, with a body that cannot be decoded
-            throw UnusableMerchantDetailsException(e)
-        } catch (e: MalformedJsonException) {
-            throw UnusableMerchantDetailsException(e)
+        } catch (e: Exception) {
+            // CTX answered, with a body that is empty, cut short or not what it should be
+            if (e is JsonParseException || e is MalformedJsonException || e is EOFException) {
+                throw UnusableMerchantDetailsException(e)
+            }
+            throw e
         }
         return response?.let {
             giftCardMap[merchantId] = it

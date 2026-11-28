@@ -49,8 +49,9 @@ data class UpdatedMerchantDetails(
                     require(denominations.size == 2)
                     denominations[1].toDouble()
                 }
+                // CTX sends this type as (min, max) too; only the amounts must be whole
                 is DenominationType.MinMaxMajor -> {
-                    require(denominations.size == 3)
+                    require(denominations.size == 2)
                     denominations[1].toDouble()
                 }
                 is DenominationType.Fixed -> {
