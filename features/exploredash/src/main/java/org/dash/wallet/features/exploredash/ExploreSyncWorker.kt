@@ -82,6 +82,10 @@ class ExploreSyncWorker @AssistedInject constructor(
         var isCatalogReplaced = false
 
         try {
+            // Opening checks the file on disk and resets the timestamp of one that is empty or
+            // from an older schema, so the timestamp read next describes the data that is there.
+            ExploreDatabase.getAppDatabase(appContext, exploreConfig)
+            databasePrefs = exploreConfig.exploreDatabasePrefs.first()
             syncStatus.setSyncProgress(0.0)
 
             val timeInMillis = measureTimeMillis {
@@ -105,8 +109,9 @@ class ExploreSyncWorker @AssistedInject constructor(
                     // below is for — loading a stale asset over a newer local DB just
                     // forces migrations on an old user_version and risks crashing.
                     if (localDbTimestamp == 0L || localDbTimestamp < preloadedDbTimestamp) {
-                        ExploreDatabase.updateDatabase(appContext, exploreRepository, exploreConfig)
-                        isCatalogReplaced = true
+                        ExploreDatabase.updateDatabase(appContext, exploreRepository, exploreConfig) {
+                            isCatalogReplaced = true
+                        }
                         // The snapshot from the start of doWork() is stale by now: finalizeUpdate
                         // has written the new timestamp and schema version.
                         exploreConfig.updateExploreDatabasePrefs {
@@ -143,8 +148,9 @@ class ExploreSyncWorker @AssistedInject constructor(
 
                 syncStatus.setSyncProgress(80.0)
 
-                ExploreDatabase.updateDatabase(appContext, exploreRepository, exploreConfig)
-                isCatalogReplaced = true
+                ExploreDatabase.updateDatabase(appContext, exploreRepository, exploreConfig) {
+                    isCatalogReplaced = true
+                }
             }
 
             log.info("sync explore db finished, took $timeInMillis ms")

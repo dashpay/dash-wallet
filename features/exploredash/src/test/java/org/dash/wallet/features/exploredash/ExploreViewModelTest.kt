@@ -1306,9 +1306,11 @@ class ExploreViewModelTest {
     @Test
     fun pagedList_isOrderedAroundTheResolvedUserCountry() {
         runBlocking {
+            // Never the device's own country, so the two cannot be told apart by accident
+            val userCountry = if (Locale.getDefault().country == "JP") "KR" else "JP"
             val network = mock<NetworkStateInt> {
                 on { isConnected } doReturn MutableStateFlow(true)
-                on { observeCountryFromIP() } doReturn flowOf("JP")
+                on { observeCountryFromIP() } doReturn flowOf(userCountry)
             }
             val dataSource = mock<ExploreDataSource> {
                 onBlocking { getMerchantCountries() } doReturn listOf("US", "GB")
@@ -1339,7 +1341,7 @@ class ExploreViewModelTest {
 
             // Only the order follows the user's country: the list itself still shows every country
             verify(dataSource, atLeastOnce()).observeMerchantsPaging(
-                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), eq(""), eq("JP")
+                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), eq(""), eq(userCountry)
             )
             verify(dataSource, never()).observeMerchantsPaging(
                 any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(),

@@ -258,6 +258,9 @@ class ExploreDatabaseTest {
         assertEquals(0L, prefs.localDbTimestamp)
         prefs = ExploreDatabasePrefs(localDbTimestamp = 1_234_567_890L)
 
+        val updateStaging = appContext.getDatabasePath("explore-database.staging")
+        updateStaging.writeText("an update being staged")
+
         // 2. Corrupt: drop merchant + room_master_table to mimic the field crash —
         //    Found columns empty + no room_master_table => "Pre-packaged database has
         //    an invalid schema" thrown by RoomOpenHelper.checkIdentity.
@@ -280,6 +283,12 @@ class ExploreDatabaseTest {
             "recovery should reset localDbTimestamp to 0",
             0L,
             prefs.localDbTimestamp
+        )
+
+        assertEquals(
+            "a recovery must leave the staging file of a running update alone",
+            "an update being staged",
+            updateStaging.readText()
         )
 
         // 5. Rebuilt DB must be functional with the v4 schema in place.
@@ -323,34 +332,90 @@ class ExploreDatabaseTest {
     /** A sync run as on an upgrade: the bundled asset is swapped in first, then the download. */
     private class TwoSwapRepository(
         private val files: GCExploreDatabase,
-        private val asset: File,
+        private val asset: File?,
         private val remote: File,
-        private val beforeDownload: suspend () -> Unit
+        private val remoteTimestamp: Long? = null,
+        private val isTimestampWriteFailing: Boolean = false,
+        private val beforeDownload: suspend () -> Unit = {}
     ) : ExploreRepository by files {
         override suspend fun preloadFromAssetsInto(dbUpdateFile: File, checkTestDB: Boolean): Boolean {
-            asset.copyTo(dbUpdateFile, overwrite = true)
-            return true
+            asset?.copyTo(dbUpdateFile, overwrite = true)
+            return asset != null
         }
 
-        override suspend fun getRemoteTimestamp(): Long = files.getTimestamp(asset) + 1_000
+        override suspend fun getRemoteTimestamp(): Long = remoteTimestamp ?: (files.getTimestamp(asset!!) + 1_000)
 
         override suspend fun download() {
             beforeDownload()
             remote.copyTo(files.getUpdateFile(), overwrite = true)
         }
+
+        override suspend fun finalizeUpdate() {
+            if (isTimestampWriteFailing) {
+                throw IOException("the timestamp could not be written")
+            }
+            files.finalizeUpdate()
+        }
+    }
+
+    private fun updateZipWithCountries(files: GCExploreDatabase, name: String, vararg countries: String): File {
+        val zip = File(appContext.cacheDir, name)
+        stageUpdateWithCountries(files, *countries)
+        files.getUpdateFile().copyTo(zip, overwrite = true)
+        files.getUpdateFile().delete()
+        return zip
+    }
+
+    private fun syncWorker(repository: ExploreRepository, syncStatus: ExploreDataSyncStatus, config: ExploreConfig) =
+        ExploreSyncWorker(
+            appContext,
+            mock<WorkerParameters>(defaultAnswer = Mockito.RETURNS_DEEP_STUBS) {
+                on { inputData } doReturn Data.EMPTY
+            },
+            mock(),
+            repository,
+            syncStatus,
+            config
+        )
+
+    @Test
+    fun syncWhoseTimestampWriteFails_stillAnnouncesTheReplacedCatalog() = runBlocking {
+        val config = updateConfig()
+        val files = GCExploreDatabase(appContext, config, mock(), mock())
+        val remote = updateZipWithCountries(files, "remote.zip", "US", "GB")
+        val repository = TwoSwapRepository(files, null, remote, remoteTimestamp = 5_000, isTimestampWriteFailing = true)
+        val syncStatus = ExploreDataSyncStatus()
+
+        syncWorker(repository, syncStatus, config).doWork()
+
+        val dao = ExploreDatabase.getAppDatabase(appContext, config).merchantDao()
+        assertEquals(listOf("GB", "US"), withContext(Dispatchers.IO) { dao.getCountries() }.sorted())
+        assertEquals(1, syncStatus.getCatalogGeneration().first())
+        assertEquals("a failed update is fetched again", 0L, prefsState.localDbTimestamp)
+    }
+
+    @Test
+    fun version4FileBesideACurrentTimestamp_isReplacedByTheSync() = runBlocking {
+        val config = updateConfig()
+        val files = GCExploreDatabase(appContext, config, mock(), mock())
+        val remote = updateZipWithCountries(files, "remote.zip", "US", "GB")
+        // After a downgrade and an upgrade: the older build left its file, this build's marks survived
+        createPopulatedVersion4(appContext.getDatabasePath("explore-database"))
+        prefsState = ExploreDatabasePrefs(localDbTimestamp = 5_000, localDbSchemaVersion = ExploreDatabase.VERSION)
+        val repository = TwoSwapRepository(files, null, remote, remoteTimestamp = 5_000)
+
+        syncWorker(repository, ExploreDataSyncStatus(), config).doWork()
+
+        val dao = ExploreDatabase.getAppDatabase(appContext, config).merchantDao()
+        assertEquals(listOf("GB", "US"), withContext(Dispatchers.IO) { dao.getCountries() }.sorted())
     }
 
     @Test
     fun daoFromBeforeATwoSwapSync_readsTheSecondFileWhenToldOfTheNewCatalog() = runBlocking {
         val config = updateConfig()
         val files = GCExploreDatabase(appContext, config, mock(), mock())
-        val asset = File(appContext.cacheDir, "asset.zip")
-        val remote = File(appContext.cacheDir, "remote.zip")
-        stageUpdateWithCountries(files, "US")
-        files.getUpdateFile().copyTo(asset, overwrite = true)
-        stageUpdateWithCountries(files, "US", "GB")
-        files.getUpdateFile().copyTo(remote, overwrite = true)
-        files.getUpdateFile().delete()
+        val asset = updateZipWithCountries(files, "asset.zip", "US")
+        val remote = updateZipWithCountries(files, "remote.zip", "US", "GB")
 
         // Hilt hands out the DAOs of the first instance for the whole session
         val dao = ExploreDatabase.getAppDatabase(appContext, config).merchantDao()
@@ -370,18 +435,8 @@ class ExploreDatabaseTest {
         }
         awaitReader()
         val repository = TwoSwapRepository(files, asset, remote) { awaitReader() }
-        val worker = ExploreSyncWorker(
-            appContext,
-            mock<WorkerParameters>(defaultAnswer = Mockito.RETURNS_DEEP_STUBS) {
-                on { inputData } doReturn Data.EMPTY
-            },
-            mock(),
-            repository,
-            syncStatus,
-            config
-        )
 
-        worker.doWork()
+        syncWorker(repository, syncStatus, config).doWork()
         awaitReader()
         reader.cancel()
 

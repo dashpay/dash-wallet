@@ -60,7 +60,8 @@ class SearchResultDiffCallback<T : SearchResult> : DiffUtil.ItemCallback<T>() {
     }
 
     override fun areContentsTheSame(oldItem: T, newItem: T): Boolean {
-        return oldItem == newItem
+        // A merchant row shows its country, which Merchant.equals() does not compare
+        return oldItem == newItem && (oldItem as? Merchant)?.country == (newItem as? Merchant)?.country
     }
 }
 

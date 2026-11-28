@@ -410,7 +410,10 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
     }
 
     private fun setupCountryFilter() {
-        viewModel.selectedCountry.observe(viewLifecycleOwner) { showCountry() }
+        viewModel.selectedCountry.observe(viewLifecycleOwner) {
+            showCountry()
+            checkResetButton()
+        }
         viewModel.countries.observe(viewLifecycleOwner) { countries ->
             // With a single country there is nothing to choose between
             val isShown = isCountryFiltered && countries.size > 1

@@ -71,6 +71,9 @@ abstract class ExploreDatabase : RoomDatabase() {
         const val VERSION = 5
         private const val EXPLORE_DB_NAME = "explore-database"
         private const val EXPLORE_DB_STAGING_NAME = "explore-database.staging"
+
+        // Its own file: a recovery can run while the sync worker is building the update's staging file
+        private const val EXPLORE_DB_RECOVERY_NAME = "explore-database.recovery"
         private const val USER_VERSION_OFFSET = 60
         private val log = LoggerFactory.getLogger(ExploreDatabase::class.java)
         private var instance: ExploreDatabase? = null
@@ -86,7 +89,8 @@ abstract class ExploreDatabase : RoomDatabase() {
         suspend fun updateDatabase(
             context: Context,
             repository: ExploreRepository,
-            exploreConfig: ExploreConfig
+            exploreConfig: ExploreConfig,
+            onReplaced: () -> Unit = {}
         ) {
             log.info("force update explore db")
             stageUpdate(context, repository)
@@ -96,7 +100,9 @@ abstract class ExploreDatabase : RoomDatabase() {
                 val previous = instance
                 instance = null
                 previous?.close()
-                promoteStagingToProduction(context)
+                promoteStagingToProduction(context, EXPLORE_DB_STAGING_NAME)
+                // Told before the timestamp is recorded: the file is replaced even if that write fails
+                onReplaced()
                 // Recorded only once the new data is the production database, so a failed update
                 // is downloaded again. It comes before the open, whose recovery resets the timestamp.
                 repository.finalizeUpdate()
@@ -173,7 +179,7 @@ abstract class ExploreDatabase : RoomDatabase() {
         private fun openRecovered(context: Context, isAssetStaged: Boolean): ExploreDatabase {
             if (isAssetStaged) {
                 try {
-                    promoteStagingToProduction(context)
+                    promoteStagingToProduction(context, EXPLORE_DB_RECOVERY_NAME)
                     return buildAndProbe(context)
                 } catch (ex: Exception) {
                     log.error("recovered asset DB failed to open, returning empty DB", ex)
@@ -205,12 +211,12 @@ abstract class ExploreDatabase : RoomDatabase() {
                     }
                     parts[1]
                 }
-                context.deleteDatabase(EXPLORE_DB_STAGING_NAME)
+                context.deleteDatabase(EXPLORE_DB_RECOVERY_NAME)
 
                 val staging = Room.databaseBuilder(
                     context,
                     ExploreDatabase::class.java,
-                    EXPLORE_DB_STAGING_NAME
+                    EXPLORE_DB_RECOVERY_NAME
                 )
                     .createFromInputStream({ openInnerDb(cacheZip, password) })
                     .setJournalMode(JournalMode.TRUNCATE)
@@ -314,10 +320,10 @@ abstract class ExploreDatabase : RoomDatabase() {
             staging.close()
         }
 
-        private fun promoteStagingToProduction(context: Context) {
+        private fun promoteStagingToProduction(context: Context, stagingName: String) {
             val dbDir = context.getDatabasePath(EXPLORE_DB_NAME).parentFile
                 ?: throw IOException("databases directory unavailable")
-            val stagingFile = File(dbDir, EXPLORE_DB_STAGING_NAME)
+            val stagingFile = File(dbDir, stagingName)
             val prodFile = File(dbDir, EXPLORE_DB_NAME)
 
             if (!stagingFile.exists()) {
@@ -332,9 +338,9 @@ abstract class ExploreDatabase : RoomDatabase() {
             }
 
             // Discard staging journal/wal/shm; Room will recreate them under the production name.
-            File(dbDir, "$EXPLORE_DB_STAGING_NAME-journal").delete()
-            File(dbDir, "$EXPLORE_DB_STAGING_NAME-shm").delete()
-            File(dbDir, "$EXPLORE_DB_STAGING_NAME-wal").delete()
+            File(dbDir, "$stagingName-journal").delete()
+            File(dbDir, "$stagingName-shm").delete()
+            File(dbDir, "$stagingName-wal").delete()
         }
 
         @VisibleForTesting
@@ -431,7 +437,7 @@ abstract class ExploreDatabase : RoomDatabase() {
             log.info("cleanup, before: ${context.databaseList().joinToString("; ")}")
             // deleteDatabase removes the main file plus -journal/-wal/-shm side files.
             context.deleteDatabase(EXPLORE_DB_NAME)
-            context.deleteDatabase(EXPLORE_DB_STAGING_NAME)
+            context.deleteDatabase(EXPLORE_DB_RECOVERY_NAME)
             log.info("cleanup, after: ${context.databaseList().joinToString("; ")}")
         }
     }

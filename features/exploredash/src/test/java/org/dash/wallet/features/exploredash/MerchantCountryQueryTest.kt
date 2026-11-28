@@ -29,10 +29,13 @@ import org.dash.wallet.features.exploredash.data.explore.model.Merchant
 import org.dash.wallet.features.exploredash.data.explore.model.MerchantInfo
 import org.dash.wallet.features.exploredash.data.explore.model.MerchantType
 import org.dash.wallet.features.exploredash.data.explore.model.SortOption
+import org.dash.wallet.features.exploredash.ui.adapters.SearchResultDiffCallback
 import org.dash.wallet.features.exploredash.ui.explore.DenomOption
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -208,6 +211,20 @@ class MerchantCountryQueryTest {
         val stores = sameNamedListed(MerchantType.PHYSICAL, "", SortOption.Name, "US", around)
 
         assertEquals(listOf("c-same", "a-same", "b-same"), stores)
+    }
+
+    @Test
+    fun rowWhoseCountryChanged_isDrawnAgain() {
+        fun merchant(country: String?) = Merchant(country = country).apply {
+            id = 1
+            name = "Shop"
+        }
+        val diff = SearchResultDiffCallback<Merchant>()
+
+        assertTrue(diff.areContentsTheSame(merchant("GB"), merchant("GB")))
+        assertTrue(diff.areContentsTheSame(merchant(null), merchant(null)))
+        assertFalse(diff.areContentsTheSame(merchant("GB"), merchant("US")))
+        assertFalse(diff.areContentsTheSame(merchant(null), merchant("US")))
     }
 
     private fun onlineOf(ids: List<String>) = ids.filter { it.endsWith("-online") }.sorted()
