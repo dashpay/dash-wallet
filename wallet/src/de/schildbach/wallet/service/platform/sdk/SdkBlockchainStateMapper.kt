@@ -1,0 +1,372 @@
+/*
+ * Copyright 2026 Dash Core Group.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package de.schildbach.wallet.service.platform.sdk
+
+import org.dash.wallet.common.data.SyncStage
+
+// ── Kill-list Step B (sync-state track): SDK progress → BlockchainState ─
+//
+// Post-cutover the dashj engine is held, so nothing calls
+// [de.schildbach.wallet.service.BlockchainStateDataProvider.updateBlockchainState]
+// and the app-wide Room `blockchain_state` row freezes at the cutover
+// snapshot — every sync indicator observing BlockchainState (home header
+// via MainViewModel, More screen, sync pills, the ongoing sync
+// notification, shielded chain-tip freshness) goes stale. The pure
+// functions here derive the SAME row from the Kotlin SDK's SPV progress
+// feed instead; [SdkBlockchainStateService] runs the equality-gated poll
+// that applies them. Everything in this file is host-JVM unit-testable.
+
+/**
+ * One polled snapshot of the SDK-side chain knowledge — the equality-gate
+ * unit: [SdkBlockchainStateService] only propagates a derivation when the
+ * whole snapshot changed (the iOS-validated pattern; naive 1 Hz polling
+ * burned CPU re-emitting identical progress, a documented iOS bug).
+ *
+ * @property progress the mirrored SPV progress ([L1ShadowSyncService.progress]).
+ * @property tipUnixSeconds the SPV tip block's timestamp (the SDK's
+ *   `spvTipUnixSecondsFlow`), 0 while unknown — dashj's
+ *   `chainHead.header.time` analogue.
+ * @property stalled the derived progress-stall verdict ([isSpvProgressStalled]).
+ * @property chainLockHeight the highest GLOBAL chainlock height the engine
+ *   has applied this session ([L1ShadowSyncService.chainLockHeight]), 0
+ *   before the first chainlock event of the session.
+ */
+internal data class SdkChainSnapshot(
+    val progress: ShadowSyncProgress,
+    val tipUnixSeconds: Long,
+    val stalled: Boolean,
+    val chainLockHeight: Int = 0
+)
+
+/**
+ * What one propagated snapshot should write into the persisted
+ * [org.dash.wallet.common.data.entity.BlockchainState] row (applied by
+ * [de.schildbach.wallet.service.BlockchainStateDataProvider.updateSdkBlockchainState]
+ * on its serial scope). Null fields mean PRESERVE the row's current value
+ * — the SDK cannot claim knowledge it does not have (e.g. zero heights
+ * while still connecting must not regress a previously-synced row).
+ */
+internal data class SdkBlockchainStateUpdate(
+    /** SDK header-chain tip height, or null (no header knowledge yet — preserve). */
+    val bestChainHeight: Int?,
+    /**
+     * Epoch-millis of the chain "date" freshness signal, or null (unknown —
+     * preserve). NOT simply the header-tip time: while the scan is
+     * incomplete this is the estimated timestamp of the FILTER-scan
+     * position, so date-freshness keeps implying sync-completeness (see
+     * [deriveBlockchainStateUpdate]).
+     */
+    val bestChainDateMs: Long?,
+    /**
+     * Combined headers+filters percent over the SESSION's work — same math
+     * as [shadowSyncPercent] — or null (preserve) on a transient ERROR
+     * snapshot, so a peer hiccup never regresses a previously-reported
+     * percent (dashj never did). A new engine session measures its own
+     * work, so this legitimately restarts low on a re-walk.
+     */
+    val percentageSync: Int?,
+    /** Masternode-list sync height, or null (unknown — preserve). */
+    val mnListHeight: Int?,
+    /**
+     * Whether the REPLAY — the engine's actual scan work, not the display —
+     * is finished: `!`[ShadowSyncProgress.replayActive], so it stays false
+     * while the block pipeline lags behind a caught-up cursor. Null on the
+     * phases with no trustworthy position (preserve), like [percentageSync].
+     *
+     * Carried separately from [percentageSync] on purpose (review,
+     * 2026-09-23): the display percent reads 100 at the iOS aggregate
+     * threshold with the committed cursor thousands of blocks behind, and
+     * `BlockchainState.replaying` — the idle-stop guard and the replay wake
+     * lock — used to be derived from it, so a final-batch park could stop the
+     * release-build engine and `rescheduleIfReplayInterrupted` then declined
+     * the restart because the replay was already "over".
+     */
+    val replayComplete: Boolean?,
+    /**
+     * Neutral sync stage for
+     * [org.dash.wallet.common.services.BlockchainStateProvider.observeSyncStage].
+     * Always the phase's own stage — the value to WRITE, and the value to seed
+     * with when nothing is established yet. Whether an already-established stage
+     * may be left alone instead is [preserveEstablishedSyncStage].
+     */
+    val syncStage: SyncStage,
+    /**
+     * True when this snapshot must not REGRESS a stage that is already
+     * established — see [mayPreserveEstablishedSyncStage]. With no established
+     * stage the writer still applies [syncStage], so a process start never
+     * reports OFFLINE for a caught-up wallet.
+     */
+    val preserveEstablishedSyncStage: Boolean,
+    /**
+     * Whether a NETWORK impediment should be derived: the SDK has no
+     * dashj-style impediment events, so a stalled/errored scan is the
+     * closest honest signal that sync is not making progress (drives
+     * [org.dash.wallet.common.data.entity.BlockchainState.syncFailed]).
+     */
+    val networkStalled: Boolean,
+    /**
+     * GLOBAL best-chainlocked block height — dashj's
+     * `chainLockHandler.bestChainLockBlockHeight` analogue — or null
+     * (preserve the row's value) when the engine has applied no chainlock
+     * this session.
+     *
+     * SOURCE (resolves the former "the SDK exposes no chainlock feed"
+     * TODO): the progress feed
+     * [org.dashfoundation.dashsdk.wallet.SpvSyncProgressData] indeed
+     * carries none, and the SDK's only chainlock-height SCALARS are the
+     * wrong shape ([org.dashfoundation.dashsdk.wallet.TrackedAssetLock.chainLockHeight]
+     * is per-asset-lock; `WalletEntity.lastAppliedChainLockBytes` is an
+     * undecoded bincode blob in the persistence layer). But the engine's
+     * WALLET-EVENT stream does carry it: `WalletEvent::ChainLockProcessed`
+     * (and `BlockProcessed`'s `chain_lock`) embed the full quorum-signed
+     * `ChainLock`, and every event reaches the app as its Rust `Debug`
+     * string on the tap [L1ShadowSyncService] already collects. See
+     * [parseL1ChainLockHeight] / [L1ShadowSyncService.chainLockHeight].
+     *
+     * LOWER BOUND, never an over-report: only chainlocks applied while
+     * this process was collecting are known, so the value trails the true
+     * chainlock tip and is 0 until the session's first chainlock event.
+     * That direction is the safe one for every consumer — a height at or
+     * below it is PROVEN chainlocked; above it is merely unknown, and
+     * [de.schildbach.wallet.payments.ChainLockedCoinSelector] then falls
+     * back to its depth rule. The writer
+     * ([de.schildbach.wallet.service.BlockchainStateDataProvider.updateSdkBlockchainState])
+     * additionally clamps it monotonically against the row, so a fresh
+     * session cannot regress a height dashj (or an earlier session)
+     * already established.
+     */
+    val chainlockHeight: Int?
+)
+
+/**
+ * Same 2.625-minute effective DGW block target as
+ * [de.schildbach.wallet.service.BlockchainStateDataProvider.BLOCK_TARGET_SPACING],
+ * in millis — the tip-date estimator's fallback granularity.
+ */
+internal const val SDK_BLOCK_TARGET_SPACING_MS: Long = (2.625 * 60 * 1000).toLong()
+
+/**
+ * How long the SPV progress snapshot may sit unchanged mid-scan before the
+ * derivation reports a NETWORK impediment ([SdkBlockchainStateUpdate.networkStalled]).
+ * Generous vs the Rust client's own retry cadence so a slow peer handoff
+ * doesn't flap the home header into "sync failed".
+ */
+internal const val SPV_STALL_THRESHOLD_MS: Long = 90_000L
+
+/**
+ * The progress-stall verdict feeding the derived NETWORK impediment:
+ * - [ShadowSyncPhase.ERROR] is stalled immediately (the engine said so);
+ * - active phases (CONNECTING through FILTERS) are stalled once the
+ *   snapshot has not changed for [thresholdMs];
+ * - IDLE and SYNCED are never stalled (nothing is supposed to move).
+ * Pure — host-testable.
+ */
+internal fun isSpvProgressStalled(
+    phase: ShadowSyncPhase,
+    msSinceProgressChange: Long,
+    thresholdMs: Long = SPV_STALL_THRESHOLD_MS
+): Boolean = when (phase) {
+    ShadowSyncPhase.ERROR -> true
+    ShadowSyncPhase.IDLE, ShadowSyncPhase.SYNCED -> false
+    ShadowSyncPhase.CONNECTING,
+    ShadowSyncPhase.HEADERS,
+    ShadowSyncPhase.FILTER_HEADERS,
+    ShadowSyncPhase.MASTERNODES,
+    ShadowSyncPhase.FILTERS -> msSinceProgressChange >= thresholdMs
+}
+
+/**
+ * The stall verdict with the iOS caught-up rule applied on top.
+ *
+ * The phase-based verdict above reads any progress snapshot that sits
+ * unchanged for [thresholdMs] mid-scan as a NETWORK stall, and the row turns
+ * that into the red "unable to connect" banner. In the dash-spv
+ * final-partial-batch stall (plan §34) the snapshot IS unchanged for many
+ * minutes — the filter commit is parked — while every filter has arrived and
+ * the engine is healthy, so the banner is factually wrong and iOS, applying
+ * the same 0.999 aggregate rule, shows nothing at all. A snapshot the
+ * aggregate calls caught up ([ShadowSyncProgress.aggregateCaughtUp]) is
+ * therefore never a stall here. The caller LOGS that exemption instead
+ * (`SdkBlockchainStateService`), so the stall stays visible in the log
+ * without being reported to the user as a connectivity failure.
+ *
+ * ERROR still stalls immediately — the aggregate is not consulted for a
+ * fault. Pure — host-testable.
+ */
+internal fun isSpvProgressStalled(
+    progress: ShadowSyncProgress,
+    msSinceProgressChange: Long,
+    thresholdMs: Long = SPV_STALL_THRESHOLD_MS
+): Boolean = when {
+    progress.phase == ShadowSyncPhase.ERROR -> true
+    progress.aggregateCaughtUp -> false
+    else -> isSpvProgressStalled(progress.phase, msSinceProgressChange, thresholdMs)
+}
+
+/**
+ * Rust SPV phase → the neutral [SyncStage] the pre-cutover pipeline maps
+ * dashj's `PeerGroup.SyncStage` onto (see
+ * [de.schildbach.wallet.service.BlockchainStateDataProvider]'s `toNeutral`):
+ * not-connected states read OFFLINE (dashj's convention before the
+ * peergroup is up), the compact-filter scan is the SDK's analogue of the
+ * block download (BLOCKS), and there is no PREBLOCKS analogue (that stage
+ * is dashj's Platform pre-block download).
+ */
+internal fun sdkSyncStage(phase: ShadowSyncPhase): SyncStage = when (phase) {
+    ShadowSyncPhase.IDLE, ShadowSyncPhase.CONNECTING, ShadowSyncPhase.ERROR -> SyncStage.OFFLINE
+    ShadowSyncPhase.HEADERS, ShadowSyncPhase.FILTER_HEADERS -> SyncStage.HEADERS
+    ShadowSyncPhase.MASTERNODES -> SyncStage.MNLIST
+    ShadowSyncPhase.FILTERS -> SyncStage.BLOCKS
+    ShadowSyncPhase.SYNCED -> SyncStage.COMPLETE
+}
+
+/**
+ * May a stage ALREADY ESTABLISHED for this wallet be left alone on this snapshot?
+ *
+ * The defect this serves is the stage and the percent disagreeing.
+ * `percentageSync` is written from [shadowSyncPercent], which claims 100 as soon
+ * as the filter scan has caught up to the header tip — but the engine does not
+ * latch SYNCED (every new block bumps the targets and drops it back to a scan
+ * phase). So a fully-synced wallet keeps flipping SYNCED → FILTERS → SYNCED, and
+ * because the stage was written unconditionally it regressed to BLOCKS while the
+ * percent stayed 100. The home screen rendered that pair as "syncing 100%" while
+ * Tools, reading the row, still said synced.
+ *
+ * Field evidence (MO-973 report 3, Samsung, 2026-09-11): 59 such blips on a
+ * wallet synced for hours, e.g. `FILTERS 100.0%` at 13:45:13 → `SYNCED` at
+ * 13:45:14.
+ *
+ * ESTABLISHED is load-bearing, and is the writer's business rather than this
+ * function's: with no prior stage there is nothing to preserve, and suppressing
+ * the write would leave `syncStageFlow` null, which `getSyncStage()` reports as
+ * OFFLINE. A cold start on an already-synced wallet — first snapshot caught up,
+ * engine not yet latched to SYNCED — would then read offline. So this only says
+ * the stage MAY be held; [SdkBlockchainStateUpdate.syncStage] still carries the
+ * phase's own stage as the value to seed with.
+ *
+ * Deliberately narrow — [scanPercent] is [shadowSyncPercent], which already reads
+ * 0 for IDLE / CONNECTING / ERROR, so those can never be held:
+ * - ERROR keeps reporting OFFLINE. That is how the fault is surfaced, alongside
+ *   the stall impediment (pinned by `derive_errorPreservesPercentage`).
+ * - IDLE / CONNECTING keep reporting OFFLINE. A cold reconnect knows no heights
+ *   at all and must read offline, not "still synced" (pinned by
+ *   `derive_noHeightKnowledgePreservesHeightAndDate`).
+ * - a genuine re-scan caps at 99 and still moves the stage.
+ * - SYNCED is never held; reaching the terminal state must always be written.
+ *
+ * Pure — host-testable.
+ */
+internal fun mayPreserveEstablishedSyncStage(phase: ShadowSyncPhase, scanPercent: Int): Boolean =
+    phase != ShadowSyncPhase.SYNCED && scanPercent >= 100
+
+/**
+ * The full field derivation — one snapshot to one row update. Field notes:
+ * - bestChainHeight: the SDK header tip ([ShadowSyncProgress.headerHeight]),
+ *   dashj's `chainHead.height` analogue; preserved while 0 (no knowledge).
+ * - bestChainDate: FRESHNESS MUST IMPLY COMPLETENESS. Under dashj the
+ *   chain-head date only became fresh at the END of the block download, and
+ *   consumers rely on that: `ShieldedTransferViewModel.isChainSyncedForTransfer`
+ *   gates transfers on `now − bestChainDate < 1 h`, and
+ *   `BlockchainServiceImpl` reads `bestChainDate < now − 1 h` as "still
+ *   syncing". The SDK's header chain finishes long before the
+ *   wallet-relevant compact-FILTER scan, so the header-tip time must NOT be
+ *   reported mid-scan. Instead:
+ *   - phase SYNCED → the real tip timestamp (or the header-gap estimate
+ *     `now − headerGap × 2.625 min` while the tip feed lags) — fresh;
+ *   - any other phase → the estimated timestamp of the current FILTER-scan
+ *     position, `tipTime − (filterTarget − filterHeight) × 2.625 min`
+ *     clamped ≤ tip time — honestly stale until the scan catches up;
+ *   - no tip knowledge, or mid-scan with no filter target yet → null
+ *     (preserve — the frozen row value must not be overwritten with a
+ *     possibly-fresh guess).
+ * - percentageSync: [shadowSyncPercent] — the combined headers+filters
+ *   metric the home header already uses (the SDK's own `overallPercentage`
+ *   under-reports during the filter scan). On a transient ERROR snapshot it
+ *   is null (preserve): dashj never regressed the percent on a peer error,
+ *   and an unconditional 0 would flap every `isSynced()` consumer
+ *   100 → 0 → 100 (the impediment/stage carries the error instead).
+ * - replaying: always false — the SDK has no replay concept; its full
+ *   re-scan simply reads as percentageSync < 100 (the writer clears the
+ *   row's flag).
+ * - syncStage / networkStalled: [sdkSyncStage] / [SdkChainSnapshot.stalled].
+ * - chainlockHeight: [SdkChainSnapshot.chainLockHeight] when the engine has
+ *   applied a chainlock this session, else null (preserve) — see the field
+ *   KDoc for why a lower bound is the safe direction.
+ * Pure — host-testable.
+ */
+internal fun deriveBlockchainStateUpdate(
+    snapshot: SdkChainSnapshot,
+    nowMs: Long
+): SdkBlockchainStateUpdate {
+    val p = snapshot.progress
+    val bestChainHeight = p.headerHeight.takeIf { it > 0 }?.toInt()
+    // The network tip's timestamp: the SDK feed when present, else the
+    // header-gap estimate (good to one block target).
+    val tipTimeMs = when {
+        snapshot.tipUnixSeconds > 0 -> snapshot.tipUnixSeconds * 1000
+        p.headerHeight > 0 && p.headerTarget > 0 ->
+            nowMs - (p.headerTarget - p.headerHeight).coerceAtLeast(0) * SDK_BLOCK_TARGET_SPACING_MS
+        else -> null
+    }
+    val bestChainDateMs = when {
+        tipTimeMs == null -> null
+        p.phase == ShadowSyncPhase.SYNCED -> tipTimeMs
+        // Mid-scan: report the FILTER-scan position's timestamp so the date
+        // stays stale until the wallet-relevant scan completes (see KDoc).
+        p.filterTarget > 0 ->
+            (tipTimeMs - (p.filterTarget - p.filterHeight).coerceAtLeast(0) * SDK_BLOCK_TARGET_SPACING_MS)
+                .coerceAtMost(tipTimeMs)
+        else -> null
+    }
+    // The raw scan percent drives the stage; percentageSync is that same value
+    // with the "no trustworthy position" phases nulled out (preserve). Sharing
+    // one source is what stops the two fields disagreeing about whether the scan
+    // still has work to do.
+    val scanPercent = shadowSyncPercent(p)
+    val percent = when (p.phase) {
+        ShadowSyncPhase.ERROR,
+        ShadowSyncPhase.IDLE,
+        ShadowSyncPhase.CONNECTING -> null
+        else -> scanPercent
+    }
+    return SdkBlockchainStateUpdate(
+        bestChainHeight = bestChainHeight,
+        bestChainDateMs = bestChainDateMs,
+        // Preserve the prior percent on states with no trustworthy scan
+        // position — a process-death restart cycles through IDLE/CONNECTING
+        // for ~3 min while reconnecting, and writing 0 there slammed a
+        // previously-synced bar 99→0 (the restart sawtooth). Same
+        // "don't regress on unknown" treatment bestChainHeight already gets;
+        // only real scan phases (and a genuine ERROR → null) move it.
+        percentageSync = percent,
+        mnListHeight = p.mnListHeight.takeIf { it > 0 }?.toInt(),
+        // Lifecycle completion, not display completion — see the field KDoc.
+        replayComplete = when (p.phase) {
+            ShadowSyncPhase.ERROR,
+            ShadowSyncPhase.IDLE,
+            ShadowSyncPhase.CONNECTING -> null
+            else -> !p.replayActive
+        },
+        syncStage = sdkSyncStage(p.phase),
+        preserveEstablishedSyncStage = mayPreserveEstablishedSyncStage(p.phase, scanPercent),
+        networkStalled = snapshot.stalled,
+        // 0 = "no chainlock observed this session" — preserve, exactly like
+        // the other unknown-is-null fields; never claim height 0.
+        chainlockHeight = snapshot.chainLockHeight.takeIf { it > 0 }
+    )
+}

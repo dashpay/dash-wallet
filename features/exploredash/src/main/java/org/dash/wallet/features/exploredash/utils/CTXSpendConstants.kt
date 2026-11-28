@@ -16,7 +16,7 @@
  */
 package org.dash.wallet.features.exploredash.utils
 
-import org.bitcoinj.core.NetworkParameters
+import org.dash.wallet.common.money.DashNetworks
 
 object CTXSpendConstants {
     const val BASE_URL = "https://spend.ctx.com/"
@@ -27,6 +27,5 @@ object CTXSpendConstants {
     const val DEFAULT_DISCOUNT_AS_DOUBLE: Double = 0.0 // 0%
     const val REPORT_EMAIL = "support@ctx.com"
 
-    fun baseUrl(networkParameters: NetworkParameters): String =
-        if (networkParameters.id == NetworkParameters.ID_MAINNET) BASE_URL else DEV_BASE_URL
+    fun baseUrl(networkId: String): String = if (networkId == DashNetworks.MAINNET) BASE_URL else DEV_BASE_URL
 }

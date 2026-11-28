@@ -28,11 +28,12 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
-import org.bitcoinj.core.Coin
-import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.data.ServiceName
+import org.dash.wallet.common.data.TxId
 import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.common.data.entity.TransactionMetadata
+import org.dash.wallet.common.money.Coin
+import org.dash.wallet.common.money.TxIds
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.transactions.TransactionCategory
 import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardInfo
@@ -63,9 +64,10 @@ import org.mockito.kotlin.whenever
 class GiftCardDetailsViewModelTest {
     @get:Rule var mainCoroutineRule = MainCoroutineRule(StandardTestDispatcher())
 
-    private val txId = Sha256Hash.ZERO_HASH
+    private val txId = TxIds.ZERO_HASH_HEX
+    private val txIdBytes = TxIds.toBytes(txId)
     private val orderId = "order-1"
-    private val pendingCard = GiftCard(txId = txId, merchantName = "Target", price = 25.0, note = orderId)
+    private val pendingCard = GiftCard.fromHex(txId = txId, merchantName = "Target", price = 25.0, note = orderId)
     private val withoutDetails = GiftCardInfo(
         orderId,
         status = GiftCardStatus.FULFILLED,
@@ -82,9 +84,9 @@ class GiftCardDetailsViewModelTest {
     private val metadataProvider = metadataProvider(ServiceName.CTXSpend)
 
     private fun metadataProvider(service: String) = mock<TransactionMetadataProvider> {
-        on { observeTransactionMetadata(txId) } doReturn emptyFlow()
-        onBlocking { getTransactionMetadata(txId) } doReturn TransactionMetadata(
-            txId,
+        on { observeTransactionMetadata(TxId.wrap(txId)) } doReturn emptyFlow()
+        onBlocking { getTransactionMetadata(TxId.wrap(txId)) } doReturn TransactionMetadata(
+            TxId.wrap(txId),
             0,
             Coin.ZERO,
             TransactionCategory.Sent,
@@ -98,8 +100,8 @@ class GiftCardDetailsViewModelTest {
         piggyCardsRepository: PiggyCardsRepository = mock()
     ): GiftCardDetailsViewModel {
         val giftCardDao = mock<GiftCardDao> {
-            on { observeCardForTransaction(txId) } doReturn savedCards
-            onBlocking { getCardForTransaction(txId) } doReturn listOf(pendingCard)
+            on { observeCardForTransaction(txIdBytes) } doReturn savedCards
+            onBlocking { getCardForTransaction(txIdBytes) } doReturn listOf(pendingCard)
         }
         return GiftCardDetailsViewModel(
             mock(),

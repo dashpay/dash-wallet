@@ -75,6 +75,7 @@ import java.io.FileNotFoundException
 import java.io.IOException
 import java.io.InputStream
 import java.math.BigInteger
+import de.schildbach.wallet.util.toSha256Hash
 
 @AndroidEntryPoint
 class EditProfileActivity : LockScreenActivity() {
@@ -289,8 +290,8 @@ class EditProfileActivity : LockScreenActivity() {
                 Status.SUCCESS -> {
                     ProfilePictureHelper.avatarHashAndFingerprint(this, it.data!!.toUri(), null,
                         object: ProfilePictureHelper.OnResourceReadyListener {
-                            override fun onResourceReady(avatarHash: Sha256Hash?, avatarFingerprint: BigInteger?) {
-                                editProfileViewModel.avatarHash = avatarHash
+                            override fun onResourceReady(avatarHash: org.dash.wallet.common.data.TxId?, avatarFingerprint: BigInteger?) {
+                                editProfileViewModel.avatarHash = avatarHash?.toSha256Hash()
                                 editProfileViewModel.avatarFingerprint = avatarFingerprint
                             }
                         }
@@ -470,6 +471,7 @@ class EditProfileActivity : LockScreenActivity() {
     }
 
     private fun showProfileInfo(profile: DashPayProfile) {
+        binding.profileUsername.text = profile.username
         if (!isEditing) {
             ProfilePictureDisplay.display(binding.dashpayUserAvatar, profile)
             initialAboutMe = profile.publicMessage

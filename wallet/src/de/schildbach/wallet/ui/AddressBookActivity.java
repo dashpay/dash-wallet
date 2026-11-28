@@ -68,6 +68,8 @@ public final class AddressBookActivity extends AbstractBindServiceActivity {
 
 	@Override
     protected void onCreateWithWallet(@Nullable final Bundle savedInstanceState) {
+		super.onCreateWithWallet(savedInstanceState);
+
 		setContentView(R.layout.address_book_content);
 		Toolbar toolbar = findViewById(R.id.toolbar);
 		toolbar.setTitle(getString(R.string.address_book_activity_title));

@@ -40,7 +40,7 @@ import androidx.lifecycle.LifecycleService;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.wallet.Wallet;
-import org.dash.wallet.common.WalletDataProvider;
+import de.schildbach.wallet.data.WalletData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,7 +64,7 @@ public final class AcceptBluetoothService extends LifecycleService {
     @Inject
     protected WalletApplication application;
     @Inject
-    protected WalletDataProvider walletDataProvider;
+    protected WalletData walletDataProvider;
 
     @Inject
     protected PackageInfoProvider packageInfoProvider;

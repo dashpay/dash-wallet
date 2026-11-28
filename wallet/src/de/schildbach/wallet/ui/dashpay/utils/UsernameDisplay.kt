@@ -1,0 +1,136 @@
+/*
+ * Copyright 2026 Dash Core Group.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package de.schildbach.wallet.ui.dashpay.utils
+
+/**
+ * A DPNS name has TWO forms: the `label` the user typed ("brian-s21") and the
+ * `normalizedLabel` DPNS derives from it by folding visually-confusable
+ * characters ("br1an-s21" — o→0, i/l→1, lowercased). The normalized form is a
+ * LOOKUP key: it is what contested-name checks, uniqueness comparisons, DPNS
+ * queries and on-chain document indexes are keyed on. It must never be shown
+ * to a human, who typed the label and expects to read it back.
+ *
+ * dashj hands the wallet the normalized form in several places —
+ * `BlockchainIdentity.primaryUsername` / `secondaryUsername` /
+ * `currentUsername` / `getUniqueUsername()` are all rewritten to
+ * `DomainDocument.normalizedLabel` by `recoverUsernames()` — and those values
+ * flowed straight into fields the UI renders (the home hello card greeted the
+ * user with "Hello br1an-s21,").
+ *
+ * [preferDisplayLabel] repairs that at the boundary: given a candidate
+ * [display] label from a source that keeps the human form (the identity
+ * record's requested username, the local DashPay profile built from the
+ * domain document's `.label`) and the [normalized] value dashj returned,
+ * it keeps the display label ONLY when it provably names the same DPNS
+ * entry — i.e. when normalizing it reproduces [normalized] exactly. Any
+ * other candidate (a stale name, a different name, none at all) loses to
+ * [normalized], which remains the authoritative on-chain answer.
+ *
+ * [normalize] is injected so the helper stays pure and host-testable; every
+ * production call site passes dashj's `Names::normalizeString`, the same
+ * function DPNS itself uses to derive `normalizedLabel`.
+ */
+internal fun preferDisplayLabel(
+    display: String?,
+    normalized: String,
+    normalize: (String) -> String
+): String = when {
+    display.isNullOrEmpty() -> normalized
+    // Already the display form (nothing was folded), or the exact same
+    // string — either way there is nothing to prefer.
+    display == normalized -> normalized
+    normalize(display) == normalized -> display
+    else -> normalized
+}
+
+
+/**
+ * TRUE when dashj's `recoverUsernames()` adopted the record's own registered
+ * SECONDARY as the identity's "primary", while the record's requested primary
+ * is a different name. The requested primary is what the app shows, so it must
+ * not be overwritten by the secondary. Two shapes produce this:
+ *
+ * - the DUAL create: the instant (non-contested) name registers immediately and
+ *   the contested primary is a CONTEST, not a registered DPNS domain until the
+ *   vote resolves, so `recoverUsernames()` adopts the only registered name, the
+ *   instant secondary. Copying that over the record's requested primary erased
+ *   the in-flight contest from the app entirely: the requested-label candidate
+ *   the contested-name scan reads was gone 20 ms before the scan ran, so no
+ *   voting tile, no UsernameRequest row, state DONE instead of VOTING, and the
+ *   More screen greeted the user with the NORMALIZED instant name (observed
+ *   live: requested `brimoztest` + instant `brimoztest3` → record clobbered to
+ *   `br1m0ztest3`; S21 2026-08-18, the Mo-972 shape);
+ * - a REPLACEMENT name after a lost or locked vote (a name-only retry, matching
+ *   master's dashj `finishRegistration`): the requested replacement becomes the
+ *   primary/display name whether or not it is contestable, and the instant
+ *   secondary stays the secondary. Once the replacement registers, dashj owns
+ *   both names and may still call the secondary "primary"; the requested label
+ *   must survive as the display name.
+ *
+ * The comparison is on NORMALIZED forms throughout: the recovered value IS
+ * the normalized label, so a raw-string compare against the record's
+ * display-form secondary can never match (`br1m0ztest3` != `brimoztest3`).
+ * When the recovered primary normalizes to the record's primary (a contest
+ * that WON, or dashj picking the replacement), the guard stands down and
+ * normal adoption runs.
+ */
+internal fun recoveredPrimaryIsPendingDualSecondary(
+    recordPrimary: String?,
+    recordSecondary: String?,
+    recoveredPrimary: String?,
+    normalize: (String) -> String
+): Boolean {
+    if (recordPrimary == null || recordSecondary == null || recoveredPrimary == null) return false
+    val recovered = try {
+        normalize(recoveredPrimary)
+    } catch (e: Exception) {
+        return false
+    }
+    return try {
+        recovered == normalize(recordSecondary) &&
+            recovered != normalize(recordPrimary)
+    } catch (e: Exception) {
+        false
+    }
+}
+
+/**
+ * The single rule for which name this wallet's OWN profile carries when the identity owns more
+ * than one DPNS name: the identity record's chosen primary ([recordPrimary], the requested name,
+ * a replacement after a lost or locked vote included), as long as the identity owns it.
+ *
+ * Returns the element of [ownedNames] that names the same DPNS entry as [recordPrimary] (compared
+ * on [normalize]d forms, so normalized and display labels both match), or null when the identity
+ * does not own it (yet): the dual create's contested primary during its vote, for instance. The
+ * caller then keeps its own candidate. Without this, every profile writer picked independently
+ * (dashj's adopted "primary", the first domain document), and a registered replacement could
+ * stay hidden behind the old instant secondary on the More screen.
+ */
+internal fun ownedRecordPrimary(
+    recordPrimary: String?,
+    ownedNames: Collection<String>,
+    normalize: (String) -> String
+): String? {
+    if (recordPrimary.isNullOrEmpty()) return null
+    return try {
+        val primary = normalize(recordPrimary)
+        if (ownedNames.any { normalize(it) == primary }) recordPrimary else null
+    } catch (e: Exception) {
+        null
+    }
+}

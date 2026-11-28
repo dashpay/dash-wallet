@@ -17,7 +17,6 @@
 
 package org.dash.wallet.common.payments.parsers
 
-import org.bitcoinj.params.MainNetParams
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -26,7 +25,7 @@ import org.junit.Test
 class AddressParserTest {
     @Test
     fun dashAddressTest() {
-        val parser = AddressParser(AddressParser.PATTERN_BITCOIN_ADDRESS, MainNetParams.get())
+        val parser = AddressParser(AddressParser.PATTERN_BITCOIN_ADDRESS, AddressNetwork.DASH_MAINNET)
 
         assertTrue(parser.exactMatch("XssjzLKgsfATYGqTQmiJURQzeKdpL5K1k3"))
 
@@ -48,7 +47,7 @@ class AddressParserTest {
 
     @Test
     fun bitcoinAddressTest() {
-        val network = BitcoinMainNetParams()
+        val network = AddressNetwork.BITCOIN_MAINNET
         val parser = BitcoinAddressParser(network)
 
         assertTrue(parser.exactMatch("183axN6F7ZjwayiJPjjwJgWGas6J9mtfi"))
@@ -104,7 +103,7 @@ class AddressParserTest {
 
     @Test
     fun normalizeCaseTest() {
-        val bitcoinParser = BitcoinAddressParser(BitcoinMainNetParams())
+        val bitcoinParser = BitcoinAddressParser(AddressNetwork.BITCOIN_MAINNET)
 
         // All-caps bech32 (QR alphanumeric mode) canonicalizes to lowercase.
         assertEquals(

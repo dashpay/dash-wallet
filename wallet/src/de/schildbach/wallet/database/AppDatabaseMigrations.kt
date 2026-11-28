@@ -268,6 +268,26 @@ class AppDatabaseMigrations {
             }
         }
 
+        val migration21to22 = object : Migration(21, 22) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // App-owned persistence of engine-reported InstantSend locks. The SDK's
+                // own mirror never records them (txos.isInstantLocked is a dead flag and
+                // transactions.context goes 0 -> 3 without passing 1), so without this
+                // table the lock evaporates with the in-process event: the asset-lock
+                // funding preflight cannot count IS-locked coins as final, and a display
+                // row whose lock event raced its insert stays "Processing" until a block.
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `instant_send_locks` (
+                        `txId` TEXT NOT NULL,
+                        `lockedAtMs` INTEGER NOT NULL,
+                        PRIMARY KEY(`txId`)
+                    )
+                    """
+                )
+            }
+        }
+
         /**
          * CrowdNode was removed, so its transactions are no longer grouped. If the cache still
          * holds a "crowdnode" group, clear both caches when the database opens, before any query

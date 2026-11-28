@@ -24,23 +24,37 @@ import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.commit
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentReceiveBinding
+import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
+import de.schildbach.wallet.data.freshReceiveAddressOffMain
 import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
+import org.dash.wallet.common.ui.toastIfStillAttached
 import org.dash.wallet.common.ui.viewBinding
 import javax.inject.Inject
+import de.schildbach.wallet.util.format
+import de.schildbach.wallet.util.setAmount
+import de.schildbach.wallet.util.setFiatAmount
+import de.schildbach.wallet.util.toDashjFiat
+import de.schildbach.wallet.util.toDashjCoin
+import de.schildbach.wallet.util.toNeutralCoin
+import de.schildbach.wallet.util.toNeutralFiat
+import de.schildbach.wallet.util.toTxId
+import de.schildbach.wallet.util.toSha256Hash
+import org.dash.wallet.common.services.ReceiveAddressUnavailableException
 
 // RequestCoinsFragment in Bitcoin Wallet has the code for Bluetooth support (sharing addresses)
 @AndroidEntryPoint
 class ReceiveFragment : Fragment(R.layout.fragment_receive) {
     private val enterAmountViewModel by activityViewModels<EnterAmountViewModel>()
     private val binding by viewBinding(FragmentReceiveBinding::bind)
-    @Inject lateinit var walletData: WalletDataProvider
+    @Inject lateinit var walletData: WalletData
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -65,14 +79,34 @@ class ReceiveFragment : Fragment(R.layout.fragment_receive) {
                 }
             )
         }
-        enterAmountViewModel.setMaxAmount(Coin.ZERO)
-        enterAmountViewModel.setMinAmount(Coin.ZERO)
+        enterAmountViewModel.setMaxAmount(org.dash.wallet.common.money.Coin.ZERO)
+        enterAmountViewModel.setMinAmount(org.dash.wallet.common.money.Coin.ZERO)
         enterAmountViewModel.onContinueEvent.observe(viewLifecycleOwner) {
             val dashAmount = it.first
             val fiatAmount = it.second
-            val address = walletData.freshReceiveAddress()
-            val dialogFragment = ReceiveDetailsDialog.createDialog(address, dashAmount, fiatAmount)
-            dialogFragment.show(requireActivity())
+            // OFF THE MAIN THREAD: this observer runs on Main, and dashj's
+            // freshReceiveAddress() forces a synchronous full-wallet save
+            // (measured 1.2s at 215 friend chains) — see freshReceiveAddressOffMain.
+            viewLifecycleOwner.lifecycleScope.launch {
+                try {
+                    val address = walletData.freshReceiveAddressOffMain()
+                    val dialogFragment = ReceiveDetailsDialog.createDialog(
+                        address, dashAmount.toDashjCoin(), fiatAmount?.toDashjFiat()
+                    )
+                    dialogFragment.show(requireActivity())
+                } catch (ex: ReceiveAddressUnavailableException) {
+                    // No safe address to put in the request — see
+                    // PaymentsReceiveFragment. Better no invoice than one the
+                    // chain has already paid.
+                    //
+                    // Guarded: the read parks uncancellably, so this arm can run
+                    // after the VIEW scope was cancelled, which on this screen
+                    // means the user navigated on with the fragment still on the
+                    // back stack — attached, so only the cancellation half of the
+                    // guard suppresses the toast.
+                    toastIfStillAttached(org.dash.wallet.common.R.string.loading_error)
+                }
+            }
         }
     }
 

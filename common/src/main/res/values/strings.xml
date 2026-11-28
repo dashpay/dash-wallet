@@ -95,8 +95,21 @@
     <string name="exchange_rate_template" translatable="false">%1$s DASH = %2$s</string>
     <string name="send_coins_error_dusty_send">The amount is too small to send</string>
     <string name="send_coins_error_insufficient_money">Insufficient funds</string>
-    <string name="send_coins_error_insufficient_mixed_money">Insufficient mixed funds. Wait for CoinJoin mixing to finish or disable this feature in the settings to complete this transaction.</string>
     <string name="syncing">Syncing</string>
+    <!-- SR-22: shown INSTEAD of a bare "Synced" whenever the scan started at a
+         user-supplied wallet creation date, so the balance and history cover
+         only part of the chain. %1$s is the date.
+
+         The date is a LANDMARK, not a boundary: BirthHeightResolver takes the
+         last checkpoint at or before it and subtracts a 4,032-block safety
+         margin, so the scan actually begins somewhat EARLIER and some pre-date
+         history does arrive. (Observed: a wallet restored with 22 Sep 2026
+         listed transactions back to 15 Aug 2026.) Both strings therefore
+         understate coverage rather than overstate it, and neither may claim
+         that everything before the date is absent — the list beside them would
+         contradict it. -->
+    <string name="sync_synced_from">Synced from %1$s</string>
+    <string name="sync_partial_scan_warning">This wallet was restored with a creation date of %1$s. Transactions before that date may be missing from the balance and history shown.</string>
     <string name="no_connection">No internet connection</string>
     <string name="rate_not_available">Not available</string>
 
@@ -105,6 +118,8 @@
     <string name="payment_protocol_default_error_title">Payment error</string>
     <string name="payment_request_problem_message">Your payment could not be processed by the server, please inquire with the merchant</string>
     <string name="payment_submission_pending_title">Payment status unknown</string>
+    <string name="payment_outcome_unknown_message">This payment may have been sent. Do not send it again — check your transaction history to confirm its status.</string>
+    <string name="payment_still_confirming">A previous payment is still being confirmed. You can send again once it has been confirmed.</string>
     <string name="payment_submission_pending_message">The payment was sent, but we did not receive a confirmation from the merchant. Your wallet will keep checking the network and will show the transaction as sent once it is found. Please wait before sending this payment again.</string>
     <string name="exchange_rate_not_found">Could not find exchange rate.</string>
     <string name="send_coins_fragment_hint_replaying">Currently payments are not possible because the wallet is not fully synced with the network</string>

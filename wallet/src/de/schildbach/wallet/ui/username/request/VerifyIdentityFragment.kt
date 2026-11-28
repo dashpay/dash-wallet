@@ -11,6 +11,8 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
+import org.dash.wallet.common.services.AuthenticationManager
 import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet_test.R
@@ -24,11 +26,18 @@ import org.dash.wallet.common.util.safeNavigate
 
 @AndroidEntryPoint
 class VerifyIdentityFragment : Fragment(R.layout.fragment_verfiy_identity) {
+
+    @Inject
+    lateinit var authManager: AuthenticationManager
     private val binding by viewBinding(FragmentVerfiyIdentityBinding::bind)
     private val dashPayViewModel: DashPayViewModel by activityViewModels()
     private val viewModel by viewModels<VerifyIdentityViewModel>()
     private val requestUserNameViewModel by activityViewModels<RequestUserNameViewModel>()
     private val args by navArgs<VerifyIdentityFragmentArgs>()
+
+    /** Guards the post-completion route/finish — see [finishAfterCompletion]. */
+    private var completionHandled = false
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -65,17 +74,33 @@ class VerifyIdentityFragment : Fragment(R.layout.fragment_verfiy_identity) {
             requestUserNameViewModel.setRequestedUserNameLink(binding.linkInput.text.toString())
             requestUserNameViewModel.verify()
             lifecycleScope.launch {
-                val creationState = dashPayViewModel.blockchainIdentity.value?.creationState ?: IdentityCreationState.NONE
-                if (creationState.ordinal < IdentityCreationState.VOTING.ordinal) {
+                val route = verifyRoute(
+                    dashPayViewModel.blockchainIdentity.value,
+                    requestUserNameViewModel.requestedUserName
+                )
+                if (route == VerifyRoute.SUBMIT_REPLACEMENT) {
+                    // A replacement for a lost, locked or taken name: submitted like any request
+                    // (the name-only retry), never only verified. No identity-state observer: the
+                    // existing record is already past NONE and would close the screen at once;
+                    // the submit's own status handler below closes it.
+                    checkViewConfirmDialog()
+                } else if (route == VerifyRoute.SUBMIT_NEW) {
                     checkViewConfirmDialog()
                     dashPayViewModel.blockchainIdentity.observe(viewLifecycleOwner) {
                         if (it?.creationStateErrorMessage != null) {
                             requireActivity().finish()
                         } else {
                             val creationState = it?.creationState ?: IdentityCreationState.NONE
-                            if (creationState.ordinal > IdentityCreationState.NONE.ordinal) {
-                                // Navigate to MoreFragment instead of UsernameRegistrationFragment  
-                                requireActivity().finish()
+                            if (creationState.ordinal > IdentityCreationState.NONE.ordinal &&
+                                !requestUserNameViewModel.uiState.value.submissionUnderway
+                            ) {
+                                // Same rule as RequestUsernameFragment: a
+                                // submit this session finishes via the
+                                // navigate-home callback on the submitting
+                                // rising edge, so this state flip only routes
+                                // a creation already in flight — the guard
+                                // stops the two from racing.
+                                finishAfterCompletion()
                             }
                         }
                     }
@@ -87,23 +112,28 @@ class VerifyIdentityFragment : Fragment(R.layout.fragment_verfiy_identity) {
             //findNavController().popBackStack()
         }
 
-        requestUserNameViewModel.uiState.observe(viewLifecycleOwner) {
-//            if (it.usernameSubmittedSuccess) {
-//                requireActivity().finish()
-//            }
+        // A submit can be triggered while THIS screen is the visible
+        // destination (the cancelled-verification shortcut below, or the
+        // confirm dialog stacked on top of it) — without the shared
+        // status handler those submissions ran with zero feedback here.
+        UsernameSubmitStatusDialogs(this, requestUserNameViewModel, authManager) {
+            // Request handed off: the creation keeps running app-side.
+            // Route exactly as RequestUsernameFragment does — a bare
+            // finish() here dropped the user on whatever screen happened to
+            // be underneath, so both screens share the one completion route.
+            finishAfterCompletion()
+        }.observe()
+    }
 
-//            if (it.usernameSubmittedError) {
-//                showErrorDialog()
-//            }
-//
-//             if (it.usernameCharactersValid && it.usernameLengthValid && it.usernameCheckSuccess) {
-//
-//                if (it.usernameVerified) {
-//                    hideKeyboard()
-//                    checkViewConfirmDialog()
-//                }
-//            }
-        }
+    /**
+     * Route-and-finish, shared with [RequestUsernameFragment] and guarded so
+     * the dialog dismiss and the identity-state observer (which can race it)
+     * run it exactly once.
+     */
+    private fun finishAfterCompletion() {
+        if (completionHandled) return
+        completionHandled = true
+        finishUsernameCreationToCompletionRoute(dashPayViewModel, requestUserNameViewModel)
     }
 
     private fun hideKeyboard() {
@@ -113,7 +143,7 @@ class VerifyIdentityFragment : Fragment(R.layout.fragment_verfiy_identity) {
     private suspend fun checkViewConfirmDialog() {
         // TODO: Can we cancel the request?
         if (requestUserNameViewModel.hasUserCancelledVerification()) {
-            requestUserNameViewModel.submit()
+            authenticateThenSubmit(this, authManager, requestUserNameViewModel)
         } else {
             safeNavigate(
                 VerifyIdentityFragmentDirections.verifyIdentityFragmentToConfirmUsernameRequestDialog(

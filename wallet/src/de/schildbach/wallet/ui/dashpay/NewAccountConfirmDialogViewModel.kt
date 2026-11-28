@@ -32,6 +32,7 @@ import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import javax.inject.Inject
+import de.schildbach.wallet.util.toDashjFiat
 
 @HiltViewModel
 class NewAccountConfirmDialogViewModel @Inject constructor(
@@ -46,7 +47,7 @@ class NewAccountConfirmDialogViewModel @Inject constructor(
 
     val exchangeRate: org.bitcoinj.utils.ExchangeRate?
         get() = exchangeRateData.value?.run {
-            org.bitcoinj.utils.ExchangeRate(Coin.COIN, fiat)
+            org.bitcoinj.utils.ExchangeRate(Coin.COIN, fiat.toDashjFiat())
         }
 
     init {

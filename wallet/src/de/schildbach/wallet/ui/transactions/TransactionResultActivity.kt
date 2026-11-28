@@ -26,6 +26,8 @@ import androidx.core.content.ContextCompat
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import de.schildbach.wallet.ui.main.MainActivity
 
 import de.schildbach.wallet.data.UsernameSearchResult
@@ -33,7 +35,6 @@ import de.schildbach.wallet.ui.dashpay.transactions.PrivateMemoDialog
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.entity.DashPayProfile
-import de.schildbach.wallet.service.platform.work.TopupIdentityWorker
 import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.ui.TransactionResultViewModel
 import de.schildbach.wallet.ui.compose_views.ComposeBottomSheet
@@ -205,48 +206,52 @@ class TransactionResultActivity : LockScreenActivity() {
             }
         }
 
-        viewModel.topUpWork(txId).observe(this) { workData ->
-            log.info("topup work data: {}", workData)
-            try {
-                val txIdString = workData.data?.outputData?.getString(TopupIdentityWorker.KEY_TOPUP_TX)
-                log.info("txId from work matches viewModel: {} ==? {}", txIdString, txId)
+        // Bug A (parity with TransactionDetailsDialogFragment): the tx is NOT in
+        // the dashj wallet (post-cutover SDK-only tx) — bind the neutral SDK
+        // detail instead of leaving the sheet blank. Metadata (tax category,
+        // private memo) is txid-keyed and works unchanged.
+        viewModel.sdkTxDetail.filterNotNull().observe(this) { detail ->
+            transactionResultViewBinder.bindSdkDetail(detail)
 
-                when (workData.status) {
-                    Status.LOADING -> {
-                        log.info("  loading: {}", workData.data?.outputData)
-                    }
-
-                    Status.SUCCESS -> {
-                        log.info("  success: {}", workData.data?.outputData)
-                    }
-
-                    Status.ERROR -> {
-                        log.info("  error: {}", workData.data?.outputData)
-                        viewModel.topUpError = true
-                        transactionResultViewBinder.setSentToReturn(
-                            viewModel.transaction.value?.versionShort ?: Transaction.SPECIAL_VERSION,
-                            viewModel.transaction.value?.type ?:Transaction.Type.TRANSACTION_ASSET_LOCK,
-                            viewModel.topUpError,
-                            viewModel.topUpComplete
-                        )                    }
-
-                    Status.CANCELED -> {
-                        log.info("  cancel: {}", workData.data?.outputData)
-                    }
+            // SDK top-up: swap the OP_RETURN row's pending label for
+            // "Platform credits" once the credits have landed.
+            lifecycleScope.launch {
+                viewModel.sdkTopUpCredited(txId)?.let { credited ->
+                    transactionResultViewBinder.setSdkTopUpState(error = false, completed = credited)
                 }
-            } catch (e: Exception) {
-                log.error("error processing topup information", e)
+            }
+            contentBinding.openExplorerCard.setOnClickListener {
+                viewOnExplorerByTxId(detail.txIdDisplayHex)
+            }
+            contentBinding.taxCategoryLayout.setOnClickListener { viewOnTaxCategory() }
+            contentBinding.reportIssueCard.setOnClickListener { showReportIssue() }
+            binding.transactionCloseBtn.setOnClickListener { onTransactionDetailsDismiss() }
+            transactionResultViewBinder.setOnRescanTriggered { rescanBlockchain() }
+
+            viewModel.transactionMetadata.observe(this) { metadata ->
+                if (metadata != null &&
+                    metadata.txId.toString().equals(detail.txIdDisplayHex, ignoreCase = true)
+                ) {
+                    transactionResultViewBinder.setTransactionMetadata(metadata)
+                }
             }
         }
 
+
         viewModel.topUpStatus(txId).observe(this) { topUp ->
-            viewModel.topUpComplete = topUp?.used() == true
-            transactionResultViewBinder.setSentToReturn(
-                viewModel.transaction.value?.versionShort ?: Transaction.SPECIAL_VERSION,
-                viewModel.transaction.value?.type ?: Transaction.Type.TRANSACTION_ASSET_LOCK,
-                viewModel.topUpError,
-                viewModel.topUpComplete
-            )
+            lifecycleScope.launch {
+                // Legacy top-ups have a `topups` row; SDK top-ups don't —
+                // their credited state comes from the SDK's recovery queue
+                // (lock still queued = pending, gone = credited).
+                viewModel.topUpComplete = topUp?.used() == true ||
+                    (topUp == null && viewModel.sdkTopUpCredited(txId) == true)
+                transactionResultViewBinder.setSentToReturn(
+                    viewModel.transaction.value?.versionShort ?: Transaction.SPECIAL_VERSION,
+                    viewModel.transaction.value?.type ?: Transaction.Type.TRANSACTION_ASSET_LOCK,
+                    viewModel.topUpError,
+                    viewModel.topUpComplete
+                )
+            }
         }
     }
 
@@ -257,9 +262,13 @@ class TransactionResultActivity : LockScreenActivity() {
     }
 
     private fun viewOnExplorer(tx: Transaction) {
+        viewOnExplorerByTxId(tx.txId.toString())
+    }
+
+    private fun viewOnExplorerByTxId(txId: String) {
         ComposeBottomSheet(R.style.PrimaryBackground) { dialog ->
             BlockExplorerSelectionView(viewModel.analytics) { explorer ->
-                viewOnBlockExplorer(explorer, "tx/${tx.txId}")
+                viewOnBlockExplorer(explorer, "tx/$txId")
                 dialog.dismiss()
             }
         }.show(this)
@@ -268,7 +277,11 @@ class TransactionResultActivity : LockScreenActivity() {
     private fun initiateTransactionBinder(tx: Transaction, dashPayProfile: DashPayProfile?) {
         val payeeName = intent.getStringExtra(EXTRA_PAYMENT_MEMO)
         val payeeVerifiedBy = intent.getStringExtra(EXTRA_PAYEE_VERIFIED_BY)
-        transactionResultViewBinder.bind(tx, dashPayProfile, payeeName, payeeVerifiedBy)
+        // Bug A: hand the binder the SDK direction/amount override (non-null only
+        // post-cutover, when the held dashj wallet misreads an SDK-authored send).
+        transactionResultViewBinder.bind(
+            tx, dashPayProfile, payeeName, payeeVerifiedBy, viewModel.sdkDirectionOverride.value
+        )
         binding.transactionCloseBtn.setOnClickListener {
             onTransactionDetailsDismiss()
         }
@@ -355,7 +368,9 @@ class TransactionResultActivity : LockScreenActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        if (finishedForNoWallet) return // never created the view model or the binder
 
+        // onCreateWithWallet() also returns before creating the binder when the intent has no tx id
         if (::transactionResultViewBinder.isInitialized) {
             viewModel.transaction.value?.confidence?.removeEventListener(transactionResultViewBinder)
         }

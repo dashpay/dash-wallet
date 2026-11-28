@@ -19,19 +19,18 @@ package de.schildbach.wallet.ui.invite
 
 import android.os.Bundle
 import android.view.View
-import androidx.fragment.app.viewModels
-import androidx.lifecycle.lifecycleScope
+import androidx.core.view.isVisible
+import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.service.platform.sdk.ContestedUsernameFees
+import de.schildbach.wallet.service.platform.sdk.ShieldedSyncStatus
 import org.bitcoinj.core.Coin
-import de.schildbach.wallet.service.platform.ContestedUsernameFees
-import de.schildbach.wallet.ui.CheckPinDialog
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.DialogInvitationFeeBinding
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.launch
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
@@ -39,33 +38,91 @@ import org.dash.wallet.common.util.observe
 @AndroidEntryPoint
 class InvitationFeeDialogFragment : OffsetDialogFragment(R.layout.dialog_invitation_fee) {
     private val binding by viewBinding(DialogInvitationFeeBinding::bind)
-    private var selectedFee = ContestedUsernameFees.fee
-    private var spendableBalance = Coin.ZERO
-    private var protocolVersionRefreshed = false
+
+    // Protocol-gated (MO-1069) — mirrors viewModel.contestedFees, refreshed
+    // by the observer in onViewCreated. Shows LEGACY (the safe pre-resolve
+    // fallback) until the live read lands; [contestedFeeResolved] keeps a
+    // contested L1 invite from being continued on that placeholder.
+    private var contestedFee = ContestedUsernameFees.LEGACY.contested
+    private var contestedFeeResolved = false
+    private var selectedFee = contestedFee
+    private var contestedSelected = true
+
+    // Gate inputs. For an L1 invite only [l1Balance] matters; for a private
+    // (shielded) invite the fee is funded from the pool, so the gate reads
+    // [shieldedBalance]/[shieldedReady] instead (Fix F). A mid-sync shielded
+    // balance is a Dash.ZERO placeholder, so it is only trusted at READY.
+    private var l1Balance = Coin.ZERO
+    private var shieldedBalance = Coin.ZERO
+    private var shieldedReady = false
+
+    // The Type-20 exit denominations that actually LEAVE the pool for a
+    // private invite (0.03 non-contested / 0.25 contested — the v13 mint
+    // mapping, shieldedInviteDenominationCredits) — the amount the user
+    // "pays", shown on the tiles/confirm screen. Distinct from what the pool
+    // must HOLD: the gate and the insufficiency message use
+    // inviteFeeRequirement = denomination + the Type-16 transfer-fee margin
+    // (the mint's fee is carved from the pool on top of the funded notes).
+    // Pinned to the mint via inviteFeeRequirement (InviteFeeGateTest).
+    private val shieldedNonContestedFee = Coin.parseCoin("0.03")
+    private val shieldedContestedFee = Coin.parseCoin("0.25")
+
     @OptIn(ExperimentalCoroutinesApi::class)
-    private val viewModel by viewModels<InvitationFragmentViewModel>()
+    private val viewModel by activityViewModels<InvitationFragmentViewModel>()
     private val args by navArgs<InvitationFeeDialogFragmentArgs>()
 
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        protocolVersionRefreshed = false
+        // Protocol-gated (MO-1069): mirror the resolved contested fee and
+        // re-render the amounts/gate once the live read lands (replays the
+        // current StateFlow value immediately, so this also covers the
+        // pre-resolve LEGACY default). viewModel is activity-scoped, so a
+        // re-opened invite flow needs an explicit refresh — its own init only
+        // ran once, on the activity's first open.
+        viewModel.refreshContestedFees()
+        viewModel.contestedFees.observe(viewLifecycleOwner) { fees ->
+            contestedFeeResolved = fees != null
+            contestedFee = (fees ?: ContestedUsernameFees.LEGACY).contested
+            if (contestedSelected) selectedFee = contestedFee
+            setFeeAmounts()
+            applyGate()
+        }
         setMode(true)
         binding.mixButton.setOnClickListener {
-            CheckPinDialog.show(requireActivity()) { pin ->
-                if (pin != null && canContinue()) {
-                    findNavController().navigate(
-                        InvitationFeeDialogFragmentDirections.toConfirmInviteDialog(selectedFee.value, args.source)
-                    )
-                    // TODO: why doesn't safeNavigate work
-                    // safeNavigate(InvitationFeeDialogFragmentDirections.toConfirmInviteDialog(selectedFee.value))
-                }
-            }
+            // Authentication happens on the confirm screen, right before the
+            // spend (ConfirmInviteDialogFragment) — the app's standard order is
+            // amount-confirm THEN authenticate. The previous PIN prompt here
+            // ran before the amount was even shown and discarded its result.
+            //
+            // Pass the amount that is ACTUALLY withdrawn (Fix G3): for a
+            // private invite the Type-20 exit denomination (0.03 / 0.25), for a
+            // standard invite the L1 fee (0.03 / 0.25). The shielded spend
+            // uses createShieldedInvite(contested) with its own internal
+            // denomination, so this value is display-only there; the L1 spend
+            // funds sendInviteTransaction with exactly this amount.
+            findNavController().navigate(
+                InvitationFeeDialogFragmentDirections.toConfirmInviteDialog(
+                    withdrawnAmount().value, args.source, args.shielded
+                )
+            )
         }
-        viewModel.walletData.observeSpendableBalance().observe(viewLifecycleOwner) { walletBalance ->
-            spendableBalance = walletBalance
-            binding.contestedName.isEnabled = walletBalance >= ContestedUsernameFees.fee
-            updateContinueButton()
+        viewModel.walletData.observeTotalBalance().observe(viewLifecycleOwner) { walletBalance ->
+            l1Balance = walletBalance
+            applyGate()
+        }
+        if (args.shielded) {
+            // Private invite: fund the fee from the shielded pool, so gate on
+            // the pool. Bring the runtime up and follow the live balance/status.
+            viewModel.ensureShieldedReady()
+            viewModel.observeShieldedBalance().observe(viewLifecycleOwner) { balance ->
+                shieldedBalance = Coin.valueOf(balance.duffs)
+                applyGate()
+            }
+            viewModel.shieldedSyncStatus.observe(viewLifecycleOwner) { status ->
+                shieldedReady = status == ShieldedSyncStatus.READY
+                applyGate()
+            }
         }
         binding.contestedName.setOnClickListener {
             setMode(true)
@@ -74,36 +131,72 @@ class InvitationFeeDialogFragment : OffsetDialogFragment(R.layout.dialog_invitat
         binding.nonContestedName.setOnClickListener {
             setMode(false)
         }
-        ContestedUsernameFees.protocolVersions.observe(viewLifecycleOwner) {
-            binding.contestedName.isEnabled = spendableBalance >= ContestedUsernameFees.fee
-            setMode(binding.contestedName.isSelected)
-        }
-        viewLifecycleOwner.lifecycleScope.launch {
-            // the contested fee depends on the platform protocol version
-            viewModel.refreshProtocolVersion()
-            protocolVersionRefreshed = true
-            binding.contestedName.isEnabled = spendableBalance >= ContestedUsernameFees.fee
-            setMode(binding.contestedName.isSelected)
-        }
+    }
+
+    /**
+     * Show the amount that leaves the user for each tile: the L1 fee for a
+     * standard invite, or the Type-20 exit denomination for a private one
+     * (Fix E — per the product rule, only the amount actually withdrawn).
+     */
+    private fun setFeeAmounts() {
+        val contestedAmount = if (args.shielded) shieldedContestedFee else contestedFee
+        val nonContestedFee = if (args.shielded) shieldedNonContestedFee else Constants.DASH_PAY_FEE
+        binding.contestedNameAmount.text =
+            getString(R.string.invitation_fee_amount, contestedAmount.toPlainString())
+        binding.nonContestedNameAmount.text =
+            getString(R.string.invitation_fee_amount, nonContestedFee.toPlainString())
     }
 
     private fun setMode(isContestedName: Boolean) {
         if (isContestedName) {
             binding.contestedName.isSelected = true
             binding.nonContestedName.isSelected = false
-            selectedFee = ContestedUsernameFees.fee
+            selectedFee = contestedFee
+            contestedSelected = true
         } else {
             binding.contestedName.isSelected = false
             binding.nonContestedName.isSelected = true
             selectedFee = Constants.DASH_PAY_FEE
+            contestedSelected = false
         }
-        updateContinueButton()
+        applyGate()
     }
 
-    private fun updateContinueButton() {
-        binding.mixButton.isEnabled = canContinue()
+    /** The amount actually withdrawn for the current selection (Fix G3). */
+    private fun withdrawnAmount(): Coin {
+        return if (args.shielded) {
+            if (contestedSelected) shieldedContestedFee else shieldedNonContestedFee
+        } else {
+            selectedFee
+        }
     }
 
-    private fun canContinue(): Boolean =
-        (!binding.contestedName.isSelected || protocolVersionRefreshed) && spendableBalance >= selectedFee
+    /**
+     * Apply the pure [inviteFeeGate] decision. BOTH tiles stay selectable
+     * regardless of balance (Fix G2); only "Confirm and pay" is gated, on the
+     * CURRENTLY selected kind, sourced from the L1 wallet or the shielded pool
+     * per [args].shielded. When the selection is unaffordable, name what the
+     * user needs ([inviteFeeRequirement] — denomination + transfer-fee margin
+     * for a private invite, the L1 fee otherwise).
+     */
+    private fun applyGate() {
+        val continueEnabled = inviteFeeGate(
+            shielded = args.shielded,
+            l1Balance = l1Balance,
+            shieldedReady = shieldedReady,
+            shieldedBalance = shieldedBalance,
+            contestedSelected = contestedSelected,
+            contestedFee = contestedFee
+        )
+        val awaitingFee = awaitingContestedInviteFee(args.shielded, contestedSelected, contestedFeeResolved)
+        binding.mixButton.isEnabled = continueEnabled && !awaitingFee
+        // Affordability is only judged against the resolved fee: the LEGACY
+        // placeholder would wrongly tell a 0.15–0.25 DASH holder they can't pay.
+        binding.insufficientFundsMessage.isVisible = !continueEnabled && !awaitingFee
+        if (!continueEnabled && !awaitingFee) {
+            val required = inviteFeeRequirement(args.shielded, contestedSelected, contestedFee)
+            binding.insufficientFundsMessage.text =
+                getString(R.string.invitation_cant_afford_message, required.toPlainString())
+        }
+    }
 }

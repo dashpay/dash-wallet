@@ -17,10 +17,10 @@
 
 package org.dash.wallet.integrations.maya.ui.convert_currency.model
 
-import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.Fiat
-import org.dash.wallet.common.util.toCoin
-import org.dash.wallet.common.util.toFiat
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.money.FiatValue
+import org.dash.wallet.common.util.toDash
+import org.dash.wallet.common.util.toFiatValue
 import org.dash.wallet.integrations.maya.model.Amount
 
 data class SwapRequest(
@@ -32,6 +32,6 @@ data class SwapRequest(
     val fiatCurrencyCode: String,
     val dashToCrypto: Boolean = true
 ) {
-    val dashAmount: Coin = amount.dash.toCoin()
-    val cryptoAmount: Fiat = amount.crypto.toFiat(cryptoCurrencyCode)
+    val dashAmount: Dash = amount.dash.toDash()
+    val cryptoAmount: FiatValue = amount.crypto.toFiatValue(cryptoCurrencyCode)
 }

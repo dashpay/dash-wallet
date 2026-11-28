@@ -18,20 +18,19 @@ package org.dash.wallet.integrations.maya.payments.parsers
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.bitcoinj.core.AddressFormatException
 import org.dash.wallet.common.R
 import org.dash.wallet.common.data.PaymentIntent
+import org.dash.wallet.common.payments.parsers.AddressFormatException
 import org.dash.wallet.common.payments.parsers.Bech32AddressParser
 import org.dash.wallet.common.payments.parsers.PaymentIntentParserException
 import org.dash.wallet.common.util.ResourceString
 import org.slf4j.LoggerFactory
 
-class XrdPaymentIntentParser : MayaPaymentIntentParser("XRD", "radix", "XRD.XRD", "x", null) {
+class XrdPaymentIntentParser : MayaPaymentIntentParser("XRD", "radix", "XRD.XRD", "x") {
     private val log = LoggerFactory.getLogger(XrdPaymentIntentParser::class.java)
     private val addressParser = Bech32AddressParser(
         "account_rdx",
-        "1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]{50,65}",
-        null
+        "1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]{50,65}"
     )
 
     override suspend fun parse(input: String): PaymentIntent = withContext(Dispatchers.Default) {

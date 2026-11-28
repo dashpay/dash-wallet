@@ -3,6 +3,7 @@ package de.schildbach.wallet.ui.more
 import androidx.lifecycle.viewModelScope
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.WalletBalanceWidgetProvider
+import de.schildbach.wallet.data.WalletData
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.security.BiometricHelper
@@ -24,7 +25,6 @@ import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.test.runTest
 import org.bitcoinj.core.Coin
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -38,7 +38,7 @@ class SecurityViewModelTest {
     val mainCoroutineRule = MainCoroutineRule()
 
     private val walletUIConfig = mockk<WalletUIConfig>()
-    private val walletData = mockk<WalletDataProvider>(relaxed = true)
+    private val walletData = mockk<WalletData>(relaxed = true)
     private val walletApplication = mockk<WalletApplication>(relaxed = true)
 
     @Before

@@ -33,8 +33,10 @@ class XrdPaymentIntentParserTest {
 
     /** The swap memo carried in the intent's OP_RETURN output: `=:ASSET:destinationAddress`. */
     private fun memoOf(intent: PaymentIntent): String {
-        val chunks = intent.outputs!![0].script.chunks
-        return String(chunks[1].data!!)
+        val script = intent.outputs!![0].scriptData
+        // Layout per Scripts.opReturnScript: OP_RETURN + single-byte length push + memo
+        // bytes (every memo in these tests is well under the 76-byte direct-push cap).
+        return String(script.copyOfRange(2, script.size))
     }
 
     @Test

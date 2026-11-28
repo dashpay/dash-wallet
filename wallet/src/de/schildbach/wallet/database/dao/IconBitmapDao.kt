@@ -19,7 +19,7 @@ package de.schildbach.wallet.database.dao
 
 import androidx.room.*
 import kotlinx.coroutines.flow.Flow
-import org.bitcoinj.core.Sha256Hash
+import org.dash.wallet.common.data.TxId
 import org.dash.wallet.common.data.entity.IconBitmap
 
 @Dao
@@ -28,11 +28,11 @@ interface IconBitmapDao {
     suspend fun addBitmap(bitmap: IconBitmap)
 
     @Query("SELECT * FROM icon_bitmaps WHERE id = :id")
-    suspend fun getBitmap(id: Sha256Hash): IconBitmap?
+    suspend fun getBitmap(id: TxId): IconBitmap?
 
     @MapInfo(keyColumn = "id")
     @Query("SELECT * FROM icon_bitmaps")
-    fun observeBitmaps(): Flow<Map<Sha256Hash, IconBitmap>>
+    fun observeBitmaps(): Flow<Map<TxId, IconBitmap>>
 
     @Query("DELETE FROM icon_bitmaps")
     suspend fun clear()

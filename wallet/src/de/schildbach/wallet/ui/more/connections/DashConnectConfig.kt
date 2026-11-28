@@ -68,6 +68,18 @@ data class StoredConnection(
 }
 
 /**
+ * What [DashConnectConfig] retains: the scopes of its grant and purchase records, and whether it has legacy
+ * rows. Grants and purchase receipts outlive a wallet wipe so a restore of the same seed sees them again.
+ */
+data class RetainedConnectRecords(val scopes: List<String>, val hasLegacyRows: Boolean) {
+    /**
+     * Whether any record belongs to the wallet with [walletScope] (see [connectWalletScope]). Another
+     * wallet's or network's records are unreachable from it. Legacy rows carry no scope; the wipe clears them.
+     */
+    fun belongTo(walletScope: String): Boolean = hasLegacyRows || scopes.any { it.startsWith("$walletScope:") }
+}
+
+/**
  * DataStore-backed store of DashConnect connections, following the [BaseConfig] pattern used by
  * `DashPayConfig`. Connections are serialized to a single JSON-array string preference (kept small;
  * a user has at most a handful of connected apps), avoiding a Room migration.
@@ -103,12 +115,18 @@ open class DashConnectConfig @Inject constructor(
     // BaseConfig's empty-preferences fallback for ordinary settings.
     suspend fun getGrants(): List<JSONObject> = observeGrants().first()
 
-    /** A single strict snapshot includes retained audits and legacy rows, regardless of scope. */
-    fun observeHasRecords(): Flow<Boolean> = configContext.dataStore.data.map { preferences ->
-        val grants = decodeGrants(preferences[GRANTS])
+    /**
+     * A single strict snapshot of the retained audits and legacy rows. A grant or purchase receipt without
+     * a scope is unreadable, not absent, and throws.
+     */
+    fun observeRetainedRecords(): Flow<RetainedConnectRecords> = configContext.dataStore.data.map { preferences ->
         val connections = JSONArray(preferences[CONNECTIONS] ?: "[]")
         val purchases = JSONArray(preferences[PURCHASES] ?: "[]")
-        grants.isNotEmpty() || connections.length() > 0 || purchases.length() > 0
+        RetainedConnectRecords(
+            decodeGrants(preferences[GRANTS]).map { it.getString("scope") } +
+                (0 until purchases.length()).map { purchases.getJSONObject(it).getString("scope") },
+            connections.length() > 0
+        )
     }
 
     fun observeGrants(): Flow<List<JSONObject>> = configContext.dataStore.data.map { preferences ->

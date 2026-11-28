@@ -22,8 +22,8 @@ import androidx.test.core.app.ApplicationProvider
 import de.schildbach.wallet.database.AppDatabase
 import de.schildbach.wallet.database.entity.TransactionMetadataCacheItem
 import kotlinx.coroutines.runBlocking
-import org.bitcoinj.core.Coin
-import org.bitcoinj.core.Sha256Hash
+import org.dash.wallet.common.money.Coin
+import org.dash.wallet.common.data.TxId
 import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.common.data.entity.TransactionMetadata
@@ -45,15 +45,15 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 // a plain Application: this test needs only a Context for Room, and booting the real
 // WalletApplication would drag in Hilt and Firebase
-@Config(application = android.app.Application::class, sdk = [28], manifest = Config.NONE)
+@Config(application = android.app.Application::class, sdk = [29], manifest = Config.NONE)
 class TransactionRecordsDaoTest {
     private lateinit var db: AppDatabase
     private lateinit var dao: TransactionRecordsDao
 
-    private val txId: Sha256Hash =
-        Sha256Hash.wrap("00000000000000000000000000000000000000000000000000000000000000a1")
-    private val otherTxId: Sha256Hash =
-        Sha256Hash.wrap("00000000000000000000000000000000000000000000000000000000000000b2")
+    private val txId: TxId =
+        TxId.wrap("00000000000000000000000000000000000000000000000000000000000000a1")
+    private val otherTxId: TxId =
+        TxId.wrap("00000000000000000000000000000000000000000000000000000000000000b2")
 
     @Before
     fun setUp() {
@@ -69,7 +69,7 @@ class TransactionRecordsDaoTest {
         db.close()
     }
 
-    private suspend fun seed(id: Sha256Hash) {
+    private suspend fun seed(id: TxId) {
         db.giftCardDao().insertGiftCard(GiftCard(txId = id, merchantName = "Acme", price = 25.0, note = "order-1"))
         db.transactionMetadataDao().insert(
             TransactionMetadata(
@@ -86,8 +86,8 @@ class TransactionRecordsDaoTest {
         )
     }
 
-    private suspend fun rowCounts(id: Sha256Hash): Triple<Int, Int, Int> = Triple(
-        db.giftCardDao().getCardCountForTransaction(id),
+    private suspend fun rowCounts(id: TxId): Triple<Int, Int, Int> = Triple(
+        db.giftCardDao().getCardCountForTransaction(id.bytes),
         if (db.transactionMetadataDao().load(id) != null) 1 else 0,
         if (db.transactionMetadataCacheDao().exists(id)) 1 else 0
     )

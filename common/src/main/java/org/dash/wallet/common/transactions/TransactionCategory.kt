@@ -16,9 +16,6 @@
 
 package org.dash.wallet.common.transactions
 
-import org.bitcoinj.core.Coin
-import org.bitcoinj.core.Transaction
-
 
 private const val EXPENSE  = 0x10000000L
 private const val INCOME   = 0x20000000L
@@ -49,23 +46,6 @@ enum class TransactionCategory(val value: Long) {
     companion object {
         fun fromValue(value: Long): TransactionCategory {
             return values().find { it.value == value } ?: Invalid
-        }
-
-        fun fromTransaction(type: Transaction.Type, value: Coin, isInternal: Boolean): TransactionCategory {
-            return when (type) {
-                Transaction.Type.TRANSACTION_COINBASE -> MiningReward
-                Transaction.Type.TRANSACTION_PROVIDER_REGISTER -> MasternodeRegister
-                Transaction.Type.TRANSACTION_PROVIDER_UPDATE_REGISTRAR -> MasternodeUpdateRegistrar
-                Transaction.Type.TRANSACTION_PROVIDER_UPDATE_SERVICE -> MasternodeUpdateService
-                Transaction.Type.TRANSACTION_PROVIDER_UPDATE_REVOKE -> MasternodeUpdateRevoke
-                else -> {
-                    when {
-                        value.isPositive -> Received
-                        isInternal -> Internal
-                        else -> Sent
-                    }
-                }
-            }
         }
     }
 }

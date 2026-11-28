@@ -45,7 +45,7 @@ class RemoteDataSource @Inject constructor(
 
     fun <Api> buildApi(api: Class<Api>): Api {
         return Retrofit.Builder()
-            .baseUrl(CTXSpendConstants.baseUrl(walletData.networkParameters))
+            .baseUrl(CTXSpendConstants.baseUrl(walletData.networkId))
             .client(getOkHttpClient(TokenAuthenticator(buildTokenApi(), config)))
             .addConverterFactory(GsonConverterFactory.create())
             .build()
@@ -54,7 +54,7 @@ class RemoteDataSource @Inject constructor(
 
     fun buildTokenApi(): CTXSpendTokenApi {
         return Retrofit.Builder()
-            .baseUrl(CTXSpendConstants.baseUrl(walletData.networkParameters))
+            .baseUrl(CTXSpendConstants.baseUrl(walletData.networkId))
             .client(getOkHttpClient(includeAuthorization = false))
             .addConverterFactory(GsonConverterFactory.create())
             .build()

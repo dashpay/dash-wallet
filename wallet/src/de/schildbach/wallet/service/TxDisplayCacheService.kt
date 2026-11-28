@@ -36,13 +36,18 @@ import de.schildbach.wallet.database.entity.TxDisplayCacheEntry
 import de.schildbach.wallet.database.entity.TxGroupCacheEntry
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.service.platform.IdentityRepository
+import de.schildbach.wallet.service.platform.sdk.CutoverState
+import de.schildbach.wallet.service.platform.sdk.CutoverUiDataService
+import de.schildbach.wallet.service.platform.sdk.dashjEngineMayStart
 import de.schildbach.wallet.transactions.TxDirectionFilter
 import de.schildbach.wallet.transactions.TxFilterType
 import de.schildbach.wallet.transactions.coinjoin.CoinJoinMixingTxSet
 import de.schildbach.wallet.transactions.coinjoin.CoinJoinTxWrapperFactory
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.main.HistoryRowView
 import de.schildbach.wallet.ui.transactions.TransactionRowView
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -51,6 +56,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -62,7 +68,6 @@ import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
@@ -70,39 +75,62 @@ import kotlinx.coroutines.launch
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.wallet.WalletEx
+import de.schildbach.wallet.data.WalletData
 import de.schildbach.wallet_test.R
-import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.PresentableTxMetadata
+import org.dash.wallet.common.data.entity.SwapOrder
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.ui.components.merchantNameBitmap
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.TransactionMetadataProvider
-import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
+import de.schildbach.wallet.transactions.TransactionUtils.isEntirelySelf
+import de.schildbach.wallet.transactions.dashjTx
+import de.schildbach.wallet.transactions.toTxInfo
+import org.dash.wallet.common.data.TxId
 import org.dash.wallet.common.transactions.TransactionWrapper
-import org.dash.wallet.common.transactions.batchAndFilterUpdates
+import de.schildbach.wallet.transactions.batchAndFilterUpdates
 import org.slf4j.LoggerFactory
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @Singleton
 class TxDisplayCacheService @Inject constructor(
-    private val walletData: WalletDataProvider,
+    private val walletData: WalletData,
     private val walletApplication: WalletApplication,
     private val txDisplayCacheDao: TxDisplayCacheDao,
     private val txGroupCacheDao: TxGroupCacheDao,
     private val metadataProvider: TransactionMetadataProvider,
     private val platformRepo: PlatformRepo,
     private val identityRepo: IdentityRepository,
-    private val blockchainStateProvider: BlockchainStateProvider
+    private val blockchainStateProvider: BlockchainStateProvider,
+    private val displayCacheRefreshBus: DisplayCacheRefreshBus,
+    private val dashPayConfig: DashPayConfig,
+    // Lazy: this service is constructed on the home screen's critical path,
+    // while CutoverUiDataService pulls in the whole SDK graph. Only the
+    // completeness check (a background coroutine) ever resolves it.
+    private val cutoverUiDataService: dagger.Lazy<CutoverUiDataService>,
+    // Lazy for the same reason: it pulls in the SDK sync graph, and only the
+    // post-cutover completeness check reads it.
+    private val l1SyncStatusService: dagger.Lazy<L1SyncStatusService>
 ) {
 
     companion object {
         private const val BATCHING_PERIOD = 500L
+
+        /**
+         * How long the sync-complete check waits for the SDK's record count
+         * before giving up ([SDK_RECORD_COUNT_WAIT_POLLS] × interval = 2 min).
+         * The bind it is waiting on took ~3 s on the S21; the window is sized
+         * for a cold start on a slow device, not for a bind that never comes.
+         */
+        private const val SDK_RECORD_COUNT_WAIT_POLLS = 24
+        private const val SDK_RECORD_COUNT_WAIT_INTERVAL_MS = 5_000L
         private val log = LoggerFactory.getLogger(TxDisplayCacheService::class.java)
     }
 
@@ -127,7 +155,6 @@ class TxDisplayCacheService @Inject constructor(
 
     private sealed class TxDataSource {
         object Empty : TxDataSource()
-        class PrebuiltCache(val rows: List<HistoryRowView>) : TxDataSource()
         object RoomLive : TxDataSource()
     }
     private val _txDataSource = MutableStateFlow<TxDataSource>(TxDataSource.Empty)
@@ -136,33 +163,45 @@ class TxDisplayCacheService @Inject constructor(
     // Internal filter driven by setFilter() calls from the ViewModel
     private val _currentFilter = MutableStateFlow(TxFilterType.ALL)
 
-    @Volatile private var metadata: Map<Sha256Hash, PresentableTxMetadata> = mapOf()
+    @Volatile private var metadata: Map<TxId, PresentableTxMetadata> = mapOf()
     @Volatile private var contacts: Map<String, DashPayProfile> = mapOf()
     @Volatile private var contactsByTxId: Map<String, DashPayProfile> = mapOf()
+    /**
+     * Whether the contacts observer has received its baseline emission. Only
+     * emissions AFTER the baseline represent contact-data CHANGES worth asking
+     * the SDK pipeline to re-resolve tx attribution for (see the observer).
+     * Touched only from the single-threaded [serviceScope].
+     */
+    private var contactsPrimed = false
     @Volatile private var minContactCreatedDate: LocalDate = LocalDate.MIN
     @Volatile private var chainLockBlockHeight: Int = 0
     private var wasReplaying: Boolean? = null
 
-    private var coinJoinWrapperFactory: CoinJoinTxWrapperFactory? = null
+    // Published on one serviceScope worker thread and read on others (the same-wallet
+    // fast-path check, and tests polling across threads), so the write must be visible.
+    @Volatile private var coinJoinWrapperFactory: CoinJoinTxWrapperFactory? = null
 
     /**
-     * Pre-built rows for the fast startup phase (from Room display cache).
-     * Set directly by the init coroutine so that the cacheAdapter always receives rows,
-     * even if the wallet-ready flow wins the serviceScope race and transitions
-     * _txDataSource to RoomLive before PrebuiltCache is set.
+     * Pre-built rows for the fast startup phase (from Room display cache). Set
+     * directly by the init coroutine, independently of [_txDataSource] — see
+     * that coroutine's own comment for why it owns only this flow.
      */
     private val _cachedRows = MutableStateFlow<List<HistoryRowView>>(emptyList())
     val cachedRows: StateFlow<List<HistoryRowView>> = _cachedRows.asStateFlow()
 
     /**
-     * Live PagingData stream. Switches from empty → Room-live after the first
-     * rebuild or display-cache hydration. cachedIn() keeps pages across recompositions.
+     * Live PagingData stream. Nothing is emitted while the data source is still
+     * [TxDataSource.Empty]: the first emission is the first Room generation, so
+     * any NotLoading refresh a collector sees is by construction a settled Room
+     * answer — never a synthetic placeholder presented before Room has loaded a
+     * page. The Fragment's cache→live swap gate relies on exactly that; a
+     * placeholder emitted here once let it detach the cache adapter over an
+     * empty live list. cachedIn() keeps pages across recompositions.
      */
     val transactions: Flow<PagingData<HistoryRowView>> = _txDataSource
         .flatMapLatest { source ->
             when (source) {
-                is TxDataSource.Empty -> flowOf(PagingData.empty())
-                is TxDataSource.PrebuiltCache -> flowOf(PagingData.empty())
+                is TxDataSource.Empty -> emptyFlow()
                 is TxDataSource.RoomLive -> {
                     Pager(
                         config = pagingConfig,
@@ -220,14 +259,11 @@ class TxDisplayCacheService @Inject constructor(
                     }
                     historyRows.add(txRow)
                 }
-                // Always populate the cache adapter, regardless of which coroutine won
-                // the serviceScope race (_txDataSource may already be RoomLive if
-                // getCount() completed before getAll()).
+                // Only _cachedRows is this coroutine's to set: the Fragment shows these
+                // through the separate cachedRows collector regardless of _txDataSource,
+                // so _txDataSource/_transactionsLoaded stay the live pipeline's alone —
+                // this coroutine deciding them too was a second writer racing it.
                 _cachedRows.value = historyRows
-                if (_txDataSource.value is TxDataSource.Empty) {
-                    _txDataSource.value = TxDataSource.PrebuiltCache(historyRows)
-                    _transactionsLoaded.value = true
-                }
             }
         }
 
@@ -235,20 +271,91 @@ class TxDisplayCacheService @Inject constructor(
             .flatMapLatest { (direction, wallet) ->
                 if (wallet == null) return@flatMapLatest emptyFlow()
                 val filter = TxDirectionFilter(direction, wallet)
-                if (wrappedTransactionList.isEmpty()) {
-                    if (txDisplayCacheDao.getCount() > 0) {
-                        _liveFilterFlag.value = filter.direction.toFilterFlag()
-                        _txDataSource.value = TxDataSource.RoomLive
-                        _transactionsLoaded.value = true
-                        initializeFactoriesFromCache()
-                    } else {
-                        rebuildWrappedList(filter)
-                    }
-                } else {
+                // _txDataSource (not wrappedTransactionList) is the right "already running" check:
+                // the RoomLive fast path below only loads active CoinJoin/CrowdNode groups into
+                // wrappedTransactionList (initializeFactoriesFromCache), so a plain wallet with only
+                // single-tx history leaves wrappedTransactionList empty forever. Keying on it here
+                // made every later direction change retake this branch — which never invalidates
+                // the Pager — so a filter pick silently updated _liveFilterFlag and changed nothing
+                // on screen. But _txDataSource alone only answers "is a pipeline running", not "is
+                // it running for THIS wallet" — a wallet wipe/replacement leaves it at RoomLive from
+                // the old wallet, since clearDatabase() deliberately never resets it (protects an
+                // in-flight rescan's recovery, see its own comment). coinJoinWrapperFactory already
+                // holds the wallet the live pipeline's factories were last built for (every RoomLive
+                // writer — initializeFactoriesFromCache, rebuildWrappedList — publishes it only
+                // after that wallet's hydration has finished, never before), so comparing it
+                // against this emission's wallet tells the two cases apart without a new field.
+                // That "publish only after hydration" ordering is what makes this check safe
+                // under a flatMapLatest cancellation: a cancelled hydration leaves the factory
+                // at the previous wallet, so the check correctly falls through and retries.
+                // The same-wallet check also requires the cache to have rows: a wallet reset
+                // (observeWalletReset) rebinds coinJoinWrapperFactory to the same wallet and
+                // leaves _txDataSource at RoomLive, but clears the cache table, so without a
+                // row count a direction change here would flip the filter flag alone and never
+                // repopulate the cache from the now-empty wallet. The count read runs on
+                // every emission, so a failed read must not throw — it would complete the
+                // whole combine subscription through the catch below and no later filter pick
+                // would ever reach the Pager again — and is instead treated as UNKNOWN:
+                // assume the cache has rows, so the proven same wallet keeps the fast path
+                // and anything else takes the warm-cache re-init, which only READS the
+                // cache. Only a KNOWN zero may fall through to rebuildWrappedList: that
+                // replaceAll()s the cache from dashj, which post-cutover can hold zero
+                // transactions while the SDK-owned cache holds the real history, so an
+                // unknown count reaching it would wipe valid rows (the exact rebuild
+                // forceRebuildTransactionCache refuses).
+                val cachedRowCount: Int? = try {
+                    txDisplayCacheDao.getCount()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    log.warn("display-cache row count read failed; treating it as unknown", e)
+                    null
+                }
+                if (
+                    _txDataSource.value is TxDataSource.RoomLive &&
+                    coinJoinWrapperFactory?.wallet === wallet &&
+                    (cachedRowCount == null || cachedRowCount > 0)
+                ) {
                     log.info("direction changed to {} — switching filter flag only", direction)
                     _liveFilterFlag.value = filter.direction.toFilterFlag()
-                    _txDataSource.value = TxDataSource.RoomLive // force new Pager with updated filter
                     _currentPagingSource.value?.invalidate()
+                } else if (cachedRowCount == null || cachedRowCount > 0) {
+                    // Publish the live pipeline BEFORE hydrating the group factories: the
+                    // cache rows are already there, so the live Pager must not wait on a
+                    // hydration that only enriches CoinJoin/CrowdNode rows. Flipping it before
+                    // hydration is safe because the retry lives in the wallet-identity
+                    // term of the same-wallet fast-path check above: every hydrating
+                    // writer publishes coinJoinWrapperFactory only after its hydration
+                    // finishes (observeWalletReset rebinds it without hydrating, but its
+                    // KNOWN-zero count fails that check), so a cancelled hydration leaves
+                    // the factory at its previous value, fails the check, and the next
+                    // emission re-enters this branch instead of taking the flag-only fast
+                    // path.
+                    _liveFilterFlag.value = filter.direction.toFilterFlag()
+                    // Re-assigning the RoomLive singleton does not emit from the StateFlow, so
+                    // the live Pager (still the previous wallet's) would otherwise keep running
+                    // with its captured filter — invalidate it explicitly, as the same-wallet
+                    // branch above does.
+                    _txDataSource.value = TxDataSource.RoomLive
+                    _currentPagingSource.value?.invalidate()
+                    _transactionsLoaded.value = true
+                    // A failed hydration must not end this subscription (the catch below
+                    // completes the combine, and no later filter pick would ever reach the
+                    // Pager again); the factory it leaves unpublished is what makes the next
+                    // emission fail the same-wallet check above and retry the hydration here.
+                    // A failed hydration also skips this emission's incremental collector:
+                    // its factories are the only thing that keeps CoinJoin/CrowdNode rows
+                    // grouped, and a row persisted ungrouped is never regrouped by the retry.
+                    try {
+                        initializeFactoriesFromCache()
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        log.warn("group factory hydration from cache failed; the next emission retries it", e)
+                        return@flatMapLatest emptyFlow()
+                    }
+                } else {
+                    rebuildWrappedList(filter)
                 }
                 val allFilter = TxDirectionFilter(TxFilterType.ALL, wallet)
                 walletData.observeTransactions(true, allFilter)
@@ -263,9 +370,15 @@ class TxDisplayCacheService @Inject constructor(
                 val oldMetadata = this.metadata
                 this.metadata = newMetadata
 
-                val changedIds = buildSet<Sha256Hash> {
-                    newMetadata.forEach { (id, meta) -> if (meta != oldMetadata[id]) add(id) }
-                    oldMetadata.forEach { (id, _) -> if (id !in newMetadata) add(id) }
+                // Swap rows first, and UNCONDITIONALLY: their decoration comes from the
+                // swap-orders table by txid and needs no dashj wrapper, so it must not be
+                // gated on either the changedIds diff below or on the wrapper being
+                // resolvable (see reconcileSwapRows).
+                reconcileSwapRows(newMetadata)
+
+                val changedIds = buildSet<String> {
+                    newMetadata.forEach { (id, meta) -> if (meta != oldMetadata[id]) add(id.toString()) }
+                    oldMetadata.forEach { (id, _) -> if (id !in newMetadata) add(id.toString()) }
                 }
 
                 if (changedIds.isEmpty()) {
@@ -282,7 +395,7 @@ class TxDisplayCacheService @Inject constructor(
                     wrapper.transactions.keys.any { it in changedIds }
                 }
                 val inMemoryTxIds = inMemoryWrappers.flatMap { it.transactions.keys }.toSet()
-                val missingTxIds = changedIds.filter { it !in inMemoryTxIds }.map { it.toString() }
+                val missingTxIds = changedIds.filter { it !in inMemoryTxIds }
                 val lazyWrappers = if (missingTxIds.isNotEmpty()) {
                     val cacheEntries = txGroupCacheDao.getGroupsForTxIds(missingTxIds)
                     val loadedById = HashMap<String, TransactionWrapper>()
@@ -301,33 +414,115 @@ class TxDisplayCacheService @Inject constructor(
                             wrapper,
                             walletData.transactionBag,
                             Constants.CONTEXT,
-                            contact = contactsByTxId[txId.toString()],
-                            metadata = newMetadata[txId],
+                            contact = contactsByTxId[txId],
+                            metadata = newMetadata[TxId.wrap(txId)],
                             chainLockBlockHeight = chainLockBlockHeight
                         )
                         TxDisplayCacheEntry.fromTransactionRowView(
                             row,
                             walletApplication,
                             computeFilterFlags(wrapper),
-                            newMetadata[txId]?.customIconId?.toString()
+                            newMetadata[TxId.wrap(txId)]?.customIconId?.toString()
                         )
                     }
                     val rowIds = newEntries.map { it.rowId }
                     val existingByRowId = txDisplayCacheDao.getEntriesByIds(rowIds).associateBy { it.rowId }
                     val entries = newEntries.map { entry ->
-                        val existing = existingByRowId[entry.rowId]
-                        if (existing != null && existing.service != null && entry.service == null) {
-                            entry.copy(
+                        val existing = existingByRowId[entry.rowId] ?: return@map entry
+                        var result = entry
+                        if (existing.service != null && result.service == null) {
+                            result = result.copy(
                                 service      = existing.service,
                                 iconType     = existing.iconType,
                                 iconBgType   = existing.iconBgType,
-                                customIconId = entry.customIconId ?: existing.customIconId
+                                customIconId = result.customIconId ?: existing.customIconId
                             )
-                        } else {
-                            entry
                         }
+                        // Post-cutover preserve-guard: this rebuild comes from the
+                        // dashj wrapper, which for an SDK-only tx reports value=0 /
+                        // rate=null. A memo/tax edit must NOT clobber a value/rate
+                        // that CutoverUiDataService already re-stamped onto the row,
+                        // so keep the existing non-degenerate value/rate (mirrors the
+                        // service-preservation guard above).
+                        if (result.valueSatoshis == 0L && existing.valueSatoshis != 0L) {
+                            result = result.copy(valueSatoshis = existing.valueSatoshis)
+                        }
+                        if (result.exchangeRateFiatCode == null &&
+                            result.exchangeRateFiatValue == null &&
+                            existing.exchangeRateFiatCode != null
+                        ) {
+                            result = result.copy(
+                                exchangeRateFiatCode  = existing.exchangeRateFiatCode,
+                                exchangeRateFiatValue = existing.exchangeRateFiatValue
+                            )
+                        }
+                        // Post-cutover preserve-guard (direction/amount/status/icon): an
+                        // SDK-stamped row carries the engine + contact correction that the dashj
+                        // wrapper cannot reproduce — an SDK contact send surfaces only its +change,
+                        // so this rebuild would revert the row to a "Received" misread (wrong icon,
+                        // title, direction and status). A memo/tax-category edit must never change a
+                        // tx's direction/amount/status, so when the existing row was SDK-stamped
+                        // (it carries a contact identity, or the dashj rebuild degenerated to
+                        // value 0 while the cached row holds a real value) preserve its
+                        // value/icon/title/status/filter bucket across the rebuild. For a
+                        // pre-cutover contact tx the existing row was built from the same dashj
+                        // computation, so this copy is a no-op — behavior is byte-for-byte unchanged.
+                        // The SDK-authority register covers NON-contact rows (a plain
+                        // SDK-authored send has no contact identity and its dashj
+                        // rebuild is not always degenerate), closing the hole that let
+                        // a memo/tax edit revert a corrected plain send.
+                        val existingIsSdkStamped = existing.contactUserId != null ||
+                            displayCacheRefreshBus.isSdkAuthoritative(entry.rowId) ||
+                            (entry.valueSatoshis == 0L && existing.valueSatoshis != 0L)
+                        if (existingIsSdkStamped) {
+                            // The swap decoration (convert icon, "Conversion"/
+                            // "Converted" title, swapStatus) is METADATA-authoritative
+                            // — this very path runs BECAUSE the swap-orders table
+                            // changed — so it must pass the freeze or the home row
+                            // stays "Sent"/"Conversion" until a manual cache wipe
+                            // (2026-08-05 Maya field test). Value, exchange rate and
+                            // the filter bucket stay frozen: the dashj rebuild still
+                            // cannot be trusted for those, swap or not.
+                            val swapDecorated = entry.swapStatus != null
+                            result = result.copy(
+                                valueSatoshis = existing.valueSatoshis,
+                                iconType      = if (swapDecorated) entry.iconType else existing.iconType,
+                                iconBgType    = if (swapDecorated) entry.iconBgType else existing.iconBgType,
+                                title         = if (swapDecorated) entry.title else existing.title,
+                                statusText    = if (swapDecorated) entry.statusText else existing.statusText,
+                                filterFlags   = existing.filterFlags
+                            )
+                        }
+                        result
                     }
                     txDisplayCacheDao.insertAll(entries)
+                }
+
+                // Changed txids with NO resolvable wrapper: on a restored post-cutover
+                // device the affected rows are SDK-planned "fallback" metadata rows the
+                // held dashj wallet cannot render, so the rebuild above never reaches
+                // them — decorate the display-cache row directly by txid instead
+                // (memo/service/custom icon only; see [planMetadataRowDecorations]).
+                val wrappedTxIds = affectedWrappers.flatMapTo(mutableSetOf()) { it.transactions.keys }
+                val wrapperlessIds = changedIds.filterNot { it in wrappedTxIds }
+                if (wrapperlessIds.isNotEmpty()) {
+                    val existingRows = HashMap<String, TxDisplayCacheEntry>(wrapperlessIds.size)
+                    for (chunk in wrapperlessIds.chunked(500)) {
+                        txDisplayCacheDao.getEntriesByIds(chunk).forEach { existingRows[it.rowId] = it }
+                    }
+                    val decorated = planMetadataRowDecorations(
+                        wrapperlessIds.associateWith { id -> newMetadata[TxId.wrap(id)] },
+                        existingRows
+                    )
+                    if (decorated.isNotEmpty()) {
+                        txDisplayCacheDao.insertAll(decorated)
+                        _currentPagingSource.value?.invalidate()
+                        log.info(
+                            "metadata re-decorated {} wrapperless row(s): {}",
+                            decorated.size,
+                            decorated.take(8).joinToString { "${it.rowId.take(8)} memo=${it.comment.length} chars" }
+                        )
+                    }
                 }
             }
             .catch { e -> log.error("metadata flow error", e) }
@@ -346,12 +541,45 @@ class TxDisplayCacheService @Inject constructor(
                 this.contacts = contactsByIdentity
                 this.contactsByTxId = mapOf()
                 resolveAllContacts()
+                // resolveAllContacts() above only re-attributes wrappers the dashj
+                // wallet can see. Post-cutover the SDK pipeline owns the fresh rows,
+                // and its DIP-15 attribution had NO reactive tie to the contact data:
+                // a row planned before the sender's friendship keychain / profile
+                // landed was cached contact-less (generic direction icon) and only
+                // retried on the 60s reconcile ticker — or never, when the resolver
+                // negative-cached a definitive-looking "no friendship match" that was
+                // really just the keychain not existing yet. The only re-resolution
+                // trigger was the addedContact edge inside one specific
+                // updateContactRequests pass. Re-request it from the DATA instead:
+                // this flow is Room-backed (contact-request + profile tables), so
+                // every contact/profile change re-runs the SDK-side attribution too,
+                // with the negative cache busted (requestContactReResolution), and
+                // the row heals in place via the display-cache write → refresh-bus →
+                // pager-invalidate chain. The FIRST emission is the baseline load of
+                // an unchanged contact set (rows already attributed last session, and
+                // startup must stay O(visible)) — skip it; the ticker converges any
+                // straggler. Inert pre-cutover (no pipeline collector) and cheap:
+                // distinctUntilChanged gates on real content changes and the walk
+                // coalesces in the pipeline.
+                if (contactsPrimed) {
+                    cutoverUiDataService.get().requestContactReResolution()
+                } else {
+                    contactsPrimed = true
+                }
             }
             .catch { e -> log.error("contacts flow error", e) }
             .launchIn(serviceScope)
 
         walletData.observeWalletReset()
             .onEach {
+                // A rescan deletes the blockstore, so the next service start
+                // takes the missing-blockstore branch, which resets the held
+                // (empty) dashj wallet — and dashj fires this event even for
+                // an empty wallet. Post-cutover the rows are the SDK's, so the
+                // rescan's keep-the-history policy applies here too (MO-1054).
+                // A wallet wipe does not depend on this listener: it clears
+                // the caches itself (clearDatabase).
+                if (keptHistoryAcrossReset("dashj wallet reset")) return@onEach
                 wrappedTransactionList = emptyList()
                 contactsByTxId = mapOf()
                 _cachedRows.value = emptyList()
@@ -388,6 +616,26 @@ class TxDisplayCacheService @Inject constructor(
             }
             .catch { e -> log.error("blockchain state flow error (cache service)", e) }
             .launchIn(serviceScope)
+
+        // Belt-and-suspenders home-list refresh: CutoverUiDataService signals the bus
+        // immediately after every display-cache write (fresh SDK receive, direction/amount
+        // correction, or a pending→confirmed IS-lock flip). Room's InvalidationTracker is
+        // supposed to re-fire the live PagingSource on those upserts but on-device it can
+        // miss the change, leaving a stale "Sending"/"Processing" row for minutes. Force the
+        // active PagingSource to re-query on every signal — equivalent to adapter.refresh(),
+        // and no more disruptive to scroll than any normal data change. Pre-cutover nothing
+        // writes the cache, so the bus never fires and this is inert.
+        displayCacheRefreshBus.changes
+            .onEach {
+                // The SDK writer authors rows with no notion of swap orders, so a row it
+                // just inserted or re-stamped may have lost (or never had) its swap
+                // decoration. Re-derive it from the swap orders before refreshing the
+                // readers, so the list never settles on a plain "Sending" row for a swap.
+                reconcileSwapRows(metadata)
+                _currentPagingSource.value?.invalidate()
+            }
+            .catch { e -> log.error("display cache refresh bus flow error", e) }
+            .launchIn(serviceScope)
     }
 
     /**
@@ -417,63 +665,173 @@ class TxDisplayCacheService @Inject constructor(
     /**
      * Called when blockchain sync transitions from replaying to synced.
      *
-     * Two independent inconsistencies can leave the display stale:
-     *   1. **Missing group-cache entries** — the group cache has fewer individual tx rows
-     *      than the wallet (`walletTxCount > cachedTxCount`).  This happens when the
-     *      previous session was killed before its replay finished and the incremental
-     *      update path (`updateWrappedListForTransactions`) never saw those txs.
-     *   2. **Display / group-cache mismatch** — the group cache was updated incrementally
-     *      (all tx entries are present) but the display cache was not fully written, so it
-     *      has fewer rows than there are distinct groups.  This can occur when all replayed
-     *      txs merged into existing CoinJoin date-groups (REPLACE instead of INSERT in
-     *      `tx_display_cache`) while the underlying tx membership changed.
-     *
-     * Either condition triggers a full rebuild.
+     * Measures the display cache against whichever engine actually OWNS the
+     * transactions right now, and asks that engine — never the other one — to
+     * close a gap it finds. See [decideCacheRebuild] for the two rule sets and
+     * why the post-cutover one could not be expressed in dashj terms.
      */
     private fun rebuildIfCacheIncomplete() {
+        // Single-flight: post-cutover a pass can park for up to two minutes
+        // waiting for the SDK count, and a second trigger arriving in that
+        // window would measure the same thing and duplicate the remedy.
+        if (!completenessCheckInFlight.compareAndSet(false, true)) return
         serviceScope.launch {
-            // If the wallet isn't loaded yet (blockchain state can fire before the wallet
-            // is restored from disk), suspend until it becomes available.
-            val wallet = walletData.wallet
-                ?: walletData.observeWallet().filterNotNull().first()
-            val walletTxCount = wallet.getTransactionCount(true)
-            val cachedTxCount = txGroupCacheDao.getTotalTxCount()
-            val groupCount = txGroupCacheDao.getGroupCount()
-            val displayRowCount = txDisplayCacheDao.getCount()
+            try {
+                // If the wallet isn't loaded yet (blockchain state can fire before the wallet
+                // is restored from disk), suspend until it becomes available.
+                val wallet = walletData.wallet
+                    ?: walletData.observeWallet().filterNotNull().first()
+                val cutoverCommitted = cutoverCommittedOrUnknown()
+                // An unreadable latch reads "not done": the check then costs one more walk.
+                val postCutoverCheckDone = cutoverCommitted && runCatching {
+                    dashPayConfig.get(DashPayConfig.POST_CUTOVER_COMPLETENESS_CHECKED) == true
+                }.getOrDefault(false)
+                val runPostCutoverCheck = cutoverCommitted && !postCutoverCheckDone
+                // The post-cutover check runs once, when the one-time sync has
+                // finished: measured mid-scan, the SDK count is still climbing
+                // (run 17 logged SDK=0, then 7346, then 7460 across three ticks).
+                if (runPostCutoverCheck) awaitSdkScanCaughtUp()
+                // Post-cutover the SDK owns the transactions, so its record count IS
+                // the measurement — and it only resolves once the cutover tx pipeline
+                // is running, which is after the SDK bind and therefore after this
+                // check's own trigger (the first blockchain-state observation, ~3 s
+                // earlier on the S21). That trigger is an edge that never comes back,
+                // so answering "unavailable" once meant the check never ran at all
+                // for the whole session. Wait for the pipeline rather than reporting
+                // a permanent unknown.
+                val sdkRecordCount = if (runPostCutoverCheck) {
+                    awaitSdkRecordCount(
+                        polls = SDK_RECORD_COUNT_WAIT_POLLS,
+                        intervalMs = SDK_RECORD_COUNT_WAIT_INTERVAL_MS,
+                        onFirstMiss = {
+                            log.info(
+                                "sync-complete check: SDK record count not available yet (the " +
+                                    "cutover tx pipeline binds after this trigger) — waiting up to {}s",
+                                SDK_RECORD_COUNT_WAIT_POLLS * SDK_RECORD_COUNT_WAIT_INTERVAL_MS / 1000
+                            )
+                        },
+                        read = { sdkRecordCountOrNull() }
+                    )
+                } else {
+                    null
+                }
+                // Read AFTER the wait so every number in the decision describes
+                // the same moment as the SDK count it is compared against.
+                val walletTxCount = wallet.getTransactionCount(true)
+                val cachedTxCount = txGroupCacheDao.getTotalTxCount()
+                val groupCount = txGroupCacheDao.getGroupCount()
+                val displayRowCount = txDisplayCacheDao.getCount()
 
-            // Fresh install / post-wipe: nothing in the wallet and nothing cached.
-            if (walletTxCount == 0 && cachedTxCount == 0 && displayRowCount == 0) {
-                return@launch
-            }
-            
-            val txsMissing = walletTxCount > cachedTxCount
-            val displayIncomplete = displayRowCount < groupCount
-            val needsRebuild = txsMissing || displayIncomplete
-
-            log.info(
-                "Sync complete: wallet={} txs | group cache={} txs/{} groups | display={} rows — {}",
-                walletTxCount, cachedTxCount, groupCount, displayRowCount,
-                if (needsRebuild)
-                    "rebuilding (txsMissing=$txsMissing, displayIncomplete=$displayIncomplete)"
-                else
-                    "cache is complete"
-            )
-            if (needsRebuild) {
-                forceRebuildTransactionCache()
+                val decision = decideCacheRebuild(
+                    cutoverCommitted = cutoverCommitted,
+                    postCutoverCheckDone = postCutoverCheckDone,
+                    sdkRecordCount = sdkRecordCount,
+                    walletTxCount = walletTxCount,
+                    cachedTxCount = cachedTxCount,
+                    groupCount = groupCount,
+                    displayRowCount = displayRowCount
+                )
+                log.info(
+                    "Sync complete (cutoverCommitted={}): SDK={} records | dashj wallet={} txs | " +
+                        "group cache={} txs/{} groups | display={} rows — {}",
+                    cutoverCommitted, sdkRecordCount ?: "unavailable", walletTxCount,
+                    cachedTxCount, groupCount, displayRowCount, decision.reason
+                )
+                when (decision.action) {
+                    CacheRebuildAction.NONE -> Unit
+                    CacheRebuildAction.DASHJ_REBUILD -> forceRebuildTransactionCache()
+                    // The SDK owns the rows post-cutover, so the remedy is its own
+                    // idempotent full reconcile walk — the dashj rebuild would erase
+                    // them ([forceRebuildTransactionCache] refuses for that reason).
+                    // A walk requested while the pipeline is still priming its first
+                    // rows is not wrong, only early: it is the same idempotent pass
+                    // the 60s ticker runs, so it costs one walk.
+                    CacheRebuildAction.SDK_RECONCILE ->
+                        runCatching { cutoverUiDataService.get().requestFullReconcile() }
+                            .onFailure { log.warn("could not request an SDK reconcile pass", it) }
+                }
+                // Latch only a check that measured something: an unavailable SDK
+                // count is retried on the next trigger.
+                if (runPostCutoverCheck && sdkRecordCount != null) {
+                    runCatching { dashPayConfig.set(DashPayConfig.POST_CUTOVER_COMPLETENESS_CHECKED, true) }
+                        .onFailure { log.warn("could not latch the post-cutover completeness check", it) }
+                }
+            } finally {
+                completenessCheckInFlight.set(false)
             }
         }
     }
 
     /**
-     * Wipes both caches and triggers a full rebuild from the current wallet state.
+     * Suspend until the SDK's L1 scan has caught up to the tip — the end of
+     * the one-time sync after a cutover or restore. Unbounded on purpose: a
+     * large restore scans for hours, and the single-flight guard keeps every
+     * other trigger out meanwhile.
+     */
+    private suspend fun awaitSdkScanCaughtUp() {
+        val caughtUp = l1SyncStatusService.get().sdkScanCaughtUp
+        if (!caughtUp.first()) {
+            log.info("sync-complete check: waiting for the SDK's one-time sync to reach the tip")
+            caughtUp.first { it }
+        }
+    }
+
+    /** Guards [rebuildIfCacheIncomplete]'s bounded wait against a second trigger. */
+    private val completenessCheckInFlight = AtomicBoolean(false)
+
+    /**
+     * The persisted cutover verdict, through the SAME predicate the send path
+     * and [CutoverUiDataService] evaluate. Reads the store rather than
+     * [CutoverUiDataService.isCutoverActive] so the answer is correct before
+     * the SDK pipelines have started.
+     *
+     * A read failure reports COMMITTED — the direction that refuses a
+     * destructive dashj rebuild it cannot prove is safe. The refusal only
+     * bites when the dashj wallet is also empty, where a rebuild has nothing
+     * to rebuild anyway.
+     */
+    private suspend fun cutoverCommittedOrUnknown(): Boolean = try {
+        !dashjEngineMayStart(CutoverState.fromStored(dashPayConfig.get(DashPayConfig.CUTOVER_STATE)))
+    } catch (e: Exception) {
+        log.warn("could not read the cutover state; treating it as committed", e)
+        true
+    }
+
+    /** The SDK's own wallet-relevant record count, or null when unavailable. */
+    private suspend fun sdkRecordCountOrNull(): Int? = try {
+        cutoverUiDataService.get().sdkWalletRecordCount()
+    } catch (e: Exception) {
+        log.warn("SDK record-count read failed; skipping the completeness check", e)
+        null
+    }
+
+    /**
+     * Wipes both caches and rebuilds them from the dashj wallet.
+     *
+     * REFUSES to run post-cutover on a held dashj wallet — see
+     * [dashjRebuildWouldEraseHistory]. Reachable from the home screen (a long
+     * press on the History title offers "refresh"), so the refusal has to be
+     * structural, not a convention.
      */
     fun forceRebuildTransactionCache() {
         serviceScope.launch {
+            val wallet = walletData.wallet ?: return@launch
+            val dashjTxCount = wallet.getTransactionCount(true)
+            if (dashjRebuildWouldEraseHistory(cutoverCommittedOrUnknown(), dashjTxCount)) {
+                log.error(
+                    "REFUSING to rebuild the transaction cache: the cutover is committed and the " +
+                        "dashj wallet holds 0 transactions, so rebuilding from it would wipe all " +
+                        "{} display rows / {} group rows and leave the history permanently empty " +
+                        "(the SDK owns the transactions now, and nothing re-populates a wiped " +
+                        "dashj-sourced cache)",
+                    txDisplayCacheDao.getCount(), txGroupCacheDao.getTotalTxCount()
+                )
+                return@launch
+            }
             txDisplayCacheDao.deleteAll()
             txGroupCacheDao.deleteAll()
             wrappedTransactionList = emptyList()
             _txDataSource.value = TxDataSource.Empty
-            val wallet = walletData.wallet ?: return@launch
             val filter = TxDirectionFilter(_currentFilter.value, wallet)
             rebuildWrappedList(filter)
         }
@@ -489,7 +847,47 @@ class TxDisplayCacheService @Inject constructor(
         _cachedRows.value = emptyList()
     }
 
-    /** clear database tables during a wipe wallet or rescan operation */
+    /**
+     * The rescan (not wipe) half of [clearDatabase] — MO-1054.
+     *
+     * Post-cutover a rescan only rewinds the SDK's scan watermark
+     * ([de.schildbach.wallet.service.platform.sdk.SdkWalletBinder.oweSpvRescanForReset]);
+     * the SDK keeps every transaction record. Wiping the caches here threw
+     * away rows whose source still holds them, and no change-feed delta
+     * follows (the records did not change) — so the history sat empty,
+     * under a "synced" header, until the pipeline's next full reconcile walk
+     * (10 s after activation, then every 60 s, plus the walk itself). Keep
+     * the rows and ask for that walk now instead: it is idempotent and
+     * corrects any row in place.
+     *
+     * Pre-cutover dashj really does drop its transactions on a rescan and
+     * re-adds them as the replay proceeds, so the wipe stays.
+     */
+    suspend fun clearDatabaseForRescan() {
+        if (keptHistoryAcrossReset("rescan")) return
+        clearDatabase()
+    }
+
+    /**
+     * The shared post-cutover guard for both rescan-driven clears: the
+     * teardown's [clearDatabaseForRescan] and the dashj wallet-reset event the
+     * next service start raises. Returns true when the rows were kept (a
+     * reconcile walk is requested in their place); false when the caller
+     * should clear as before.
+     */
+    private suspend fun keptHistoryAcrossReset(trigger: String): Boolean {
+        if (rescanMayClearHistoryCache(cutoverCommittedOrUnknown())) return false
+        log.info(
+            "{}: keeping {} display rows / {} group rows — the cutover is committed and the " +
+                "SDK keeps its transactions across a rescan; requesting a reconcile walk instead",
+            trigger, txDisplayCacheDao.getCount(), txGroupCacheDao.getTotalTxCount()
+        )
+        runCatching { cutoverUiDataService.get().requestFullReconcile() }
+            .onFailure { log.warn("could not request an SDK reconcile pass after the {}", trigger, it) }
+        return true
+    }
+
+    /** clear database tables during a wipe wallet or (pre-cutover) rescan operation */
     suspend fun clearDatabase() {
         txDisplayCacheDao.deleteAll()
         txGroupCacheDao.deleteAll()
@@ -506,12 +904,11 @@ class TxDisplayCacheService @Inject constructor(
         try {
             walletData.wallet?.let { wallet ->
                 val t0 = System.currentTimeMillis()
-                coinJoinWrapperFactory = CoinJoinTxWrapperFactory(walletData.networkParameters, wallet as WalletEx)
+                val cjFactory = CoinJoinTxWrapperFactory(walletData.networkParameters, wallet as WalletEx)
 
                 val rawCount = wallet.getTransactions(true).size
                 val t1 = System.currentTimeMillis()
 
-                val cjFactory = coinJoinWrapperFactory ?: return
                 val wrapped = walletData.wrapAllTransactions(cjFactory)
                 val t2 = System.currentTimeMillis()
 
@@ -524,6 +921,21 @@ class TxDisplayCacheService @Inject constructor(
                     rawCount, wrapped.size, wrappedTransactionList.size,
                     t1 - t0, t2 - t1, t3 - t2, t3 - t0
                 )
+
+                // Publish the factories now, BEFORE the first suspension (persistGroupCache),
+                // unlike initializeFactoriesFromCache, which publishes only after its last
+                // hydrating read. The two paths differ in what the same-wallet fast-path
+                // check can see: this rebuild is entered only on a KNOWN zero row count, and
+                // wrapAllTransactions does not suspend, so the factories are fully hydrated
+                // the moment they are published here — yet the fast path cannot match them
+                // until the cache has rows, which only this rebuild's own replaceAll
+                // provides. A rebuild cancelled before that commit is simply retried (the
+                // count is still zero), and one cancelled after it keeps the factories
+                // consistent with the rows it wrote. Publishing them only after the commit
+                // instead left whatever factories were installed before (e.g. the empty
+                // same-wallet ones a wallet reset installs) to be matched by the fast path
+                // over this rebuild's rows, with no later re-hydration.
+                coinJoinWrapperFactory = cjFactory
 
                 persistGroupCache(wrapped)
                 updateDisplayCache(wrapped.toList(), filter.direction.toFilterFlag())
@@ -548,15 +960,15 @@ class TxDisplayCacheService @Inject constructor(
                 wrapper,
                 walletData.transactionBag,
                 Constants.CONTEXT,
-                contact = contactsByTxId[txId.toString()],
-                metadata = metadata[txId],
+                contact = contactsByTxId[txId],
+                metadata = metadata[TxId.wrap(txId)],
                 chainLockBlockHeight = chainLockBlockHeight
             )
             return TxDisplayCacheEntry.fromTransactionRowView(
                 row,
                 walletApplication,
                 computeFilterFlags(wrapper),
-                metadata[txId]?.customIconId?.toString()
+                metadata[TxId.wrap(txId)]?.customIconId?.toString()
             )
         }
 
@@ -577,11 +989,11 @@ class TxDisplayCacheService @Inject constructor(
                 else                       -> TxGroupCacheEntry.TYPE_SINGLE
             }
             wrapper.transactions.values
-                .sortedBy { it.updateTime }
+                .sortedBy { it.updateTimeMillis }
                 .mapIndexed { index, tx ->
                     TxGroupCacheEntry(
                         groupId     = wrapper.id,
-                        txId        = tx.txId.toString(),
+                        txId        = tx.txId,
                         wrapperType = type,
                         groupDate   = wrapper.groupDate.toString(),
                         sortOrder   = index
@@ -595,7 +1007,6 @@ class TxDisplayCacheService @Inject constructor(
         val wallet = walletData.wallet ?: return
         val t0 = System.currentTimeMillis()
         val cjFactory = CoinJoinTxWrapperFactory(walletData.networkParameters, wallet as WalletEx)
-        coinJoinWrapperFactory = cjFactory
 
         val today = LocalDate.now().toString()
         val activeEntries = txGroupCacheDao.getActiveGroups(today)
@@ -616,7 +1027,7 @@ class TxDisplayCacheService @Inject constructor(
 
             val wrapper = when (wrapperType) {
                 TxGroupCacheEntry.TYPE_COINJOIN -> {
-                    txs.forEach { cjFactory.tryInclude(it) }
+                    txs.forEach { cjFactory.tryInclude(it.toTxInfo(wallet, walletData.networkParameters)) }
                     cjFactory.wrappers.find { it.id == groupId }
                 }
                 else -> null
@@ -625,18 +1036,28 @@ class TxDisplayCacheService @Inject constructor(
         }
 
         wrappedTransactionList = activeWrappers.sortedByDescending { it.groupDate }
+        // Publish the factories only now that hydration has finished. Unlike
+        // rebuildWrappedList, this warm path is entered with cache rows already present,
+        // so a factory published before the getActiveGroups read above completed would
+        // let the same-wallet fast-path check match the new wallet over the old wallet's
+        // rows — a cancellation before this point must leave the factories untouched
+        // (see the comment above that check).
+        coinJoinWrapperFactory = cjFactory
         log.info("initializeFactoriesFromCache: {} active groups loaded in {}ms",
             byGroup.size, System.currentTimeMillis() - t0)
     }
 
     private suspend fun loadWrapperOnDemand(groupId: String, wrapperType: String): TransactionWrapper? {
         val wallet = walletData.wallet ?: return null
-        // Lazily initialize factories if they haven't been set yet (e.g. metadata flow fires
-        // before rebuildWrappedList / initializeFactoriesFromCache has run).
-        if (coinJoinWrapperFactory == null) {
-            coinJoinWrapperFactory = CoinJoinTxWrapperFactory(walletData.networkParameters, wallet as WalletEx)
-        }
-        val cjFactory = coinJoinWrapperFactory ?: return null
+        // Fall back to lazily built factories when none are published yet (e.g. the metadata
+        // flow fires before rebuildWrappedList / initializeFactoriesFromCache has run). They
+        // stay local to this call and are never published: only a hydrating path
+        // (rebuildWrappedList, initializeFactoriesFromCache) may publish a factory, because
+        // the same-wallet fast-path check trusts a published factory as proof that its
+        // wallet's hydration finished — a lazy one would satisfy that check and the
+        // hydration would be skipped. Each caller dedupes groups within a call, so a
+        // per-call factory loses nothing.
+        val cjFactory = coinJoinWrapperFactory ?: CoinJoinTxWrapperFactory(walletData.networkParameters, wallet as WalletEx)
 
         val entries = txGroupCacheDao.getGroupEntries(groupId)
         val txs = entries.sortedBy { it.sortOrder }.mapNotNull { row ->
@@ -651,7 +1072,7 @@ class TxDisplayCacheService @Inject constructor(
 
         val wrapper = when (wrapperType) {
             TxGroupCacheEntry.TYPE_COINJOIN -> {
-                txs.forEach { cjFactory.tryInclude(it) }
+                txs.forEach { cjFactory.tryInclude(it.toTxInfo(wallet, walletData.networkParameters)) }
                 cjFactory.wrappers.find { it.id == groupId }
             }
             else -> txs.firstOrNull()?.let { createSingleTxWrapper(it) }
@@ -665,10 +1086,12 @@ class TxDisplayCacheService @Inject constructor(
     }
 
     private suspend fun updateWrappedListForTransactions(txs: List<Transaction>) {
+        val bag = walletData.transactionBag
+        val params = walletData.networkParameters
         val txIdToWrapper = HashMap<String, TransactionWrapper>(wrappedTransactionList.size * 4)
         wrappedTransactionList.forEach { wrapper ->
             wrapper.transactions.keys.forEach { txId ->
-                txIdToWrapper[txId.toString()] = wrapper
+                txIdToWrapper[txId] = wrapper
             }
         }
 
@@ -679,7 +1102,7 @@ class TxDisplayCacheService @Inject constructor(
         for (tx in txs) {
             val existing = txIdToWrapper[tx.txId.toString()]
             if (existing != null) {
-                existing.transactions[tx.txId] = tx
+                existing.transactions[tx.txId.toString()] = tx.toTxInfo(bag, params)
                 affectedWrappers.add(existing)
             } else {
                 unknownTxs.add(tx)
@@ -700,7 +1123,7 @@ class TxDisplayCacheService @Inject constructor(
                         ?: loadWrapperOnDemand(cacheEntry.groupId, cacheEntry.wrapperType)
                             ?.also { loadedById[it.id] = it }
                     if (wrapper != null) {
-                        wrapper.transactions[tx.txId] = tx
+                        wrapper.transactions[tx.txId.toString()] = tx.toTxInfo(bag, params)
                         affectedWrappers.add(wrapper)
                         if (mutableList.none { it.id == wrapper.id }) {
                             mutableList.add(wrapper)
@@ -711,7 +1134,8 @@ class TxDisplayCacheService @Inject constructor(
 
                 var added = false
 
-                val (cjIncluded, cjWrapper) = coinJoinWrapperFactory?.tryInclude(tx) ?: (false to null)
+                val txInfo = tx.toTxInfo(bag, params)
+                val (cjIncluded, cjWrapper) = coinJoinWrapperFactory?.tryInclude(txInfo) ?: (false to null)
                 if (cjIncluded && cjWrapper != null) {
                     if (mutableList.none { it.id == cjWrapper.id }) {
                         mutableList.add(cjWrapper)
@@ -739,20 +1163,23 @@ class TxDisplayCacheService @Inject constructor(
             val txId = wrapper.transactions.keys.first()
             val row = TransactionRowView.fromTransactionWrapper(
                 wrapper, walletData.transactionBag, Constants.CONTEXT,
-                contact = contactsByTxId[txId.toString()],
-                metadata = metadata[txId],
+                contact = contactsByTxId[txId],
+                metadata = metadata[TxId.wrap(txId)],
                 chainLockBlockHeight = chainLockBlockHeight
             )
             TxDisplayCacheEntry.fromTransactionRowView(
                 row,
                 walletApplication,
                 computeFilterFlags(wrapper),
-                metadata[txId]?.customIconId?.toString()
+                metadata[TxId.wrap(txId)]?.customIconId?.toString()
             )
         }
         if (displayEntries.isNotEmpty()) {
             val beforeCount = txDisplayCacheDao.getCount()
-            txDisplayCacheDao.insertAll(displayEntries)
+            // Never regress an SDK-stamped row: mid-rescan the dashj wrapper computes a
+            // "Received +change"/no-contact misread for a contact send the SDK already
+            // corrected — merge so contact identity and direction/shape are preserved.
+            txDisplayCacheDao.insertAll(mergeAllPreservingSdkStamped(displayEntries))
             val afterCount = txDisplayCacheDao.getCount()
             if (afterCount != beforeCount) {
                 log.info(
@@ -768,11 +1195,11 @@ class TxDisplayCacheService @Inject constructor(
                 else                       -> TxGroupCacheEntry.TYPE_SINGLE
             }
             wrapper.transactions.values
-                .sortedBy { it.updateTime }
+                .sortedBy { it.updateTimeMillis }
                 .mapIndexed { index, tx ->
                     TxGroupCacheEntry(
                         groupId     = wrapper.id,
-                        txId        = tx.txId.toString(),
+                        txId        = tx.txId,
                         wrapperType = type,
                         groupDate   = wrapper.groupDate.toString(),
                         sortOrder   = index
@@ -793,9 +1220,9 @@ class TxDisplayCacheService @Inject constructor(
         val txsToResolve = wrappedTransactionList
             .map { it.transactions.values.first() }
             .filter { tx ->
-                !tx.isEntirelySelf(walletData.transactionBag) &&
-                    tx.updateTime.toInstant().atZone(ZoneId.systemDefault()).toLocalDate() >= minContactCreatedDate &&
-                    contactsByTxId[tx.txId.toString()] == null
+                !tx.isEntirelySelf &&
+                    tx.groupDate >= minContactCreatedDate &&
+                    contactsByTxId[tx.txId] == null
             }
 
         if (txsToResolve.isEmpty()) return
@@ -808,8 +1235,8 @@ class TxDisplayCacheService @Inject constructor(
                 .map { tx ->
                     async(Dispatchers.IO) {
                         try {
-                            identityRepo.blockchainIdentity?.getContactForTransaction(tx)?.let { id ->
-                                contactsSnapshot[id]?.let { profile -> tx.txId.toString() to profile }
+                            identityRepo.blockchainIdentity?.getContactForTransaction(tx.dashjTx)?.let { id ->
+                                contactsSnapshot[id]?.let { profile -> tx.txId to profile }
                             }
                         } catch (e: Exception) {
                             log.warn("failed to resolve contact for tx {}: {}", tx.txId, e.message)
@@ -835,19 +1262,22 @@ class TxDisplayCacheService @Inject constructor(
                         wrapper,
                         walletData.transactionBag,
                         Constants.CONTEXT,
-                        contact = contactsByTxId[txId.toString()],
-                        metadata = metadata[txId],
+                        contact = contactsByTxId[txId],
+                        metadata = metadata[TxId.wrap(txId)],
                         chainLockBlockHeight = chainLockBlockHeight
                     )
                     TxDisplayCacheEntry.fromTransactionRowView(
                         row,
                         walletApplication,
                         computeFilterFlags(wrapper),
-                        metadata[txId]?.customIconId?.toString()
+                        metadata[TxId.wrap(txId)]?.customIconId?.toString()
                     )
                 }
             if (updatedEntries.isNotEmpty()) {
-                txDisplayCacheDao.insertAll(updatedEntries)
+                // Attach the freshly-resolved contact but never regress the SDK-stamped
+                // value/direction/status of an already-corrected row (the dashj wrapper
+                // misreads an SDK contact send as "Received +change").
+                txDisplayCacheDao.insertAll(mergeAllPreservingSdkStamped(updatedEntries))
             }
         }
     }
@@ -911,28 +1341,31 @@ class TxDisplayCacheService @Inject constructor(
                     wrapper,
                     walletData.transactionBag,
                     Constants.CONTEXT,
-                    contact = contactsByTxId[txId.toString()],
-                    metadata = metadata[txId],
+                    contact = contactsByTxId[txId],
+                    metadata = metadata[TxId.wrap(txId)],
                     chainLockBlockHeight = chainLockBlockHeight
                 )
                 TxDisplayCacheEntry.fromTransactionRowView(
                     row,
                     walletApplication,
                     computeFilterFlags(wrapper),
-                    metadata[txId]?.customIconId?.toString()
+                    metadata[TxId.wrap(txId)]?.customIconId?.toString()
                 )
             }
         if (updatedEntries.isNotEmpty()) {
-            txDisplayCacheDao.insertAll(updatedEntries)
+            // Same preserve-merge as resolveAllContacts: attach the contact, keep the
+            // SDK-stamped shape.
+            txDisplayCacheDao.insertAll(mergeAllPreservingSdkStamped(updatedEntries))
         }
     }
 
     private fun createSingleTxWrapper(tx: Transaction): TransactionWrapper = object : TransactionWrapper {
+        private val txInfo = tx.toTxInfo(walletData.transactionBag, walletData.networkParameters)
         override val id           = tx.txId.toString()
-        override val transactions = hashMapOf(tx.txId to tx)
-        override val groupDate    = tx.updateTime.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
-        override fun tryInclude(t: Transaction) = t.txId == tx.txId
-        override fun getValue(bag: org.bitcoinj.core.TransactionBag) = tx.getValue(bag)
+        override val transactions = hashMapOf(txInfo.txId to txInfo)
+        override val groupDate    = txInfo.groupDate
+        override fun tryInclude(tx: org.dash.wallet.common.transactions.TxInfo) = tx.txId == txInfo.txId
+        override fun getValue() = org.dash.wallet.common.money.Dash(txInfo.netValueDuffs)
     }
 
     /**
@@ -950,7 +1383,7 @@ class TxDisplayCacheService @Inject constructor(
      */
     private fun iconBitmapForEntry(entry: TxDisplayCacheEntry): Bitmap? {
         val txId = try {
-            Sha256Hash.wrap(entry.rowId)
+            TxId.wrap(entry.rowId)
         } catch (e: IllegalArgumentException) {
             return null
         }
@@ -987,10 +1420,104 @@ class TxDisplayCacheService @Inject constructor(
         iconBitmapForEntry(entry)?.let { return it }
         val iconId = entry.customIconId ?: return null
         return try {
-            metadataProvider.getIcon(Sha256Hash.wrap(iconId))
+            metadataProvider.getIcon(TxId.wrap(iconId))
         } catch (e: IllegalArgumentException) {
             null
         }
+    }
+
+    /**
+     * Merge a dashj-rebuilt display [entry] over the [existing] cached row so the
+     * rebuild can never REGRESS SDK-stamped state (mirrors the metadata-flow
+     * preserve-guard, factored for the live-tx and contact-resolution writers).
+     *
+     * Post-cutover / post-restore, [CutoverUiDataService] corrects contact rows to
+     * their authoritative shape (engine signed net → SENT −0.1 with the contact
+     * identity), but the dashj-side writers here rebuild the same rowIds from the
+     * dashj wrapper, which mid-rescan (inputs not yet connected) or for an
+     * SDK-only tx computes a "Received +change" misread with no contact — on
+     * device this flip-flopped a corrected SENT contact row back to a bare green
+     * RECEIVED arrow until the next SDK pass (≤60s). Guards, all idempotent:
+     *  - an existing service classification is kept (same as the metadata guard);
+     *  - a degenerate rebuild (value 0 while the cached row holds a real value)
+     *    keeps the cached value, and a null rate never clears a stamped rate;
+     *  - contact attribution is never DROPPED: a rebuild without a contact keeps
+     *    the cached contact columns;
+     *  - the display SHAPE (value/icon/title/status/filter bucket) of a row
+     *    carrying a contact identity is frozen ENTIRELY against this rebuild
+     *    (not just on a direction flip: on-device a same-direction rebuild
+     *    rewrote a contact send's −0.4 to −260, dashj's fee-only misread of a
+     *    friendship payment). Only same-direction status PROGRESS passes
+     *    through ("Sending"→"Sent", clearing a stale secondary status);
+     *    degenerate rebuilds freeze the same way. Non-contact, non-degenerate
+     *    rows pass through unchanged, so pre-cutover behaviour is untouched.
+     */
+    private fun mergePreservingSdkStamped(
+        entry: TxDisplayCacheEntry,
+        existing: TxDisplayCacheEntry?
+    ): TxDisplayCacheEntry = mergeDisplayEntryPreservingSdkStamped(
+        entry = entry,
+        existing = existing,
+        sendingTitle = walletApplication.getString(R.string.transaction_row_status_sending),
+        sentTitle = walletApplication.getString(R.string.transaction_row_status_sent),
+        // NON-contact SDK-stamped rows: the row carries no contact identity to
+        // recognise it by, so the SDK sync pipeline registers every rowId it planned
+        // or verified ([DisplayCacheRefreshBus.markSdkAuthoritative]) and this rebuild
+        // consults that register. Pre-cutover nothing registers, so the flag is always
+        // false and behaviour is byte-for-byte unchanged.
+        sdkAuthoritative = displayCacheRefreshBus.isSdkAuthoritative(entry.rowId)
+    )
+
+    /** Batch [mergePreservingSdkStamped] over [entries] with one Room read for the existing rows. */
+    private suspend fun mergeAllPreservingSdkStamped(
+        entries: List<TxDisplayCacheEntry>
+    ): List<TxDisplayCacheEntry> {
+        if (entries.isEmpty()) return entries
+        // Chunked: SQLite's IN-clause variable cap is 999 and rescan batches can be large.
+        val existingByRowId = HashMap<String, TxDisplayCacheEntry>(entries.size)
+        for (chunk in entries.map { it.rowId }.chunked(500)) {
+            txDisplayCacheDao.getEntriesByIds(chunk).forEach { existingByRowId[it.rowId] = it }
+        }
+        return entries.map { mergePreservingSdkStamped(it, existingByRowId[it.rowId]) }
+    }
+
+    /**
+     * Re-apply the swap decoration to every already-cached row whose txid has a
+     * `swap_orders` record, from [snapshot] (the presentable metadata, which carries the
+     * joined order). See [planSwapRowDecorations] for why this is derived from the order
+     * rather than from a re-render of the transaction, and for the on-device latch it fixes.
+     *
+     * Cheap and idempotent: one Room read over the swap txids only (a handful), and a write
+     * only for rows that actually differ — a settled swap row costs one query per trigger.
+     */
+    private suspend fun reconcileSwapRows(snapshot: Map<TxId, PresentableTxMetadata>) {
+        val swapMetadata = snapshot.values.filter { it.swapOrder != null }
+        if (swapMetadata.isEmpty()) return
+        // Chunked like every other reader here: SQLite's IN-clause variable cap is 999 and
+        // a heavy DEX user's swap count is unbounded.
+        val existingByRowId = HashMap<String, TxDisplayCacheEntry>(swapMetadata.size)
+        for (chunk in swapMetadata.map { it.txId.toString() }.chunked(500)) {
+            txDisplayCacheDao.getEntriesByIds(chunk).forEach { existingByRowId[it.rowId] = it }
+        }
+        val decorated = planSwapRowDecorations(swapMetadata, existingByRowId) { order ->
+            walletApplication.getString(
+                TransactionRowView.swapTitleRes(order.status),
+                order.fromAsset,
+                order.toAsset
+            )
+        }
+        if (decorated.isEmpty()) return
+        txDisplayCacheDao.insertAll(decorated)
+        // Same belt-and-suspenders as the rest of this service: Room's InvalidationTracker
+        // can miss an upsert on-device, and a swap row that is already correct in the table
+        // but stale on screen is the very symptom this reconciler exists to end.
+        _currentPagingSource.value?.invalidate()
+        log.info(
+            "swap row reconcile: re-decorated {} of {} swap row(s) from swap_orders ({})",
+            decorated.size,
+            existingByRowId.size,
+            decorated.joinToString { "${it.rowId.take(8)}→${it.title}" }
+        )
     }
 
     private fun computeFilterFlags(wrapper: TransactionWrapper): Int {
@@ -999,14 +1526,14 @@ class TxDisplayCacheService @Inject constructor(
         if (wrapper is CoinJoinMixingTxSet) {
             flags = TxDisplayCacheEntry.FLAG_COINJOIN
         } else {
-            if (wrapper.transactions.values.any { TxDirectionFilter(TxFilterType.SENT, bag).matches(it) }) {
+            if (wrapper.transactions.values.any { TxDirectionFilter(TxFilterType.SENT, bag).matches(it.dashjTx) }) {
                 flags = flags or TxDisplayCacheEntry.FLAG_SENT
             }
-            if (wrapper.transactions.values.any { TxDirectionFilter(TxFilterType.RECEIVED, bag).matches(it) }) {
+            if (wrapper.transactions.values.any { TxDirectionFilter(TxFilterType.RECEIVED, bag).matches(it.dashjTx) }) {
                 flags = flags or TxDisplayCacheEntry.FLAG_RECEIVED
             }
             val firstTxId = wrapper.transactions.keys.first()
-            if (ServiceName.isDashSpend(metadata[firstTxId]?.service)) {
+            if (ServiceName.isDashSpend(metadata[TxId.wrap(firstTxId)]?.service)) {
                 flags = flags or TxDisplayCacheEntry.FLAG_GIFT_CARD or TxDisplayCacheEntry.FLAG_SENT
             }
         }
@@ -1023,5 +1550,365 @@ class TxDisplayCacheService @Inject constructor(
     @VisibleForTesting
     fun close() {
         serviceScope.cancel()
+    }
+}
+
+/**
+ * PURE planner for the SWAP DECORATION of already-cached display rows — the
+ * host-testable core of [TxDisplayCacheService.reconcileSwapRows].
+ *
+ * A swap row's decoration (convert icon on the orange halo, "Conversion …"/"Converted …"
+ * title, [TxDisplayCacheEntry.swapStatus] for the row chip) is derived ENTIRELY from the
+ * `swap_orders` record keyed by txid — exactly like the transaction-details screen
+ * ([de.schildbach.wallet.ui.TransactionResultViewModel.swapOrder], which observes the
+ * order directly). It needs NO dashj transaction, so unlike
+ * [TransactionRowView.fromTransaction] this planner can decorate a row for a transaction
+ * the held dashj wallet cannot render (an SDK-authored send whose inputs are unconnected,
+ * or one it does not hold at all).
+ *
+ * That independence is the fix for the verified on-device latch (2026-08-07 Maya field
+ * test): a Maya/SwapKit MAX sell's row was authored by the SDK writer
+ * ([de.schildbach.wallet.service.platform.sdk.CutoverUiDataService]) which knows nothing
+ * about swap orders, so it stayed titled "Sending" — permanently, because the SDK record's
+ * `context` never advanced past mempool AND because the only writer that DID know about
+ * the swap (the metadata flow) fires on a metadata DIFF and had already consumed the one
+ * that mattered. Re-deriving the decoration from `swap_orders` on every metadata emission
+ * and every display-cache write signal converges regardless of which writer authored the row.
+ *
+ * Idempotent by construction: a row that already matches is not returned, so a settled
+ * swap row produces no write on any later pass. Only the decoration fields are touched —
+ * value, exchange rate, contact identity, memo, time and the filter bucket are preserved,
+ * since this planner has no authority over them.
+ *
+ * @param swapMetadata presentable metadata whose [PresentableTxMetadata.swapOrder] is set.
+ * @param resolveTitle resolves an order to its row title; supply
+ *        [TransactionRowView.swapTitleRes] formatted with the order's assets so this
+ *        planner and the renderer can never disagree.
+ */
+internal fun planSwapRowDecorations(
+    swapMetadata: Collection<PresentableTxMetadata>,
+    existingByRowId: Map<String, TxDisplayCacheEntry>,
+    resolveTitle: (SwapOrder) -> String
+): List<TxDisplayCacheEntry> = swapMetadata.mapNotNull { meta ->
+    val order = meta.swapOrder ?: return@mapNotNull null
+    // Only rows the cache already displays are decorated. A swap whose row does not exist
+    // yet is left to whichever writer authors it first; that write signals the refresh bus,
+    // which brings us straight back here with the row present.
+    val existing = existingByRowId[meta.txId.toString()] ?: return@mapNotNull null
+    val decorated = existing.copy(
+        title = resolveTitle(order),
+        iconType = TxDisplayCacheEntry.ICON_CONVERT,
+        iconBgType = TxDisplayCacheEntry.BG_ORANGE,
+        // A swap row's live state is the chip fed by swapStatus ("Processing"/"Refunded"/
+        // "Failed" — see TransactionAdapter.setSwapStatus), never a secondary status line;
+        // this also clears the stale "Processing"/"Confirming" a plain-send writer stamped.
+        statusText = "",
+        // Keep an already-classified service when this metadata row carries none, so the
+        // decoration cannot un-classify a row (the service column is what keeps the SDK
+        // planner's plain-send re-stamp off this row).
+        service = meta.service ?: existing.service,
+        swapStatus = order.status.name
+    )
+    decorated.takeIf { it != existing }
+}
+
+/**
+ * PURE planner for the METADATA DECORATION of already-cached display rows whose
+ * transaction the held dashj wallet cannot render — the host-testable core of
+ * [TxDisplayCacheService]'s wrapperless metadata re-decoration.
+ *
+ * The metadata-change observer's rebuild path needs a dashj [TransactionWrapper], but on
+ * a restored post-cutover device the display rows are SDK-planned and their metadata
+ * arrives as "SDK fallback rows" ([WalletTransactionMetadataProvider]) for txs the
+ * wallet does not hold — so no wrapper ever resolves and the row could never learn its
+ * memo (verified in the field: "platform metadata merged" with zero "row … bound with
+ * metadata" renders across whole sessions). Like [planSwapRowDecorations], this planner
+ * works off the display-cache row keyed by txid instead.
+ *
+ * Decoration ONLY, mirroring what the wrapper path's SDK-stamp preserve-guards let
+ * metadata drive on such a row: [TxDisplayCacheEntry.comment] (the memo — metadata is
+ * its source of truth, so a removed metadata row clears it), [TxDisplayCacheEntry.service]
+ * (never un-classified) and [TxDisplayCacheEntry.customIconId] (the merchant/service
+ * icon, rendered from live metadata at display time). Value, direction, icon, title,
+ * status, time, rate, contact identity and the filter bucket are never touched.
+ * Idempotent: a row that already matches is not returned.
+ *
+ * Stamping `service` here does NOT opt the row out of the SDK planner's later status
+ * transitions: [de.schildbach.wallet.service.platform.sdk.planL1DisplaySync] and
+ * [de.schildbach.wallet.service.platform.sdk.planL1InstantLockRowUpdate] treat a
+ * service classification as decoration, not as the never-touch rich-row signal —
+ * a row decorated while "Sending"/"Processing" still settles on its lock.
+ *
+ * @param metadataByTxId the CHANGED txids mapped to their new presentable metadata
+ *        (null = the metadata row was removed).
+ */
+internal fun planMetadataRowDecorations(
+    metadataByTxId: Map<String, PresentableTxMetadata?>,
+    existingByRowId: Map<String, TxDisplayCacheEntry>
+): List<TxDisplayCacheEntry> = metadataByTxId.mapNotNull { (txId, meta) ->
+    // Only rows the cache already displays are decorated; a row planned LATER is
+    // born decorated by the SDK planner's own build-time join.
+    val existing = existingByRowId[txId] ?: return@mapNotNull null
+    val decorated = existing.copy(
+        comment = meta?.memo ?: "",
+        service = meta?.service ?: existing.service,
+        customIconId = meta?.customIconId?.toString() ?: existing.customIconId
+    )
+    decorated.takeIf { it != existing }
+}
+
+/**
+ * PURE merge of a dashj-rebuilt display [entry] over the [existing] cached row —
+ * the host-testable core of [TxDisplayCacheService.mergePreservingSdkStamped]
+ * (see that method's KDoc for the full rationale). Kept free of Android/Room so
+ * the guard's carve-outs can be unit-tested directly.
+ *
+ * @param sdkAuthoritative whether the SDK sync pipeline has claimed authority over
+ *        this rowId ([DisplayCacheRefreshBus.markSdkAuthoritative]) — the signal
+ *        that identifies a NON-contact SDK-stamped row. Always false pre-cutover.
+ */
+internal fun mergeDisplayEntryPreservingSdkStamped(
+    entry: TxDisplayCacheEntry,
+    existing: TxDisplayCacheEntry?,
+    sendingTitle: String,
+    sentTitle: String,
+    sdkAuthoritative: Boolean
+): TxDisplayCacheEntry {
+    existing ?: return entry
+    var result = entry
+    if (existing.service != null && result.service == null) {
+        result = result.copy(
+            service      = existing.service,
+            iconType     = existing.iconType,
+            iconBgType   = existing.iconBgType,
+            customIconId = result.customIconId ?: existing.customIconId
+        )
+    }
+    val degenerateRebuild = entry.valueSatoshis == 0L && existing.valueSatoshis != 0L
+    if (degenerateRebuild) {
+        result = result.copy(valueSatoshis = existing.valueSatoshis)
+    }
+    if (result.exchangeRateFiatCode == null && existing.exchangeRateFiatCode != null) {
+        result = result.copy(
+            exchangeRateFiatCode  = existing.exchangeRateFiatCode,
+            exchangeRateFiatValue = existing.exchangeRateFiatValue
+        )
+    }
+    if (result.contactUserId == null && existing.contactUserId != null) {
+        result = result.copy(
+            contactUsername    = existing.contactUsername,
+            contactDisplayName = existing.contactDisplayName,
+            contactAvatarUrl   = existing.contactAvatarUrl,
+            contactUserId      = existing.contactUserId
+        )
+    }
+    // FULL shape freeze for contact/SDK-stamped rows. The previous guard only
+    // froze on a SENT↔RECEIVED direction flip or a value-0 rebuild — verified
+    // on-device to be full of holes: a contact send of −0.4 was rewritten by
+    // this dashj-side path to −260 (fee-only: dashj counts the friendship
+    // payment output as watched-own, so its net degenerates to −fee) with the
+    // direction UNCHANGED and the value non-zero, so no rule fired and the
+    // wrong value persisted. The dashj wrapper can never recompute the
+    // authoritative value/direction of an SDK-authored tx (only the SDK's signed
+    // wallet net can), so when the existing row carries a contact identity, is
+    // registered as SDK-AUTHORITATIVE, or the rebuild is degenerate, NOTHING
+    // display-shaping from the rebuild is trusted: value, icon, title, status and
+    // filter bucket all stay as cached. The ONLY refresh allowed through is
+    // same-direction status PROGRESS — dashj's legitimate job: flipping a
+    // "Sending" title to "Sent", and clearing a stale secondary status
+    // ("Processing"/"Confirming" → none). dashj may never (re)introduce a
+    // secondary status or relabel an SDK-authored title ("Shielded", "Invitation").
+    // Pre-cutover a contact row is rebuilt from the SAME dashj computation
+    // that produced it, so the freeze is value-identical there (the one
+    // deliberate exception: a contact row's "Processing"→"Confirming" text
+    // swap no longer flows through these writers — cosmetic only).
+    // Rows without contact data, not SDK-registered and non-degenerate are
+    // untouched: byte-for-byte pre-cutover behavior.
+    // dashj stays AUTHORITATIVE for transaction ERRORS (dead / conflicting /
+    // double-spent): the SDK display path has no error concept and the planner carves
+    // error rows out of every re-stamp, so a rebuild that newly reports hasErrors must
+    // pass through whole — otherwise a failed tx would keep its "Sent" icon and title.
+    val newlyErrored = entry.hasErrors && !existing.hasErrors
+    val sdkStamped = existing.contactUserId != null || sdkAuthoritative
+    if (!newlyErrored && (sdkStamped || degenerateRebuild)) {
+        val sameDirection = entry.iconType == existing.iconType
+        val allowStatusProgress = sameDirection && !degenerateRebuild
+        val sendingToSent = allowStatusProgress &&
+            existing.title == sendingTitle && entry.title == sentTitle
+        val statusCleared = allowStatusProgress &&
+            entry.statusText.isEmpty() && existing.statusText.isNotEmpty()
+        // The swap decoration (convert icon, "Conversion"/"Converted" title,
+        // swapStatus) is METADATA-authoritative — it comes from the swap-orders
+        // table the tracking service maintains, not from a dashj recomputation —
+        // so it must pass the freeze. The tracker flips PENDING→COMPLETED long
+        // after the row was SDK-stamped; freezing the title pinned the row at
+        // "Sent"/"Conversion" until a manual cache wipe (home-screen staleness
+        // found in the 2026-08-05 Maya field test). Value, exchange rate,
+        // contact identity and the filter bucket stay frozen: the dashj rebuild
+        // still cannot be trusted for those, swap or not. A rebuild WITHOUT
+        // swap metadata (entry.swapStatus == null) never undresses an existing
+        // swap row — the freeze keeps the cached shape as before.
+        val swapDecorated = entry.swapStatus != null
+        result = result.copy(
+            valueSatoshis = existing.valueSatoshis,
+            iconType      = if (swapDecorated) entry.iconType else existing.iconType,
+            iconBgType    = if (swapDecorated) entry.iconBgType else existing.iconBgType,
+            title         = if (swapDecorated || sendingToSent) entry.title else existing.title,
+            statusText    = if (swapDecorated || statusCleared) entry.statusText else existing.statusText,
+            filterFlags   = existing.filterFlags
+        )
+    }
+    return result
+}
+
+/**
+ * Whether rebuilding the display/group caches from the dashj wallet would
+ * DESTROY the user's visible history rather than refresh it.
+ *
+ * Post-cutover the dashj wallet is held with zero transactions while the SDK
+ * feeds the caches, so a rebuild from it wipes both tables and re-populates
+ * them from nothing — and no dashj-sourced path ever fills them again.
+ */
+internal fun dashjRebuildWouldEraseHistory(cutoverCommitted: Boolean, dashjTxCount: Int): Boolean =
+    cutoverCommitted && dashjTxCount == 0
+
+/**
+ * Whether a blockchain rescan may wipe the display/group caches — the pure
+ * core of [TxDisplayCacheService.clearDatabaseForRescan] and of the dashj
+ * wallet-reset listener the rescan's next service start triggers (MO-1054).
+ *
+ * Only pre-cutover: there the dashj wallet drops its transactions and the
+ * replay re-adds them. Post-cutover the SDK keeps its records across the
+ * rescan, so a wipe only empties the history until the next reconcile walk.
+ * An unreadable cutover state arrives here as committed (see
+ * `cutoverCommittedOrUnknown`), which keeps the rows — the non-destructive
+ * direction.
+ */
+internal fun rescanMayClearHistoryCache(cutoverCommitted: Boolean): Boolean = !cutoverCommitted
+
+/**
+ * Read [read] until it yields a count, up to [polls] retries [intervalMs]
+ * apart; null means it stayed unavailable for the whole window.
+ *
+ * The sync-complete completeness check is edge-triggered (replaying→synced, or
+ * the first already-synced observation) and post-cutover its only measurement
+ * is the SDK's record count — which does not resolve until the cutover tx
+ * pipeline has bound, a few seconds AFTER that edge. Reading once therefore
+ * reported a permanent "unavailable" and the check silently never ran; the
+ * edge does not come back to give it a second chance. [onFirstMiss] is invoked
+ * once, only if the first read misses, so the wait is visible in the log
+ * without a line on the common path where the count is already there.
+ */
+internal suspend fun awaitSdkRecordCount(
+    polls: Int,
+    intervalMs: Long,
+    onFirstMiss: () -> Unit = {},
+    read: suspend () -> Int?
+): Int? {
+    read()?.let { return it }
+    onFirstMiss()
+    repeat(polls) {
+        delay(intervalMs)
+        read()?.let { return it }
+    }
+    return null
+}
+
+/** What [decideCacheRebuild] asks the caller to do about an incomplete cache. */
+internal enum class CacheRebuildAction { NONE, DASHJ_REBUILD, SDK_RECONCILE }
+
+/** A [CacheRebuildAction] with the counts that justified it, for the log line. */
+internal data class CacheRebuildDecision(
+    val action: CacheRebuildAction,
+    val reason: String
+)
+
+/**
+ * Decide whether the display cache is missing rows, measured against the
+ * engine that OWNS the transactions.
+ *
+ * ## Post-cutover ([cutoverCommitted])
+ *
+ * Runs ONCE per wallet, after the SDK's one-time sync first reaches the tip
+ * ([postCutoverCheckDone] latches it). Records collapse into rows on a
+ * CoinJoin wallet (per-day historical-mixing groups — dashj folded 7456
+ * transactions into 434 rows on run 17's Wallet B), so the comparison below
+ * reads "missing rows" on every pass there; run on every sync-complete tick it
+ * requested a full reconcile each time (D-M-01 §4b). One reconcile after the
+ * one-time sync is the useful part, and the 60s ticker keeps the cache
+ * converged after it.
+ *
+ * Every row comes from the SDK ([CutoverUiDataService]), so the only source
+ * with anything to compare against is the SDK's own wallet-relevant record
+ * count. The dashj numbers below cannot express this: dashj is held at zero
+ * transactions, so `walletTxCount > cachedTxCount` is `0 > n` and
+ * `displayRowCount < groupCount` compares SDK-written display rows against a
+ * group cache the SDK never writes — both permanently false, which is why the
+ * check reported "cache is complete" over a frozen list.
+ *
+ * Records collapse into rows at most (per-day historical-mixing groups), so
+ * FEWER rows than records is the only detectable gap and the comparison never
+ * fires the other way.
+ *
+ * ## Pre-cutover
+ *
+ * Unchanged, and it is the dashj wallet that owns the rows:
+ *   1. **Missing group-cache entries** — the group cache has fewer individual tx
+ *      rows than the wallet (`walletTxCount > cachedTxCount`). Happens when the
+ *      previous session was killed before its replay finished and the
+ *      incremental update path never saw those txs.
+ *   2. **Display / group-cache mismatch** — all tx entries are present but the
+ *      display cache was not fully written, so it has fewer rows than there are
+ *      distinct groups. Occurs when replayed txs merged into existing CoinJoin
+ *      date-groups while the underlying tx membership changed.
+ */
+internal fun decideCacheRebuild(
+    cutoverCommitted: Boolean,
+    postCutoverCheckDone: Boolean,
+    sdkRecordCount: Int?,
+    walletTxCount: Int,
+    cachedTxCount: Int,
+    groupCount: Int,
+    displayRowCount: Int
+): CacheRebuildDecision {
+    if (cutoverCommitted) {
+        if (postCutoverCheckDone) {
+            return CacheRebuildDecision(
+                CacheRebuildAction.NONE,
+                "the post-cutover check already ran once, after the one-time sync"
+            )
+        }
+        if (sdkRecordCount == null) {
+            return CacheRebuildDecision(
+                CacheRebuildAction.NONE,
+                "SDK record count unavailable — cannot judge completeness this pass"
+            )
+        }
+        if (sdkRecordCount > displayRowCount) {
+            return CacheRebuildDecision(
+                CacheRebuildAction.SDK_RECONCILE,
+                "display cache is missing rows (SDK holds $sdkRecordCount records, display has " +
+                    "$displayRowCount rows) — requesting an SDK reconcile pass"
+            )
+        }
+        return CacheRebuildDecision(
+            CacheRebuildAction.NONE,
+            "cache is complete (SDK holds $sdkRecordCount records, display has $displayRowCount rows)"
+        )
+    }
+
+    // Fresh install / post-wipe: nothing in the wallet and nothing cached.
+    if (walletTxCount == 0 && cachedTxCount == 0 && displayRowCount == 0) {
+        return CacheRebuildDecision(CacheRebuildAction.NONE, "nothing in the wallet and nothing cached")
+    }
+    val txsMissing = walletTxCount > cachedTxCount
+    val displayIncomplete = displayRowCount < groupCount
+    return if (txsMissing || displayIncomplete) {
+        CacheRebuildDecision(
+            CacheRebuildAction.DASHJ_REBUILD,
+            "rebuilding (txsMissing=$txsMissing, displayIncomplete=$displayIncomplete)"
+        )
+    } else {
+        CacheRebuildDecision(CacheRebuildAction.NONE, "cache is complete")
     }
 }

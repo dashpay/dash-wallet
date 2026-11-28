@@ -23,7 +23,11 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.data.InvitationValidationState
+import de.schildbach.wallet.database.entity.BlockchainIdentityBaseData
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
+import de.schildbach.wallet.database.entity.IdentityCreationState
+import de.schildbach.wallet.database.entity.IdentityRecordKey
+import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.TopUpRepository
 import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
@@ -34,8 +38,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import android.net.Uri
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import org.bitcoinj.core.PeerGroup.SyncStage
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
@@ -46,30 +51,62 @@ class InviteHandlerViewModel @Inject constructor(
     dashPayProfileDao: DashPayProfileDao,
     private val blockchainStateProvider: BlockchainStateProvider,
     private val topUpRepository: TopUpRepository,
-    private val dashPayConfig: DashPayConfig
+    private val dashPayConfig: DashPayConfig,
+    private val identityRepository: IdentityRepository
 ) : BaseProfileViewModel(blockchainIdentityDataDao, dashPayProfileDao) {
     companion object {
         private val log = LoggerFactory.getLogger(InviteHandlerViewModel::class.java)
     }
 
-    private val _invitation = MutableStateFlow<InvitationLinkData?>(null)
-    val invitation: StateFlow<InvitationLinkData?> = _invitation.asStateFlow()
-
-//    private val _validationState = MutableStateFlow(InvitationValidationState.NONE)
-//    val validationState: StateFlow<InvitationValidationState?> = _validationState.asStateFlow()
+    /**
+     * The pending invite, tagged with the [PendingInvitation.generation] it was
+     * stored under. Every set, replace or clear — including one that arrives
+     * through the persisted INVITATION_LINK — bumps the generation, so it, not
+     * the link, identifies "this exact invite": reopening A after A → B → A
+     * gets a new generation that A's earlier validation and dialog cannot match.
+     */
+    private val _pendingInvitation = MutableStateFlow<PendingInvitation?>(null)
+    val pendingInvitation: StateFlow<PendingInvitation?> = _pendingInvitation.asStateFlow()
 
     var fromOnboarding = false
 
+    /**
+     * Serialises every change to [_pendingInvitation] (and the persisted link
+     * behind it): set, clear, the INVITATION_LINK observer and the publication
+     * of a validation verdict — and the delivery of that verdict. Guards
+     * [generation] and [deliveredGeneration].
+     */
+    private val storeMutex = Mutex()
+    private var generation = 0L
+
+    /**
+     * The generation whose definitive verdict has been handed to the UI by
+     * [takeUndeliveredVerdict] (0: none; generations start at 1). Publication
+     * and delivery are separate: a verdict published while the lock screen is
+     * up stays undelivered until a caller that can show it takes it.
+     */
+    private var deliveredGeneration = 0L
+
     val isUsingInvite: Boolean
-        get() = _invitation.value != null
+        get() = _pendingInvitation.value != null
 
     init {
         dashPayConfig.observe(DashPayConfig.INVITATION_LINK)
-            .onEach {
-                _invitation.value = if (!it.isNullOrEmpty()) {
-                    InvitationLinkData(it.toUri())
-                } else {
-                    null
+            .onEach { stored ->
+                storeMutex.withLock {
+                    val current = _pendingInvitation.value
+                    if (stored.isNullOrEmpty()) {
+                        if (current != null) {
+                            _pendingInvitation.value = null
+                            generation++
+                        }
+                    } else if (current?.data?.link?.toString() != stored) {
+                        // Only adopt a DIFFERENT link. The in-memory copy carries the
+                        // validation verdict; re-wrapping the same link would reset it
+                        // to "unvalidated" and re-run validation (and its dialog).
+                        // setInvitationLink() publishes a fresh copy itself.
+                        _pendingInvitation.value = PendingInvitation(++generation, InvitationLinkData(stored.toUri()))
+                    }
                 }
             }
             .launchIn(viewModelScope)
@@ -115,48 +152,280 @@ class InviteHandlerViewModel @Inject constructor(
         null
     }
 
+    /**
+     * Stores [invitation] as THE pending invite, replacing any earlier one, and
+     * publishes it unvalidated under a new generation so it is (re)validated
+     * and the user gets a verdict for it — even when the same link is opened
+     * again, whose stored copy may carry a verdict that was never shown (e.g.
+     * it was reached while the lock screen was up).
+     */
     suspend fun setInvitationLink(invitation: InvitationLinkData, fromOnboarding: Boolean) {
-        dashPayConfig.set(DashPayConfig.INVITATION_LINK, invitation.link.toString())
-        dashPayConfig.set(DashPayConfig.INVITATION_FROM_ONBOARDING, fromOnboarding)
+        storeMutex.withLock {
+            dashPayConfig.set(DashPayConfig.INVITATION_LINK, invitation.link.toString())
+            dashPayConfig.set(DashPayConfig.INVITATION_FROM_ONBOARDING, fromOnboarding)
+            _pendingInvitation.value = PendingInvitation(++generation, InvitationLinkData(invitation.link))
+        }
     }
 
-    suspend fun clearInvitation() {
-        dashPayConfig.set(DashPayConfig.INVITATION_LINK, "")
-        dashPayConfig.set(DashPayConfig.INVITATION_FROM_ONBOARDING, false)
-        _invitation.value = null
+    /**
+     * The one way a newly opened invite is taken in, from every route (the
+     * home screen, onboarding, the invite link handler): a dead claim
+     * ([clearFailedInviteClaim]) is cleared first, so it can block neither
+     * this invite nor a later check. Outside onboarding an invite-based
+     * identity still being created turns the invite away ([isInviteClaimInProgress]);
+     * onboarding stores it for later, as it always has.
+     *
+     * @return false if the invite was turned away and not stored
+     */
+    suspend fun receiveInvite(invitation: InvitationLinkData, fromOnboarding: Boolean): Boolean {
+        clearFailedInviteClaim()
+        if (!fromOnboarding && isInviteClaimInProgress()) {
+            log.info("invite opened while an invite-based identity is being created; ignoring it")
+            return false
+        }
+        setInvitationLink(invitation, fromOnboarding)
+        return true
     }
 
-    suspend fun validateInvitation(): InvitationValidationState = withContext(Dispatchers.IO) {
-        _invitation.value?.let { invite ->
-            var updatedInvitation = invite.copy()
-            if (hasIdentity || inVotingPeriod) {
-                // we have an identity, don't check the validity
-                updatedInvitation = updatedInvitation.validate(
-                    if (inVotingPeriod) {
-                        InvitationValidationState.ALREADY_HAS_REQUESTED_USERNAME
-                    } else {
-                        InvitationValidationState.ALREADY_HAS_IDENTITY
-                    }
-                )
-            } else try {
-                if (blockchainStateProvider.getSyncStage() == SyncStage.BLOCKS) {
-                    updatedInvitation = updatedInvitation.copy(isValid = topUpRepository.validateInvitation(invite))
+    /**
+     * True while an identity is being created FROM AN INVITE (in progress or
+     * stopped on an error the user can retry). Only then is a newly opened
+     * invite answered with "DashPay is currently processing an invite"; in
+     * every other case the new invite replaces any stored one and goes
+     * through [validateInvitation], which answers a wallet that already has a
+     * username with ALREADY_HAS_IDENTITY.
+     *
+     * Read from the store rather than [blockchainIdentity], which is posted
+     * asynchronously and may not be populated yet on a cold start from a link.
+     */
+    suspend fun isInviteClaimInProgress(): Boolean = withContext(Dispatchers.IO) {
+        inviteClaimInProgress(blockchainIdentityDataDao.load())
+    }
+
+    /**
+     * Drops an invite-based identity record whose claim stopped on "Invite has
+     * already been used". That failure is terminal (retrying spends the same
+     * one-time key again and fails the same way), yet only the home tile's
+     * retry ([de.schildbach.wallet.ui.invite.InviteHandler.handleError])
+     * cleared it. Every other retry left it in place, and
+     * [isInviteClaimInProgress] then turned away every invite opened
+     * afterwards (MO-975). [receiveInvite] calls it for every new invite.
+     *
+     * The clear is conditional on the record being unchanged since the read:
+     * a retry that reset the error in between keeps its record.
+     *
+     * @return true if a record was cleared
+     */
+    suspend fun clearFailedInviteClaim(): Boolean = withContext(Dispatchers.IO) {
+        val record = blockchainIdentityDataDao.load()
+        if (record == null || !inviteClaimFailedTerminally(record)) {
+            return@withContext false
+        }
+        val cleared = identityRepository.clearBlockchainIdentityDataIfUnchanged(IdentityRecordKey.of(record))
+        if (cleared) log.info("cleared an invite claim that failed because the invite was already used")
+        cleared
+    }
+
+    /**
+     * Discards the pending invite. With [expectedGeneration], only if the
+     * pending invite is still that exact one (same generation, and the
+     * persisted link has not been changed elsewhere and not yet observed
+     * here): a verdict reached for invite A must not delete an invite that
+     * replaced A — even a reopened A — while A was being validated or its
+     * dialog was up. Without it (the user dismissing the tile) it clears
+     * whatever is stored.
+     *
+     * @return true if the invite was cleared
+     */
+    suspend fun clearInvitation(expectedGeneration: Long? = null): Boolean {
+        storeMutex.withLock {
+            if (expectedGeneration != null) {
+                val current = _pendingInvitation.value
+                val stored = dashPayConfig.get(DashPayConfig.INVITATION_LINK)
+                if (current?.generation != expectedGeneration || stored != current.data.link.toString()) {
+                    log.info("not clearing the invite: it was replaced after it was validated")
+                    return false
                 }
+            }
+            dashPayConfig.set(DashPayConfig.INVITATION_LINK, "")
+            dashPayConfig.set(DashPayConfig.INVITATION_FROM_ONBOARDING, false)
+            if (_pendingInvitation.value != null) {
+                _pendingInvitation.value = null
+                generation++
+            }
+            return true
+        }
+    }
 
-                when {
-                    updatedInvitation.isValid == null -> updatedInvitation = updatedInvitation.validate(InvitationValidationState.NOT_SYNCED)
-                    updatedInvitation.isValid!! ->  updatedInvitation = updatedInvitation.validate(InvitationValidationState.VALID)
-                    else -> {
-                        log.info("${invite.isValid} invite already claimed?")
-                         updatedInvitation = updatedInvitation.validate(InvitationValidationState.ALREADY_CLAIMED)
+    /**
+     * Validates the current invite and publishes the verdict.
+     *
+     * Several validations of the same invite can overlap (the home screen
+     * drives one from the invite feed and one from the sync-state feed), and
+     * around sync completion one may see the chain unsynced while another
+     * sees it synced. So a verdict is published only if
+     *  - the invite is still the same generation (not replaced, reopened or
+     *    cleared meanwhile), and
+     *  - no definitive verdict has been published for that generation yet:
+     *    the provisional [InvitationValidationState.NOT_SYNCED] can be
+     *    replaced by a definitive verdict, never the other way round, and the
+     *    first definitive verdict is final.
+     *
+     * Publishing is not delivering: the UI shows a definitive verdict via
+     * [takeUndeliveredVerdict], which hands it out exactly once.
+     *
+     * @return the published invite; null if this call's verdict was discarded
+     * (the invite it validated was superseded, or another validation already
+     * settled it).
+     */
+    suspend fun validateInvitation(): PendingInvitation? = withContext(Dispatchers.IO) {
+        val snapshot = _pendingInvitation.value ?: return@withContext null
+        val invite = snapshot.data
+        // Read the identity straight from the store: the LiveData behind
+        // hasIdentity/inVotingPeriod is posted asynchronously, and on a cold
+        // start from an invite link validation can run before it is populated.
+        // A wallet that already has a username was then treated as having
+        // none, the invite was validated against the network instead (VALID),
+        // and that verdict latched — the invite was never cleared, so every
+        // later invite hit the "currently processing an invite" dialog.
+        val identity = blockchainIdentityDataDao.load()
+        val hasIdentity = identity?.hasUsername ?: false
+        val inVotingPeriod = identity?.votingInProgress ?: false
+
+        // The invite that created THIS wallet's identity is not an error
+        // to report back to its owner — that claim succeeded. It can
+        // still arrive again long afterwards, because the identity keeps
+        // its own copy of the link (BlockchainIdentityConfig.INVITE_LINK,
+        // deliberately never cleared) and because a launching intent is
+        // replayed whenever the task is recreated. Drop it silently
+        // instead of telling the user they cannot claim the invite they
+        // already claimed.
+        if (invite.isSameInvitation(identity?.invite)) {
+            log.info("dropping the invite that created this wallet's identity")
+            clearInvitation(expectedGeneration = snapshot.generation)
+            return@withContext null
+        }
+
+        val verdict = if (hasIdentity || inVotingPeriod) {
+            // we have an identity, don't check the validity
+            invite.validate(
+                if (inVotingPeriod) {
+                    InvitationValidationState.ALREADY_HAS_REQUESTED_USERNAME
+                } else {
+                    InvitationValidationState.ALREADY_HAS_IDENTITY
+                }
+            )
+        } else {
+            try {
+                // Post-cutover, L1 sync is driven by the SDK, so dashj's peerGroup.syncStage
+                // never advances to BLOCKS. Gate on the real synced signal (percentageSync==100)
+                // that the rest of the UI already uses, otherwise the invite stays NOT_SYNCED forever.
+                val isValid = if (blockchainStateProvider.getState()?.isSynced() == true) {
+                    topUpRepository.validateInvitation(invite)
+                } else {
+                    null
+                }
+                when (isValid) {
+                    null -> invite.copy(isValid = null).validate(InvitationValidationState.NOT_SYNCED)
+                    true -> invite.copy(isValid = true).validate(InvitationValidationState.VALID)
+                    false -> {
+                        log.info("invite already claimed?")
+                        invite.copy(isValid = false).validate(InvitationValidationState.ALREADY_CLAIMED)
                     }
                 }
             } catch (e: Exception) {
                 log.info("error validating invite:", e)
-                updatedInvitation = updatedInvitation.validate(InvitationValidationState.INVALID)
+                invite.validate(InvitationValidationState.INVALID)
             }
-            _invitation.value = updatedInvitation
-            updatedInvitation.validationState
-        } ?: InvitationValidationState.NONE
+        }
+        publishVerdict(snapshot.generation, verdict)
     }
+
+    private suspend fun publishVerdict(forGeneration: Long, verdict: InvitationLinkData): PendingInvitation? =
+        storeMutex.withLock {
+            val current = _pendingInvitation.value
+            when {
+                current?.generation != forGeneration -> {
+                    log.info("discarding the verdict for an invite that was replaced during validation")
+                    null
+                }
+                current.data.validationState.let { it != null && it != InvitationValidationState.NOT_SYNCED } -> {
+                    log.info(
+                        "discarding {} verdict: invite already settled as {}",
+                        verdict.validationState,
+                        current.data.validationState
+                    )
+                    null
+                }
+                else -> PendingInvitation(forGeneration, verdict).also { _pendingInvitation.value = it }
+            }
+        }
+
+    /**
+     * Hands out the current invite's definitive verdict (anything but
+     * unvalidated or the provisional NOT_SYNCED) if it has not been delivered
+     * yet, marking it delivered — so whichever caller gets here first shows
+     * the verdict (and runs its clear) exactly once, regardless of which
+     * validation published it.
+     *
+     * [canDeliver] is evaluated under the lock, just before marking: a caller
+     * that cannot show UI right now (lock screen up) gets null and leaves the
+     * verdict undelivered for a later caller (e.g. the unlock).
+     */
+    suspend fun takeUndeliveredVerdict(canDeliver: () -> Boolean = { true }): PendingInvitation? =
+        storeMutex.withLock {
+            val current = _pendingInvitation.value ?: return@withLock null
+            val state = current.data.validationState
+            when {
+                state == null || state == InvitationValidationState.NOT_SYNCED -> null
+                deliveredGeneration == current.generation -> null
+                !canDeliver() -> null
+                else -> current.also { deliveredGeneration = it.generation }
+            }
+        }
 }
+
+/**
+ * The pending invite together with the generation it was stored under; see
+ * [InviteHandlerViewModel.pendingInvitation].
+ */
+data class PendingInvitation(val generation: Long, val data: InvitationLinkData)
+
+/**
+ * Pure rule behind [InviteHandlerViewModel.isInviteClaimInProgress]: an
+ * identity record that was started from an invite and has neither finished
+ * (VOTING or later) nor been reset.
+ */
+internal fun inviteClaimInProgress(identity: BlockchainIdentityBaseData?): Boolean =
+    identity != null &&
+        identity.usingInvite &&
+        identity.creationState > IdentityCreationState.NONE &&
+        identity.creationState < IdentityCreationState.VOTING
+
+/**
+ * The message CreateIdentityService stores when an invite's funding was
+ * already spent by an earlier claim: the shielded note's nullifier is spent,
+ * or the L1 asset-lock outpoint was already used.
+ */
+internal const val INVITE_ALREADY_USED_MESSAGE = "Invite has already been used"
+
+/**
+ * Whether [creationStateErrorMessage] is the terminal "invite already used"
+ * failure: exactly the message CreateIdentityService throws, as
+ * IdentityRepository.updateIdentityCreationState stores it
+ * ("<exception class>: <message>"), or bare. Never a substring: the stored
+ * text also carries SDK and DAPI error text, and a message that merely
+ * mentions the phrase (e.g. "cannot determine whether Invite has already
+ * been used") must not authorize clearing the identity record.
+ */
+internal fun isInviteAlreadyUsedError(creationStateErrorMessage: String?): Boolean =
+    creationStateErrorMessage == INVITE_ALREADY_USED_MESSAGE ||
+        creationStateErrorMessage == "IllegalStateException: $INVITE_ALREADY_USED_MESSAGE"
+
+/**
+ * Pure rule behind [InviteHandlerViewModel.clearFailedInviteClaim]: an invite
+ * claim that is still recorded as in progress but stopped on the terminal
+ * "invite already used" error, which no retry can get past.
+ */
+internal fun inviteClaimFailedTerminally(identity: BlockchainIdentityBaseData?): Boolean =
+    inviteClaimInProgress(identity) && isInviteAlreadyUsedError(identity?.creationStateErrorMessage)

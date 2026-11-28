@@ -33,12 +33,12 @@ import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.transactions.TxFilterType
 import androidx.datastore.preferences.core.Preferences
 import androidx.lifecycle.viewModelScope
-import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.service.DeviceInfoProvider
 import de.schildbach.wallet.database.dao.DashPayContactRequestDao
 import de.schildbach.wallet.database.dao.UserAlertDao
+import de.schildbach.wallet.database.dao.UsernameRequestDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityBaseData
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
@@ -46,30 +46,31 @@ import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.database.entity.DashPayContactRequest
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.security.BiometricHelper
-import de.schildbach.wallet.service.CoinJoinService
 import de.schildbach.wallet.service.TxDisplayCacheService
 import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.PlatformService
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.ui.main.MainViewModel
 import io.mockk.*
-import org.dash.wallet.integrations.maya.api.DispatchingSwapProvider
 import junit.framework.TestCase.assertEquals
+import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.*
 import org.bitcoinj.core.Coin
-import org.bitcoinj.core.PeerGroup
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.params.TestNet3Params
-import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.money.MonetaryFormat
+import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.Resource
+import org.dash.wallet.common.data.SyncStage
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.data.entity.ExchangeRate
@@ -78,6 +79,8 @@ import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.RateRetrievalState
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.integrations.maya.api.DispatchingSwapProvider
+import org.dash.wallet.integrations.maya.api.SwapProvider
 import org.junit.Before
 import org.junit.Ignore
 import org.junit.Rule
@@ -86,10 +89,13 @@ import org.junit.rules.TestRule
 import org.junit.rules.TestWatcher
 import org.junit.runner.Description
 import java.math.BigInteger
+import java.util.Collections
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainCoroutineRule(
-    private val testDispatcher: TestDispatcher = UnconfinedTestDispatcher()
+    val testDispatcher: TestDispatcher = UnconfinedTestDispatcher()
 ) : TestWatcher() {
     override fun starting(description: Description) {
         Dispatchers.setMain(testDispatcher)
@@ -145,6 +151,9 @@ class MainViewModelTest {
     private val invitationsDaoMock = mockk<InvitationsDao> {
         coEvery { loadAll() } returns listOf()
     }
+    private val usernameRequestDaoMock = mockk<UsernameRequestDao> {
+        coEvery { getRequestsByNormalizedLabel(any()) } returns listOf()
+    }
     private val userAgentDaoMock = mockk<UserAlertDao> {
         every { observe(any()) } returns flow { }
     }
@@ -159,7 +168,7 @@ class MainViewModelTest {
     }
     private val workManagerMock = mockk<WorkManager> {
         every { getWorkInfosByTagLiveData(any()) } returns MutableLiveData(listOf())
-        every { getWorkInfosByTagFlow(any()) } returns MutableStateFlow(listOf())
+        every { getWorkInfosByTagFlow(any()) } returns emptyFlow()
     }
     private val savedStateMock = mockk<SavedStateHandle>()
 
@@ -167,10 +176,9 @@ class MainViewModelTest {
         every { logError(any(), any()) } returns Unit
     }
 
-    private val walletDataMock = mockk<WalletDataProvider> {
+    private val walletDataMock = mockk<WalletData> {
         every { wallet } returns null
         every { observeWalletReset() } returns MutableStateFlow(Unit)
-        every { observeMixedBalance() } returns MutableStateFlow(Coin.FIFTY_COINS)
     }
 
     private val blockchainStateMock = mockk<BlockchainStateProvider> {
@@ -187,12 +195,14 @@ class MainViewModelTest {
     }
     private val mockDashPayConfig = mockk<DashPayConfig> {
         every { observe<Long>(any()) } returns MutableStateFlow(0L)
+        every { observePreservingErrors(DashPayConfig.USE_KOTLIN_SDK_SHIELDED) } returns MutableStateFlow(false)
         coEvery { areNotificationsDisabled() } returns false
     }
 
     private val uiConfigMock = mockk<WalletUIConfig> {
         every { observe(any<Preferences.Key<Boolean>>()) } returns MutableStateFlow(false)
         every { observe(WalletUIConfig.SELECTED_CURRENCY) } returns MutableStateFlow("USD")
+        every { observePreservingErrors(any<Preferences.Key<Boolean>>()) } returns MutableStateFlow(false)
     }
 
     private val identityRepository = mockk<IdentityRepository>() {
@@ -212,12 +222,41 @@ class MainViewModelTest {
 
     }
 
-    private val txDisplayCacheService = mockk<TxDisplayCacheService>(relaxUnitFun = true)
+    private val txDisplayCacheService = mockk<TxDisplayCacheService>(relaxed = true)
+    /**
+     * The engine-agnostic sync seam. The ViewModel no longer knows which L1
+     * engine produced the status — see [de.schildbach.wallet.service.L1SyncStatusService].
+     */
+    private val syncStatusFlow =
+        MutableStateFlow(de.schildbach.wallet.service.L1SyncUiStatus())
+    private val l1SyncStatusService = mockk<de.schildbach.wallet.service.L1SyncStatusService> {
+        every { status } returns syncStatusFlow
+        every { sdkScanCaughtUp } returns MutableStateFlow(false)
+    }
+    // Post-upgrade mixed-funds prompt: no CoinJoin funds in these fixtures
+    // and nothing in flight, so the startup collector never fires and the
+    // watcher re-arm is a no-op.
+    private val coinJoinFundsMigrationService =
+        mockk<de.schildbach.wallet.service.platform.sdk.CoinJoinFundsMigrationService> {
+            coEvery { shouldPrompt() } returns false
+            coEvery { inFlightMigration() } returns null
+            coEvery { shouldPresentPrompt() } returns false
+            every { startInFlightWatcherIfNeeded() } returns Unit
+        }
+    // Application-scoped owner of the bell badge; the ViewModel only reads its
+    // StateFlow and asks for a refresh, so a relaxed mock with an empty count is enough.
+    private val contactRequestNotificationService =
+        mockk<de.schildbach.wallet.service.platform.ContactRequestNotificationService>(relaxed = true) {
+            every { unseenNotificationCount } returns MutableStateFlow(0)
+        }
     private val biometricHelper = mockk<BiometricHelper>()
     private val deviceInfoProvider = mockk<DeviceInfoProvider>()
-    private val coinJoinConfig = mockk<CoinJoinConfig>()
-    private val coinJoinService = mockk<CoinJoinService>()
-
+    private val swapProvider = mockk<DispatchingSwapProvider>()
+    private val sdkBindRetryService = mockk<de.schildbach.wallet.service.platform.sdk.SdkBindRetryService> {
+        every { blocker } returns kotlinx.coroutines.flow.MutableStateFlow(null)
+    }
+    private val shieldedBalanceService =
+        mockk<de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService>(relaxed = true)
     @get:Rule
     var rule: TestRule = InstantTaskExecutorRule()
 
@@ -231,7 +270,9 @@ class MainViewModelTest {
         every { configMock.isRestoringBackup } returns false
 
         every { blockchainStateMock.observeState() } returns flow { BlockchainState() }
-        every { blockchainStateMock.observeSyncStage() } returns MutableStateFlow(PeerGroup.SyncStage.BLOCKS)
+        every { blockchainStateMock.observeSyncStage() } returns MutableStateFlow(SyncStage.BLOCKS)
+        // Self-healing Platform-availability poll in MainViewModel.init calls this.
+        coEvery { platformService.isPlatformAvailable() } returns true
         every { exchangeRatesMock.observeExchangeRate(any()) } returns flow { ExchangeRate("USD", "100") }
         every { walletDataMock.observeTotalBalance() } returns flow { Coin.COIN }
         every { walletDataMock.observeMostRecentTransaction() } returns flow {
@@ -297,14 +338,18 @@ class MainViewModelTest {
                 biometricHelper,
                 deviceInfoProvider,
                 invitationsDaoMock,
+                usernameRequestDaoMock,
                 userAgentDaoMock,
                 dashPayProfileDaoMock,
                 mockDashPayConfig,
                 dashPayContactRequestDao,
-                coinJoinConfig,
-                coinJoinService,
                 txDisplayCacheService,
-                mockk<DispatchingSwapProvider>(relaxed = true)
+                coinJoinFundsMigrationService,
+                l1SyncStatusService,
+                contactRequestNotificationService,
+                swapProvider,
+                sdkBindRetryService,
+                shieldedBalanceService
             )
         )
 
@@ -337,14 +382,18 @@ class MainViewModelTest {
                 biometricHelper,
                 deviceInfoProvider,
                 invitationsDaoMock,
+                usernameRequestDaoMock,
                 userAgentDaoMock,
                 dashPayProfileDaoMock,
                 mockDashPayConfig,
                 dashPayContactRequestDao,
-                coinJoinConfig,
-                coinJoinService,
                 txDisplayCacheService,
-                mockk<DispatchingSwapProvider>(relaxed = true)
+                coinJoinFundsMigrationService,
+                l1SyncStatusService,
+                contactRequestNotificationService,
+                swapProvider,
+                sdkBindRetryService,
+                shieldedBalanceService
             )
         )
 
@@ -352,5 +401,278 @@ class MainViewModelTest {
             assertEquals(true, viewModel.isBlockchainSynced.value)
             assertEquals(false, viewModel.isBlockchainSyncFailed.value)
         }
+    }
+
+    /**
+     * ANR regression guard.
+     *
+     * A mainnet tester restoring a large CoinJoin wallet hit the system ANR dialog
+     * repeatedly — about every 8 seconds, for the whole sync, stopping only when the
+     * sync finished.
+     *
+     * The `blockchain_state` row is rewritten roughly once a SECOND for the whole
+     * duration of a sync (`SdkBlockchainStateService` polls the L1 progress feed at 1 Hz
+     * and `BlockchainStateDataProvider.updateSdkBlockchainState` saves the row), so
+     * every collector of `BlockchainStateProvider.observeState()` runs at ~1 Hz while
+     * syncing. `launchIn(viewModelScope)` collects on `Dispatchers.Main.immediate`, and
+     * the collector used to read `walletData.wallet.lastBlockSeenHeight` there.
+     *
+     * That dashj accessor takes the wallet lock, which is a FAIR
+     * `ReentrantReadWriteLock` (`org.bitcoinj.utils.Threading.readWriteLock` builds it
+     * with `fair = true`), so a reader queues strictly FIFO behind every pending writer.
+     * During a sync the write lock is held for many seconds at a time by
+     * `Wallet.saveToFileStream` — the 5s autosave serializes the entire wallet protobuf,
+     * every transaction and every CoinJoin keychain key. On a ~100k-transaction wallet
+     * the main thread therefore parked past the 5s ANR threshold once per emission.
+     *
+     * So: the dashj wallet must never be touched on the main dispatcher's thread, either
+     * from the 1 Hz collector or from a property initializer (the ViewModel is
+     * constructed on the main thread from `MainActivity.onCreate`, while the lock screen
+     * is drawing). `MainCoroutineRule` installs an `UnconfinedTestDispatcher` as Main,
+     * which runs on this JUnit thread — so any access recorded on this thread is an
+     * access that would happen on the real main thread in production.
+     */
+    /**
+     * Privacy regression guard (MO-1107).
+     *
+     * [MainViewModel.hideBalance] used to be shared with
+     * `SharingStarted.WhileSubscribed(5000)`: the upstream `combine` only ran while at
+     * least one screen was actively collecting it, so its cached `.value` could freeze
+     * stale once every collector went away (e.g. the user navigated off both Home and
+     * More for 5+ seconds). A later preference change made with no active collector —
+     * like enabling Autohide Balance from Settings → Security while no balance screen
+     * is on screen — would not reach `.value` until something re-subscribed, so a
+     * fresh collector's first emission replayed the stale value and briefly rendered a
+     * real amount instead of the just-enabled hidden state.
+     *
+     * `Eagerly` keeps the upstream collected for the lifetime of the activity-scoped
+     * `viewModelScope`, so `.value` is always current even with zero collectors. This
+     * test never collects [MainViewModel.hideBalance] itself — it only flips the
+     * preference and reads `.value` — so it fails under `WhileSubscribed` and passes
+     * under `Eagerly`.
+     */
+    @Test(timeout = 1000)
+    fun `hideBalance value is current even with no active collector`() {
+        val autoHideBalance = MutableStateFlow(false)
+        every { uiConfigMock.observePreservingErrors(WalletUIConfig.AUTO_HIDE_BALANCE) } returns autoHideBalance
+
+        val viewModel = MainViewModel(
+            analyticsService,
+            configMock,
+            uiConfigMock,
+            exchangeRatesMock,
+            walletDataMock,
+            walletApp,
+            identityRepository,
+            platformRepo,
+            platformService,
+            platformSyncService,
+            blockchainIdentityConfigMock,
+            savedStateMock,
+            blockchainStateMock,
+            biometricHelper,
+            deviceInfoProvider,
+            invitationsDaoMock,
+            usernameRequestDaoMock,
+            userAgentDaoMock,
+            dashPayProfileDaoMock,
+            mockDashPayConfig,
+            dashPayContactRequestDao,
+            txDisplayCacheService,
+            coinJoinFundsMigrationService,
+            l1SyncStatusService,
+            contactRequestNotificationService,
+            swapProvider,
+            sdkBindRetryService,
+            shieldedBalanceService
+        )
+
+        assertEquals(false, viewModel.hideBalance.value)
+
+        autoHideBalance.value = true
+
+        assertEquals(true, viewModel.hideBalance.value)
+    }
+
+    /**
+     * Privacy regression guard (MO-1107), companion to the test above.
+     *
+     * `observe()`'s own IOException rescue ([org.dash.wallet.common.data.BaseConfig.data])
+     * emits [kotlinx.coroutines.flow.emptyPreferences] once and then completes the flow —
+     * harmless under the old `WhileSubscribed(5000)` sharing (the next resubscribe restarts
+     * it), but under `Eagerly`'s one-shot collection a completed upstream would freeze
+     * [MainViewModel.hideBalance] forever at whatever it last held, including a real,
+     * unmasked `false`. [MainViewModel] reads [WalletUIConfig.AUTO_HIDE_BALANCE] through
+     * `observePreservingErrors` (lets the failure through as a real exception instead of
+     * swallowing it) with a `retryWhen` that fails closed and keeps retrying — the same
+     * shape as `homeShieldedBalanceFlow`
+     * (see `de.schildbach.wallet.ui.main.HomeShieldedBalanceTest.anUnreadableFlag_isPending_notZero_andRecovers`).
+     * This stubs a real value followed by a read failure and asserts the result is the
+     * fail-closed `true`, not the stale `false` frozen in place.
+     */
+    @Test(timeout = 1000)
+    fun `hideBalance fails closed, not frozen unmasked, when the preference read fails`() {
+        val autoHideBalance = kotlinx.coroutines.flow.flow {
+            emit(false)
+            throw java.io.IOException("datastore unreadable")
+        }
+        every { uiConfigMock.observePreservingErrors(WalletUIConfig.AUTO_HIDE_BALANCE) } returns autoHideBalance
+
+        val viewModel = MainViewModel(
+            analyticsService,
+            configMock,
+            uiConfigMock,
+            exchangeRatesMock,
+            walletDataMock,
+            walletApp,
+            identityRepository,
+            platformRepo,
+            platformService,
+            platformSyncService,
+            blockchainIdentityConfigMock,
+            savedStateMock,
+            blockchainStateMock,
+            biometricHelper,
+            deviceInfoProvider,
+            invitationsDaoMock,
+            usernameRequestDaoMock,
+            userAgentDaoMock,
+            dashPayProfileDaoMock,
+            mockDashPayConfig,
+            dashPayContactRequestDao,
+            txDisplayCacheService,
+            coinJoinFundsMigrationService,
+            l1SyncStatusService,
+            contactRequestNotificationService,
+            swapProvider,
+            sdkBindRetryService,
+            shieldedBalanceService
+        )
+
+        assertEquals(true, viewModel.hideBalance.value)
+    }
+
+    /**
+     * Companion to the fail-closed test above: pins the *recovery* half of the same
+     * contract. `retryWhen` must resubscribe to the upstream read after failing closed,
+     * not just fail closed once and complete — a regression that swapped it for
+     * `catch { emit(true) }` (which fails closed but then completes the flow) would still
+     * pass the fail-closed test above while leaving [MainViewModel.hideBalance] frozen at
+     * `true` forever, never un-hiding once the preference becomes readable again.
+     */
+    @Test(timeout = 1000)
+    fun `hideBalance fails closed, then recovers once a later read succeeds`() {
+        var reads = 0
+        val autoHideBalance = kotlinx.coroutines.flow.flow {
+            if (reads++ == 0) {
+                emit(false)
+                throw java.io.IOException("datastore unreadable")
+            } else {
+                emit(false)
+            }
+        }
+        every { uiConfigMock.observePreservingErrors(WalletUIConfig.AUTO_HIDE_BALANCE) } returns autoHideBalance
+
+        val viewModel = MainViewModel(
+            analyticsService,
+            configMock,
+            uiConfigMock,
+            exchangeRatesMock,
+            walletDataMock,
+            walletApp,
+            identityRepository,
+            platformRepo,
+            platformService,
+            platformSyncService,
+            blockchainIdentityConfigMock,
+            savedStateMock,
+            blockchainStateMock,
+            biometricHelper,
+            deviceInfoProvider,
+            invitationsDaoMock,
+            usernameRequestDaoMock,
+            userAgentDaoMock,
+            dashPayProfileDaoMock,
+            mockDashPayConfig,
+            dashPayContactRequestDao,
+            txDisplayCacheService,
+            coinJoinFundsMigrationService,
+            l1SyncStatusService,
+            contactRequestNotificationService,
+            swapProvider,
+            sdkBindRetryService,
+            shieldedBalanceService
+        )
+
+        assertEquals(true, viewModel.hideBalance.value)
+
+        coroutineRule.testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(false, viewModel.hideBalance.value)
+    }
+
+    @Test(timeout = 10_000)
+    fun `dashj wallet is never accessed on the main dispatcher thread`() {
+        val mainThread = Thread.currentThread()
+        val accessThreads = Collections.synchronizedList(mutableListOf<Thread>())
+        val accessed = CountDownLatch(1)
+
+        // Re-stub the `wallet` getter to record which thread reads it. Returning null
+        // keeps every existing collector on its null-safe path.
+        every { walletDataMock.wallet } answers {
+            accessThreads.add(Thread.currentThread())
+            accessed.countDown()
+            null
+        }
+
+        val state = BlockchainState().apply { replaying = false; percentageSync = 42 }
+        every { blockchainStateMock.observeState() } returns MutableStateFlow(state)
+
+        MainViewModel(
+            analyticsService,
+            configMock,
+            uiConfigMock,
+            exchangeRatesMock,
+            walletDataMock,
+            walletApp,
+            identityRepository,
+            platformRepo,
+            platformService,
+            platformSyncService,
+            blockchainIdentityConfigMock,
+            savedStateMock,
+            blockchainStateMock,
+            biometricHelper,
+            deviceInfoProvider,
+            invitationsDaoMock,
+            usernameRequestDaoMock,
+            userAgentDaoMock,
+            dashPayProfileDaoMock,
+            mockDashPayConfig,
+            dashPayContactRequestDao,
+            txDisplayCacheService,
+            coinJoinFundsMigrationService,
+            l1SyncStatusService,
+            contactRequestNotificationService,
+            swapProvider,
+            sdkBindRetryService,
+            shieldedBalanceService
+        )
+
+        // The collector is expected to reach the wallet on a background dispatcher.
+        // If it never does at all the assertion below still holds, so a timeout here is
+        // not a failure — it just means nothing read the wallet.
+        accessed.await(5, TimeUnit.SECONDS)
+
+        val onMain = accessThreads.filter { it === mainThread }
+        assertTrue(
+            "walletData.wallet was read ${onMain.size} time(s) on the main dispatcher " +
+                "thread (${mainThread.name}). Every dashj wallet accessor takes the fair " +
+                "wallet lock, which during a sync is held for seconds at a time by the " +
+                "autosave protobuf serializer — on a large CoinJoin wallet that is a " +
+                "repeating ANR. Keep the blockchain-state collector on flowOn(" +
+                "Dispatchers.IO) and keep property initializers off the wallet.",
+            onMain.isEmpty()
+        )
     }
 }

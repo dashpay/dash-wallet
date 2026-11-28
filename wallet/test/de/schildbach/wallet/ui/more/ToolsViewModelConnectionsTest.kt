@@ -56,14 +56,29 @@ class ToolsViewModelConnectionsTest {
         Dispatchers.resetMain()
     }
 
-    private fun viewModel(identityConfig: BlockchainIdentityConfig = mockk(relaxed = true)): ToolsViewModel {
-        val walletData = mockk<WalletDataProvider>(relaxed = true)
+    private fun viewModel(
+        identityConfig: BlockchainIdentityConfig = mockk(relaxed = true) {
+            coEvery { get(BlockchainIdentityConfig.IDENTITY_ID) } returns null
+        }
+    ): ToolsViewModel {
+        // ToolsViewModel reads hasUsername() on creation; a relaxed get() would return a bare Object.
+        coEvery { identityConfig.get(BlockchainIdentityConfig.CREATION_STATE) } returns null
+        val walletData = mockk<de.schildbach.wallet.data.WalletData>(relaxed = true)
         every { walletData.wallet!!.watchingKey.serializePubB58(any()) } returns "xpub"
         val repository = PlatformDashConnectRepository(mockk(relaxed = true), platformRepo, identityRepository, mockk(relaxed = true))
         return ToolsViewModel(
-            walletData, mockk(relaxed = true), mockk(relaxed = true),
-            mockk(relaxed = true) { every { observeState() } returns emptyFlow() },
-            mockk(relaxed = true), identityConfig, mockk(relaxed = true), repository
+            walletData = walletData,
+            walletDataProvider = mockk(relaxed = true),
+            walletApplication = mockk(relaxed = true),
+            clipboardManager = mockk(relaxed = true),
+            transactionMetadataProvider = mockk(relaxed = true),
+            blockchainStateDao = mockk(relaxed = true) { every { observeState() } returns emptyFlow() },
+            dashPayConfig = mockk(relaxed = true),
+            blockchainServiceConfig = mockk(relaxed = true),
+            dashjDiagnosticSyncState = mockk(relaxed = true),
+            identityConfig = identityConfig,
+            analyticsService = mockk(relaxed = true),
+            connectRepository = repository
         ).also { viewModels += it }
     }
 

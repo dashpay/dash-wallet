@@ -96,6 +96,15 @@ class SetPinActivity : InteractionAwareActivity() {
 
     private var state = State.SET_PIN
 
+    // set once the confirmed PIN has been handed off for encryption / PIN change;
+    // blocks nextStep() re-entry (double-tap or a stray extra keypress) from invoking
+    // savePinAndEncrypt()/changePin() a second time
+    private var pinConfirmed = false
+
+    // the delayed encryption / PIN-change submission queued by nextStep(); canceled
+    // when the user edits the PIN or the screen returns to an input state before it fires
+    private var pendingSubmitRunnable: Runnable? = null
+
     companion object {
         private const val EXTRA_TITLE_RES_ID = "extra_title_res_id"
         private const val EXTRA_PASSWORD = "extra_password"
@@ -192,9 +201,18 @@ class SetPinActivity : InteractionAwareActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        cancelPendingSubmit()
         if (intent.getBooleanExtra(EXTRA_ONBOARDING, false)) {
             OnboardingState.remove()
         }
+    }
+
+    private fun cancelPendingSubmit() {
+        val pending = pendingSubmitRunnable ?: return
+        // clearing the reference alone defuses the runnable; removeCallbacks just
+        // saves the dead callback from occupying the queue
+        pendingSubmitRunnable = null
+        pinPreviewView.removeCallbacks(pending)
     }
 
     private fun initView() {
@@ -219,6 +237,10 @@ class SetPinActivity : InteractionAwareActivity() {
                 if (pin.size < viewModel.pinLength || state == State.DECRYPT) {
                     pin.add(number)
                     pinPreviewView.next()
+                } else {
+                    // the PIN is already complete; ignore extra taps so nextStep()
+                    // cannot fire a second time for the same PIN
+                    return
                 }
 
                 if (state == State.DECRYPT) {
@@ -233,6 +255,12 @@ class SetPinActivity : InteractionAwareActivity() {
             }
 
             override fun onBack(longClick: Boolean) {
+                if (pendingSubmitRunnable != null) {
+                    // the user is retracting the PIN they just confirmed; the queued
+                    // submission must not fire for it
+                    cancelPendingSubmit()
+                    pinConfirmed = false
+                }
                 if (pin.size > 0) {
                     pin.removeAt(pin.lastIndex)
                     pinPreviewView.prev()
@@ -255,13 +283,25 @@ class SetPinActivity : InteractionAwareActivity() {
     private fun nextStep() {
         if (state == State.CONFIRM_PIN) {
             if (pin == viewModel.pinArray) {
-                Handler().postDelayed({
-                    if (changePin) {
-                        viewModel.changePin()
-                    } else {
-                        viewModel.savePinAndEncrypt(!upgradingWallet)
+                if (pinConfirmed) {
+                    return
+                }
+                pinConfirmed = true
+                val submit = object : Runnable {
+                    override fun run() {
+                        if (pendingSubmitRunnable !== this) {
+                            return // canceled after posting
+                        }
+                        pendingSubmitRunnable = null
+                        if (changePin) {
+                            viewModel.changePin()
+                        } else {
+                            viewModel.savePinAndEncrypt(!upgradingWallet)
+                        }
                     }
-                }, 200)
+                }
+                pendingSubmitRunnable = submit
+                pinPreviewView.postDelayed(submit, 200)
             } else {
                 pinPreviewView.shake()
                 setState(State.CONFIRM_PIN)
@@ -281,6 +321,13 @@ class SetPinActivity : InteractionAwareActivity() {
     }
 
     private fun setState(newState: State) {
+        if (newState != State.ENCRYPTING && newState != State.DECRYPTING) {
+            // back on an input state (including CONFIRM_PIN after an encryption
+            // error) — retract any queued submission and allow the PIN to be
+            // submitted again
+            cancelPendingSubmit()
+            pinConfirmed = false
+        }
         when (newState) {
             State.DECRYPT -> {
                 pinPreviewView.mode = PinPreviewView.PinType.CUSTOM
@@ -436,11 +483,28 @@ class SetPinActivity : InteractionAwareActivity() {
                             if (viewModel.biometricHelper.requiresEnabling
                                 && viewModel.configuration.enableFingerprint
                             ) {
+                                // Fully SUSPEND auto-logout for the DURATION of the biometric
+                                // enroll, not merely clear the "locked" flags. shouldLogout() also
+                                // returns true via (autoLogoutEnabled && logoutTimeExceeded): when
+                                // the system enroll dialog takes focus the app counts as
+                                // backgrounded, so the next timer tick fires onLogout() ->
+                                // biometricHelper.cancelPending() and kills the live BiometricPrompt
+                                // (ERROR_CANCELED). turnOffAutoLogout() stops the timer outright;
+                                // turnOnAutoLogout() in finally always restores it, even if the
+                                // enroll throws. The flag clears stay as belt-and-suspenders. See
+                                // LockScreenActivity for the full explanation of this same guard.
+                                walletApplication.autoLogout.deviceWasLocked = false
+                                walletApplication.autoLogout.keepLockedUntilPinEntered = false
+                                turnOffAutoLogout()
                                 lifecycleScope.launch {
-                                    viewModel.biometricHelper.enableBiometricReminder(
-                                        this@SetPinActivity,
-                                        viewModel.getPinAsString()
-                                    )
+                                    try {
+                                        viewModel.biometricHelper.enableBiometricReminder(
+                                            this@SetPinActivity,
+                                            viewModel.getPinAsString()
+                                        )
+                                    } finally {
+                                        turnOnAutoLogout()
+                                    }
 
                                     if (initialPin != null) {
                                         goHome()

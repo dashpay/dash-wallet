@@ -1,0 +1,927 @@
+/*
+ * Copyright 2026 Dash Core Group.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package de.schildbach.wallet.service
+
+import de.schildbach.wallet.data.WalletData
+import de.schildbach.wallet.service.platform.sdk.CutoverCoordinator
+import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
+import de.schildbach.wallet.service.platform.sdk.SdkWalletBinder
+import de.schildbach.wallet.service.platform.sdk.ShadowSyncPhase
+import de.schildbach.wallet.service.platform.sdk.ShadowSyncProgress
+import de.schildbach.wallet.service.platform.sdk.sdkWalletBirthTimeSecs
+import de.schildbach.wallet.service.platform.sdk.shadowSyncPercent
+import de.schildbach.wallet.service.platform.sdk.shadowSyncPermille
+import java.util.Locale
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.transformLatest
+import kotlinx.coroutines.withTimeoutOrNull
+import org.dash.wallet.common.data.BlockchainServiceConfig
+import org.dash.wallet.common.data.entity.BlockchainState
+import org.dash.wallet.common.services.BlockchainStateProvider
+import javax.inject.Inject
+import javax.inject.Singleton
+
+/**
+ * The L1 sync state, as the UI needs to render it — with NO indication of
+ * which engine produced it.
+ *
+ * @property isSynced the chain is caught up; hide the "Syncing N%" header,
+ *   stop the blinking "Syncing balance" indicator, enable the sync-gated
+ *   entry points (shortcut bar, CrowdNode staking, Join DashPay).
+ * @property percentage 0..100 progress for the "Syncing N%" header; 0 means
+ *   "no usable figure yet" and the header renders a bare "Syncing…".
+ * @property percentageTenths the same figure in tenths of a percent
+ *   (0..1000) when the engine reports finely enough to show one decimal —
+ *   the SDK regime, where the scan measures its own session's work and a
+ *   long re-walk lives between 99.0 and 99.9 for a long time. Null in the
+ *   dashj regime, whose percent is a whole number; see [syncHeaderPercentLabel].
+ * @property isFailed sync is impeded (the error pane).
+ * @property dashPaySynced whether the DashPay half has settled too
+ *   ([DashPaySyncStatus]). Deliberately a SEPARATE field rather than a
+ *   widening of [isSynced]: [isSynced] gates funds and feature paths (the
+ *   shortcut bar, CrowdNode staking, Join DashPay eligibility, invite
+ *   revalidation) that must not wait on contact sync, so only the surfaces
+ *   that TELL THE USER "still syncing" read [isFullySynced].
+ * @property scanStartDateSecs when non-null, the scan only ever covered the
+ *   chain from this date forward ([boundedScanStartSecs]) — everything the
+ *   wallet's keys could have received BEFORE it was never looked at, so the
+ *   balance and history on screen are a lower bound, not the truth. Null on
+ *   every wallet whose scan started at its own earliest key time (the normal
+ *   case). The Network Monitor's SYNCED stage says what it actually means
+ *   instead: "Synced from <date>" (SR-22). The home header does not show the
+ *   date; it hides once synced, as on an unbounded scan.
+ */
+data class L1SyncUiStatus(
+    val isSynced: Boolean = false,
+    val percentage: Int = 0,
+    val isFailed: Boolean = false,
+    val dashPaySynced: Boolean = true,
+    val scanStartDateSecs: Long? = null,
+    val percentageTenths: Int? = null
+) {
+    /**
+     * The USER-FACING "everything is done" predicate: the chain is caught up
+     * AND the DashPay side has settled. On 11.10.86 these diverged by ~12
+     * minutes — the UI said synced at 17:12:39 while contact sync ran until
+     * 17:20:09, the receiving accounts registered at 17:20:31 and the correct
+     * balance only appeared at 17:25:00.
+     */
+    val isFullySynced: Boolean get() = isSynced && dashPaySynced
+
+    /**
+     * The scan skipped a range the wallet's own keys cover, so "synced" is
+     * only true of the part that was scanned. Deliberately NOT folded into
+     * [isSynced]: that flag gates funds and feature paths (sends, the
+     * shortcut bar, CrowdNode staking, Join DashPay eligibility), and a
+     * bounded scan that has caught up IS usable — permanently withholding
+     * those would be a worse bug than the one this exists to fix. It is the
+     * user-facing CLAIM that has to be honest, not the gate.
+     */
+    val isPartialScan: Boolean get() = scanStartDateSecs != null
+}
+
+/**
+ * Whether the SDK L1 scan has caught up.
+ *
+ * THE ONE DEFINITION. Two consumers must flip in the same instant or the
+ * user sees a contradiction: the home header's blinking "Syncing balance"
+ * label, and `CutoverUiDataService.overlayTotalBalance`'s decision to
+ * publish the live SDK figure instead of holding the last-known one. A
+ * label over a live climbing figure — or a settled figure with the label
+ * still blinking — is worse than either state alone. Both now derive from
+ * here rather than from two hand-copied expressions.
+ *
+ * Uses [ShadowSyncProgress.scanCaughtUpToTip], not the SDK's never-latching
+ * `synced`/phase == SYNCED: a live SPV perpetually chasing the moving tip
+ * would otherwise read as un-synced forever. Since 2026-09-21 that predicate
+ * also carries the iOS rule ([ShadowSyncProgress.aggregateCaughtUp]) — the
+ * engine's own aggregate at `>= 0.999` — so the two clients call the same
+ * engine state synced at the same instant. Pure — host-testable.
+ *
+ * THE PIPELINE-LAG VETO IS GONE FROM HERE, ON PURPOSE. Until 2026-09-21 this
+ * also required `!blockPipelineLagging`, closing the field incident where the
+ * engine held SYNCED through an armed replay and the app persisted a partial
+ * 48.86 DASH as the last-known balance. Two things changed the call:
+ * - iOS never had the veto, and the point of adopting its rule is to read
+ *   "synced" when it does.
+ * - In the dash-spv final-partial-batch stall (plan §34) the wallet cursor
+ *   parks WITH the filter cursor, so the veto held "Syncing balance" on
+ *   forever at 99% — the report this change exists to fix.
+ * The protection moved rather than died: [L1SyncStatusService.sdkPipelineLagging]
+ * feeds `CutoverUiDataService`'s persist gate, so the DURABLE seed — the one
+ * place a wrong figure poisons every later launch — still waits for the
+ * pipeline. The DISPLAY hold and the label no longer do.
+ */
+fun sdkL1ScanCaughtUp(progress: ShadowSyncProgress): Boolean =
+    progress.synced || progress.scanCaughtUpToTip
+
+/**
+ * The date the scan actually STARTED FROM (Unix seconds) when that is later
+ * than the wallet's own earliest key time — i.e. there is a range the
+ * wallet's keys cover that no engine ever looked at. Null when nothing was
+ * skipped. Pure — host-testable.
+ *
+ * ## Why this is not simply "the user picked a date"
+ *
+ * The restore screen's date only NARROWS anything when it lands after the
+ * wallet's own floor, and neither engine uses it raw:
+ *
+ *  - SDK regime: [sdkWalletBirthTimeSecs] takes the MINIMUM of the
+ *    user's date and a genuine key creation time, so a protobuf-backup
+ *    restore whose keys predate the chosen date is scanned in full — and
+ *    must not be flagged.
+ *  - dashj regime: `BlockchainServiceImpl`'s fresh-store checkpointing
+ *    reads `serviceConfig.getWalletCreationDate() ?: wallet.earliestKeyCreationTime`
+ *    — the user's date wins OUTRIGHT there, so the same input can skip past
+ *    a genuine key time that the SDK regime would have honoured. The two
+ *    rules are reproduced separately rather than averaged, because a status
+ *    line that is honest about the wrong engine is not honest.
+ *
+ * Comparing the resulting floor against the wallet's own key time is what
+ * makes this a statement about UNSCANNED HISTORY rather than about a
+ * preference: a seed restore stamps `Constants.EARLIEST_HD_SEED_CREATION_TIME`
+ * (2015-03-29) as the key time, so any later floor provably skips chain the
+ * wallet could have been paid on.
+ *
+ * SR-22: a restore confirmed with the date picker's default (today) scanned
+ * roughly nothing, found 21.7 of 107.08 tDASH, and reported "Synced".
+ */
+internal fun boundedScanStartSecs(
+    sdkOwnsL1: Boolean,
+    configuredCreationDateSecs: Long?,
+    walletEarliestKeyCreationTimeSecs: Long?
+): Long? {
+    // No wallet loaded yet: nothing to compare against, so claim nothing.
+    val walletFloorSecs = walletEarliestKeyCreationTimeSecs ?: return null
+    val scanFloorSecs = if (sdkOwnsL1) {
+        sdkWalletBirthTimeSecs(configuredCreationDateSecs, walletEarliestKeyCreationTimeSecs)
+    } else {
+        configuredCreationDateSecs ?: walletEarliestKeyCreationTimeSecs
+    } ?: return null
+    return scanFloorSecs.takeIf { it > walletFloorSecs }
+}
+
+/**
+ * dashj's own header percentage, replicating the historical rule that a
+ * REPLAY reporting 100% is shown as 0 (a replay at "100%" has not started
+ * re-scanning yet, and showing 100 would hide the header entirely).
+ * Pure — host-testable.
+ */
+internal fun dashjSyncPercentage(state: BlockchainState?): Int = when {
+    state == null -> 0
+    state.replaying && state.percentageSync == 100 -> 0
+    else -> state.percentageSync
+}
+
+/**
+ * Merge the two engines' sync feeds into the one status the UI renders.
+ * Pure — host-testable.
+ *
+ * `isFailed` comes from the persisted `BlockchainState` in BOTH regimes on
+ * purpose: post-cutover `SdkBlockchainStateService` writes the SDK's own
+ * progress-stall NETWORK impediment into that same row, so the failure
+ * signal is engine-correct either way. (The UI used to read it
+ * unconditionally from a dashj-only field ALONGSIDE a branched sync feed,
+ * which post-cutover could paint the error pane from a stale dashj
+ * impediment.)
+ *
+ * [platformStarved] ORs in the sustained masternode-list starvation verdict
+ * ([platformMasternodeListStarved] held past its grace window) — a
+ * PLATFORM-side outage the L1 signals above cannot see. The progress-stall
+ * impediment's clock is reset by ANY progress change, and post-sync every
+ * new block ticks the header/filter heights, so an engine stuck without a
+ * masternode list (no DAPI possible) reads as "not stalled" within about a
+ * block interval of each banner appearance — observed live: the banner
+ * cleared on its own while the masternode list was still empty and DAPI had
+ * made zero calls for over half an hour. The starvation verdict holds for
+ * as long as its condition does, so the banner cannot self-clear while the
+ * outage persists.
+ *
+ * [scanStartDateSecs] rides through untouched ([boundedScanStartSecs] has
+ * already decided whether a range was skipped): it annotates the status
+ * rather than changing it, because a bounded scan that has caught up is
+ * genuinely caught up WITH ITS OWN RANGE — what must change is only what the
+ * UI claims. SR-22.
+ */
+internal fun mergeL1SyncUiStatus(
+    sdkOwnsL1: Boolean,
+    sdkProgress: ShadowSyncProgress,
+    dashjState: BlockchainState?,
+    platformStarved: Boolean = false,
+    dashPaySynced: Boolean = true,
+    scanStartDateSecs: Long? = null
+): L1SyncUiStatus = L1SyncUiStatus(
+    isSynced = if (sdkOwnsL1) sdkL1ScanCaughtUp(sdkProgress) else dashjState?.isSynced() == true,
+    percentage = if (sdkOwnsL1) shadowSyncPercent(sdkProgress) else dashjSyncPercentage(dashjState),
+    isFailed = dashjState?.syncFailed() == true || platformStarved,
+    dashPaySynced = dashPaySynced,
+    scanStartDateSecs = scanStartDateSecs,
+    percentageTenths = if (sdkOwnsL1) shadowSyncPermille(sdkProgress) else null
+)
+
+/**
+ * The number after "Syncing" in the home header, or null for the bare
+ * "Syncing…" (no usable figure yet). One decimal when the engine supplies
+ * tenths ("99.1%", "99.9%" — a re-walk spends most of its time there), the
+ * whole number otherwise ("42%"); a complete 1000 renders as "100%", never
+ * "100.0%". Pure — host-testable.
+ */
+fun syncHeaderPercentLabel(status: L1SyncUiStatus, locale: Locale = Locale.getDefault()): String? {
+    val tenths = status.percentageTenths
+    return when {
+        tenths == null -> status.percentage.takeIf { it > 0 }?.let { "$it%" }
+        tenths <= 0 -> null
+        tenths >= 1000 -> "100%"
+        else -> String.format(locale, "%.1f%%", tenths / 10.0)
+    }
+}
+
+/**
+ * The INSTANTANEOUS masternode-list starvation condition: the SDK owns L1,
+ * the wallet-relevant scan has caught up (the header shows "synced"), and
+ * neither the live engine feed nor the persisted row has EVER seen a
+ * masternode list — meaning no quorum knowledge and no DAPI address list,
+ * so every Platform feature is unreachable regardless of how healthy the
+ * L1 chain looks. Pure — host-testable.
+ *
+ * Uses the max of the live and persisted heights, exactly like
+ * [mergeL1SyncDetail]: on a warm start of a HEALTHY wallet the engine's
+ * live height is legitimately 0 for a while, but the row (preserved on the
+ * don't-regress-on-unknown rule) still carries the previous session's
+ * height — so only wallets that have never synced a masternode list at all
+ * (the stranded-fresh-wallet shape) can satisfy this.
+ *
+ * Held-time is deliberately NOT part of this predicate — the caller wraps
+ * it in [sustainedPlatformStarvation] so a normal startup (where the list
+ * is legitimately absent for a couple of minutes after the scan catches
+ * up) never flashes the banner.
+ */
+internal fun platformMasternodeListStarved(
+    sdkOwnsL1: Boolean,
+    sdkProgress: ShadowSyncProgress,
+    dashjState: BlockchainState?
+): Boolean = sdkOwnsL1 &&
+    sdkL1ScanCaughtUp(sdkProgress) &&
+    maxOf(sdkProgress.mnListHeight, (dashjState?.mnlistHeight ?: 0).toLong()) <= 0L
+
+/**
+ * How long the instantaneous starvation condition must HOLD before it is
+ * reported ([sustainedPlatformStarvation]). On a healthy fresh install the
+ * masternode list lands within a couple of minutes of the filter scan
+ * catching up, so five sustained minutes without one — while the L1 chain
+ * is fully synced — is a real outage, not startup latency. (The observed
+ * stranded wallet sat listless for hours.)
+ */
+internal const val PLATFORM_MNLIST_STARVATION_GRACE_MS = 5 * 60_000L
+
+/**
+ * Debounce the instantaneous starvation condition into the REPORTED one:
+ * true only once [starved] has held for [graceMs], false the instant it
+ * stops holding. The leading `emit(false)` keeps downstream `combine`s
+ * flowing during the grace window; [distinctUntilChanged] on the input
+ * keeps upstream re-emissions of the same verdict from restarting the
+ * clock (the exact self-clearing bug this exists to fix — see
+ * [mergeL1SyncUiStatus]).
+ */
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+internal fun sustainedPlatformStarvation(
+    starved: Flow<Boolean>,
+    graceMs: Long = PLATFORM_MNLIST_STARVATION_GRACE_MS
+): Flow<Boolean> = starved
+    .distinctUntilChanged()
+    .flatMapLatest { isStarved ->
+        if (isStarved) {
+            flow {
+                emit(false)
+                delay(graceMs)
+                emit(true)
+            }
+        } else {
+            flowOf(false)
+        }
+    }
+    .distinctUntilChanged()
+
+/**
+ * Absolute ceiling on how long the DashPay term may hold the user-facing
+ * "still syncing" state ([dashPaySyncSettledWithDeadline]).
+ *
+ * Belt-and-braces, deliberately independent of every producer: the terms
+ * themselves are each individually bounded, but the S21 regression was
+ * precisely a term that looked bounded and was not (the backfill gate's armed
+ * marker is permanent on a healthy wallet). An indicator that never clears is
+ * worse than one that clears early, so past this point the DashPay half is
+ * reported settled regardless of what any producer says. Time the phone spends
+ * locked with contact account builds waiting on it
+ * ([DashPaySettleVerdict.HELD_BY_LOCKED_DEVICE]) runs a longer ceiling of its
+ * own instead ([DASHPAY_LOCKED_HOLD_CEILING_MS]): nobody can see it, and it
+ * ends a few minutes after an unlock.
+ *
+ * Sized above the worst observed honest tail: on 11.10.86 the L1 scan reported
+ * caught up at 17:12:39 and the DashPay side finished at 17:25:00 — ~12.4
+ * minutes of contact sync, account registration and backfill. Fifteen minutes
+ * keeps that case reporting truthfully while still guaranteeing the indicator
+ * clears.
+ */
+internal const val DASHPAY_SETTLE_DEADLINE_MS = 15 * 60_000L
+
+/**
+ * The DashPay settled verdict, with [deadlineMs] as a hard ceiling: false
+ * while the terms say unsettled, but true unconditionally once that has held
+ * for the deadline. Settling early re-emits true immediately.
+ *
+ * Same shape as [sustainedPlatformStarvation] (and the same reasoning about
+ * [distinctUntilChanged] on the input: a producer re-emitting the same verdict
+ * must not restart the clock, or a 60 s republish cadence would hold the
+ * ceiling off forever). Pure — host-testable.
+ */
+internal fun dashPaySyncSettledWithDeadline(
+    settled: Flow<Boolean>,
+    deadlineMs: Long = DASHPAY_SETTLE_DEADLINE_MS
+): Flow<Boolean> = dashPaySyncVerdictWithDeadline(
+    settled.map { if (it) DashPaySettleVerdict.SETTLED else DashPaySettleVerdict.UNSETTLED },
+    deadlineMs
+)
+
+/**
+ * The DashPay half of "finished syncing" as the ceiling sees it
+ * ([dashPaySyncVerdictWithDeadline]).
+ */
+internal enum class DashPaySettleVerdict {
+    SETTLED,
+
+    /** Unsettled: reported as syncing until it settles or [DASHPAY_SETTLE_DEADLINE_MS] passes. */
+    UNSETTLED,
+
+    /**
+     * Unsettled because contact account builds are waiting on the device being
+     * unlocked ([DashPaySyncTerms.heldByLockedDevice]): reported as syncing
+     * under [DASHPAY_LOCKED_HOLD_CEILING_MS] instead of the ordinary ceiling,
+     * which would otherwise run out while the phone sits locked and the user
+     * would unlock to a short balance shown as final (QA phone 2,
+     * 12.0.0-qa28). A locked device shows no header, and once it is unlocked
+     * the producer drops the hold when the next drain runs or after
+     * [de.schildbach.wallet.service.platform.sdk.ACCOUNT_BUILD_UNLOCK_GRACE_MS],
+     * whichever is first — and that change starts a fresh ordinary ceiling.
+     */
+    HELD_BY_LOCKED_DEVICE,
+
+    /**
+     * Unsettled, and no drain has touched the contact account builds yet this
+     * process ([DashPaySyncTerms.awaitingFirstDrain]): reported as syncing
+     * under [DASHPAY_FIRST_DRAIN_CEILING_MS] of caught-up time instead of the
+     * ordinary ceiling. On a restore the first drain only runs after the first
+     * contact sync — 28 minutes after the scan caught up on QA phone 2, with
+     * 211 builds (1.856 DASH of contact payments) still unmatched — so the
+     * ordinary 15 minutes would hide the indicator while those funds are
+     * missing. When the first drain runs the verdict becomes
+     * [UNSETTLED] (or [SETTLED]), which starts a fresh ordinary ceiling.
+     */
+    AWAITING_FIRST_DRAIN
+}
+
+/**
+ * Backstop ceiling for [DashPaySettleVerdict.HELD_BY_LOCKED_DEVICE], kept
+ * independent of the producer for the same reason as
+ * [DASHPAY_SETTLE_DEADLINE_MS]: should a producer stop publishing while it
+ * holds, the indicator must still clear. Long enough to cover a night with
+ * the phone locked.
+ */
+internal const val DASHPAY_LOCKED_HOLD_CEILING_MS = 12 * 60 * 60_000L
+
+/**
+ * Ceiling for [DashPaySettleVerdict.AWAITING_FIRST_DRAIN], counted only while
+ * the L1 scan is caught up — the same clock the producer's own pre-first-drain
+ * pin runs on
+ * ([de.schildbach.wallet.service.platform.sdk.DEFERRED_BUILDS_UNDRAINED_SETTLED_READS]:
+ * 60 caught-up refreshes a minute apart, ~1 h). Set half an hour above that
+ * pin so the producer's verdict is what normally ends the hold, and this only
+ * backstops a producer that stops publishing. Time before the scan catches up
+ * does not count: the header shows syncing for the scan itself, and a restore
+ * scan can outlast any wall-clock ceiling (QA phone 2: 2.5 h).
+ */
+internal const val DASHPAY_FIRST_DRAIN_CEILING_MS = 90 * 60_000L
+
+/**
+ * Wall-clock backstop for [DashPaySettleVerdict.AWAITING_FIRST_DRAIN], should
+ * the caught-up clock never run (an L1 feed that never reports caught up):
+ * the hold must still end. Same length as [DASHPAY_LOCKED_HOLD_CEILING_MS].
+ */
+internal const val DASHPAY_FIRST_DRAIN_WALL_CEILING_MS = 12 * 60 * 60_000L
+
+/** The ceiling's view of [terms]. Pure — host-testable. */
+internal fun dashPaySettleVerdict(terms: DashPaySyncTerms): DashPaySettleVerdict = when {
+    terms.settled -> DashPaySettleVerdict.SETTLED
+    terms.heldByLockedDevice -> DashPaySettleVerdict.HELD_BY_LOCKED_DEVICE
+    terms.awaitingFirstDrain -> DashPaySettleVerdict.AWAITING_FIRST_DRAIN
+    else -> DashPaySettleVerdict.UNSETTLED
+}
+
+/**
+ * [dashPaySyncSettledWithDeadline] over the four-way [DashPaySettleVerdict]:
+ * [deadlineMs] runs while [DashPaySettleVerdict.UNSETTLED], [lockedHoldMs]
+ * while [DashPaySettleVerdict.HELD_BY_LOCKED_DEVICE], and [firstDrainHoldMs]
+ * of time with [firstDrainClockRunning] true (the scan caught up) — capped at
+ * [firstDrainWallCeilingMs] of wall time — while
+ * [DashPaySettleVerdict.AWAITING_FIRST_DRAIN]. Every change of verdict
+ * restarts the clock — so builds that start draining after an unlock, or after
+ * the first drain, are reported as syncing again even if a ceiling ran out
+ * earlier. [elapsedMs] is the monotonic clock the caught-up time is measured
+ * on. Pure — host-testable.
+ */
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+internal fun dashPaySyncVerdictWithDeadline(
+    verdicts: Flow<DashPaySettleVerdict>,
+    deadlineMs: Long = DASHPAY_SETTLE_DEADLINE_MS,
+    lockedHoldMs: Long = DASHPAY_LOCKED_HOLD_CEILING_MS,
+    firstDrainHoldMs: Long = DASHPAY_FIRST_DRAIN_CEILING_MS,
+    firstDrainWallCeilingMs: Long = DASHPAY_FIRST_DRAIN_WALL_CEILING_MS,
+    firstDrainClockRunning: Flow<Boolean> = flowOf(true),
+    elapsedMs: () -> Long = { System.nanoTime() / 1_000_000 }
+): Flow<Boolean> = verdicts
+    .distinctUntilChanged()
+    .flatMapLatest { verdict ->
+        when (verdict) {
+            DashPaySettleVerdict.SETTLED -> flowOf(true)
+            DashPaySettleVerdict.UNSETTLED -> unsettledUntil(deadlineMs)
+            DashPaySettleVerdict.HELD_BY_LOCKED_DEVICE -> unsettledUntil(lockedHoldMs)
+            DashPaySettleVerdict.AWAITING_FIRST_DRAIN -> unsettledForRunningTime(
+                firstDrainHoldMs, firstDrainWallCeilingMs, firstDrainClockRunning, elapsedMs
+            )
+        }
+    }
+    .distinctUntilChanged()
+
+private fun unsettledUntil(ceilingMs: Long): Flow<Boolean> = flow {
+    emit(false)
+    delay(ceilingMs)
+    emit(true)
+}
+
+/**
+ * False until [ceilingMs] has accumulated while [running] reads true (or
+ * [wallCeilingMs] of wall time has passed, whichever is first), then true.
+ * Time while [running] is false is not counted, and a pause does not reset
+ * what was already spent. If [running] ends without reaching the ceiling, the
+ * remainder runs on wall time — fail open, the hold must end.
+ */
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+private fun unsettledForRunningTime(
+    ceilingMs: Long,
+    wallCeilingMs: Long,
+    running: Flow<Boolean>,
+    elapsedMs: () -> Long
+): Flow<Boolean> = flow {
+    emit(false)
+    // Only touched from one [transformLatest] block at a time: it cancels AND
+    // joins the previous block before starting the next.
+    var spentMs = 0L
+    withTimeoutOrNull(wallCeilingMs) {
+        val reached = running
+            .distinctUntilChanged()
+            .transformLatest { isRunning ->
+                if (!isRunning) return@transformLatest
+                val startMs = elapsedMs()
+                try {
+                    delay((ceilingMs - spentMs).coerceAtLeast(0))
+                    emit(Unit)
+                } finally {
+                    spentMs += elapsedMs() - startMs
+                }
+            }
+            .firstOrNull()
+        if (reached == null) delay((ceilingMs - spentMs).coerceAtLeast(0))
+    }
+    emit(true)
+}
+
+/**
+ * Neutral chain-sync stage for the DETAIL readout (Tools → Network
+ * Monitor) — finer-grained than [org.dash.wallet.common.data.SyncStage]
+ * (which collapses the filter pipeline for the home header), with NO
+ * indication of which engine produced it.
+ *
+ * [SETUP_RETRYING] (MO-995): the engine cannot start because the wallet's
+ * one-time setup (the SDK wallet bind) failed and is being retried — the
+ * keystore-denial outage class. Rendered instead of the dead
+ * [IDLE]/"Not started" so the user learns that unlocking the device
+ * finishes setup, rather than staring at "Network engine not started"
+ * forever.
+ */
+enum class L1SyncStage { IDLE, CONNECTING, HEADERS, FILTER_HEADERS, MASTERNODE_LIST, FILTERS, SYNCED, ERROR, SETUP_RETRYING }
+
+/**
+ * The detailed engine-agnostic L1 sync readout for the Network Monitor:
+ * everything [L1SyncUiStatus] deliberately hides because ordinary screens
+ * don't need it. Heights are 0 when the producing engine has no knowledge
+ * of them (the UI renders those as unknown, never as "height 0").
+ *
+ * @property headerHeight/@property headerTarget header-chain scan position
+ *   (target 0 = unknown/not applicable — e.g. the dashj regime reports no
+ *   target).
+ * @property filterHeight/@property filterTarget wallet-relevant
+ *   compact-filter scan position (both 0 in the dashj regime, which has no
+ *   filter pipeline).
+ * @property mnListHeight masternode-list sync height.
+ * @property chainLockHeight best PROVEN chainlocked height — a monotonic
+ *   LOWER BOUND on the network's chainlock tip (see
+ *   [BlockchainState.chainlockHeight]'s note), never a live mirror.
+ * @property scanStartDateSecs the date the scan started from when history
+ *   before it was skipped ([boundedScanStartSecs]); null when the whole of
+ *   the wallet's own range was scanned. Same field, same meaning, as
+ *   [L1SyncUiStatus.scanStartDateSecs].
+ */
+data class L1SyncDetail(
+    val stage: L1SyncStage = L1SyncStage.IDLE,
+    val percentage: Int = 0,
+    val isSynced: Boolean = false,
+    val headerHeight: Long = 0,
+    val headerTarget: Long = 0,
+    val filterHeight: Long = 0,
+    val filterTarget: Long = 0,
+    val mnListHeight: Long = 0,
+    val chainLockHeight: Int = 0,
+    val scanStartDateSecs: Long? = null
+)
+
+/**
+ * SDK scan phase → neutral detail stage. ERROR always shows (honesty
+ * first); otherwise a caught-up scan reads SYNCED even though a live SPV
+ * never latches the SDK's own SYNCED phase (see
+ * [ShadowSyncProgress.scanCaughtUpToTip]) — keeping the stage label
+ * consistent with [sdkL1ScanCaughtUp]/[shadowSyncPercent], which report
+ * synced/100% on the same predicate. Pure — host-testable.
+ */
+internal fun toL1SyncStage(progress: ShadowSyncProgress): L1SyncStage = when {
+    progress.phase == ShadowSyncPhase.ERROR -> L1SyncStage.ERROR
+    sdkL1ScanCaughtUp(progress) -> L1SyncStage.SYNCED
+    else -> when (progress.phase) {
+        ShadowSyncPhase.IDLE -> L1SyncStage.IDLE
+        ShadowSyncPhase.CONNECTING -> L1SyncStage.CONNECTING
+        ShadowSyncPhase.HEADERS -> L1SyncStage.HEADERS
+        ShadowSyncPhase.FILTER_HEADERS -> L1SyncStage.FILTER_HEADERS
+        ShadowSyncPhase.MASTERNODES -> L1SyncStage.MASTERNODE_LIST
+        ShadowSyncPhase.FILTERS -> L1SyncStage.FILTERS
+        // ERROR and the caught-up cases are handled above; SYNCED without
+        // scanCaughtUpToTip still means synced (the SDK latched it itself).
+        else -> L1SyncStage.SYNCED
+    }
+}
+
+/**
+ * Merge the two engines' feeds into the one detail readout. Pure —
+ * host-testable.
+ *
+ * SDK regime: the live progress feed is the source, but the PERSISTED row
+ * backstops it — after a process restart the engine cycles through
+ * IDLE/CONNECTING for minutes with all-zero heights, and the row (written
+ * by `SdkBlockchainStateService` from this same engine, so engine-correct)
+ * still carries the last known header/mnlist/chainlock heights and
+ * percent. `max()` keeps the readout monotonic through that window instead
+ * of collapsing to zeros (the same don't-regress-on-unknown rule
+ * `deriveBlockchainStateUpdate` applies when writing). The session
+ * chainlock feed and the row are merged the same way — the row survives
+ * restarts, the session feed leads within one.
+ *
+ * dashj regime: the row is all dashj has (no filter pipeline, no header
+ * target), so filter fields stay 0/unknown.
+ *
+ * [bindRetryPending] (MO-995): a failed SDK wallet bind is awaiting retry
+ * ([SdkWalletBinder.bindRetryPending]). In the SDK regime this replaces an
+ * [L1SyncStage.IDLE] stage with [L1SyncStage.SETUP_RETRYING] — IDLE only,
+ * because the pending flag can only coexist with a DEAD engine (an unbound
+ * wallet has no engine to run); any real progress means the wallet bound
+ * and the honest scan stage must win. The dashj regime ignores it: after
+ * the bind-failure rollback dashj is the engine and its real stages render.
+ */
+internal fun mergeL1SyncDetail(
+    sdkOwnsL1: Boolean,
+    progress: ShadowSyncProgress,
+    sessionChainLockHeight: Int,
+    state: BlockchainState?,
+    bindRetryPending: Boolean = false,
+    lastKnownFilterHeight: Long = 0,
+    lastKnownFilterTarget: Long = 0,
+    scanStartDateSecs: Long? = null
+): L1SyncDetail = if (sdkOwnsL1) {
+    val idleOrConnecting = progress.phase == ShadowSyncPhase.IDLE ||
+        progress.phase == ShadowSyncPhase.CONNECTING
+    val scanStage = toL1SyncStage(progress)
+    L1SyncDetail(
+        stage = if (bindRetryPending && scanStage == L1SyncStage.IDLE) {
+            L1SyncStage.SETUP_RETRYING
+        } else {
+            scanStage
+        },
+        // Restart sawtooth guard: IDLE/CONNECTING carry no scan position,
+        // so fall back to the row's (SDK-written, preserved) percent
+        // rather than reporting 0 over a previously-synced chain.
+        percentage = if (idleOrConnecting) {
+            state?.percentageSync ?: 0
+        } else {
+            shadowSyncPercent(progress)
+        },
+        isSynced = sdkL1ScanCaughtUp(progress),
+        headerHeight = maxOf(progress.headerHeight, (state?.bestChainHeight ?: 0).toLong()),
+        headerTarget = progress.headerTarget,
+        // MO-995: filters need the same sawtooth guard as the rows above, and
+        // did not have it. BlockchainState carries no filter height (dashj has
+        // no filter pipeline, so the row never persists one), so the backstop
+        // is the last non-zero pair seen in THIS process instead of the row.
+        //
+        // Without it, "Block filters" alone collapsed to "-" during the
+        // IDLE/CONNECTING window while headers, masternode list, chainlock and
+        // percentage all held their last known values — so the screen read
+        // "Synced ... Block headers 2,532,259 ... Block filters —", which is
+        // what QA reported. formatHeights() renders "-" exactly when height
+        // AND target are both <= 0.
+        //
+        // Guarded on idleOrConnecting ONLY, deliberately: outside that window
+        // a filter height that moves BACKWARDS is real and must show honestly
+        // — the DashPay coreHeight backfill legitimately rewinds the scan (seen
+        // dropping 1,543,144 -> 1,252,305 in the field). A blanket max() would
+        // mask that and report a position the engine no longer holds.
+        // MO-1022 FOLLOW-UP: the in-process backstop above is EMPTY on a cold
+        // start, which is exactly when QA looks. Field log (2026-09-04, prod
+        // 12000004, SM-A536B) — app opened 19:13:07, Network Monitor checked
+        // immediately:
+        //
+        //     19:13:14  L1Shadow phase=IDLE 0.0% headers 0/0 filters 0/0 wallet 2533349
+        //     19:14:14  L1Shadow phase=SYNCED 100.0% headers 2533366/2533366 filters 2533366/2533366
+        //
+        // A full minute of "-" before the engine reconnects. So ALSO floor on
+        // the engine's committed wallet cursor, which that same line shows is
+        // populated (`wallet 2533349`) while filters read 0/0: it is seeded at
+        // shadow start from the SDK's DURABLE watermark
+        // (`L1ShadowSyncService.startIfEnabled` → `sdkWalletSyncedHeight`), so
+        // unlike lastKnownFilter* it survives a process restart. It is not a
+        // proxy either — the committed wallet cursor IS the filter-scan
+        // position, which is why `blockPipelineLagging` measures the scan with
+        // it. (My earlier note here claimed "nothing persists a filter height";
+        // that was wrong.)
+        //
+        // The target takes every floor the height takes AND the height's own
+        // raw value, so the pair can never render as height > target. (The
+        // shared floors alone are not enough: both branches read the same
+        // `data.filters` snapshot, so they cannot drift apart, but an engine
+        // that reported currentHeight > targetHeight in one snapshot would
+        // still invert the pair here.) Deliberately NOT the persisted header
+        // tip: that would report a target the filter pipeline never received,
+        // and it is not needed for the invariant.
+        filterHeight = if (idleOrConnecting) {
+            maxOf(progress.filterHeight, lastKnownFilterHeight, progress.walletSyncedHeight)
+        } else {
+            progress.filterHeight
+        },
+        filterTarget = if (idleOrConnecting) {
+            maxOf(
+                progress.filterTarget,
+                lastKnownFilterTarget,
+                progress.walletSyncedHeight,
+                lastKnownFilterHeight,
+                // ...including the raw height itself, which the floors above
+                // do NOT subsume: if the engine ever reports currentHeight >
+                // targetHeight in one snapshot, every other term here can sit
+                // below it and the pair would render inverted.
+                progress.filterHeight
+            )
+        } else {
+            progress.filterTarget
+        },
+        mnListHeight = maxOf(progress.mnListHeight, (state?.mnlistHeight ?: 0).toLong()),
+        chainLockHeight = maxOf(sessionChainLockHeight, state?.chainlockHeight ?: 0),
+        scanStartDateSecs = scanStartDateSecs
+    )
+} else {
+    L1SyncDetail(
+        stage = when {
+            state == null -> L1SyncStage.IDLE
+            state.syncFailed() -> L1SyncStage.ERROR
+            state.isSynced() -> L1SyncStage.SYNCED
+            // dashj's row doesn't distinguish its internal stages here;
+            // an in-progress sync reads as the block/header download.
+            else -> L1SyncStage.HEADERS
+        },
+        percentage = dashjSyncPercentage(state),
+        isSynced = state?.isSynced() == true,
+        headerHeight = (state?.bestChainHeight ?: 0).toLong(),
+        mnListHeight = (state?.mnlistHeight ?: 0).toLong(),
+        chainLockHeight = state?.chainlockHeight ?: 0,
+        scanStartDateSecs = scanStartDateSecs
+    )
+}
+
+/**
+ * THE SEAM for "how far along is the L1 chain sync?".
+ *
+ * Before this existed, every screen that shows sync progress had to know
+ * WHICH L1 engine was running: `MainViewModel` re-exported the engine-start
+ * gate as a `sdkOwnsL1` UI flag and published two parallel pairs of feeds
+ * (SDK progress vs dashj `BlockchainState`), and four Fragments each wrote
+ * their own `if (sdkOwnsL1) … else …` to pick one — six branches, five
+ * duplicated collector blocks, and a `LiveData<Boolean?>` / `StateFlow<Boolean>`
+ * type mismatch at every call site. The engine choice is a seam concern; it
+ * had leaked into the view layer.
+ *
+ * This collapses all of it into ONE flow. The engine choice is made here,
+ * reactively ([CutoverCoordinator.sdkOwnsL1Flow], so a mid-launch
+ * auto-commit is picked up without a relaunch — the old one-shot read was
+ * resolved once at ViewModel construction), and nothing above the seam can
+ * observe it.
+ */
+@Singleton
+class L1SyncStatusService @Inject constructor(
+    cutoverCoordinator: CutoverCoordinator,
+    l1ShadowSyncService: L1ShadowSyncService,
+    blockchainStateProvider: BlockchainStateProvider,
+    dashPaySyncStatus: DashPaySyncStatus,
+    sdkWalletBinder: SdkWalletBinder,
+    blockchainServiceConfig: BlockchainServiceConfig,
+    walletData: WalletData,
+    scope: CoroutineScope
+) {
+    /**
+     * [sdkL1ScanCaughtUp] over the live SDK progress feed — published so
+     * `CutoverUiDataService`'s balance hold and the home header's blinking
+     * label share ONE source (see the function KDoc).
+     */
+    val sdkScanCaughtUp: Flow<Boolean> =
+        l1ShadowSyncService.progress.map(::sdkL1ScanCaughtUp).distinctUntilChanged()
+
+    /**
+     * [ShadowSyncProgress.blockPipelineLagging] over the live progress feed —
+     * the veto that LEFT [sdkL1ScanCaughtUp] on 2026-09-21, published on its
+     * own so `CutoverUiDataService` can keep applying it to the one decision
+     * where it still belongs: persisting the balance as the launch seed. A
+     * wrong DISPLAYED figure corrects itself on the next tick; a wrong
+     * PERSISTED one poisons every later launch (the 48.86 DASH incident), so
+     * that gate alone still waits for the block pipeline to drain.
+     */
+    val sdkPipelineLagging: Flow<Boolean> =
+        l1ShadowSyncService.progress.map { it.blockPipelineLagging }.distinctUntilChanged()
+
+    /**
+     * The SUSTAINED platform-outage verdict ([platformMasternodeListStarved]
+     * held past [PLATFORM_MNLIST_STARVATION_GRACE_MS]): an L1-synced wallet
+     * that has never obtained a masternode list has no DAPI reachability at
+     * all — a failure the L1-derived impediment cannot see (and, post-sync,
+     * actively clears within a block interval; see [mergeL1SyncUiStatus]).
+     *
+     * Held EAGERLY in the service's own long-lived [scope], NOT per
+     * subscription: [status]'s downstream is screen-scoped
+     * (`MainViewModel.syncStatus` uses `WhileSubscribed`), and a grace clock
+     * that restarted on every navigation back to the home screen would need
+     * the user to sit still for the whole grace before the outage ever
+     * surfaced.
+     */
+    private val platformStarvedSustained: StateFlow<Boolean> = sustainedPlatformStarvation(
+        combine(
+            cutoverCoordinator.sdkOwnsL1Flow(),
+            l1ShadowSyncService.progress,
+            blockchainStateProvider.observeState()
+        ) { sdkOwnsL1, progress, state ->
+            platformMasternodeListStarved(sdkOwnsL1, progress, state)
+        }
+    ).catch { e ->
+        // Fail-open to the pre-existing (L1-impediment-only) behavior — an
+        // eager collector on the app scope must never take the process down.
+        org.slf4j.LoggerFactory.getLogger(L1SyncStatusService::class.java)
+            .warn("platform-starvation feed failed; banner falls back to the L1 impediment", e)
+        emit(false)
+    }.stateIn(scope, SharingStarted.Eagerly, false)
+
+    /**
+     * The DashPay half of "finished syncing", under [DASHPAY_SETTLE_DEADLINE_MS].
+     *
+     * Held EAGERLY in the service scope for the same reason as
+     * [platformStarvedSustained]: [status]'s downstream is screen-scoped
+     * (`MainViewModel.syncStatus` uses `WhileSubscribed`), and a ceiling clock
+     * that restarted on every navigation back to the home screen would never
+     * expire. Starts at `true` so a wallet the signal does not apply to can
+     * never flicker into "syncing" on the way to its first emission.
+     */
+    private val dashPaySettled: StateFlow<Boolean> =
+        dashPaySyncVerdictWithDeadline(
+            dashPaySyncStatus.terms.map(::dashPaySettleVerdict),
+            // The producer counts its pre-first-drain pin on this same signal.
+            firstDrainClockRunning = sdkScanCaughtUp
+        )
+            .catch { e ->
+                // Fail OPEN: the indicator must never be stuck on because a
+                // bookkeeping feed failed.
+                org.slf4j.LoggerFactory.getLogger(L1SyncStatusService::class.java)
+                    .warn("DashPay settled feed failed; reporting the DashPay half as settled", e)
+                emit(true)
+            }
+            .stateIn(scope, SharingStarted.Eagerly, true)
+
+    /**
+     * The date the scan started from, when history before it was skipped
+     * ([boundedScanStartSecs] over the live inputs) — null on a wallet whose
+     * own range was scanned in full.
+     *
+     * All three inputs are FEEDS, not one-shot reads, and each for a reason:
+     * the engine can change under a mid-launch auto-commit; the stored date
+     * is cleared by a later full rescan (Settings → Rescan blockchain with no
+     * date), which must retire the warning without a relaunch; and the wallet
+     * is null for the first moments of every cold start, so a read taken then
+     * would decide "nothing was skipped" and never revisit it.
+     *
+     * A config read failure degrades to "no date stored", i.e. to claiming
+     * nothing — an unreadable preference must never be turned into an
+     * accusation that the user's history is missing.
+     */
+    private val scanStartDateSecs: Flow<Long?> = combine(
+        cutoverCoordinator.sdkOwnsL1Flow(),
+        blockchainServiceConfig.observeWalletCreationDate().catch { e ->
+            org.slf4j.LoggerFactory.getLogger(L1SyncStatusService::class.java)
+                .warn("wallet creation date feed failed; not flagging the scan as bounded", e)
+            emit(null)
+        },
+        walletData.observeWallet().map { it?.earliestKeyCreationTime }
+    ) { sdkOwnsL1, configuredCreationDate, walletEarliestKeyTime ->
+        boundedScanStartSecs(sdkOwnsL1, configuredCreationDate, walletEarliestKeyTime)
+    }.distinctUntilChanged()
+
+    /** The engine-agnostic L1 sync status every sync-aware screen renders. */
+    val status: Flow<L1SyncUiStatus> =
+        combine(
+            cutoverCoordinator.sdkOwnsL1Flow(),
+            l1ShadowSyncService.progress,
+            blockchainStateProvider.observeState(),
+            platformStarvedSustained,
+            // Two annotations share this slot: `combine` tops out at five flows.
+            combine(dashPaySettled, scanStartDateSecs) { settled, scanStart -> settled to scanStart }
+        ) { sdkOwnsL1, progress, state, platformStarved, (dashPaySynced, scanStart) ->
+            mergeL1SyncUiStatus(sdkOwnsL1, progress, state, platformStarved, dashPaySynced, scanStart)
+        }.distinctUntilChanged()
+
+    /**
+     * Last non-zero filter position seen in this process — the in-memory
+     * backstop for the IDLE/CONNECTING window (see [mergeL1SyncDetail]).
+     *
+     * Process-scoped, and therefore EMPTY on a cold start — which is exactly
+     * when the Network Monitor gets opened. The durable half of the backstop
+     * is [ShadowSyncProgress.walletSyncedHeight]; see [mergeL1SyncDetail].
+     */
+    @Volatile private var lastFilterHeight = 0L
+    @Volatile private var lastFilterTarget = 0L
+
+    /**
+     * The engine-agnostic DETAIL readout for the Network Monitor
+     * ([mergeL1SyncDetail]) — same seam discipline as [status]: the engine
+     * choice is made here, reactively, and nothing above can observe it.
+     * The binder's [SdkWalletBinder.bindRetryPending] rides along so a
+     * failed wallet bind renders as [L1SyncStage.SETUP_RETRYING] instead of
+     * the dead "Not started" (MO-995).
+     */
+    val details: Flow<L1SyncDetail> =
+        combine(
+            cutoverCoordinator.sdkOwnsL1Flow(),
+            l1ShadowSyncService.progress,
+            l1ShadowSyncService.chainLockHeight,
+            blockchainStateProvider.observeState(),
+            // Two signals share this slot: `combine` tops out at five flows.
+            combine(sdkWalletBinder.bindRetryPending, scanStartDateSecs) { pending, scanStart ->
+                pending to scanStart
+            }
+        ) { sdkOwnsL1, progress, chainLockHeight, state, (bindRetryPending, scanStart) ->
+            mergeL1SyncDetail(
+                sdkOwnsL1, progress, chainLockHeight, state, bindRetryPending,
+                lastFilterHeight, lastFilterTarget, scanStart
+            ).also { detail ->
+                // Only ever advance on a real reading; a 0 from an idle engine
+                // must not erase what we are backstopping with.
+                if (detail.filterHeight > 0) lastFilterHeight = detail.filterHeight
+                if (detail.filterTarget > 0) lastFilterTarget = detail.filterTarget
+            }
+        }.distinctUntilChanged()
+}

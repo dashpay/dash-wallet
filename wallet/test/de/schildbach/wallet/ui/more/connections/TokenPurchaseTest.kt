@@ -17,7 +17,7 @@ import org.robolectric.annotation.Config
 import java.math.BigInteger
 
 @RunWith(RobolectricTestRunner::class)
-@Config(application = Application::class, sdk = [28], manifest = Config.NONE)
+@Config(application = Application::class, sdk = [29], manifest = Config.NONE)
 class TokenPurchaseTest {
     @Test fun `price and quantity retain unsigned 64 bit precision`() {
         val approval = TokenPurchaseApproval(DashStRequest(byteArrayOf(1), DashConnectNetwork.DEVNET),

@@ -17,28 +17,44 @@
 
 package org.dash.wallet.common.services
 
-import org.bitcoinj.core.Address
-import org.bitcoinj.core.Coin
-import org.bitcoinj.core.Sha256Hash
-import org.bitcoinj.core.Transaction
-import org.bitcoinj.core.TransactionOutput
-import org.bitcoinj.uri.BitcoinURI
-import org.bitcoinj.wallet.CoinSelector
-import org.bitcoinj.wallet.SendRequest
-import org.bitcoinj.wallet.Wallet
-import java.util.function.Consumer
-import java.util.function.Predicate
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.transactions.TxInfo
 
 class DirectPayException(message: String) : Exception(message)
 
 /**
- * Thrown when a BIP70 payment was submitted but the merchant's response was lost, so the
- * transaction may or may not have been broadcast. The transaction's inputs stay locked while
- * the wallet keeps checking the network in the background; once the transaction is seen it is
- * committed as sent, and if it never appears the inputs are released.
+ * Thrown when a payment was submitted but its outcome is unknown: the transaction may or may
+ * not have been broadcast. Callers must not treat it as a failure and must not offer a retry,
+ * since a new send could pay twice; tell the user the payment may have been sent instead.
+ *
+ * Open so each sender can say more precisely what is unknown. Subclasses and the APIs that
+ * throw them document their own recovery (what stays reserved, and for how long).
+ *
+ * @property txId the transaction id, as hex, or a sentinel documented by the subclass when the
+ *   sender has no txid
  */
-class PaymentSubmissionPendingException(val txId: Sha256Hash, cause: Throwable?) :
-    Exception("Payment submission result unknown for $txId; verification pending", cause)
+open class PaymentSubmissionPendingException(
+    val txId: String,
+    cause: Throwable?,
+    message: String = "Payment submission result unknown for $txId; verification pending"
+) : Exception(message, cause)
+
+/**
+ * Thrown instead of building a payment while an earlier payment's outcome is still unknown and its
+ * inputs cannot be kept out of coin selection. Nothing was built, signed or sent. It lifts by
+ * itself once that payment is confirmed on the network or released; the screen should say so
+ * (`R.string.payment_still_confirming`) rather than report a failure.
+ */
+class PaymentStillConfirmingException(message: String) : IllegalStateException(message)
+
+/**
+ * Thrown instead of sending when the SDK engine refused because its L1 funding gate is closed:
+ * the engine is not running, or its filter scan has not caught up to the chain tip. This is the
+ * one send failure that means "not synced yet", and the only one a screen may present as such
+ * (`R.string.send_coins_fragment_hint_replaying`). Nothing was built, signed or sent, and the same
+ * payment works once the scan reaches the tip.
+ */
+class SendEngineNotSyncedException(message: String) : IllegalStateException(message)
 
 /**
  * Facts a caller wants kept with a payment so one recovered long afterwards looks like the
@@ -50,50 +66,77 @@ data class PaymentRecoveryMetadata(
     val merchantIconUrl: String? = null
 )
 
+/**
+ * Neutral (dashj-free) payment service facade: amounts are [Dash], addresses are base58
+ * strings, created transactions are returned as [TxInfo] snapshots or hex tx ids.
+ */
+/**
+ * The wallet a payment was confirmed against. Taken without suspending at the moment the user
+ * confirms ([SendPaymentService.currentWalletSession]) and handed to the send, so the steps in
+ * between (a lookup, an invoice fetch, a quote) cannot change which wallet pays: a payment that
+ * carries one is refused, with nothing sent, once that wallet has been wiped or replaced. Opaque
+ * outside the wallet module.
+ */
+class WalletSession(val handle: Any)
+
 interface SendPaymentService {
+
+    /**
+     * The wallet installed right now as a [WalletSession], or null when none is. Never suspends,
+     * so a caller can take it at the moment the user confirms, before anything can wait.
+     */
+    fun currentWalletSession(): WalletSession?
+
+    /**
+     * Sends [amount] to the base58 [address] and returns the created transaction's txId
+     * as a hex string. Failures surface as exceptions classifiable with the neutral
+     * `Throwable.is*` helpers.
+     */
     suspend fun sendCoins(
-        address: Address,
-        amount: Coin,
-        coinSelector: CoinSelector? = null,
+        address: String,
+        amount: Dash,
         emptyWallet: Boolean = false,
-        beforeSending: Consumer<Transaction>? = null,
-        canSendLockedOutput: Predicate<TransactionOutput>? = null
-    ): Transaction
+        session: WalletSession? = null
+    ): String
 
+    /** Fee/total estimate for sending [amount] to [address]. */
     suspend fun estimateNetworkFee(
-        address: Address,
-        amount: Coin,
+        address: String,
+        amount: Dash,
         emptyWallet: Boolean = false
-    ): TransactionDetails
+    ): TransactionEstimate
 
-    data class TransactionDetails(
+    data class TransactionEstimate(
         val fee: String,
-        val amountToSend: Coin,
+        val amountToSend: Dash,
         val totalAmount: String
     )
 
     /**
-     * @param originWallet the wallet the user confirmed this payment on, captured by the caller
-     *   before it suspended. Coins are selected, the transaction signed and submitted from this
-     *   wallet only, and the payment is refused if a wipe has taken it away since. Null means the
-     *   wallet installed when this is called, which is right for a caller that has not waited on
-     *   anything since the user confirmed.
-     * @param onTransactionCreated invoked once the transaction is built and signed, before it is
-     *   submitted, so a caller can persist anything it will need to recover the payment later.
-     *   Runs while the payment is still recoverable: after this point the transaction may reach
-     *   the payee even if this process dies.
+     * Pays the given `dash:` payment URI and returns the created transaction.
+     *
+     * The payment is made from the wallet of [session] when one is given, otherwise from the
+     * wallet installed when this is called, and refused if a wipe takes that wallet away before
+     * it is submitted.
+     *
+     * @param recovery facts to keep with a payment whose submission result may turn out unknown
+     * @param onTransactionCreated invoked with the hex transaction id once the transaction is
+     *   built and signed, before it is submitted wherever the payment path allows it, so a caller
+     *   can persist anything it will need to recover the payment later. Runs while the payment is
+     *   still recoverable: after this point the transaction may reach the payee even if this
+     *   process dies.
+     * @throws PaymentSubmissionPendingException if the payment may have been sent but its outcome
+     *   is not known yet, e.g. the merchant's response was lost. The transaction's inputs stay
+     *   locked while the wallet keeps checking the network in the background; once the
+     *   transaction is seen it is committed as sent, and if it never appears the inputs are
+     *   released. A subclass may say more precisely what is unknown, such as an acknowledged
+     *   payment whose local record could not be written yet.
      */
     suspend fun payWithDashUrl(
         dashUri: String,
         serviceName: String?,
         recovery: PaymentRecoveryMetadata? = null,
-        originWallet: Wallet? = null,
-        onTransactionCreated: (suspend (Sha256Hash) -> Unit)? = null
-    ): Transaction
-    fun isFeeTooHigh(tx: Transaction): Boolean
-
-    /** support manual tx creation */
-    suspend fun completeTransaction(sendRequest: SendRequest)
-    suspend fun signTransaction(sendRequest: SendRequest)
-    suspend fun sendTransaction(sendRequest: SendRequest): Transaction
+        session: WalletSession? = null,
+        onTransactionCreated: (suspend (String) -> Unit)? = null
+    ): TxInfo
 }

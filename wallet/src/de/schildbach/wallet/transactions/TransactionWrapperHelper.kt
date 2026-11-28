@@ -17,16 +17,27 @@
 
 package de.schildbach.wallet.transactions
 
+import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionBag
+import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.common.transactions.TransactionWrapperFactory
-import java.time.ZoneId
+import org.dash.wallet.common.transactions.TxInfo
 
 object TransactionWrapperHelper {
+    /**
+     * Groups [transactions] into the wrappers produced by [wrapperFactories]. Transactions no
+     * factory claims get a single-transaction wrapper each, unless [includeUnwrapped] is false:
+     * then they are dropped as soon as they are checked, so only the matched transactions are
+     * kept in memory (a large wallet can hold tens of thousands of transactions).
+     */
     fun wrapTransactions(
         transactions: Set<Transaction?>,
-        vararg wrapperFactories: TransactionWrapperFactory
+        bag: TransactionBag,
+        params: NetworkParameters,
+        vararg wrapperFactories: TransactionWrapperFactory,
+        includeUnwrapped: Boolean = true
     ): Collection<TransactionWrapper> {
         wrapperFactories.sortByDescending { it.averageTransactions }
         val wrappedTransactions = ArrayList<TransactionWrapper>()
@@ -36,10 +47,11 @@ object TransactionWrapperHelper {
                 continue
             }
 
+            val txInfo = transaction.toTxInfo(bag, params)
             var added = false
 
             for (wrapperFactory in wrapperFactories) {
-                val (included, wrapper) = wrapperFactory.tryInclude(transaction)
+                val (included, wrapper) = wrapperFactory.tryInclude(txInfo)
                 if (included && wrapper != null) {
                     if (!wrappedTransactions.contains(wrapper)) {
                         wrappedTransactions.add(wrapper)
@@ -49,13 +61,13 @@ object TransactionWrapperHelper {
                 }
             }
 
-            if (!added) {
+            if (!added && includeUnwrapped) {
                 val anonWrapper: TransactionWrapper = object : TransactionWrapper {
                     override val id: String = transaction.txId.toStringBase58()
-                    override val transactions = hashMapOf(transaction.txId to transaction)
-                    override val groupDate = transaction.updateTime.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
-                    override fun tryInclude(tx: Transaction) = true
-                    override fun getValue(bag: TransactionBag) = transaction.getValue(bag)
+                    override val transactions = hashMapOf(txInfo.txId to txInfo)
+                    override val groupDate = txInfo.groupDate
+                    override fun tryInclude(tx: TxInfo) = true
+                    override fun getValue() = Dash(txInfo.netValueDuffs)
                 }
                 wrappedTransactions.add(anonWrapper)
             }

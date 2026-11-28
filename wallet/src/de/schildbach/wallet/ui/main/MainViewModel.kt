@@ -29,29 +29,32 @@ import androidx.paging.PagingData
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.database.dao.DashPayContactRequestDao
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.dao.InvitationsDao
 import de.schildbach.wallet.database.dao.UserAlertDao
+import de.schildbach.wallet.database.dao.UsernameRequestDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
+import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.livedata.SeriousErrorLiveData
 import de.schildbach.wallet.security.BiometricHelper
-import de.schildbach.wallet.service.CoinJoinMode
-import de.schildbach.wallet.service.CoinJoinService
 import de.schildbach.wallet.service.DeviceInfoProvider
-import de.schildbach.wallet.service.MAX_ALLOWED_AHEAD_TIMESKEW
-import de.schildbach.wallet.service.MAX_ALLOWED_BEHIND_TIMESKEW
-import de.schildbach.wallet.service.MixingStatus
+import de.schildbach.wallet.service.platform.ContactRequestNotificationService
 import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.TxDisplayCacheService
 import de.schildbach.wallet.service.platform.PlatformService
 import de.schildbach.wallet.service.platform.PlatformSyncService
+import de.schildbach.wallet.service.platform.sdk.CoinJoinFundsMigrationService
+import de.schildbach.wallet.service.platform.sdk.MIXED_FUNDS_PROMPT_HARD_SUPPRESSED
+import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
+import de.schildbach.wallet.service.platform.sdk.ShieldedSyncStatus
+import de.schildbach.wallet.service.platform.sdk.shieldedReadRetryDelayMs
+import de.schildbach.wallet.service.L1SyncStatusService
+import de.schildbach.wallet.service.L1SyncUiStatus
 import de.schildbach.wallet.transactions.TxFilterType
 import de.schildbach.wallet.ui.dashpay.BaseContactsViewModel
-import de.schildbach.wallet.ui.dashpay.NotificationCountLiveData
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
@@ -68,23 +71,28 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Coin
-import org.bitcoinj.core.PeerGroup
-import org.bitcoinj.core.PeerGroup.SyncStage
 import org.bitcoinj.core.Transaction
-import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.money.MonetaryFormat
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.WalletEx
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.CurrencyInfo
 import org.dash.wallet.common.data.SingleLiveEvent
+import org.dash.wallet.common.data.SyncStage
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.data.entity.ExchangeRate
@@ -110,7 +118,7 @@ class MainViewModel @Inject constructor(
     private val config: Configuration,
     private val walletUIConfig: WalletUIConfig,
     exchangeRatesProvider: ExchangeRatesProvider,
-    val walletData: WalletDataProvider,
+    val walletData: WalletData,
     private val walletApplication: WalletApplication,
     private val identityRepository: IdentityRepository,
     val platformRepo: PlatformRepo,
@@ -122,16 +130,31 @@ class MainViewModel @Inject constructor(
     val biometricHelper: BiometricHelper,
     private val deviceInfo: DeviceInfoProvider,
     private val invitationsDao: InvitationsDao,
+    private val usernameRequestDao: UsernameRequestDao,
     userAlertDao: UserAlertDao,
     dashPayProfileDao: DashPayProfileDao,
     private val dashPayConfig: DashPayConfig,
     dashPayContactRequestDao: DashPayContactRequestDao,
-    private val coinJoinConfig: CoinJoinConfig,
-    private val coinJoinService: CoinJoinService,
     private val txDisplayCacheService: TxDisplayCacheService,
-    private val swapProvider: DispatchingSwapProvider
+    private val coinJoinFundsMigrationService: CoinJoinFundsMigrationService,
+    l1SyncStatusService: L1SyncStatusService,
+    private val contactRequestNotificationService: ContactRequestNotificationService,
+    private val swapProvider: DispatchingSwapProvider,
+    sdkBindRetryService: de.schildbach.wallet.service.platform.sdk.SdkBindRetryService,
+    private val shieldedBalanceService: ShieldedBalanceService
 ) : BaseContactsViewModel(blockchainIdentityDataDao, dashPayProfileDao, dashPayContactRequestDao) {
     var restoringBackup: Boolean = false
+
+    /**
+     * The L1 chain-sync state every sync-aware home screen renders —
+     * "is it synced", "what percent", "did it fail" — with NO indication of
+     * which engine produced it ([L1SyncStatusService] makes that choice at
+     * the seam). Replaces the old `sdkOwnsL1` UI flag and the two parallel
+     * SDK/dashj feed pairs the Fragments used to select between.
+     */
+    val syncStatus: StateFlow<L1SyncUiStatus> =
+        l1SyncStatusService.status
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), L1SyncUiStatus())
 
     val balanceDashFormat: MonetaryFormat = config.format.noCode().minDecimals(0)
     val fiatFormat: MonetaryFormat = Constants.LOCAL_FORMAT.minDecimals(0).optionalDecimals(0, 2)
@@ -190,19 +213,54 @@ class MainViewModel @Inject constructor(
     private val _totalBalance = MutableLiveData<Coin>()
     val totalBalance: LiveData<Coin>
         get() = _totalBalance
-    private val _mixedBalance = MutableLiveData<Coin>()
-    val mixedBalance: LiveData<Coin>
-        get() = _mixedBalance
+
+    /**
+     * The home-screen header balance ONLY: the transparent (L1) total plus
+     * the shielded balance. Every other screen keeps showing the L1-only
+     * [totalBalance] / `observeTotalBalance()`.
+     */
+    private val _homeBalance = MutableLiveData<Coin>()
+    val homeBalance: LiveData<Coin>
+        get() = _homeBalance
+
+    /**
+     * True while [homeBalance] is missing the shielded part because it is not
+     * known yet (see [homeShieldedBalance]) — the home header keeps its
+     * "Syncing balance" indicator on until it arrives.
+     */
+    private val _homeShieldedPending = MutableStateFlow(false)
+    val homeShieldedPending: StateFlow<Boolean> = _homeShieldedPending.asStateFlow()
 
     private val _temporaryHideBalance = MutableStateFlow<Boolean?>(null)
-    val hideBalance = walletUIConfig.observe(WalletUIConfig.AUTO_HIDE_BALANCE)
+    // Eagerly, not WhileSubscribed: MainViewModel is activity-scoped and already
+    // lives for the activity's lifetime, so this stays collected even with no
+    // active screen observer, closing the stale-replay window WhileSubscribed(5000)
+    // used to leave open (a fresh collector — e.g. a fragment returning to the
+    // screen — used to replay a stale cached value instead of the preference just
+    // persisted elsewhere; thepastaclaw/coderabbitai review #1645).
+    //
+    // observePreservingErrors + retryWhen, not observe: observe()'s own
+    // IOException rescue (BaseConfig.data) swallows the error and completes the
+    // flow after one emission — harmless under WhileSubscribed (the next
+    // resubscribe restarts it), but Eagerly collects exactly once for this
+    // ViewModel's lifetime, so that completion would otherwise freeze hideBalance
+    // forever. Fail closed and keep retrying instead, same shape as
+    // homeShieldedBalanceFlow below; initialValue = true fails closed the same
+    // way until the first real read lands.
+    val hideBalance = walletUIConfig.observePreservingErrors(WalletUIConfig.AUTO_HIDE_BALANCE)
         .combine(_temporaryHideBalance) { autoHide, temporaryHide ->
             temporaryHide ?: autoHide ?: false
         }
+        .retryWhen { e, attempt ->
+            log.warn("hideBalance read failed (attempt {})", attempt, e)
+            emit(true)
+            delay(shieldedReadRetryDelayMs(attempt))
+            true
+        }
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = false
+            started = SharingStarted.Eagerly,
+            initialValue = true
         )
     private val _remindMetadata = MutableStateFlow(false)
     val remindMetadata = _remindMetadata.asStateFlow()
@@ -213,16 +271,6 @@ class MainViewModel @Inject constructor(
         get() = _isNetworkUnavailable
 
     val currencyChangeDetected = SingleLiveEvent<Pair<String, String>>()
-
-    // CoinJoin
-    val coinJoinMode: Flow<CoinJoinMode>
-        get() = coinJoinConfig.observeMode()
-    val mixingState: Flow<MixingStatus>
-        get() = coinJoinService.observeMixingState()
-    val mixingProgress: Flow<Double>
-        get() = coinJoinService.observeMixingProgress()
-    val mixingSessions: Flow<Int>
-        get() = coinJoinService.observeActiveSessions()
 
     // DashPay
     private val isPlatformAvailable = MutableStateFlow(false)
@@ -255,13 +303,71 @@ class MainViewModel @Inject constructor(
 
     val showCreateUsernameEvent = SingleLiveEvent<Unit>()
 
+    /**
+     * Post-upgrade MIXED-FUNDS prompt: this wallet still holds coins on the
+     * CoinJoin keychain that the app can no longer spend, and the user has
+     * not yet chosen what to do with them. Fires only after the L1 view is
+     * current enough to trust the balance — see
+     * [CoinJoinFundsMigrationService.shouldPrompt] — and re-fires after
+     * activity/ViewModel recreation or lock-unlock until a choice is made
+     * (see [recheckMixedFundsMigrationPrompt]).
+     */
+    /**
+     * Mirrors the service/dialog emergency kill-switch so the startup and
+     * lock-dismiss triggers cannot diverge from the sheet's own gate.
+     */
+    private val mixedFundsPromptSuppressed = MIXED_FUNDS_PROMPT_HARD_SUPPRESSED
+
+    val showMixedFundsMigration = SingleLiveEvent<Unit>()
+
+    /**
+     * In-memory throttle for [showMixedFundsMigration]: stops the
+     * blockchain-state flow re-firing while the sheet is (presumably) up.
+     * Deliberately NOT persisted in [savedStateHandle] — a recreated
+     * activity/ViewModel must re-offer the forced choice until the permanent
+     * latch ([DashPayConfig.MIXED_FUNDS_MIGRATION_DONE]) is set by an actual
+     * migration.
+     */
+    private var mixedFundsPromptShownThisSession = false
+
+    /**
+     * One-time post-UPGRADE sync explainer
+     * ([de.schildbach.wallet.ui.cutover.CutoverSyncNoticeDialogFragment]).
+     * Fires while the persisted marker
+     * ([DashPayConfig.CUTOVER_UPGRADE_NOTICE_PENDING], armed only on the
+     * upgrade seam) is set; the sheet clears the marker when the user
+     * acknowledges it, which is what makes it once-ever.
+     */
+    val showCutoverUpgradeNotice = SingleLiveEvent<Unit>()
+
+    /**
+     * "SDK setup pending": why the SDK wallet bind is blocked, null while
+     * bound. MainActivity shows
+     * [de.schildbach.wallet.ui.cutover.SdkBindPendingDialogFragment] while
+     * this is non-null (docs/upgrade-memory-and-sync-plan.md, Phase 1a item 3).
+     */
+    val sdkBindBlocker: StateFlow<de.schildbach.wallet.service.platform.sdk.SdkBindBlocker?> =
+        sdkBindRetryService.blocker
+
     val sendContactRequestState = SendContactRequestOperation.allOperationsStatus(walletApplication)
     val seriousErrorLiveData = SeriousErrorLiveData(platformRepo)
     var processingSeriousError = false
 
-    val notificationCountData = NotificationCountLiveData(identityRepository, platformRepo, platformSyncService, dashPayConfig, viewModelScope)
-    val notificationCount: Int
-        get() = notificationCountData.value ?: 0
+    /**
+     * The home-screen bell badge. Sourced from the application-scoped
+     * [ContactRequestNotificationService] rather than recomputed inside a
+     * `ContactsBasedLiveData`: that class registers its contacts-updated listener
+     * only while something observes it, so a contact request that arrived while the
+     * user was on another screen never triggered a recount. The service keeps the
+     * value current regardless of what is on screen.
+     *
+     * Exposed as the service's own StateFlow rather than through `asLiveData()`:
+     * that wrapper stops collecting a few seconds after its last observer
+     * detaches and keeps serving the value it had then, so the bell could render
+     * the pre-navigation count for a beat on the way back to the home screen.
+     */
+    val notificationCount: StateFlow<Int> =
+        contactRequestNotificationService.unseenNotificationCount
 
     private var contactRequestTimer: AnalyticsTimer? = null
 
@@ -288,8 +394,13 @@ class MainViewModel @Inject constructor(
         // wallet the write lock is held for many seconds at a time by
         // Wallet.saveToFileStream (the 5s autosave serializes the ENTIRE wallet
         // protobuf — every transaction and every CoinJoin keychain key) and by
-        // receiveFromBlock. The result on a large wallet is a main-thread stall that
-        // exceeds the 5s ANR threshold, once per emission, for the whole sync window.
+        // receiveFromBlock. The result on a ~100k-transaction CoinJoin wallet is a
+        // main-thread stall that exceeds the 5s ANR threshold, once per emission, for
+        // the whole sync window — and that stops the moment the sync does.
+        //
+        // Post-cutover this got strictly worse: BlockchainState.replaying is hardcoded
+        // false, so the `if (!state.replaying)` guard below — which used to suppress
+        // this log for exactly the duration of a replay — is now always true.
         //
         // flowOn() applies to everything UPSTREAM of it, i.e. to this onEach, so the
         // body now runs on Dispatchers.IO. Everything it touches is safe there:
@@ -317,19 +428,73 @@ class MainViewModel @Inject constructor(
             .catch { e -> log.error("blockchain state flow error", e) }
             .launchIn(viewModelScope)
 
-        // we need the total wallet balance for mixing progress,
-        walletData.observeTotalBalance()
+        // Post-upgrade MIXED-FUNDS prompt: fired once the L1 view is current
+        // enough that a zero/non-zero CoinJoin balance means something — the
+        // service owns that predicate, and it now requires TRUE sync
+        // completion (BlockchainState.isSynced()), so the forced prompt can
+        // never land on top of a still-wrong mid-scan balance. Never blocks
+        // startup: this is a background collector, and a wallet with no mixed
+        // funds never emits.
+        //
+        // The latch here is deliberately IN-MEMORY (not SavedStateHandle): it
+        // only throttles the flow re-firing while the sheet is already up.
+        // If the activity is recreated before the user chose — e.g. the lock
+        // screen engaged and tore the sheet down — the fresh ViewModel starts
+        // unlatched and the prompt re-shows, because the only thing that may
+        // silence it for good is the permanent latch the service sets when
+        // shield/keep-spendable actually runs
+        // ([DashPayConfig.MIXED_FUNDS_MIGRATION_DONE], via `shouldPrompt()`).
+        blockchainStateProvider.observeState()
+            .filterNotNull()
             .onEach {
-                _totalBalance.value = it
+                if (mixedFundsPromptShownThisSession || mixedFundsPromptSuppressed) return@onEach
+                // A persisted IN-FLIGHT marker re-shows the sheet in its
+                // post-choice PROCESSING presentation (a broadcast whose
+                // result is not user-visible yet — e.g. the lock screen tore
+                // the sheet down during the confirmation window) unless its
+                // "could not confirm" guidance was already acknowledged;
+                // otherwise the service decides whether the forced choice is due.
+                if (coinJoinFundsMigrationService.shouldPresentPrompt()) {
+                    mixedFundsPromptShownThisSession = true
+                    showMixedFundsMigration.postCall()
+                }
             }
+            .catch { e -> log.error("mixed-funds migration prompt flow error", e) }
+            .launchIn(viewModelScope)
+
+        // One-time post-UPGRADE sync explainer. Observed (not read once)
+        // because the marker is armed asynchronously during wallet load, which
+        // can land after this ViewModel is constructed.
+        dashPayConfig.observe(DashPayConfig.CUTOVER_UPGRADE_NOTICE_PENDING)
+            .distinctUntilChanged()
+            .onEach { pending -> if (pending == true) showCutoverUpgradeNotice.postCall() }
+            .catch { e -> log.error("cutover upgrade-notice flow error", e) }
+            .launchIn(viewModelScope)
+
+        // Re-arm the in-flight completion watcher after a process restart:
+        // it clears the marker once the migration's result becomes visible
+        // (no-op when nothing is in flight).
+        coinJoinFundsMigrationService.startInFlightWatcherIfNeeded()
+
+        // Phase 5d: the displayed balance follows whichever engine owns L1
+        // this launch. observeTotalBalance() is cutover-aware at the
+        // WalletData facade (WalletApplication overlays the SDK's
+        // live L1 balance via CutoverUiDataService once the cutover is
+        // committed), so EVERY balance consumer switches consistently —
+        // pre-cutover this is byte-identical to the dashj-only feed.
+        walletData.observeTotalBalance()
+            .onEach { _totalBalance.value = it }
             .catch { e -> log.error("total balance flow error", e) }
             .launchIn(viewModelScope)
 
-        walletData.observeMixedBalance()
-            .onEach {
-                _mixedBalance.value = it
+        // Home header only: L1 total + shielded balance.
+        walletData.observeTotalBalance()
+            .combine(observeHomeShieldedBalance()) { transparent, shielded ->
+                _homeShieldedPending.value = shielded == null
+                transparent.add(Coin.valueOf((shielded ?: Dash.ZERO).duffs))
             }
-            .catch { e -> log.error("mixed balance flow error", e) }
+            .onEach { _homeBalance.value = it }
+            .catch { e -> log.error("home balance flow error", e) }
             .launchIn(viewModelScope)
 
         walletUIConfig
@@ -355,6 +520,11 @@ class MainViewModel @Inject constructor(
 
         // DashPay
         startContactRequestTimer()
+
+        // Prime the bell badge for this launch. The service holds the count across
+        // screens, but on a cold start nothing has computed it yet and the periodic
+        // contact sync may be minutes away.
+        contactRequestNotificationService.refreshCountInBackground()
 
         dashPayConfig.observe(DashPayConfig.LAST_SEEN_NOTIFICATION_TIME)
             .filterNotNull()
@@ -389,6 +559,25 @@ class MainViewModel @Inject constructor(
             }
             .catch { e -> log.error("sync stage flow error", e) }
             .launchIn(viewModelScope)
+
+        // Self-heal a transient DAPI "unavailable" verdict. The sync-stage
+        // check above fires only when the STAGE changes (distinctUntilChanged),
+        // so a `false` returned once the stage settles at BLOCKS would latch
+        // forever — permanently hiding both Join DashPay entry points (the home
+        // card and the More-screen DashPay section, each gated on
+        // isAbleToCreateIdentity) until an app restart. Retry until Platform is
+        // reachable, then stop; nothing here flips it back to false.
+        if (Constants.SUPPORTS_PLATFORM) {
+            viewModelScope.launch {
+                while (isActive && !isPlatformAvailable.value) {
+                    if (runCatching { platformService.isPlatformAvailable() }.getOrDefault(false)) {
+                        isPlatformAvailable.value = true
+                    } else {
+                        delay(PLATFORM_AVAILABILITY_RETRY_MS)
+                    }
+                }
+            }
+        }
         restoringBackup = config.isRestoringBackup
     }
 
@@ -399,6 +588,24 @@ class MainViewModel @Inject constructor(
     fun logError(ex: Exception, details: String) {
         analytics.logError(ex, details)
     }
+
+    /**
+     * The shielded part of [homeBalance]: zero unless the shielded feature is
+     * on (`SUPPORTS_PLATFORM` and `USE_KOTLIN_SDK_SHIELDED`). The runtime is
+     * brought up at startup by [PlatformSyncService]; null — the header shows
+     * the shielded part as pending — until it is READY (see
+     * [homeShieldedBalance]), and while a read is failing.
+     */
+    private fun observeHomeShieldedBalance(): Flow<Dash?> = homeShieldedBalanceFlow(
+        // WITHOUT the IOException rescue: only a flag READ as disabled or
+        // unset may authorize a zero; an unreadable one is unknown.
+        enabledFlag = dashPayConfig.observePreservingErrors(DashPayConfig.USE_KOTLIN_SDK_SHIELDED)
+            .map { Constants.SUPPORTS_PLATFORM && it == true },
+        live = { shieldedBalanceService.observeShieldedBalance() },
+        status = { shieldedBalanceService.shieldedSyncStatus },
+        maybeStale = { shieldedBalanceService.shieldedBalanceMaybeStale },
+        onError = { e, attempt -> log.error("home shielded balance flow error (attempt {})", attempt, e) }
+    )
 
     fun triggerHideBalance() {
         _temporaryHideBalance.value = !hideBalance.value
@@ -435,20 +642,10 @@ class MainViewModel @Inject constructor(
         walletData.processDirectTransaction(tx)
     }
 
-    suspend fun getCoinJoinMode(): CoinJoinMode {
-        return coinJoinConfig.getMode()
-    }
-
     suspend fun getDeviceTimeSkew(force: Boolean): Pair<Boolean, Long> {
         return try {
             val timeSkew = getTimeSkew(force)
-            val maxAllowedTimeSkew: Long = if (coinJoinConfig.getMode() == CoinJoinMode.NONE) {
-                TIME_SKEW_TOLERANCE
-            } else {
-                if (timeSkew > 0) MAX_ALLOWED_AHEAD_TIMESKEW * 3 else MAX_ALLOWED_BEHIND_TIMESKEW * 2
-            }
-            coinJoinService.updateTimeSkew(timeSkew)
-            return Pair(abs(timeSkew) > maxAllowedTimeSkew, timeSkew)
+            return Pair(abs(timeSkew) > TIME_SKEW_TOLERANCE, timeSkew)
         } catch (_: Exception) {
             // Ignore errors
             Pair(false, 0)
@@ -567,10 +764,40 @@ class MainViewModel @Inject constructor(
     }
 
     private fun forceUpdateNotificationCount() {
-        notificationCountData.onContactsUpdated()
+        contactRequestNotificationService.refreshCountInBackground()
         viewModelScope.launch(Dispatchers.IO) {
             platformSyncService.updateContactRequests()
         }
+    }
+
+    private var lastContactResumeRefreshMs = 0L
+
+    /**
+     * Force a network contact-request refresh when the user returns to the
+     * home screen. The periodic [PlatformSyncService] poll is scoped to the
+     * blockchain service, which auto-tears-down after a few minutes and does
+     * not reliably re-arm the ticker across service restarts — leaving
+     * multi-minute windows (even in foreground) where contact requests and
+     * acceptances aren't fetched. Opening the Contacts screen already forces a
+     * poll; this closes the gap for the home screen too so the notification
+     * bell refreshes without the user having to drill in.
+     *
+     * Throttled to [CONTACT_RESUME_REFRESH_THROTTLE_MS] so rapid app switching
+     * can't hammer the network, and gated on an established identity + a synced
+     * chain (the underlying [PlatformSyncService.updateContactRequests] also
+     * self-gates, but skipping the coroutine hop when there's nothing to do
+     * keeps resume cheap). Safe no-op for users without a DashPay identity.
+     */
+    fun refreshContactsOnResume() {
+        if (!identityRepository.hasBlockchainIdentity || _isBlockchainSynced.value != true) {
+            return
+        }
+        val now = System.currentTimeMillis()
+        if (now - lastContactResumeRefreshMs < CONTACT_RESUME_REFRESH_THROTTLE_MS) {
+            return
+        }
+        lastContactResumeRefreshMs = now
+        forceUpdateNotificationCount()
     }
 
     suspend fun dismissUsernameCreatedCardIfDone(): Boolean {
@@ -602,8 +829,25 @@ class MainViewModel @Inject constructor(
         return platformRepo.loadProfileByUserId(profileId)
     }
 
-    suspend fun getRequestedUsername(): String =
-        blockchainIdentityDataDao.get(BlockchainIdentityConfig.USERNAME) ?: ""
+    /**
+     * The requested username in the user's own DISPLAY form ("contested1"),
+     * never the DPNS-normalized label ("c0ntested1"). The identity restore
+     * path historically persisted the normalized label into the USERNAME
+     * pref (observed live on the More-screen tile), so when the stored
+     * value matches a known request's normalizedLabel, the request's
+     * display label wins — see [resolveRequestedUsernameDisplay].
+     */
+    suspend fun getRequestedUsername(): String {
+        val stored = blockchainIdentityDataDao.get(BlockchainIdentityConfig.USERNAME) ?: ""
+        if (stored.isEmpty()) return stored
+        val identityId = blockchainIdentityDataDao.get(BlockchainIdentityConfig.IDENTITY_ID)
+        val candidates = try {
+            usernameRequestDao.getRequestsByNormalizedLabel(stored)
+        } catch (e: Exception) {
+            emptyList()
+        }
+        return resolveRequestedUsernameDisplay(stored, identityId, candidates)
+    }
     suspend fun getInviteHistory() = invitationsDao.loadAll()
 
     private fun combineLatestData(): Boolean {
@@ -710,10 +954,141 @@ class MainViewModel @Inject constructor(
         swapProvider.setBackend(backend)
     }
 
+    /**
+     * Re-evaluate the mixed-funds prompt after the lock screen is dismissed:
+     * if it engaged while the sheet was up (dismissing it) and no choice has
+     * been recorded yet, `shouldPrompt()` is still true and the prompt is
+     * re-fired. If a migration DID broadcast but its result is not visible
+     * yet (the persisted in-flight marker), the sheet is re-fired too — it
+     * opens straight in its processing presentation, so the confirmation
+     * window is never an unexplained near-zero balance. Once the result
+     * lands (marker cleared) this is a no-op.
+     */
+    fun recheckMixedFundsMigrationPrompt() {
+        if (mixedFundsPromptSuppressed) return
+        viewModelScope.launch {
+            try {
+                // The in-flight marker re-shows the PROCESSING presentation
+                // (a broadcast migration whose result is not visible yet) —
+                // but not "could not confirm" guidance the user already
+                // closed, which would otherwise return on every resume;
+                // shouldPrompt() covers the pre-decision forced choice.
+                if (coinJoinFundsMigrationService.shouldPresentPrompt()) {
+                    mixedFundsPromptShownThisSession = true
+                    showMixedFundsMigration.postCall()
+                }
+            } catch (e: Exception) {
+                log.error("mixed-funds migration prompt recheck error", e)
+            }
+        }
+    }
+
     companion object {
         private const val DIRECTION_KEY = "tx_direction"
         private const val TIME_SKEW_TOLERANCE = 3600000L // 1 hour
+        /** Retry cadence for the self-healing Platform-availability poll (see init). */
+        private const val PLATFORM_AVAILABILITY_RETRY_MS = 30_000L
+
+        /**
+         * Throttle window for the on-resume contact-request refresh (see
+         * [refreshContactsOnResume]). The background [PlatformSyncService]
+         * ticker runs every 15s while its sync service is alive; matching that
+         * cadence here means returning to the app never fires a redundant
+         * network poll on top of a tick that just ran, while still refreshing
+         * promptly across the multi-minute gaps left when the blockchain
+         * service tears down and the ticker isn't re-armed.
+         */
+        private const val CONTACT_RESUME_REFRESH_THROTTLE_MS = 15_000L
 
         private val log = LoggerFactory.getLogger(MainViewModel::class.java)
     }
+}
+
+/**
+ * The shielded part of the home header as a flow — host-testable: zero while
+ * [enabledFlag] reads false, otherwise [homeShieldedBalance] over the live
+ * sources; null while the amount is unknown.
+ *
+ * Fail closed: an error anywhere — the flag read included — emits null (the
+ * header marks the shielded amount pending instead of ending the whole
+ * home-balance flow on a stale total) and re-subscribes the whole branch
+ * after [retryDelayMs], so it recovers once the reads do.
+ */
+@OptIn(ExperimentalCoroutinesApi::class)
+internal fun homeShieldedBalanceFlow(
+    enabledFlag: Flow<Boolean>,
+    live: () -> Flow<Dash>,
+    status: () -> Flow<ShieldedSyncStatus>,
+    maybeStale: () -> Flow<Boolean>,
+    onError: (Throwable, Long) -> Unit,
+    retryDelayMs: (Long) -> Long = ::shieldedReadRetryDelayMs
+): Flow<Dash?> = enabledFlag
+    .distinctUntilChanged()
+    .flatMapLatest { enabled ->
+        if (!enabled) {
+            flowOf(Dash.ZERO)
+        } else {
+            combine(live(), status(), maybeStale()) { balance, syncStatus, stale ->
+                homeShieldedBalance(syncStatus, balance, stale)
+            }
+        }
+    }
+    .retryWhen { e, attempt ->
+        onError(e, attempt)
+        emit(null)
+        delay(retryDelayMs(attempt))
+        true
+    }
+    .distinctUntilChanged()
+
+/**
+ * The shielded amount the home header adds to the L1 total — pure and
+ * host-testable. `observeShieldedBalance()` reads `Dash.ZERO` until the
+ * runtime is READY and during a re-scan, so only a READY balance is used;
+ * otherwise the amount is unknown (null) and the header shows it as pending.
+ * The persisted last-known balance is deliberately NOT used here: it is one
+ * install-wide value that can't be proven to belong to the loaded wallet.
+ *
+ * After a local shielded spend ([balanceMaybeStale]) the amount is unknown
+ * until the service clears the flag (the note balance has settled) — even
+ * while READY: once the first pass completes the status stays READY through
+ * later sync passes, so READY alone does not mean the spend has settled.
+ *
+ * Platform identity is deliberately NOT consulted: with the shielded flag
+ * on, `SdkWalletBinder` binds identity-free wallets too (fund → shield →
+ * create identity), so a wallet without an identity can hold shielded
+ * funds. Ownership comes from the bound runtime itself — the service tears
+ * its READY state down when it stops.
+ */
+internal fun homeShieldedBalance(
+    status: ShieldedSyncStatus,
+    live: Dash,
+    balanceMaybeStale: Boolean
+): Dash? = when {
+    balanceMaybeStale -> null
+    status == ShieldedSyncStatus.READY -> live
+    else -> null
+}
+
+/**
+ * Pick the DISPLAY form of the requested username, pure and host-testable.
+ *
+ * [stored] is whatever the USERNAME pref holds — the display form the user
+ * typed ("contested1") on the direct creation path, but the DPNS-normalized
+ * label ("c0ntested1", homoglyphs folded o→0/l→1) when the identity restore
+ * path persisted `blockchainIdentity.primaryUsername` from the contested-
+ * names index. [candidates] are the locally known username requests whose
+ * normalizedLabel equals [stored]; the one belonging to [identityId] (any,
+ * when the identity is unknown) carries the display label the contender
+ * document was created with. Falls back to [stored] when no request
+ * matches — never worse than the old behavior.
+ */
+internal fun resolveRequestedUsernameDisplay(
+    stored: String,
+    identityId: String?,
+    candidates: List<UsernameRequest>
+): String {
+    val match = candidates.firstOrNull { identityId == null || it.identity == identityId }
+        ?: return stored
+    return match.username.ifEmpty { stored }
 }

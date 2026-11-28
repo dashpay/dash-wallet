@@ -18,9 +18,9 @@ package org.dash.wallet.integrations.maya.payments.parsers
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.bitcoinj.core.AddressFormatException
 import org.dash.wallet.common.R
 import org.dash.wallet.common.data.PaymentIntent
+import org.dash.wallet.common.payments.parsers.AddressFormatException
 import org.dash.wallet.common.payments.parsers.PaymentIntentParserException
 import org.dash.wallet.common.util.ResourceString
 import org.slf4j.LoggerFactory
@@ -33,7 +33,7 @@ open class CardanoPaymentIntentParser(
     currency: String = "ADA",
     asset: String = "ADA.ADA",
     shortAsset: String? = null
-) : MayaPaymentIntentParser(currency, "cardano", asset, shortAsset, null) {
+) : MayaPaymentIntentParser(currency, "cardano", asset, shortAsset) {
     private val log = LoggerFactory.getLogger(CardanoPaymentIntentParser::class.java)
     private val addressParser = CardanoAddressParser()
 

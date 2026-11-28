@@ -19,7 +19,7 @@ package de.schildbach.wallet.database.entity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import org.bitcoinj.core.Sha256Hash
+import org.dash.wallet.common.data.TxId
 import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.common.data.entity.TransactionMetadata
@@ -27,7 +27,7 @@ import org.dash.wallet.common.data.entity.TransactionMetadata
 @Entity(tableName = "transaction_metadata_cache")
 data class TransactionMetadataCacheItem(
     var cacheTimestamp: Long, // time added to the table
-    var txId: Sha256Hash,
+    var txId: TxId,
     var sentTimestamp: Long? = null,
     var taxCategory: TaxCategory? = null,
     var currencyCode: String? = null,

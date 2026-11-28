@@ -20,7 +20,7 @@ package de.schildbach.wallet.database.dao
 import androidx.room.Dao
 import androidx.room.Query
 import androidx.room.Transaction
-import org.bitcoinj.core.Sha256Hash
+import org.dash.wallet.common.data.TxId
 
 /**
  * Erases every local record of a single transaction. The deletes span three tables, so they live
@@ -33,17 +33,17 @@ import org.bitcoinj.core.Sha256Hash
 @Dao
 interface TransactionRecordsDao {
     @Query("SELECT COUNT(*) FROM gift_cards WHERE txId = :txId")
-    suspend fun countGiftCards(txId: Sha256Hash): Int
+    suspend fun countGiftCards(txId: TxId): Int
 
     @Query("DELETE FROM gift_cards WHERE txId = :txId")
-    suspend fun removeGiftCards(txId: Sha256Hash)
+    suspend fun removeGiftCards(txId: TxId)
 
     /** Queued Dash Platform changes; dropping these stops the metadata being published. */
     @Query("DELETE FROM transaction_metadata_cache WHERE txId = :txId")
-    suspend fun removeQueuedMetadataChanges(txId: Sha256Hash)
+    suspend fun removeQueuedMetadataChanges(txId: TxId)
 
     @Query("DELETE FROM transaction_metadata WHERE txid = :txId")
-    suspend fun removeMetadata(txId: Sha256Hash)
+    suspend fun removeMetadata(txId: TxId)
 
     /**
      * Drops the gift cards, the queued platform changes and the metadata together.
@@ -52,7 +52,7 @@ interface TransactionRecordsDao {
      * @return how many gift cards were removed
      */
     @Transaction
-    suspend fun forgetTransaction(txId: Sha256Hash): Int {
+    suspend fun forgetTransaction(txId: TxId): Int {
         val cards = countGiftCards(txId)
         removeGiftCards(txId)
         removeQueuedMetadataChanges(txId)

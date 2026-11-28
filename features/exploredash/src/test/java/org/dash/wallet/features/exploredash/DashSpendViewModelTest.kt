@@ -25,11 +25,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
-import org.bitcoinj.core.Coin
-import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.TxId
 import org.dash.wallet.common.data.entity.GiftCard
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.money.TxIds
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.NetworkStateInt
@@ -138,7 +139,7 @@ class DashSpendViewModelTest {
         }
 
         return DashSpendViewModel(
-            mock<WalletDataProvider> { on { observeSpendableBalance() } doReturn flowOf(Coin.ZERO) },
+            mock<WalletDataProvider> { on { observeTotalBalance() } doReturn flowOf(Dash.ZERO) },
             mock<ExchangeRatesProvider> { on { observeExchangeRate(any()) } doReturn emptyFlow() },
             mock<Configuration>(),
             mock<SendPaymentService>(),
@@ -151,7 +152,10 @@ class DashSpendViewModelTest {
             SavedStateHandle(),
             mock<MerchantDao>(),
             mock<CTXSpendConfig>(),
-            mock<BlockchainStateProvider> { on { observeState() } doReturn emptyFlow() },
+            mock<BlockchainStateProvider> {
+                on { observeState() } doReturn emptyFlow()
+                on { observeFirstSyncDone() } doReturn emptyFlow()
+            },
             // nothing outstanding: these tests are about merchant details, and the view model
             // refuses to start a purchase until this says so explicitly
             mock<UnresolvedPaymentsProvider> {
@@ -223,7 +227,7 @@ class DashSpendViewModelTest {
     @Test
     fun ctxCheckout_keepsTheChallengeForTheReopenedCard() {
         runBlocking {
-            val txId = Sha256Hash.ZERO_HASH
+            val txId = TxIds.ZERO_HASH_HEX
             val link = "https://spend.ctx.com/gift-cards/order-1/redeem"
             val api = mock<CTXSpendApi> {
                 onBlocking { purchaseGiftCard(any()) } doReturn GiftCardResponse(
@@ -243,9 +247,9 @@ class DashSpendViewModelTest {
             val saved = argumentCaptor<List<GiftCard>>()
             verify(giftCardDao).insertGiftCards(saved.capture())
             assertEquals(1, saved.firstValue.size)
-            whenever(giftCardDao.observeCardForTransaction(txId)).thenReturn(flowOf(saved.firstValue))
+            whenever(giftCardDao.observeCardForTransaction(TxIds.toBytes(txId))).thenReturn(flowOf(saved.firstValue))
             val metadataProvider = mock<TransactionMetadataProvider> {
-                on { observeTransactionMetadata(txId) } doReturn emptyFlow()
+                on { observeTransactionMetadata(TxId.wrap(txId)) } doReturn emptyFlow()
             }
             val reopened = GiftCardDetailsViewModel(
                 mock(),

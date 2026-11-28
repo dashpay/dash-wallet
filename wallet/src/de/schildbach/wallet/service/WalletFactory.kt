@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.util.Crypto
+import de.schildbach.wallet.util.FriendKeyChainLookahead
 import de.schildbach.wallet.util.Iso8601Format
 import org.bitcoinj.core.AddressFormatException
 import org.bitcoinj.core.DumpedPrivateKey
@@ -40,7 +41,6 @@ import org.bitcoinj.wallet.WalletEx
 import org.bitcoinj.wallet.WalletExtension
 import org.bitcoinj.wallet.WalletProtobufSerializer
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
-import org.dash.wallet.common.data.BlockchainServiceConfig
 import org.dash.wallet.common.util.Io
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -59,7 +59,12 @@ import javax.inject.Inject
 interface WalletFactory {
     // Onboarding
     fun create(params: NetworkParameters, seedWordCount: Int): Wallet
-    suspend fun restoreFromSeed(params: NetworkParameters, recoveryPhrase: List<String>, creationTimeSeconds: Long? = null): Wallet
+    /**
+     * Side-effect free, like the other onboarding factories: the wallet is
+     * not accepted until `WalletApplication.setWallet` says so, so the caller
+     * persists the user's chosen creation date only after that.
+     */
+    suspend fun restoreFromSeed(params: NetworkParameters, recoveryPhrase: List<String>): Wallet
     @Throws(IOException::class)
     fun restoreFromFile(params: NetworkParameters, backupUri: Uri, password: String): Pair<Wallet, Boolean>
 
@@ -70,8 +75,7 @@ interface WalletFactory {
 }
 
 class DashWalletFactory @Inject constructor(
-    private val walletApplication: WalletApplication,
-    private val blockchainServiceConfig: BlockchainServiceConfig
+    private val walletApplication: WalletApplication
 ) : WalletFactory {
 
     companion object {
@@ -120,8 +124,8 @@ class DashWalletFactory @Inject constructor(
         return wallet
     }
 
-    override suspend fun restoreFromSeed(params: NetworkParameters, recoveryPhrase: List<String>, creationTimeSeconds: Long?): Wallet {
-        return restoreWalletFromSeed(recoveryPhrase, params, creationTimeSeconds)
+    override suspend fun restoreFromSeed(params: NetworkParameters, recoveryPhrase: List<String>): Wallet {
+        return restoreWalletFromSeed(recoveryPhrase, params)
     }
 
     @Throws(IOException::class)
@@ -153,7 +157,16 @@ class DashWalletFactory @Inject constructor(
         var walletStream: FileInputStream? = null
         try {
             walletStream = FileInputStream(walletFile)
-            val wallet = WalletProtobufSerializer().readWallet(walletStream, false, getExtensions(params))
+            // Same deferral as WalletApplication.loadWalletFromProtobuf: the
+            // DashPay friend-chain lookahead is minutes of EC derivation on a
+            // wallet with many contacts and must not run inside the parse.
+            // See FriendKeyChainLookahead for why the watched-key set is unchanged.
+            FriendKeyChainLookahead.reset()
+            FriendKeyChainLookahead.useStore(walletFile)
+            val serializer = WalletProtobufSerializer()
+            serializer.setKeyChainFactory(FriendKeyChainLookahead.deferringFactory())
+            val wallet = serializer.readWallet(walletStream, false, getExtensions(params))
+            FriendKeyChainLookahead.completeAsync()
 
             if (wallet.params != params) {
                 throw UnreadableWalletException(
@@ -183,6 +196,8 @@ class DashWalletFactory @Inject constructor(
             // does this work on encrypted backups?
             wallet.addKeyChain(Constants.BIP44_PATH)
             wallet as WalletEx
+            // mixing was removed from the app, but the CoinJoin keychain is still provisioned
+            // so that funds mixed by older versions (or other wallets sharing this seed) stay visible
             wallet.initializeCoinJoin(0)
             return wallet
         } finally {
@@ -272,10 +287,9 @@ class DashWalletFactory @Inject constructor(
         }
     }
 
-    private suspend fun restoreWalletFromSeed(
+    private fun restoreWalletFromSeed(
         words: List<String>,
-        params: NetworkParameters,
-        creationTimeSeconds: Long? = null
+        params: NetworkParameters
     ): Wallet {
         return try {
             // The wallet creation time should always be the oldest possible time
@@ -295,10 +309,6 @@ class DashWalletFactory @Inject constructor(
             addMissingExtensions(wallet)
 
             checkWalletValid(wallet, params)
-            // set the creation date here
-            creationTimeSeconds?.let {
-                blockchainServiceConfig.setWalletCreationDate(it)
-            }
             wallet
         } finally {
         }

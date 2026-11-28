@@ -26,13 +26,23 @@ import de.schildbach.wallet_test.databinding.DialogReceiveDetailsBinding
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.Fiat
-import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.money.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.toFormattedString
 import javax.inject.Inject
+import de.schildbach.wallet.util.format
+import de.schildbach.wallet.util.setAmount
+import de.schildbach.wallet.util.setFiatAmount
+import de.schildbach.wallet.util.toDashjFiat
+import de.schildbach.wallet.util.toDashjCoin
+import de.schildbach.wallet.util.toNeutralCoin
+import de.schildbach.wallet.util.toNeutralFiat
+import de.schildbach.wallet.util.toTxId
+import de.schildbach.wallet.util.toSha256Hash
+import de.schildbach.wallet.util.toFormattedString
 
 @AndroidEntryPoint
 class ReceiveDetailsDialog : OffsetDialogFragment(R.layout.dialog_receive_details) {
@@ -66,7 +76,7 @@ class ReceiveDetailsDialog : OffsetDialogFragment(R.layout.dialog_receive_detail
             val dashAmount = getSerializable(ARG_DASH_AMOUNT) as Coin
             val fiatAmount = getSerializable(ARG_FIAT_AMOUNT) as Fiat?
 
-            binding.receiveInfo.setInfo(address, dashAmount)
+            binding.receiveInfo.setInfo(address.toBase58(), dashAmount?.let { org.dash.wallet.common.money.Dash(it.value) })
             binding.amount.inputValue.text = MonetaryFormat.BTC
                 .repeatOptionalDecimals(1, Configuration.PREFS_DEFAULT_BTC_PRECISION)
                 .minDecimals(0).noCode().format(dashAmount)

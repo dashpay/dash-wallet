@@ -13,7 +13,7 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(application = Application::class, sdk = [28])
+@Config(application = Application::class, sdk = [29])
 class ConnectLinkManifestTest {
     @Test fun `exported Connect entry point ignores caller supplied keep unlocked`() {
         val context = RuntimeEnvironment.getApplication()
@@ -35,7 +35,8 @@ class ConnectLinkManifestTest {
         val context = RuntimeEnvironment.getApplication()
         val caller = org.robolectric.Robolectric.buildActivity(android.app.Activity::class.java).create().get()
         val payment = org.dash.wallet.common.data.PaymentIntent.fromAddress(
-            "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL", null, org.bitcoinj.params.TestNet3Params.get())
+            "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL", null,
+            org.dash.wallet.common.payments.parsers.AddressNetwork.fromId(org.bitcoinj.params.TestNet3Params.get().id))
         de.schildbach.wallet.ui.send.SendCoinsActivity.start(caller, "internal-send", payment, true, true)
         val launched = shadowOf(caller).nextStartedActivity
         assertEquals(de.schildbach.wallet.ui.send.InAppSendCoinsActivity::class.java.name, launched.component!!.className)

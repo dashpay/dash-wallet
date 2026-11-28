@@ -362,7 +362,7 @@ class RedeemLinkActivity : InteractionAwareActivity() {
         }
 
         val url = intent.getStringExtra(EXTRA_URL)
-        val ctxBaseUrl = CTXSpendConstants.baseUrl(walletData.networkParameters)
+        val ctxBaseUrl = CTXSpendConstants.baseUrl(walletData.networkId)
 
         if (url == null || !RedeemLinkPolicy.canOpenInApp(url, Build.VERSION.SDK_INT, ctxBaseUrl)) {
             finish()

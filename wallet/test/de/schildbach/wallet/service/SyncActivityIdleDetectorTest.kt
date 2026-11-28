@@ -1,0 +1,353 @@
+/*
+ * Copyright 2026 Dash Core Group.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package de.schildbach.wallet.service
+
+import de.schildbach.wallet.service.platform.sdk.ShadowSyncPhase
+import de.schildbach.wallet.service.platform.sdk.ShadowSyncProgress
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+/**
+ * Host-JVM tests for the foreground service's idle detector
+ * ([isSyncIdle]) and its SDK sample source ([sdkActivitySample]).
+ *
+ * The regression this pins: post-cutover the dashj peergroup is held, so
+ * every counter the detector used to read was permanently 0 and the
+ * service `stopSelf()`d roughly two minutes after EVERY start — in the
+ * middle of the SDK's initial scan.
+ */
+class SyncActivityIdleDetectorTest {
+
+    private fun progress(
+        headerHeight: Long = 1_500_000,
+        filterHeight: Long = 1_400_000,
+        mnListHeight: Long = 1_499_000
+    ) = ShadowSyncProgress(
+        phase = ShadowSyncPhase.FILTERS,
+        overallPercent = 50.0,
+        headerHeight = headerHeight,
+        headerTarget = 1_514_660,
+        filterHeight = filterHeight,
+        filterTarget = 1_514_660,
+        mnListHeight = mnListHeight
+    )
+
+    private val quiet = SyncActivitySample(0, 0, 0, 0)
+
+    // ── The idle RULE (unchanged semantics, now testable) ─────────────
+
+    @Test
+    fun idle_neverBeforeTheMinimumHistory() {
+        assertFalse(isSyncIdle(emptyList()))
+        assertFalse(isSyncIdle(listOf(quiet)))
+        assertTrue(isSyncIdle(List(MIN_COLLECT_HISTORY) { quiet }))
+    }
+
+    @Test
+    fun idle_anyCounterInsideItsWindowKeepsTheServiceAlive() {
+        val withBlocks = listOf(SyncActivitySample(0, 1, 0, 0), quiet, quiet)
+        assertFalse("a recent block download is activity", isSyncIdle(withBlocks))
+
+        val withHeaders = listOf(quiet, SyncActivitySample(0, 0, 5, 0), quiet)
+        assertFalse("a recent header batch is activity", isSyncIdle(withHeaders))
+
+        val withMnList = listOf(quiet, quiet, SyncActivitySample(0, 0, 0, 1))
+        assertFalse("a recent mnlistdiff is activity", isSyncIdle(withMnList))
+    }
+
+    @Test
+    fun idle_transactionsHaveTheLongestWindow() {
+        // A transaction at index 8 is still inside IDLE_TRANSACTION_TIMEOUT_MIN (9)…
+        val recentTx = List(8) { quiet } + SyncActivitySample(1, 0, 0, 0)
+        assertFalse(isSyncIdle(recentTx))
+        // …while a BLOCK that far back is outside IDLE_BLOCK_TIMEOUT_MIN (2).
+        val staleBlock = List(8) { quiet } + SyncActivitySample(0, 1, 0, 0)
+        assertTrue(isSyncIdle(staleBlock))
+    }
+
+    // ── The SDK sample source (the actual fix) ────────────────────────
+
+    @Test
+    fun sdkSample_firstTickHasNoReferenceSnapshot() {
+        assertEquals(
+            "no previous snapshot must read as all-zero, not as a height-vs-0 delta",
+            SyncActivitySample(0, 0, 0, 0),
+            sdkActivitySample(previous = null, current = progress(), txEventsSinceLastSample = 0)
+        )
+    }
+
+    @Test
+    fun sdkSample_aScanningEngineIsNOTIdle() {
+        // THE REGRESSION: this is what a mid-scan SDK engine looks like while
+        // the dashj counters — which used to be the only input — read 0/0/0/0.
+        val before = progress(headerHeight = 1_500_000, filterHeight = 1_400_000, mnListHeight = 1_499_000)
+        val after = progress(headerHeight = 1_500_020, filterHeight = 1_402_000, mnListHeight = 1_499_010)
+
+        val sample = sdkActivitySample(before, after, txEventsSinceLastSample = 2)
+        assertEquals(SyncActivitySample(2, 2_000, 20, 10), sample)
+        assertFalse(
+            "a scanning SDK engine must keep the foreground service alive",
+            isSyncIdle(listOf(sample, sample))
+        )
+
+        // …and this is what the OLD sample source reported for the very same
+        // instant, because every one of its counters came from the HELD dashj
+        // peergroup: two ticks of nothing, then stopSelf(). Same rule, wrong
+        // inputs — which is why the fix changed the SOURCE, not the rule.
+        val dashjCountersWithTheEngineHeld = listOf(quiet, quiet)
+        assertTrue(isSyncIdle(dashjCountersWithTheEngineHeld))
+    }
+
+    @Test
+    fun sdkSample_aGenuinelyIdleEngineStillStopsTheService() {
+        // The detector must not simply be disabled: nothing moving is still idle.
+        val stable = progress()
+        val sample = sdkActivitySample(stable, stable, txEventsSinceLastSample = 0)
+        assertEquals(SyncActivitySample(0, 0, 0, 0), sample)
+        assertTrue(isSyncIdle(List(MIN_COLLECT_HISTORY) { sample }))
+    }
+
+    // ── Phase 1b item 7: a replay is never idle ───────────────────────
+
+    @Test
+    fun idleCounters_doNotStopTheService_whileReplaying() {
+        // The reference install's SDK replay: minutes of matched-block
+        // processing with the filter position frozen. Idle by the counters,
+        // but the service must stay up until the scan reaches the tip.
+        val stable = progress()
+        val sample = sdkActivitySample(stable, stable, txEventsSinceLastSample = 0)
+        val history = List(MIN_COLLECT_HISTORY + 3) { sample }
+        assertTrue("the counters themselves read idle", isSyncIdle(history))
+        assertFalse("…but a replay keeps the service alive", shouldStopForIdle(history, replaying = true, appOpen = false))
+        assertTrue("…and once the replay is over the same history stops it", shouldStopForIdle(history, replaying = false, appOpen = false))
+    }
+
+    @Test
+    fun idleCounters_doNotStopTheService_whileTheAppIsOpen() {
+        // 12.0.1-beta field log: three quiet samples taken in the background,
+        // then the user opened and unlocked the app and the next tick stopped
+        // the service — and with it the engine behind the balance.
+        val stable = progress()
+        val sample = sdkActivitySample(stable, stable, txEventsSinceLastSample = 0)
+        val history = List(MIN_COLLECT_HISTORY + 1) { sample }
+        assertTrue("the counters themselves read idle", isSyncIdle(history))
+        assertFalse(
+            "the app on screen keeps the service alive",
+            shouldStopForIdle(history, replaying = false, appOpen = true)
+        )
+        assertTrue(
+            "in the background the same history still stops it",
+            shouldStopForIdle(history, replaying = false, appOpen = false)
+        )
+    }
+
+    @Test
+    fun activeCounters_neverStop_regardlessOfTheReplayFlag() {
+        val before = progress(headerHeight = 1_500_000, filterHeight = 1_400_000, mnListHeight = 1_499_000)
+        val after = progress(headerHeight = 1_500_020, filterHeight = 1_402_000, mnListHeight = 1_499_010)
+        val sample = sdkActivitySample(before, after, txEventsSinceLastSample = 0)
+        assertFalse(shouldStopForIdle(listOf(sample, sample), replaying = false, appOpen = false))
+        assertFalse(shouldStopForIdle(listOf(sample, sample), replaying = true, appOpen = false))
+    }
+
+    // ── The missing-blockstore wallet.reset() guard ───────────────────
+
+    @Test
+    fun walletReset_allowedPreCutover_soDashjCanResyncAsBefore() {
+        assertTrue(
+            "pre-cutover the peergroup DOES re-download — behaviour must be unchanged",
+            mayResetDashjWalletForMissingBlockstore(sdkOwnsL1 = false, dashjTransactionCount = 42)
+        )
+    }
+
+    @Test
+    fun walletReset_refusedPostCutover_whenItWouldDestroyHistory() {
+        // FIX-pin: post-cutover the peergroup is held, so the reset buys no
+        // re-download — it just empties the wallet the home-screen history is
+        // rebuilt from, and its reset listener deletes both display caches.
+        assertFalse(
+            mayResetDashjWalletForMissingBlockstore(sdkOwnsL1 = true, dashjTransactionCount = 42)
+        )
+    }
+
+    @Test
+    fun walletReset_stillAllowedPostCutover_whenThereIsNothingToLose() {
+        // A wallet with no transactions (fresh install) loses nothing, so it
+        // keeps the original path rather than adding a second behaviour.
+        assertTrue(
+            mayResetDashjWalletForMissingBlockstore(sdkOwnsL1 = true, dashjTransactionCount = 0)
+        )
+    }
+
+    @Test
+    fun sdkSample_clampsBackwardsHeightsToZero() {
+        // A re-scan walks the filter height backwards; a negative "download
+        // count" would be meaningless (and, being > 0 in neither direction,
+        // must simply read as no progress).
+        val before = progress(filterHeight = 1_400_000)
+        val after = progress(filterHeight = 1_000_000)
+        assertEquals(0, sdkActivitySample(before, after, 0).blocksDownloaded)
+        assertEquals(0, sdkActivitySample(before, after, -5).transactionsReceived)
+    }
+
+    @Test
+    fun engineStart_holdsTheServiceOnlyWhileInFlightAndUnderTheCap() {
+        val began = 1_000_000L
+        assertFalse("no start in flight", engineStartHoldsService(0L, began + 60_000))
+        // The field shape: idle-stopped two minutes into a start that took 14.
+        assertTrue("two minutes in", engineStartHoldsService(began, began + 2 * 60_000))
+        assertTrue("just under the cap", engineStartHoldsService(began, began + ENGINE_START_KEEPALIVE_MS - 1))
+        assertFalse("a hung start stops holding at the cap", engineStartHoldsService(began, began + ENGINE_START_KEEPALIVE_MS))
+        assertFalse("custom cap", engineStartHoldsService(began, began + 5_000, capMs = 5_000))
+    }
+
+    @Test
+    fun replayWakeLock_heldOnlyWhileTheReplayCanProgress() {
+        assertTrue(replayHoldsWakeLock(replaying = true, networkImpeded = false, filterScanWedged = false))
+        assertFalse("no replay", replayHoldsWakeLock(replaying = false, networkImpeded = false, filterScanWedged = false))
+        // Offline: the engine waits for connections, as dashj did with its peergroup stopped.
+        assertFalse("offline", replayHoldsWakeLock(replaying = true, networkImpeded = true, filterScanWedged = false))
+        // The filter-stall watchdog has spent its restarts on a wedge.
+        assertFalse("wedged", replayHoldsWakeLock(replaying = true, networkImpeded = false, filterScanWedged = true))
+    }
+
+    @Test
+    fun durableLag_holdsWhileBehindAndAdvancing() {
+        // The field numbers at the 22:23 stop.
+        assertTrue(durableLagHoldsService(2_421_000, 2_547_694, msSinceDurableAdvanced = 60_000))
+        assertFalse("a persister that stopped no longer holds",
+            durableLagHoldsService(2_421_000, 2_547_694, msSinceDurableAdvanced = DURABLE_LAG_STALL_MS))
+        assertFalse("within the 5,000-block persist steps is normal",
+            durableLagHoldsService(2_540_000, 2_547_694, msSinceDurableAdvanced = 0))
+        assertFalse("caught up", durableLagHoldsService(2_547_694, 2_547_694, msSinceDurableAdvanced = 0))
+        assertFalse("unknown durable", durableLagHoldsService(0, 2_547_694, msSinceDurableAdvanced = 0))
+        assertFalse("unknown committed", durableLagHoldsService(2_421_000, 0, msSinceDurableAdvanced = 0))
+    }
+
+    @Test
+    fun durableHeightTracker_measuresSinceTheLastChange() {
+        val tracker = DurableHeightTracker()
+        assertEquals("first sighting counts as movement", 0L, tracker.observe(2_400_000, 1_000))
+        assertEquals(60_000L, tracker.observe(2_400_000, 61_000))
+        assertEquals(0L, tracker.observe(2_410_000, 90_000))
+        assertEquals(0L, tracker.observe(2_000_000, 95_000)) // a rescan rewind is a change too
+        assertEquals(5_000L, tracker.observe(2_000_000, 100_000))
+    }
+
+    @Test
+    fun foregroundDemotion_waitsForTheHoldAndRunsWhenItEnds() {
+        var hold = false
+        val gate = ForegroundDemotionGate { hold }
+        assertTrue("no hold (pre-cutover): demote as before", gate.mayDemote())
+        assertFalse("nothing pending", gate.onHold(false))
+
+        // The field shape: the scan goes SYNCED while the SDK is still saving it.
+        hold = true
+        assertFalse(gate.onHold(true))
+        assertFalse("synced, but the durable-lag hold is active", gate.mayDemote())
+        assertFalse("hold still active: nothing to re-run", gate.onHold(true))
+        hold = false
+        assertTrue("hold ended with a demotion pending: re-run it", gate.onHold(false))
+        assertFalse("re-run once only", gate.onHold(false))
+        assertTrue(gate.mayDemote())
+    }
+
+    @Test
+    fun foregroundDemotion_beforeTheFirstTick_followsTheLiveHold() {
+        // The SDK path skips its first tick, so a synced state can arrive
+        // before the tick has reported anything while a start is in flight.
+        var hold = true
+        val gate = ForegroundDemotionGate { hold }
+        assertFalse("refused under the live hold, with no tick yet", gate.mayDemote())
+        hold = false
+        assertTrue("the first tick to see the hold over re-runs it", gate.onHold(false))
+        assertTrue(gate.mayDemote())
+    }
+
+    @Test
+    fun foregroundDemotion_holdBeginningBetweenTicks_isRefused() {
+        var hold = false
+        val gate = ForegroundDemotionGate { hold }
+        assertFalse(gate.onHold(false)) // the last tick saw no hold
+        hold = true // the durable lag crosses the margin before the next tick
+        assertFalse(gate.mayDemote())
+        assertFalse("still held at the next tick", gate.onHold(true))
+        hold = false
+        assertTrue(gate.onHold(false))
+    }
+
+    @Test
+    fun durableHeightTracker_readOnlyAccessor_isFreshForUnseenHeightsAndAgesOtherwise() {
+        val tracker = DurableHeightTracker()
+        assertEquals("never observed: a lag seen before the first tick holds", 0L, tracker.msSinceChange(2_400_000, 1_000))
+        assertEquals("the read recorded nothing", 0L, tracker.observe(2_400_000, 5_000))
+        assertEquals("ages while the tick keeps seeing it", 60_000L, tracker.msSinceChange(2_400_000, 65_000))
+        assertEquals("a height the tick has not seen yet is movement", 0L, tracker.msSinceChange(2_410_000, 65_000))
+
+        // A stalled persister: the tick keeps observing the same height, and the
+        // read-only view ages past the stall limit, so the lag stops holding.
+        tracker.observe(2_400_000, 5_000 + DURABLE_LAG_STALL_MS)
+        val age = tracker.msSinceChange(2_400_000, 5_000 + DURABLE_LAG_STALL_MS)
+        assertEquals(DURABLE_LAG_STALL_MS, age)
+        assertFalse(durableLagHoldsService(2_400_000, 2_547_694, age))
+    }
+
+    @Test
+    fun engineStartPending_holdsOnlyBeforeTheStartWithinTheGrace() {
+        val created = 1_000_000L
+        val at = created + 28_000 // the field gap between onCreate and the start
+        assertTrue(engineStartPendingHoldsService(created, at, engineRunning = false, bindBlocked = false))
+        assertFalse("engine already running", engineStartPendingHoldsService(created, at, engineRunning = true, bindBlocked = false))
+        assertFalse("a blocked bind must still idle out", engineStartPendingHoldsService(created, at, engineRunning = false, bindBlocked = true))
+        assertTrue(
+            "just under the grace",
+            engineStartPendingHoldsService(created, created + ENGINE_START_PENDING_GRACE_MS - 1, engineRunning = false, bindBlocked = false)
+        )
+        assertFalse(
+            "a start that never comes stops holding at the grace",
+            engineStartPendingHoldsService(created, created + ENGINE_START_PENDING_GRACE_MS, engineRunning = false, bindBlocked = false)
+        )
+        assertFalse("creation time unknown", engineStartPendingHoldsService(0L, at, engineRunning = false, bindBlocked = false))
+    }
+
+    @Test
+    fun foregroundDemotion_cachedSyncedStateBeforeTheStartMarker_isRefused() {
+        // The observer replays the stored synced state before the kicked start
+        // has set its marker: only the pending-start part of the hold sees it.
+        val created = 1_000_000L
+        var now = created + 5_000
+        var startingSinceMs = 0L
+        var engineRunning = false
+        val gate = ForegroundDemotionGate {
+            engineStartPendingHoldsService(created, now, engineRunning, bindBlocked = false) ||
+                engineStartHoldsService(startingSinceMs, now)
+        }
+        assertFalse("synced state at startup, start marker still 0", gate.mayDemote())
+
+        now = created + 28_000
+        startingSinceMs = now // the start begins
+        assertFalse(gate.onHold(true))
+        now += 60_000
+        engineRunning = true // the start returns and clears its marker
+        startingSinceMs = 0L
+        assertTrue("the hold has ended with a demotion pending: re-run it", gate.onHold(false))
+        assertTrue(gate.mayDemote())
+    }
+}

@@ -33,7 +33,7 @@ import org.bitcoinj.params.DevNetParams;
 import org.bitcoinj.params.MainNetParams;
 import de.schildbach.wallet.network.SakuraDevNetParams;
 import org.bitcoinj.params.TestNet3Params;
-import org.bitcoinj.utils.MonetaryFormat;
+import org.dash.wallet.common.money.MonetaryFormat;
 import org.bitcoinj.wallet.DeterministicKeyChain;
 
 import java.io.File;
@@ -49,6 +49,9 @@ public final class Constants {
 
     /** Network this wallet is on (e.g. testnet or mainnet). */
     public static final NetworkParameters NETWORK_PARAMETERS;
+
+    /** Neutral network descriptor matching {@link #NETWORK_PARAMETERS}, for the dashj-free common APIs. */
+    public static final org.dash.wallet.common.payments.parsers.AddressNetwork ADDRESS_NETWORK;
 
     private static String FILENAME_NETWORK_SUFFIX;
     private static String FEE_NETWORK_SUFFIX;
@@ -126,7 +129,10 @@ public final class Constants {
                 if (SUPPORTS_PLATFORM) {
                     SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING);
                 }
-                org.dash.wallet.common.util.Constants.FAUCET_URL = "http://faucet.testnet.networks.dash.org/";
+                // Same faucet the iOS example app uses (it replaced
+                // faucet.testnet.networks.dash.org, which no longer accepts
+                // connections and whose captcha challenge fails).
+                org.dash.wallet.common.util.Constants.FAUCET_URL = "https://faucet.thepasta.org/";
                 org.dash.wallet.common.util.Constants.INSTANCE.setEXPLORE_GC_FILE_PATH("explore/explore-v4-testnet.db");
                 break;
             }
@@ -155,7 +161,9 @@ public final class Constants {
                 throw new IllegalStateException("Unsupported flavor " + BuildConfig.FLAVOR);
             }
         }
-        org.dash.wallet.common.util.Constants.INSTANCE.setMAX_MONEY(NETWORK_PARAMETERS.getMaxMoney());
+        ADDRESS_NETWORK = org.dash.wallet.common.payments.parsers.AddressNetwork.fromId(NETWORK_PARAMETERS.getId());
+        org.dash.wallet.common.util.Constants.INSTANCE.setMAX_MONEY(
+                org.dash.wallet.common.money.Coin.valueOf(NETWORK_PARAMETERS.getMaxMoney().getValue()));
         org.dash.wallet.common.util.Constants.INSTANCE.setBUILD_FLAVOR(BuildConfig.FLAVOR);
     }
 
@@ -167,7 +175,10 @@ public final class Constants {
         /** Filename of the wallet. */
         public static final String WALLET_FILENAME_PROTOBUF = "wallet-protobuf" + FILENAME_NETWORK_SUFFIX;
 
-        /** How often the wallet is autosaved. */
+        /**
+         * The default wallet autosave debounce. Large wallet files use a longer
+         * one — see {@code WalletFileSizeGuard.autosaveDelayMs}.
+         */
         public static final long WALLET_AUTOSAVE_DELAY_MS = 5 * DateUtils.SECOND_IN_MILLIS;
 
         /** Filename of the automatic key backup (old format, can only be read). */
@@ -285,6 +296,13 @@ public final class Constants {
     public static String NOTIFICATION_CHANNEL_ID_ONGOING = "dash.notifications.ongoing";
     public static String NOTIFICATION_CHANNEL_ID_GENERIC = "dash.notifications.generic";
     public static String NOTIFICATION_CHANNEL_ID_DASHPAY = "dash.notifications.dashpay";
+    /**
+     * Incoming contact requests. Deliberately a channel of its own rather than
+     * {@link #NOTIFICATION_CHANNEL_ID_DASHPAY}: that one is IMPORTANCE_LOW (it carries the
+     * identity-creation progress notification, which must stay silent), and Android freezes a
+     * channel's importance at creation time, so an existing install could never be raised.
+     */
+    public static String NOTIFICATION_CHANNEL_ID_CONTACTS = "dash.notifications.contacts";
 
     public static int USERNAME_MIN_LENGTH = 3;
     public static int USERNAME_NON_CONTESTED_MIN_LENGTH = 20;
@@ -318,7 +336,52 @@ public final class Constants {
     //Backup Warnings (true = both seed and backup file, false = seed only)
     public static final boolean SUPPORT_BOTH_BACKUP_WARNINGS = false;
 
+    // 15,000,000,000 credits (Platform v4.2 reduced the contested-name
+    // prefunded voting balance from 0.2 to 0.1 DASH; see MO-1069)
+    public static final Coin DASH_PAY_FEE_CONTESTED = Coin.parseCoin("0.15");
+    public static final Coin DASH_PAY_FEE_CONTESTED_NAME = Coin.parseCoin("0.10");
     public static final Coin DASH_PAY_FEE = Coin.parseCoin("0.03");
+
+    // Pre-Platform-v4.2 contested-username fee (protocol < 14). Mainnet runs
+    // protocol 13 (Drive 4.1.x); testnet has activated 14. The transparent
+    // identity-create balance check / confirm sheet / top-up use this pair
+    // until a live protocol-version query confirms v4.2 is active on the
+    // wallet's network — see ContestedUsernameFees.kt.
+    public static final Coin DASH_PAY_FEE_CONTESTED_LEGACY = Coin.parseCoin("0.25");
+    public static final Coin DASH_PAY_FEE_CONTESTED_NAME_LEGACY = Coin.parseCoin("0.20");
+
+    // Fee margin one shielded operation costs ON TOP of its denomination /
+    // shielded amount. Derived from the consensus fee constants
+    // (rs-platform-version / rs-dpp compute_minimum_shielded_fee, current
+    // values):
+    //  - Shield entry (ShieldFromAssetLock): pool fee = min_shielded_fee(2
+    //    actions) 162,851,200 + asset-lock base cost 50,000,000
+    //    = 212,851,200 credits ~= 0.00213 DASH, deducted from the locked
+    //    amount;
+    //  - Type-16 shielded transfer (the invite mint):
+    //    100M + n_actions x 31,425,600 credits, i.e. ~0.00194 DASH at the
+    //    3-action minimum, +0.000314 per extra spent note.
+    // 0.003 covers either with headroom (a transfer of up to 6 actions).
+    // Replaces the 0.05 guess pad (2026-08-05). Kept in sync with the
+    // credits-space twin SHIELDED_INVITE_FEE_MARGIN_CREDITS
+    // (SdkShieldedInviteCreation.kt) by InviteFeeGateTest.
+    public static final Coin SHIELDED_FEE_MARGIN = Coin.parseCoin("0.003");
+
+    // How much the user should SHIELD (L1 -> pool) to afford a username via
+    // the shielded path. The pool must hold the whole exit denomination
+    // (0.03 non-contested / 0.25 contested under the v13 allowed set — see
+    // SHIELDED_IDENTITY_DENOMINATIONS_CREDITS). The non-contested denomination
+    // still equals DASH_PAY_FEE; the contested denomination (0.25) is now only
+    // the SMALLEST member covering DASH_PAY_FEE_CONTESTED (0.15 since MO-1069,
+    // down from 0.2/0.25) — no longer an exact match, pinned by
+    // InviteFeeGateTest. The Shield operation's own fee is deducted
+    // from the locked amount — so shielding the bare denomination lands
+    // just short. User-facing guidance is a ROUND number chosen above
+    // denomination + SHIELDED_FEE_MARGIN (product decision 2026-08-05):
+    // 0.035 / 0.26. Must never fall below the enforced gate
+    // (denomination + SHIELDED_FEE_MARGIN) — pinned by InviteFeeGateTest.
+    public static final Coin SHIELDED_USERNAME_FUND_MIN = Coin.parseCoin("0.035");
+    public static final Coin SHIELDED_USERNAME_FUND_MIN_CONTESTED = Coin.parseCoin("0.26");
 
     // 150,000,000
     public static final Coin DASH_PAY_INVITE_MIN = DASH_PAY_FEE.div(10);

@@ -19,8 +19,8 @@ package org.dash.wallet.common.util;
 
 import java.util.regex.Matcher;
 
-import org.bitcoinj.core.Monetary;
-import org.bitcoinj.utils.MonetaryFormat;
+import org.dash.wallet.common.money.Monetary;
+import org.dash.wallet.common.money.MonetaryFormat;
 import org.dash.wallet.common.ui.Formats;
 
 import android.graphics.Typeface;
