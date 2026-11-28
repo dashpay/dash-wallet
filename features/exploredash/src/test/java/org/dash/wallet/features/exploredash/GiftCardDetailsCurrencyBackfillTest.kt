@@ -237,6 +237,31 @@ class GiftCardDetailsCurrencyBackfillTest {
     }
 
     @Test
+    fun metadataArrivingWhileALookupRuns_getsOneMoreLookupWhenThatOneEndsUnresolved() {
+        val dao = open(legacyCard, accessToken = "token", failingLookups = 3)
+        assertEquals(1, orderLookups.get())
+
+        metadata.value = ctxMetadata.copy(timestamp = 2_000L)
+        assertEquals(1, orderLookups.get())
+        allAttemptsMade()
+
+        assertEquals(4, orderLookups.get())
+        verifyBlocking(dao) { backfillCurrency(txIdBytes(), eq("GBP")) }
+    }
+
+    @Test
+    fun cardChangingWhileALookupRuns_getsOneMoreLookupWhenThatOneEndsUnresolved() {
+        val emissions = MutableStateFlow(listOf(legacyCard))
+        val dao = open(emissions, legacyCard, accessToken = "token", failingLookups = 3)
+
+        emissions.value = listOf(legacyCard.copy(pin = "1"))
+        allAttemptsMade()
+
+        assertEquals(4, orderLookups.get())
+        verifyBlocking(dao) { backfillCurrency(txIdBytes(), eq("GBP")) }
+    }
+
+    @Test
     fun lookupThatKeepsFailing_stopsAfterThreeAttempts() {
         val dao = open(legacyCard, accessToken = "token", failingLookups = 10)
 
