@@ -579,15 +579,7 @@ class DashSpendViewModel @Inject constructor(
                     )
                 }
             )
-            val provider = giftCardProviderDao.getProviderByMerchantId(quotedMerchantId, quotedProvider.name)
-            refuseUnlessStillOffered(shown)
-            // PiggyCards can be bought from before its details were answered, as it always could
-            val sourceId = shown.sourceId
-                ?: provider?.sourceId.takeIf { quotedProvider == GiftCardProviderType.PiggyCards }
-            if (sourceId == null || provider?.sourceId != sourceId) {
-                log.error("purchaseGiftCard error: the provider's merchant is not the one that was quoted")
-                throw CTXSpendException(ResourceString(R.string.gift_card_order_changed))
-            }
+            val sourceId = quotedSourceId(shown, quotedMerchantId, quotedProvider)
             when (quotedProvider) {
                 GiftCardProviderType.CTX -> {
                     try {
@@ -599,14 +591,15 @@ class DashSpendViewModel @Inject constructor(
                         }
                         // before the order exists: without a usable rate none is left behind unpaid
                         confirmedPrice = shown to acceptedPrice(shown)
-                        refuseUnlessStillOffered(shown)
+                        // read again after the last wait: a catalog sync can repoint the row during it
+                        val orderedFrom = quotedSourceId(shown, quotedMerchantId, quotedProvider)
                         if (purchaseBlock != null) {
                             log.error("purchaseGiftCard error: the offer was withdrawn while the rate was looked up")
                             throw CTXSpendException(ResourceString(R.string.gift_card_order_changed))
                         }
                         val requestedAt = elapsedRealtime()
                         ctxSpendRepository.orderGiftcard(
-                            merchantId = sourceId,
+                            merchantId = orderedFrom,
                             fiatCurrency = currency,
                             order = giftCardOrderShoppingCart,
                             cryptoCurrency = Constants.DASH_CURRENCY
@@ -649,6 +642,26 @@ class DashSpendViewModel @Inject constructor(
                 }
             }.also { cards -> cards.firstOrNull()?.let { orderedCards = it.id to shownOrder.values.sum() } }
         } ?: throw CTXSpendException("purchaseGiftCard error: no merchant")
+    }
+
+    /**
+     * The provider's merchant to order from, as its row says now: the one [shown] was quoted for,
+     * or nothing is ordered. PiggyCards can be bought from before its details were answered, as
+     * it always could, and then from whichever merchant its row names.
+     */
+    private suspend fun quotedSourceId(
+        shown: GiftCardQuote,
+        merchantId: String,
+        provider: GiftCardProviderType
+    ): String {
+        val row = giftCardProviderDao.getProviderByMerchantId(merchantId, provider.name)
+        refuseUnlessStillOffered(shown)
+        val sourceId = shown.sourceId ?: row?.sourceId.takeIf { provider == GiftCardProviderType.PiggyCards }
+        if (sourceId == null || row?.sourceId != sourceId) {
+            log.error("purchaseGiftCard error: the provider's merchant is not the one that was quoted")
+            throw CTXSpendException(ResourceString(R.string.gift_card_order_changed))
+        }
+        return sourceId
     }
 
     /** Called after every wait on the way to an order: nothing is ordered once the selection is another. */
