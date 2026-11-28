@@ -296,8 +296,11 @@ class RedeemLinkActivity : InteractionAwareActivity() {
     @VisibleForTesting
     internal val redeemServiceWorkerClient = object : ServiceWorkerClientCompat() {
         override fun shouldInterceptRequest(request: WebResourceRequest): WebResourceResponse? {
+            // Retry can put up a new page before the answer is delivered, and that page was checked on its own.
+            val page = webView
+
             return screenRequest(request.url) {
-                if (!isFinishing && webView != null) {
+                if (page != null && isShowing(page)) {
                     showBlockedByProxy()
                 }
             }
