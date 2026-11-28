@@ -2411,14 +2411,13 @@ class DashSpendCardCurrencyTest {
     }
 
     @Test
-    fun timeBeforeCtxAnsweredTheOrder_isNotCountedAgainstItsLifetime() = runBlocking {
+    fun timeCtxTookToAnswerTheOrder_countsAgainstItsLifetime() = runBlocking {
         paymentRequestAsksFor(Dash.valueOf(316_666_666))
         val viewModel = viewModel()
         val shown = viewModel.shownFor100Pounds()
         api.stub {
             onBlocking { purchaseGiftCard(any()) } doAnswer {
-                // a slow request: CTX may have created the order at any moment of it
-                elapsedMillis += 10.minutes.inWholeMilliseconds
+                elapsedMillis += 10_000
                 GiftCardResponse(
                     id = "order-1",
                     status = "unpaid",
@@ -2433,11 +2432,11 @@ class DashSpendCardCurrencyTest {
         }
 
         val order = viewModel.purchaseGiftCard(shown)
-        // 16 minutes after the request went out, and maybe only 6 into the order's 15
-        elapsedMillis += 6.minutes.inWholeMilliseconds
+        // 15 minutes and a second after the request went out, less than 15 minutes after the answer
+        elapsedMillis += 15.minutes.inWholeMilliseconds - 9_000
 
-        assertEquals(zeroTxId, viewModel.payCtxOrder(shown, "dash:?r=x", order))
-        assertEquals(listOf<Dash?>(Dash.valueOf(316_666_666)), sentPayments)
+        assertRefusedAsExpired { viewModel.payCtxOrder(shown, "dash:?r=x", order) }
+        assertEquals(emptyList<Dash?>(), sentPayments)
     }
 
     @Test
@@ -2564,12 +2563,6 @@ class DashSpendCardCurrencyTest {
             }
         }
 
-        // a sheet that is there is told itself
-        assertThrows(IllegalStateException::class.java) {
-            runBlocking { viewModel.payOrder(quote, "dash:?r=x", cards) }
-        }
-        assertNull(viewModel.paymentFailure.value)
-
         val sheet = launch(Dispatchers.Default, start = CoroutineStart.LAZY) {
             try {
                 viewModel.payOrder(quote, "dash:?r=x", cards)
@@ -2584,7 +2577,10 @@ class DashSpendCardCurrencyTest {
         sheet.start()
         sheet.join()
 
-        assertEquals("the payment failed", viewModel.paymentFailure.value?.message)
+        val failure = checkNotNull(viewModel.paymentFailure.value)
+        assertEquals("the payment failed", failure.message)
+        assertTrue("one screen reports it", viewModel.takePaymentFailure(failure))
+        assertFalse("and no other does", viewModel.takePaymentFailure(failure))
     }
 
     @Test

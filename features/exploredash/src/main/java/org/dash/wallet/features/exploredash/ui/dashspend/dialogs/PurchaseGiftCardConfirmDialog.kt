@@ -62,6 +62,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -683,7 +684,14 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
     ): String? {
         val quote = checkNotNull(shownQuote)
         // submission and order recording together, so a destroyed view cannot separate them
-        return submitPayment { viewModel.payOrder(quote, url, giftCards) }
+        return try {
+            viewModel.payOrder(quote, url, giftCards)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // published as a payment failure, and reported once by whichever screen takes it
+            null
+        }
     }
 
     /** [pay] returns null when the order was left unpaid for the buyer to decide on a new price. */
