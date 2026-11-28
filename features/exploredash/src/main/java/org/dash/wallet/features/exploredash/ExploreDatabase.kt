@@ -18,7 +18,6 @@
 package org.dash.wallet.features.exploredash
 
 import android.content.Context
-import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteException
 import androidx.annotation.VisibleForTesting
 import androidx.room.Database
@@ -41,6 +40,7 @@ import org.dash.wallet.features.exploredash.repository.ExploreRepository
 import org.dash.wallet.features.exploredash.utils.ExploreConfig
 import org.dash.wallet.features.exploredash.utils.RoomConverters
 import org.slf4j.LoggerFactory
+import java.io.DataInputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -70,12 +70,9 @@ abstract class ExploreDatabase : RoomDatabase() {
         const val VERSION = 5
         private const val EXPLORE_DB_NAME = "explore-database"
         private const val EXPLORE_DB_STAGING_NAME = "explore-database.staging"
+        private const val USER_VERSION_OFFSET = 60
         private val log = LoggerFactory.getLogger(ExploreDatabase::class.java)
         private var instance: ExploreDatabase? = null
-
-        // Injected DAOs keep using the instance they came from. It reopens on its next query, so
-        // closing every earlier instance before a swap is what moves them to the new file.
-        private val replacedInstances = mutableListOf<ExploreDatabase>()
 
         suspend fun getAppDatabase(context: Context, exploreConfig: ExploreConfig): ExploreDatabase {
             if (instance == null) {
@@ -95,8 +92,7 @@ abstract class ExploreDatabase : RoomDatabase() {
             // succeeds, instance is reassigned to the fresh DB.
             val previous = instance
             instance = null
-            previous?.let { replacedInstances.add(it) }
-            replacedInstances.forEach { it.close() }
+            previous?.close()
             instance = update(context, repository, exploreConfig)
         }
 
@@ -105,8 +101,6 @@ abstract class ExploreDatabase : RoomDatabase() {
             val previous = instance
             instance = null
             previous?.close()
-            replacedInstances.forEach { it.close() }
-            replacedInstances.clear()
         }
 
         private suspend fun open(context: Context, exploreConfig: ExploreConfig): ExploreDatabase {
@@ -116,7 +110,9 @@ abstract class ExploreDatabase : RoomDatabase() {
                 val wasOlderVersion = storedVersion(context)?.let { it < VERSION } ?: false
                 val database = buildAndProbe(context)
                 // Neither an empty database (first run, or wiped by a downgrade) nor rows migrated
-                // from an older schema's file are the current remote data, whatever the timestamp says.
+                // from an older schema's file are the current remote data, whatever the timestamp
+                // says. The version check is what catches upgrade, downgrade, upgrade: the older
+                // build syncs its own file and leaves this build's schema marker in place.
                 if (wasOlderVersion || !hasExpectedData(database.openHelper.writableDatabase)) {
                     clearLocalTimestamp(exploreConfig)
                 }
@@ -246,12 +242,17 @@ abstract class ExploreDatabase : RoomDatabase() {
             return database
         }
 
+        // user_version from the SQLite file header, without opening the database
         private fun storedVersion(context: Context): Int? {
             val file = context.getDatabasePath(EXPLORE_DB_NAME)
-            if (!file.exists()) {
-                return null
+            return try {
+                DataInputStream(file.inputStream()).use { input ->
+                    input.skipBytes(USER_VERSION_OFFSET)
+                    input.readInt()
+                }
+            } catch (ex: IOException) {
+                null
             }
-            return SQLiteDatabase.openDatabase(file.path, null, SQLiteDatabase.OPEN_READWRITE).use { it.version }
         }
 
         private suspend fun clearLocalTimestamp(exploreConfig: ExploreConfig) {
@@ -390,14 +391,9 @@ abstract class ExploreDatabase : RoomDatabase() {
         }
 
         private fun hasExpectedData(db: SupportSQLiteDatabase): Boolean {
-            var cursor = db.query("SELECT id FROM merchant;")
-            val merchantCount = cursor.count
-            cursor.close()
-            cursor = db.query("SELECT id FROM atm;")
-            val atmCount = cursor.count
-            cursor.close()
-
-            return merchantCount > 0 && atmCount > 0
+            return db.query("SELECT EXISTS(SELECT 1 FROM merchant) AND EXISTS(SELECT 1 FROM atm)").use { cursor ->
+                cursor.moveToFirst() && cursor.getInt(0) == 1
+            }
         }
 
         private suspend fun fixObsoleteName(context: Context, config: ExploreConfig) {

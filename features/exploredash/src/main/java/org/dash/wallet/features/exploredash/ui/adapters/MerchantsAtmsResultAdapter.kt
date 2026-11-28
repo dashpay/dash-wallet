@@ -125,8 +125,12 @@ class MerchantViewHolder(val binding: MerchantRowBinding) : ExploreViewHolder(bi
     fun bind(merchant: Merchant?) {
         val resources = binding.root.resources
         binding.title.text = merchant?.name
-        binding.subtitle.text = getDistanceText(resources, merchant)
-        binding.subtitle.isVisible = merchant?.type != MerchantType.ONLINE && binding.subtitle.text.isNotEmpty()
+        // An online gift card row has no distance; its country says where the card can be spent
+        val cardCountry = merchant?.country?.takeIf { it.isNotBlank() && merchant.type == MerchantType.ONLINE }
+        binding.subtitle.text = cardCountry?.let { Locale("", it).displayCountry }
+            ?: getDistanceText(resources, merchant)
+        binding.subtitle.isVisible = (cardCountry != null || merchant?.type != MerchantType.ONLINE) &&
+            binding.subtitle.text.isNotEmpty()
         if (merchant != null) {
             val text = SavingsFormatting.format(
                 context = binding.root.context,

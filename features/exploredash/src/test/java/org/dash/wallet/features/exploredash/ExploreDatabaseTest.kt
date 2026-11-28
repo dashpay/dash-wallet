@@ -138,9 +138,9 @@ class ExploreDatabaseTest {
             }
         }
 
-        private fun createPopulatedVersion4(file: File, merchants: Int = 1) {
+        private fun createPopulatedVersion4(file: File) {
             createExploreDatabaseVersion4(file) { v4 ->
-                repeat(merchants) { v4.execSQL("INSERT INTO merchant (name) VALUES ('dummy merchant')") }
+                v4.execSQL("INSERT INTO merchant (name) VALUES ('dummy merchant')")
                 v4.execSQL("INSERT INTO atm (name) VALUES ('dummy atm')")
             }
         }
@@ -407,31 +407,19 @@ class ExploreDatabaseTest {
 
         assertEquals(timestamp, prefsState.localDbTimestampFor(ExploreDatabase.VERSION))
     }
-
-    private fun stageUpdateFile(repository: GCExploreDatabase, merchants: Int) {
-        val inner = appContext.getDatabasePath("explore-update-inner")
-        createPopulatedVersion4(inner, merchants)
-        zipExploreDb(inner, repository.getUpdateFile())
-        appContext.deleteDatabase(inner.name)
-    }
-
     @Test
-    fun secondUpdate_isReadThroughADaoFromBeforeTheFirst() = runTest {
+    fun localDbWithoutMerchants_isNeverUpToDate() = runTest {
         val config = updateConfig()
-        val repository = GCExploreDatabase(appContext, config, mock(), mock())
-        val injectedDao = ExploreDatabase.getAppDatabase(appContext, config).merchantDao()
-        assertEquals(0, withContext(Dispatchers.IO) { injectedDao.getCount() })
+        ExploreDatabase.getAppDatabase(appContext, config).openHelper.writableDatabase
+            .execSQL("INSERT INTO atm (name) VALUES ('dummy atm')")
+        ExploreDatabase.resetInstanceForTest()
+        prefsState = ExploreDatabasePrefs(
+            localDbTimestamp = 1_234_567_890L,
+            localDbSchemaVersion = ExploreDatabase.VERSION
+        )
 
-        stageUpdateFile(repository, merchants = 1)
-        ExploreDatabase.updateDatabase(appContext, repository, config)
-        assertEquals(1, withContext(Dispatchers.IO) { injectedDao.getCount() })
+        ExploreDatabase.getAppDatabase(appContext, config)
 
-        stageUpdateFile(repository, merchants = 2)
-        ExploreDatabase.updateDatabase(appContext, repository, config)
-        assertEquals(2, withContext(Dispatchers.IO) { injectedDao.getCount() })
-
-        stageUpdateFile(repository, merchants = 3)
-        ExploreDatabase.updateDatabase(appContext, repository, config)
-        assertEquals(3, withContext(Dispatchers.IO) { injectedDao.getCount() })
+        assertEquals(0L, prefsState.localDbTimestamp)
     }
 }

@@ -116,15 +116,10 @@ class ExploreViewModel @Inject constructor(
         const val DEFAULT_RADIUS_OPTION = 20
         const val MAX_MARKERS = 100
         val DEFAULT_SORT_OPTION = SortOption.Name
-        const val DEFAULT_COUNTRY = "US"
 
         // Localized country name to ISO code, in the order the names sort in that language
         internal fun countryNames(countries: List<String>, locale: Locale = Locale.getDefault()): Map<String, String> =
             countries.associateBy { Locale("", it).getDisplayCountry(locale) }.toSortedMap(Collator.getInstance(locale))
-
-        // An explicit choice wins over the detected country; either only counts while the database has it
-        internal fun resolveCountry(available: List<String>, chosen: String?, detected: String): String =
-            listOfNotNull(chosen, detected.uppercase(Locale.ROOT)).firstOrNull { it in available } ?: DEFAULT_COUNTRY
 
         private val log = LoggerFactory.getLogger(ExploreViewModel::class.java)
 
@@ -317,20 +312,10 @@ class ExploreViewModel @Inject constructor(
     val chosenCountry: StateFlow<String?> = exploreConfig.selectedCountry
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
-    val defaultCountry: String
-        get() = resolveCountry(_countries.value, null, location.value)
-
-    val selectedCountry: StateFlow<String> = combine(
-        _countries,
-        chosenCountry,
-        location
-    ) { available, chosen, detected ->
-        resolveCountry(available, chosen, detected)
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.Eagerly,
-        initialValue = DEFAULT_COUNTRY
-    )
+    // No country means merchants of every country; a picked one counts while the database has it
+    val selectedCountry: StateFlow<String> = combine(_countries, chosenCountry) { available, chosen ->
+        chosen?.takeIf { it in available }.orEmpty()
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, "")
 
     private suspend fun reloadCountries() {
         try {
@@ -348,7 +333,7 @@ class ExploreViewModel @Inject constructor(
         return if (mode == FilterMode.Online || mode == FilterMode.All) selectedCountry.value else ""
     }
 
-    // null forgets the choice, so the detected country applies again
+    // null forgets the choice, so every country shows again
     fun setCountry(country: String?) {
         viewModelScope.launch { exploreConfig.setSelectedCountry(country) }
     }

@@ -427,7 +427,9 @@ private fun ActionButton(
         // where can the user spend the gift card
         if (!isDash) {
             Text(
-                text = stringResource(R.string.country_availability),
+                text = merchant.country?.takeIf { it.isNotBlank() }?.let {
+                    stringResource(R.string.country_availability_in, Locale("", it).displayCountry)
+                } ?: stringResource(R.string.country_availability),
                 style = MyTheme.Overline,
                 color = colors.gray400,
                 modifier = Modifier

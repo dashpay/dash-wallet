@@ -61,6 +61,11 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
     private var sortOption = ExploreViewModel.DEFAULT_SORT_OPTION
     private var selectedTerritory: String = ""
     private var countryNames: Map<String, String> = mapOf()
+    private var isCountryShown = false
+
+    private val isCountryFiltered: Boolean
+        get() = viewModel.exploreTopic == ExploreTopic.Merchants &&
+            (viewModel.filterMode.value == FilterMode.Online || viewModel.filterMode.value == FilterMode.All)
 
     // Only a country the user picked here is saved; the one shown by default is not a choice
     private var pickedCountry: String? = null
@@ -407,14 +412,14 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
     private fun setupCountryFilter() {
         viewModel.selectedCountry.observe(viewLifecycleOwner) { showCountry() }
         viewModel.countries.observe(viewLifecycleOwner) { countries ->
-            val isOnlineOrAll = viewModel.filterMode.value == FilterMode.Online ||
-                viewModel.filterMode.value == FilterMode.All
             // With a single country there is nothing to choose between
-            val isShown = viewModel.exploreTopic == ExploreTopic.Merchants && isOnlineOrAll && countries.size > 1
+            val isShown = isCountryFiltered && countries.size > 1
+            isCountryShown = isShown
             binding.countryLabel.isVisible = isShown
             binding.countryBtn.isVisible = isShown
             countryNames = ExploreViewModel.countryNames(countries)
             showCountry()
+            checkResetButton()
         }
 
         binding.countryBtn.setOnClickListener {
@@ -422,6 +427,7 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
             OptionPickerDialog(
                 getString(R.string.explore_country),
                 names.keys.map { IconifiedViewItem(it) },
+                // Nothing is marked while every country shows
                 names.values.indexOf(shownCountry),
                 useCheckMark = true
             ) { item, _, dialog ->
@@ -437,14 +443,15 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
     }
 
     private val shownCountry: String
-        get() = pickedCountry ?: if (isCountryReset) viewModel.defaultCountry else viewModel.selectedCountry.value
+        get() = pickedCountry ?: if (isCountryReset) "" else viewModel.selectedCountry.value
 
     private fun showCountry() {
-        binding.countryName.text = Locale("", shownCountry).displayCountry
+        binding.countryName.text = shownCountry.ifEmpty { null }?.let { Locale("", it).displayCountry }
+            ?: getString(R.string.explore_option_all)
     }
 
     private val hasCountryChoice: Boolean
-        get() = viewModel.exploreTopic == ExploreTopic.Merchants &&
+        get() = isCountryShown &&
             (pickedCountry != null || (!isCountryReset && viewModel.chosenCountry.value != null))
 
     private fun setupLocationPermission() {
@@ -609,7 +616,8 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
         sortOption = ExploreViewModel.DEFAULT_SORT_OPTION
         sortByOptionsAdapter?.selectedIndex = sortOptions.indexOf(sortOption)
 
-        if (viewModel.exploreTopic == ExploreTopic.Merchants) {
+        // Also without the picker: a saved country the database no longer has is forgotten too
+        if (isCountryFiltered) {
             pickedCountry = null
             isCountryReset = true
             showCountry()

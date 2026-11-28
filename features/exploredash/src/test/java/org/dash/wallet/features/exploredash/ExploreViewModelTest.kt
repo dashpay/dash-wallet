@@ -336,7 +336,7 @@ class ExploreViewModelTest {
 
             assertEquals(expected, actual)
             verify(dataSource)
-                .observePhysicalMerchants("", territory, "", DenomOption.Both, "", GeoBounds.noBounds, "", "US")
+                .observePhysicalMerchants("", territory, "", DenomOption.Both, "", GeoBounds.noBounds, "")
             verify(locationState).getRadiusBounds(0.0, 0.0, viewModel.radius)
         }
     }
@@ -474,7 +474,7 @@ class ExploreViewModelTest {
 
             assertEquals(expected, actual)
             verify(dataSource)
-                .observePhysicalMerchants(query, territory, "", DenomOption.Both, "", GeoBounds.noBounds, "", "US")
+                .observePhysicalMerchants(query, territory, "", DenomOption.Both, "", GeoBounds.noBounds, "")
             verify(locationState).getRadiusBounds(0.0, 0.0, viewModel.radius)
         }
     }
@@ -1031,30 +1031,6 @@ class ExploreViewModelTest {
         }
     }
 
-    @Test
-    fun resolveCountry_detectedCountryInTheDatabase_isTheDefault() {
-        assertEquals("GB", ExploreViewModel.resolveCountry(listOf("US", "GB"), null, "GB"))
-        assertEquals("GB", ExploreViewModel.resolveCountry(listOf("US", "GB"), null, "gb"))
-    }
-
-    @Test
-    fun resolveCountry_detectedCountryNotInTheDatabase_fallsBackToUS() {
-        assertEquals("US", ExploreViewModel.resolveCountry(listOf("US", "GB"), null, "FR"))
-        assertEquals("US", ExploreViewModel.resolveCountry(listOf(), null, "GB"))
-        assertEquals("US", ExploreViewModel.resolveCountry(listOf("US", "GB"), null, ""))
-    }
-
-    @Test
-    fun resolveCountry_chosenCountryInTheDatabase_winsOverTheDetectedOne() {
-        assertEquals("CA", ExploreViewModel.resolveCountry(listOf("US", "GB", "CA"), "CA", "GB"))
-    }
-
-    @Test
-    fun resolveCountry_chosenCountryGoneFromTheDatabase_fallsBackToTheDefault() {
-        assertEquals("GB", ExploreViewModel.resolveCountry(listOf("US", "GB"), "CA", "GB"))
-        assertEquals("US", ExploreViewModel.resolveCountry(listOf("US", "GB"), "CA", "FR"))
-    }
-
     private fun viewModelWithCountries(
         dataSource: ExploreDataSource,
         config: ExploreConfig,
@@ -1122,13 +1098,13 @@ class ExploreViewModelTest {
     }
 
     @Test
-    fun defaultCountry_isNotSaved_anExplicitChoiceIs() {
+    fun allCountriesDefault_isNotSaved_aPickIsAndResetForgetsIt() {
         runBlocking {
             val config = configWithChosenCountry(null)
             val viewModel = viewModelWithCountries(mock<ExploreDataSource>(), config, listOf("US", "GB"))
             kotlinx.coroutines.delay(100)
 
-            assertEquals("US", viewModel.selectedCountry.value)
+            assertEquals("", viewModel.selectedCountry.value)
             assertEquals(listOf("US", "GB"), viewModel.countries.value)
             verify(config, never()).setSelectedCountry(anyOrNull())
 
@@ -1141,17 +1117,20 @@ class ExploreViewModelTest {
     }
 
     @Test
-    fun detectionSettlingOnAnotherCountry_savesNothingAndMovesTheDefault() {
+    fun noPickedCountry_showsEveryCountryWhateverIsDetected() {
         runBlocking {
             val config = configWithChosenCountry(null)
-            val detectedByIp = MutableStateFlow("US")
             val network = mock<NetworkStateInt> {
                 on { isConnected } doReturn MutableStateFlow(true)
-                on { observeCountryFromIP() } doReturn detectedByIp
+                on { observeCountryFromIP() } doReturn flowOf("GB")
             }
-            val locationMock = mock<UserLocationStateInt>()
             val dataSource = mock<ExploreDataSource> {
                 onBlocking { getMerchantCountries() } doReturn listOf("US", "GB")
+                on { observePhysicalMerchants(any(), any(), any(), any(), any(), any(), any(), any()) } doReturn
+                    flowOf(listOf())
+            }
+            val locationMock = mock<UserLocationStateInt> {
+                on { getRadiusBounds(any(), any(), any()) } doReturn GeoBounds.noBounds
             }
             val viewModel = ExploreViewModel(
                 dataSource,
@@ -1161,16 +1140,47 @@ class ExploreViewModelTest {
                 config,
                 mock<AnalyticsService>()
             ).also { it.init(ExploreTopic.Merchants) }
-            kotlinx.coroutines.delay(100)
-            assertEquals("US", viewModel.selectedCountry.value)
-
-            detectedByIp.value = "GB"
+            viewModel.setFilterMode(FilterMode.All)
+            viewModel.searchBounds = GeoBounds.noBounds
             kotlinx.coroutines.delay(100)
 
-            assertEquals("GB", viewModel.selectedCountry.value)
-            assertEquals("GB", viewModel.defaultCountry)
-            assertNull(viewModel.chosenCountry.value)
+            viewModel.boundedSearchFlow.first()
+
+            assertEquals("GB", viewModel.location.value)
+            assertEquals("", viewModel.selectedCountry.value)
+            verify(dataSource)
+                .observePhysicalMerchants("", "", "", DenomOption.Both, "", GeoBounds.noBounds, "", "")
             verify(config, never()).setSelectedCountry(anyOrNull())
+        }
+    }
+
+    @Test
+    fun forgettingThePickedCountry_returnsToEveryCountry() {
+        runBlocking {
+            val stored = MutableStateFlow<String?>("GB")
+            val config = mock<ExploreConfig> {
+                on { selectedCountry } doReturn stored
+                onBlocking { setSelectedCountry(anyOrNull()) } doAnswer { stored.value = it.arguments[0] as String? }
+            }
+            val viewModel = viewModelWithCountries(mock<ExploreDataSource>(), config, listOf("US", "GB"))
+            kotlinx.coroutines.delay(100)
+            assertEquals("GB", viewModel.selectedCountry.value)
+
+            viewModel.setCountry(null)
+            kotlinx.coroutines.delay(100)
+
+            assertEquals("", viewModel.selectedCountry.value)
+        }
+    }
+
+    @Test
+    fun pickedCountryGoneFromTheDatabase_showsEveryCountry() {
+        runBlocking {
+            val viewModel =
+                viewModelWithCountries(mock<ExploreDataSource>(), configWithChosenCountry("CA"), listOf("US", "GB"))
+            kotlinx.coroutines.delay(100)
+
+            assertEquals("", viewModel.selectedCountry.value)
         }
     }
 
@@ -1196,7 +1206,7 @@ class ExploreViewModelTest {
             ).also { it.init(ExploreTopic.Merchants) }
             kotlinx.coroutines.delay(100)
             assertEquals(listOf<String>(), viewModel.countries.value)
-            assertEquals("US", viewModel.selectedCountry.value)
+            assertEquals("", viewModel.selectedCountry.value)
 
             progress.value = Resource.loading(80.0)
             kotlinx.coroutines.delay(100)
@@ -1324,7 +1334,7 @@ class ExploreViewModelTest {
             progress.value = Resource.success(100.0)
             kotlinx.coroutines.delay(1000)
 
-            assertEquals("US", viewModel.selectedCountry.value)
+            assertEquals("", viewModel.selectedCountry.value)
             verify(dataSource, times(2)).getMerchantCountries()
             verify(dataSource, times(2))
                 .getMerchantsResultCount(any(), any(), any(), any(), any(), any(), any(), any())
