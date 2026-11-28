@@ -2249,6 +2249,33 @@ class DashSpendCardCurrencyTest {
     }
 
     @Test
+    fun loadRefusedWhileTheSessionIsStillInPlace_canBeTriedAgainWithoutSigningOut() = runBlocking {
+        ctxRefusesTheMerchantWith(401)
+        signedInToCtx = true
+        setRate("USD", "25")
+        val viewModel = viewModel()
+
+        viewModel.openCtxMerchant()
+
+        assertEquals(GiftCardPurchaseBlock.CURRENCY_UNKNOWN, viewModel.purchaseBlock)
+    }
+
+    @Test
+    fun refreshOfAnAcceptedMerchantThatCtxCannotFind_keepsItsConfirmedDetails() = runBlocking {
+        ctxSells("GBP", listOf("5", "500"))
+        setRate("GBP", "30")
+        val viewModel = viewModel()
+        val merchant = viewModel.openCtxMerchant()
+        viewModel.enter("100")
+
+        ctxRefusesTheMerchantWith(404)
+        viewModel.updateMerchantDetails(merchant)
+
+        assertEquals("GBP", viewModel.cardCurrency)
+        assertNull(viewModel.purchaseBlock)
+    }
+
+    @Test
     fun firstLoadMetWithAServerError_canBeTriedAgain() = runBlocking {
         ctxRefusesTheMerchantWith(503)
         setRate("USD", "25")

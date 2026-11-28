@@ -1115,9 +1115,11 @@ class DashSpendViewModel @Inject constructor(
         } catch (ex: Exception) {
             log.error("failed to get merchant ${merchant.merchantId}", ex)
             when ((ex as? CTXSpendException)?.errorCode) {
-                HttpURLConnection.HTTP_UNAUTHORIZED -> isSignedOut = true
-                HttpURLConnection.HTTP_NOT_FOUND -> {
-                    // an answer, and a clear one: CTX no longer has this merchant
+                // a refresh that failed for now is refused too, with the session still in place
+                HttpURLConnection.HTTP_UNAUTHORIZED -> isSignedOut = !ctxSpendRepository.isUserSignedIn()
+                // an answer on a first load: CTX does not have this merchant. Once its details
+                // were accepted, it is one more refresh that brought nothing.
+                HttpURLConnection.HTTP_NOT_FOUND -> if (_cardCurrencyState.value !is CardCurrencyState.Known) {
                     isAnswered = true
                     isNothingOffered = true
                 }

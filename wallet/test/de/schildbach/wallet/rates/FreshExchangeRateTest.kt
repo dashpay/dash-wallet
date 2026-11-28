@@ -1,89 +1,76 @@
-/*
- * Copyright 2026 Dash Core Group.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
 package de.schildbach.wallet.rates
 
-import de.schildbach.wallet.database.dao.ExchangeRatesDao
-import io.mockk.coEvery
+import androidx.room.Room
+import androidx.test.core.app.ApplicationProvider
+import de.schildbach.wallet.database.AppDatabase
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
 import kotlinx.coroutines.runBlocking
-import org.dash.wallet.common.data.ExchangeRatesConfig
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
-import java.util.concurrent.TimeUnit
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
-/** A rate that money is checked against must itself be recent, whatever the last refresh says. */
+/**
+ * A refresh replaces the rows it has rates for and leaves every other row as it was. Money is
+ * only checked against a rate the last refresh itself returned.
+ */
+@RunWith(RobolectricTestRunner::class)
+@Config(application = android.app.Application::class, sdk = [29], manifest = Config.NONE)
 class FreshExchangeRateTest {
-    private val dao = mockk<ExchangeRatesDao>()
-    private val config = mockk<ExchangeRatesConfig>(relaxed = true) {
-        // the rates as a whole were retrieved just now
-        coEvery { get(ExchangeRatesConfig.EXCHANGE_RATES_RETRIEVAL_TIME) } answers { System.currentTimeMillis() }
-    }
-
-    private lateinit var repository: ExchangeRatesRepository
+    private lateinit var db: AppDatabase
+    private val source = mockk<DashRetailClient>()
 
     @Before
     fun setUp() {
-        // the real rate sources cannot be built outside the app, and none is to be called here
+        db = Room.inMemoryDatabaseBuilder(
+            ApplicationProvider.getApplicationContext(),
+            AppDatabase::class.java
+        ).allowMainThreadQueries().build()
+        // the real rate sources cannot be built outside the app
         mockkStatic(DashRetailClient::class, DashRatesSecondFallback::class)
-        every { DashRetailClient.getInstance() } returns mockk()
+        every { DashRetailClient.getInstance() } returns source
         every { DashRatesSecondFallback.getInstance() } returns mockk()
-        repository = ExchangeRatesRepository(dao, config)
-        // refreshed a moment ago, so only the stored row counts
-        ExchangeRatesRepository::class.java.getDeclaredField("lastUpdated").apply {
-            isAccessible = true
-            setLong(repository, System.currentTimeMillis())
-        }
+        // left over from a day when the source still had pounds
+        runBlocking { db.exchangeRatesDao().insertAll(listOf(ExchangeRate("GBP", "45"))) }
     }
 
     @After
     fun tearDown() {
         unmockkStatic(DashRetailClient::class, DashRatesSecondFallback::class)
+        db.close()
     }
 
-    private fun storedRate(retrievedMinutesAgo: Long?) = ExchangeRate("GBP", "30").apply {
-        retrievedMinutesAgo?.let { retrievalTime = System.currentTimeMillis() - TimeUnit.MINUTES.toMillis(it) }
-    }.also { coEvery { dao.getExchangeRateForCurrency("GBP") } returns it }
-
-    @Test
-    fun rowLeftBehindByAnEarlierRefresh_isNotFresh() = runBlocking {
-        storedRate(retrievedMinutesAgo = 31)
-
-        assertNull(repository.getFreshExchangeRate("GBP", 1))
+    private fun freshRate(currency: String) = runBlocking {
+        ExchangeRatesRepository(db.exchangeRatesDao(), mockk(relaxed = true)).getFreshExchangeRate(currency, 10_000)
     }
 
     @Test
-    fun rowOfTheLatestRefresh_isFresh() = runBlocking {
-        val rate = storedRate(retrievedMinutesAgo = 29)
+    fun rowTheRefreshDidNotRenew_isNotFresh() {
+        every { source.rates } returns listOf(ExchangeRate("USD", "40"))
 
-        assertEquals(rate, repository.getFreshExchangeRate("GBP", 1))
+        assertNull(freshRate("GBP"))
     }
 
     @Test
-    fun rowWithoutATimeOfItsOwn_goesByTheTimeOfTheLastRefresh() = runBlocking {
-        val rate = storedRate(retrievedMinutesAgo = null)
+    fun rowTheRefreshRenewed_isFresh() {
+        every { source.rates } returns listOf(ExchangeRate("USD", "40"), ExchangeRate("GBP", "30"))
 
-        assertEquals(rate, repository.getFreshExchangeRate("GBP", 1))
+        assertEquals("30", freshRate("GBP")?.rate)
+    }
+
+    @Test
+    fun refreshThatFailed_leavesNoFreshRate() {
+        every { source.rates } throws java.io.IOException("offline")
+        every { DashRatesSecondFallback.getInstance().rates } throws java.io.IOException("offline")
+
+        assertNull(freshRate("GBP"))
     }
 }
