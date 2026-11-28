@@ -23,13 +23,14 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.ui.invite.InviteHandler
 import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet_test.databinding.ActivityTransparentBinding
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.OnboardingState
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
@@ -50,7 +51,9 @@ class InviteHandlerActivity : AppCompatActivity() {
     @Inject
     lateinit var analytics: AnalyticsService
     @Inject
-    lateinit var walletDataProvider: WalletDataProvider
+    lateinit var walletDataProvider: WalletData
+    @Inject
+    lateinit var walletApplication: WalletApplication
     @Inject
     lateinit var configuration: Configuration
 
@@ -77,6 +80,7 @@ class InviteHandlerActivity : AppCompatActivity() {
     }
 
     private fun handleInvite(intent: Intent?) {
+        if (redirectDegradedWallet(walletApplication)) return
         if (intent != null) {
             lifecycleScope.launch {
                 val invitation = viewModel.handleInvite(intent)
@@ -94,16 +98,21 @@ class InviteHandlerActivity : AppCompatActivity() {
     }
 
     private fun handleInvite(invite: InvitationLinkData) {
+        if (redirectDegradedWallet(walletApplication)) return
         val mainTask = inviteHandler.getMainTask()
         log.info("mainTask: $mainTask")
         when {
             onboardingInProgress() -> {
                 lifecycleScope.launch {
-                    viewModel.setInvitationLink(invite, true)
+                    viewModel.receiveInvite(invite, true)
                     finish()
                 }
             }
-            walletDataProvider.wallet != null -> {
+            // Degraded first (see LockScreenActivity.onCreate): during a
+            // safe-mode retry reading the wallet would wait on the main thread
+            // for the retry's parse. Degraded goes to onboarding, which owns
+            // the recovery screen.
+            !walletApplication.isWalletLoadDegraded && walletDataProvider.wallet != null -> {
                 log.info("the invite will be forwarded, starting MainActivity with invite: ${invite.link}, mainTask: {}", mainTask != null)
                 val intent = MainActivity.createIntent(this, invite)
                 mainTask?.startActivity(applicationContext, intent, null)

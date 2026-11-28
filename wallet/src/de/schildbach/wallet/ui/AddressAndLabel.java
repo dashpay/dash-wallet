@@ -45,7 +45,7 @@ public class AddressAndLabel implements Parcelable {
 
     public AddressAndLabel(final NetworkParameters addressParams, final String address, @Nullable final String label)
             throws AddressFormatException.WrongNetwork {
-        this(AddressUtil.fromString(addressParams, address, Constants.NETWORK_PARAMETERS), label);
+        this(Address.fromString(addressParams != null ? addressParams : de.schildbach.wallet.util.AddressUtilsDashj.paramsFromAddress(address, Constants.NETWORK_PARAMETERS), address), label);
     }
 
     @Override
@@ -87,7 +87,7 @@ public class AddressAndLabel implements Parcelable {
     };
 
     private AddressAndLabel(final Parcel in) {
-        address = AddressUtil.fromString(Constants.NETWORK_PARAMETERS, in.readString(), Constants.NETWORK_PARAMETERS);
+        address = Address.fromString(Constants.NETWORK_PARAMETERS, in.readString());
         label = in.readString();
     }
 }

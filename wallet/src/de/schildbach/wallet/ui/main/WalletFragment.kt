@@ -45,7 +45,6 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.data.ServiceType
 import de.schildbach.wallet.ui.EditProfileActivity
 import de.schildbach.wallet.ui.LockScreenActivity
-import de.schildbach.wallet.ui.coinjoin.CoinJoinActivity
 import de.schildbach.wallet.ui.compose_views.ComposeBottomSheet
 import de.schildbach.wallet.ui.dashpay.ContactsScreenMode
 import de.schildbach.wallet.ui.dashpay.NotificationsFragment
@@ -80,6 +79,7 @@ import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.components.InfoPanel
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.scan.ScanActivity
+import org.dash.wallet.common.ui.toastIfStillAttached
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.openCustomTab
@@ -88,6 +88,8 @@ import org.dash.wallet.features.exploredash.ui.explore.ExploreTopic
 import org.dash.wallet.integrations.maya.utils.SwapBackend
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
+import de.schildbach.wallet.service.L1SyncUiStatus
+import org.dash.wallet.common.services.ReceiveAddressUnavailableException
 
 @AndroidEntryPoint
 class WalletFragment : Fragment(R.layout.home_content) {
@@ -171,29 +173,12 @@ class WalletFragment : Fragment(R.layout.home_content) {
                 }
             }
         }
-        binding.composeMixingStatusPane.setViewCompositionStrategy(
-            ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed
-        )
-        binding.composeMixingStatusPane.setContent {
-            MixingStatusCard(
-                viewModel.coinJoinMode,
-                viewModel.mixingState,
-                viewModel.mixingProgress,
-                viewModel.mixedBalance.asFlow(),
-                viewModel.totalBalance.asFlow(),
-                viewModel.hideBalance
-            ) {
-                startActivity(Intent(requireContext(), CoinJoinActivity::class.java).apply {
-                    putExtra(CoinJoinActivity.FIRST_TIME_EXTRA, false)
-                })
-            }
-        }
-
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.transactionsLoaded.collect { if (it) refreshShortcutBar() }
         }
-        viewModel.isBlockchainSynced.observe(viewLifecycleOwner) { updateSyncState() }
-        viewModel.isBlockchainSyncFailed.observe(viewLifecycleOwner) { updateSyncState() }
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.syncStatus.collect { updateSyncState(it) }
+        }
 
         if (!configuration.hasDisplayedTaxCategoryExplainer) {
             viewModel.observeMostRecentTransaction().observe(viewLifecycleOwner) { mostRecentTransaction: Transaction ->
@@ -234,7 +219,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
             }
         }
 
-        viewModel.notificationCountData.observe(viewLifecycleOwner) { setNotificationIndicator() }
+        viewModel.notificationCount.observe(viewLifecycleOwner) { setNotificationIndicator() }
 
         viewModel.totalBalance.observe(viewLifecycleOwner) {
             val balance: Coin = viewModel.totalBalance.value ?: Coin.ZERO
@@ -289,18 +274,15 @@ class WalletFragment : Fragment(R.layout.home_content) {
         shortcutViewModel.userHasContacts = viewModel.hasIdentity && viewModel.hasContacts.value
     }
 
-    private fun updateSyncState() {
-        val isSyncFailed = viewModel.isBlockchainSyncFailed.value
-
-        if (isSyncFailed != null && isSyncFailed) {
+    private fun updateSyncState(status: L1SyncUiStatus) {
+        if (status.isFailed) {
             binding.syncStatusPane.syncErrorPane.isVisible = true
             return
         }
 
         binding.syncStatusPane.syncErrorPane.isVisible = false
-        val isSynced = viewModel.isBlockchainSynced.value
 
-        if (isSynced != null && isSynced) {
+        if (status.isSynced) {
             refreshShortcutBar()
         }
     }
@@ -387,7 +369,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
     private fun setNotificationIndicator() {
         binding.notificationBell.isVisible = viewModel.hasIdentity
         binding.notificationBell.setImageResource(
-            if (viewModel.notificationCount > 0) {
+            if (viewModel.notificationCount.value > 0) {
                 R.drawable.ic_new_notifications
             } else {
                 R.drawable.ic_notification_bell
@@ -463,9 +445,25 @@ class WalletFragment : Fragment(R.layout.home_content) {
                 safeNavigate(WalletFragmentDirections.homeToSearch(type = ExploreTopic.ATMs))
             }
             ShortcutOption.TOPPER -> {
-                lifecycleScope.launch {
-                    val uri = shortcutViewModel.getTopperUrl(getString(R.string.dash_wallet_name))
-                    requireActivity().openCustomTab(uri)
+                // The VIEW's scope, not the fragment's: forward navigation from
+                // Home keeps this fragment on the back stack (Send pops up to
+                // walletFragment INCLUSIVE=false), so a fragment-scoped coroutine
+                // would still be active and still attached when the parked read
+                // unwinds, and the guard below would pass and toast over the
+                // screen the user moved to. Destroying the view is what makes the
+                // cancellation half of that guard mean anything here.
+                viewLifecycleOwner.lifecycleScope.launch {
+                    try {
+                        val uri = shortcutViewModel.getTopperUrl(getString(R.string.dash_wallet_name))
+                        requireActivity().openCustomTab(uri)
+                    } catch (ex: ReceiveAddressUnavailableException) {
+                        // Same rule as the other Topper entry points: without a
+                        // safe deposit address, do not open the purchase flow.
+                        // Guarded — the read parks uncancellably, so this can run
+                        // once the fragment is gone and `requireContext()` would
+                        // throw.
+                        toastIfStillAttached(org.dash.wallet.common.R.string.loading_error)
+                    }
                 }
             }
             ShortcutOption.UPHOLD -> {

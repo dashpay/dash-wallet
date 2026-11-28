@@ -13,7 +13,6 @@
     <string name="blockchain_state_progress_stalled">Συγχρονισμός σε αναστολή</string>
     <string name="blockchain_state_progress_problem_storage">Συγχρονισμός: Πρόβλημα αποθήκευσης</string>
     <string name="blockchain_state_progress_problem_network">Συγχρονισμός: Πρόβλημα δικτύου</string>
-    <string name="mixing_state_progress_mixing">Ανάμειξη νομισμάτων (%1$s%%)</string>
     <string name="wallet_address_fragment_clipboard_msg">Η διεύθυνση Dash αντιγράφτηκε στο πρόχειρο</string>
     <string name="wallet_address_dialog_fragment_hint">Για λόγους προστασίας της ανωνυμίας σας, η διεύθυνσή σας θα αλλάζει με κάθε πληρωμή που θα λαμβάνετε.</string>
     <string name="wallet_balance_fragment_too_much">Το ποσό αυτό είναι αρκετά μεγάλο για να το έχετε σε ένα σημείο. Μετακινήστε μερικά νομίσματα σε άλλο πορτοφόλι για τη δική σας ασφάλεια.</string>
@@ -43,8 +42,6 @@
     <string name="wallet_low_storage_dialog_button_apps">Διαχείριση εφαρμογών</string>
     <string name="wallet_timeskew_dialog_title">Ελέξτε ρυθμίσεις ημερομηνίας &amp; χρόνου</string>
     <string name="wallet_timeskew_dialog_msg">Ο χρόνος της συσκευής σας είναι λάθος κατά %d λεπτά. Ενδεχομένως να μην μπορείτε να στείλετε ή να λάβετε Dash εξαιτίας αυτού του προβλήματος.\n\nΠρέπει να ελέγξετε και αν χρειάζεται να διορθώσετε στις ρυθμίσεις την ημερομηνία, την ώρα και την ζώνη ώρας.</string>
-    <string name="wallet_coinjoin_timeskew_dialog_msg">Η ώρα της συσκευής σας είναι %s με %d δεύτερα. Δεν μπορείτε να χρησιμοποιήσετε το CoinJoin λόγω αυτής της διαφοράς.\n\nΟι ρυθμίσεις ώρας στη συσκευή σας πρέπει να αλλάξουν σε \"Αυτόματη ρύθμιση ώρας\" για να χρησιμοποιήσετε το CoinJoin.</string>
-    <string name="settings_coinjoin_timeskew_dialog_msg">Ο χρόνος της συσκευής σας απέχει περισσότερο από 5 δευτερόλεπτα. Δεν μπορείτε να χρησιμοποιήσετε το CoinJoin λόγω αυτής της διαφοράς.\n\nΟι ρυθμίσεις ώρας στη συσκευή σας πρέπει να αλλάξουν σε \"Αυτόματη ρύθμιση ώρας\" πριν χρησιμοποιήσετε το CoinJoin.</string>
     <string name="send_coins_activity_title">Αποστολή Dash</string>
     <string name="send_coins_fragment_request_payment_request_progress">Παραλαβή υπογραφής από %s...</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Η παραλαβή της υπογραφής απέτυχε</string>

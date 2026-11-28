@@ -23,14 +23,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
-import org.bitcoinj.core.Coin
-import org.bitcoinj.core.Sha256Hash
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.TaxCategory
+import org.dash.wallet.common.data.TxId
 import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.common.data.entity.TransactionMetadata
+import org.dash.wallet.common.money.Coin
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.transactions.TransactionCategory
 import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.GiftCardResponse
@@ -44,16 +44,15 @@ import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TestRule
-import org.mockito.kotlin.after
 import org.mockito.kotlin.any
+import org.mockito.kotlin.argThat
 import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
-import org.mockito.kotlin.timeout
+import org.mockito.kotlin.never
 import org.mockito.kotlin.verifyBlocking
 import java.io.IOException
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 
@@ -65,17 +64,33 @@ import java.util.concurrent.atomic.AtomicReference
 class GiftCardDetailsCurrencyBackfillTest {
     @get:Rule var rule: TestRule = InstantTaskExecutorRule()
 
-    @get:Rule var mainCoroutineRule = MainCoroutineRule()
+    // one scheduler for the view model's scope and its lookups: nothing runs on another thread or in real time
+    private val dispatcher = UnconfinedTestDispatcher()
 
-    private val txId: Sha256Hash =
-        Sha256Hash.wrap("00000000000000000000000000000000000000000000000000000000000000a1")
+    @get:Rule var mainCoroutineRule = MainCoroutineRule(dispatcher)
+
+    private val txId: TxId =
+        TxId.wrap("00000000000000000000000000000000000000000000000000000000000000a1")
+
+    private fun txIdBytes() = argThat<ByteArray> { contentEquals(txId.bytes) }
 
     // already delivered, so nothing polls for it
     private val legacyCard =
         GiftCard(txId = txId, merchantName = "Acme", price = 23.75, number = "1234", note = "order-1")
 
+    private val ctxMetadata = TransactionMetadata(
+        txId = txId,
+        timestamp = 1_000L,
+        value = Coin.COIN,
+        type = TransactionCategory.Sent,
+        taxCategory = TaxCategory.Expense,
+        service = ServiceName.CTXSpend
+    )
+    private val metadata = MutableStateFlow<TransactionMetadata?>(ctxMetadata)
+    private val blankReplies = AtomicInteger()
     private val orderLookups = AtomicInteger()
     private val accessToken = AtomicReference<String?>()
+    private val storedToken = MutableStateFlow<String?>(null)
     private lateinit var api: CTXSpendApi
 
     private fun open(card: GiftCard, accessToken: String?, failingLookups: Int = 0): GiftCardDao =
@@ -88,17 +103,18 @@ class GiftCardDetailsCurrencyBackfillTest {
         failingLookups: Int = 0
     ): GiftCardDao {
         val dao = mock<GiftCardDao> {
-            on { observeCardForTransaction(eq(txId)) } doReturn emissions
-            onBlocking { getCardForTransaction(eq(txId)) } doReturn listOf(card)
+            on { observeCardForTransaction(txIdBytes()) } doReturn emissions
+            onBlocking { getCardForTransaction(txIdBytes()) } doReturn listOf(card)
             onBlocking { backfillCurrency(any(), any()) } doReturn 1
         }
         val config = mock<CTXSpendConfig> {
-            on { observeSecureData(any()) } doReturn emptyFlow()
+            on { observeSecureData(any()) } doReturn storedToken
             onBlocking { getSecuredData(eq(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN)) } doAnswer {
                 this@GiftCardDetailsCurrencyBackfillTest.accessToken.get()
             }
         }
         this.accessToken.set(accessToken)
+        storedToken.value = accessToken
         api = mock<CTXSpendApi> {
             onBlocking { getGiftCardByOrderId(eq("order-1")) } doAnswer {
                 if (orderLookups.incrementAndGet() <= failingLookups) {
@@ -108,20 +124,13 @@ class GiftCardDetailsCurrencyBackfillTest {
                     id = "order-1",
                     status = "fulfilled",
                     fiatAmount = "23.75",
-                    fiatCurrency = "GBP"
+                    fiatCurrency = if (blankReplies.getAndDecrement() > 0) " " else "GBP"
                 )
             }
         }
         val metadataProvider = mock<TransactionMetadataProvider> {
-            on { observeTransactionMetadata(eq(txId)) } doReturn emptyFlow()
-            onBlocking { getTransactionMetadata(eq(txId)) } doReturn TransactionMetadata(
-                txId = txId,
-                timestamp = 1_000L,
-                value = Coin.COIN,
-                type = TransactionCategory.Sent,
-                taxCategory = TaxCategory.Expense,
-                service = ServiceName.CTXSpend
-            )
+            on { observeTransactionMetadata(eq(txId)) } doReturn metadata
+            onBlocking { getTransactionMetadata(eq(txId)) } doAnswer { metadata.value }
         }
 
         GiftCardDetailsViewModel(
@@ -134,73 +143,141 @@ class GiftCardDetailsCurrencyBackfillTest {
             mock(),
             mock(),
             config
-        ).init(txId)
+        ).apply { currencyLookupDispatcher = dispatcher }.init(txId.toString())
         return dao
     }
 
-    /** Until [done], shows the card again and again: an emission during a lookup is skipped. */
-    private fun MutableStateFlow<List<GiftCard>>.emitUntil(done: () -> Boolean) {
-        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
-        var change = 0
-        while (!done() && System.nanoTime() < deadline) {
-            value = listOf(legacyCard.copy(pin = "${change++}"))
-            Thread.yield()
-        }
-    }
+    private fun allAttemptsMade() = dispatcher.scheduler.advanceUntilIdle()
 
     @Test
     fun cardWithoutACurrency_isBackfilledWhenItsDetailsOpen() {
         val dao = open(legacyCard, accessToken = "token")
 
-        verifyBlocking(dao, timeout(5000)) { backfillCurrency(eq(txId), eq("GBP")) }
+        verifyBlocking(dao) { backfillCurrency(txIdBytes(), eq("GBP")) }
     }
 
     @Test
     fun cardWithACurrency_isLeftAlone() {
         val dao = open(legacyCard.copy(currency = "EUR"), accessToken = "token")
+        allAttemptsMade()
 
-        verifyBlocking(dao, after(300).never()) { backfillCurrency(any(), any()) }
+        verifyBlocking(dao, never()) { backfillCurrency(any(), any()) }
+        assertEquals(0, orderLookups.get())
     }
 
     @Test
     fun signedOut_keepsTheCardWithoutACurrency() {
         val dao = open(legacyCard, accessToken = null)
+        allAttemptsMade()
 
-        verifyBlocking(dao, after(300).never()) { backfillCurrency(any(), any()) }
+        verifyBlocking(dao, never()) { backfillCurrency(any(), any()) }
+        assertEquals(0, orderLookups.get())
     }
 
     @Test
     fun signedOut_looksTheCurrencyUpOnceSignedIn() {
         val emissions = MutableStateFlow(listOf(legacyCard))
         val dao = open(emissions, legacyCard, accessToken = null)
-        verifyBlocking(dao, after(300).never()) { backfillCurrency(any(), any()) }
+        allAttemptsMade()
 
         accessToken.set("token")
-        emissions.emitUntil { orderLookups.get() >= 1 }
+        emissions.value = listOf(legacyCard.copy(pin = "1"))
 
-        verifyBlocking(dao, timeout(5000)) { backfillCurrency(eq(txId), eq("GBP")) }
+        verifyBlocking(dao) { backfillCurrency(txIdBytes(), eq("GBP")) }
     }
 
     @Test
-    fun failedLookup_isRepeatedWhenTheCardIsSeenAgainWithoutACurrency() {
-        val emissions = MutableStateFlow(listOf(legacyCard))
-        val dao = open(emissions, legacyCard, accessToken = "token", failingLookups = 1)
+    fun signingIn_looksTheCurrencyUpWithoutTheCardChanging() {
+        val dao = open(legacyCard, accessToken = null)
+        allAttemptsMade()
+        assertEquals(0, orderLookups.get())
 
-        emissions.emitUntil { orderLookups.get() >= 2 }
+        accessToken.set("token")
+        storedToken.value = "token"
 
-        verifyBlocking(dao, timeout(5000)) { backfillCurrency(eq(txId), eq("GBP")) }
+        verifyBlocking(dao) { backfillCurrency(txIdBytes(), eq("GBP")) }
+    }
+
+    @Test
+    fun cardWhoseServiceIsNotRecordedYet_staysPending() {
+        metadata.value = ctxMetadata.copy(service = null)
+        val dao = open(legacyCard, accessToken = "token")
+        allAttemptsMade()
+        assertEquals(0, orderLookups.get())
+
+        metadata.value = ctxMetadata
+
+        verifyBlocking(dao) { backfillCurrency(txIdBytes(), eq("GBP")) }
+    }
+
+    @Test
+    fun failedLookup_isRepeatedWhileTheDetailsStayOpen() {
+        val dao = open(legacyCard, accessToken = "token", failingLookups = 1)
+        assertEquals(1, orderLookups.get())
+        verifyBlocking(dao, never()) { backfillCurrency(any(), any()) }
+
+        allAttemptsMade()
+
+        verifyBlocking(dao) { backfillCurrency(txIdBytes(), eq("GBP")) }
         assertEquals(2, orderLookups.get())
+    }
+
+    @Test
+    fun lookupThatKeepsFailing_stopsAfterThreeAttempts() {
+        val dao = open(legacyCard, accessToken = "token", failingLookups = 10)
+
+        allAttemptsMade()
+
+        assertEquals(3, orderLookups.get())
+        verifyBlocking(dao, never()) { backfillCurrency(any(), any()) }
+    }
+
+    @Test
+    fun replyWithoutACurrency_isAskedAgain() {
+        blankReplies.set(1)
+        val dao = open(legacyCard, accessToken = "token")
+
+        allAttemptsMade()
+
+        verifyBlocking(dao) { backfillCurrency(txIdBytes(), eq("GBP")) }
+        assertEquals(2, orderLookups.get())
+    }
+
+    @Test
+    fun cardWhoseTransactionIsNotKnownYet_isLookedUpWhenItArrives() {
+        metadata.value = null
+        val dao = open(legacyCard, accessToken = "token")
+        // every attempt is over, so only the arrival itself can start another lookup
+        allAttemptsMade()
+        assertEquals(0, orderLookups.get())
+
+        metadata.value = ctxMetadata
+
+        verifyBlocking(dao) { backfillCurrency(txIdBytes(), eq("GBP")) }
+    }
+
+    @Test
+    fun cardOfAnotherProvider_isNeverLookedUpAtCtx() {
+        metadata.value = ctxMetadata.copy(service = ServiceName.PiggyCards)
+        val emissions = MutableStateFlow(listOf(legacyCard))
+        open(emissions, legacyCard, accessToken = "token")
+
+        emissions.value = listOf(legacyCard.copy(pin = "1"))
+        allAttemptsMade()
+
+        assertEquals(0, orderLookups.get())
     }
 
     @Test
     fun successfulLookup_isNotRepeated() {
         val emissions = MutableStateFlow(listOf(legacyCard))
         val dao = open(emissions, legacyCard, accessToken = "token")
-        verifyBlocking(dao, timeout(5000)) { backfillCurrency(eq(txId), eq("GBP")) }
+        verifyBlocking(dao) { backfillCurrency(txIdBytes(), eq("GBP")) }
 
         emissions.value = listOf(legacyCard.copy(pin = "1"))
         emissions.value = listOf(legacyCard.copy(pin = "2"))
+        allAttemptsMade()
 
-        verifyBlocking(api, after(300).times(1)) { getGiftCardByOrderId(any()) }
+        assertEquals(1, orderLookups.get())
     }
 }

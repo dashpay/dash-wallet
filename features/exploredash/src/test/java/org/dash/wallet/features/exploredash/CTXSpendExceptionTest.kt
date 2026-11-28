@@ -16,8 +16,8 @@
 
 package org.dash.wallet.features.exploredash
 
-import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.data.ServiceName
+import org.dash.wallet.common.money.TxIds
 import org.dash.wallet.common.util.ResourceString
 import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardInfo
 import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardStatus
@@ -86,7 +86,7 @@ class CTXSpendExceptionTest {
         val exception = CTXSpendException(
             ResourceString(
                 R.string.gift_card_rejected,
-                listOf("giftcard-1", "00000-0000000-00001", Sha256Hash.ZERO_HASH.toStringBase58())
+                listOf("giftcard-1", "00000-0000000-00001", TxIds.toBase58(TxIds.ZERO_HASH_HEX))
             ),
             GiftCardInfo(
                 "giftcard-1",

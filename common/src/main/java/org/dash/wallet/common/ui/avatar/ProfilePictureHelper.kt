@@ -33,7 +33,7 @@ import com.bumptech.glide.request.transition.Transition
 import com.bumptech.glide.util.Util
 import com.google.common.base.Stopwatch
 import com.google.common.io.BaseEncoding
-import org.bitcoinj.core.Sha256Hash
+import org.dash.wallet.common.data.TxId
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.math.BigInteger
@@ -41,6 +41,7 @@ import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.util.*
+import java.util.concurrent.TimeUnit
 
 
 class ProfilePictureHelper {
@@ -51,6 +52,9 @@ class ProfilePictureHelper {
 
         private const val ZOOM_PARAM_KEY = "dashpay-profile-pic-zoom"
 
+        /** Cap on the blocking raw-avatar fetch in [avatarBytesBlocking]. */
+        private const val AVATAR_FETCH_TIMEOUT_SECONDS = 10L
+
         fun avatarHashAndFingerprint(context: Context, pictureUrl: Uri, profileAvatarHash: ByteArray?, listener: OnResourceReadyListener? = null) {
             val watch = Stopwatch.createStarted()
             Glide.with(context)
@@ -59,12 +63,12 @@ class ProfilePictureHelper {
                     .into(object : CustomTarget<File>() {
 
                         override fun onResourceReady(resource: File, transition: Transition<in File>?) {
-                            val serverAvatarHash = Sha256Hash.of(resource)
+                            val serverAvatarHash = TxId.of(resource)
                             watch.stop()
                             val encoding = BaseEncoding.base64().omitPadding()
                             log.debug("server avatarHash: '{}', took {}", encoding.encode(serverAvatarHash.bytes), watch)
                             if (profileAvatarHash != null && !(profileAvatarHash contentEquals serverAvatarHash.bytes)) {
-                                val profileAvatarHashBase64 = encoding.encode(Sha256Hash.wrap(profileAvatarHash).bytes)
+                                val profileAvatarHashBase64 = encoding.encode(TxId.wrap(profileAvatarHash).bytes)
                                 log.info("server avatarHash ({}) doesn't match the profile avatarHash ({})", encoding.encode(serverAvatarHash.bytes), profileAvatarHashBase64)
                             }
                             val avatarFingerprint = CocoaImageDHash.of(BitmapFactory.decodeFile(resource.path))
@@ -79,6 +83,30 @@ class ProfilePictureHelper {
                             }
                         }
                     })
+        }
+
+        /**
+         * The RAW bytes of the avatar at [pictureUrl] — the same file
+         * [avatarHashAndFingerprint] hashes, so a SHA-256 of the result equals
+         * the profile's `avatarHash`. Needed by the Kotlin-SDK profile write,
+         * which computes the avatar hash + perceptual fingerprint Rust-side
+         * from the raw image instead of taking the app's precomputed pair.
+         *
+         * BLOCKING (Glide's future) and bounded by [AVATAR_FETCH_TIMEOUT_SECONDS]
+         * — background threads only. Returns null on any failure/timeout; the
+         * caller then falls back to the dashj profile path, which carries the
+         * precomputed digest instead.
+         */
+        fun avatarBytesBlocking(context: Context, pictureUrl: Uri): ByteArray? = try {
+            Glide.with(context)
+                .asFile()
+                .load(pictureUrl)
+                .submit()
+                .get(AVATAR_FETCH_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+                .readBytes()
+        } catch (e: Exception) {
+            log.warn("failed to fetch raw avatar bytes", e)
+            null
         }
 
         fun setPicZoomParameter(uri: Uri, newValue: String): Uri {
@@ -214,6 +242,6 @@ class ProfilePictureHelper {
     }
 
     interface OnResourceReadyListener {
-        fun onResourceReady(avatarHash: Sha256Hash?, avatarFingerprint: BigInteger?)
+        fun onResourceReady(avatarHash: TxId?, avatarFingerprint: BigInteger?)
     }
 }

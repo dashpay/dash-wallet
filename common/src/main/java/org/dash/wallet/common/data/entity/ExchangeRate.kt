@@ -23,7 +23,7 @@ import android.os.Parcelable
 import androidx.room.Entity
 import androidx.room.Ignore
 import androidx.room.PrimaryKey
-import org.bitcoinj.utils.Fiat
+import org.dash.wallet.common.money.Fiat
 import org.dash.wallet.common.data.CurrencyInfo
 import java.lang.IllegalArgumentException
 import java.math.BigDecimal

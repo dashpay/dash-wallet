@@ -12,7 +12,7 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(application = Application::class, sdk = [28])
+@Config(application = Application::class, sdk = [29])
 class ConnectionDialogsTest {
     @Test fun `callback uses shared wallet dialog and cancel does not open the website`() {
         val controller = Robolectric.buildActivity(FragmentActivity::class.java)
@@ -46,5 +46,11 @@ class ConnectionDialogsTest {
         ConnectionStatus.entries.forEach { status ->
             assertEquals(1, ConnectionsTab.entries.count { it.includes(connection(status)) })
         }
+    }
+
+    @Test fun `Active rows disconnect while Disconnected and Expired rows reconnect`() {
+        assertEquals(ConnectionRowAction.DISCONNECT, ConnectionsTab.ACTIVE.rowAction)
+        assertEquals(ConnectionRowAction.RECONNECT, ConnectionsTab.DISCONNECTED.rowAction)
+        assertEquals(ConnectionRowAction.RECONNECT, ConnectionsTab.EXPIRED.rowAction)
     }
 }

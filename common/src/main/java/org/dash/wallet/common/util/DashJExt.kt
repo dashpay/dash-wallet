@@ -1,5 +1,6 @@
 package org.dash.wallet.common.util
 
-import org.bitcoinj.core.NetworkParameters
+import org.dash.wallet.common.payments.parsers.AddressNetwork
 
-fun NetworkParameters.isMainNet(): Boolean = id == NetworkParameters.ID_MAINNET
+/** True when this network id (`NetworkParameters.getId()`) is the Dash mainnet id. */
+fun String.isMainNetId(): Boolean = this == AddressNetwork.ID_MAINNET

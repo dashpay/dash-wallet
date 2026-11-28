@@ -19,7 +19,7 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(application = Application::class, sdk = [28], manifest = Config.NONE)
+@Config(application = Application::class, sdk = [29], manifest = Config.NONE)
 class TokenPurchaseSubmissionTest {
     private fun config() = DashConnectConfig(RuntimeEnvironment.getApplication(), mockk<WalletDataProvider>(relaxed = true))
     private fun receipt() = JSONObject().put("id", "scope:purchase").put("status", "outcomeUnknown")

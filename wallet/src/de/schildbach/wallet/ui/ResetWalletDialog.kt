@@ -19,12 +19,12 @@ package de.schildbach.wallet.ui
 import android.app.Dialog
 import android.content.DialogInterface
 import android.os.Bundle
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.core.os.bundleOf
 import androidx.fragment.app.DialogFragment
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.service.RestartService
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -37,8 +37,6 @@ class ResetWalletDialog : DialogFragment() {
     private lateinit var alertDialog: AlertDialog
     @Inject
     lateinit var analytics: AnalyticsService
-    @Inject
-    lateinit var restartService: RestartService
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         alertDialog = BaseAlertDialogBuilder(requireContext())
@@ -47,16 +45,24 @@ class ResetWalletDialog : DialogFragment() {
                 message = getString(R.string.wallet_lock_reset_wallet_message)
                 negativeText = getString(R.string.wallet_lock_reset_wallet_title)
                 negativeAction = {
-                    (activity as? AbstractBindServiceActivity)?.unbindServiceServiceConnection()
-                    // 1. wipe the wallet
-                    // 2. start OnboardingActivity
-                    // 3. close the backstack (Home->More->Security)
-                    // The wipe completes asynchronously and the callback fires after this fragment's
-                    // activity has been torn down, so restart using the application context rather than
-                    // requireActivity() (which would throw "Fragment not attached to an activity").
-                    val appContext = WalletApplication.getInstance()
-                    WalletApplication.getInstance().triggerWipe() {
-                        restartService.performRestart(appContext, true)
+                    // triggerWipe closes the backstack and starts
+                    // OnboardingActivity itself, from the application context,
+                    // BEFORE any data is destroyed — this dialog's activity does
+                    // not survive the wipe and must not be called back into.
+                    if (WalletApplication.getInstance().triggerWipe()) {
+                        // Still synchronous with the start request, so the service
+                        // is unbound before it handles the wipe command.
+                        (activity as? AbstractBindServiceActivity)?.unbindServiceServiceConnection()
+                    } else {
+                        // Refused (the wipe could not be recorded): the wallet is untouched.
+                        context?.let {
+                            Toast.makeText(
+                                it.applicationContext,
+                                "${it.getString(R.string.wallet_lock_reset_wallet_title)}: " +
+                                    it.getString(R.string.loading_error),
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
                     }
                 }
                 positiveText = getString(android.R.string.no)

@@ -17,8 +17,8 @@
 
 package org.dash.wallet.common.transactions.filters
 
-import org.bitcoinj.core.Transaction
+import org.dash.wallet.common.transactions.TxInfo
 
 interface TransactionFilter {
-    fun matches(tx: Transaction): Boolean
+    fun matches(tx: TxInfo): Boolean
 }

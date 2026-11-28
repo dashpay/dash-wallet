@@ -19,7 +19,7 @@ package de.schildbach.wallet.payments
 
 import androidx.fragment.app.FragmentActivity
 import de.schildbach.wallet.ui.send.ConfirmTransactionDialog
-import org.bitcoinj.utils.ExchangeRate
+import org.dash.wallet.common.money.ExchangeRate
 import org.dash.wallet.common.services.ConfirmTransactionService
 import javax.inject.Inject
 

@@ -11,7 +11,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(application = Application::class, sdk = [28], manifest = Config.NONE)
+@Config(application = Application::class, sdk = [29], manifest = Config.NONE)
 class AppConnectResponseCleanupTest {
     private val config = mockk<DashConnectConfig>()
     private val session = AppConnectSession(mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true), config)

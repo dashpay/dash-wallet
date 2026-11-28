@@ -30,9 +30,9 @@ import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.Transaction.Purpose;
-import org.bitcoinj.utils.MonetaryFormat;
+import org.dash.wallet.common.money.MonetaryFormat;
 import org.bitcoinj.wallet.Wallet;
-import org.dash.wallet.common.transactions.TransactionUtils;
+import de.schildbach.wallet.transactions.TransactionUtils;
 import org.dash.wallet.common.ui.CurrencyTextView;
 
 import de.schildbach.wallet.Constants;
@@ -273,7 +273,7 @@ public class BlockListAdapter extends RecyclerView.Adapter<BlockListAdapter.Bloc
         final CurrencyTextView rowValue = (CurrencyTextView) row.findViewById(R.id.block_row_transaction_value);
         rowValue.setAlwaysSigned(true);
         rowValue.setFormat(format);
-        rowValue.setAmount(value);
+        rowValue.setAmount(value != null ? org.dash.wallet.common.money.Coin.valueOf(value.getValue()) : null);
     }
 
     public interface OnClickListener {

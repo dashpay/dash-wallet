@@ -39,7 +39,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.tooling.preview.Preview
@@ -47,8 +46,8 @@ import androidx.compose.ui.unit.dp
 
 /**
  * Custom toggle switch component matching the Dash design system
- * Based on Figma design: https://www.figma.com/design/azdJACb5WmivxYVhB5q46F/Design-system---Android?node-id=2486-6695
- * Features a larger thumb with shadow that extends beyond the track, matching the Figma design
+ * Based on Figma design ("toggle/yes"): https://www.figma.com/design/azdJACb5WmivxYVhB5q46F/Design-system---Android?node-id=2486-6694
+ * A 52x32 pill track with a 24dp white thumb inset 4dp inside it
  */
 @Composable
 fun DashSwitch(
@@ -60,14 +59,15 @@ fun DashSwitch(
     val density = LocalDensity.current
     val colors = LocalDashColors.current
     
-    // Dimensions based on Figma design with larger thumb
-    val trackWidth = 32.dp
-    val trackHeight = 16.dp  // Smaller track height
-    val thumbSize = 20.dp    // Larger thumb that extends beyond track
-    val trackCornerRadius = 8.dp
-    
-    // Calculate thumb travel distance (track width minus thumb size) in pixels
-    val maxOffsetPx = with(density) { (trackWidth - thumbSize).toPx() }
+    // Dimensions based on Figma design
+    val trackWidth = 52.dp
+    val trackHeight = 32.dp
+    val thumbInset = 4.dp
+    val thumbSize = trackHeight - thumbInset * 2
+    val trackCornerRadius = trackHeight / 2
+
+    // Thumb travel distance (track width minus thumb size and both insets) in pixels
+    val maxOffsetPx = with(density) { (trackWidth - thumbSize - thumbInset * 2).toPx() }
     
     // Animate thumb position
     val thumbOffsetPx by animateFloatAsState(
@@ -83,7 +83,7 @@ fun DashSwitch(
     val trackColor = if (checked) {
         colors.dashBlue
     } else {
-        colors.gray300
+        colors.gray300.copy(alpha = 0.5f)
     }
     val thumbColor = Color.White
     
@@ -111,23 +111,18 @@ fun DashSwitch(
                 )
         )
         
-        // Thumb container - positioned relative to track
+        // Thumb container - positioned inside the track
         Box(
             modifier = Modifier
                 .width(trackWidth)
-                .height(thumbSize), // Use thumb size for container height
+                .height(trackHeight)
+                .padding(horizontal = thumbInset),
             contentAlignment = Alignment.CenterStart
         ) {
-            // Thumb with shadow (larger than track)
             Box(
                 modifier = Modifier
                     .size(thumbSize)
                     .offset(x = thumbOffset)
-                    .shadow(
-                        elevation = 2.dp,
-                        shape = CircleShape,
-                        clip = false
-                    )
                     .background(
                         color = thumbColor,
                         shape = CircleShape

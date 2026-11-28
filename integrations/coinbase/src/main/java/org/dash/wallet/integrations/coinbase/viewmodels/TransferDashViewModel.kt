@@ -3,23 +3,24 @@ package org.dash.wallet.integrations.coinbase.viewmodels
 import androidx.annotation.StringRes
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import org.bitcoinj.core.Address
-import org.bitcoinj.core.Coin
-import org.bitcoinj.core.InsufficientMoneyException
-import org.bitcoinj.utils.Fiat
-import org.bitcoinj.wallet.Wallet.CouldNotAdjustDownwards
-import org.bitcoinj.wallet.Wallet.DustySendRequested
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.R
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.freshReceiveAddressStringOffMain
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.ExchangeRate
+import org.dash.wallet.common.getDashBalance
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.money.FiatValue
+import org.dash.wallet.common.observeTotalDashBalance
 import org.dash.wallet.common.services.*
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -36,7 +37,10 @@ import org.dash.wallet.integrations.coinbase.ui.dialogs.CoinBaseResultDialog
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.util.*
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
+import org.dash.wallet.common.services.ReceiveAddressUnavailableException
 
 @HiltViewModel
 class TransferDashViewModel @Inject constructor(
@@ -48,16 +52,96 @@ class TransferDashViewModel @Inject constructor(
     networkState: NetworkStateInt,
     private val analyticsService: AnalyticsService,
     private val transactionMetadataProvider: TransactionMetadataProvider,
-    private val walletUIConfig: WalletUIConfig
+    private val walletUIConfig: WalletUIConfig,
+    private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
+    companion object {
+        private const val KEY_PAYMENT_OUTCOME_UNKNOWN = "payment_outcome_unknown"
+        private const val KEY_SEND_IN_PROGRESS = "send_in_progress"
+        private const val KEY_SENT_UNDELIVERED = "sent_undelivered"
+    }
 
-    val minimumFee: Coin = Coin.valueOf(226)
-    private val _loadingState: MutableLiveData<Boolean> = MutableLiveData()
+    /**
+     * True once a transfer's send may have gone out with its outcome unknown. Terminal: no
+     * further send is accepted, and it is kept in [savedStateHandle] so a recreated screen (or
+     * process) still shows the warning instead of a Continue that could pay twice.
+     */
+    val paymentOutcomeUnknown: StateFlow<Boolean> =
+        savedStateHandle.getStateFlow(KEY_PAYMENT_OUTCOME_UNKNOWN, false)
+
+    /**
+     * Called when a transfer screen is opened afresh (not recreated). This view model is scoped
+     * to the whole Coinbase graph and outlives the screen, but [paymentOutcomeUnknown] belongs to
+     * the transfer it was raised for: a new transfer starts clear, while a recreated screen keeps
+     * refusing the uncertain one.
+     */
+    fun startNewTransfer() {
+        // Results and questions of an earlier transfer, including one whose send is still
+        // running, are dropped rather than shown on (or answered from) the new screen.
+        transferGeneration.incrementAndGet()
+        _sendDashToCoinbaseState.value = null
+        savedStateHandle[KEY_PAYMENT_OUTCOME_UNKNOWN] = false
+        savedStateHandle[KEY_SENT_UNDELIVERED] = false
+    }
+
+    /** Which opened transfer screen a send belongs to (see [startNewTransfer]). */
+    private val transferGeneration = AtomicInteger(0)
+
+    init {
+        // A transfer was sending when the process died: it may have gone out, and nothing is
+        // left to say whether it did.
+        if (savedStateHandle.get<Boolean>(KEY_SEND_IN_PROGRESS) == true) {
+            savedStateHandle[KEY_PAYMENT_OUTCOME_UNKNOWN] = true
+            savedStateHandle[KEY_SEND_IN_PROGRESS] = false
+        }
+        // A transfer went out, but the process died before the screen took its result (held
+        // while the wallet was locked): the restored screen must not offer it again.
+        if (savedStateHandle.get<Boolean>(KEY_SENT_UNDELIVERED) == true) {
+            savedStateHandle[KEY_PAYMENT_OUTCOME_UNKNOWN] = true
+            savedStateHandle[KEY_SENT_UNDELIVERED] = false
+        }
+    }
+
+    /**
+     * Starts the transfer in this view model's scope, so a recreation of the screen (which
+     * cancels the screen's own coroutines) cannot cancel a send that may already be on the
+     * network. Its result arrives in [observeSendDashToCoinbaseState].
+     * False, with nothing started, when a send is in progress or an earlier one's outcome is
+     * unknown.
+     */
+    fun submitTransfer(
+        dashValue: Dash,
+        isEmptyWallet: Boolean,
+        session: WalletSession?
+    ): Boolean {
+        if (paymentOutcomeUnknown.value || sentUnanswered() || sendInFlight.get()) {
+            return false
+        }
+        val generation = transferGeneration.get()
+        // Undispatched: sendDash claims the send before this returns.
+        viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
+            _loadingState.value = true
+            try {
+                sendDash(dashValue, isEmptyWallet, session)
+            } finally {
+                _loadingState.value = false
+            }
+        }
+        return true
+    }
+
+    /** Held while one send is in progress (see [sendDash]). */
+    private val sendInFlight = AtomicBoolean(false)
+
+    val minimumFee: Dash = Dash.valueOf(226)
+    // False from the start: after a process death nothing is loading, and the screen must take
+    // down the progress dialog the FragmentManager restored.
+    private val _loadingState: MutableLiveData<Boolean> = MutableLiveData(false)
     val observeLoadingState: LiveData<Boolean>
         get() = _loadingState
 
-    private val _dashBalanceInWalletState = MutableLiveData(walletDataProvider.getWalletBalance())
-    val dashBalanceInWalletState: LiveData<Coin>
+    private val _dashBalanceInWalletState = MutableLiveData(walletDataProvider.getDashBalance())
+    val dashBalanceInWalletState: LiveData<Dash>
         get() = _dashBalanceInWalletState
 
     private var withdrawalLimitCurrency = MutableStateFlow<String?>(null)
@@ -71,9 +155,42 @@ class TransferDashViewModel @Inject constructor(
 
     val onBuildTransactionParamsCallback = SingleLiveEvent<CoinbaseTransactionParams>()
 
-    private val _sendDashToCoinbaseState = MutableLiveData<SendDashResponseState>()
-    val observeSendDashToCoinbaseState: LiveData<SendDashResponseState>
-        get() = _sendDashToCoinbaseState
+    private val _sendDashToCoinbaseState = MutableStateFlow<SendDashResponseState?>(null)
+
+    /**
+     * The transfer's result, kept until the screen takes it ([consumeSendDashToCoinbaseState]):
+     * a send this view model owns can finish while no screen is resumed to show it.
+     */
+    val observeSendDashToCoinbaseState: StateFlow<SendDashResponseState?> = _sendDashToCoinbaseState.asStateFlow()
+
+    /** True for exactly one taker of [state], which then shows it. */
+    fun consumeSendDashToCoinbaseState(state: SendDashResponseState): Boolean =
+        _sendDashToCoinbaseState.compareAndSet(state, null)
+
+    /**
+     * The user answered the transfer's result dialog. Until then a transfer that went out stays
+     * marked in the saved state, so a process death with the dialog up restores a screen that
+     * refuses to send it again.
+     */
+    fun acknowledgeTransferResult() {
+        savedStateHandle[KEY_SENT_UNDELIVERED] = false
+    }
+
+    /** Gives back a taken [state] the user did not answer, unless a newer one arrived. */
+    fun retainSendDashToCoinbaseState(state: SendDashResponseState) {
+        if (_sendDashToCoinbaseState.compareAndSet(null, state)) {
+            markSentUndelivered(state)
+        }
+    }
+
+    private fun sentUnanswered(): Boolean = savedStateHandle.get<Boolean>(KEY_SENT_UNDELIVERED) == true
+
+    /** A transfer that went out stays marked, in the saved state, until the user answers its result. */
+    private fun markSentUndelivered(state: SendDashResponseState) {
+        if (state is SendDashResponseState.SuccessState) {
+            savedStateHandle[KEY_SENT_UNDELIVERED] = true
+        }
+    }
 
     private val _userAccountDataWithExchangeRate = MutableLiveData<CoinbaseToDashExchangeRateUIModel>()
     val userAccountOnCoinbaseState: LiveData<CoinbaseToDashExchangeRateUIModel>
@@ -89,22 +206,22 @@ class TransferDashViewModel @Inject constructor(
 
     val isDeviceConnectedToInternet: LiveData<Boolean> = networkState.isConnected.asLiveData()
 
-    var minAllowedSwapDashCoin: Coin = Coin.ZERO
-    var minFiatAmount: Fiat = Fiat.valueOf(Constants.USD_CURRENCY, 0)
+    var minAllowedSwapDashCoin: Dash = Dash.ZERO
+    var minFiatAmount: FiatValue = FiatValue.valueOf(Constants.USD_CURRENCY, 0)
 
-    var maxForDashCoinBaseAccount: Coin = Coin.ZERO
+    var maxForDashCoinBaseAccount: Dash = Dash.ZERO
         private set
 
     init {
         getUserAccountAddress()
         getUserData()
-        walletDataProvider.observeSpendableBalance()
+        walletDataProvider.observeTotalDashBalance()
             .onEach(_dashBalanceInWalletState::postValue)
             .launchIn(viewModelScope)
 
         walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
             .filterNotNull()
-            .onEach { minFiatAmount = Fiat.valueOf(it, minFiatAmount.value) }
+            .onEach { minFiatAmount = FiatValue.valueOf(it, minFiatAmount.value) }
             .launchIn(viewModelScope)
 
         withdrawalLimitCurrency
@@ -133,18 +250,18 @@ class TransferDashViewModel @Inject constructor(
         val bd = cleanedValue.setScale(8, RoundingMode.HALF_UP)
 
         val coin = try {
-            Coin.parseCoin(bd.toString())
+            Dash.parse(bd.toString())
         } catch (x: Exception) {
-            Coin.ZERO
+            Dash.ZERO
         }
 
         minAllowedSwapDashCoin = coin
 
         val formattedAmount = GenericUtils.formatFiatWithoutComma(minFaitValue.toString())
         minFiatAmount = try {
-            Fiat.parseFiat(minFiatAmount.currencyCode, formattedAmount)
+            FiatValue.parseFiat(minFiatAmount.currencyCode, formattedAmount)
         } catch (x: Exception) {
-            Fiat.valueOf(minFiatAmount.currencyCode, 0)
+            FiatValue.valueOf(minFiatAmount.currencyCode, 0)
         }
     }
 
@@ -152,11 +269,11 @@ class TransferDashViewModel @Inject constructor(
         maxForDashCoinBaseAccount = account.coinbaseAccount.coinBalance()
     }
 
-    private suspend fun isInputGreaterThanLimit(amountInDash: Coin): Boolean {
+    private suspend fun isInputGreaterThanLimit(amountInDash: Dash): Boolean {
         return coinBaseRepository.isInputGreaterThanLimit(amountInDash)
     }
 
-    suspend fun checkEnteredAmountValue(amountInDash: Coin): SwapValueErrorType {
+    suspend fun checkEnteredAmountValue(amountInDash: Dash): SwapValueErrorType {
         return when {
             (amountInDash == minAllowedSwapDashCoin || amountInDash.isGreaterThan(minAllowedSwapDashCoin)) &&
                 maxForDashCoinBaseAccount.isLessThan(minAllowedSwapDashCoin) -> SwapValueErrorType.NotEnoughBalance
@@ -171,7 +288,7 @@ class TransferDashViewModel @Inject constructor(
         }
     }
 
-    fun isInputGreaterThanWalletBalance(input: Coin, balanceInWallet: Coin): Boolean {
+    fun isInputGreaterThanWalletBalance(input: Dash, balanceInWallet: Dash): Boolean {
         return input.isGreaterThan(balanceInWallet)
     }
 
@@ -199,25 +316,60 @@ class TransferDashViewModel @Inject constructor(
         }
     }
 
-    suspend fun sendDash(dashValue: Coin, isEmptyWallet: Boolean) {
-        _sendDashToCoinbaseState.value = checkTransaction(dashValue, isEmptyWallet)
+    /** The wallet installed now, taken when the user confirms a transfer (see [sendDash]). */
+    fun currentWalletSession(): WalletSession? = sendPaymentService.currentWalletSession()
+
+    /**
+     * Sends the transfer from the wallet of [session], taken when the user confirmed it, and
+     * refused with nothing sent if that wallet has since been wiped (review 4304575003).
+     */
+    suspend fun sendDash(dashValue: Dash, isEmptyWallet: Boolean, session: WalletSession?) {
+        // Claimed synchronously, before the first suspension, so two rapid confirms cannot both
+        // pass and send; refused for good once an earlier send's outcome is unknown.
+        // Refused too while a transfer that went out awaits the user's answer to its result.
+        if (paymentOutcomeUnknown.value || sentUnanswered() || !sendInFlight.compareAndSet(false, true)) {
+            return
+        }
+        // Saved with the screen's state: should the process die before this send ends, the
+        // restored screen treats its outcome as unknown (see init).
+        savedStateHandle[KEY_SEND_IN_PROGRESS] = true
+        val generation = transferGeneration.get()
+        try {
+            val state = checkTransaction(dashValue, isEmptyWallet, session)
+            // A newer transfer screen was opened meanwhile: this result is not its own.
+            if (generation == transferGeneration.get()) {
+                if (state == SendDashResponseState.OutcomeUnknownState) {
+                    savedStateHandle[KEY_PAYMENT_OUTCOME_UNKNOWN] = true
+                }
+                markSentUndelivered(state)
+                _sendDashToCoinbaseState.value = state
+            }
+        } catch (ex: CancellationException) {
+            // Cancelled while sending: the transfer may have gone out, and nobody is left to
+            // learn whether it did.
+            if (generation == transferGeneration.get()) {
+                savedStateHandle[KEY_PAYMENT_OUTCOME_UNKNOWN] = true
+            }
+            throw ex
+        } finally {
+            // An unknown outcome has already set the terminal flag above, which keeps refusing.
+            savedStateHandle[KEY_SEND_IN_PROGRESS] = false
+            sendInFlight.set(false)
+        }
     }
 
-    suspend fun estimateNetworkFee(value: Coin, emptyWallet: Boolean): SendPaymentService.TransactionDetails? {
+    suspend fun estimateNetworkFee(value: Dash, emptyWallet: Boolean): SendPaymentService.TransactionEstimate? {
         try {
             return sendPaymentService.estimateNetworkFee(dashAddress, value, emptyWallet)
         } catch (exception: Exception) {
-            when (exception) {
-                is DustySendRequested -> {
+            when {
+                exception.isDustySend -> {
                     _sendDashToCoinbaseError.value = NetworkFeeExceptionState(R.string.send_coins_error_dusty_send)
                 }
-                is InsufficientMoneyException -> {
+                exception.isInsufficientMoney -> {
                     _sendDashToCoinbaseError.value = NetworkFeeExceptionState(
                         R.string.send_coins_error_insufficient_money
                     )
-                }
-                is CouldNotAdjustDownwards -> {
-                    _sendDashToCoinbaseError.value = NetworkFeeExceptionState(R.string.send_coins_error_dusty_send)
                 }
                 else -> {
                     _sendDashToCoinbaseError.value = NetworkFeeExceptionState(exceptionMessage = exception.toString())
@@ -228,37 +380,70 @@ class TransferDashViewModel @Inject constructor(
     }
 
     private suspend fun checkTransaction(
-        coin: Coin,
-        isEmptyWallet: Boolean
+        coin: Dash,
+        isEmptyWallet: Boolean,
+        session: WalletSession?
     ): SendDashResponseState {
         return try {
-            val transaction = sendPaymentService.sendCoins(
+            val txId = sendPaymentService.sendCoins(
                 dashAddress,
                 coin,
-                emptyWallet = isEmptyWallet
+                emptyWallet = isEmptyWallet,
+                session = session
             )
             transactionMetadataProvider.markAddressAsTransferOutAsync(
-                dashAddress.toBase58(),
+                dashAddress,
                 ServiceName.Coinbase
             )
-            SendDashResponseState.SuccessState(transaction.isPending)
-        } catch (e: InsufficientMoneyException) {
-            e.printStackTrace()
-            SendDashResponseState.InsufficientMoneyState
+            // Sent, whether or not the wallet already lists it as pending (it may not have it yet,
+            // or it may be confirmed already): never reported as an error that offers a retry.
+            SendDashResponseState.SuccessState(txId)
         } catch (e: Exception) {
-            e.printStackTrace()
-            e.message?.let {
-                SendDashResponseState.FailureState(it)
-            } ?: SendDashResponseState.UnknownFailureState
+            when {
+                // Not a failure of the send: the caller decides what a cancellation means.
+                e is CancellationException -> throw e
+                // May have been sent: never reported as a failure, which offers a retry.
+                e is PaymentSubmissionPendingException -> {
+                    e.printStackTrace()
+                    SendDashResponseState.OutcomeUnknownState
+                }
+                e.isInsufficientMoney -> {
+                    e.printStackTrace()
+                    SendDashResponseState.InsufficientMoneyState
+                }
+                else -> {
+                    e.printStackTrace()
+                    e.message?.let {
+                        SendDashResponseState.FailureState(it)
+                    } ?: SendDashResponseState.UnknownFailureState
+                }
+            }
         }
     }
 
-    fun reviewTransfer(dashValue: String) {
+    fun reviewTransfer(dashValue: String) = viewModelScope.launch {
+        // Off-main: reviewTransfer is called from a Main-thread observer, and
+        // the underlying freshReceiveAddress() forces a synchronous
+        // full-wallet save; the callback below still fires on Main.
+        val depositAddress = try {
+            walletDataProvider.freshReceiveAddressStringOffMain()
+        } catch (ex: ReceiveAddressUnavailableException) {
+            // Transferring from Coinbase to the held dashj chain's frozen address
+            // would deposit to an already-paid address (SR-03).
+            //
+            // Emit the EXISTING address-creation failure event, which the fragment
+            // already observes. Clearing the params event instead does not suppress
+            // it — SingleLiveEvent marks a null value pending just the same — and
+            // the fragment then forwards that null into a non-null navigation
+            // argument, crashing rather than showing the error.
+            onAddressCreationFailedCallback.call()
+            return@launch
+        }
         val sendTransactionToWalletParams = SendTransactionToWalletParams(
             dashValue,
             Constants.DASH_CURRENCY,
             UUID.randomUUID().toString(),
-            walletDataProvider.freshReceiveAddress().toBase58(),
+            depositAddress,
             CoinbaseConstants.TRANSACTION_TYPE_SEND
         )
 
@@ -326,20 +511,20 @@ class TransferDashViewModel @Inject constructor(
             }
         }
     }
-    private val dashAddress: Address
-        get() = Address.fromString(
-            walletDataProvider.networkParameters,
-            (observeCoinbaseAddressState.value ?: observeCoinbaseUserAccountAddress.value ?: "").trim {
-                it <= ' '
-            }
-        )
+    private val dashAddress: String
+        get() = (observeCoinbaseAddressState.value ?: observeCoinbaseUserAccountAddress.value ?: "").trim {
+            it <= ' '
+        }
 }
 
 sealed class SendDashResponseState {
-    data class SuccessState(val isTransactionPending: Boolean): SendDashResponseState()
+    data class SuccessState(val txId: String): SendDashResponseState()
     object InsufficientMoneyState: SendDashResponseState()
     data class FailureState(val failureMessage: String): SendDashResponseState()
     object UnknownFailureState: SendDashResponseState()
+
+    /** The send may have gone out ([PaymentSubmissionPendingException]); must not be retried. */
+    object OutcomeUnknownState: SendDashResponseState()
 }
 
 data class NetworkFeeExceptionState(

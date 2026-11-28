@@ -9,16 +9,17 @@ No DashJ release or key-derivation changes are required.
 
 ## Prerequisites
 
-- An updated `5.0.0-SNAPSHOT` Platform SDK containing `NetworkConfiguration`
-  and the explicit-network native constructor, including rebuilt Android libraries.
-  The previously published snapshot without those APIs is not sufficient.
+- No manual SDK install. The root `build.gradle` pins the legacy Platform SDK
+  (`dppVersion`, `5.0.0-20261016.200955-3`), which already has `NetworkConfiguration.sakura()`
+  and the explicit-network constructor, and the Kotlin SDK (`dashSdkVersion`,
+  `5.0.0-int31-20261019.192942-1`). Gradle resolves both from the snapshots repository.
 - Set `sakuraSporkAddress` in local.properties or with `-PsakuraSporkAddress=...`.
   This is the operator's public signing address, never a private key. No other
   devnet's address is substituted. Missing values fail the devnet build; malformed
   addresses are also rejected when constructing the network parameters.
 - Core port defaults to `20001` by assumption; override with `-PsakuraCorePort=...`.
 
-Build with `./gradlew :wallet:assembleDevnetDebug` after installing the updated SDK.
+Build with `./gradlew :wallet:assembleDevnetDebug`.
 The local, Git-ignored `wallet/google-services.json` must contain
 `org.dash.wallet.devnet` so Firebase-dependent startup workers can initialize.
 

@@ -300,7 +300,7 @@ private fun MultipleProvidersSection(
             for (provider in providers) {
                 ProviderOption(
                     providerName = provider.provider,
-                    subtitle = if (provider.denominationsType == DenominationType.MinMax.value) {
+                    subtitle = if (provider.sellsFlexibleAmounts()) {
                         stringResource(R.string.flexible_amounts)
                     } else {
                         stringResource(R.string.fixed_amounts)
@@ -327,7 +327,7 @@ private fun SingleProviderSection(
     provider: GiftCardProvider
 ) {
     val context = LocalContext.current
-    val subtitle = if (provider.denominationsType == DenominationType.MinMax.value) {
+    val subtitle = if (provider.sellsFlexibleAmounts()) {
         stringResource(R.string.flexible_amounts)
     } else {
         stringResource(R.string.fixed_amounts)
@@ -922,3 +922,6 @@ private fun PreviewMerchantDetails() {
         )
     }
 }
+
+private fun GiftCardProvider.sellsFlexibleAmounts() = denominationsType == DenominationType.MinMax.value ||
+    denominationsType == DenominationType.MinMaxMajor.value

@@ -17,9 +17,9 @@
 
 package org.dash.wallet.common.ui;
 
-import org.bitcoinj.core.Coin;
-import org.bitcoinj.core.Monetary;
-import org.bitcoinj.utils.MonetaryFormat;
+import org.dash.wallet.common.money.Coin;
+import org.dash.wallet.common.money.Monetary;
+import org.dash.wallet.common.money.MonetaryFormat;
 import org.dash.wallet.common.R;
 import org.dash.wallet.common.util.Constants;
 import org.dash.wallet.common.util.GenericUtils;

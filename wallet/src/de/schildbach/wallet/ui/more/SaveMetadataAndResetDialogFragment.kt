@@ -120,7 +120,8 @@ fun ResetWalletDialog(
     onLearnMore: () -> Unit,
     viewModel: TransactionMetadataSettingsPreviewViewModel
 ) {
-    val lastSaveWorkId by viewModel.lastSaveWorkId.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
+    val lastSaveWorkId = uiState.lastSaveWorkId
 
     ModalDialog(
         showDialog = true,
@@ -156,12 +157,14 @@ fun ExampleScreen() {
     // State to control dialog visibility
     val showDialog = remember { mutableStateOf(true) }
     val viewModel = object: TransactionMetadataSettingsPreviewViewModel {
-        override val filterState: StateFlow<TransactionMetadataSettings>
-                = MutableStateFlow(TransactionMetadataSettings(savePastTxToNetwork = true, saveToNetwork = true, modified = true))
-        override val hasPastTransactionsToSave: StateFlow<Boolean> = MutableStateFlow(true)
-        override val lastSaveWorkId = MutableStateFlow(null)
-        override val lastSaveDate: StateFlow<Long> = MutableStateFlow(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(2))
-        override val futureSaveDate: StateFlow<Long> = MutableStateFlow(System.currentTimeMillis())
+        override val uiState: StateFlow<TransactionMetadataSettingsUIState> = MutableStateFlow(
+            TransactionMetadataSettingsUIState(
+                settings = TransactionMetadataSettings(savePastTxToNetwork = true, saveToNetwork = true, modified = true),
+                lastSaveDate = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(2),
+                futureSaveDate = System.currentTimeMillis(),
+                hasPastTransactionsToSave = true
+            )
+        )
         override fun updatePreferences(settings: TransactionMetadataSettings) {}
         override fun observePublishOperation(workId: String): Flow<Resource<WorkInfo>> = MutableStateFlow(Resource.loading<WorkInfo>())
     }

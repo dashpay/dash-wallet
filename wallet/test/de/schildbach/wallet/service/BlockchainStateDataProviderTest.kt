@@ -1,0 +1,527 @@
+/*
+ * Copyright 2026 Dash Core Group.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package de.schildbach.wallet.service
+
+import de.schildbach.wallet.database.dao.BlockchainStateDao
+import de.schildbach.wallet.service.platform.sdk.SdkBlockchainStateUpdate
+import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
+import de.schildbach.wallet.service.platform.sdk.ShadowSyncPhase
+import de.schildbach.wallet.service.platform.sdk.ShadowSyncProgress
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.runTest
+import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.data.SyncStage
+import org.dash.wallet.common.data.entity.BlockchainState
+import org.dash.wallet.common.data.entity.BlockchainState.Impediment
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
+import org.junit.Test
+import java.util.Date
+import java.util.EnumSet
+
+/**
+ * Host-JVM tests for the kill-list Step B writer/rollback surface of
+ * [BlockchainStateDataProvider]: [BlockchainStateDataProvider.updateSdkBlockchainState]
+ * applied against a REAL prior Room row (chainlock preservation,
+ * replaying=false, null-field preservation, impediment composition, the
+ * bestChainHeightEver advance) and [BlockchainStateDataProvider.clearSdkDerivedState]
+ * (the rollback hook that un-latches the SDK stall NETWORK impediment).
+ *
+ * The provider serializes writers on its own single-thread scope, so
+ * assertions poll ([awaitUntil]) instead of assuming synchronous writes.
+ */
+class BlockchainStateDataProviderTest {
+
+    /** In-memory stand-in for the Room DAO; @Volatile publishes writer-thread mutations. */
+    private class FakeBlockchainStateDao : BlockchainStateDao() {
+        @Volatile
+        var state: BlockchainState? = null
+        public override suspend fun insert(blockchainState: BlockchainState) {
+            state = blockchainState
+        }
+        override suspend fun getState(): BlockchainState? = state
+        override fun observeState(): Flow<BlockchainState?> = flowOf(state)
+    }
+
+    private val dao = FakeBlockchainStateDao()
+    private val configuration = mockk<Configuration>(relaxed = true)
+    private val l1Progress = MutableStateFlow(ShadowSyncProgress.IDLE)
+    private val l1ShadowSyncService = mockk<L1ShadowSyncService> { every { progress } returns l1Progress }
+    private val provider = BlockchainStateDataProvider(
+        context = mockk(relaxed = true),
+        dashSystemService = mockk(relaxed = true),
+        blockchainStateDao = dao,
+        walletDataProvider = mockk(relaxed = true),
+        configuration = configuration,
+        l1ShadowSyncService = { l1ShadowSyncService }
+    )
+
+    private fun sdkUpdate(
+        bestChainHeight: Int? = null,
+        bestChainDateMs: Long? = null,
+        percentageSync: Int? = null,
+        mnListHeight: Int? = null,
+        syncStage: SyncStage = SyncStage.BLOCKS,
+        networkStalled: Boolean = false,
+        chainlockHeight: Int? = null,
+        preserveEstablishedSyncStage: Boolean = false,
+        // Default: the lifecycle agrees with the percent, which is what every
+        // pre-2026-09-23 fixture assumed. Tests of the disagreement pass it.
+        replayComplete: Boolean? = percentageSync?.let { it >= 100 }
+    ) = SdkBlockchainStateUpdate(
+        bestChainHeight = bestChainHeight,
+        bestChainDateMs = bestChainDateMs,
+        percentageSync = percentageSync,
+        mnListHeight = mnListHeight,
+        replayComplete = replayComplete,
+        syncStage = syncStage,
+        networkStalled = networkStalled,
+        chainlockHeight = chainlockHeight,
+        preserveEstablishedSyncStage = preserveEstablishedSyncStage
+    )
+
+    private fun awaitUntil(what: String, timeoutMs: Long = 5_000, condition: () -> Boolean) {
+        val deadline = System.currentTimeMillis() + timeoutMs
+        while (!condition()) {
+            if (System.currentTimeMillis() > deadline) {
+                fail("timed out after ${timeoutMs}ms waiting for: $what")
+            }
+            Thread.sleep(10)
+        }
+    }
+
+    @Test
+    fun updateSdkBlockchainState_appliedAgainstRealPriorRow() {
+        // A realistic dashj-written prior row, mid-replay, with a chainlock
+        // height the SDK has no feed for and a STORAGE impediment reported
+        // by the still-running Android-side monitors.
+        dao.state = BlockchainState(
+            Date(1_000_000_000L),
+            1_500_000,
+            true,
+            EnumSet.of(Impediment.STORAGE),
+            1_499_990,
+            1_499_000,
+            80
+        )
+        provider.updateImpediments(setOf(Impediment.STORAGE))
+
+        provider.updateSdkBlockchainState(
+            sdkUpdate(
+                bestChainHeight = 1_500_100,
+                bestChainDateMs = 2_000_000_000L,
+                percentageSync = 90,
+                mnListHeight = null, // no masternode knowledge → preserve
+                syncStage = SyncStage.BLOCKS,
+                networkStalled = true
+            )
+        )
+        // The stage flow is set LAST on the writer thread — awaiting it is
+        // the barrier that makes every earlier row mutation visible.
+        awaitUntil("SDK update applied") { provider.getSyncStage() == SyncStage.BLOCKS }
+
+        val row = dao.state!!
+        assertEquals(1_500_100, row.bestChainHeight)
+        assertEquals(Date(2_000_000_000L), row.bestChainDate)
+        assertEquals(90, row.percentageSync)
+        assertTrue("below the tip on the SDK path IS a replay — the service must stay alive", row.replaying)
+        assertEquals("a null chainlockHeight preserves the row's value", 1_499_990, row.chainlockHeight)
+        assertEquals("null mnListHeight preserves the row's value", 1_499_000, row.mnlistHeight)
+        assertEquals(
+            "service impediments compose with the SDK stall NETWORK bit",
+            setOf(Impediment.STORAGE, Impediment.NETWORK),
+            row.impediments
+        )
+    }
+
+    @Test
+    fun updateSdkBlockchainState_replayingFollowsThePercentage() {
+        // Phase 1b item 7. Reference install, 2026-09-15: the SDK replay ran
+        // for eleven hours with `replaying` hard-coded false, so the idle rule
+        // stopped the service nine times and nothing rescheduled it.
+        dao.state = BlockchainState(Date(0L), 0, false, EnumSet.noneOf(Impediment::class.java), 0, 0, 100)
+
+        provider.updateSdkBlockchainState(sdkUpdate(percentageSync = 42, syncStage = SyncStage.BLOCKS))
+        awaitUntil("below-tip update applied") { dao.state?.percentageSync == 42 }
+        assertTrue("42% is a replay in progress", dao.state!!.replaying)
+
+        // A transient null percent (SDK ERROR blip) preserves both fields.
+        provider.updateSdkBlockchainState(sdkUpdate(percentageSync = null, syncStage = SyncStage.HEADERS))
+        awaitUntil("null-percent update applied") { provider.getSyncStage() == SyncStage.HEADERS }
+        assertEquals(42, dao.state!!.percentageSync)
+        assertTrue("a null percent must not clear the replay flag", dao.state!!.replaying)
+
+        provider.updateSdkBlockchainState(sdkUpdate(percentageSync = 100, syncStage = SyncStage.COMPLETE))
+        awaitUntil("tip update applied") { dao.state?.percentageSync == 100 }
+        assertFalse("at the tip the replay is over", dao.state!!.replaying)
+        assertTrue(dao.state!!.isSynced())
+    }
+
+    /**
+     * Review, 2026-09-23. The display percent reads 100 at the iOS aggregate
+     * threshold (plan §35) while the committed cursor is thousands of blocks
+     * behind and the block pipeline still lags (the §34 final-batch park).
+     * `replaying` is the idle-stop guard and the replay wake lock; deriving
+     * it from that percent stopped the release-build engine mid-work and
+     * then declined the one-minute restart because the replay was "over".
+     * The flag now follows the lifecycle signal, and the DAO's clear-at-100%
+     * must not undo that one line later.
+     */
+    @Test
+    fun updateSdkBlockchainState_replayingFollowsTheLifecycle_notTheDisplayPercent() {
+        dao.state = BlockchainState(Date(0L), 0, false, EnumSet.noneOf(Impediment::class.java), 0, 0, 100)
+
+        // The park: display says 100, the engine is still replaying.
+        provider.updateSdkBlockchainState(
+            sdkUpdate(percentageSync = 100, syncStage = SyncStage.COMPLETE, replayComplete = false)
+        )
+        // The fixture already reads 100, so wait for the stage the update publishes.
+        awaitUntil("parked update applied") { provider.getSyncStage() == SyncStage.COMPLETE }
+        assertTrue("100% on the display does not end the replay while the engine still works", dao.state!!.replaying)
+
+        // A transient ERROR/IDLE/CONNECTING snapshot carries no verdict: preserve.
+        provider.updateSdkBlockchainState(
+            sdkUpdate(percentageSync = null, syncStage = SyncStage.OFFLINE, replayComplete = null)
+        )
+        awaitUntil("null update applied") { provider.getSyncStage() == SyncStage.OFFLINE }
+        assertTrue("an unknown verdict leaves the flag alone", dao.state!!.replaying)
+
+        // Review 2026-09-23, second round: a connectivity callback rewrites the
+        // same row through updateImpediments() — impediments only. The DAO's
+        // dashj-era clear-at-100% must not end the replay on that write either.
+        provider.updateImpediments(setOf(Impediment.NETWORK))
+        awaitUntil("impediment-only write applied") { dao.state?.impediments?.contains(Impediment.NETWORK) == true }
+        assertEquals(100, dao.state!!.percentageSync)
+        assertTrue("an impediment-only rewrite of a parked row must not end the replay", dao.state!!.replaying)
+
+        // The pipeline drains: the lifecycle says complete, the flag clears.
+        provider.updateSdkBlockchainState(
+            sdkUpdate(percentageSync = 100, syncStage = SyncStage.COMPLETE, replayComplete = true)
+        )
+        awaitUntil("completion applied") { dao.state?.replaying == false }
+        assertFalse(dao.state!!.replaying)
+        // isSynced() also wants no impediments; drop the NETWORK bit set above.
+        provider.updateImpediments(emptySet())
+        awaitUntil("impediments cleared") { dao.state?.impediments?.isEmpty() == true }
+        assertTrue(dao.state!!.isSynced())
+    }
+
+    @Test
+    fun markReplayStartedForSdkTakeover_flagsTheReplay_zeroesThePercent_keepsHeights() {
+        // Phase 1b item 8: dashj's "synced, 100%" row at the moment of the
+        // upgrade cutover. Emulator finding 3: the home screen kept showing
+        // this while the SDK scanned from genesis.
+        dao.state = BlockchainState(Date(1_000_000_000L), 1_500_000, false, EnumSet.noneOf(Impediment::class.java), 1_499_990, 1_499_000, 100)
+
+        provider.markReplayStartedForSdkTakeover()
+        awaitUntil("takeover marker applied") { dao.state?.replaying == true }
+
+        val row = dao.state!!
+        assertEquals("nothing scanned yet", 0, row.percentageSync)
+        assertFalse(row.isSynced())
+        assertEquals("heights are preserved", 1_500_000, row.bestChainHeight)
+        assertEquals(1_499_990, row.chainlockHeight)
+        assertEquals(1_499_000, row.mnlistHeight)
+        assertEquals(Date(1_000_000_000L), row.bestChainDate)
+
+        // The SDK's first real update then takes over the percentage.
+        provider.updateSdkBlockchainState(sdkUpdate(percentageSync = 7, syncStage = SyncStage.BLOCKS))
+        awaitUntil("first SDK update applied") { dao.state?.percentageSync == 7 }
+        assertTrue(dao.state!!.replaying)
+    }
+
+    @Test
+    fun markReplayStartedForSdkTakeover_movesTheStageOffComplete() {
+        // Review finding on #1568: the takeover marker fixed the ROW but not
+        // the STAGE. dashj has usually finished by the cutover, so
+        // syncStageFlow sits at COMPLETE, and getSyncStage() kept reporting a
+        // finished sync over a row that says "replaying from 0%" — for however
+        // long it took the SDK's first progress update to arrive. Every
+        // syncStage consumer (MainViewModel.observeSyncStage) read the wrong
+        // thing in that window.
+        provider.updateSdkBlockchainState(
+            sdkUpdate(percentageSync = 100, syncStage = SyncStage.COMPLETE)
+        )
+        awaitUntil("dashj-era COMPLETE established") { provider.getSyncStage() == SyncStage.COMPLETE }
+
+        dao.state = BlockchainState(Date(1_000L), 1_500_000, false, EnumSet.noneOf(Impediment::class.java), 0, 0, 100)
+        provider.markReplayStartedForSdkTakeover()
+
+        awaitUntil("stage left COMPLETE with the row") { provider.getSyncStage() != SyncStage.COMPLETE }
+        assertEquals(
+            "a takeover replay is a block scan, not an offline wallet",
+            SyncStage.BLOCKS,
+            provider.getSyncStage()
+        )
+        assertTrue("and the row agrees", dao.state!!.replaying)
+    }
+
+    @Test
+    fun markReplayStartedForSdkTakeover_leavesAReplayAlreadyInProgressAlone() {
+        dao.state = BlockchainState(Date(0L), 10, true, EnumSet.noneOf(Impediment::class.java), 0, 0, 55)
+        provider.markReplayStartedForSdkTakeover()
+        // Nothing to await: the writer must not touch the row. Give it a moment anyway.
+        Thread.sleep(100)
+        assertEquals(55, dao.state!!.percentageSync)
+        assertTrue(dao.state!!.replaying)
+    }
+
+    @Test
+    fun updateSdkBlockchainState_advancesBestChainHeightEver() {
+        // FIX-pin: the ongoing-sync notification dismisses only when the
+        // row's height reaches config.bestChainHeightEver, and only dashj
+        // paths ever advanced that pref — the SDK writer must mirror
+        // WalletApplication's maybe-increment write.
+        provider.updateSdkBlockchainState(sdkUpdate(bestChainHeight = 1_600_000, percentageSync = 50))
+        // The percent is mutated after the config call on the writer thread.
+        awaitUntil("first update applied") { dao.state?.percentageSync == 50 }
+        verify(exactly = 1) { configuration.maybeIncrementBestChainHeightEver(1_600_000) }
+
+        // No header knowledge → no advance attempt either.
+        provider.updateSdkBlockchainState(sdkUpdate(bestChainHeight = null, percentageSync = 51))
+        awaitUntil("second update applied") { dao.state?.percentageSync == 51 }
+        verify(exactly = 1) { configuration.maybeIncrementBestChainHeightEver(any()) }
+    }
+
+    @Test
+    fun updateSdkBlockchainState_nullPercentagePreservesPriorPercent() {
+        // FIX-pin: a transient SDK ERROR propagates percentageSync=null —
+        // the row keeps its 100 (no 100 → 0 → 100 isSynced() flap) while
+        // the stall NETWORK impediment raises.
+        provider.updateSdkBlockchainState(sdkUpdate(percentageSync = 100, syncStage = SyncStage.COMPLETE))
+        awaitUntil("synced row written") { dao.state?.percentageSync == 100 }
+
+        provider.updateSdkBlockchainState(
+            sdkUpdate(percentageSync = null, syncStage = SyncStage.OFFLINE, networkStalled = true)
+        )
+        awaitUntil("error update applied") { dao.state?.syncFailed() == true }
+        assertEquals("percent preserved through the transient error", 100, dao.state!!.percentageSync)
+    }
+
+    @Test
+    fun updateSdkBlockchainState_advancesChainlockHeightMonotonically() {
+        // FIX-pin (chainlockHeight post-cutover): dashj's
+        // chainLockHandler.bestChainLockBlockHeight stops advancing the moment
+        // the peergroup is held, so the row froze at the cutover snapshot (0 on
+        // a fresh restore) forever — ChainLockedCoinSelector then permanently
+        // took its FALLBACK_CONFIRMATIONS depth branch. The SDK writer now
+        // carries the engine's applied-chainlock height into the row.
+        dao.state = BlockchainState(
+            Date(1_000_000_000L),
+            1_500_000,
+            false,
+            EnumSet.noneOf(Impediment::class.java),
+            1_499_990,
+            1_499_000,
+            100
+        )
+
+        provider.updateSdkBlockchainState(sdkUpdate(percentageSync = 99, chainlockHeight = 1_500_050))
+        awaitUntil("chainlock advance applied") { dao.state?.percentageSync == 99 }
+        assertEquals(
+            "an SDK-observed chainlock advances the row",
+            1_500_050,
+            dao.state!!.chainlockHeight
+        )
+
+        // A fresh session starts with no observed chainlock and the engine's
+        // first event can be BELOW what dashj (or the last session) proved.
+        // Monotonic: it must never walk the row backwards.
+        provider.updateSdkBlockchainState(sdkUpdate(percentageSync = 98, chainlockHeight = 1_400_000))
+        awaitUntil("lower chainlock update applied") { dao.state?.percentageSync == 98 }
+        assertEquals(
+            "a lower SDK chainlock height must not regress the row",
+            1_500_050,
+            dao.state!!.chainlockHeight
+        )
+    }
+
+    @Test
+    fun clearSdkDerivedState_unlatchesStallNetworkImpedimentAndSyncStage() {
+        // FIX-pin: gate true → stalled update → gate false (rollback). The
+        // stall bit must reset — otherwise every later composition keeps
+        // NETWORK latched (syncFailed() until process restart) — and the
+        // persisted row's impediments must recompose immediately.
+        provider.updateSdkBlockchainState(
+            sdkUpdate(percentageSync = 40, syncStage = SyncStage.BLOCKS, networkStalled = true)
+        )
+        awaitUntil("stall raised") { dao.state?.syncFailed() == true }
+        awaitUntil("SDK stage driven") { provider.getSyncStage() == SyncStage.BLOCKS }
+
+        provider.clearSdkDerivedState()
+        awaitUntil("stall cleared") { dao.state?.syncFailed() == false }
+        assertTrue("no service impediments → row composes empty", dao.state!!.impediments.isEmpty())
+        assertEquals(
+            "SDK-written sync stage neutralized for the dashj path to re-drive",
+            SyncStage.OFFLINE,
+            provider.getSyncStage()
+        )
+    }
+
+    // ── MO-973 / CodeRabbit: the caught-up blip must not regress an ESTABLISHED
+    //    stage, but must still SEED one when none exists ────────────────────
+
+    /**
+     * The blip case: a stage is already established, then a caught-up snapshot
+     * arrives carrying a scan phase. Holding it is the whole point — otherwise the
+     * home screen renders "syncing 100%" on a wallet that is synced.
+     */
+    @Test
+    fun sdkUpdate_caughtUpBlipDoesNotRegressAnEstablishedStage() {
+        provider.updateSdkBlockchainState(
+            sdkUpdate(syncStage = SyncStage.COMPLETE, percentageSync = 40)
+        )
+        awaitUntil("stage established") { provider.getSyncStage() == SyncStage.COMPLETE }
+
+        // The blip: phase says BLOCKS, but the scan has caught up.
+        provider.updateSdkBlockchainState(
+            sdkUpdate(
+                syncStage = SyncStage.BLOCKS,
+                percentageSync = 100,
+                preserveEstablishedSyncStage = true
+            )
+        )
+        // Asserting that the stage did NOT move needs proof the blip actually ran
+        // — sleeping and reading COMPLETE back would pass even if it never did.
+        // saveState happens BEFORE the stage decision in the same body, so awaiting
+        // the blip's OWN row value would still leave that decision possibly
+        // pending. The scope is a single-thread executor running jobs in order
+        // (see BlockchainStateDataProvider.coroutineScope), so awaiting a TRAILING
+        // update's row value proves the blip's body completed, stage line included.
+        provider.updateSdkBlockchainState(
+            sdkUpdate(
+                syncStage = SyncStage.BLOCKS,
+                percentageSync = 101,
+                preserveEstablishedSyncStage = true
+            )
+        )
+        awaitUntil("blip body completed") { dao.state?.percentageSync == 101 }
+        assertEquals(SyncStage.COMPLETE, provider.getSyncStage())
+    }
+
+    /**
+     * The process-start case CodeRabbit flagged: nothing established yet. Holding
+     * the write would leave the flow null, which getSyncStage() reports as
+     * OFFLINE — so a cold start on an already-caught-up wallet would read offline.
+     * The seed must be applied instead.
+     */
+    @Test
+    fun sdkUpdate_caughtUpFirstUpdateSeedsTheStageInsteadOfReportingOffline() {
+        // No prior update at all — the flow is still null.
+        provider.updateSdkBlockchainState(
+            sdkUpdate(syncStage = SyncStage.BLOCKS, preserveEstablishedSyncStage = true)
+        )
+        awaitUntil("stage seeded") { provider.getSyncStage() == SyncStage.BLOCKS }
+        assertEquals(SyncStage.BLOCKS, provider.getSyncStage())
+    }
+
+    /**
+     * Review finding on #1564: preservation must not pin a wallet OFFLINE.
+     *
+     * IDLE/CONNECTING/ERROR map to SyncStage.OFFLINE and WRITE it (shadowSyncPercent
+     * reports 0 for them, so they never set the preserve flag). The caught-up FILTERS
+     * snapshot that follows a reconnect DOES set it — so a rule that preserved any
+     * established stage suppressed the forward transition and left the wallet reading
+     * offline with an active scan sitting at the tip.
+     */
+    @Test
+    fun sdkUpdate_caughtUpScanAfterConnectingMustLeaveOffline() {
+        provider.updateSdkBlockchainState(
+            sdkUpdate(percentageSync = 0, syncStage = SyncStage.OFFLINE)
+        )
+        awaitUntil("offline established") { provider.getSyncStage() == SyncStage.OFFLINE }
+
+        // Recovery: the scan is active and caught up to the tip.
+        provider.updateSdkBlockchainState(
+            sdkUpdate(percentageSync = 100, syncStage = SyncStage.BLOCKS, preserveEstablishedSyncStage = true)
+        )
+
+        awaitUntil("forward transition out of OFFLINE") { provider.getSyncStage() == SyncStage.BLOCKS }
+        assertEquals(SyncStage.BLOCKS, provider.getSyncStage())
+    }
+
+    @Test
+    fun sdkUpdate_caughtUpScanAfterAnErrorMustLeaveOffline() {
+        // An ERROR snapshot writes OFFLINE the same way a CONNECTING one does.
+        provider.updateSdkBlockchainState(
+            sdkUpdate(percentageSync = 0, syncStage = SyncStage.OFFLINE, networkStalled = true)
+        )
+        awaitUntil("offline established") { provider.getSyncStage() == SyncStage.OFFLINE }
+
+        provider.updateSdkBlockchainState(
+            sdkUpdate(percentageSync = 100, syncStage = SyncStage.BLOCKS, preserveEstablishedSyncStage = true)
+        )
+
+        awaitUntil("forward transition out of OFFLINE") { provider.getSyncStage() == SyncStage.BLOCKS }
+        assertEquals(SyncStage.BLOCKS, provider.getSyncStage())
+    }
+
+    /**
+     * The other direction still holds: an intermediate stage must not be held either,
+     * so a genuine HEADERS -> BLOCKS advance during a caught-up scan still lands.
+     */
+    @Test
+    fun sdkUpdate_caughtUpScanAdvancesAnIntermediateStage() {
+        provider.updateSdkBlockchainState(
+            sdkUpdate(percentageSync = 50, syncStage = SyncStage.HEADERS)
+        )
+        awaitUntil("headers established") { provider.getSyncStage() == SyncStage.HEADERS }
+
+        provider.updateSdkBlockchainState(
+            sdkUpdate(percentageSync = 100, syncStage = SyncStage.BLOCKS, preserveEstablishedSyncStage = true)
+        )
+
+        awaitUntil("stage advanced") { provider.getSyncStage() == SyncStage.BLOCKS }
+        assertEquals(SyncStage.BLOCKS, provider.getSyncStage())
+    }
+
+
+    private fun progress(phase: ShadowSyncPhase, firstSyncDone: Boolean) =
+        ShadowSyncProgress(phase, 0.0, 100, 200, 100, 200, firstSyncDone = firstSyncDone)
+
+    /**
+     * The screens' signal is the scanner's answer: first scan finished for the running wallet
+     * AND the funding gate open. A stopped engine, one waiting for peers or one in error does
+     * not open a screen, whatever was recorded.
+     */
+    @Test
+    fun observeFirstSyncDone_followsTheFundingGate_notOnlyTheRecord() = runTest {
+        val cases = listOf(
+            ShadowSyncPhase.IDLE to true,
+            ShadowSyncPhase.CONNECTING to true,
+            ShadowSyncPhase.ERROR to true,
+            ShadowSyncPhase.FILTERS to false,
+            ShadowSyncPhase.FILTERS to true,
+            ShadowSyncPhase.HEADERS to true
+        )
+        val seen = cases.map { (phase, done) ->
+            l1Progress.value = progress(phase, done)
+            provider.observeFirstSyncDone().first()
+        }
+
+        assertEquals(listOf(false, false, false, false, true, true), seen)
+    }
+}

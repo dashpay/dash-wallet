@@ -18,7 +18,10 @@
 package org.dash.wallet.features.exploredash.repository
 
 import com.google.gson.Gson
+import com.google.gson.JsonParseException
+import com.google.gson.stream.MalformedJsonException
 import kotlinx.coroutines.flow.Flow
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.ResourceString
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.GetMerchantResponse
@@ -185,6 +188,19 @@ class CTXSpendRepository @Inject constructor(
                 log.error("gift card order came back in {} but {} was ordered", reported, fiatCurrency)
                 throw CTXSpendException(ResourceString(R.string.gift_card_error))
             }
+        if (!response.cardFiatAmount.isNullOrBlank() &&
+            response.cardFiatAmount.trim().toBigDecimalOrNull()?.compareTo(fiatAmount.toBigDecimal()) != 0
+        ) {
+            log.error("gift card order came back for {} but {} was ordered", response.cardFiatAmount, fiatAmount)
+            throw CTXSpendException(ResourceString(R.string.gift_card_error))
+        }
+        // USD is what CTX always sold, so only there may an answer leave the currency out
+        if (!fiatCurrency.equals(Constants.USD_CURRENCY, ignoreCase = true) &&
+            response.fiatCurrency.isNullOrBlank() && response.cardFiatCurrency.isNullOrBlank()
+        ) {
+            log.error("gift card order for {} came back without a currency", fiatCurrency)
+            throw CTXSpendException(ResourceString(R.string.gift_card_error))
+        }
 
         return listOf(
             GiftCardInfo(
@@ -200,7 +216,8 @@ class CTXSpendRepository @Inject constructor(
                 redeemUrl = response.redeemUrl,
                 fiatAmount = response.fiatAmount,
                 fiatCurrency = response.fiatCurrency?.takeIf { it.isNotBlank() } ?: fiatCurrency,
-                paymentUrls = response.paymentUrls
+                paymentUrls = response.paymentUrls,
+                paymentUrlExpiration = response.paymentUrlExpiration
             )
         )
     }
@@ -284,19 +301,35 @@ class CTXSpendRepository @Inject constructor(
     }
 
     override suspend fun getMerchant(merchantId: String): UpdatedMerchantDetails? {
-        val response = api.getMerchant(merchantId)
+        val response = try {
+            api.getMerchant(merchantId)
+        } catch (e: JsonParseException) {
+            // CTX answered, with a body that cannot be decoded
+            throw UnusableMerchantDetailsException(e)
+        } catch (e: MalformedJsonException) {
+            throw UnusableMerchantDetailsException(e)
+        }
         return response?.let {
             giftCardMap[merchantId] = it
+            if (response.denominations.isEmpty()) {
+                throw UnusableMerchantDetailsException(IllegalStateException("no denominations"), true)
+            }
             try {
+                // read as decimals: toDouble() takes "NaN", and toFiat() would round 10.00001 into 10
+                val currency = GiftCardCurrency.normalize(response.currency)
+                val amounts = response.denominations.map { denom -> denom.trim().toBigDecimal() }
+                require(amounts.all { amount -> GiftCardCurrency.isCardAmount(amount, currency) })
                 UpdatedMerchantDetails(
                     id = response.id,
                     savingsPercentage = response.discount,
                     denominationsType = response.denominationsType,
-                    denominations = response.denominations.map { denom -> denom.toDouble() },
+                    denominations = amounts.map { amount -> amount.toDouble() },
                     redeemType = response.redeemType,
                     enabled = response.enabled,
                     currency = response.currency
-                )
+                ).also { details ->
+                    require(details.denominations.any { it > 0.0 })
+                }
             } catch (e: Exception) {
                 throw UnusableMerchantDetailsException(e)
             }

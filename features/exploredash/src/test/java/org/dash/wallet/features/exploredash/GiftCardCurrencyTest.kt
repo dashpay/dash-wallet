@@ -17,22 +17,37 @@
 
 package org.dash.wallet.features.exploredash
 
+import kotlinx.coroutines.runBlocking
+import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.Brand
+import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.Giftcard
+import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.GiftcardResponse
+import org.dash.wallet.features.exploredash.network.service.piggycards.PiggyCardsApi
+import org.dash.wallet.features.exploredash.repository.PiggyCardsRepository
 import org.dash.wallet.features.exploredash.utils.GiftCardCurrency
 import org.dash.wallet.features.exploredash.utils.toCardFormattedString
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.mockito.kotlin.any
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
 import java.util.Locale
 
 class GiftCardCurrencyTest {
     private val originalLocale = Locale.getDefault()
+    private val originalFormatLocale = Locale.getDefault(Locale.Category.FORMAT)
+    private val originalDisplayLocale = Locale.getDefault(Locale.Category.DISPLAY)
 
     private fun digits(text: String) = text.filter(Char::isDigit).map { Character.digit(it, 10) }.joinToString("")
 
     @After
     fun restoreLocale() {
         Locale.setDefault(originalLocale)
+        Locale.setDefault(Locale.Category.FORMAT, originalFormatLocale)
+        Locale.setDefault(Locale.Category.DISPLAY, originalDisplayLocale)
     }
 
     @Test
@@ -75,5 +90,72 @@ class GiftCardCurrencyTest {
         assertEquals("1000", digits(GiftCardCurrency.toFiat(1000.0, "JPY").toCardFormattedString()))
         assertEquals("1234", digits(GiftCardCurrency.toFiat(1.234, "KWD").toCardFormattedString()))
         assertEquals("1900", digits(GiftCardCurrency.toFiat(18.991, "GBP").toCardFormattedString(roundUp = true)))
+    }
+
+    @Test
+    fun discountedTotal_roundsUpOnceAtTheCurrencyDigits() {
+        // 1.1 * 0.9 is 0.9900000000000001 in binary floating point, which must not become 0.991
+        assertEquals("0.990", GiftCardCurrency.discountedTotal(mapOf(1.1 to 1), "KWD") { 0.1 }.toPlainString())
+        assertEquals("22.50", GiftCardCurrency.discountedTotal(mapOf(25.0 to 1), "USD") { 0.1 }.toPlainString())
+        // 18.9905 is rounded up, never down
+        assertEquals("19.00", GiftCardCurrency.discountedTotal(mapOf(19.99 to 1), "USD") { 0.05 }.toPlainString())
+        assertEquals("965", GiftCardCurrency.discountedTotal(mapOf(1000.0 to 1), "JPY") { 0.035 }.toPlainString())
+        assertEquals("25.00", GiftCardCurrency.discountedTotal(mapOf(25.0 to 1), "USD") { 0.0 }.toPlainString())
+    }
+
+    @Test
+    fun discountedTotal_addsEveryCardAtItsOwnDiscountBeforeRounding() {
+        val discounts = mapOf(25.0 to 0.1, 33.33 to 0.035)
+        val order = mapOf(25.0 to 2, 33.33 to 3)
+
+        // 2 * 22.5 + 3 * 32.163450 = 141.49035
+        val total = GiftCardCurrency.discountedTotal(order, "USD") { discounts.getValue(it) }
+        assertEquals("141.50", total.toPlainString())
+    }
+
+    @Test
+    fun discountedTotal_ofAPiggyCardsCardIsNotPushedUpACentByFloatNoise() = runBlocking {
+        val card = Giftcard(
+            id = 1,
+            name = "Acme",
+            description = "",
+            image = "",
+            priceType = "range",
+            currency = "USD",
+            discountPercentage = 5.6,
+            minDenomination = 10.0,
+            maxDenomination = 500.0,
+            denomination = "",
+            fee = 0,
+            quantity = 1,
+            brandId = 42
+        )
+        val api = mock<PiggyCardsApi> {
+            onBlocking { getBrands(any()) } doReturn listOf(Brand("42", "Acme"))
+            onBlocking { getGiftCards(any(), any()) } doReturn GiftcardResponse(200, "", listOf(card))
+        }
+        val piggyCards = PiggyCardsRepository(api, mock())
+        piggyCards.getMerchant("42")
+        // 5.6% less the 1.5% service fee is 0.040999999999999995 in the repository's arithmetic
+        val discount = piggyCards.getGiftCardDiscount("42", 100.0)
+        assertTrue(discount < 0.041)
+
+        val total = GiftCardCurrency.discountedTotal(mapOf(100.0 to 1), "USD") { discount }
+
+        assertEquals("95.90", total.toPlainString())
+    }
+
+    @Test
+    fun isCardAmount_readsTheDecimalsAsWritten() {
+        assertTrue(GiftCardCurrency.isCardAmount("10.00".toBigDecimal(), "USD"))
+        assertFalse(GiftCardCurrency.isCardAmount("10.00001".toBigDecimal(), "USD"))
+        assertFalse(GiftCardCurrency.isCardAmount("1000.5".toBigDecimal(), "JPY"))
+        assertTrue(GiftCardCurrency.isCardAmount("1.234".toBigDecimal(), "KWD"))
+        assertFalse(GiftCardCurrency.isCardAmount("-5".toBigDecimal(), "USD"))
+        assertFalse(GiftCardCurrency.isCardAmount("92233720369".toBigDecimal(), "USD"))
+        assertTrue(GiftCardCurrency.isCardAmount("92233720368".toBigDecimal(), "USD"))
+        // no currency: only what a Fiat can hold
+        assertTrue(GiftCardCurrency.isCardAmount("1.2345".toBigDecimal(), null))
+        assertFalse(GiftCardCurrency.isCardAmount("1.123456789".toBigDecimal(), null))
     }
 }

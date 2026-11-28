@@ -7,11 +7,20 @@
     android:layout_height="match_parent"
     app:viewToHideWhenSoftKeyboardIsOpen="@id/header">
 
+    <!--
+      No app:navGraph here on purpose: CreateUsernameActivity resolves the
+      start destination dynamically and inflates + sets the graph in code
+      (resolveCreateUsernameStartDestination). Declaring the graph in XML made
+      the NavHostFragment eagerly instantiate the XML start destination
+      (requestUsernameFragment) BEFORE the code reset it — and that fragment's
+      identity observer finish()es the activity for a username already in
+      voting, so tapping the More requested-username tile flashed and bounced
+      back instead of landing on the voting-results screen (Bug 3).
+    -->
     <androidx.fragment.app.FragmentContainerView
         android:id="@+id/nav_host_create_user_name_fragment"
         android:name="androidx.navigation.fragment.NavHostFragment"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        app:defaultNavHost="true"
-        app:navGraph="@navigation/nav_username" />
+        app:defaultNavHost="true" />
 </de.schildbach.wallet.ui.widget.KeyboardResponsiveCoordinatorLayout>

@@ -18,9 +18,9 @@ package org.dash.wallet.integrations.maya.payments.parsers
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.bitcoinj.core.AddressFormatException
 import org.dash.wallet.common.R
 import org.dash.wallet.common.data.PaymentIntent
+import org.dash.wallet.common.payments.parsers.AddressFormatException
 import org.dash.wallet.common.payments.parsers.PaymentIntentParserException
 import org.dash.wallet.common.util.ResourceString
 import org.slf4j.LoggerFactory
@@ -34,7 +34,7 @@ open class SolanaPaymentIntentParser(
     currency: String = "SOL",
     asset: String = "SOL.SOL",
     shortAsset: String? = null
-) : MayaPaymentIntentParser(currency, "solana", asset, shortAsset, null) {
+) : MayaPaymentIntentParser(currency, "solana", asset, shortAsset) {
     private val log = LoggerFactory.getLogger(SolanaPaymentIntentParser::class.java)
     private val addressParser = SolanaAddressParser()
 

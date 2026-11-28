@@ -1,4 +1,98 @@
 DashPay Wallet
+v12.0.2
+  Includes everything in v11.9.2: DashConnect on mainnet with the v2 one-QR flow, the redesigned approve sheet and Connections page, and the removal of the CrowdNode integration (#1604, #1662, #1664, #1670, #1674)
+
+  DashPay
+  - Paying a contact enables Send on a restored wallet: contact-account coverage starts from our own contact requests (#1708)
+  - Recover from an invite that was already claimed, from stale onboarding screens, and from a shielded runtime left on a replaced wallet (#1700)
+  - Register a replacement username for an identity the SDK created (#1626)
+  - Issue an SDK identity's keys on the identity chain before checking or signing with them (#1693)
+
+  DashConnect
+  - Disconnect and Reconnect buttons on the Connections rows (#1692)
+  - Connections are scoped to the wallet; the date picker survives the lock screen and a retry keeps the approved expiry (#1691)
+
+  Home & sync
+  - The sync header hides once synced instead of showing "Synced from <date>"; Network Monitor still shows the date (#1701)
+  - Repair the change-only amounts a resumed rescan left in the transaction list (#1657)
+
+  Sending
+  - Report an ambiguous send as "outcome unknown", never as a failure that can be retried (#1643)
+
+  Maintenance
+  - Updated to Dash Platform Kotlin SDK 5.1.0 (#1682)
+  - Published to Google Play as an app bundle (#1706)
+  - Translated the missing strings into German, French, Italian, Polish, Russian, Portuguese and Spanish (#1705)
+
+v12.0.1-beta
+  Core & Platform
+  - Core v24 support: updated to dashj 24.0.0 and dpp 5.0.1
+  - Updated to Dash Platform Kotlin SDK 5.0.0 for Platform protocol 14 (#1630, #1644)
+  - Strip the prebuilt native libraries with NDK 29 (#1685)
+
+  DashPay
+  - Register a replacement username for an identity the SDK created, with a username retry that survives leaving the screen, process death and the lock screen (#1626)
+  - Contested username fee follows the Platform protocol version (#1584)
+  - Dark mode fixes in the username flow and the profile picture upload dialog (#1625, #1660)
+
+  Sending
+  - An ambiguous send, Coinbase transfer, swap or sale is reported as "outcome unknown" and can't be sent twice; payment dialogs keep their result across screen recreation and the lock screen (#1643)
+  - A stale funding reservation on the atomic send path is classified as not broadcast (#1548)
+
+  Transactions
+  - Transaction details show only the payee under Sent to, and the fee row is back (#1655)
+  - The transaction filter filters the list (#1666)
+  - Repair the change-only amounts a resumed rescan leaves behind (#1657)
+
+  Shielded
+  - Retry a failed stop before restarting the shielded sync loop (#1651)
+  - Round the fiat line on the shielded transfer amount screen to two decimals (#1654)
+
+  Other fixes
+  - Autohide Balance applies to the More-screen balance cards (#1645)
+  - CrowdNode sign-up restore scan no longer runs out of memory (#1653)
+  - Corrected the inner curve of the C in the CTX logo (#1665)
+
+v12.0.0-beta
+  New engine
+  - The Dash Platform Kotlin SDK now runs sync, balance, transaction history, sends and receives for new, restored and upgraded wallets; dashj still holds the keys (#1532)
+  - Payments, BIP70/BIP270 payment requests, Maya swap deposits, Buy Credits and CrowdNode message signing all go through the SDK (#1531, #1535, #1536, #1537)
+  - A send can draw on every account in the wallet, including funds received from DashPay contacts
+  - SDK-backed Network Monitor
+
+  Shielded balance
+  - A new shielded balance: move Dash from your wallet into it, receive at a shielded address, send, transfer internally and unshield back to the wallet
+  - The shielded balance appears on the More screen and is included in the home screen total (#1621)
+  - Create a DashPay username privately, paid from the shielded balance, including contested usernames
+  - Shielded invitations: the inviter funds the invite from the shielded balance (#1575)
+
+  CoinJoin
+  - CoinJoin mixing is removed; mixed funds are migrated to the shielded balance or kept spendable (#1607)
+  - Historical mixing transactions are still grouped on the home screen (#1533)
+
+  DashPay
+  - Each contact payment goes to a new address (#1608)
+  - Restored wallets recover their identity, username and contacts, with the correct balance and history (#1559, #1602)
+  - Contested username duplicate registration, identity decoding and Keystore lock fixes (#1564, #1565, #1612)
+  - Masternode voting: real vote errors and already-cast votes (#1566)
+  - Invites: a stale invite no longer blocks new ones; invite links open in the iOS wallet (#1615, #1619)
+
+  Privacy
+  - Turn off usage analytics in Settings; amounts are never logged (#1606)
+
+  Restore & sync
+  - Large CoinJoin wallets restore with the right dates, labels and connection state (#1591)
+  - A wallet recovered from a key backup is persisted; stale wipe markers are ignored (#1576, #1577)
+  - Background starts of large wallets survive, and a system kill is no longer a crash (#1585, #1594)
+  - Rescan Blockchain keeps the block store (#1617)
+
+  Navigation & display
+  - Back on a tab returns to Home; back on Home sends the wallet to the background (#1618, #1624)
+  - Dark mode fixes on the shielded transfer screens and the send screen (#1613, #1620)
+
+  Maintenance
+  - Support reports include the SDK's logs, and Tools has an opt-in dashj sync diagnostic
+
 v11.9.2
   DashConnect
   - Available on mainnet: every entry point and operation is gated on the network running Platform protocol 14, with Retry when the version cannot be read (#1670)

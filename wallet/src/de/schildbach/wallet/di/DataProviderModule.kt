@@ -25,10 +25,14 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.WalletData
+import de.schildbach.wallet.data.WalletDataAdapter
 import de.schildbach.wallet.data.PendingDirectPaymentConfig
 import org.dash.wallet.common.WalletDataProvider
 import de.schildbach.wallet.rates.ExchangeRatesRepository
 import de.schildbach.wallet.service.WalletTransactionMetadataProvider
+import de.schildbach.wallet.service.platform.sdk.SdkTxDetailProvider
+import de.schildbach.wallet.service.platform.sdk.SdkTxMetadataSource
 import de.schildbach.wallet.service.BlockchainStateDataProvider
 import de.schildbach.wallet.service.ExchangeIntegrationListProvider
 import org.dash.wallet.common.integrations.ExchangeIntegrationProvider
@@ -46,8 +50,14 @@ abstract class DataProviderModule {
         @Provides
         fun provideWalletData(
             @ApplicationContext context: Context
-        ): WalletDataProvider = context as WalletApplication
+        ): WalletData = context as WalletApplication
     }
+
+    @Singleton
+    @Binds
+    abstract fun bindWalletDataProvider(
+        adapter: WalletDataAdapter
+    ): WalletDataProvider
 
     @Binds
     abstract fun bindBlockchainStateProvider(
@@ -58,6 +68,11 @@ abstract class DataProviderModule {
     abstract fun bindTransactionMetadata(
         transactionMetadataService: WalletTransactionMetadataProvider
     ): TransactionMetadataProvider
+
+    @Binds
+    abstract fun bindSdkTxMetadataSource(
+        sdkTxDetailProvider: SdkTxDetailProvider
+    ): SdkTxMetadataSource
 
     @Singleton
     @Binds

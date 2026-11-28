@@ -45,6 +45,7 @@ open class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() 
     constructor() : this(R.layout.dialog_adaptive)
 
     companion object {
+        private const val DEFAULT_TAG = "adaptive_dialog"
         const val ICON_RES_ARG = "icon_res"
         const val TITLE_ARG = "title"
         const val MESSAGE_ARG = "message"
@@ -100,6 +101,27 @@ open class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() 
             ).apply { isCancelable = false }
         }
 
+        /**
+         * Indeterminate progress WITH an explicit dismiss button, for
+         * operations that keep running app-side after the dialog is closed
+         * (the caller's work must not be tied to the dialog's lifecycle).
+         * The button resolves the result callback with `false`.
+         */
+        @JvmStatic
+        fun progress(
+            message: String,
+            dismissButtonText: String
+        ): AdaptiveDialog {
+            return create(
+                R.layout.dialog_progress_dismissible,
+                null,
+                null,
+                message,
+                dismissButtonText,
+                null
+            ).apply { isCancelable = true }
+        }
+
         @JvmStatic
         fun create(
             @DrawableRes icon: Int?,
@@ -152,6 +174,34 @@ open class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() 
     protected var onResultListener: ((Boolean?) -> Unit)? = null
     var isMessageSelectable = false
 
+    /**
+     * Optional live secondary status line (layouts that carry a
+     * `R.id.dialog_secondary_message` view, e.g. the dismissible progress
+     * dialog). Held here so [updateSecondaryMessage] can be called before
+     * the view exists (the dialog is shown asynchronously) and re-applied
+     * after view (re)creation — a long-running operation can push a "why
+     * this is slow" hint into the dialog the user is watching. Null/blank
+     * hides the line.
+     */
+    private var secondaryMessage: String? = null
+    private var secondaryMessageView: TextView? = null
+
+    /**
+     * Set (or clear) the live secondary status line. Safe to call at any
+     * time, on the main thread — before the dialog is shown, while it is
+     * visible, or after it has been dismissed.
+     */
+    fun updateSecondaryMessage(text: String?) {
+        secondaryMessage = text
+        secondaryMessageView?.let { applySecondaryMessage(it) }
+    }
+
+    private fun applySecondaryMessage(view: TextView) {
+        val text = secondaryMessage
+        view.text = text ?: ""
+        view.isVisible = !text.isNullOrEmpty()
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -182,6 +232,10 @@ open class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() 
         val positiveButton: TextView? = view.findViewById(R.id.dialog_positive_button)
         val negativeButton: TextView? = view.findViewById(R.id.dialog_negative_button)
 
+        secondaryMessageView = view.findViewById<TextView?>(R.id.dialog_secondary_message)?.also {
+            applySecondaryMessage(it)
+        }
+
         showIfNotEmpty(iconView, ICON_RES_ARG)
         showIfNotEmpty(titleView, TITLE_ARG)
         val isMessageShown = showIfNotEmpty(messageView, MESSAGE_ARG)
@@ -208,15 +262,35 @@ open class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() 
     }
 
     fun show(activity: FragmentActivity, onResult: ((Boolean?) -> Unit)? = null) {
+        show(activity, DEFAULT_TAG, onResult)
+    }
+
+    /**
+     * Shows the dialog under [tag], so a screen can find and replace its own dialog after a
+     * recreation, when the restored instance has lost [onResult].
+     */
+    fun show(activity: FragmentActivity, tag: String, onResult: ((Boolean?) -> Unit)?) {
         activity.lifecycleScope.launchWhenResumed {
             onResultListener = onResult
-            show(activity.supportFragmentManager, "adaptive_dialog")
+            show(activity.supportFragmentManager, tag)
         }
     }
 
-    suspend fun showAsync(activity: FragmentActivity): Boolean? {
+    suspend fun showAsync(activity: FragmentActivity): Boolean? = showAsync(activity, DEFAULT_TAG, false)
+
+    /**
+     * Shows the dialog under [tag], first dismissing a copy of it restored after a recreation:
+     * that copy lost its result listener with the previous screen, so its buttons answer nothing.
+     */
+    suspend fun showAsync(activity: FragmentActivity, tag: String): Boolean? = showAsync(activity, tag, true)
+
+    private suspend fun showAsync(activity: FragmentActivity, tag: String, replaceRestored: Boolean): Boolean? {
         if (!activity.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
             return null
+        }
+        if (replaceRestored) {
+            (activity.supportFragmentManager.findFragmentByTag(tag) as? DialogFragment)
+                ?.dismissAllowingStateLoss()
         }
 
         return suspendCancellableCoroutine { coroutine ->
@@ -227,7 +301,7 @@ open class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() 
             }
 
             try {
-                show(activity, onSuccess)
+                show(activity, tag, onSuccess)
             } catch (ex: Exception) {
                 if (coroutine.isActive) {
                     coroutine.resumeWithException(ex)
@@ -282,6 +356,14 @@ open class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() 
         super.onDismiss(dialog)
         onResultListener?.invoke(null)
         onResultListener = null
+    }
+
+    override fun onDestroyView() {
+        // Drop the view reference so a later updateSecondaryMessage never
+        // touches a detached view; the pending text stays in secondaryMessage
+        // and is re-applied on the next onViewCreated.
+        secondaryMessageView = null
+        super.onDestroyView()
     }
 
     protected fun showIfNotEmpty(view: TextView?, argKey: String): Boolean {

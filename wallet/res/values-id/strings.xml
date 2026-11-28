@@ -13,7 +13,6 @@
     <string name="blockchain_state_progress_stalled">Sinkronisasi terhenti</string>
     <string name="blockchain_state_progress_problem_storage">Sinkronisasi: Masalah penyimpanan</string>
     <string name="blockchain_state_progress_problem_network">Sinkronisasi: Masalah jaringan</string>
-    <string name="mixing_state_progress_mixing">Pencampuran koin (%1$s%%)</string>
     <string name="wallet_address_fragment_clipboard_msg">Alamat Dash disalin</string>
     <string name="wallet_address_dialog_fragment_hint">Untuk melindungi privasi, alamat anda tidak akan berubah sampai alamat tersebut menerima pembayaran.</string>
     <string name="wallet_balance_fragment_too_much">Jumlahnya terlalu besar untuk ditampung pada kantong anda. Silahkan allihkan sebagian ke tempat yang aman.</string>
@@ -43,8 +42,6 @@
     <string name="wallet_low_storage_dialog_button_apps">Mengelola Aplikasi</string>
     <string name="wallet_timeskew_dialog_title">Periksa pengaturan tanggal &amp; waktu</string>
     <string name="wallet_timeskew_dialog_msg">Waktu perangkat Anda tidak aktif dalam %d menit. Anda mungkin tidak dapat mengirim atau menerima Dash karena masalah ini.\n\nAnda harus memeriksa dan jika perlu memperbaiki pengaturan tanggal, waktu dan zona waktu Anda.</string>
-    <string name="wallet_coinjoin_timeskew_dialog_msg">Waktu perangkat anda %s dalam %d Detik. Anda tidak dapat menggunakan CoinJoin karena perbedaan ini.\n\nPengaturan waktu pada perangkat Anda perlu diubah ke “Atur waktu secara otomatis” untuk menggunakan CoinJoin.</string>
-    <string name="settings_coinjoin_timeskew_dialog_msg">Waktu perangkat Anda berbeda lebih dari 5 detik. Anda tidak dapat menggunakan CoinJoin karena perbedaan ini.\n\nPengaturan waktu pada perangkat Anda perlu diubah ke “Atur waktu secara otomatis” sebelum menggunakan CoinJoin.</string>
     <string name="send_coins_activity_title">Kirim Dash</string>
     <string name="send_coins_fragment_request_payment_request_progress">Mengambil tanda tangan dari %s...</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Gagal mengambil tanda tangan</string>

@@ -1,0 +1,2201 @@
+/*
+ * Copyright 2026 Dash Core Group.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+package de.schildbach.wallet.service.platform.sdk
+
+import android.app.Application
+import androidx.room.Room
+import de.schildbach.wallet_test.R
+import io.mockk.every
+import io.mockk.mockk
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.runBlocking
+import org.dashfoundation.dashsdk.persistence.DashDatabase
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
+import org.robolectric.annotation.Config
+
+/**
+ * SQL-level regression tests for [SdkTxStoreWalker] — the fix for the
+ * release-blocking scalability defect where the post-cutover display
+ * pipeline materialized the WHOLE `txos`/`transactions` store per snapshot
+ * (a ~100k-tx CoinJoin mainnet wallet crash-looped at ~97% sync). The
+ * production queries run against an in-memory instance of the AAR's own
+ * Room schema ([DashDatabase]) seeded LARGE (50k wallet transactions), and
+ * every claim the fix makes is asserted mechanically:
+ *
+ * - a full walk covers every row while never holding more than one bounded
+ *   page, in a bounded number of queries;
+ * - an unchanged store is confirmed with the fingerprint queries ONLY —
+ *   the O(1)-class skip (verified by counting queries via the walker's
+ *   query spy);
+ * - an incremental drain emits new rows + the bounded recent tail, never
+ *   the table;
+ * - context-only UPDATEs (no count/rowid movement) are still detected;
+ * - a spend-only send (no change output ⇒ no new TXO row) is discovered.
+ *
+ * Robolectric runner: the queries need a real SQLite (Room in-memory) —
+ * the same `sdk = 29` host setup [SdkAssetLockFundingPreflightQueryTest]
+ * uses.
+ */
+@RunWith(RobolectricTestRunner::class)
+@Config(application = Application::class, sdk = [29], manifest = Config.NONE)
+class SdkTxStoreWalkerTest {
+
+    private lateinit var db: DashDatabase
+
+    private val walletIdHex = "11".repeat(32)
+    private val walletId = requireNotNull(walletIdFromHex(walletIdHex))
+
+    private val queryLog = mutableListOf<String>()
+
+    @Before
+    fun setup() {
+        db = Room.inMemoryDatabaseBuilder(
+            RuntimeEnvironment.getApplication(),
+            DashDatabase::class.java
+        ).allowMainThreadQueries().build()
+        exec(
+            "INSERT INTO wallets (walletId, walletGroupId, birthHeight, syncedHeight, lastSynced, " +
+                "isImported, createdAt, lastUpdated) VALUES (?, ?, 0, 0, 0, 0, 0, 0)",
+            walletId,
+            walletId
+        )
+    }
+
+    @After
+    fun tearDown() {
+        db.close()
+    }
+
+    // ── Harness ───────────────────────────────────────────────────────
+
+    private fun exec(sql: String, vararg args: Any?) {
+        db.openHelper.writableDatabase.execSQL(sql, args)
+    }
+
+    private fun walker(
+        pageRows: Int = 1_000,
+        tailRows: Int = 32,
+        payloadFacts: (ByteArray) -> TxPayloadFacts? = ::dashjPayloadFacts,
+        onQuery: (String) -> Unit = { queryLog += it },
+        onStoredNetsRepaired: (Int) -> Unit = {}
+    ) = SdkTxStoreWalker(
+        db = db,
+        walletId = walletId,
+        pageTxoRows = pageRows,
+        tailRows = tailRows,
+        pageThrottleMs = 0L,
+        onQuery = onQuery,
+        payloadFacts = payloadFacts,
+        onStoredNetsRepaired = onStoredNetsRepaired
+    )
+
+    /** Deterministic 32-byte wire txid for index [n]. */
+    private fun txid(n: Int): ByteArray = ByteArray(32).also {
+        it[0] = (n and 0xff).toByte()
+        it[1] = ((n shr 8) and 0xff).toByte()
+        it[2] = ((n shr 16) and 0xff).toByte()
+        it[31] = 1 // never all-zero
+    }
+
+    private fun displayHex(n: Int) = displayHexOf(txid(n))
+
+    /**
+     * Seed [count] wallet transactions, each funding ONE wallet TXO — via a
+     * compiled statement inside one transaction so 50k rows seed fast.
+     */
+    private fun seedWalletTxs(count: Int, startAt: Int = 0, context: Int = 3) {
+        val sqldb = db.openHelper.writableDatabase
+        sqldb.beginTransaction()
+        try {
+            val txStmt = sqldb.compileStatement(
+                "INSERT INTO transactions (txid, transactionData, context, blockHeight, blockTimestamp, " +
+                    "blockPosition, hasBlockPosition, direction, transactionType, transactionTypeKind, " +
+                    "netAmount, label, firstSeen, createdAt, lastUpdated) " +
+                    "VALUES (?, ?, ?, 0, 0, 0, 0, 0, 'standard', 0, ?, '', ?, 0, 0)"
+            )
+            val txoStmt = sqldb.compileStatement(
+                "INSERT INTO txos (outpoint, vout, amount, address, scriptPubKey, height, isCoinbase, " +
+                    "isConfirmed, isInstantLocked, isLocked, isSpent, createdAt, lastUpdated, walletId, " +
+                    "txid, spendingTxid, spendingInputIndex, accountId, coreAddressId) " +
+                    "VALUES (?, 0, 1000, 'addr', ?, 0, 0, 1, 0, 0, 0, 0, 0, ?, ?, NULL, NULL, NULL, NULL)"
+            )
+            for (i in startAt until startAt + count) {
+                val id = txid(i)
+                txStmt.clearBindings()
+                txStmt.bindBlob(1, id)
+                txStmt.bindBlob(2, ByteArray(0))
+                txStmt.bindLong(3, context.toLong())
+                txStmt.bindLong(4, 1000L)
+                txStmt.bindLong(5, 1_700_000_000L + i)
+                txStmt.executeInsert()
+                val outpoint = ByteArray(36).also { o -> id.copyInto(o); o[35] = 1 }
+                txoStmt.clearBindings()
+                txoStmt.bindBlob(1, outpoint)
+                txoStmt.bindBlob(2, ByteArray(0))
+                txoStmt.bindBlob(3, walletId)
+                txoStmt.bindBlob(4, id)
+                txoStmt.executeInsert()
+            }
+            sqldb.setTransactionSuccessful()
+        } finally {
+            sqldb.endTransaction()
+        }
+    }
+
+    // ── (a) full walk: bounded pages, complete coverage, bounded queries ──
+
+    @Test
+    fun walkAll_50kRows_boundedPagesAndCompleteCoverage() = runBlocking {
+        val n = 50_000
+        val pageRows = 1_000
+        seedWalletTxs(n)
+        val w = walker(pageRows = pageRows)
+
+        queryLog.clear()
+        val pageSizes = mutableListOf<Int>()
+        val seenTxids = HashSet<String>()
+        w.walkAll { page ->
+            pageSizes.add(page.size)
+            page.forEach { seenTxids += it.txidHex }
+        }
+
+        // Complete coverage…
+        assertEquals(n, seenTxids.size)
+        // …with EVERY page inside the bounded window (a page of TXO rows can
+        // introduce at most 2 txids per row: funder + spender).
+        assertTrue("a page exceeded the bounded window", pageSizes.all { it <= pageRows * 2 })
+        assertTrue("the walk was not paged at all", pageSizes.size >= n / pageRows)
+        // Query bound: one TXO page query + at most ⌈2·pageRows/500⌉ IN-chunk
+        // record fetches + one pending-reservation aggregate per page —
+        // nothing proportional to the table per pass.
+        val pages = pageSizes.size + 1 // + the final short/empty page probe
+        val maxQueriesPerPage = 2 + (2 * pageRows + 499) / 500
+        assertTrue(
+            "query count ${queryLog.size} exceeds the per-page bound",
+            queryLog.size <= pages * maxQueriesPerPage
+        )
+        // The full-table reads of the old pipeline must be gone for good.
+        assertTrue(
+            "an unbounded (LIMIT-less) txos read crept back in",
+            queryLog.none { it.startsWith("SELECT txid, vout, spendingTxid FROM txos") }
+        )
+    }
+
+    @Test
+    fun walkAll_dedupsMultiTxoTransactions() = runBlocking {
+        // One transaction funding 5 TXOs (the CoinJoin denomination shape)
+        // must be emitted once, not five times.
+        seedWalletTxs(1)
+        for (vout in 1..4) {
+            exec(
+                "INSERT INTO txos (outpoint, vout, amount, address, scriptPubKey, height, isCoinbase, " +
+                    "isConfirmed, isInstantLocked, isLocked, isSpent, createdAt, lastUpdated, walletId, " +
+                    "txid, spendingTxid, spendingInputIndex, accountId, coreAddressId) " +
+                    "VALUES (?, ?, 1000, 'addr', ?, 0, 0, 1, 0, 0, 0, 0, 0, ?, ?, NULL, NULL, NULL, NULL)",
+                ByteArray(36).also { it[0] = vout.toByte(); it[35] = 9 },
+                vout,
+                ByteArray(0),
+                walletId,
+                txid(0)
+            )
+        }
+        val emitted = mutableListOf<String>()
+        walker().walkAll { page -> page.forEach { emitted += it.txidHex } }
+        assertEquals(listOf(displayHex(0)), emitted)
+    }
+
+    // ── (b) the O(1) no-change skip ───────────────────────────────────
+
+    @Test
+    fun drainChanges_unchangedStore_skipsAfterFingerprintQueriesOnly() = runBlocking {
+        seedWalletTxs(5_000)
+        val w = walker()
+        w.primeWatermarks()
+        // First drain establishes the fingerprint (and emits the bounded tail).
+        assertTrue(w.drainChanges { })
+
+        // UNCHANGED store: the drain must confirm and skip with the five
+        // fingerprint queries — no row queries, no pages, no records.
+        queryLog.clear()
+        var pages = 0
+        val drained = w.drainChanges { pages++ }
+        assertFalse(drained)
+        assertEquals(0, pages)
+        assertEquals("expected exactly the 5 fingerprint queries", 5, queryLog.size)
+        assertTrue(queryLog.all { it.startsWith("SELECT COUNT(*)") || it.startsWith("SELECT COALESCE(SUM(context)") })
+    }
+
+    // ── incremental drain: new rows + bounded tail, never the table ───
+
+    @Test
+    fun drainChanges_emitsOnlyNewRowsPlusBoundedTail() = runBlocking {
+        val tailRows = 32
+        seedWalletTxs(5_000)
+        val w = walker(tailRows = tailRows)
+        w.primeWatermarks()
+        assertTrue(w.drainChanges { }) // baseline
+
+        seedWalletTxs(count = 7, startAt = 5_000)
+
+        val emitted = mutableListOf<L1TxUiRecord>()
+        assertTrue(w.drainChanges { page -> emitted += page })
+        val emittedTxids = emitted.map { it.txidHex }.toSet()
+        // Every new row surfaced…
+        for (i in 5_000 until 5_007) {
+            assertTrue("new tx $i missing from the drain", displayHex(i) in emittedTxids)
+        }
+        // …and the total pass stayed bounded (new rows + funded/spender tails),
+        // nowhere near the 5k-row table.
+        assertTrue(
+            "drain emitted ${emittedTxids.size} records — not bounded",
+            emittedTxids.size <= 7 + 2 * tailRows
+        )
+    }
+
+    @Test
+    fun drainChanges_contextOnlyUpdate_isDetectedViaTheTail() = runBlocking {
+        seedWalletTxs(2_000, context = 0) // everything pending
+        val w = walker()
+        w.primeWatermarks()
+        assertTrue(w.drainChanges { }) // baseline
+
+        // A context-only UPDATE moves no count and no rowid — the exact write
+        // shape the old comment claimed was covered but wasn't bounded.
+        val flipped = txid(1_999) // recent (highest rowid) — inside the tail window
+        exec("UPDATE transactions SET context = 3 WHERE txid = ?", flipped)
+
+        val emitted = mutableListOf<L1TxUiRecord>()
+        assertTrue("context-only update went undetected", w.drainChanges { page -> emitted += page })
+        val record = emitted.firstOrNull { it.txidHex == displayHex(1_999) }
+        assertEquals(L1TxUiStatus.CHAINLOCKED, requireNotNull(record) { "flipped tx not re-emitted" }.status)
+    }
+
+    @Test
+    fun drainChanges_spendOnlySend_discoversTheSpenderTx() = runBlocking {
+        seedWalletTxs(1_000)
+        val w = walker()
+        w.primeWatermarks()
+        assertTrue(w.drainChanges { }) // baseline
+
+        // A max-send has NO change output: no new TXO row, only a new
+        // `transactions` row + spendingTxid marks on existing TXOs.
+        val spender = txid(700_000)
+        exec(
+            "INSERT INTO transactions (txid, transactionData, context, blockHeight, blockTimestamp, " +
+                "blockPosition, hasBlockPosition, direction, transactionType, transactionTypeKind, " +
+                "netAmount, label, firstSeen, createdAt, lastUpdated) " +
+                "VALUES (?, ?, 1, 0, 0, 0, 0, 1, 'standard', 0, -1000, '', 1700009999, 0, 0)",
+            spender,
+            ByteArray(0)
+        )
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ?", spender, txid(3))
+
+        val emitted = mutableListOf<L1TxUiRecord>()
+        assertTrue(w.drainChanges { page -> emitted += page })
+        val spenderHex = displayHexOf(spender)
+        assertTrue(
+            "the spend-only spender tx was not discovered",
+            emitted.any { it.txidHex == spenderHex }
+        )
+    }
+
+    // ── point lookups (the seam's lazy views) ─────────────────────────
+
+    @Test
+    fun pointLookups_freshAndWalletScoped() = runBlocking {
+        seedWalletTxs(10)
+        val w = walker()
+
+        val record = requireNotNull(w.recordFor(displayHex(3)))
+        assertEquals(L1TxUiStatus.CHAINLOCKED, record.status)
+        assertEquals(1000L, record.netAmountDuffs)
+        // Unknown / non-wallet txids resolve to null (dashj-fallback parity).
+        assertNull(w.recordFor(displayHexOf(txid(999_999))))
+
+        assertTrue(w.isMineOutpoint(displayHex(3), 0))
+        assertFalse(w.isMineOutpoint(displayHex(3), 7))
+        assertNull(w.spenderOf(displayHex(3), 0))
+
+        val spender = txid(500_000)
+        exec(
+            "INSERT INTO transactions (txid, transactionData, context, blockHeight, blockTimestamp, " +
+                "blockPosition, hasBlockPosition, direction, transactionType, transactionTypeKind, " +
+                "netAmount, label, firstSeen, createdAt, lastUpdated) " +
+                "VALUES (?, ?, 1, 0, 0, 0, 0, 1, 'standard', 0, -500, '', 1700009999, 0, 0)",
+            spender,
+            ByteArray(0)
+        )
+        exec("UPDATE txos SET spendingTxid = ? WHERE txid = ?", spender, txid(3))
+        // Fresh reads — no caching layer to go stale.
+        assertEquals(displayHexOf(spender), w.spenderOf(displayHex(3), 0))
+        // The spender is wallet-relevant purely through spendingTxid. Its
+        // stored −500 is a per-account slice of the real spend — the #4387
+        // heal recomputes the whole-wallet net from the mirror (it spent the
+        // 1000-duff output and funded nothing back).
+        assertEquals(-1000L, requireNotNull(w.recordFor(displayHexOf(spender))).netAmountDuffs)
+    }
+
+    @Test
+    fun allRecordsNow_enumeratesEverythingOnce() = runBlocking {
+        seedWalletTxs(2_500)
+        val all = walker(pageRows = 512).allRecordsNow()
+        assertEquals(2_500, all.size)
+        assertEquals(2_500, all.map { it.txidHex }.toSet().size)
+    }
+
+    // ── Misattributed-record reattribution + foreign-row exclusion ────
+    //
+    // Replica of the live S22 testnet corruption (s22test63b, 11.10.73):
+    // the SDK stored EVERY tx `direction=0 (incoming)` with a positive
+    // netAmount — including a drain that PAID a contact (its only output
+    // sits on the watch-only type-13 dashpayExternalAccount) and two
+    // account sweeps that never left the wallet. The walker must serve the
+    // corrected shapes, and the contact-side rows must grant no ownership
+    // or membership.
+
+    private val bip44Account = 100L
+    private val recvAccount = 114L // type 12: contact pays US — our money
+    private val extAccount = 115L // type 13: we pay the CONTACT — their money
+
+    private fun insertAccount(id: Long, type: Int, ownerWalletId: ByteArray = walletId) {
+        exec(
+            "INSERT INTO accounts (id, walletId, accountType, accountIndex, accountTypeName, " +
+                "balanceConfirmed, balanceUnconfirmed, externalHighestUsed, internalHighestUsed, " +
+                "standardTag, registrationIndex, keyClass, userIdentityId, friendIdentityId, " +
+                "createdAt, lastUpdated) VALUES (?, ?, ?, 0, '', 0, 0, 0, 0, 0, 0, 0, ?, ?, 0, 0)",
+            id,
+            ownerWalletId,
+            type,
+            ByteArray(32).also { it[0] = id.toByte() },
+            ByteArray(32).also { it[0] = id.toByte(); it[1] = 1 }
+        )
+    }
+
+    private fun insertCoreAddress(address: String, accountId: Long) {
+        exec(
+            "INSERT INTO core_addresses (address, publicKey, poolTypeTag, addressIndex, " +
+                "derivationPath, isUsed, firstSeenHeight, lastSeenHeight, balance, createdAt, " +
+                "lastUpdated, accountId) VALUES (?, ?, 0, 0, '', 1, 0, 0, 0, 0, 0, ?)",
+            address,
+            ByteArray(0),
+            accountId
+        )
+    }
+
+    private fun insertTx(
+        id: ByteArray,
+        direction: Int,
+        netAmount: Long,
+        payload: ByteArray,
+        firstSeen: Long,
+        typeKind: Int = TX_TYPE_KIND_STANDARD
+    ) {
+        exec(
+            "INSERT INTO transactions (txid, transactionData, context, blockHeight, blockTimestamp, " +
+                "blockPosition, hasBlockPosition, direction, transactionType, transactionTypeKind, " +
+                "netAmount, label, firstSeen, createdAt, lastUpdated) " +
+                "VALUES (?, ?, 3, 0, 0, 0, 0, ?, 'Standard', $typeKind, ?, '', ?, 0, 0)",
+            id,
+            payload,
+            direction,
+            netAmount,
+            firstSeen
+        )
+    }
+
+    private var outpointSeed = 100
+
+    private fun insertTxo(
+        txid: ByteArray,
+        vout: Int,
+        amount: Long,
+        address: String,
+        spendingTxid: ByteArray? = null
+    ): ByteArray {
+        val outpoint = ByteArray(36).also {
+            it[0] = (outpointSeed and 0xff).toByte()
+            it[1] = (outpointSeed++ shr 8).toByte()
+            it[35] = 7
+        }
+        exec(
+            "INSERT INTO txos (outpoint, vout, amount, address, scriptPubKey, height, isCoinbase, " +
+                "isConfirmed, isInstantLocked, isLocked, isSpent, createdAt, lastUpdated, walletId, " +
+                "txid, spendingTxid, spendingInputIndex, accountId, coreAddressId) " +
+                "VALUES (?, ?, ?, ?, ?, 0, 0, 1, 0, 0, ?, 0, 0, ?, ?, ?, NULL, NULL, ?)",
+            outpoint,
+            vout,
+            amount,
+            address,
+            ByteArray(0),
+            if (spendingTxid != null) 1 else 0,
+            walletId,
+            txid,
+            spendingTxid,
+            address
+        )
+        return outpoint
+    }
+
+    /**
+     * A `pending_inputs` reservation as the engine writes it at broadcast:
+     * outpoint + the spending txid denorm ([spendingTransactionTxid] left
+     * NULL — the relationship materialization is optional and irrelevant to
+     * the walker's reads, which only consult the always-set scalar).
+     */
+    private fun insertPendingInput(outpoint: ByteArray, spendingTxid: ByteArray) {
+        exec(
+            "INSERT INTO pending_inputs (outpoint, inputIndex, spendingTxid, " +
+                "spendingTransactionTxid, walletId, createdAt) VALUES (?, 0, ?, NULL, ?, 0)",
+            outpoint,
+            spendingTxid,
+            walletId
+        )
+    }
+
+    /**
+     * The S22 store shape. Amounts follow the live wallet: a 0.5 contact
+     * receive, a sweep of it into BIP44 (fee 226), a drain of the sweep
+     * outputs paying the contact (fee 636), a 1.0 faucet receive — every
+     * `transactions` row stored `direction=0` with a positive net, exactly
+     * as pulled from the device. [contactSpendsDrainOutput] additionally
+     * appends the CONTACT's own later spend of the drain output.
+     */
+    private fun seedS22Shape(): S22Txids {
+        insertAccount(bip44Account, 0)
+        insertAccount(recvAccount, 12)
+        insertAccount(extAccount, 13)
+        insertCoreAddress("bip44_0", bip44Account)
+        insertCoreAddress("bip44_1", bip44Account)
+        insertCoreAddress("chg_0", bip44Account)
+        insertCoreAddress("recv12_a", recvAccount)
+        insertCoreAddress("ext13_a", extAccount)
+
+        val receive = txid(11)
+        val sweep = txid(12)
+        val drain = txid(13)
+        val faucet = txid(14)
+
+        // Transactions first (txos.txid/spendingTxid both FK-reference them):
+        // - the contact paid us 0.5 on the type-12 receiving chain (OUR money);
+        // - the sweep moved it to BIP44, never leaving the wallet — stored as
+        //   a +0.49999774 "receive" of its own outputs (the live corruption);
+        // - the drain paid the CONTACT (single output on the watch-only
+        //   type-13 chain) — stored as a +0.49999138 "receive" of the
+        //   contact's money;
+        // - the faucet receive is a genuine incoming tx, must stay untouched.
+        insertTx(receive, direction = 0, netAmount = 50_000_000, payload = ByteArray(0), firstSeen = 1_700_000_001)
+        insertTx(sweep, direction = 0, netAmount = 49_999_774, payload = byteArrayOf(2), firstSeen = 1_700_000_002)
+        insertTx(drain, direction = 0, netAmount = 49_999_138, payload = byteArrayOf(3), firstSeen = 1_700_000_003)
+        insertTx(faucet, direction = 0, netAmount = 100_000_000, payload = ByteArray(0), firstSeen = 1_700_000_004)
+
+        insertTxo(receive, 1, 50_000_000, "recv12_a", spendingTxid = sweep)
+        insertTxo(sweep, 0, 49_990_000, "bip44_0", spendingTxid = drain)
+        insertTxo(sweep, 1, 9_774, "chg_0", spendingTxid = drain)
+        insertTxo(drain, 0, 49_999_138, "ext13_a")
+        insertTxo(faucet, 0, 100_000_000, "bip44_1")
+
+        return S22Txids(receive, sweep, drain, faucet)
+    }
+
+    private data class S22Txids(
+        val receive: ByteArray,
+        val sweep: ByteArray,
+        val drain: ByteArray,
+        val faucet: ByteArray
+    )
+
+    /** The contact spends the drain output from THEIR wallet — not our tx. */
+    private fun contactSpendsDrainOutput(drain: ByteArray): ByteArray {
+        val contactSpend = txid(15)
+        insertTx(contactSpend, direction = 0, netAmount = 49_998_500, payload = ByteArray(0), firstSeen = 1_700_000_005)
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ? AND vout = 0", contactSpend, drain)
+        return contactSpend
+    }
+
+    /** Deterministic facts for the marker payloads [seedS22Shape] writes. */
+    private val markerPayloadFacts: (ByteArray) -> TxPayloadFacts? = { payload ->
+        when (payload.firstOrNull()?.toInt()) {
+            2 -> TxPayloadFacts(outputsTotalDuffs = 49_999_774, outputCount = 2, inputCount = 1)
+            3 -> TxPayloadFacts(outputsTotalDuffs = 49_999_138, outputCount = 1, inputCount = 2)
+            else -> null
+        }
+    }
+
+    @Test
+    fun reattribution_s22Shape_sweepInternal_drainOutgoing_receivesUntouched() = runBlocking {
+        val ids = seedS22Shape()
+        val w = walker(payloadFacts = markerPayloadFacts)
+
+        val byHex = HashMap<String, L1TxUiRecord>()
+        w.walkAll { page -> page.forEach { byHex[it.txidHex] = it } }
+
+        // The sweep: every output returned to owned addresses → INTERNAL,
+        // net = −fee, fee recovered (payload proves all inputs were ours).
+        val sweep = requireNotNull(byHex[displayHexOf(ids.sweep)])
+        assertEquals(L1TxUiDirection.INTERNAL, sweep.direction)
+        assertEquals(-226L, sweep.netAmountDuffs)
+        assertEquals(226L, sweep.feeDuffs)
+
+        // The drain: its only output is the CONTACT's → OUTGOING, net =
+        // −(inputs we spent), fee = inputs − outputs.
+        val drain = requireNotNull(byHex[displayHexOf(ids.drain)])
+        assertEquals(L1TxUiDirection.OUTGOING, drain.direction)
+        assertEquals(-49_999_774L, drain.netAmountDuffs)
+        assertEquals(636L, drain.feeDuffs)
+
+        // Genuine receives keep their stored shape.
+        val receive = requireNotNull(byHex[displayHexOf(ids.receive)])
+        assertEquals(L1TxUiDirection.INCOMING, receive.direction)
+        assertEquals(50_000_000L, receive.netAmountDuffs)
+        val faucet = requireNotNull(byHex[displayHexOf(ids.faucet)])
+        assertEquals(L1TxUiDirection.INCOMING, faucet.direction)
+        assertEquals(100_000_000L, faucet.netAmountDuffs)
+    }
+
+    /**
+     * The S22 AssetLock shape (dashpay/platform#4412): a credit purchase
+     * persisted INTERNAL/net-0. Real figures from the field wallet: one
+     * 0.14886489 input, 0.11886248 change, 0.03 OP_RETURN burn, 241-duff fee.
+     * The heal must surface OUTGOING / −(burn+fee) = −0.03000241, with the
+     * fee recovered from the payload.
+     */
+    @Test
+    fun reattribution_assetLock_internalNetZero_healsToOutgoingBurnPlusFee() = runBlocking {
+        insertAccount(bip44Account, 0)
+        insertCoreAddress("bip44_al", bip44Account)
+        insertCoreAddress("bip44_al_change", bip44Account)
+        val funding = txid(41)
+        insertTx(funding, direction = 0, netAmount = 14_886_489, payload = ByteArray(0), firstSeen = 1_700_000_000)
+        insertTxo(funding, 0, 14_886_489, "bip44_al")
+
+        val assetLock = txid(42)
+        insertTx(
+            assetLock, direction = 2, netAmount = 0, payload = byteArrayOf(9),
+            firstSeen = 1_700_000_001, typeKind = TX_TYPE_KIND_ASSET_LOCK
+        )
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ? AND vout = 0", assetLock, funding)
+        insertTxo(assetLock, 1, 11_886_248, "bip44_al_change")
+
+        val w = walker(payloadFacts = { payload ->
+            // outputs = change + value-bearing OP_RETURN burn; both inputs ours.
+            if (payload.firstOrNull()?.toInt() == 9) {
+                TxPayloadFacts(outputsTotalDuffs = 14_886_248, outputCount = 2, inputCount = 1)
+            } else {
+                null
+            }
+        })
+        val byHex = HashMap<String, L1TxUiRecord>()
+        w.walkAll { page -> page.forEach { byHex[it.txidHex] = it } }
+
+        val healed = requireNotNull(byHex[displayHexOf(assetLock)])
+        assertEquals(L1TxUiDirection.OUTGOING, healed.direction)
+        assertEquals(-3_000_241L, healed.netAmountDuffs)
+        assertEquals(241L, healed.feeDuffs)
+    }
+
+    /**
+     * The display pipeline end to end for that healed record: the walker's
+     * OUTGOING asset lock is probed (typed AssetLock), and with its resolved
+     * kind it renders "Upgrade Fee" valued at the burn — not plain "Sent".
+     */
+    @Test
+    fun reattribution_assetLock_healedOutgoing_rendersItsPlatformTitle() = runBlocking {
+        insertAccount(bip44Account, 0)
+        insertCoreAddress("bip44_al3", bip44Account)
+        insertCoreAddress("bip44_al3_change", bip44Account)
+        val funding = txid(91)
+        insertTx(funding, direction = 0, netAmount = 14_886_489, payload = ByteArray(0), firstSeen = 1_700_000_000)
+        insertTxo(funding, 0, 14_886_489, "bip44_al3")
+        val assetLock = txid(92)
+        insertTx(
+            assetLock, direction = 2, netAmount = 0, payload = byteArrayOf(9),
+            firstSeen = 1_700_000_001, typeKind = TX_TYPE_KIND_ASSET_LOCK
+        )
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ? AND vout = 0", assetLock, funding)
+        insertTxo(assetLock, 1, 11_886_248, "bip44_al3_change")
+        val w = walker(payloadFacts = { payload ->
+            if (payload.firstOrNull()?.toInt() == 9) {
+                TxPayloadFacts(outputsTotalDuffs = 14_886_248, outputCount = 2, inputCount = 1)
+            } else {
+                null
+            }
+        })
+        val records = ArrayList<L1TxUiRecord>()
+        w.walkAll { page -> records += page }
+        val healed = records.single { it.txidHex == displayHexOf(assetLock) }
+        assertEquals(L1TxUiDirection.OUTGOING, healed.direction)
+        assertEquals("the copy keeps the type kind", TX_TYPE_KIND_ASSET_LOCK, healed.transactionTypeKind)
+        assertTrue(probesOutgoingAssetLockKind(healed))
+        assertFalse(
+            "the plain funding receive is never probed",
+            probesOutgoingAssetLockKind(records.single { it.txidHex == displayHexOf(funding) })
+        )
+
+        val resolve: (Int) -> String = { id -> "str:$id" }
+        val plan = planL1DisplaySync(
+            listOf(healed), emptyMap(), emptySet(), resolve, nowMs = 1_700_000_100_000L,
+            kindByTxid = mapOf(healed.txidHex to AssetLockKind.UPGRADE)
+        )
+        val row = plan.inserts.single()
+        assertEquals(resolve(R.string.dashpay_upgrade_fee), row.title)
+        assertEquals(-3_000_000L, row.valueSatoshis)
+        assertTrue(plan.notifyIncoming.isEmpty())
+    }
+
+    /**
+     * D-M-01: the store leaves `fee` NULL, so the walker recovers it for the
+     * display. A walk that sees only SOME of a send's spend marks cannot — and
+     * must try again once the rest land, in the same walker (the 60s reconcile
+     * reuses it), then persist the fee durably.
+     */
+    @Test
+    fun feeRecovery_partialSpendMarks_retriesWhenTheRestLand() = runBlocking {
+        insertAccount(bip44Account, 0)
+        insertCoreAddress("bip44_fr_a", bip44Account)
+        insertCoreAddress("bip44_fr_b", bip44Account)
+        insertCoreAddress("bip44_fr_change", bip44Account)
+        val fundingA = txid(61)
+        val fundingB = txid(62)
+        insertTx(fundingA, direction = 0, netAmount = 2_000_000, payload = ByteArray(0), firstSeen = 1_700_000_000)
+        insertTx(fundingB, direction = 0, netAmount = 1_500_000, payload = ByteArray(0), firstSeen = 1_700_000_000)
+        insertTxo(fundingA, 0, 2_000_000, "bip44_fr_a")
+        insertTxo(fundingB, 0, 1_500_000, "bip44_fr_b")
+
+        // A two-input credit purchase with the net the engine persists
+        // (−(burn+fee)) and no fee: 3 000 000 burn + 499 759 change, 241 fee.
+        val assetLock = txid(63)
+        insertTx(
+            assetLock, direction = 2, netAmount = -3_000_241, payload = byteArrayOf(9),
+            firstSeen = 1_700_000_001, typeKind = TX_TYPE_KIND_ASSET_LOCK
+        )
+        insertTxo(assetLock, 1, 499_759, "bip44_fr_change")
+        // Only the first input's spend mark has landed.
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ? AND vout = 0", assetLock, fundingA)
+
+        val w = walker(payloadFacts = { payload ->
+            if (payload.firstOrNull()?.toInt() == 9) {
+                TxPayloadFacts(outputsTotalDuffs = 3_499_759, outputCount = 2, inputCount = 2)
+            } else {
+                null
+            }
+        })
+        fun walkedAssetLock(): L1TxUiRecord {
+            val byHex = HashMap<String, L1TxUiRecord>()
+            runBlocking { w.walkAll { page -> page.forEach { byHex[it.txidHex] = it } } }
+            return requireNotNull(byHex[displayHexOf(assetLock)])
+        }
+
+        assertNull("one of two inputs proves no fee", walkedAssetLock().feeDuffs)
+        assertNull(storedShape(assetLock).third)
+
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ? AND vout = 0", assetLock, fundingB)
+
+        val recovered = walkedAssetLock()
+        assertEquals(241L, recovered.feeDuffs)
+        assertEquals(-3_000_241L, recovered.netAmountDuffs) // the net itself is untouched
+        assertEquals(241L, storedShape(assetLock).third)
+    }
+
+    /**
+     * An AssetLock whose stored net is already non-zero (the shape the rust
+     * store-side fix will persist) is NOT flagged — the heal arm goes inert.
+     */
+    @Test
+    fun reattribution_assetLock_correctStoredNet_untouched() = runBlocking {
+        insertAccount(bip44Account, 0)
+        insertCoreAddress("bip44_al2", bip44Account)
+        insertCoreAddress("bip44_al2_change", bip44Account)
+        val funding = txid(43)
+        insertTx(funding, direction = 0, netAmount = 14_886_489, payload = ByteArray(0), firstSeen = 1_700_000_000)
+        insertTxo(funding, 0, 14_886_489, "bip44_al2")
+
+        val assetLock = txid(44)
+        insertTx(
+            assetLock, direction = 1, netAmount = -3_000_241, payload = byteArrayOf(9),
+            firstSeen = 1_700_000_001, typeKind = TX_TYPE_KIND_ASSET_LOCK
+        )
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ? AND vout = 0", assetLock, funding)
+        insertTxo(assetLock, 1, 11_886_248, "bip44_al2_change")
+
+        val w = walker(payloadFacts = { null })
+        val byHex = HashMap<String, L1TxUiRecord>()
+        w.walkAll { page -> page.forEach { byHex[it.txidHex] = it } }
+
+        val kept = requireNotNull(byHex[displayHexOf(assetLock)])
+        assertEquals(L1TxUiDirection.OUTGOING, kept.direction)
+        assertEquals(-3_000_241L, kept.netAmountDuffs)
+    }
+
+    /**
+     * The dashpay/platform#4387 shape from the S22 reconciliation: a
+     * multi-account sweep persisted OUTGOING but with only ONE account
+     * slice's net. The widened OUTGOING flag recomputes the whole-wallet
+     * net from the mirror.
+     */
+    @Test
+    fun reattribution_outgoingUndersizedNet_healsToWholeWalletNet() = runBlocking {
+        insertAccount(bip44Account, 0)
+        insertAccount(recvAccount, 12)
+        insertCoreAddress("bip44_s1", bip44Account)
+        insertCoreAddress("recv_s2", recvAccount)
+        val f1 = txid(45)
+        insertTx(f1, direction = 0, netAmount = 200_000_000, payload = ByteArray(0), firstSeen = 1_700_000_000)
+        insertTxo(f1, 0, 200_000_000, "bip44_s1")
+        val f2 = txid(46)
+        insertTx(f2, direction = 0, netAmount = 62_000_000, payload = ByteArray(0), firstSeen = 1_700_000_001)
+        insertTxo(f2, 0, 62_000_000, "recv_s2")
+
+        val sweep = txid(47)
+        // Stored: the net of only the second input's account slice.
+        insertTx(sweep, direction = 1, netAmount = -500_000, payload = byteArrayOf(10), firstSeen = 1_700_000_002)
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ? AND vout = 0", sweep, f1)
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ? AND vout = 0", sweep, f2)
+
+        val w = walker(payloadFacts = { payload ->
+            if (payload.firstOrNull()?.toInt() == 10) {
+                // Everything left the wallet; fee = 300 duffs.
+                TxPayloadFacts(outputsTotalDuffs = 261_999_700, outputCount = 1, inputCount = 2)
+            } else {
+                null
+            }
+        })
+        val byHex = HashMap<String, L1TxUiRecord>()
+        w.walkAll { page -> page.forEach { byHex[it.txidHex] = it } }
+
+        val healed = requireNotNull(byHex[displayHexOf(sweep)])
+        assertEquals(L1TxUiDirection.OUTGOING, healed.direction)
+        assertEquals(-262_000_000L, healed.netAmountDuffs)
+        assertEquals(300L, healed.feeDuffs)
+    }
+
+    @Test
+    fun reattribution_withoutPayloadFacts_sweepDegradesToOutgoing_neverInternal() = runBlocking {
+        val ids = seedS22Shape()
+        // No payload facts at all: internal-vs-send cannot be proven, so the
+        // sweep must degrade to OUTGOING (sign-correct) — never stay a fake
+        // "Received", never claim INTERNAL without proof.
+        val w = walker(payloadFacts = { null })
+        val byHex = HashMap<String, L1TxUiRecord>()
+        w.walkAll { page -> page.forEach { byHex[it.txidHex] = it } }
+        val sweep = requireNotNull(byHex[displayHexOf(ids.sweep)])
+        assertEquals(L1TxUiDirection.OUTGOING, sweep.direction)
+        assertEquals(-226L, sweep.netAmountDuffs)
+        val drain = requireNotNull(byHex[displayHexOf(ids.drain)])
+        assertEquals(L1TxUiDirection.OUTGOING, drain.direction)
+        assertEquals(-49_999_774L, drain.netAmountDuffs)
+    }
+
+    @Test
+    fun foreignRows_grantNoOwnershipOrMembership() = runBlocking {
+        val ids = seedS22Shape()
+        val contactSpend = contactSpendsDrainOutput(ids.drain)
+        val w = walker(payloadFacts = markerPayloadFacts)
+
+        // The contact-side output is not OURS…
+        assertFalse(w.isMineOutpoint(displayHexOf(ids.drain), 0))
+        // …but the wallet's own outputs are.
+        assertTrue(w.isMineOutpoint(displayHexOf(ids.sweep), 0))
+        assertTrue(w.isMineOutpoint(displayHexOf(ids.sweep), 1))
+
+        // The contact's own spend of it is THEIR activity: never enumerated…
+        val walked = HashSet<String>()
+        w.walkAll { page -> page.forEach { walked += it.txidHex } }
+        assertFalse(displayHexOf(contactSpend) in walked)
+        // …never a point-readable wallet record…
+        assertNull(w.recordFor(displayHexOf(contactSpend)))
+        // …and never in the recent tail.
+        assertTrue(w.tailRecords().none { it.txidHex == displayHexOf(contactSpend) })
+        // The wallet's own txs all remain members.
+        for (member in listOf(ids.receive, ids.sweep, ids.drain, ids.faucet)) {
+            assertTrue(displayHexOf(member) in walked)
+        }
+    }
+
+    @Test
+    fun reattribution_pointLookup_servesTheCorrectedShape() = runBlocking {
+        val ids = seedS22Shape()
+        val w = walker(payloadFacts = markerPayloadFacts)
+        val drain = requireNotNull(w.recordFor(displayHexOf(ids.drain)))
+        assertEquals(L1TxUiDirection.OUTGOING, drain.direction)
+        assertEquals(-49_999_774L, drain.netAmountDuffs)
+        val sweep = requireNotNull(w.recordFor(displayHexOf(ids.sweep)))
+        assertEquals(L1TxUiDirection.INTERNAL, sweep.direction)
+    }
+
+    // ── Durable write-back: corrected once, never re-processed ────────
+
+    /** Raw (direction, netAmount, fee) of one stored `transactions` row. */
+    private fun storedShape(txid: ByteArray): Triple<Int, Long, Long?> =
+        db.openHelper.readableDatabase.query(
+            androidx.sqlite.db.SimpleSQLiteQuery(
+                "SELECT direction, netAmount, fee FROM transactions WHERE txid = ?",
+                arrayOf<Any?>(txid)
+            )
+        ).use { c ->
+            assertTrue(c.moveToFirst())
+            Triple(c.getInt(0), c.getLong(1), if (c.isNull(2)) null else c.getLong(2))
+        }
+
+    @Test
+    fun reattribution_persistsCorrectionsDurably_nextLaunchDoesNoReattributionWork() = runBlocking {
+        val ids = seedS22Shape()
+        walker(payloadFacts = markerPayloadFacts).walkAll { }
+
+        // The corrections landed in the STORE (the durable per-record flag):
+        // sweep → INTERNAL(2) net=−fee fee recovered; drain → OUTGOING(1).
+        assertEquals(Triple(2, -226L, 226L), storedShape(ids.sweep))
+        assertEquals(Triple(1, -49_999_774L, 636L), storedShape(ids.drain))
+        // Genuine receives untouched.
+        assertEquals(Triple(0, 50_000_000L, null), storedShape(ids.receive))
+        assertEquals(Triple(0, 100_000_000L, null), storedShape(ids.faucet))
+
+        // "Next launch": a FRESH walker instance (no in-memory state). The
+        // corrected rows produce NO further reattribution WORK — no payload
+        // fetch (dashj parse), no UPDATE — the every-launch storm is gone.
+        // The bounded funded-split aggregate DOES still run: since the #4387
+        // heal, OUTGOING rows with spent evidence are audited against the
+        // mirror each pass (a correct row and a per-account-slice row are
+        // numerically indistinguishable without it), and the audit's verdict
+        // "already correct" is what suppresses the facts fetch and the write.
+        val w2 = walker(payloadFacts = { error("payload parse must not run on a corrected store") })
+        queryLog.clear()
+        val byHex = HashMap<String, L1TxUiRecord>()
+        w2.walkAll { page -> page.forEach { byHex[it.txidHex] = it } }
+        assertTrue(queryLog.none { it.contains("transactionData") })
+        assertTrue(queryLog.none { it.startsWith("UPDATE transactions") })
+        // …and the served shapes are still the corrected ones.
+        assertEquals(L1TxUiDirection.INTERNAL, byHex[displayHexOf(ids.sweep)]?.direction)
+        assertEquals(L1TxUiDirection.OUTGOING, byHex[displayHexOf(ids.drain)]?.direction)
+        assertEquals(L1TxUiDirection.INCOMING, byHex[displayHexOf(ids.faucet)]?.direction)
+    }
+
+    @Test
+    fun reattribution_engineRewriteReflagsAndRecorrects() = runBlocking {
+        // The wipe/restore/armed-rescan re-run contract: when the engine
+        // re-persists the misattributed Rust record (the only way the wrong
+        // shape can come back), the walker must re-correct AND re-persist —
+        // no invalidation plumbing, the flag condition is structural.
+        val ids = seedS22Shape()
+        walker(payloadFacts = markerPayloadFacts).walkAll { }
+        assertEquals(Triple(1, -49_999_774L, 636L), storedShape(ids.drain))
+
+        // Engine rewrite: the rescan re-stores the wrong INCOMING shape.
+        exec(
+            "UPDATE transactions SET direction = 0, netAmount = 49999138, fee = NULL WHERE txid = ?",
+            ids.drain
+        )
+
+        val byHex = HashMap<String, L1TxUiRecord>()
+        walker(payloadFacts = markerPayloadFacts).walkAll { page -> page.forEach { byHex[it.txidHex] = it } }
+        assertEquals(L1TxUiDirection.OUTGOING, byHex[displayHexOf(ids.drain)]?.direction)
+        assertEquals(Triple(1, -49_999_774L, 636L), storedShape(ids.drain))
+    }
+
+    // ── Repairs are reported: the parity breakdown compares these nets ─
+    //
+    // Review, PR #1605: the write-back is the app's own, so no engine event
+    // tells the parity breakdown its stored nets moved. The walker reports
+    // every committed change of a stored net, and nothing else.
+
+    @Test
+    fun reattribution_reportsTheStoredNetsItChanged_andNothingOnTheNextPass() = runBlocking {
+        val ids = seedS22Shape()
+        val reported = mutableListOf<Int>()
+        walker(payloadFacts = markerPayloadFacts, onStoredNetsRepaired = { reported += it }).walkAll { }
+        // The sweep and the drain both had their nets rewritten.
+        assertEquals(Triple(2, -226L, 226L), storedShape(ids.sweep))
+        assertEquals(Triple(1, -49_999_774L, 636L), storedShape(ids.drain))
+        assertEquals(listOf(2), reported)
+
+        // A corrected store writes nothing, so it reports nothing.
+        reported.clear()
+        walker(payloadFacts = markerPayloadFacts, onStoredNetsRepaired = { reported += it }).walkAll { }
+        assertTrue(reported.isEmpty())
+    }
+
+    @Test
+    fun reattribution_countsOnlyTheRowsItActuallyRewrote() = runBlocking {
+        // The engine rewrites the drain between the walker's read and its
+        // write: the compare-and-set misses that row, and only the sweep's
+        // net changes.
+        val ids = seedS22Shape()
+        val reported = mutableListOf<Int>()
+        var rewritten = false
+        walker(
+            payloadFacts = markerPayloadFacts,
+            onQuery = { sql ->
+                if (!rewritten && sql.startsWith("UPDATE transactions")) {
+                    rewritten = true
+                    exec("UPDATE transactions SET netAmount = 49999000 WHERE txid = ?", ids.drain)
+                }
+            },
+            onStoredNetsRepaired = { reported += it }
+        ).walkAll { }
+        assertEquals(Triple(2, -226L, 226L), storedShape(ids.sweep))
+        assertEquals(Triple(0, 49_999_000L, null), storedShape(ids.drain))
+        assertEquals(listOf(1), reported)
+    }
+
+    @Test
+    fun reattribution_reportsNothing_whenEveryWriteMissed() = runBlocking {
+        val ids = seedS22Shape()
+        val reported = mutableListOf<Int>()
+        var rewritten = false
+        walker(
+            payloadFacts = markerPayloadFacts,
+            onQuery = { sql ->
+                if (!rewritten && sql.startsWith("UPDATE transactions")) {
+                    rewritten = true
+                    exec("UPDATE transactions SET netAmount = netAmount - 1 WHERE txid IN (?, ?)", ids.sweep, ids.drain)
+                }
+            },
+            onStoredNetsRepaired = { reported += it }
+        ).walkAll { }
+        assertEquals(Triple(0, 49_999_773L, null), storedShape(ids.sweep))
+        assertEquals(Triple(0, 49_999_137L, null), storedShape(ids.drain))
+        assertTrue(reported.isEmpty())
+    }
+
+    @Test
+    fun coinJoin_mixingResumRead_reportsTheRepairedNet_besideTheCorrectionSignal() {
+        // The mixing re-sum's member read ([SdkTxStoreWalker.recordsFor]) persists
+        // the CoinJoin net-only correction too. Its txid signal is the display's;
+        // the count is the parity breakdown's, and it must arrive either way.
+        val ids = seedCoinJoinRound()
+        val reported = mutableListOf<Int>()
+        val signalled = mutableListOf<Set<String>>()
+        val w = SdkTxStoreWalker(
+            db = db,
+            walletId = walletId,
+            pageThrottleMs = 0L,
+            payloadFacts = coinJoinFacts,
+            onStoredNetsRepaired = { reported += it },
+            onCorrectionsPersisted = { signalled += it }
+        )
+        assertEquals(0L, w.recordsFor(listOf(displayHexOf(ids.round))).single().netAmountDuffs)
+        assertEquals(listOf(1), reported)
+        assertEquals(listOf(setOf(displayHexOf(ids.round))), signalled)
+
+        // Already persisted: a later walk has nothing left to report.
+        walkRecords(walker(payloadFacts = coinJoinFacts, onStoredNetsRepaired = { reported += it }))
+        assertEquals(listOf(1), reported)
+    }
+
+    /** A [DashSdkService] whose manager has this test's wallet as its only one. */
+    private fun boundSdkService(): DashSdkService {
+        val manager = mockk<org.dashfoundation.dashsdk.wallet.PlatformWalletManager> {
+            every { wallets } returns MutableStateFlow(mapOf(walletIdHex to mockk(relaxed = true)))
+        }
+        return mockk { every { walletManagerOrNull() } returns manager }
+    }
+
+    @Test
+    fun detailSheetPointLookup_reportsTheStoredNetItRepaired() = runBlocking {
+        // The tx-detail sheet reads one record through a walker of its own
+        // ([boundWalletRecordOrNull]); that read reattributes, and so writes.
+        val ids = seedS22Shape()
+        val reported = mutableListOf<Int>()
+        val drainBefore = storedShape(ids.drain).second
+        val record = boundWalletRecordOrNull(boundSdkService(), db, displayHexOf(ids.drain)) { reported += it }
+        val drainAfter = storedShape(ids.drain).second
+        assertNotEquals(drainBefore, drainAfter)
+        assertEquals(drainAfter, record?.netAmountDuffs)
+        assertEquals(listOf(1), reported)
+
+        // Read again: the store is already right, so nothing is reported.
+        boundWalletRecordOrNull(boundSdkService(), db, displayHexOf(ids.drain)) { reported += it }
+        assertEquals(listOf(1), reported)
+    }
+
+    @Test
+    fun metadataBatchLookup_reportsTheStoredNetsItRepaired() = runBlocking {
+        // The metadata import reads many records in one walker pass
+        // ([boundWalletRecordsOrEmpty]); its write-back is reported as one count.
+        val ids = seedS22Shape()
+        val reported = mutableListOf<Int>()
+        val hexes = listOf(ids.receive, ids.sweep, ids.drain, ids.faucet).map(::displayHexOf)
+        val before = listOf(ids.sweep, ids.drain).map { storedShape(it).second }
+        val records = boundWalletRecordsOrEmpty(boundSdkService(), db, hexes) { reported += it }
+        val after = listOf(ids.sweep, ids.drain).map { storedShape(it).second }
+        assertTrue(before.zip(after).all { (b, a) -> b != a })
+        assertEquals(after, listOf(ids.sweep, ids.drain).map { records[displayHexOf(it)]?.netAmountDuffs })
+        assertEquals(listOf(2), reported)
+
+        boundWalletRecordsOrEmpty(boundSdkService(), db, hexes) { reported += it }
+        assertEquals(listOf(2), reported)
+    }
+
+    // ── Incomplete-TXO-mirror guard: no born-wrong durable stamps ─────
+    //
+    // Replica of the 2026-08-19 device investigation: the store had DROPPED
+    // change-output rows (platform ecc6740ed4 — owned output role losing
+    // index collisions in the same-txid record fold), so the walker summed
+    // an incomplete funded set and durably persisted a born-wrong net
+    // (5e4d7282: −0.98771 stamped when the true net was −0.00000227). The
+    // guard must catch the gap — a payload output paying a wallet-tracked
+    // address with no txos row — skip the correction, write nothing, and
+    // heal normally once the mirror rows land.
+
+    @Test
+    fun reattribution_incompleteMirror_defersCorrectionAndPersistsNothing() = runBlocking {
+        insertAccount(bip44Account, 0)
+        insertCoreAddress("bip44_g0", bip44Account)
+        insertCoreAddress("bip44_g1", bip44Account)
+        insertCoreAddress("chg_g", bip44Account)
+
+        val funding = txid(61)
+        insertTx(funding, direction = 0, netAmount = 100_000_000, payload = ByteArray(0), firstSeen = 1_700_000_001)
+        insertTxo(funding, 0, 100_000_000, "bip44_g0")
+
+        // An internal sweep stored misattributed as INCOMING +0.6. Its real
+        // outputs: 0.6 back to bip44_g1 (mirrored) and 0.39999774 change to
+        // chg_g — whose txos row the store dropped.
+        val sweep = txid(62)
+        insertTx(sweep, direction = 0, netAmount = 60_000_000, payload = byteArrayOf(6), firstSeen = 1_700_000_002)
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ?", sweep, funding)
+        insertTxo(sweep, 0, 60_000_000, "bip44_g1")
+        // The change row for vout 1 is deliberately absent — the dropped row.
+
+        val incompleteFacts: (ByteArray) -> TxPayloadFacts? = { payload ->
+            if (payload.firstOrNull()?.toInt() == 6) {
+                TxPayloadFacts(
+                    outputsTotalDuffs = 99_999_774,
+                    outputCount = 2,
+                    inputCount = 1,
+                    outputAddresses = listOf("bip44_g1", "chg_g")
+                )
+            } else {
+                null
+            }
+        }
+
+        queryLog.clear()
+        val byHex = HashMap<String, L1TxUiRecord>()
+        walker(payloadFacts = incompleteFacts).walkAll { page -> page.forEach { byHex[it.txidHex] = it } }
+
+        // Deferred: the stored shape is served untouched and NOTHING is
+        // written. Before the guard this pass computed net = 0.6 − 1.0 =
+        // −0.4 from the incomplete mirror and stamped it durably — the
+        // born-wrong value that then fought every later correct upsert.
+        val served = requireNotNull(byHex[displayHexOf(sweep)])
+        assertEquals(L1TxUiDirection.INCOMING, served.direction)
+        assertEquals(60_000_000L, served.netAmountDuffs)
+        assertEquals(Triple(0, 60_000_000L, null), storedShape(sweep))
+        assertTrue(queryLog.none { it.startsWith("UPDATE transactions") })
+
+        // The mirror heals (the upstream fold fix, or the rows simply land
+        // late): the exact same record now corrects to INTERNAL/−fee and
+        // persists durably — deferral, not suppression.
+        insertTxo(sweep, 1, 39_999_774, "chg_g")
+        val byHex2 = HashMap<String, L1TxUiRecord>()
+        walker(payloadFacts = incompleteFacts).walkAll { page -> page.forEach { byHex2[it.txidHex] = it } }
+        val healed = requireNotNull(byHex2[displayHexOf(sweep)])
+        assertEquals(L1TxUiDirection.INTERNAL, healed.direction)
+        assertEquals(-226L, healed.netAmountDuffs)
+        assertEquals(226L, healed.feeDuffs)
+        assertEquals(Triple(2, -226L, 226L), storedShape(sweep))
+    }
+
+    // ── Rows a replayed block re-recorded with its change alone (D-SDK-06) ──
+    //
+    // A rescan resumed after a process death replays blocks against an engine
+    // reloaded with only the unspent coins, so a spend of a coin funded below
+    // the rescan is re-recorded as an incoming payment of its change. Shapes
+    // and amounts are the 2026-10-28 testnet restore's rows.
+
+    /** Seeds a coin funded below the rescan, at [address], and returns its funding txid. */
+    private fun seedFundingBelowTheRescan(n: Int, amount: Long, address: String): ByteArray {
+        val funding = txid(n)
+        insertTx(funding, direction = 0, netAmount = amount, payload = ByteArray(0), firstSeen = 1_700_000_000L + n)
+        insertTxo(funding, 0, amount, address)
+        return funding
+    }
+
+    @Test
+    fun reattribution_replayedAssetLock_storedIncomingChange_healsToOutgoingBurnPlusFee() = runBlocking {
+        insertAccount(bip44Account, 0)
+        insertCoreAddress("bip44_r0", bip44Account)
+        insertCoreAddress("chg_r0", bip44Account)
+        val funding = seedFundingBelowTheRescan(110, 100_001_000, "bip44_r0")
+
+        // 0e65124b…: 0.03 burned for credits, 0.97000759 change, 241 fee —
+        // stored INCOMING +0.97000759 after the replay.
+        val assetLock = txid(111)
+        insertTx(
+            assetLock, direction = 0, netAmount = 97_000_759, payload = byteArrayOf(30),
+            firstSeen = 1_700_000_200, typeKind = TX_TYPE_KIND_ASSET_LOCK
+        )
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ?", assetLock, funding)
+        insertTxo(assetLock, 1, 97_000_759, "chg_r0")
+        val facts: (ByteArray) -> TxPayloadFacts? = { payload ->
+            if (payload.firstOrNull()?.toInt() == 30) {
+                TxPayloadFacts(
+                    outputsTotalDuffs = 100_000_759,
+                    outputCount = 2,
+                    inputCount = 1,
+                    outputAddresses = listOf(null, "chg_r0")
+                )
+            } else {
+                null
+            }
+        }
+
+        val byHex = HashMap<String, L1TxUiRecord>()
+        walker(payloadFacts = facts).walkAll { page -> page.forEach { byHex[it.txidHex] = it } }
+
+        val healed = requireNotNull(byHex[displayHexOf(assetLock)])
+        assertEquals(L1TxUiDirection.OUTGOING, healed.direction)
+        assertEquals(-3_000_241L, healed.netAmountDuffs)
+        assertEquals(241L, healed.feeDuffs)
+        assertEquals(Triple(1, -3_000_241L, 241L), storedShape(assetLock))
+
+        // Durable: the corrected row no longer matches any flag.
+        queryLog.clear()
+        walker(payloadFacts = facts).walkAll { }
+        assertTrue(queryLog.none { it.startsWith("UPDATE transactions") })
+    }
+
+    @Test
+    fun reattribution_replayedAssetLock_withoutPayloadFacts_isDeferredUntilTheMirrorCanBeVerified() = runBlocking {
+        insertAccount(bip44Account, 0)
+        insertCoreAddress("bip44_r5", bip44Account)
+        insertCoreAddress("chg_r5", bip44Account)
+        val funding = seedFundingBelowTheRescan(118, 100_001_000, "bip44_r5")
+
+        // The replayed AssetLock is stored INCOMING, its change row has not
+        // landed, and its payload does not parse: the mirror alone says
+        // −1.00001, which would be stored as OUTGOING and never flagged again.
+        val assetLock = txid(119)
+        insertTx(
+            assetLock, direction = 0, netAmount = 97_000_759, payload = byteArrayOf(31),
+            firstSeen = 1_700_000_300, typeKind = TX_TYPE_KIND_ASSET_LOCK
+        )
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ?", assetLock, funding)
+
+        queryLog.clear()
+        val byHex = HashMap<String, L1TxUiRecord>()
+        walker(payloadFacts = { null }).walkAll { page -> page.forEach { byHex[it.txidHex] = it } }
+        assertTrue(queryLog.none { it.startsWith("UPDATE transactions") })
+        assertEquals(Triple(0, 97_000_759L, null), storedShape(assetLock))
+        val served = requireNotNull(byHex[displayHexOf(assetLock)])
+        assertEquals(L1TxUiDirection.INCOMING, served.direction)
+        assertEquals(97_000_759L, served.netAmountDuffs)
+
+        // Once the change row lands and the payload parses, the row heals.
+        insertTxo(assetLock, 1, 97_000_759, "chg_r5")
+        val facts: (ByteArray) -> TxPayloadFacts? = { payload ->
+            if (payload.firstOrNull()?.toInt() == 31) {
+                TxPayloadFacts(
+                    outputsTotalDuffs = 100_000_759,
+                    outputCount = 2,
+                    inputCount = 1,
+                    outputAddresses = listOf(null, "chg_r5")
+                )
+            } else {
+                null
+            }
+        }
+        walker(payloadFacts = facts).walkAll { }
+        assertEquals(Triple(1, -3_000_241L, 241L), storedShape(assetLock))
+    }
+
+    @Test
+    fun reattribution_replayedAssetLock_withSomeInputsUnmarked_isDeferredUntilEveryInputIsMarked() = runBlocking {
+        insertAccount(bip44Account, 0)
+        insertCoreAddress("bip44_r6", bip44Account)
+        insertCoreAddress("bip44_r7", bip44Account)
+        insertCoreAddress("chg_r6", bip44Account)
+        val first = seedFundingBelowTheRescan(120, 60_000_500, "bip44_r6")
+        val second = seedFundingBelowTheRescan(121, 40_000_500, "bip44_r7")
+
+        // Two inputs, 0.03 burned, 0.97000759 change, 241 fee — stored
+        // INCOMING after the replay, with only the first input marked spent.
+        val assetLock = txid(122)
+        insertTx(
+            assetLock, direction = 0, netAmount = 97_000_759, payload = byteArrayOf(33),
+            firstSeen = 1_700_000_400, typeKind = TX_TYPE_KIND_ASSET_LOCK
+        )
+        insertTxo(assetLock, 1, 97_000_759, "chg_r6")
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ?", assetLock, first)
+        val facts: (ByteArray) -> TxPayloadFacts? = { payload ->
+            if (payload.firstOrNull()?.toInt() == 33) {
+                TxPayloadFacts(
+                    outputsTotalDuffs = 100_000_759,
+                    outputCount = 2,
+                    inputCount = 2,
+                    outputAddresses = listOf(null, "chg_r6")
+                )
+            } else {
+                null
+            }
+        }
+
+        // One mark of two: the mirror says +0.37000259, short of the second
+        // input, so nothing is written.
+        queryLog.clear()
+        walker(payloadFacts = facts).walkAll { }
+        assertTrue(queryLog.none { it.startsWith("UPDATE transactions") })
+        assertEquals(Triple(0, 97_000_759L, null), storedShape(assetLock))
+
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ?", assetLock, second)
+        walker(payloadFacts = facts).walkAll { }
+        assertEquals(Triple(1, -3_000_241L, 241L), storedShape(assetLock))
+    }
+
+    @Test
+    fun reattribution_internalLeftAtZeroBySomeInputsUnmarked_staysFlaggedAndHeals() = runBlocking {
+        insertAccount(bip44Account, 0)
+        insertCoreAddress("bip44_r8", bip44Account)
+        insertCoreAddress("bip44_r9", bip44Account)
+        insertCoreAddress("bip44_r10", bip44Account)
+        val first = seedFundingBelowTheRescan(123, 10_193_735, "bip44_r8")
+        val second = seedFundingBelowTheRescan(124, 342, "bip44_r9")
+
+        // A two-input self-transfer, 342 fee — stored INTERNAL +0.10193735,
+        // with only the first input marked: the recompute is net 0.
+        val move = txid(125)
+        insertTx(move, direction = 2, netAmount = 10_193_735, payload = byteArrayOf(34), firstSeen = 1_700_000_500)
+        insertTxo(move, 0, 10_193_735, "bip44_r10")
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ?", move, first)
+        val facts: (ByteArray) -> TxPayloadFacts? = { payload ->
+            if (payload.firstOrNull()?.toInt() == 34) {
+                TxPayloadFacts(
+                    outputsTotalDuffs = 10_193_735,
+                    outputCount = 1,
+                    inputCount = 2,
+                    outputAddresses = listOf("bip44_r10")
+                )
+            } else {
+                null
+            }
+        }
+        walker(payloadFacts = facts).walkAll { }
+        assertEquals(Triple(2, 0L, null), storedShape(move))
+
+        // The second mark lands: the net-0 row is still flagged and heals.
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ?", move, second)
+        walker(payloadFacts = facts).walkAll { }
+        assertEquals(Triple(2, -342L, 342L), storedShape(move))
+    }
+
+    @Test
+    fun reattribution_internalWithoutPayloadFacts_isDeferredRatherThanStoredOutgoing() = runBlocking {
+        insertAccount(bip44Account, 0)
+        insertCoreAddress("bip44_r11", bip44Account)
+        insertCoreAddress("bip44_r12", bip44Account)
+        val funding = seedFundingBelowTheRescan(126, 10_194_077, "bip44_r11")
+
+        // A self-transfer, 342 fee — stored INTERNAL +0.10193735, every input
+        // marked, but its payload cannot be parsed yet.
+        val move = txid(127)
+        insertTx(move, direction = 2, netAmount = 10_193_735, payload = byteArrayOf(35), firstSeen = 1_700_000_600)
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ?", move, funding)
+        insertTxo(move, 0, 10_193_735, "bip44_r12")
+
+        // Without facts the INTERNAL check cannot run: the row would be stored
+        // OUTGOING and, its net then matching the mirror, never refetched.
+        queryLog.clear()
+        val byHex = HashMap<String, L1TxUiRecord>()
+        walker(payloadFacts = { null }).walkAll { page -> page.forEach { byHex[it.txidHex] = it } }
+        assertTrue(queryLog.none { it.startsWith("UPDATE transactions") })
+        assertEquals(Triple(2, 10_193_735L, null), storedShape(move))
+        val served = requireNotNull(byHex[displayHexOf(move)])
+        assertEquals(L1TxUiDirection.INTERNAL, served.direction)
+        assertEquals(10_193_735L, served.netAmountDuffs)
+
+        val facts: (ByteArray) -> TxPayloadFacts? = { payload ->
+            if (payload.firstOrNull()?.toInt() == 35) {
+                TxPayloadFacts(
+                    outputsTotalDuffs = 10_193_735,
+                    outputCount = 1,
+                    inputCount = 1,
+                    outputAddresses = listOf("bip44_r12")
+                )
+            } else {
+                null
+            }
+        }
+        walker(payloadFacts = facts).walkAll { }
+        assertEquals(Triple(2, -342L, 342L), storedShape(move))
+    }
+
+    @Test
+    fun reattribution_internalWithSomeInputsUnmarked_isNotStoredNegativeUntilEveryInputIsMarked() = runBlocking {
+        insertAccount(bip44Account, 0)
+        insertCoreAddress("bip44_r13", bip44Account)
+        insertCoreAddress("bip44_r14", bip44Account)
+        insertCoreAddress("bip44_r15", bip44Account)
+        insertCoreAddress("bip44_r16", bip44Account)
+        val first = seedFundingBelowTheRescan(128, 1_000_000, "bip44_r13")
+        val second = seedFundingBelowTheRescan(129, 100_000, "bip44_r14")
+        val third = seedFundingBelowTheRescan(130, 50_000, "bip44_r15")
+
+        // A three-input self-transfer, 150,000 fee — stored INTERNAL +0.01.
+        val move = txid(131)
+        insertTx(move, direction = 2, netAmount = 1_000_000, payload = byteArrayOf(36), firstSeen = 1_700_000_700)
+        insertTxo(move, 0, 1_000_000, "bip44_r16")
+        val facts: (ByteArray) -> TxPayloadFacts? = { payload ->
+            if (payload.firstOrNull()?.toInt() == 36) {
+                TxPayloadFacts(
+                    outputsTotalDuffs = 1_000_000,
+                    outputCount = 1,
+                    inputCount = 3,
+                    outputAddresses = listOf("bip44_r16")
+                )
+            } else {
+                null
+            }
+        }
+
+        // One mark: net 0, applied — the row stays flagged.
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ?", move, first)
+        walker(payloadFacts = facts).walkAll { }
+        assertEquals(Triple(2, 0L, null), storedShape(move))
+
+        // Two marks: −100,000 would never be flagged again, so nothing is
+        // written.
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ?", move, second)
+        queryLog.clear()
+        walker(payloadFacts = facts).walkAll { }
+        assertTrue(queryLog.none { it.startsWith("UPDATE transactions") })
+        assertEquals(Triple(2, 0L, null), storedShape(move))
+
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ?", move, third)
+        walker(payloadFacts = facts).walkAll { }
+        assertEquals(Triple(2, -150_000L, 150_000L), storedShape(move))
+    }
+
+    @Test
+    fun reattribution_sendPayingAContact_isNotDeferredByTheContactsUnmirroredOutput() = runBlocking {
+        insertAccount(bip44Account, 0)
+        insertAccount(extAccount, 13)
+        insertCoreAddress("bip44_r1", bip44Account)
+        insertCoreAddress("chg_r1", bip44Account)
+        insertCoreAddress("ext13_r1", extAccount)
+        val funding = seedFundingBelowTheRescan(112, 100_001_000, "bip44_r1")
+
+        // 75b37b55…: 10,000 paid to a contact, 0.99990773 change, 227 fee —
+        // stored INCOMING +0.99990773. The store writes no txos row for an
+        // output paid to a contact's address.
+        val send = txid(113)
+        insertTx(send, direction = 0, netAmount = 99_990_773, payload = byteArrayOf(31), firstSeen = 1_700_000_201)
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ?", send, funding)
+        insertTxo(send, 1, 99_990_773, "chg_r1")
+        val facts: (ByteArray) -> TxPayloadFacts? = { payload ->
+            if (payload.firstOrNull()?.toInt() == 31) {
+                TxPayloadFacts(
+                    outputsTotalDuffs = 100_000_773,
+                    outputCount = 2,
+                    inputCount = 1,
+                    outputAddresses = listOf("ext13_r1", "chg_r1")
+                )
+            } else {
+                null
+            }
+        }
+
+        val byHex = HashMap<String, L1TxUiRecord>()
+        walker(payloadFacts = facts).walkAll { page -> page.forEach { byHex[it.txidHex] = it } }
+
+        val corrected = requireNotNull(byHex[displayHexOf(send)])
+        assertEquals(L1TxUiDirection.OUTGOING, corrected.direction)
+        assertEquals(-10_227L, corrected.netAmountDuffs)
+        assertEquals(227L, corrected.feeDuffs)
+        assertEquals(Triple(1, -10_227L, 227L), storedShape(send))
+    }
+
+    @Test
+    fun reattribution_internalStoredWithPositiveNet_healsToMinusFee() = runBlocking {
+        insertAccount(bip44Account, 0)
+        insertCoreAddress("bip44_r2", bip44Account)
+        insertCoreAddress("bip44_r3", bip44Account)
+        val funding = seedFundingBelowTheRescan(114, 10_194_077, "bip44_r2")
+
+        // e002fc4f…: a self-transfer, 342 fee — stored INTERNAL +0.10193735.
+        val move = txid(115)
+        insertTx(move, direction = 2, netAmount = 10_193_735, payload = byteArrayOf(32), firstSeen = 1_700_000_202)
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ?", move, funding)
+        insertTxo(move, 0, 10_193_735, "bip44_r3")
+        val facts: (ByteArray) -> TxPayloadFacts? = { payload ->
+            if (payload.firstOrNull()?.toInt() == 32) {
+                TxPayloadFacts(
+                    outputsTotalDuffs = 10_193_735,
+                    outputCount = 1,
+                    inputCount = 1,
+                    outputAddresses = listOf("bip44_r3")
+                )
+            } else {
+                null
+            }
+        }
+
+        val byHex = HashMap<String, L1TxUiRecord>()
+        walker(payloadFacts = facts).walkAll { page -> page.forEach { byHex[it.txidHex] = it } }
+
+        val healed = requireNotNull(byHex[displayHexOf(move)])
+        assertEquals(L1TxUiDirection.INTERNAL, healed.direction)
+        assertEquals(-342L, healed.netAmountDuffs)
+        assertEquals(Triple(2, -342L, 342L), storedShape(move))
+    }
+
+    @Test
+    fun reattribution_correctInternalMove_isNotFlaggedOrFetched() = runBlocking {
+        insertAccount(bip44Account, 0)
+        insertCoreAddress("bip44_r4", bip44Account)
+        insertCoreAddress("bip44_r5", bip44Account)
+        val funding = seedFundingBelowTheRescan(116, 10_194_077, "bip44_r4")
+
+        // The same move stored correctly: INTERNAL −fee. Only a POSITIVE
+        // internal net is flagged, so a correct store pays no payload work.
+        val move = txid(117)
+        insertTx(move, direction = 2, netAmount = -342, payload = byteArrayOf(33), firstSeen = 1_700_000_203)
+        exec("UPDATE transactions SET fee = 342 WHERE txid = ?", move)
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ?", move, funding)
+        insertTxo(move, 0, 10_193_735, "bip44_r5")
+        var payloadsParsed = 0
+
+        queryLog.clear()
+        walker(payloadFacts = { payloadsParsed++; null }).walkAll { }
+
+        assertEquals(0, payloadsParsed)
+        assertTrue(queryLog.none { it.startsWith("UPDATE transactions") })
+        assertEquals(Triple(2, -342L, 342L), storedShape(move))
+    }
+
+    @Test
+    fun reattribution_changeRowLandingMidWalk_neverPersistsTheIncompleteSum() = runBlocking {
+        // Interleaving the guard must survive: the missing change row lands
+        // AFTER the funded sum was read and BEFORE mirror completeness is
+        // judged. As two statements, the completeness probe then approved a
+        // mirror the sum never saw and the walker stamped OUTGOING/−0.4 from
+        // the incomplete total — the exact born-wrong write the guard exists
+        // to stop. Sums and completeness now come from one read, so the row
+        // is either in both or in neither; the wrong shape can never persist.
+        insertAccount(bip44Account, 0)
+        insertCoreAddress("bip44_k0", bip44Account)
+        insertCoreAddress("bip44_k1", bip44Account)
+        insertCoreAddress("chg_k", bip44Account)
+
+        val funding = txid(67)
+        insertTx(funding, direction = 0, netAmount = 100_000_000, payload = ByteArray(0), firstSeen = 1_700_000_001)
+        insertTxo(funding, 0, 100_000_000, "bip44_k0")
+        val sweep = txid(68)
+        insertTx(sweep, direction = 0, netAmount = 60_000_000, payload = byteArrayOf(9), firstSeen = 1_700_000_002)
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ?", sweep, funding)
+        insertTxo(sweep, 0, 60_000_000, "bip44_k1")
+        // vout 1 (0.39999774 change to chg_k) is absent when the walk begins.
+
+        val sweepFacts: (ByteArray) -> TxPayloadFacts? = { payload ->
+            if (payload.firstOrNull()?.toInt() == 9) {
+                TxPayloadFacts(
+                    outputsTotalDuffs = 99_999_774,
+                    outputCount = 2,
+                    inputCount = 1,
+                    outputAddresses = listOf("bip44_k1", "chg_k")
+                )
+            } else {
+                null
+            }
+        }
+
+        // Land the missing row on the SECOND per-txid txos read of the walk.
+        // Before the fix that is the completeness probe, run after the SUM;
+        // after the fix there is only one such read, so the row never lands
+        // mid-decision at all.
+        var perTxidTxosReads = 0
+        var landed = false
+        val interleave: (String) -> Unit = { sql ->
+            queryLog += sql
+            if (sql.contains("FROM txos t WHERE t.walletId = ? AND t.txid IN")) {
+                perTxidTxosReads++
+                if (perTxidTxosReads == 2 && !landed) {
+                    landed = true
+                    insertTxo(sweep, 1, 39_999_774, "chg_k")
+                }
+            }
+        }
+
+        queryLog.clear()
+        val byHex = HashMap<String, L1TxUiRecord>()
+        walker(payloadFacts = sweepFacts, onQuery = interleave).walkAll { page -> page.forEach { byHex[it.txidHex] = it } }
+        val served = requireNotNull(byHex[displayHexOf(sweep)])
+
+        // Never the incomplete-sum shape, served OR stored.
+        assertNotEquals(L1TxUiDirection.OUTGOING, served.direction)
+        assertNotEquals(-40_000_000L, served.netAmountDuffs)
+        val stored = storedShape(sweep)
+        assertTrue(
+            "stored $stored must be the untouched record or the correct INTERNAL/−fee, never the incomplete sum",
+            stored == Triple(0, 60_000_000L, null) || stored == Triple(2, -226L, 226L)
+        )
+
+        // Once the row is present for a whole walk, the record heals.
+        if (!landed) insertTxo(sweep, 1, 39_999_774, "chg_k")
+        val byHex2 = HashMap<String, L1TxUiRecord>()
+        walker(payloadFacts = sweepFacts).walkAll { page -> page.forEach { byHex2[it.txidHex] = it } }
+        val healed = requireNotNull(byHex2[displayHexOf(sweep)])
+        assertEquals(L1TxUiDirection.INTERNAL, healed.direction)
+        assertEquals(-226L, healed.netAmountDuffs)
+        assertEquals(Triple(2, -226L, 226L), storedShape(sweep))
+    }
+
+    @Test
+    fun reattribution_externalSend_unknownOutputAddress_stillPersistsDurably() = runBlocking {
+        insertAccount(bip44Account, 0)
+        insertCoreAddress("bip44_h0", bip44Account)
+        insertCoreAddress("chg_h", bip44Account)
+
+        val receive = txid(63)
+        insertTx(receive, direction = 0, netAmount = 50_000_000, payload = ByteArray(0), firstSeen = 1_700_000_001)
+        insertTxo(receive, 0, 50_000_000, "bip44_h0")
+
+        // A genuine external payment stored INCOMING +change. The payment
+        // output's address is UNKNOWN to the wallet, so its absence from
+        // the mirror is the ordinary send shape, not a dropped row — the
+        // guard must not block the durable correction.
+        val send = txid(64)
+        insertTx(send, direction = 0, netAmount = 29_999_774, payload = byteArrayOf(7), firstSeen = 1_700_000_002)
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ?", send, receive)
+        insertTxo(send, 1, 29_999_774, "chg_h")
+
+        val sendFacts: (ByteArray) -> TxPayloadFacts? = { payload ->
+            if (payload.firstOrNull()?.toInt() == 7) {
+                TxPayloadFacts(
+                    outputsTotalDuffs = 49_999_774,
+                    outputCount = 2,
+                    inputCount = 1,
+                    outputAddresses = listOf("yTheirExternalAddress", "chg_h")
+                )
+            } else {
+                null
+            }
+        }
+
+        val byHex = HashMap<String, L1TxUiRecord>()
+        walker(payloadFacts = sendFacts).walkAll { page -> page.forEach { byHex[it.txidHex] = it } }
+        val corrected = requireNotNull(byHex[displayHexOf(send)])
+        assertEquals(L1TxUiDirection.OUTGOING, corrected.direction)
+        assertEquals(-20_000_226L, corrected.netAmountDuffs)
+        assertEquals(226L, corrected.feeDuffs)
+        assertEquals(Triple(1, -20_000_226L, 226L), storedShape(send))
+    }
+
+    @Test
+    fun reattribution_externalSend_toAnotherWalletsAddress_isForeignNotAMirrorHole() = runBlocking {
+        // core_addresses is shared by every wallet in the store. A second
+        // wallet's tracked address must read as a foreign payee for THIS
+        // wallet, not as a dropped mirror row: our txos will never gain a row
+        // for a coin that is not ours, so misreading it as "known" would defer
+        // the correction forever (the unscoped query did exactly that).
+        val otherWalletId = requireNotNull(walletIdFromHex("22".repeat(32)))
+        exec(
+            "INSERT INTO wallets (walletId, walletGroupId, birthHeight, syncedHeight, lastSynced, " +
+                "isImported, createdAt, lastUpdated) VALUES (?, ?, 0, 0, 0, 0, 0, 0)",
+            otherWalletId,
+            otherWalletId
+        )
+        val otherAccount = 99L
+        insertAccount(otherAccount, 0, ownerWalletId = otherWalletId)
+        insertCoreAddress("yOtherWalletsAddress", otherAccount)
+
+        insertAccount(bip44Account, 0)
+        insertCoreAddress("bip44_j0", bip44Account)
+        insertCoreAddress("chg_j", bip44Account)
+
+        val receive = txid(65)
+        insertTx(receive, direction = 0, netAmount = 50_000_000, payload = ByteArray(0), firstSeen = 1_700_000_001)
+        insertTxo(receive, 0, 50_000_000, "bip44_j0")
+
+        // Same shape as the external-send case above, except the payee is the
+        // OTHER wallet's tracked address.
+        val send = txid(66)
+        insertTx(send, direction = 0, netAmount = 29_999_774, payload = byteArrayOf(8), firstSeen = 1_700_000_002)
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE txid = ?", send, receive)
+        insertTxo(send, 1, 29_999_774, "chg_j")
+
+        val sendFacts: (ByteArray) -> TxPayloadFacts? = { payload ->
+            if (payload.firstOrNull()?.toInt() == 8) {
+                TxPayloadFacts(
+                    outputsTotalDuffs = 49_999_774,
+                    outputCount = 2,
+                    inputCount = 1,
+                    outputAddresses = listOf("yOtherWalletsAddress", "chg_j")
+                )
+            } else {
+                null
+            }
+        }
+
+        queryLog.clear()
+        val byHex = HashMap<String, L1TxUiRecord>()
+        walker(payloadFacts = sendFacts).walkAll { page -> page.forEach { byHex[it.txidHex] = it } }
+        val corrected = requireNotNull(byHex[displayHexOf(send)])
+        assertEquals(L1TxUiDirection.OUTGOING, corrected.direction)
+        assertEquals(-20_000_226L, corrected.netAmountDuffs)
+        assertEquals(226L, corrected.feeDuffs)
+        assertEquals(Triple(1, -20_000_226L, 226L), storedShape(send))
+        assertTrue(queryLog.any { it.startsWith("UPDATE transactions") })
+    }
+
+    // ── pending_inputs reservations: the "lingering receive" fix ──────
+    //
+    // The SDK only writes `txos.isSpent`/`spendingTxid` at CONFIRMATION,
+    // but reserves the spent outpoints in `pending_inputs` at BROADCAST.
+    // Between the two, a send's stored record is `INCOMING +change` with no
+    // confirmed spent evidence — without the reservation supplement the
+    // walker served that phantom receive for minutes (the on-device
+    // lingering receive). These tests pin the display predicate
+    // (isSpent == 0 AND spendingTxid IS NULL AND outpoint reserved), the
+    // display-only rule (nothing persisted from pending evidence), and the
+    // precedence that makes the SDK's never-cleaned stale reservations
+    // harmless once the real marks land.
+
+    /** Payload facts for marker 4: payment 0.2 (external) + change 0.29999774, one input. */
+    private val pendingSendPayloadFacts: (ByteArray) -> TxPayloadFacts? = { payload ->
+        when (payload.firstOrNull()?.toInt()) {
+            4 -> TxPayloadFacts(outputsTotalDuffs = 49_999_774, outputCount = 2, inputCount = 1)
+            5 -> TxPayloadFacts(outputsTotalDuffs = 49_999_774, outputCount = 1, inputCount = 1)
+            else -> null
+        }
+    }
+
+    @Test
+    fun pendingReservation_correctsJustBroadcastSend_displayOnlyThenConfirmedPersists() = runBlocking {
+        insertAccount(bip44Account, 0)
+        insertCoreAddress("bip44_0", bip44Account)
+        insertCoreAddress("chg_0", bip44Account)
+
+        val receive = txid(21)
+        val send = txid(22)
+        // A confirmed 0.5 receive…
+        insertTx(receive, direction = 0, netAmount = 50_000_000, payload = ByteArray(0), firstSeen = 1_700_000_001)
+        // …spent by a JUST-BROADCAST send, stored the way the engine writes
+        // it pre-confirm: INCOMING, net = +change, fee NULL — the phantom
+        // receive of money already spent.
+        insertTx(send, direction = 0, netAmount = 29_999_774, payload = byteArrayOf(4), firstSeen = 1_700_000_002)
+        val receiveOutpoint = insertTxo(receive, 0, 50_000_000, "bip44_0") // isSpent=0, spendingTxid=NULL
+        insertTxo(send, 1, 29_999_774, "chg_0") // the change output
+        insertPendingInput(receiveOutpoint, send)
+
+        // DISPLAY: the reservation supplies the spent evidence — OUTGOING,
+        // net = change − spent = −(payment + fee), fee recovered from the
+        // payload (all inputs provably ours via the reservation count).
+        val byHex = HashMap<String, L1TxUiRecord>()
+        walker(payloadFacts = pendingSendPayloadFacts).walkAll { page -> page.forEach { byHex[it.txidHex] = it } }
+        val sendRecord = requireNotNull(byHex[displayHexOf(send)])
+        assertEquals(L1TxUiDirection.OUTGOING, sendRecord.direction)
+        assertEquals(-20_000_226L, sendRecord.netAmountDuffs)
+        assertEquals(226L, sendRecord.feeDuffs)
+        // The receive row itself stays a genuine receive.
+        assertEquals(L1TxUiDirection.INCOMING, requireNotNull(byHex[displayHexOf(receive)]).direction)
+
+        // DISPLAY-ONLY: pending evidence never rewrites the store — the
+        // stored shape is untouched until the real marks land.
+        assertEquals(Triple(0, 29_999_774L, null), storedShape(send))
+
+        // CONFIRMATION lands: real marks written; the stale reservation is
+        // DELIBERATELY left behind (the SDK never cleans pending_inputs up).
+        exec("UPDATE txos SET spendingTxid = ?, isSpent = 1 WHERE outpoint = ?", send, receiveOutpoint)
+
+        // Same display shape — the isSpent=0/spendingTxid-NULL guards keep
+        // the stale reservation from double-counting the spent input — and
+        // the correction is now persisted durably (the pre-existing rule).
+        val byHex2 = HashMap<String, L1TxUiRecord>()
+        walker(payloadFacts = pendingSendPayloadFacts).walkAll { page -> page.forEach { byHex2[it.txidHex] = it } }
+        val confirmed = requireNotNull(byHex2[displayHexOf(send)])
+        assertEquals(L1TxUiDirection.OUTGOING, confirmed.direction)
+        assertEquals(-20_000_226L, confirmed.netAmountDuffs)
+        assertEquals(226L, confirmed.feeDuffs)
+        assertEquals(Triple(1, -20_000_226L, 226L), storedShape(send))
+    }
+
+    @Test
+    fun pendingReservation_changelessSend_discoveredAndCorrectedReactively() = runBlocking {
+        insertAccount(bip44Account, 0)
+        insertCoreAddress("bip44_0", bip44Account)
+
+        val receive = txid(31)
+        insertTx(receive, direction = 0, netAmount = 50_000_000, payload = ByteArray(0), firstSeen = 1_700_000_001)
+        val receiveOutpoint = insertTxo(receive, 0, 50_000_000, "bip44_0")
+
+        val w = walker(payloadFacts = pendingSendPayloadFacts)
+        w.primeWatermarks()
+        assertTrue(w.drainChanges { }) // baseline
+
+        // A change-less send (max-send/drain): pre-confirm its ONLY store
+        // traces are the transactions row and the reservation. Tx row first —
+        // without the reservation it is not yet wallet-relevant.
+        val send = txid(32)
+        insertTx(send, direction = 0, netAmount = 49_999_774, payload = byteArrayOf(5), firstSeen = 1_700_000_002)
+        val phaseB = mutableListOf<L1TxUiRecord>()
+        assertTrue(w.drainChanges { page -> phaseB += page })
+        assertTrue(
+            "a tx with no owned-TXO link and no reservation must not gain membership",
+            phaseB.none { it.txidHex == displayHexOf(send) }
+        )
+
+        // The reservation lands as its OWN later write. It must re-trigger
+        // the drain (pending_inputs is part of the fingerprint) and surface
+        // the send — membership and spent evidence both via pending_inputs.
+        insertPendingInput(receiveOutpoint, send)
+        val phaseC = mutableListOf<L1TxUiRecord>()
+        assertTrue("a reservation-only write went undetected", w.drainChanges { page -> phaseC += page })
+        val sendRecord = phaseC.firstOrNull { it.txidHex == displayHexOf(send) }
+        assertEquals(L1TxUiDirection.OUTGOING, requireNotNull(sendRecord) { "reserving send not emitted" }.direction)
+        assertEquals(-50_000_000L, sendRecord.netAmountDuffs)
+        assertEquals(226L, sendRecord.feeDuffs)
+
+        // Point reads see the same membership + corrected shape.
+        val point = requireNotNull(w.recordFor(displayHexOf(send)))
+        assertEquals(L1TxUiDirection.OUTGOING, point.direction)
+        assertEquals(-50_000_000L, point.netAmountDuffs)
+
+        // Still display-only: the stored row keeps the engine's shape.
+        assertEquals(Triple(0, 49_999_774L, null), storedShape(send))
+    }
+
+    // ── CoinJoin income-only net (rust-dashcore#979 shape) ────────────
+    //
+    // A restore that processes a mixing round before the transactions that
+    // funded its inputs stores the round "income-only": netAmount = +(our
+    // outputs) where the true net is funded − spent (0 for a pure
+    // denomination round). Without the engine fix the walker must re-net
+    // these rows from the TXO mirror — net only, behind the completeness
+    // guard, durably, and convergently while the spent marks still land.
+
+    private val cjAccount = 120L
+    private val denom = 100_001L
+
+    /** Txids of the [seedCoinJoinRound] shape. */
+    private data class CoinJoinTxids(val f1: ByteArray, val f2: ByteArray, val round: ByteArray)
+
+    /**
+     * One 4-in/4-out mixing round: two of the inputs are ours (denominations
+     * funded by [CoinJoinTxids.f1]/[CoinJoinTxids.f2] on CoinJoin-account
+     * addresses), two belong to other participants; two outputs pay our
+     * CoinJoin addresses, two pay the other participants. True net = 0.
+     *
+     * @param storedNet the round's persisted net (born income-only: +2·denom).
+     * @param linkF2 whether f2's spend of its denomination into the round is
+     *        in the mirror yet (false = the mid-sync partial-evidence shape:
+     *        neither f2's tx row nor its TXO exist yet).
+     * @param mirrorOut2 whether the round's second owned output (vout 2) has
+     *        its `txos` row (false = the incomplete-mirror shape).
+     */
+    private fun seedCoinJoinRound(
+        storedNet: Long = 2 * denom,
+        linkF2: Boolean = true,
+        mirrorOut2: Boolean = true
+    ): CoinJoinTxids {
+        insertAccount(cjAccount, 1)
+        insertCoreAddress("cj_in0", cjAccount)
+        insertCoreAddress("cj_in1", cjAccount)
+        insertCoreAddress("cj_out0", cjAccount)
+        insertCoreAddress("cj_out1", cjAccount)
+        val ids = CoinJoinTxids(f1 = txid(81), f2 = txid(82), round = txid(83))
+        insertTx(ids.f1, direction = 2, netAmount = 0, payload = ByteArray(0), firstSeen = 1_700_000_001)
+        insertTx(
+            ids.round, direction = 3, netAmount = storedNet, payload = byteArrayOf(20),
+            firstSeen = 1_700_000_003, typeKind = TX_TYPE_KIND_COINJOIN
+        )
+        // A stored fee the recompute must leave alone.
+        exec("UPDATE transactions SET fee = 123 WHERE txid = ?", ids.round)
+        insertTxo(ids.f1, 0, denom, "cj_in0", spendingTxid = ids.round)
+        if (linkF2) linkSecondInput(ids)
+        insertTxo(ids.round, 0, denom, "cj_out0")
+        if (mirrorOut2) insertTxo(ids.round, 2, denom, "cj_out1")
+        return ids
+    }
+
+    /** f2 (and its denomination's spend into the round) lands in the store. */
+    private fun linkSecondInput(ids: CoinJoinTxids) {
+        insertTx(ids.f2, direction = 2, netAmount = 0, payload = ByteArray(0), firstSeen = 1_700_000_002)
+        insertTxo(ids.f2, 0, denom, "cj_in1", spendingTxid = ids.round)
+    }
+
+    /** The round's real shape: our outputs at vout 0/2, the other participants' at 1/3. */
+    private val coinJoinFacts: (ByteArray) -> TxPayloadFacts? = { payload ->
+        if (payload.firstOrNull()?.toInt() == 20) {
+            TxPayloadFacts(
+                outputsTotalDuffs = 4 * denom,
+                outputCount = 4,
+                inputCount = 4,
+                outputAddresses = listOf("cj_out0", "yParticipantA", "cj_out1", "yParticipantB")
+            )
+        } else {
+            null
+        }
+    }
+
+    private fun walkRecords(w: SdkTxStoreWalker): Map<String, L1TxUiRecord> = runBlocking {
+        val byHex = HashMap<String, L1TxUiRecord>()
+        w.walkAll { page -> page.forEach { byHex[it.txidHex] = it } }
+        byHex
+    }
+
+    @Test
+    fun coinJoin_bornIncomeOnly_correctedToFundedMinusSpent_persistedOnce() {
+        val ids = seedCoinJoinRound()
+
+        queryLog.clear()
+        val served = requireNotNull(walkRecords(walker(payloadFacts = coinJoinFacts))[displayHexOf(ids.round)])
+        // funded (2·denom) − spent (2·denom) = 0; direction and fee stand.
+        assertEquals(0L, served.netAmountDuffs)
+        assertEquals(L1TxUiDirection.COINJOIN, served.direction)
+        assertEquals(123L, served.feeDuffs)
+        assertEquals(Triple(3, 0L, 123L), storedShape(ids.round))
+        assertEquals(1, queryLog.count { it.startsWith("UPDATE transactions") })
+
+        // Second pass (fresh walker — "next launch"): the corrected row is
+        // equal to its recompute → no payload fetch, no write.
+        queryLog.clear()
+        val again = walkRecords(walker(payloadFacts = { error("no payload work on a corrected store") }))
+        assertEquals(0L, again[displayHexOf(ids.round)]?.netAmountDuffs)
+        assertTrue(queryLog.none { it.contains("transactionData") })
+        assertTrue(queryLog.none { it.startsWith("UPDATE transactions") })
+    }
+
+    @Test
+    fun coinJoin_alreadyCorrect_untouchedAndNoPayloadFetch() {
+        // The #979 store: the engine already persisted the true net.
+        val ids = seedCoinJoinRound(storedNet = 0L)
+        queryLog.clear()
+        val served = walkRecords(walker(payloadFacts = { error("payload parse must not run for a correct row") }))
+        assertEquals(0L, served[displayHexOf(ids.round)]?.netAmountDuffs)
+        assertEquals(Triple(3, 0L, 123L), storedShape(ids.round))
+        assertTrue(queryLog.none { it.contains("transactionData") })
+        assertTrue(queryLog.none { it.startsWith("UPDATE transactions") })
+    }
+
+    @Test
+    fun coinJoin_with979_correctNetNeverRaisedByIncompleteSpentMarks() {
+        // The #979 store mid-restore: the engine already persisted the true,
+        // fully attributed net (0), but only ONE of our two inputs has its
+        // spent mark in the mirror yet — the recompute reads +denom. It must
+        // be refused (the walker never makes an engine-correct net worse,
+        // and if the second input's row never lands that would be permanent).
+        val ids = seedCoinJoinRound(storedNet = 0L, linkF2 = false)
+        queryLog.clear()
+        val served = walkRecords(walker(payloadFacts = { error("no payload work for a refused raise") }))
+        assertEquals(0L, served[displayHexOf(ids.round)]?.netAmountDuffs)
+        assertEquals(Triple(3, 0L, 123L), storedShape(ids.round))
+        assertTrue(queryLog.none { it.contains("transactionData") })
+        assertTrue(queryLog.none { it.startsWith("UPDATE transactions") })
+
+        // Once the mark lands the recompute agrees — still nothing to do.
+        linkSecondInput(ids)
+        queryLog.clear()
+        walkRecords(walker(payloadFacts = coinJoinFacts))
+        assertEquals(Triple(3, 0L, 123L), storedShape(ids.round))
+        assertTrue(queryLog.none { it.startsWith("UPDATE transactions") })
+    }
+
+    @Test
+    fun coinJoin_incompleteMirror_defersAndPersistsNothing() {
+        // Our second output (vout 2, a wallet-tracked CoinJoin address) has no
+        // txos row: funded would read 1·denom and stamp a born-wrong −denom.
+        val ids = seedCoinJoinRound(mirrorOut2 = false)
+        queryLog.clear()
+        val served = walkRecords(walker(payloadFacts = coinJoinFacts))
+        assertEquals(2 * denom, served[displayHexOf(ids.round)]?.netAmountDuffs)
+        assertEquals(Triple(3, 2 * denom, 123L), storedShape(ids.round))
+        assertTrue(queryLog.none { it.startsWith("UPDATE transactions") })
+
+        // Without payload facts the guard cannot run → deferred as well.
+        walkRecords(walker(payloadFacts = { null }))
+        assertEquals(Triple(3, 2 * denom, 123L), storedShape(ids.round))
+
+        // The row lands → corrected on the next pass.
+        insertTxo(ids.round, 2, denom, "cj_out1")
+        walkRecords(walker(payloadFacts = coinJoinFacts))
+        assertEquals(Triple(3, 0L, 123L), storedShape(ids.round))
+    }
+
+    @Test
+    fun coinJoin_midSyncPartialEvidence_convergesOnLaterPass() {
+        // Only ONE of our two inputs is linked in the mirror yet: the
+        // recompute is partial (+denom) — closer than the born +2·denom.
+        val ids = seedCoinJoinRound(linkF2 = false)
+        walkRecords(walker(payloadFacts = coinJoinFacts))
+        assertEquals(Triple(3, denom, 123L), storedShape(ids.round))
+
+        // The second input's funding tx and spend mark land: the flag
+        // re-fires structurally and the compare-and-set runs against the
+        // CURRENT stored value (+denom), not the born one.
+        linkSecondInput(ids)
+        queryLog.clear()
+        val served = walkRecords(walker(payloadFacts = coinJoinFacts))
+        assertEquals(0L, served[displayHexOf(ids.round)]?.netAmountDuffs)
+        assertEquals(Triple(3, 0L, 123L), storedShape(ids.round))
+        assertEquals(1, queryLog.count { it.startsWith("UPDATE transactions") })
+    }
+
+    @Test
+    fun coinJoin_withoutSpentEvidence_orNotCoinJoinDirection_neverRecomputed() {
+        // No owned input linked at all → no spent evidence → not flagged
+        // (a round we merely received into stays as stored).
+        insertAccount(cjAccount, 1)
+        insertCoreAddress("cj_out0", cjAccount)
+        val round = txid(84)
+        insertTx(
+            round, direction = 3, netAmount = denom, payload = byteArrayOf(20),
+            firstSeen = 1_700_000_003, typeKind = TX_TYPE_KIND_COINJOIN
+        )
+        insertTxo(round, 0, denom, "cj_out0")
+        walkRecords(walker(payloadFacts = coinJoinFacts))
+        assertEquals(Triple(3, denom, null), storedShape(round))
+    }
+
+    @Test
+    fun coinJoin_correctionSignalled_andRecordsForServesCurrentNets() {
+        // The mixing-group re-sum's two hooks into the walker: the
+        // persisted-corrections signal, and point reads of the served nets.
+        val ids = seedCoinJoinRound()
+        val signalled = mutableListOf<Set<String>>()
+        val w = SdkTxStoreWalker(
+            db = db,
+            walletId = walletId,
+            pageThrottleMs = 0L,
+            payloadFacts = coinJoinFacts,
+            onCorrectionsPersisted = { signalled += it }
+        )
+        val unknown = displayHexOf(txid(99))
+        // A point read corrects (and signals) exactly like a walk; a txid the
+        // store does not hold is simply absent.
+        val served = w.recordsFor(listOf(displayHexOf(ids.round), unknown))
+        assertEquals(listOf(displayHexOf(ids.round)), served.map { it.txidHex })
+        assertEquals(0L, served.single().netAmountDuffs)
+        assertEquals(listOf(setOf(displayHexOf(ids.round))), signalled)
+
+        // Already corrected: nothing persisted, nothing signalled.
+        walkRecords(w)
+        assertEquals(1, signalled.size)
+    }
+
+    @Test
+    fun coinJoin_recordsForWithoutListener_stillPersistsTheCorrection() {
+        // The mixing re-sum reads its members through a walker with NO
+        // corrections listener (the nets it gets back already carry the
+        // correction). The correction must still be persisted, exactly once.
+        val ids = seedCoinJoinRound()
+        val quiet = SdkTxStoreWalker(db = db, walletId = walletId, pageThrottleMs = 0L, payloadFacts = coinJoinFacts)
+        val served = quiet.recordsFor(listOf(displayHexOf(ids.round)))
+        assertEquals(0L, served.single().netAmountDuffs)
+        assertEquals(0L, storedShape(ids.round).second)
+        queryLog.clear()
+        walkRecords(walker(payloadFacts = coinJoinFacts))
+        assertEquals(0, queryLog.count { it.startsWith("UPDATE transactions") })
+    }
+
+    @Test
+    fun recomputeCoinJoinRecordNet_netOnly() {
+        val born = l1TxUiRecord(txid(85), 2 * denom, 50L, 3, 3, 1_700_000_000, 0)
+        val fixed = recomputeCoinJoinRecordNet(born, spentOwnedDuffs = 2 * denom, fundedOwnedDuffs = 2 * denom - 10)
+        assertEquals(-10L, fixed.netAmountDuffs)
+        assertEquals(L1TxUiDirection.COINJOIN, fixed.direction)
+        assertEquals(50L, fixed.feeDuffs)
+        // Already correct → the SAME record (no churn).
+        val correct = born.copy(netAmountDuffs = 0L)
+        assertTrue(correct === recomputeCoinJoinRecordNet(correct, 2 * denom, 2 * denom))
+        // No spent evidence, or not a CoinJoin record → untouched.
+        assertTrue(born === recomputeCoinJoinRecordNet(born, 0L, 2 * denom))
+        val outgoing = born.copy(direction = L1TxUiDirection.OUTGOING)
+        assertTrue(outgoing === recomputeCoinJoinRecordNet(outgoing, 2 * denom, 0L))
+        // MONOTONE: a recompute HIGHER than the stored net (the #979 store
+        // with spent marks still incomplete) is refused — the same record.
+        assertTrue(correct === recomputeCoinJoinRecordNet(correct, spentOwnedDuffs = denom, fundedOwnedDuffs = 2 * denom))
+        // A lower recompute from partial evidence still applies (moves down).
+        assertEquals(denom, recomputeCoinJoinRecordNet(born, denom, 2 * denom).netAmountDuffs)
+    }
+
+    // ── reattributeIncomingRecord (pure) ──────────────────────────────
+
+    private fun incomingRecord(net: Long) = l1TxUiRecord(
+        txidWireBytes = txid(77),
+        netAmountDuffs = net,
+        feeDuffs = null,
+        contextCode = 3,
+        directionCode = 0,
+        firstSeenSec = 1_700_000_000,
+        blockTimestampSec = 0
+    )
+
+    @Test
+    fun reattribute_noOwnedSpend_returnsRecordUntouched() {
+        val r = incomingRecord(100)
+        assertEquals(r, reattributeIncomingRecord(r, 0, 0, 100, 0, null))
+    }
+
+    @Test
+    fun reattribute_netStillPositive_keepsIncomingButCorrectsNet() {
+        // A co-funded receive: we spent 100 of our own but gained 400 —
+        // genuinely incoming, only the stored net (which counted foreign
+        // outputs) is corrected.
+        val r = incomingRecord(900)
+        val out = reattributeIncomingRecord(r, 1, 100, 500, 400, null)
+        assertEquals(L1TxUiDirection.INCOMING, out.direction)
+        assertEquals(400L, out.netAmountDuffs)
+    }
+
+    @Test
+    fun reattribute_feeOnlyWhenPayloadProvesAllInputsOurs() {
+        val r = incomingRecord(500)
+        // Payload says 3 inputs, we only spent 2 rows: someone else co-funded
+        // — the outputs/inputs difference is NOT our fee.
+        val coFunded = reattributeIncomingRecord(
+            r, 2, 1_000, 500, 0,
+            TxPayloadFacts(outputsTotalDuffs = 900, outputCount = 2, inputCount = 3)
+        )
+        assertEquals(L1TxUiDirection.OUTGOING, coFunded.direction)
+        assertNull(coFunded.feeDuffs)
+        // Same shape but all inputs ours → fee = spent − outputs.
+        val allOurs = reattributeIncomingRecord(
+            r, 3, 1_000, 500, 0,
+            TxPayloadFacts(outputsTotalDuffs = 900, outputCount = 2, inputCount = 3)
+        )
+        assertEquals(100L, allOurs.feeDuffs)
+    }
+
+    @Test
+    fun reattribute_internalRequiresEveryOutputOwned() {
+        val r = incomingRecord(500)
+        // All outputs owned (payload total == owned funded) → INTERNAL.
+        val internal = reattributeIncomingRecord(
+            r, 1, 1_000, 990, 0,
+            TxPayloadFacts(outputsTotalDuffs = 990, outputCount = 2, inputCount = 1)
+        )
+        assertEquals(L1TxUiDirection.INTERNAL, internal.direction)
+        assertEquals(-10L, internal.netAmountDuffs)
+        // One output value missing from the mirror → an external send.
+        val send = reattributeIncomingRecord(
+            r, 1, 1_000, 400, 0,
+            TxPayloadFacts(outputsTotalDuffs = 990, outputCount = 2, inputCount = 1)
+        )
+        assertEquals(L1TxUiDirection.OUTGOING, send.direction)
+        assertEquals(-600L, send.netAmountDuffs)
+        // A foreign (contact) output present → OUTGOING even if the mirror
+        // sums happen to line up.
+        val contactPay = reattributeIncomingRecord(
+            r, 1, 1_000, 0, 990,
+            TxPayloadFacts(outputsTotalDuffs = 990, outputCount = 1, inputCount = 1)
+        )
+        assertEquals(L1TxUiDirection.OUTGOING, contactPay.direction)
+        assertEquals(-1_000L, contactPay.netAmountDuffs)
+    }
+
+    @Test
+    fun firstUnmirroredKnownOutput_flagsOnlyTrackedAddressGaps() {
+        val payload = TxPayloadFacts(
+            outputsTotalDuffs = 1_000,
+            outputCount = 3,
+            inputCount = 1,
+            outputAddresses = listOf("external", "ours", null)
+        )
+        val known = setOf("ours")
+        // A tracked address with no mirror row → its vout.
+        assertEquals(1, firstUnmirroredKnownOutput(payload, known, setOf(0)))
+        // Its mirror row present → complete.
+        assertNull(firstUnmirroredKnownOutput(payload, known, setOf(1)))
+        // Unknown and address-less outputs never count as gaps.
+        assertNull(firstUnmirroredKnownOutput(payload, setOf("elsewhere"), emptySet()))
+        // A facts source without addresses, or no tracked addresses at all,
+        // keeps the guard inert (pre-guard behavior).
+        assertNull(firstUnmirroredKnownOutput(payload.copy(outputAddresses = emptyList()), known, emptySet()))
+        assertNull(firstUnmirroredKnownOutput(payload, emptySet(), emptySet()))
+    }
+
+    // ── dashjPayloadFacts against the REAL device payloads ────────────
+
+    /** The S22 drain `5538f908…` exactly as pulled from `dash-sdk.db`: 4 inputs, one 0.69998912 output. */
+    private val realDrainPayloadHex =
+        "0300000004940BFC85D8D4A0A9BB70BB47AF508945DDCB4AB1FBA0EE6BF2780AFA6C4D86F1000000006B48304502" +
+            "21008F83D2AC1EAE44619F5D70964B115FEF4CF895D36D7954621A29DA37E1B0413402206354850A86C9B714" +
+            "5F6B475B6DEACEC41740706C8C9AEAC2C7D189253F15D1F3012103EC1D737702CCDB3132638ABA4FB7374586" +
+            "79676564B74CCD4EC44F0D396D8F63FFFFFFFF940BFC85D8D4A0A9BB70BB47AF508945DDCB4AB1FBA0EE6BF2" +
+            "780AFA6C4D86F1010000006B483045022100C6EED361E986191D129923616673E94288253AE3572FED4DC3FC" +
+            "0FC27A74DFFD0220057A4E343EA35EA985226339CEAE31DCBE6661507075FF0DD569E6635083A0680121036E" +
+            "247D793057F6B8157AE2FAD0A3303C0906DD9CF099B7A34BCC7190FC20CBBCFFFFFFFFBAFCD5EC2CEA426E6D" +
+            "BC1E742BFDE57E4DA879F6572EA313D110C2FFDF0449EB000000006B483045022100AB0D51A71AEDFD91A269" +
+            "62D731325D71725A5DBC568DD1011598062F8309130C022020515A9F117C08C0F62F2AB1EDDFAD1D379DB429" +
+            "77E4C3DED9CFD19772ACB979012103ABA9BCB27FE823605F4E88F53727332CD8C498D1B6CBEBEB4073E43752" +
+            "6F65CBFFFFFFFFBAFCD5EC2CEA426E6DBC1E742BFDE57E4DA879F6572EA313D110C2FFDF0449EB010000006A" +
+            "47304402207D4E24ACC491F956D8DB3A0707D541191684D44FA83D2323823B14BF5999E41002205611F39A0C" +
+            "0B615E54E87CC61A1D3ADB49A6ACD68573B5A09E321B814F8BB3A501210383549EA9B29BA857C983C9D78A5D" +
+            "C3BECA1B5BD5FC6FBAC838E5F77D8FCA24EFFFFFFFFF0140192C04000000001976A9140FF03CDA88402842A4" +
+            "8B5EA94E037B236CC09DBA88AC00000000"
+
+    @Test
+    fun dashjPayloadFacts_parsesTheRealDrainPayload() {
+        val payload = realDrainPayloadHex.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
+        val facts = requireNotNull(dashjPayloadFacts(payload)) { "real payload failed to parse" }
+        assertEquals(69_998_912L, facts.outputsTotalDuffs)
+        assertEquals(1, facts.outputCount)
+        assertEquals(4, facts.inputCount)
+        // The mirror-completeness guard needs the destination addresses:
+        // the single P2PKH output must resolve to a base58 address.
+        assertEquals(1, facts.outputAddresses.size)
+        assertTrue(facts.outputAddresses[0] != null)
+        // Garbage never parses to facts.
+        assertNull(dashjPayloadFacts(ByteArray(0)))
+        assertNull(dashjPayloadFacts(byteArrayOf(1, 2, 3)))
+    }
+
+    // ── Batch point lookup (metadata import) ──────────────────────────
+
+    @Test
+    fun recordsFor_matchesRecordFor_withOnePendingAggregatePerBatch() = runBlocking {
+        insertAccount(bip44Account, 0)
+        insertCoreAddress("bip44_0", bip44Account)
+        insertCoreAddress("chg_0", bip44Account)
+        // A just-broadcast send whose only spent evidence is its pending_inputs
+        // reservation (the case the wallet-wide aggregate exists for)…
+        val receive = txid(21)
+        val send = txid(22)
+        insertTx(receive, direction = 0, netAmount = 50_000_000, payload = ByteArray(0), firstSeen = 1_700_000_001)
+        insertTx(send, direction = 0, netAmount = 29_999_774, payload = byteArrayOf(4), firstSeen = 1_700_000_002)
+        val receiveOutpoint = insertTxo(receive, 0, 50_000_000, "bip44_0")
+        insertTxo(send, 1, 29_999_774, "chg_0")
+        insertPendingInput(receiveOutpoint, send)
+        // …plus ordinary standard receives, each of which also triggers the aggregate.
+        seedWalletTxs(count = 20, startAt = 100)
+        val notInStore = displayHexOf(txid(9_999))
+        val hexes = listOf(displayHexOf(receive), displayHexOf(send)) + (100 until 120).map { displayHex(it) }
+
+        val single = hexes.associateWith { walker(payloadFacts = pendingSendPayloadFacts).recordFor(it) }
+        queryLog.clear()
+        val batch = walker(payloadFacts = pendingSendPayloadFacts).recordsByHex(hexes + notInStore)
+
+        // Same records as one recordFor per txid, including the pending correction.
+        assertEquals(single.filterValues { it != null }, batch)
+        assertEquals(L1TxUiDirection.OUTGOING, batch.getValue(displayHexOf(send)).direction)
+        assertEquals(-20_000_226L, batch.getValue(displayHexOf(send)).netAmountDuffs)
+        // The wallet-wide pending_inputs aggregate: at most once for reattribution and
+        // once for fee recovery, for the whole batch of 22 — not once per txid.
+        val aggregates = queryLog.count { it.contains("GROUP BY s.spendingTxid") }
+        assertTrue("pending aggregate ran $aggregates times", aggregates in 1..2)
+    }
+}

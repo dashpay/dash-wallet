@@ -20,14 +20,24 @@ package de.schildbach.wallet.ui.dashpay.utils
 import android.content.Context
 import androidx.datastore.preferences.SharedPreferencesMigration
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
+import de.schildbach.wallet.Constants
+import org.bitcoinj.core.NetworkParameters
 import de.schildbach.wallet.ui.more.TxMetadataSaveFrequency
+import de.schildbach.wallet_test.BuildConfig
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.BaseConfig
@@ -93,7 +103,50 @@ open class DashPayConfig @Inject constructor(
         )
     )
 ) {
+    /**
+     * Store releases always use the SDK. Persisted SDK flags remain QA controls only:
+     * neither an old preference nor a direct file edit may change production routing.
+     * The separate Tools dashj diagnostic remains user-configurable. L1_SEND is the pre-cutover
+     * override; normal SDK sending remains enabled by committed cutover.
+     */
+    private fun <T> productionFlagOverride(key: Preferences.Key<T>): T? {
+        if (!sdkFlagsLocked) return null
+        // By identity, not name or equals() (Preferences.Key compares names only):
+        // only these Boolean key objects match, so T is Boolean and the cast holds.
+        // A same-named key of another type falls through to the store.
+        val value = when {
+            key === USE_KOTLIN_SDK_DPNS_READS ||
+                key === USE_KOTLIN_SDK_DASHPAY_WRITES ||
+                key === USE_KOTLIN_SDK_SHIELDED ||
+                key === USE_KOTLIN_SDK_L1_INVITE ||
+                key === USE_KOTLIN_SDK_L1_SHADOW -> true
+            key === USE_KOTLIN_SDK_L1_SEND -> false
+            else -> return null
+        }
+        @Suppress("UNCHECKED_CAST")
+        return value as T
+    }
+
+    override suspend fun <T> get(key: Preferences.Key<T>): T? =
+        productionFlagOverride(key) ?: super.get(key)
+
+    override fun <T> observe(key: Preferences.Key<T>): Flow<T?> =
+        productionFlagOverride(key)?.let { flowOf(it) } ?: super.observe(key)
+
+    override fun <T> observePreservingErrors(key: Preferences.Key<T>): Flow<T?> =
+        productionFlagOverride(key)?.let { flowOf(it) } ?: super.observePreservingErrors(key)
+
+    override suspend fun <T> set(key: Preferences.Key<T>, value: T) {
+        if (productionFlagOverride(key) != null) return
+        super.set(key, value)
+    }
+
     companion object {
+        val sdkFlagsLocked: Boolean
+            get() = !BuildConfig.DEBUG && BuildConfig.FLAVOR == "prod"
+
+        private val log = org.slf4j.LoggerFactory.getLogger(DashPayConfig::class.java)
+
         const val DISABLE_NOTIFICATIONS: Long = -1
 
         const val PREFERENCES_NAME = "dashpay"
@@ -101,7 +154,6 @@ open class DashPayConfig @Inject constructor(
         val LAST_METADATA_PUSH = longPreferencesKey("last_metadata_push")
         val HAS_DASH_PAY_INFO_SCREEN_BEEN_SHOWN = booleanPreferencesKey("has_dash_pay_info_screen_been_shown")
         val VOTING_INFO_SHOWN = booleanPreferencesKey("voting_info_shown")
-        val MIX_DASH_SHOWN = booleanPreferencesKey("mix_dash_shown")
         val KEYS_DONT_ASK_AGAIN = booleanPreferencesKey("dont_ask_again_for_keys")
         val FIRST_TIME_VOTING = booleanPreferencesKey("first_time_voting")
         val CREDIT_INFO_SHOWN = booleanPreferencesKey("credit_info_shown")
@@ -121,12 +173,833 @@ open class DashPayConfig @Inject constructor(
         val TRANSACTION_METADATA_SAVE_MEMOS = booleanPreferencesKey("transaction_metadata_save_memos")
         val TRANSACTION_METADATA_SAVE_GIFT_CARD_INFO = booleanPreferencesKey("transaction_metadata_save_gift_card_info")
         val TRANSACTION_METADATA_SAVE_AFTER = longPreferencesKey("transaction_metadata_save_after")
+
+        /**
+         * One-shot marker for the re-merge of already-fetched platform metadata.
+         *
+         * Metadata fetched before the `syncPlatformMetadata` fallback fix was
+         * stored as platform documents and then DISCARDED before reaching the
+         * UI-visible table. The documents are still on the device and carry the
+         * whole field set, so the repair is a local re-merge — no re-fetch, and
+         * the fetch watermark would not re-deliver them anyway.
+         */
+        val TRANSACTION_METADATA_REMERGE_DONE = booleanPreferencesKey("transaction_metadata_remerge_done")
         val TRANSACTION_METADATA_SAVE_ON_RESET = booleanPreferencesKey("transaction_metadata_save_on_reset")
         val TRANSACTION_METADATA_LAST_SAVE_WORK_ID = stringPreferencesKey("transaction_metadata_last_save_work_id")
         val TRANSACTION_METADATA_LAST_PAST_SAVE = longPreferencesKey("transaction_metadata_last_save_work_timestamp")
         val INVITATION_LINK = stringPreferencesKey("invitation_link")
         val INVITATION_FROM_ONBOARDING = booleanPreferencesKey("invitation_link_from_onboarding")
+
+        /**
+         * Pending invite-claim OVERAGE record (see
+         * [de.schildbach.wallet.service.platform.sdk.ShieldedInviteOverageTopUp]):
+         * a claimed shielded invite whose note value exceeded the clamped exit
+         * denomination (legacy 0.3 note → 0.25 claim) left the remainder in
+         * the claimer's own pool as the claim's change note; per the product
+         * decision it must end up as credits on the NEW identity. The record
+         * survives process death (INVITATION_LINK precedent) so the follow-up
+         * top-up resumes at next launch.
+         * - IDENTITY_ID: the claimed identity (base58); presence = pending.
+         * - CREDITS: the gross overage, in Platform credits.
+         * - NET_CREDITS: set once the unshield step SUCCEEDED (gross − the
+         *   Rust-computed unshield fee) — its presence advances the resume
+         *   point past the unshield.
+         * - TOPUP_STARTED: set immediately BEFORE the top-up broadcast
+         *   attempt, so a rerun that finds no address balance can tell "the
+         *   top-up consumed it" (done) from "the unshield hasn't surfaced
+         *   yet" (retry).
+         */
+        val INVITE_OVERAGE_IDENTITY_ID = stringPreferencesKey("invite_overage_identity_id")
+        val INVITE_OVERAGE_CREDITS = longPreferencesKey("invite_overage_credits")
+        val INVITE_OVERAGE_NET_CREDITS = longPreferencesKey("invite_overage_net_credits")
+        val INVITE_OVERAGE_TOPUP_STARTED = booleanPreferencesKey("invite_overage_topup_started")
+
+        /**
+         * The identity (base58) whose invite-claim overage has EVER had a
+         * pending record created — set by every record persist and by every
+         * record clear (completion or give-up). This is the one-shot guard for
+         * the completed-claim RECONCILE
+         * ([de.schildbach.wallet.service.platform.sdk.ShieldedInviteOverageTopUp.reconcileCompletedClaim]):
+         * without it, a drained record would look identical to a claim whose
+         * overage was never recorded, and the reconcile would re-mint the
+         * record after every completion — a repeated top-up.
+         */
+        val INVITE_OVERAGE_RECONCILED_IDENTITY = stringPreferencesKey("invite_overage_reconciled_identity")
+
+        /**
+         * When the pending record was minted (epoch ms) — the settle-aware
+         * give-up rule's age input: absence of the overage may only be
+         * believed once the record is old enough for the shielded scan to
+         * have provably caught up (observed live: the worker ran seconds
+         * after the claim, before the claim's change note was scanned, and
+         * abandoned a real 0.05).
+         */
+        val INVITE_OVERAGE_CREATED_AT_MS = longPreferencesKey("invite_overage_created_at_ms")
+
+        /**
+         * v2 outcome markers — the clear-kind provenance the v1 marker
+         * lacked. SUCCESS (top-up landed / provably consumed) suppresses the
+         * reconcile permanently; ABANDONED (provable-absence give-up) allows
+         * a re-mint ONLY when the pool actually holds the derivable overage
+         * (the note appeared after the abandon). The v1 key above cannot
+         * distinguish the two, so a v1-only stamp is treated like ABANDONED
+         * — one guarded re-mint — and is erased when superseded.
+         */
+        val INVITE_OVERAGE_OUTCOME_SUCCESS = stringPreferencesKey("invite_overage_outcome_success")
+        val INVITE_OVERAGE_OUTCOME_ABANDONED = stringPreferencesKey("invite_overage_outcome_abandoned")
+
+        /**
+         * Whether the "Transfers take different times" sheet (Figma
+         * 1740:16412) has been shown on the shielded internal-transfer
+         * screen. It auto-opens once on the user's first visit and is set
+         * on dismissal; the nav-bar info icon re-opens it manually any
+         * time. Follows the *_INFO_SHOWN precedents above.
+         */
+        val SHIELDED_TIMING_INFO_SHOWN = booleanPreferencesKey("shielded_timing_info_shown")
+
+        /**
+         * Whether the post-upgrade MIXED-FUNDS (CoinJoin) migration has been
+         * handled for this wallet — set once the user picks an option that
+         * actually spends (shield / combine) or dismisses the prompt for
+         * good. Deliberately NOT set when an attempt provably spent nothing
+         * ([de.schildbach.wallet.service.platform.sdk.MixedFundsMigrationOutcome.NOT_ATTEMPTED]),
+         * so a failed migration is re-offered on the next startup.
+         *
+         * The flag is a nag-suppressor, not the authority: the prompt also
+         * requires a non-zero CoinJoin-keychain balance, so a completed
+         * migration stops it regardless of whether this ever persisted.
+         * See [de.schildbach.wallet.service.platform.sdk.CoinJoinFundsMigrationService].
+         */
+        val MIXED_FUNDS_MIGRATION_DONE = booleanPreferencesKey("mixed_funds_migration_done")
+        val MIXED_FUNDS_MIGRATION_DEFERRED_DUFFS = longPreferencesKey("mixed_funds_migration_deferred_duffs")
+
+        /**
+         * A mixed-funds migration that BROADCAST but whose result is not
+         * user-visible yet — `ACTION|startedAtMillis|legacyBaseline[|failed]`, the third field
+         * ignored on read (see [de.schildbach.wallet.service.platform.sdk.InFlightMixedFundsMigration]),
+         * blank/absent when nothing is in flight. Written alongside
+         * [MIXED_FUNDS_MIGRATION_DONE] when a migration records STARTED and
+         * cleared once the result is proven (the CoinJoin-funded lock consumed for SHIELD, an
+         * empty SDK CoinJoin account for COMBINE). Acknowledging the
+         * timed-out state does NOT clear it (see
+         * [MIXED_FUNDS_MIGRATION_ACKNOWLEDGED_AT]). Keeps the sheet's PROCESSING presentation
+         * alive across lock-screen teardown / activity recreation / process
+         * death — the on-device bug where the ~1-minute confirmation window
+         * left an unexplained near-zero balance behind the lock screen.
+         */
+        val MIXED_FUNDS_MIGRATION_IN_FLIGHT = stringPreferencesKey("mixed_funds_migration_in_flight")
+        val MIXED_FUNDS_CONSOLIDATION = stringPreferencesKey("mixed_funds_consolidation")
+
+        /**
+         * `startedAtMillis` of the in-flight marker whose "could not confirm"
+         * guidance the user closed. While it matches the current marker the
+         * automatic triggers (startup, resume) stop re-presenting the sheet;
+         * the marker — and any consolidation stage — is kept, so Tools still
+         * opens it and Try again resumes it (which restarts the window, so a
+         * fresh attempt is presented again).
+         */
+        val MIXED_FUNDS_MIGRATION_ACKNOWLEDGED_AT = longPreferencesKey("mixed_funds_migration_acknowledged_at")
+
+        /**
+         * Submission journal of a DIRECT (no consolidation) mixed-funds shield:
+         * `preparing` from the tap until the native funding call is about to
+         * run, `submitted` from then on. A `preparing` journal left by a dead
+         * process proves nothing was submitted; `submitted` (or an absent
+         * journal on an older marker) is uncertain and is never rebuilt.
+         */
+        val MIXED_FUNDS_DIRECT_SHIELD_PHASE = stringPreferencesKey("mixed_funds_direct_shield_phase")
+
+        /**
+         * CoinJoin outpoints (comma-separated hex) a mixed-funds SHIELD recorded
+         * before its native funding call. Completion requires THESE to be spent
+         * by one shielded top-up lock, so a later CoinJoin coin never blocks it.
+         * Blank on older/adopted records, which keep the account-level check.
+         */
+        val MIXED_FUNDS_SHIELD_INPUTS = stringPreferencesKey("mixed_funds_shield_inputs")
+
+        /** Shield-lock outpoints whose resume got `AssetLockAlreadyConsumed` (`PendingWalletShieldLock`). */
+        val SHIELD_LOCKS_PLATFORM_CONSUMED = stringSetPreferencesKey("shield_locks_platform_consumed")
+
+        /**
+         * Phase 3c of the dashj → Kotlin SDK migration
+         * (`docs/kotlin-sdk-migration-plan.md`): route read-only DPNS
+         * username resolution/search through the Dash Platform Kotlin SDK
+         * instead of dashj-platform. Default OFF — the dashj path is
+         * untouched unless this is explicitly enabled, and any SDK-path
+         * failure falls back to dashj per call. Re-read on every lookup, so
+         * toggling either direction is instant (no restart).
+         * See [de.schildbach.wallet.service.platform.sdk.SdkUsernameQueries].
+         */
+        val USE_KOTLIN_SDK_DPNS_READS = booleanPreferencesKey("use_kotlin_sdk_dpns_reads")
+
+        /**
+         * Phase 3e of the dashj → Kotlin SDK migration
+         * (`docs/kotlin-sdk-migration-plan.md`): route the DashPay WRITE
+         * operations (send contact request, create/update profile) through
+         * the Dash Platform Kotlin SDK instead of dashj-platform. Default
+         * OFF. Unlike the read flag, a failed SDK write only falls back to
+         * dashj when the SDK path DEFINITIVELY did not broadcast (see
+         * [de.schildbach.wallet.service.platform.sdk.SdkDashPayWrites] for
+         * the decision table) — an ambiguous failure surfaces as an error
+         * exactly like a dashj broadcast failure would, never as a silent
+         * second broadcast. Re-read on every write, so toggling either
+         * direction is instant (no restart).
+         */
+        val USE_KOTLIN_SDK_DASHPAY_WRITES = booleanPreferencesKey("use_kotlin_sdk_dashpay_writes")
+
+        /**
+         * Phase 4 of the dashj → Kotlin SDK migration
+         * (`docs/kotlin-sdk-migration-plan.md`): enable the SHIELDED
+         * (Orchard) balance runtime — the per-network commitment-tree
+         * store, the wallet's shielded sub-wallet binding, the background
+         * shielded sync loop, and the shielded spend operations (shield /
+         * transfer / unshield / withdraw). Default OFF: with the flag off
+         * the shielded service is provably inert (no native call, no
+         * SQLite file, no sync loop). Spends follow the
+         * [de.schildbach.wallet.service.platform.sdk.SdkWriteResult]
+         * no-double-broadcast contract — see
+         * [de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService].
+         * Re-read on every call, so toggling ON is instant; toggling OFF
+         * stops gating new work but does not tear down a running sync loop
+         * (call `ShieldedBalanceService.stop()` for that).
+         */
+        val USE_KOTLIN_SDK_SHIELDED = booleanPreferencesKey("use_kotlin_sdk_shielded")
+
+        /**
+         * Phase 4 (invitation slice) of the dashj → Kotlin SDK migration
+         * (`docs/kotlin-sdk-migration-plan.md`): route the TRANSPARENT (L1)
+         * DashPay INVITATION create + claim through the Kotlin SDK's DIP-13
+         * invitation wrappers
+         * ([org.dashfoundation.dashsdk.identity.IdentityRegistration.createInvitation]
+         * / [org.dashfoundation.dashsdk.identity.IdentityRegistration.claimInvitation])
+         * instead of the dashj asset-lock voucher path
+         * ([de.schildbach.wallet.service.platform.TopUpRepository.createInviteFundingTransaction]
+         * / [de.schildbach.wallet.service.platform.TopUpRepository.obtainAssetLockTransaction]).
+         * The transparent counterpart of the shielded-invite flag above.
+         *
+         * Default OFF: with the flag off (or the cutover not yet committed)
+         * every L1-invite entry point returns [SdkWriteResult.NotBroadcast]
+         * without touching the SDK, and the dashj create/claim paths are
+         * byte-identical to before. Because the L1 funds live in the SDK only
+         * AFTER the cutover, the routing seams additionally gate on the
+         * COMMITTED CUTOVER (same as
+         * [de.schildbach.wallet.service.platform.sdk.SdkTransparentUsernameCreation]).
+         * See [de.schildbach.wallet.service.platform.sdk.SdkL1InviteCreation].
+         */
+        val USE_KOTLIN_SDK_L1_INVITE = booleanPreferencesKey("use_kotlin_sdk_l1_invite")
+
+        /**
+         * Phase 5a of the dashj → Kotlin SDK migration
+         * (`docs/kotlin-sdk-migration-plan.md`): run the Kotlin SDK's Rust
+         * SPV client ALONGSIDE dashj as a shadow — a verification harness
+         * for the eventual L1 cutover, changing nothing user-facing. While
+         * on (and the app wallet is bound to the SDK), the shadow service
+         * starts the SDK's compact-filter sync into its own storage
+         * directory and probes balance/tx-count parity against the dashj
+         * wallet every 10 seconds
+         * (`L1ShadowSyncService.PARITY_INTERVAL_MS`). Default OFF: with the
+         * flag off the service is provably inert (no native call, no SPV
+         * storage, no probe loop).
+         *
+         * SHIPPING POLICY (2026-07-30): the shadow harness is the cutover's
+         * verification instrument and SHIPS ENABLED in every build — the
+         * seeding below turns it ON for all variants, including the
+         * prodRelease store build, so what is tested is what ships. The
+         * parity COMPUTATION runs everywhere (the cutover auto-commit, the
+         * Tools dashj-sync diagnostic and the support-log parity file all
+         * consume its reports); only the VERBOSE `L1Parity` ticker and the
+         * `L1ParityDiff` outpoint dumps are gated on `BuildConfig.DEBUG`
+         * and drop out of release builds.
+         * See [de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService].
+         */
+        val USE_KOTLIN_SDK_L1_SHADOW = booleanPreferencesKey("use_kotlin_sdk_l1_shadow")
+
+        /**
+         * Phase 5b of the dashj → Kotlin SDK migration
+         * (`docs/kotlin-sdk-migration-plan.md`): route the NORMAL L1 send —
+         * a plain Dash payment to a base58 address — through the Kotlin
+         * SDK's Core send pipeline (build + sign + broadcast over the SDK's
+         * SPV peers) instead of dashj. Scope: ONLY the neutral
+         * `SendPaymentService.sendCoins(String, Dash)` overload (the
+         * integrations path — Coinbase/Maya); the dashj-typed main-UI send
+         * stays on dashj until Phase 5c. Every send is hard-gated on the
+         * same shadow-sync parity evidence as the shielded funding pipeline
+         * (see `SdkL1SendService`), and any outcome where the SDK provably
+         * broadcast nothing falls back to the unchanged dashj path.
+         *
+         * Default OFF and — unlike the other migration flags —
+         * DELIBERATELY NOT seeded ON by the debug-build init block below:
+         * this flag moves real user funds through the SDK's own
+         * build/sign/broadcast stack, so it stays opt-in even for testers
+         * (adb/debug-screen toggle) until the shadow-parity harness has
+         * soak-validated the SDK's L1 view across enough devices. Re-read
+         * on every send, so toggling either direction is instant.
+         */
+        val USE_KOTLIN_SDK_L1_SEND = booleanPreferencesKey("use_kotlin_sdk_l1_send")
+
+        /**
+         * The `USE_KOTLIN_SDK_*` flags every build seeds ON when unset — pure
+         * so [seedDebugDefaultsIfUnset]'s network split is host-testable. Per
+         * Brian's decisions: mainnet prodDebug seeds the SAME feature set as
+         * testnet (2026-07-27), and as of 2026-07-30 **all variants** seed
+         * (the `BuildConfig.DEBUG` gate was removed) so a prodRelease store
+         * build is byte-for-byte behaviourally identical to the QA builds —
+         * no divergence between what is tested and what ships. This means
+         * prodRelease exposes the SDK paths to REAL funds by default; the
+         * pre-release gates (DIP-15 friendship-xpub parity) still apply before
+         * a store rollout. `USE_KOTLIN_SDK_L1_SEND` is never seeded anywhere.
+         */
+        internal fun debugSeedFlags(isMainnet: Boolean) = if (isMainnet) {
+            // Mainnet: full set (real-funds validation vehicle — see KDoc).
+            listOf(
+                USE_KOTLIN_SDK_DPNS_READS,
+                USE_KOTLIN_SDK_DASHPAY_WRITES,
+                USE_KOTLIN_SDK_SHIELDED,
+                USE_KOTLIN_SDK_L1_INVITE,
+                USE_KOTLIN_SDK_L1_SHADOW
+            )
+        } else {
+            listOf(
+                USE_KOTLIN_SDK_DPNS_READS,
+                USE_KOTLIN_SDK_DASHPAY_WRITES,
+                USE_KOTLIN_SDK_SHIELDED,
+                USE_KOTLIN_SDK_L1_INVITE,
+                USE_KOTLIN_SDK_L1_SHADOW
+            )
+        }
+
+        /**
+         * Wall-clock ms of the last L1 shadow reset
+         * ([de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService.resetShadowState]).
+         * Persisted (not in-memory) so a reset survives a process death:
+         * the reset-aftermath deficit detector uses it to distinguish
+         * "the previous reset broke the shadow state" (recover with one
+         * hard reset) from an organic SDK scan deficit (stand down) —
+         * see `ShadowResetDecider`'s decision table.
+         */
+        val L1_SHADOW_LAST_RESET = longPreferencesKey("l1_shadow_last_reset")
+
+        /**
+         * Phase 5d cutover state machine (see docs/kotlin-sdk-migration-plan.md
+         * and [de.schildbach.wallet.service.platform.sdk.CutoverState]).
+         * Persisted per-install so the engine-start decision survives process
+         * death; absent = [de.schildbach.wallet.service.platform.sdk
+         * .CutoverState.DUAL_RUNNING] (today's behavior). The transition to
+         * CUT_OVER is the single atomic write that makes the SDK the L1
+         * source of truth; every engine-start site consults it first.
+         */
+        val CUTOVER_STATE = stringPreferencesKey("cutover_state")
+
+        /**
+         * One-shot marker: an EXISTING wallet (an app upgrade — loaded from
+         * the protobuf, not created or restored) was just cut over to the SDK
+         * on this launch, so the one-time sync explainer is still owed to the
+         * user. Written by
+         * [de.schildbach.wallet.service.platform.sdk.CutoverCoordinator
+         * .commitForUpgradedWalletAsync] at the moment the state actually
+         * moves to CUT_OVER, and cleared when the user acknowledges the
+         * explainer — and only on the upgrade path (a fresh install or a
+         * restore commits through `setWallet` instead and already has its own
+         * sync expectation).
+         *
+         * "Exactly once, ever" is NOT a property of this key: acknowledging
+         * clears it back to false, which is indistinguishable from never having
+         * been armed. [CUTOVER_UPGRADE_NOTICE_EVER_ARMED] is what makes the
+         * once-ever guarantee real.
+         */
+        val CUTOVER_UPGRADE_NOTICE_PENDING = booleanPreferencesKey("cutover_upgrade_notice_pending")
+
+        /**
+         * MO-995 (Andrei, comment 91138 #2): the once-EVER latch behind
+         * [CUTOVER_UPGRADE_NOTICE_PENDING]. Set the first time the upgrade
+         * explainer is armed on this install, and never cleared.
+         *
+         * WHY A SECOND KEY IS NEEDED: `..._PENDING` is a *pending* flag — the
+         * sheet sets it back to false on acknowledgment, which reads exactly
+         * like "never armed". So any later arming re-shows a sheet whose own
+         * copy promises "This happens only once, after this update".
+         *
+         * That is not hypothetical. Field log (2026-09-02, prod, 11.9.1 →
+         * 12.0.0-sync): the notice was pending at the 07:31:54 upgrade launch
+         * and the user acknowledged it, then the upgrade seam committed the
+         * cutover TEN HOURS LATER on the next process start (17:31:54
+         * `cutover state DUAL_RUNNING -> CUT_OVER (upgraded-wallet launch)`)
+         * and armed the very same explainer a second time.
+         *
+         * The ten-hour gap came from the (since removed) bind-evidence gate,
+         * which could never pass on the upgrade launch itself, so the commit
+         * and the arming landed on a later process start. The seam commits
+         * on the upgrade launch now, but a wipe reset followed by a
+         * re-commit, or a failed state persist retried on the next launch,
+         * would still reach an arming site twice. This latch makes every
+         * such path idempotent.
+         */
+        val CUTOVER_UPGRADE_NOTICE_EVER_ARMED = booleanPreferencesKey("cutover_upgrade_notice_ever_armed")
+
+        /**
+         * Set the first time the SDK wallet bind succeeds on this install, and
+         * never cleared except by a wallet wipe. DIAGNOSTIC ONLY since the
+         * no-fallback cutover policy (docs/upgrade-memory-and-sync-plan.md §12):
+         * it used to be the evidence the UPGRADE seam required before handing
+         * L1 to the SDK (MO-995 GATE 2), which could not be satisfied on the
+         * upgrade launch itself and so committed every upgrade one launch late
+         * with dashj running in between. The cutover now commits
+         * unconditionally; this key tells the support report whether the
+         * install has ever bound.
+         */
+        val SDK_BIND_EVER_SUCCEEDED = booleanPreferencesKey("sdk_bind_ever_succeeded")
+
+        /**
+         * Wall-clock ms at which the SDK bind was first found blocked, cleared
+         * when a bind succeeds: how long the wallet has been unable to sync.
+         * Survives process deaths, so a phone that stays locked across many
+         * short-lived background starts is still measured from the first.
+         * Read by SdkBindRetryService to decide when a routine "unlock your
+         * phone to sync" reminder is due.
+         */
+        val SDK_BIND_BLOCKED_SINCE_MS = longPreferencesKey("sdk_bind_blocked_since_ms")
+
+        /**
+         * The current [de.schildbach.wallet.service.platform.sdk.SdkBindBlocker]
+         * name while the SDK bind is pending, "NONE" once bound. Written by
+         * [de.schildbach.wallet.service.platform.sdk.SdkBindRetryService] so the
+         * support report can say WHY an install never finished its SDK setup
+         * (device locked vs. a keystore that denies while unlocked).
+         */
+        val SDK_BIND_BLOCKER = stringPreferencesKey("sdk_bind_blocker")
+
+        /**
+         * MO-995: set the first time a launch is seen to have crossed the
+         * cutover boundary — the previous launch ran a build BELOW
+         * `CutoverCoordinator.FIRST_CUTOVER_VERSION_CODE` — and never cleared
+         * except by a wallet wipe.
+         *
+         * Deliberately phrased against that constant rather than a release
+         * name. The boundary has already moved once (11100000 -> 12000000 when
+         * the cutover slipped from 11.10 to 12.0.0), which silently turned
+         * every 11.1x version code from "already cut over" into "pre-cutover".
+         * A version named here would contradict the code the next time it
+         * moves; the constant cannot.
+         *
+         * WHY THIS EXISTS: `Configuration.lastVersionCode` is "the version the
+         * PREVIOUS LAUNCH ran", not "the version this install upgraded from" —
+         * `updateLastVersionCode` overwrites it on every startup. So the fact
+         * that an install crossed the boundary is visible for exactly ONE
+         * launch, and that is the very launch on which the SDK bind has not
+         * run yet (the seam is in `finalizeInitialization`; the binder starts
+         * with platform sync). Without a durable latch, the upgrade seam's
+         * two conditions could never both hold and it would never commit
+         * again — losing the one-time sync explainer with it.
+         *
+         * Latching it means the commit can land on whichever later launch
+         * first has a working bind, which is what a device like walletB needs:
+         * its keystore may deny the bind for many launches before it heals.
+         */
+        val CUTOVER_UPGRADE_BOUNDARY_CROSSED =
+            booleanPreferencesKey("cutover_upgrade_boundary_crossed")
+
+        /**
+         * Set once the post-cutover display-cache completeness check
+         * (`TxDisplayCacheService.rebuildIfCacheIncomplete`) has run — which it
+         * does exactly once, after the SDK's one-time sync first reaches the
+         * tip — and never cleared except by a wallet wipe (which clears every
+         * DashPayConfig key), so a restore gets its own single check.
+         *
+         * Why only once: the check compares SDK records against display rows,
+         * and on a CoinJoin wallet records legitimately fold into per-day group
+         * rows, so it always reads "missing rows". Before this latch it ran on
+         * every sync-complete tick and requested a full reconcile each time
+         * (D-M-01 §4b). Keeping the cache converged after that one check is the
+         * separate 60s reconcile ticker's job, not this check's.
+         */
+        val POST_CUTOVER_COMPLETENESS_CHECKED =
+            booleanPreferencesKey("post_cutover_completeness_checked")
+
+        /**
+         * DIAGNOSTIC toggle (Tools screen, debug instrumentation): un-hold the
+         * dashj L1 engine AFTER the Phase 5d cutover has committed, so the
+         * legacy peergroup syncs normally alongside the SDK — a backup /
+         * SDK-vs-dashj parity verification aid. Default OFF.
+         *
+         * Purely ADDITIVE and reversible: with the flag OFF every path that
+         * reads it is a no-op and behavior is byte-for-byte the pre-feature
+         * behavior — the cutover state, the `sdkOwnsL1` decision, and every
+         * SDK surface are untouched. When ON (and the cutover is committed) the
+         * blockchain service's engine-start gate lets the dashj peergroup start
+         * WITHOUT flipping `sdkOwnsL1` (the home header keeps reading the SDK's
+         * L1 sync); dashj's own sync % + SDK-vs-dashj parity verdict are routed
+         * to a separate diagnostic holder
+         * ([de.schildbach.wallet.service.DashjDiagnosticSyncState]) that only
+         * the Tools screen observes, so the shared `blockchain_state` row is
+         * never disturbed. Toggling requires a blockchain-service restart to
+         * re-resolve the gate (see the Tools row).
+         */
+        val DASHJ_SYNC_DIAGNOSTIC = booleanPreferencesKey("dashj_sync_diagnostic")
+
+        /**
+         * DIAGNOSTIC companion to [DASHJ_SYNC_DIAGNOSTIC]: epoch SECONDS the
+         * un-held dashj engine should start syncing from; 0 (or unset) = sync
+         * everything from the beginning. Chosen in the Tools "Sync from date"
+         * dialog every time the toggle is switched ON, and persisted BEFORE
+         * the flag flips so the service always reads a settled value.
+         *
+         * Why a start date is diagnostically valid: coins cannot predate the
+         * wallet's keys, so syncing from a date at/before the wallet's
+         * creation date still observes every wallet transaction — the
+         * SDK-vs-dashj parity verdict is unaffected. Only read on the
+         * post-cutover diagnostic path (dashj held by the cutover, un-held by
+         * the toggle); the pre-cutover primary dashj engine never consults it.
+         */
+        val DASHJ_SYNC_DIAGNOSTIC_FROM_SECS = longPreferencesKey("dashj_sync_diagnostic_from_secs")
+
+        /**
+         * DIP-15 §12.6 coreHeight-BACKFILL coverage record — the app-side
+         * interim mitigation for the SDK's in-memory-only `rescan_triggered`
+         * guard (`rs-platform-wallet/src/wallet/identity/state/managed_identity/
+         * dashpay.rs`), which is never persisted and therefore re-fires the
+         * rewind on EVERY launch, forever. See
+         * [de.schildbach.wallet.service.platform.sdk.DashPayBackfillGate].
+         *
+         * Written ONLY once the scan has provably climbed back PAST the
+         * height it was rewound from — never when a backfill merely starts.
+         * Marking on trigger would record an interrupted backfill as done and
+         * permanently miss the historical contact payments it exists to find.
+         *
+         * - COVERED_FLOOR: the synced height the completed backfill was
+         *   rewound DOWN to (observed, not computed).
+         * - COMPLETED_THROUGH: the durable `WalletEntity.syncedHeight` at the
+         *   moment completion was observed.
+         * - CONTACT_FINGERPRINT: the app's own contact-request set the
+         *   coverage belongs to. Any change invalidates the record, because a
+         *   newly-established contact's receival addresses were NOT in the
+         *   filter match set during the covered scan — regardless of its core
+         *   height — so its history needs its own backfill.
+         */
+        val DASHPAY_BACKFILL_COVERED_FLOOR = longPreferencesKey("dashpay_backfill_covered_floor")
+        val DASHPAY_BACKFILL_COMPLETED_THROUGH = longPreferencesKey("dashpay_backfill_completed_through")
+        val DASHPAY_BACKFILL_CONTACT_FINGERPRINT = stringPreferencesKey("dashpay_backfill_contact_fingerprint")
+
+        /**
+         * Whether COVERED_FLOOR was DIRECTLY OBSERVED (the durable synced
+         * height seen after the SDK's rewind) rather than ASSUMED from a pass
+         * that produced no rewind at all.
+         *
+         * The two are not interchangeable. An observed floor is authoritative:
+         * the SDK chose it, so the fact that some contact's core height sits
+         * below it only reflects the SDK subsetting by direction and
+         * establishment. An ASSUMED floor is just "the tip at the moment we
+         * concluded there was nothing to do" — and if that conclusion was
+         * wrong, it silently claims coverage over history that was never
+         * re-scanned with the contact addresses watched.
+         *
+         * Absent on records written before this flag existed, which are
+         * treated as ASSUMED so a wallet already carrying a bad floor
+         * re-validates once instead of staying stuck forever.
+         */
+        val DASHPAY_BACKFILL_COVERAGE_OBSERVED = booleanPreferencesKey("dashpay_backfill_coverage_observed")
+
+        /**
+         * An OBSERVED, still-running backfill: the SDK lowered the durable
+         * synced height to PENDING_FLOOR from PENDING_TARGET, and the scan has
+         * not yet climbed back to PENDING_TARGET. Persisted (not in-memory)
+         * precisely because the tester's ~19-minute sessions are shorter than
+         * the ~25-minute re-scan — the watch has to resume across launches
+         * instead of restarting the rewind. Cleared when the backfill
+         * completes (promoted to the coverage record above) or when the
+         * contact set changes underneath it.
+         */
+        val DASHPAY_BACKFILL_PENDING_FLOOR = longPreferencesKey("dashpay_backfill_pending_floor")
+        val DASHPAY_BACKFILL_PENDING_TARGET = longPreferencesKey("dashpay_backfill_pending_target")
+        val DASHPAY_BACKFILL_PENDING_FINGERPRINT = stringPreferencesKey("dashpay_backfill_pending_fingerprint")
+
+        /**
+         * One-shot version marker for the migration address-window heal
+         * ([de.schildbach.wallet.service.platform.sdk.SdkWalletBinder]
+         * step 4c): once the SDK wallet's gap limits are widened and the
+         * backfill coverage invalidated, this records the heal version so
+         * later binds don't repeat the widening or force another rewind.
+         */
+        val SDK_GAP_WIDENED_VERSION = intPreferencesKey("sdk_gap_widened_version")
+
+        /**
+         * A bind's address-window widening failed, so that session scanned at
+         * the Rust default windows and may have stepped past outputs paid
+         * beyond them. The next SUCCESSFUL widening arms the SPV rescan, and
+         * this clears once that rewind is durable (see [SDK_OWED_RESCAN_ARMED]);
+         * the address-window heal owes its own rewind here too. On an
+         * already-healed wallet nothing else
+         * would ever look at those blocks again. Best-effort flag, written by
+         * [de.schildbach.wallet.service.platform.sdk.SdkWalletBinder] step 4c.
+         */
+        val SDK_GAP_WIDEN_RESCAN_OWED = booleanPreferencesKey("sdk_gap_widen_rescan_owed")
+
+        /**
+         * The address-pool backfill filled holes the engine loaded its pool
+         * without, so payments to those addresses were missed and a rescan is
+         * owed. The inserted rows only reach the engine on its next load, so
+         * the rescan waits for a later process: this holds the token of the
+         * process that filled them, and a bind in any other process turns it
+         * into [SDK_GAP_WIDEN_RESCAN_OWED] and clears it. Written by
+         * [de.schildbach.wallet.service.platform.sdk.SdkWalletBinder] step 4c.
+         */
+        val SDK_POOL_HOLES_RESCAN_PENDING = stringPreferencesKey("sdk_pool_holes_rescan_pending")
+
+        /**
+         * A reset owes the SDK SPV rewind to birth: a backup-recovered
+         * wallet's reset, or Settings → Rescan Blockchain (the key keeps its
+         * original name). The wallet must re-scan its history, so its scan may
+         * not resume from the previous watermark. MANDATORY, unlike
+         * [SDK_GAP_WIDEN_RESCAN_OWED]: the scan gate holds the SPV scan until
+         * the rewind is armed (at the default windows if widening fails, in
+         * which case the widening's own debt is kept for a later, wider
+         * rescan). It is cleared only once the armed rewind is durable
+         * (see [SDK_OWED_RESCAN_ARMED]). Written by
+         * [de.schildbach.wallet.service.platform.sdk.SdkWalletBinder.oweSpvRescanForReset].
+         */
+        val SDK_RECOVERY_RESCAN_OWED = booleanPreferencesKey("sdk_recovery_rescan_owed")
+
+        /**
+         * The SDK wallet (id, hex) whose FIRST scan has reached the chain tip: the strict
+         * send gate passed once for it
+         * ([de.schildbach.wallet.service.platform.sdk.evaluateWalletFundingGate]). From then
+         * on an ordinary catch-up no longer blocks sending, as on 11.9 and iOS; until then
+         * (a restore, the first scan after the upgrade) the strict gate applies. Absent
+         * means "not yet": a wipe clears it with the rest of this store, and the scanner
+         * removes it before it deletes the SDK wallet's rows or the wallet itself
+         * ([de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService]). Nothing has to
+         * be written before a restore or the cutover for the gate to be strict.
+         */
+        val SDK_L1_FIRST_SYNC_DONE_WALLET = stringPreferencesKey("sdk_l1_first_sync_done_wallet")
+
+        /**
+         * An owed SPV rewind ([SDK_RECOVERY_RESCAN_OWED], [SDK_GAP_WIDEN_RESCAN_OWED])
+         * that was ARMED but is not yet known to be durable. The SDK arm only
+         * rewinds the in-memory checkpoint, so the debts stay set until the
+         * durable `WalletEntity.syncedHeight` shows the rewind persisted; this
+         * record says what the arm was measured against. Encoded by
+         * [de.schildbach.wallet.service.platform.sdk.ArmedOwedRescan].
+         */
+        val SDK_OWED_RESCAN_ARMED = stringPreferencesKey("sdk_owed_rescan_armed")
+
+        /**
+         * A provisioning pass ARMED but not yet accounted for: written by
+         * the gate BEFORE it lets a provisioning pass run, recording the
+         * pre-pass durable synced height (TARGET) and the contact set the
+         * pass was armed for (FINGERPRINT). A later gate consultation —
+         * same process or next launch — that finds the durable height
+         * BELOW the armed target has race-free proof the pass's rewind
+         * fired, and promotes the marker to the PENDING watch above.
+         * Exists because observing the rewind directly is unreliable: the
+         * SDK persists the rewound watermark asynchronously (~9–60 s after
+         * the in-memory rewind), so a one-shot read after the pass
+         * routinely reports "no rewind" even though it happened. Cleared
+         * when the pass is accounted for (watch latched, or coverage
+         * recorded) or abandoned on a contact-set change.
+         */
+        val DASHPAY_BACKFILL_ARMED_TARGET = longPreferencesKey("dashpay_backfill_armed_target")
+        val DASHPAY_BACKFILL_ARMED_FINGERPRINT = stringPreferencesKey("dashpay_backfill_armed_fingerprint")
+
+        /**
+         * The durable filter-scan watermark AT THE MOMENT DIP-15 receival
+         * accounts were last REGISTERED — the §17 "uncovered contact chain"
+         * diagnostic's only sound input.
+         *
+         * Debt is a statement about ORDERING, not about the present: a
+         * contact chain is uncovered when it was registered while the scan
+         * had ALREADY passed its core height, because the scan that walked
+         * those blocks did so without the chain's addresses in its match
+         * set. Comparing the LIVE synced height against the contact floor
+         * cannot express that — after any wallet finishes syncing, the live
+         * height is above the floor by construction, so the comparison
+         * reports debt on every healthy wallet forever. This records the one
+         * value that distinguishes the two, once, when it is true.
+         *
+         * The HIGHEST such height is kept: a later registration above the
+         * floor is a real debt even if an earlier one sat below it.
+         *
+         * WALLET pins the record to the SDK wallet it describes, so a
+         * rebind onto a different wallet does not inherit its ordering.
+         *
+         * Absent means no registration has been observed by a build that
+         * records this — reported as "not determinable", never as debt.
+         */
+        val DASHPAY_CONTACT_REGISTRATION_SYNCED_HEIGHT =
+            longPreferencesKey("dashpay_contact_registration_synced_height")
+        val DASHPAY_CONTACT_REGISTRATION_WALLET =
+            stringPreferencesKey("dashpay_contact_registration_wallet")
+
+        /**
+         * Last shielded balance (in duffs) persisted from a fully-synced
+         * (READY) shielded runtime, so the More-screen "Shielded" card can
+         * render the known balance INSTANTLY on open — even while a
+         * background re-scan re-binds the runtime on relaunch — instead of a
+         * "Syncing…" placeholder. Written by
+         * [de.schildbach.wallet.service.platform.sdk.ShieldedBalanceServiceImpl]
+         * only when the balance is trustworthy (status READY); absent until
+         * the first such emission. Follows the last-known-value precedents
+         * above (e.g. [TRANSACTION_METADATA_LAST_PAST_SAVE]).
+         */
+        val LAST_SHIELDED_BALANCE_DUFFS = longPreferencesKey("last_shielded_balance_duffs")
+
+        /**
+         * A local shielded spend is still reconciling (its note settlement can
+         * span several sync passes). Set together with removing
+         * [LAST_SHIELDED_BALANCE_DUFFS]; cleared only once the balance has
+         * settled. Survives a runtime stop and process death so the next
+         * bring-up restores the settlement guard instead of trusting the first
+         * READY pass.
+         */
+        val SHIELDED_SPEND_RECONCILE_PENDING = booleanPreferencesKey("shielded_spend_reconcile_pending")
+
+        /**
+         * Wall-clock lower bound (Unix millis, skew allowance already
+         * subtracted) of the EARLIEST local shielded spend still reconciling —
+         * the SDK activity rows created at or after it are the spends whose
+         * input notes must be spent in the store before the balance may
+         * settle. Written and removed together with
+         * [SHIELDED_SPEND_RECONCILE_PENDING]; a marker without it (written by
+         * an older build) reads as 0, i.e. every row counts.
+         */
+        val SHIELDED_SPEND_RECONCILE_SINCE_MS = longPreferencesKey("shielded_spend_reconcile_since_ms")
     }
+
+    // ALL builds seed the Kotlin SDK migration flags ON (once, only if unset) so every
+    // variant — testnet debug, mainnet prodDebug, and the prodRelease store build —
+    // behaves identically (Brian's directive 2026-07-30: QA == mainnet == release, no
+    // flag divergence between what is tested and what ships). QA can still toggle them
+    // afterwards. (Method name kept for now; it no longer gates on BuildConfig.DEBUG.)
+    // Kept so a test can let it finish before editing the flags it seeds.
+    internal val initialSeeding: Job = CoroutineScope(Dispatchers.IO).launch {
+        seedDebugDefaultsIfUnset()
+    }
+
+    /**
+     * Idempotent debug-flag seeding — callable OUTSIDE the init block
+     * because a Reset Wallet wipes this DataStore MID-PROCESS: the
+     * singleton already exists, so the init-time pass never re-runs, all
+     * `USE_KOTLIN_SDK_*` flags silently read as OFF, and every SDK path
+     * (binder, shadow, shielded) goes inert with no log trail — observed
+     * live: the duck-say overnight restore ran with the SDK dark. The
+     * wipe path calls this after clearing (debug builds only; a no-op on
+     * release where BuildConfig.DEBUG gates the caller). Which flags are
+     * seeded is network-dependent — see [debugSeedFlags].
+     */
+    suspend fun seedDebugDefaultsIfUnset() {
+        try {
+            val seeded = mutableListOf<String>()
+            val alreadySet = mutableListOf<String>()
+            val debugDefaultOnFlags = debugSeedFlags(
+                isMainnet = Constants.NETWORK_PARAMETERS.id == NetworkParameters.ID_MAINNET
+            )
+
+            for (flag in debugDefaultOnFlags) {
+                if (get(flag) == null) {
+                    set(flag, true)
+                    seeded.add(flag.name)
+                } else {
+                    alreadySet.add(flag.name)
+                }
+            }
+
+            log.info("debug SDK flag seeding: seeded ON = {}, already set (skipped) = {}", seeded, alreadySet)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // best-effort seeding; unset flags simply stay at their OFF default —
+            // but that darkens every flag-gated SDK surface, so it must be loud
+            log.warn("debug SDK flag seeding failed; unset USE_KOTLIN_SDK_* flags stay OFF", e)
+        }
+    }
+
+    /**
+     * The last shielded balance persisted from a fully-synced runtime, in
+     * duffs, or null when none has ever been persisted. See
+     * [LAST_SHIELDED_BALANCE_DUFFS].
+     */
+    suspend fun getLastShieldedBalanceDuffs(): Long? = get(LAST_SHIELDED_BALANCE_DUFFS)
+
+    /**
+     * Durably record that a local shielded spend is reconciling: in ONE
+     * transaction, drop the last-known balance, set
+     * [SHIELDED_SPEND_RECONCILE_PENDING] and record [sinceMs] as
+     * [SHIELDED_SPEND_RECONCILE_SINCE_MS], so a runtime stop or process death
+     * before the balance settles can neither bring the pre-spend amount back
+     * nor lose the pending settlement. Overlapping spends keep the EARLIEST
+     * since: the first spend's activity row must still be checked until the
+     * whole reconciliation settles. A marker already set without a since
+     * (older build) keeps 0 — every row counts.
+     */
+    suspend fun markShieldedSpendReconcilePending(sinceMs: Long) = editPreferences { prefs ->
+        prefs.remove(LAST_SHIELDED_BALANCE_DUFFS)
+        val alreadyPending = prefs[SHIELDED_SPEND_RECONCILE_PENDING] == true
+        val existingSince = prefs[SHIELDED_SPEND_RECONCILE_SINCE_MS]
+        prefs[SHIELDED_SPEND_RECONCILE_PENDING] = true
+        prefs[SHIELDED_SPEND_RECONCILE_SINCE_MS] = when {
+            !alreadyPending -> sinceMs
+            existingSince == null -> 0L
+            else -> minOf(existingSince, sinceMs)
+        }
+    }
+
+    /**
+     * Persist [duffs] as the last-known shielded balance UNLESS a local spend
+     * is reconciling — checked in the same DataStore transaction as the write,
+     * so a balance sampled before a spend can never be written back after
+     * [markShieldedSpendReconcilePending] dropped it: transactions serialize,
+     * and whichever lands second wins against the stale snapshot (the spend's
+     * removes it; this one sees the marker and skips). Returns whether it was
+     * written.
+     */
+    suspend fun setLastShieldedBalanceDuffsUnlessReconciling(duffs: Long): Boolean {
+        var written = false
+        editPreferences { prefs ->
+            if (prefs[SHIELDED_SPEND_RECONCILE_PENDING] != true) {
+                prefs[LAST_SHIELDED_BALANCE_DUFFS] = duffs
+                written = true
+            }
+        }
+        return written
+    }
+
+    /**
+     * The since ([SHIELDED_SPEND_RECONCILE_SINCE_MS]) of the local shielded
+     * spend reconciliation still pending, or null when none is pending. A
+     * pending marker with no since reads as 0 (every activity row counts).
+     * Read via [observePreservingErrors]: an unreadable store THROWS instead
+     * of reading as "not pending", so the caller can fail closed.
+     */
+    suspend fun shieldedSpendReconcilePendingSinceMs(): Long? {
+        if (observePreservingErrors(SHIELDED_SPEND_RECONCILE_PENDING).first() != true) return null
+        return observePreservingErrors(SHIELDED_SPEND_RECONCILE_SINCE_MS).first() ?: 0L
+    }
+
+    /** The pending spend has settled: removes the marker and its since together. */
+    suspend fun clearShieldedSpendReconcilePending() = editPreferences { prefs ->
+        prefs.remove(SHIELDED_SPEND_RECONCILE_PENDING)
+        prefs.remove(SHIELDED_SPEND_RECONCILE_SINCE_MS)
+    }
+
+    /**
+     * Whether the dashj-sync DIAGNOSTIC toggle is on (see
+     * [DASHJ_SYNC_DIAGNOSTIC]). Defaults to false when unset.
+     */
+    suspend fun getDashjSyncDiagnostic(): Boolean = get(DASHJ_SYNC_DIAGNOSTIC) ?: false
+
+    /** Reactive mirror of [getDashjSyncDiagnostic] (null → false). */
+    fun observeDashjSyncDiagnostic(): Flow<Boolean> =
+        observe(DASHJ_SYNC_DIAGNOSTIC).map { it ?: false }
+
+    /** Persist the dashj-sync DIAGNOSTIC toggle (see [DASHJ_SYNC_DIAGNOSTIC]). */
+    suspend fun setDashjSyncDiagnostic(enabled: Boolean) = set(DASHJ_SYNC_DIAGNOSTIC, enabled)
+
+    /**
+     * The diagnostic dashj sync start date in epoch seconds; 0 = sync
+     * everything (see [DASHJ_SYNC_DIAGNOSTIC_FROM_SECS]).
+     */
+    suspend fun getDashjSyncDiagnosticFromSecs(): Long = get(DASHJ_SYNC_DIAGNOSTIC_FROM_SECS) ?: 0L
+
+    /** Persist the diagnostic dashj sync start date (see [DASHJ_SYNC_DIAGNOSTIC_FROM_SECS]). */
+    suspend fun setDashjSyncDiagnosticFromSecs(secs: Long) = set(DASHJ_SYNC_DIAGNOSTIC_FROM_SECS, secs)
 
     open suspend fun areNotificationsDisabled(): Boolean {
         return (get(LAST_SEEN_NOTIFICATION_TIME) ?: 0) == DISABLE_NOTIFICATIONS
@@ -205,14 +1078,26 @@ open class DashPayConfig @Inject constructor(
         )
     }
 
+    /**
+     * Persist [settings] — all seven keys in ONE DataStore transaction.
+     *
+     * Seven [set] calls are seven `dataStore.edit`s, and
+     * [observeTransactionMetadataSettings] emits after each one, so observers
+     * would see every half-written combination. The settings screen compares
+     * its draft against each emission: an intermediate state that happens to
+     * equal a reopened screen's draft clears its `modified` flag, and the next
+     * intermediate state then overwrites that draft as if it were unedited.
+     */
     suspend fun setTransactionMetadataSettings(settings: TransactionMetadataSettings) {
-        set(TRANSACTION_METADATA_SAVE_TO_NETWORK, settings.saveToNetwork)
-        set(TRANSACTION_METADATA_SAVE_FREQUENCY, settings.saveFrequency.name)
-        set(TRANSACTION_METADATA_SAVE_PAYMENT_CATEGORY, settings.savePaymentCategory)
-        set(TRANSACTION_METADATA_SAVE_TAX_CATEGORY, settings.saveTaxCategory)
-        set(TRANSACTION_METADATA_SAVE_EXCHANGE, settings.saveExchangeRates)
-        set(TRANSACTION_METADATA_SAVE_MEMOS, settings.savePrivateMemos)
-        set(TRANSACTION_METADATA_SAVE_GIFT_CARD_INFO, settings.saveGiftcardInfo)
+        editPreferences { preferences ->
+            preferences[TRANSACTION_METADATA_SAVE_TO_NETWORK] = settings.saveToNetwork
+            preferences[TRANSACTION_METADATA_SAVE_FREQUENCY] = settings.saveFrequency.name
+            preferences[TRANSACTION_METADATA_SAVE_PAYMENT_CATEGORY] = settings.savePaymentCategory
+            preferences[TRANSACTION_METADATA_SAVE_TAX_CATEGORY] = settings.saveTaxCategory
+            preferences[TRANSACTION_METADATA_SAVE_EXCHANGE] = settings.saveExchangeRates
+            preferences[TRANSACTION_METADATA_SAVE_MEMOS] = settings.savePrivateMemos
+            preferences[TRANSACTION_METADATA_SAVE_GIFT_CARD_INFO] = settings.saveGiftcardInfo
+        }
     }
 
     suspend fun shouldSaveOnReset(): Boolean = get(TRANSACTION_METADATA_SAVE_ON_RESET) == true
@@ -227,5 +1112,26 @@ open class DashPayConfig @Inject constructor(
             set(TRANSACTION_METADATA_FEATURE_INSTALLED, System.currentTimeMillis())
         }
         return installedDate
+    }
+
+    /**
+     * Record [syncedHeight] as the contact-registration floor for [walletId] —
+     * both keys in ONE DataStore transaction.
+     *
+     * [DASHPAY_CONTACT_REGISTRATION_WALLET] and
+     * [DASHPAY_CONTACT_REGISTRATION_SYNCED_HEIGHT] are only meaningful as a
+     * pair, so they have to be written as one. Two [set] calls are two separate
+     * `dataStore.edit`s: a process death between them leaves the NEW wallet id
+     * standing against the PREVIOUS wallet's height, and the reader gates only
+     * on the id matching — so it would serve that stale height as this wallet's
+     * floor and mis-report §17 coverage, in whichever direction the two heights
+     * happen to differ. Nothing later repairs it, because the recorder only
+     * overwrites a height it can see is LOWER than the one it is recording.
+     */
+    open suspend fun setContactRegistration(walletId: String, syncedHeight: Long) {
+        editPreferences { preferences ->
+            preferences[DASHPAY_CONTACT_REGISTRATION_WALLET] = walletId
+            preferences[DASHPAY_CONTACT_REGISTRATION_SYNCED_HEIGHT] = syncedHeight
+        }
     }
 }

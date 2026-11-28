@@ -236,6 +236,7 @@
             android:button="@drawable/round_checkbox"
             android:padding="6dp"
             android:text="@string/dialog_confirm_accept_contact_request"
+            android:textColor="@color/content_primary"
             android:textSize="16sp" />
 
         <LinearLayout

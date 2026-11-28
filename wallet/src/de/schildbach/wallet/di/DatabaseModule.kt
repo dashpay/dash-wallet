@@ -51,7 +51,8 @@ object DatabaseModule {
                 AppDatabaseMigrations.migration18to19,
                 AppDatabaseMigrations.migration19to20,
                 AppDatabaseMigrations.migration20to21,
-                AppDatabaseMigrations.migration21to22
+                AppDatabaseMigrations.migration21to22,
+                AppDatabaseMigrations.migration22to23
             )
             .addCallback(AppDatabaseMigrations.removeCrowdNodeCacheRows)
             // destructive migrations are used from versions 1 to 11
@@ -158,5 +159,10 @@ object DatabaseModule {
     @Provides
     fun provideSwapOrderDao(appDatabase: AppDatabase): SwapOrderDao {
         return appDatabase.swapOrderDao()
+    }
+
+    @Provides
+    fun provideInstantSendLockDao(appDatabase: AppDatabase): InstantSendLockDao {
+        return appDatabase.instantSendLockDao()
     }
 }

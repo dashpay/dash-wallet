@@ -22,6 +22,8 @@ import de.schildbach.wallet.database.dao.TransactionMetadataChangeCacheDao
 import de.schildbach.wallet.database.dao.TransactionMetadataDao
 import de.schildbach.wallet.database.dao.TransactionMetadataDocumentDao
 import de.schildbach.wallet.database.dao.TransactionRecordsDao
+import de.schildbach.wallet.service.platform.sdk.SdkTxMetadataSource
+import de.schildbach.wallet.service.platform.sdk.SdkTxPresence
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -30,10 +32,11 @@ import io.mockk.mockk
 import io.mockk.slot
 import kotlinx.coroutines.test.runTest
 import org.bitcoinj.core.Sha256Hash
+import de.schildbach.wallet.data.WalletData
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.wallet.Wallet
-import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.entity.GiftCard
+import org.dash.wallet.common.data.entity.TransactionMetadata
 import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
 import org.dash.wallet.integrations.maya.data.SwapOrderDao
 import org.junit.Assert.assertEquals
@@ -54,12 +57,14 @@ class WalletTransactionMetadataProviderGiftCardTest {
     private lateinit var cacheDao: TransactionMetadataChangeCacheDao
     private lateinit var metadataDao: TransactionMetadataDao
     private lateinit var recordsDao: TransactionRecordsDao
-    private lateinit var walletData: WalletDataProvider
+    private lateinit var walletData: WalletData
     private lateinit var wallet: Wallet
     private lateinit var provider: WalletTransactionMetadataProvider
+    private val sdkStoreRows = mutableMapOf<org.dash.wallet.common.data.TxId, TransactionMetadata>()
+    private var sdkStoreOpen = true
 
-    private val txId: Sha256Hash =
-        Sha256Hash.wrap("0000000000000000000000000000000000000000000000000000000000000001")
+    private val txId: org.dash.wallet.common.data.TxId =
+        org.dash.wallet.common.data.TxId.wrap("0000000000000000000000000000000000000000000000000000000000000001")
 
     @Before
     fun setUp() {
@@ -81,7 +86,20 @@ class WalletTransactionMetadataProviderGiftCardTest {
             swapOrderDao = mockk<SwapOrderDao>(relaxed = true),
             transactionMetadataChangeCacheDao = cacheDao,
             transactionMetadataDocumentDao = mockk<TransactionMetadataDocumentDao>(relaxed = true),
-            dashPayConfig = mockk<DashPayConfig>(relaxed = true)
+            dashPayConfig = mockk<DashPayConfig>(relaxed = true),
+            // The SDK store holds none of these transactions either, unless a test says so.
+            sdkTxMetadataSource = object : SdkTxMetadataSource {
+                override suspend fun defaultMetadataFor(txId: org.dash.wallet.common.data.TxId): TransactionMetadata? =
+                    sdkStoreRows[txId].takeIf { sdkStoreOpen }
+                override suspend fun defaultMetadataFor(
+                    txIds: Collection<org.dash.wallet.common.data.TxId>
+                ): Map<org.dash.wallet.common.data.TxId, TransactionMetadata> = emptyMap()
+                override suspend fun presenceOf(txId: org.dash.wallet.common.data.TxId): SdkTxPresence = when {
+                    !sdkStoreOpen -> SdkTxPresence.UNAVAILABLE
+                    txId in sdkStoreRows -> SdkTxPresence.HELD
+                    else -> SdkTxPresence.ABSENT
+                }
+            }
         )
     }
 
@@ -101,7 +119,7 @@ class WalletTransactionMetadataProviderGiftCardTest {
             note = "order-123",
             index = 0
         )
-        coEvery { giftCardDao.getCardForTransaction(txId) } returns listOf(existing)
+        coEvery { giftCardDao.getCardForTransaction(txId.bytes) } returns listOf(existing)
 
         // Fulfillment writes only the newly-arrived number/pin.
         val incoming = existing.copy(
@@ -146,7 +164,7 @@ class WalletTransactionMetadataProviderGiftCardTest {
             note = "order-7",
             index = 0
         )
-        coEvery { giftCardDao.getCardForTransaction(txId) } returns listOf(existing)
+        coEvery { giftCardDao.getCardForTransaction(txId.bytes) } returns listOf(existing)
 
         // Caller hands us defaults (merchantName="", price=0.0) without realising they would
         // clobber the stored merchant info.
@@ -180,7 +198,7 @@ class WalletTransactionMetadataProviderGiftCardTest {
     @Test
     fun `insert path is used when no existing row matches the index`() = runTest {
         // No local row for this (txId, index) yet — e.g. the dummy row wasn't saved.
-        coEvery { giftCardDao.getCardForTransaction(txId) } returns emptyList()
+        coEvery { giftCardDao.getCardForTransaction(txId.bytes) } returns emptyList()
 
         val incoming = GiftCard(
             txId = txId,
@@ -225,7 +243,7 @@ class WalletTransactionMetadataProviderGiftCardTest {
             barcodeValue = null, barcodeFormat = null,
             merchantUrl = "https://redeem/1", note = "order-multi", index = 1
         )
-        coEvery { giftCardDao.getCardForTransaction(txId) } returns listOf(card0, card1)
+        coEvery { giftCardDao.getCardForTransaction(txId.bytes) } returns listOf(card0, card1)
 
         // Only update card at index 1.
         val incoming = card1.copy(
@@ -254,7 +272,7 @@ class WalletTransactionMetadataProviderGiftCardTest {
             txId = txId, merchantName = "Acme", price = 25.0,
             note = "order-7", index = 0, currency = "GBP"
         )
-        coEvery { giftCardDao.getCardForTransaction(txId) } returns listOf(existing)
+        coEvery { giftCardDao.getCardForTransaction(txId.bytes) } returns listOf(existing)
         val captured = slot<GiftCard>()
         coEvery { giftCardDao.updateGiftCard(capture(captured)) } returns 1
 
@@ -272,7 +290,7 @@ class WalletTransactionMetadataProviderGiftCardTest {
             barcodeValue = null, barcodeFormat = null,
             merchantUrl = "https://kept", note = "order-9", index = 0
         )
-        coEvery { giftCardDao.getCardForTransaction(txId) } returns listOf(existing)
+        coEvery { giftCardDao.getCardForTransaction(txId.bytes) } returns listOf(existing)
         coEvery { giftCardDao.updateGiftCard(any()) } returns 1
 
         val incoming = existing.copy(number = "N", pin = "P", merchantUrl = null, note = null)
@@ -306,7 +324,7 @@ class WalletTransactionMetadataProviderGiftCardTest {
             barcodeValue = null, barcodeFormat = null,
             merchantUrl = "https://kept", note = "order-9", index = 2
         )
-        coEvery { giftCardDao.getCardForTransaction(txId) } returns listOf(existing)
+        coEvery { giftCardDao.getCardForTransaction(txId.bytes) } returns listOf(existing)
         coEvery { giftCardDao.updateGiftCard(any()) } returns 1
 
         provider.updateGiftCardMetadata(existing.copy(number = "N", pin = "P"))
@@ -331,10 +349,34 @@ class WalletTransactionMetadataProviderGiftCardTest {
     @Test
     fun `forgetTransaction refuses to touch a transaction the wallet holds`() = runTest {
         // the payment did reach the network after all: this is real user data
-        every { wallet.getTransaction(txId) } returns mockk<Transaction>(relaxed = true)
+        every { wallet.getTransaction(Sha256Hash.wrap(txId.bytes)) } returns mockk<Transaction>(relaxed = true)
 
         provider.forgetTransaction(txId)
 
+        coVerify(exactly = 0) { recordsDao.forgetTransaction(any()) }
+    }
+
+    @Test
+    fun `forgetTransaction refuses to touch a transaction only the SDK store holds`() = runTest {
+        // Since #1603 an SDK-only transaction has real metadata too; the dashj wallet not
+        // holding it is no proof the payment was never sent.
+        sdkStoreRows[txId] = mockk(relaxed = true)
+
+        val settled = provider.forgetTransaction(txId)
+
+        org.junit.Assert.assertTrue("a real transaction settles the cleanup", settled)
+        coVerify(exactly = 0) { recordsDao.forgetTransaction(any()) }
+    }
+
+    @Test
+    fun `forgetTransaction does nothing when the SDK store cannot be consulted`() = runTest {
+        // "store not open" is not "store does not hold it": the SDK may hold a real payment
+        // the dashj wallet never saw, so fail closed and leave it for a later round
+        sdkStoreOpen = false
+
+        val settled = provider.forgetTransaction(txId)
+
+        org.junit.Assert.assertFalse("an unchecked SDK store must not settle the cleanup", settled)
         coVerify(exactly = 0) { recordsDao.forgetTransaction(any()) }
     }
 

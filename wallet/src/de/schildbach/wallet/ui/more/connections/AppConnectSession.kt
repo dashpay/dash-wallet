@@ -2,6 +2,7 @@
 package de.schildbach.wallet.ui.more.connections
 
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.service.platform.IdentityKeyChainBackfillException
 import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.PlatformService
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
@@ -14,6 +15,7 @@ import org.bitcoinj.core.Base58
 import org.bitcoinj.core.ECKey
 import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.core.Sha256Hash
+import org.bouncycastle.crypto.params.KeyParameter
 import org.dashj.platform.dapiclient.model.DocumentQuery
 import org.dashj.platform.dashpay.callback.WalletSignerCallback
 import org.dashj.platform.dpp.contract.VerifiedContractGroup
@@ -39,6 +41,17 @@ import de.schildbach.wallet.ui.more.connections.AppConnectKeyState.live
 import de.schildbach.wallet.ui.more.connections.AppConnectKeyState.sameKey
 import de.schildbach.wallet.ui.more.connections.AppConnectKeyState.sameKeyIdentity
 
+/**
+ * The network and wallet part of a connection scope, `network:devnet:watching-key hash`. A record whose
+ * scope starts with it and a `:` was written by this wallet (or a restore of its seed), whichever identity
+ * it then held.
+ */
+internal fun connectWalletScope(wallet: org.bitcoinj.wallet.Wallet): String {
+    val network = Constants.NETWORK_PARAMETERS
+    val devnet = if (network.id == NetworkParameters.ID_DEVNET) network.devNetName else ""
+    return "${network.id}:$devnet:${Sha256Hash.of(wallet.watchingKey.pubKey)}"
+}
+
 /** One-QR, PV14 grant lifecycle. The mutex covers approval, recovery and revocation. */
 internal class AppConnectSession(
     private val service: PlatformService,
@@ -63,14 +76,26 @@ internal class AppConnectSession(
 
     fun scope(): String {
         val wallet = walletRepo.walletApplication.wallet ?: error("Wallet unavailable")
-        val network = Constants.NETWORK_PARAMETERS
-        val devnet = if (network.id == NetworkParameters.ID_DEVNET) network.devNetName else ""
-        return "${network.id}:$devnet:${Sha256Hash.of(wallet.watchingKey.pubKey)}:${identityId()}"
+        return "${connectWalletScope(wallet)}:${identityId()}"
     }
 
     private fun identityId() = identities.blockchainIdentity?.uniqueIdentifier ?: error("Identity unavailable")
     private fun checkScope(expected: String) = check(scope() == expected) { "Wallet, identity or network changed. Scan again." }
     private fun readIdentity(): Identity = platform.client.getIdentity(identityId().toBuffer(), true) ?: error("Identity not found")
+
+    /**
+     * [readIdentity] for an operation that signs: first issues the identity's wallet keys on the
+     * dashj identity chain ([PlatformRepo.requireIdentityChainKeys]), failing before any signing.
+     */
+    internal fun readSigningIdentity(keyParameter: KeyParameter?): Identity {
+        val identity = readIdentity()
+        try {
+            walletRepo.requireIdentityChainKeys(identity, keyParameter)
+        } catch (e: IdentityKeyChainBackfillException) {
+            throw IllegalStateException("Unable to read this wallet's identity keys. Try again.", e)
+        }
+        return identity
+    }
 
     /**
      * Call after a proven query such as [readIdentity]: its verified response set the SDK's version. A
@@ -122,7 +147,7 @@ internal class AppConnectSession(
             check(!wallet.isEncrypted || keyParameter != null) { "Wallet password unavailable. Unlock the wallet and try again." }
             authorize()
             checkScope(approval.scope)
-            val identity = readIdentity()
+            val identity = readSigningIdentity(keyParameter)
             check(identity.id.toString() == approval.ownerId) { "Purchase targets a different identity" }
             val summary = nativeBytes(dashsdk.prepareTokenPurchaseSdk(platform.rustSdk,
                 approval.request.transitionBytes, identity.id.toNative()))
@@ -199,15 +224,16 @@ internal class AppConnectSession(
         val prior = config.getGrants().firstOrNull { it.getString("id") == "$scope:${requestHash(request)}" }
         val selectedAuth = prior?.let { indices(it, "authIndices") } ?: parsed.auth.indices.toSet()
         check(0 in selectedAuth && selectedAuth.all { it in parsed.auth.indices }) { "Stored grant does not match request" }
-        var grants = parsed.auth.mapIndexed { index, grant ->
-            AppConnectLimits.clamp(grant, blockTime, requireUsableExpiry = index in selectedAuth)
-        }
-        if (prior != null) {
-            val saved = decodeKeys(prior).filter { it.purpose == Purpose.AUTHENTICATION }
-            check(saved.size == selectedAuth.size) { "Stored grant does not match request" }
-            grants = grants.mapIndexed { index, grant ->
-                val position = selectedAuth.sorted().indexOf(index)
-                if (position < 0) grant else grant.copy(totalBudget = saved[position].totalBudget, expiresAt = saved[position].expiresAt)
+        val saved = prior?.let { record -> decodeKeys(record).filter { it.purpose == Purpose.AUTHENTICATION } }
+        check(saved == null || saved.size == selectedAuth.size) { "Stored grant does not match request" }
+        // The approved limits replace the QR's before the expiry check, so it judges the expiry that will be used.
+        val grants = parsed.auth.mapIndexed { index, grant ->
+            val position = selectedAuth.sorted().indexOf(index)
+            if (saved == null || position < 0) {
+                AppConnectLimits.clamp(grant, blockTime, requireUsableExpiry = index in selectedAuth)
+            } else {
+                grant.copy(totalBudget = saved[position].totalBudget, expiresAt = saved[position].expiresAt)
+                    .also { AppConnectLimits.requireUsableExpiry(it, blockTime) }
             }
         }
         val groupScopes = validateOwnership(request, grants)
@@ -284,7 +310,7 @@ internal class AppConnectSession(
             val privateKeys = mutableListOf<ByteArray>()
             var ephemeral: ByteArray? = null
             try {
-                var identity = readIdentity()
+                var identity = readSigningIdentity(keyParameter)
                 check(identity.id.toString() == plan.identityId) { "Identity changed. Scan again." }
                 requireProtocolVersion()
                 val time = platform.client.getPlatformTime(identity.id)
@@ -490,7 +516,8 @@ internal class AppConnectSession(
     private fun exact(doc: Document, record: JSONObject) = fields(record).all { (name, bytes) ->
         (doc.data[name] as? ByteArray)?.contentEquals(bytes as ByteArray) == true
     }
-    private fun signingKey(identity: Identity, level: SecurityLevel, time: Long): IdentityPublicKey = identity.publicKeys.firstOrNull {
+    @androidx.annotation.VisibleForTesting
+    internal fun signingKey(identity: Identity, level: SecurityLevel, time: Long): IdentityPublicKey = identity.publicKeys.firstOrNull {
         it.purpose == Purpose.AUTHENTICATION && it.securityLevel == level &&
             (level != SecurityLevel.HIGH || it.type == KeyType.ECDSA_SECP256K1) && it.contractBounds == null && live(it, time) &&
             (walletRepo.authenticationGroupExtension?.identityKeyChain?.findKeyFromPubKey(it.data) != null ||
@@ -574,7 +601,7 @@ internal class AppConnectSession(
         val keyParameter = walletRepo.getWalletEncryptionKey()
         check(!wallet.isEncrypted || keyParameter != null) { "Wallet password unavailable. Unlock the wallet and try again." }
         checkScope(scope)
-        var identity = readIdentity()
+        var identity = readSigningIdentity(keyParameter)
         val time = platform.client.getPlatformTime(identity.id)
         val disable = AppConnectKeyState.revocableIds(AppConnectKeyState.inspect(
             records.flatMap { decodeKeys(it) }, identity.publicKeys, time))
@@ -652,7 +679,8 @@ internal class AppConnectSession(
             val keyParameter = walletRepo.getWalletEncryptionKey()
             check(!wallet.isEncrypted || keyParameter != null) { "Wallet password unavailable. Unlock the wallet and try again." }
             checkScope(scope)
-            val identity = readIdentity()
+            // signs the update with the MASTER key, which must first be issued on the identity chain
+            val identity = readSigningIdentity(keyParameter)
             val disable = sharedProfileKeyIds(identity, scope).filter { it in ids }
             if (disable.isEmpty()) return@withLock
             rememberIdentity(identity)

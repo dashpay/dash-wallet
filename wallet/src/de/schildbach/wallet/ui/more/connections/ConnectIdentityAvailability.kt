@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.map
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -22,16 +22,22 @@ class ConnectIdentityAvailability @Inject constructor(
     private val identities: IdentityRepository,
     private val identityConfig: BlockchainIdentityConfig,
     private val connections: DashConnectConfig,
-    private val walletData: WalletDataProvider
+    private val walletData: WalletData
 ) {
+    /**
+     * Retained records count only for the wallet that wrote them: a wiped wallet's grants stay on disk for
+     * a restore of its seed, and must not make a new wallet without a username look connected.
+     */
     fun observe(): Flow<ConnectIdentityStatus> = combine(
         identities.initializationResult, identities.blockchainIdentityFlow,
-        identityConfig.observeIdentityPresence(), connections.observeHasRecords()
-    ) { initialized, identity, persistedIdentity, hasRecords ->
+        identityConfig.observeIdentityPresence(), connections.observeRetainedRecords()
+    ) { initialized, identity, persistedIdentity, records ->
+        val wallet = walletData.wallet
         val status = when {
             initialized == null -> ConnectIdentityStatus.LOADING
-            initialized.isFailure || walletData.wallet == null -> ConnectIdentityStatus.UNAVAILABLE
-            identity == null && !persistedIdentity && !hasRecords -> ConnectIdentityStatus.NO_IDENTITY
+            initialized.isFailure || wallet == null -> ConnectIdentityStatus.UNAVAILABLE
+            identity == null && !persistedIdentity && !records.belongTo(connectWalletScope(wallet)) ->
+                ConnectIdentityStatus.NO_IDENTITY
             else -> ConnectIdentityStatus.AVAILABLE
         }
         identity to status

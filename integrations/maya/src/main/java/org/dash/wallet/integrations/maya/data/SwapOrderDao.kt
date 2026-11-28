@@ -24,7 +24,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
-import org.bitcoinj.core.Sha256Hash
+import org.dash.wallet.common.data.TxId
 import org.dash.wallet.common.data.entity.SwapOrder
 import org.dash.wallet.common.data.entity.SwapOrderStatus
 
@@ -37,10 +37,10 @@ interface SwapOrderDao {
     suspend fun updateOrder(order: SwapOrder): Int
 
     @Query("SELECT * FROM swap_orders WHERE txId = :txId")
-    suspend fun getOrder(txId: Sha256Hash): SwapOrder?
+    suspend fun getOrder(txId: TxId): SwapOrder?
 
     @Query("SELECT * FROM swap_orders WHERE txId = :txId")
-    fun observeOrder(txId: Sha256Hash): Flow<SwapOrder?>
+    fun observeOrder(txId: TxId): Flow<SwapOrder?>
 
     @Query("SELECT * FROM swap_orders WHERE status IN (:statuses)")
     suspend fun getOrdersWithStatus(statuses: List<SwapOrderStatus>): List<SwapOrder>
@@ -50,5 +50,5 @@ interface SwapOrderDao {
 
     @MapInfo(keyColumn = "txId")
     @Query("SELECT * FROM swap_orders")
-    fun observeOrders(): Flow<Map<Sha256Hash, SwapOrder>>
+    fun observeOrders(): Flow<Map<TxId, SwapOrder>>
 }

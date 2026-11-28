@@ -21,23 +21,42 @@ import de.schildbach.wallet.util.WalletUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Coin
-import org.bitcoinj.core.Sha256Hash
-import org.bitcoinj.core.Transaction
-import org.bitcoinj.utils.MonetaryFormat
-import org.bitcoinj.wallet.Wallet
+import org.dash.wallet.common.money.MonetaryFormat
+import org.dash.wallet.common.transactions.TxInfo
 import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.data.entity.TransactionMetadata
 import org.dash.wallet.common.services.TransactionMetadataProvider
-import org.dash.wallet.common.transactions.TransactionUtils
-import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
+import de.schildbach.wallet.transactions.TransactionUtils
+import de.schildbach.wallet.transactions.TransactionUtils.isEntirelySelf
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.*
+import de.schildbach.wallet.util.format
+import de.schildbach.wallet.util.setAmount
+import de.schildbach.wallet.util.setFiatAmount
+import de.schildbach.wallet.util.toDashjFiat
+import de.schildbach.wallet.util.toDashjCoin
+import de.schildbach.wallet.util.toNeutralCoin
+import de.schildbach.wallet.util.toNeutralFiat
+import de.schildbach.wallet.util.toTxId
+import de.schildbach.wallet.util.toSha256Hash
 
 @SuppressLint("SimpleDateFormat")
+/**
+ * Exports the wallet's transaction history.
+ *
+ * Takes an already-resolved [TxInfo] list rather than a dashj `Wallet`. Post-cutover the
+ * SDK owns L1 and the dashj wallet is HELD — frozen at the cutover snapshot — so a wallet
+ * restored after the cutover has no dashj transactions at all and `wallet.getTransactions()`
+ * returned an empty list, producing a header-only CSV with no error (the field report that
+ * prompted this). Callers pass `WalletDataProvider.getTransactions()`, which routes through
+ * the cutover seam exactly like the transaction list the UI renders: the SDK-fed set
+ * post-cutover, plus any dashj-only transactions the SDK store never learned, so history
+ * can never shrink across the cutover.
+ */
 abstract class TransactionExporter(
     val transactionMetadataProvider: TransactionMetadataProvider,
-    val wallet: Wallet,
+    val transactions: Collection<TxInfo>,
     val taxCategories: List<String>
 ) {
 
@@ -56,50 +75,69 @@ abstract class TransactionExporter(
         /**
          * @return an empty column as a string ""
          */
-        val emptyField: (Transaction, TransactionMetadata?) -> String = { _, _ -> "" }
+        val emptyField: (TxInfo, TransactionMetadata?) -> String = { _, _ -> "" }
 
         /**
          * @return the date in iso8601 format as a string
          */
-        val iso8601DateField: (Transaction, TransactionMetadata?) -> String = { tx, metadata ->
-            iso8601Format.format(metadata?.timestamp?.let { Date(it) }
-                ?: WalletUtils.getTransactionDate(tx))
+        val iso8601DateField: (TxInfo, TransactionMetadata?) -> String = { tx, metadata ->
+            iso8601Format.format(Date(metadata?.timestamp ?: tx.updateTimeMillis))
         }
     }
-    protected lateinit var metadataMap: Map<Sha256Hash, TransactionMetadata>
+    /** Keyed by lower-case txid hex — [TxInfo.txId]'s form. */
+    protected lateinit var metadataMap: Map<String, TransactionMetadata>
     suspend fun initMetadataMap() = withContext(Dispatchers.IO) {
         val list = transactionMetadataProvider.getAllTransactionMetadata()
 
         metadataMap = if (list.isNotEmpty()) {
-            list.associateBy({ it.txId }, { it })
+            list.associateBy({ it.txId.toString().lowercase() }, { it })
         } else {
             mapOf()
         }
     }
 
-    protected val sortedTransactions by lazy {
-        wallet.getTransactions(false).sortedBy {
-            val confidence = it.getConfidence(wallet.context)
-            if (confidence != null && confidence.sentAt != null && confidence.sentAt < it.updateTime) {
-                confidence.sentAt
-            } else {
-                it.updateTime
-            }
+    /** exportString() implementations call this so exporting works without a prior initMetadataMap() call */
+    protected suspend fun ensureMetadataMap() {
+        if (!::metadataMap.isInitialized) {
+            initMetadataMap()
         }
     }
 
-    protected fun getTransactionValue(tx: Transaction): Coin {
-        return tx.getValue(wallet)
+    protected val sortedTransactions by lazy {
+        transactions.sortedBy { it.updateTimeMillis }
     }
 
-    protected fun isInternal(tx: Transaction) : Boolean {
-        return tx.isEntirelySelf(wallet)
+    /** Duffs burned into value-bearing OP_RETURN outputs (the asset-lock credit-funding shape). */
+    protected fun opReturnBurnDuffs(tx: TxInfo): Long =
+        tx.outputs.filter { it.isOpReturn }.sumOf { it.valueDuffs }
+
+    /**
+     * Net value to the wallet; the SDK computes this post-cutover, dashj before it.
+     *
+     * One correction on top of the stored figure: an AssetLock credit purchase is
+     * persisted `INTERNAL / net 0` (every non-burn output returns to the wallet),
+     * which hid the purchase from this export entirely — the S22 reconciliation's
+     * 0.03000241 residual. The burn (value-bearing OP_RETURN) plus fee IS the
+     * wallet's real spend, so surface it as a negative value here. Tracked for the
+     * proper store-side fix on the platform repo (net should be −(burn+fee) at
+     * persistence time); this stays correct after that fix because the stored net
+     * will then be non-zero and the branch never fires.
+     */
+    protected fun getTransactionValue(tx: TxInfo): Coin {
+        val stored = tx.netValueDuffs
+        if (stored == 0L && tx.isEntirelySelf) {
+            val burn = opReturnBurnDuffs(tx)
+            if (burn > 0L) return Coin.valueOf(-(burn + (tx.feeDuffs ?: 0L)))
+        }
+        return Coin.valueOf(stored)
     }
+
+    protected fun isInternal(tx: TxInfo): Boolean = tx.isEntirelySelf
 
     /**
      * @return the tax category of the transaction, using [taxCategories]
      */
-    val taxCategory: (Transaction, TransactionMetadata?) -> String = { tx, metadata ->
+    val taxCategory: (TxInfo, TransactionMetadata?) -> String = { tx, metadata ->
         val taxCategory = metadata?.taxCategory
             ?: TaxCategory.getDefault(getTransactionValue(tx).isPositive, false)
 
@@ -109,22 +147,23 @@ abstract class TransactionExporter(
     /**
      * @return the cryptocurrency code of the transaction, which will be DASH
      */
-    val currency: (Transaction, TransactionMetadata?) -> String = { _, _ ->
+    val currency: (TxInfo, TransactionMetadata?) -> String = { _, _ ->
         monetaryFormatCode
     }
 
     /**
      * @return the local currency code of the transaction
      */
-    val fiatCurrency: (Transaction, TransactionMetadata?) -> String = { tx, metadata ->
-        val fiatCurrency = metadata?.currencyCode ?: tx.exchangeRate?.fiat?.currencyCode
-        fiatCurrency ?: ""
+    val fiatCurrency: (TxInfo, TransactionMetadata?) -> String = { tx, metadata ->
+        // Only metadata carries the rate here: TxInfo is the neutral seam type and has no
+        // exchange rate. No current dataSpec uses this column.
+        metadata?.currencyCode ?: ""
     }
 
     /**
      * @return the value of the transaction if it was received, otherwise any empty string
      */
-    val receivedValueOnly: (Transaction, TransactionMetadata?) -> String = { tx, metadata ->
+    val receivedValueOnly: (TxInfo, TransactionMetadata?) -> String = { tx, metadata ->
         val value = getTransactionValue(tx)
         if(value.isPositive) {
             monetaryFormatNoCode.format(value).toString()
@@ -136,7 +175,7 @@ abstract class TransactionExporter(
     /**
      * @return the value of the transaction if it was sent, otherwise any empty string
      */
-    val sentValueOnly: (Transaction, TransactionMetadata?) -> String = { tx, metadata ->
+    val sentValueOnly: (TxInfo, TransactionMetadata?) -> String = { tx, metadata ->
         val value = getTransactionValue(tx)
         if(value.isNegative) {
             monetaryFormatNoCode.format(value.negate()).toString()
@@ -148,7 +187,7 @@ abstract class TransactionExporter(
     /**
      * @return the value of the transaction. Positive for received, negative for sent
      */
-    val value: (Transaction, TransactionMetadata?) -> String = { tx, metadata ->
+    val value: (TxInfo, TransactionMetadata?) -> String = { tx, metadata ->
         val value = getTransactionValue(tx)
         value.toString()
     }
@@ -156,14 +195,14 @@ abstract class TransactionExporter(
     /**
      * @return the transaction id in hex format
      */
-    val transactionId: (Transaction, TransactionMetadata?) -> String = { tx, _ ->
-        tx.txId.toString()
+    val transactionId: (TxInfo, TransactionMetadata?) -> String = { tx, _ ->
+        tx.txId
     }
 
     /**
      * @return the source string "DASH Wallet"
      */
-    val sourceDashWallet: (Transaction, TransactionMetadata?) -> String = { _, _ ->
+    val sourceDashWallet: (TxInfo, TransactionMetadata?) -> String = { _, _ ->
         "DASH Wallet"
     }
 

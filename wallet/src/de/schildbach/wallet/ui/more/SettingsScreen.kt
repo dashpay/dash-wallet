@@ -17,7 +17,6 @@
 
 package de.schildbach.wallet.ui.more
 
-import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -38,18 +37,13 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.flow.StateFlow
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.service.CoinJoinMode
-import de.schildbach.wallet.service.MixingStatus
 import de.schildbach.wallet_test.R
-import org.bitcoinj.core.Coin
 import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.Menu
 import org.dash.wallet.common.ui.components.MenuItem
 import org.dash.wallet.common.ui.components.TopIntro
 import org.dash.wallet.common.ui.components.TopNavBase
-import org.dash.wallet.common.util.toBigDecimal
-import java.text.DecimalFormat
 
 @Composable
 fun SettingsScreen(
@@ -58,12 +52,13 @@ fun SettingsScreen(
     onRescanBlockchainClick: () -> Unit = {},
     onAboutDashClick: () -> Unit = {},
     onNotificationsClick: () -> Unit = {},
-    onCoinJoinClick: () -> Unit = {},
     onTransactionMetadataClick: () -> Unit = {},
-    onBatteryOptimizationClick: () -> Unit = {}
+    onBatteryOptimizationClick: () -> Unit = {},
+    onAnalyticsToggle: ((Boolean) -> Unit)? = null,
+    onAnalyticsInfoClick: () -> Unit = {}
 ) {
     val viewModel: SettingsViewModel = hiltViewModel()
-    
+
     SettingsScreen(
         uiStateFlow = viewModel.uiState,
         onBackClick = onBackClick,
@@ -71,9 +66,10 @@ fun SettingsScreen(
         onRescanBlockchainClick = onRescanBlockchainClick,
         onAboutDashClick = onAboutDashClick,
         onNotificationsClick = onNotificationsClick,
-        onCoinJoinClick = onCoinJoinClick,
         onTransactionMetadataClick = onTransactionMetadataClick,
-        onBatteryOptimizationClick = onBatteryOptimizationClick
+        onBatteryOptimizationClick = onBatteryOptimizationClick,
+        onAnalyticsToggle = onAnalyticsToggle ?: { viewModel.setAnalyticsEnabled(it) },
+        onAnalyticsInfoClick = onAnalyticsInfoClick
     )
 }
 
@@ -85,12 +81,13 @@ fun SettingsScreen(
     onRescanBlockchainClick: () -> Unit = {},
     onAboutDashClick: () -> Unit = {},
     onNotificationsClick: () -> Unit = {},
-    onCoinJoinClick: () -> Unit = {},
     onTransactionMetadataClick: () -> Unit = {},
-    onBatteryOptimizationClick: () -> Unit = {}
+    onBatteryOptimizationClick: () -> Unit = {},
+    onAnalyticsToggle: (Boolean) -> Unit = {},
+    onAnalyticsInfoClick: () -> Unit = {}
 ) {
     val uiState by uiStateFlow.collectAsState()
-    
+
     SettingsScreenContent(
         uiState = uiState,
         onBackClick = onBackClick,
@@ -98,9 +95,10 @@ fun SettingsScreen(
         onRescanBlockchainClick = onRescanBlockchainClick,
         onAboutDashClick = onAboutDashClick,
         onNotificationsClick = onNotificationsClick,
-        onCoinJoinClick = onCoinJoinClick,
         onTransactionMetadataClick = onTransactionMetadataClick,
-        onBatteryOptimizationClick = onBatteryOptimizationClick
+        onBatteryOptimizationClick = onBatteryOptimizationClick,
+        onAnalyticsToggle = onAnalyticsToggle,
+        onAnalyticsInfoClick = onAnalyticsInfoClick
     )
 }
 
@@ -112,50 +110,11 @@ private fun SettingsScreenContent(
     onRescanBlockchainClick: () -> Unit = {},
     onAboutDashClick: () -> Unit = {},
     onNotificationsClick: () -> Unit = {},
-    onCoinJoinClick: () -> Unit = {},
     onTransactionMetadataClick: () -> Unit = {},
-    onBatteryOptimizationClick: () -> Unit = {}
+    onBatteryOptimizationClick: () -> Unit = {},
+    onAnalyticsToggle: (Boolean) -> Unit = {},
+    onAnalyticsInfoClick: () -> Unit = {}
 ) {
-    @StringRes val statusId: Int
-    var balance: String? = null
-    var balanceIcon: Int? = null
-    val decimalFormat = DecimalFormat("0.000")
-
-    if (uiState.coinJoinMixingMode == CoinJoinMode.NONE && uiState.coinJoinMixingStatus != MixingStatus.FINISHING) {
-        statusId = R.string.turned_off
-    } else {
-        if (uiState.coinJoinMixingStatus == MixingStatus.FINISHED) {
-            statusId = R.string.coinjoin_progress_finished
-        } else {
-            statusId = when (uiState.coinJoinMixingStatus) {
-                MixingStatus.NOT_STARTED -> R.string.coinjoin_not_started
-                MixingStatus.MIXING -> R.string.coinjoin_mixing
-                MixingStatus.FINISHING -> R.string.coinjoin_mixing_finishing
-                MixingStatus.PAUSED -> R.string.coinjoin_paused
-                else -> R.string.error
-            }
-            if (!uiState.hideBalance) {
-                balance = stringResource(
-                    R.string.coinjoin_progress_balance,
-                    decimalFormat.format(uiState.mixedBalance.toBigDecimal()),
-                    decimalFormat.format(uiState.totalBalance.toBigDecimal())
-                )
-                balanceIcon = R.drawable.ic_dash_d_black
-            } else {
-                balance = stringResource(R.string.coinjoin_progress_amount_hidden)
-            }
-        }
-    }
-    val coinJoinStatusText = when {
-        uiState.coinJoinMixingMode != CoinJoinMode.NONE && (uiState.coinJoinMixingStatus == MixingStatus.MIXING || uiState.coinJoinMixingStatus == MixingStatus.FINISHING) ->
-            stringResource(
-                R.string.coinjoin_progress_status_percentage,
-                stringResource(statusId),
-                uiState.mixingProgress.toInt()
-            )
-
-        else -> stringResource(statusId)
-    }
     val colors = LocalDashColors.current
     Column(
             modifier = Modifier
@@ -212,16 +171,6 @@ private fun SettingsScreenContent(
                         action = onNotificationsClick
                     )
 
-                    // CoinJoin
-                    MenuItem(
-                        title = stringResource(R.string.coinjoin),
-                        subtitle = coinJoinStatusText,
-                        icon = R.drawable.ic_mixing,
-                        action = onCoinJoinClick,
-                        dashAmount = balance,
-                        dashIcon = balanceIcon
-                    )
-
                     // Transaction Metadata
                     if (Constants.SUPPORTS_TXMETADATA && uiState.transactionMetadataVisible) {
                         MenuItem(
@@ -245,6 +194,22 @@ private fun SettingsScreenContent(
                         icon = R.drawable.ic_battery,
                         action = onBatteryOptimizationClick
                     )
+
+                    // Share usage data / analytics opt-out (MO-1065). Hidden when the
+                    // build has no Firebase: nothing is collected, so nothing to opt out of.
+                    // Figma "Action item / Var 2": title + 20dp blue info icon, no subtitle.
+                    if (uiState.analyticsAvailable) {
+                        MenuItem(
+                            title = stringResource(R.string.settings_analytics_title),
+                            icon = R.drawable.ic_usage,
+                            showInfo = true,
+                            onInfoClick = onAnalyticsInfoClick,
+                            infoIcon = R.drawable.ic_nav_bar_info,
+                            infoIconSize = 20.dp,
+                            checked = uiState.analyticsEnabled,
+                            onCheckedChange = onAnalyticsToggle
+                        )
+                    }
                 }
             }
         }
@@ -260,20 +225,15 @@ fun MoreScreenPreview() {
 }
 
 @Composable
-@Preview(name = "Settings with CoinJoin Active - Light", uiMode = Configuration.UI_MODE_NIGHT_NO)
-@Preview(name = "Settings with CoinJoin Active - Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
-fun MoreScreenPreviewWithCoinJoin() {
+@Preview(name = "Settings populated - Light", uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Settings populated - Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
+fun MoreScreenPreviewPopulated() {
     val customState = SettingsUIState(
         localCurrencySymbol = "USD",
-        coinJoinMixingMode = CoinJoinMode.INTERMEDIATE,
-        coinJoinMixingStatus = MixingStatus.MIXING,
-        mixingProgress = 50.0,
-        mixedBalance = Coin.COIN,
-        totalBalance = Coin.COIN.multiply(2L),
-        hideBalance = false,
         ignoringBatteryOptimizations = true,
         transactionMetadataVisible = true,
-        transactionMetadataSubtitle = "Last saved: Jan 15, 2024"
+        transactionMetadataSubtitle = "Last saved: Jan 15, 2024",
+        analyticsEnabled = true
     )
     DashWalletTheme {
         SettingsScreenContent(uiState = customState)

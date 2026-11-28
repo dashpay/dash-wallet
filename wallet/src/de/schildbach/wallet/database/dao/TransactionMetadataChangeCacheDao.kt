@@ -20,7 +20,7 @@ package de.schildbach.wallet.database.dao
 import androidx.room.*
 import de.schildbach.wallet.database.entity.TransactionMetadataCacheItem
 import kotlinx.coroutines.flow.Flow
-import org.bitcoinj.core.Sha256Hash
+import org.dash.wallet.common.data.TxId
 import org.dash.wallet.common.data.TaxCategory
 
 /**
@@ -38,26 +38,26 @@ interface TransactionMetadataChangeCacheDao {
     suspend fun load(): List<TransactionMetadataCacheItem>
 
     @Query("SELECT * FROM transaction_metadata_cache WHERE txId = :txId AND cacheTimestamp > :updatedAfter ORDER BY id")
-    suspend fun findAfter(txId: Sha256Hash, updatedAfter: Long): List<TransactionMetadataCacheItem>
+    suspend fun findAfter(txId: TxId, updatedAfter: Long): List<TransactionMetadataCacheItem>
 
     @Query("SELECT * FROM transaction_metadata_cache WHERE cacheTimestamp <= :updatedBefore ORDER BY id")
     suspend fun findAllBefore(updatedBefore: Long): List<TransactionMetadataCacheItem>
 
     @Query("SELECT COUNT(1) FROM transaction_metadata_cache WHERE txid = :txId;")
-    suspend fun exists(txId: Sha256Hash): Boolean
+    suspend fun exists(txId: TxId): Boolean
 
     @Query("SELECT * FROM transaction_metadata_cache WHERE txid = :txId")
-    suspend fun load(txId: Sha256Hash): TransactionMetadataCacheItem?
+    suspend fun load(txId: TxId): TransactionMetadataCacheItem?
 
     @Query("SELECT DISTINCT txId FROM transaction_metadata_cache")
-    suspend fun getAllTransactionIds(): List<Sha256Hash>
+    suspend fun getAllTransactionIds(): List<TxId>
 
     @Query(
         """INSERT INTO transaction_metadata_cache (txId, cacheTimestamp, taxCategory) 
            VALUES (:txId, :cacheTimestamp, :taxCategory)"""
     )
     suspend fun insertTaxCategory(
-        txId: Sha256Hash,
+        txId: TxId,
         taxCategory: TaxCategory,
         cacheTimestamp: Long = System.currentTimeMillis()
     )
@@ -66,23 +66,23 @@ interface TransactionMetadataChangeCacheDao {
         """INSERT INTO transaction_metadata_cache (txId, cacheTimestamp, sentTimestamp) 
            VALUES (:txId, :cacheTimestamp, :sentTimestamp)"""
     )
-    suspend fun insertSentTime(txId: Sha256Hash, sentTimestamp: Long, cacheTimestamp: Long = System.currentTimeMillis())
+    suspend fun insertSentTime(txId: TxId, sentTimestamp: Long, cacheTimestamp: Long = System.currentTimeMillis())
 
     @Query("INSERT INTO transaction_metadata_cache (txId, cacheTimestamp, memo) VALUES(:txId, :cacheTimestamp, :memo)")
-    suspend fun insertMemo(txId: Sha256Hash, memo: String, cacheTimestamp: Long = System.currentTimeMillis())
+    suspend fun insertMemo(txId: TxId, memo: String, cacheTimestamp: Long = System.currentTimeMillis())
 
     @Query(
         """INSERT INTO transaction_metadata_cache (txId, cacheTimestamp, service) 
            VALUES(:txId, :cacheTimestamp, :service)"""
     )
-    suspend fun insertService(txId: Sha256Hash, service: String, cacheTimestamp: Long = System.currentTimeMillis())
+    suspend fun insertService(txId: TxId, service: String, cacheTimestamp: Long = System.currentTimeMillis())
 
     @Query(
         """INSERT INTO transaction_metadata_cache (txId, cacheTimestamp, currencyCode, rate) 
            VALUES (:txId, :cacheTimestamp, :currencyCode, :rate)"""
     )
     suspend fun insertExchangeRate(
-        txId: Sha256Hash,
+        txId: TxId,
         currencyCode: String,
         rate: String,
         cacheTimestamp: Long = System.currentTimeMillis()
@@ -93,7 +93,7 @@ interface TransactionMetadataChangeCacheDao {
            VALUES (:txId, :cacheTimestamp, :customIconUrl)"""
     )
     suspend fun insertCustomIconUrl(
-        txId: Sha256Hash,
+        txId: TxId,
         customIconUrl: String,
         cacheTimestamp: Long = System.currentTimeMillis()
     )
@@ -103,7 +103,7 @@ interface TransactionMetadataChangeCacheDao {
            VALUES (:txId, :cacheTimestamp, :service, :taxCategory, :customIconUrl, :index)"""
     )
     suspend fun markGiftCardTx(
-        txId: Sha256Hash,
+        txId: TxId,
         service: String,
         taxCategory: TaxCategory,
         customIconUrl: String?,
@@ -116,7 +116,7 @@ interface TransactionMetadataChangeCacheDao {
            VALUES (:txId, :cacheTimestamp, :giftCardNumber, :giftCardPin, :merchantName, :originalPrice, :merchantUrl, :order, :giftCardChallenge, :index)"""
     )
     suspend fun insertGiftCardData(
-        txId: Sha256Hash,
+        txId: TxId,
         giftCardNumber: String?,
         giftCardPin: String?,
         merchantName: String?,
@@ -133,7 +133,7 @@ interface TransactionMetadataChangeCacheDao {
            VALUES (:txId, :cacheTimestamp, :barcodeValue, :barcodeFormat, :index)"""
     )
     suspend fun insertBarcode(
-        txId: Sha256Hash,
+        txId: TxId,
         barcodeValue: String?,
         barcodeFormat: String?,
         index: Int,
@@ -191,7 +191,7 @@ interface TransactionMetadataChangeCacheDao {
         )
     """)
     suspend fun has(
-        txId: Sha256Hash,
+        txId: TxId,
         sentTimestamp: Long?,
         taxCategory: TaxCategory?,
         currencyCode: String?,

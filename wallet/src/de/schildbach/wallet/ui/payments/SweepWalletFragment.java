@@ -53,7 +53,8 @@ import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.UTXO;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.crypto.BIP38PrivateKey;
-import org.bitcoinj.utils.MonetaryFormat;
+import org.dash.wallet.common.money.MonetaryFormat;
+import org.bitcoinj.wallet.AllowUnconfirmedCoinSelector;
 import org.bitcoinj.wallet.KeyChainGroup;
 import org.bitcoinj.wallet.SendRequest;
 import org.bitcoinj.wallet.Wallet;
@@ -74,6 +75,7 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import javax.annotation.Nullable;
+import javax.inject.Inject;
 
 import dagger.hilt.android.AndroidEntryPoint;
 import de.schildbach.wallet.Constants;
@@ -130,6 +132,9 @@ public class SweepWalletFragment extends Fragment {
     private DialogFragment loadingDialog;
 
     private SweepWalletViewModel viewModel;
+
+    @Inject
+    SweepTxBroadcaster sweepTxBroadcaster;
 
     private enum State {
         INTRO,
@@ -529,7 +534,8 @@ public class SweepWalletFragment extends Fragment {
             introductionGroup.setVisibility(View.GONE);
             balanceGroup.setVisibility(View.VISIBLE);
             balanceView.setFormat(btcFormat.noCode());
-            balanceView.setAmount(walletToSweep.getBalance(BalanceType.ESTIMATED));
+            balanceView.setAmount(org.dash.wallet.common.money.Coin.valueOf(
+                    walletToSweep.getBalance(BalanceType.ESTIMATED).getValue()));
         } else {
             introductionGroup.setVisibility(View.VISIBLE);
             balanceGroup.setVisibility(View.GONE);
@@ -549,9 +555,9 @@ public class SweepWalletFragment extends Fragment {
             viewGo.setText(R.string.sweep_wallet_fragment_button_sweep);
             viewGo.setEnabled(walletToSweep != null && walletToSweep.getBalance(BalanceType.ESTIMATED).signum() > 0
                     && fees != null);
-            log.info("State:  Confirm Sweep:  walletToSweep: " + (walletToSweep == null ? "valid" : "invalid") +
-                    "wallet balance > 0: " + (walletToSweep.getBalance(BalanceType.ESTIMATED).signum() > 0 ? "true" : "false") +
-                    "fees: " + (fees == null ? "null" : fees.toString()));
+            log.info("State:  Confirm Sweep:  walletToSweep: " + (walletToSweep != null ? "valid" : "invalid") +
+                    "  wallet balance > 0: " + (walletToSweep.getBalance(BalanceType.ESTIMATED).signum() > 0 ? "true" : "false") +
+                    "  fees: " + (fees == null ? "null" : fees.toString()));
         } else if (state == State.PREPARATION) {
             viewGo.setText(R.string.send_coins_preparation_msg);
             viewGo.setEnabled(false);
@@ -603,14 +609,85 @@ public class SweepWalletFragment extends Fragment {
     private void handleSweep() {
         setState(State.PREPARATION);
 
-        final Address receivingAddress = application.getWallet().freshReceiveAddress();
+        // OFF THE MAIN THREAD: this runs from the confirm-button click, and
+        // dashj's freshReceiveAddress() forces a synchronous full-wallet save
+        // of the MAIN wallet (measured 1.2s at 215 DashPay friend chains).
+        // Fetch the address on the background handler, then hop back to the
+        // main handler for the SendRequest/UI continuation (so the
+        // SendCoinsOfflineTask callbacks keep their main-looper affinity).
+        backgroundHandler.post(() -> {
+            org.bitcoinj.core.Context.propagate(Constants.CONTEXT);
+            // The SELF-TRANSFER destination, not the advertised receive address.
+            // A sweep moves the user's own coins into their own wallet, and
+            // post-cutover freshReceiveAddressLive() returns the very address the
+            // Receive screen is showing — so a counterparty holding an unpaid QR
+            // could watch it and tie the sweep's amount and its paper-wallet
+            // inputs to the person behind that QR. "The funds are already linked
+            // to the paper key" does not answer that: the NEW link is from the
+            // paper key to the QR holder's view of the recipient.
+            //
+            // Post-cutover this THROWS rather than falling back to an advertised
+            // address, so preparation failures are handled here, before anything
+            // is sent.
+            final Address receivingAddress;
+            try {
+                receivingAddress = application.unadvertisedDestinationLive();
+            } catch (final Exception x) {
+                // RETRYABLE, not FAILED: the destination read can fail
+                // transiently (the engine is not bound yet, an FFI read errored),
+                // and State.FAILED disables the sweep button with no error shown,
+                // stranding the user on a dead screen. Return them to the
+                // confirmation step so they can try again — the one thing we must
+                // not do is proceed to an advertised address.
+                log.warn("sweep: could not obtain a self-transfer destination", x);
+                handler.post(() -> {
+                    if (!isAdded()) {
+                        return;
+                    }
+                    setState(State.CONFIRM_SWEEP);
+                    final androidx.fragment.app.FragmentActivity activity = getActivity();
+                    if (activity != null) {
+                        android.widget.Toast.makeText(activity,
+                                org.dash.wallet.common.R.string.loading_error,
+                                android.widget.Toast.LENGTH_LONG).show();
+                    }
+                });
+                return;
+            }
+            handler.post(() -> {
+                if (!isAdded()) {
+                    return;
+                }
+                continueSweep(receivingAddress);
+            });
+        });
+    }
+
+    private void continueSweep(final Address receivingAddress) {
         final SendRequest sendRequest = SendRequest.emptyWallet(receivingAddress);
 
         sendRequest.feePerKb = fees.get(FeeCategory.ECONOMIC);
+        // The throwaway wallet contains ONLY the fabricated funding txs built from
+        // UTXOs that Electrum/Insight just confirmed are unspent on-chain, so every
+        // candidate is spendable by construction. The default DefaultCoinSelector
+        // must not veto them: when the paper wallet was funded from THIS app's own
+        // wallet, the fabricated tx shares the funding txid's confidence from the
+        // global TxConfidenceTable (source SELF, type PENDING) and the fragment's
+        // fabrication guard deliberately leaves it un-upgraded to BUILDING. With
+        // the dashj engine held post-cutover that confidence stays PENDING with
+        // numBroadcastPeers() == 0 forever, which DefaultCoinSelector.isSelectable
+        // rejects, emptying the coin selection and failing the sweep with
+        // CouldNotAdjustDownwards. A permissive selector scoped to this single
+        // SendRequest (it never touches the main wallet) restores selection
+        // regardless of the held/unsynced dashj engine's confidence view.
+        sendRequest.coinSelector = AllowUnconfirmedCoinSelector.get();
 
         if (viewModel.getCurrentExchangeRate() != null) {
             sendRequest.exchangeRate = new org.bitcoinj.utils.ExchangeRate(
-                    Coin.COIN, viewModel.getCurrentExchangeRate().getFiat());
+                    Coin.COIN,
+                    org.bitcoinj.utils.Fiat.valueOf(
+                            viewModel.getCurrentExchangeRate().getFiat().currencyCode,
+                            viewModel.getCurrentExchangeRate().getFiat().value));
             log.info("Using exchange rate: " + sendRequest.exchangeRate.coinToFiat(Coin.COIN).toFriendlyString());
         }
 
@@ -620,7 +697,12 @@ public class SweepWalletFragment extends Fragment {
                 sentTransaction = transaction;
 
                 setState(State.SENDING);
+                // Pre-cutover: broadcasts via the dashj peergroup (unchanged).
                 application.processDirectTransaction(sentTransaction);
+                // Post-cutover the peergroup is held and the broadcast above no-ops,
+                // so also push the signed tx to the same Electrum/explorer servers the
+                // sweep used for UTXO discovery. No-op pre-cutover (see SweepTxBroadcaster).
+                sweepTxBroadcaster.broadcastIfCutoverCommitted(sentTransaction);
                 viewModel.logEvent(AnalyticsConstants.SendReceive.IMPORT_PRIVATE_KEY_SUCCESS);
                 showTransactionResult(sentTransaction);
             }

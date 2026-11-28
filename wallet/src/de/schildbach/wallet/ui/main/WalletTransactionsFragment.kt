@@ -33,6 +33,8 @@ import de.schildbach.wallet.ui.CreateUsernameActivity
 import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.HistoryHeaderAdapter
+import de.schildbach.wallet.ui.dashpay.IdentityCreationStatusHolder
+import de.schildbach.wallet.ui.dashpay.RetryStatusHint
 import de.schildbach.wallet.ui.invite.InviteHandler
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
@@ -44,12 +46,15 @@ import androidx.paging.LoadState
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.database.entity.IdentityCreationState
-import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.data.InvitationValidationState
 import de.schildbach.wallet.service.platform.IdentityRepository
+import de.schildbach.wallet.service.platform.sdk.SdkTransparentUsernameCreation
 import de.schildbach.wallet.service.platform.work.RestoreIdentityOperation
+import de.schildbach.wallet.transactions.TxFilterType
 import de.schildbach.wallet.ui.InviteHandlerViewModel
+import de.schildbach.wallet.ui.PendingInvitation
 import de.schildbach.wallet.ui.dashpay.user.DashPayUserBottomSheet
 import de.schildbach.wallet.ui.registerLockScreenDeactivated
 import de.schildbach.wallet.ui.transactions.TransactionDetailsDialogFragment
@@ -74,6 +79,18 @@ import org.dash.wallet.features.exploredash.ui.dashspend.dialogs.GiftCardDetails
 import org.dash.wallet.features.exploredash.ui.dashspend.dialogs.GiftCardOrderDetailsDialog
 import org.dash.wallet.features.exploredash.ui.dashspend.dialogs.GiftCardViewModel
 import javax.inject.Inject
+import de.schildbach.wallet.util.format
+import de.schildbach.wallet.util.setAmount
+import de.schildbach.wallet.util.setFiatAmount
+import de.schildbach.wallet.util.toDashjFiat
+import de.schildbach.wallet.util.toDashjCoin
+import de.schildbach.wallet.util.toNeutralCoin
+import de.schildbach.wallet.util.toNeutralFiat
+import de.schildbach.wallet.util.toTxId
+import de.schildbach.wallet.util.toSha256Hash
+import de.schildbach.wallet.service.L1SyncUiStatus
+import de.schildbach.wallet.service.syncHeaderPercentLabel
+import kotlinx.coroutines.flow.map
 
 @AndroidEntryPoint
 class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragment) {
@@ -87,6 +104,23 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
     private var onViewCreatedTime: Long = 0L
     private var pendingManualRefresh: Boolean = false
 
+    /**
+     * Whether cacheAdapter is still the attached list adapter, and whether its last submitted
+     * snapshot was non-empty. Tracked here and updated synchronously at the exact submission/
+     * swap points, rather than read back from [CacheTransactionAdapter.currentList] —
+     * ListAdapter.submitList() runs its diff on a background executor and posts the update back,
+     * so currentList does not reflect a just-submitted list until that round-trip lands.
+     */
+    private var cacheAdapterAttached: Boolean = true
+    private var cacheHasRows: Boolean = false
+
+    /**
+     * One "still syncing" invite notice per launch. The provisional
+     * NOT_SYNCED verdict can be re-reached on every sync-state emission,
+     * and the notice is informational — repeating it would be a nag.
+     */
+    private var notSyncedInviteNoticeShown = false
+
     private val viewModel by activityViewModels<MainViewModel>()
     private val giftCardViewModel by activityViewModels<GiftCardViewModel>()
     private val binding by viewBinding(WalletTransactionsFragmentBinding::bind)
@@ -99,10 +133,24 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
     @Inject
     lateinit var identityRepository: IdentityRepository
 
+    @Inject
+    lateinit var transparentUsernameCreation: SdkTransparentUsernameCreation
+
+    @Inject
+    lateinit var identityCreationStatus: IdentityCreationStatusHolder
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         onViewCreatedTime = System.currentTimeMillis()
         log.info("STARTUP WalletTransactionsFragment.onViewCreated at {}", onViewCreatedTime)
+
+        // This Fragment's VIEW (and with it cacheAdapter/concatAdapter/liveAdapter below) can be
+        // recreated more than once on the same Fragment instance (e.g. a bottom-nav tab whose view
+        // is torn down and rebuilt while the Fragment itself is retained). Reset the per-view
+        // tracking fields here or a stale "already swapped to live" from a previous view survives
+        // into the fresh ConcatAdapter(header, cacheAdapter) below and blocks the new swap forever.
+        cacheAdapterAttached = true
+        cacheHasRows = false
 
         val clickHandler = { rowView: HistoryRowView, _: Int, isProfileClick: Boolean ->
             viewLifecycleOwner.lifecycleScope.launch {
@@ -126,7 +174,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                                 // so route here instead.
                                 if (ServiceName.isDashSpend(rowView.service)) {
                                     viewModel.logEvent(AnalyticsConstants.DashSpend.DETAILS_GIFT_CARD)
-                                    val txId = Sha256Hash.wrap(rowView.id)
+                                    val txId = rowView.id
                                     if (giftCardViewModel.getGiftCardCount(txId) > 1) {
                                         GiftCardOrderDetailsDialog.newInstance(txId)
                                     } else {
@@ -134,13 +182,13 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                                     }
                                 } else {
                                     viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS)
-                                    TransactionDetailsDialogFragment.newInstance(txWrapper.transactions.keys.first())
+                                    TransactionDetailsDialogFragment.newInstance(Sha256Hash.wrap(txWrapper.transactions.keys.first()))
                                 }
                             }
 
                             ServiceName.isDashSpend(rowView.service) -> {
                                 viewModel.logEvent(AnalyticsConstants.DashSpend.DETAILS_GIFT_CARD)
-                                val txId = Sha256Hash.wrap(rowView.id)
+                                val txId = rowView.id
                                 if (giftCardViewModel.getGiftCardCount(txId) > 1) {
                                     GiftCardOrderDetailsDialog.newInstance(txId)
                                 } else {
@@ -169,7 +217,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                                             // Same routing as the in-memory path above: a group
                                             // of one opens the transaction detail directly.
                                             TransactionDetailsDialogFragment.newInstance(
-                                                wrapper.transactions.keys.first()
+                                                Sha256Hash.wrap(wrapper.transactions.keys.first())
                                             ).show(activity)
                                         } else {
                                             TransactionGroupDetailsFragment(wrapper).show(activity)
@@ -230,10 +278,12 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
             }
         })
 
+        updateFilterButtonLabel(viewModel.transactionsDirection)
         binding.transactionFilterBtn.setOnClickListener {
             val dialogFragment = TransactionsFilterDialog(viewModel.transactionsDirection) { direction, _ ->
                 viewModel.transactionsDirection = direction
                 viewModel.logDirectionChangedEvent(direction)
+                updateFilterButtonLabel(direction)
             }
 
             dialogFragment.show(requireActivity())
@@ -282,8 +332,17 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         // becomes false — allowing showEmptyView() to fire correctly.
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.cachedRows.collect { rows ->
-                cacheAdapter.submitList(rows)
-                if (rows.isNotEmpty()) {
+                // cacheHasRows is read by other collectors (loadStateFlow, isBuildingCache) to
+                // decide whether rows are actually on screen. submitList()'s diff runs on a
+                // background thread before the RecyclerView is updated, so setting the flag here
+                // (rather than in the commit callback) could let one of those collectors see
+                // cacheHasRows = true while the cache adapter still shows zero items.
+                cacheAdapter.submitList(rows) { cacheHasRows = rows.isNotEmpty() }
+                // The startup snapshot can arrive after the live side has already taken over and
+                // settled on its own (possibly empty) answer — cacheAdapterAttached excludes that
+                // case so a late cache emission doesn't force showTransactionList() over a correctly
+                // shown empty view.
+                if (rows.isNotEmpty() && cacheAdapterAttached) {
                     log.info("STARTUP cache submitList: {} rows at {}", rows.size, System.currentTimeMillis())
                     if (firstPageLoadStartTime == 0L) {
                         firstPageLoadStartTime = System.currentTimeMillis()
@@ -312,16 +371,32 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
             }
         })
 
-        viewModel.isBlockchainSynced.observe(viewLifecycleOwner) {
-            header.isSynced = it
-            if (inviteHandlerViewModel.isUsingInvite) {
-                lifecycleScope.launch {
-                    processInvitation(inviteHandlerViewModel.invitation.value!!, isSynced = it, isLockScreenActive())
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.syncStatus.map { it.isSynced }.distinctUntilChanged().collect { isSynced ->
+                header.isSynced = isSynced
+                // The Join DashPay tile only becomes eligible once the scan
+                // finishes (HistoryHeaderAdapter.joinDashPayEligible), and the
+                // adapter re-binds itself above. But on a wallet with no
+                // displayed rows the whole list may currently be hidden behind
+                // the "no transactions" view — a decision only re-taken on a
+                // paging load-state emission, which may never arrive. Re-take
+                // it here so the tile actually becomes visible on completion.
+                if (!header.isEmpty()) {
+                    showTransactionList()
+                }
+                inviteHandlerViewModel.pendingInvitation.value?.let { pending ->
+                    // Re-drives the invite through validation on every sync-state
+                    // change: an invite checked mid-scan gets the provisional
+                    // NOT_SYNCED verdict, and this is what converts it to
+                    // VALID/ALREADY_CLAIMED once the scan completes — the user
+                    // never has to re-tap the link.
+                    processInvitation(pending, revalidate = isSynced)
                 }
             }
-            updateSyncState()
         }
-        viewModel.blockchainSyncPercentage.observe(viewLifecycleOwner) { updateSyncState() }
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.syncStatus.collect { updateSyncState(it) }
+        }
 
         // Collect live PagingData and submit to the live (PagingDataAdapter) adapter.
         viewLifecycleOwner.lifecycleScope.launch {
@@ -332,32 +407,50 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         }
 
         // Handle loading/empty states via liveAdapter's loadStateFlow.
-        // Also swaps the RecyclerView from cacheAdapter to liveAdapter once live items arrive.
+        // Also swaps the RecyclerView from cacheAdapter to liveAdapter once the live Pager has
+        // a definitive answer.
         viewLifecycleOwner.lifecycleScope.launch {
             liveAdapter.loadStateFlow
                 .distinctUntilChanged()
                 .collectLatest { loadStates ->
-                    val isRefreshing = loadStates.refresh is LoadState.Loading
-                    val cacheHasItems = concatAdapter.adapters.contains(cacheAdapter) &&
-                        cacheAdapter.currentList.isNotEmpty()
-                    // Only show the loading spinner when there's nothing to display yet.
-                    val isLoading = isRefreshing && liveAdapter.itemCount == 0 && !cacheHasItems
-                    val isEmpty = loadStates.refresh is LoadState.NotLoading &&
-                        liveAdapter.itemCount == 0 && !cacheHasItems
-
-                    // Swap cacheAdapter → liveAdapter inside the same ConcatAdapter once live
-                    // items are ready.  Keeping one ConcatAdapter instance avoids the
-                    // "cannot find wrapper" crash from ConcatAdapterController.
-                    if (loadStates.refresh is LoadState.NotLoading && liveAdapter.itemCount > 0 &&
-                        concatAdapter.adapters.contains(cacheAdapter)) {
+                    // Swap cacheAdapter → liveAdapter inside the same ConcatAdapter as soon as the
+                    // live (filter-aware) Pager has its first settled answer for the current
+                    // filter — whether that answer is some rows or none. The unfiltered cache
+                    // snapshot must not keep deciding what's on screen once the live data is in,
+                    // or a filter matching nothing would stay masked by the cache's stale content.
+                    // Gated on viewModel.transactionsLoaded instead of a per-view "seen Loading"
+                    // latch: that latch is reset per view but a late subscriber to the singleton
+                    // service's cachedIn() Pager (e.g. this view recreated after a bottom-nav tab
+                    // swap, once the Pager has already settled once) gets a synthesized catch-up
+                    // Insert.Refresh carrying the current settled LoadStates and never replays the
+                    // historical Loading transition, so the latch could never flip and the swap
+                    // would never fire. transactionsLoaded is flipped exactly when the service's
+                    // data source becomes authoritative and is not reset per view, so a late
+                    // subscriber reads the right value immediately. The service emits nothing
+                    // while its data source is still Empty, so a NotLoading refresh here always
+                    // comes from a settled Room generation, never a startup placeholder.
+                    // Keeping one ConcatAdapter instance avoids the "cannot find wrapper"
+                    // crash from ConcatAdapterController.
+                    if (cacheAdapterAttached &&
+                        loadStates.refresh is LoadState.NotLoading &&
+                        viewModel.transactionsLoaded.value) {
                         log.info("STARTUP swapping to live adapter: {} items at {}",
                             liveAdapter.itemCount, System.currentTimeMillis())
                         val lm = binding.walletTransactionsList.layoutManager as LinearLayoutManager
                         val scrollState = lm.onSaveInstanceState()
                         concatAdapter.removeAdapter(cacheAdapter)
                         concatAdapter.addAdapter(liveAdapter)
+                        cacheAdapterAttached = false
                         lm.onRestoreInstanceState(scrollState)
                     }
+
+                    val isRefreshing = loadStates.refresh is LoadState.Loading
+                    val cacheHasItems = cacheAdapterAttached && cacheHasRows
+                    // Only show the loading spinner when there's nothing to display yet.
+                    val isLoading = isRefreshing && liveAdapter.itemCount == 0 && !cacheHasItems
+                    val isEmpty = viewModel.transactionsLoaded.value &&
+                        loadStates.refresh is LoadState.NotLoading &&
+                        liveAdapter.itemCount == 0 && !cacheHasItems
 
                     if (!isRefreshing && liveAdapter.itemCount > 0 && firstPageLoadStartTime > 0L) {
                         log.info("STARTUP first live items visible: {}ms from onViewCreated, {}ms from first-load-start ({} items)",
@@ -368,7 +461,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                     }
 
                     val buildingFromScratch = viewModel.isBuildingCache.value &&
-                        liveAdapter.itemCount == 0 && cacheAdapter.currentList.isEmpty()
+                        liveAdapter.itemCount == 0 && !cacheHasItems
                     binding.loading.isVisible = isLoading || buildingFromScratch
                     if (isEmpty && header.isEmpty()) showEmptyView() else showTransactionList()
                 }
@@ -378,8 +471,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         // from scratch (no rows displayed yet). If rows are already visible, suppress the
         // overlay so the existing list stays on screen during background rebuilds.
         viewModel.isBuildingCache.observe(viewLifecycleOwner) { building ->
-            val hasRows = viewModel.transactionsLoaded.value &&
-                (liveAdapter.itemCount > 0 || cacheAdapter.currentList.isNotEmpty())
+            val hasRows = liveAdapter.itemCount > 0 || (cacheAdapterAttached && cacheHasRows)
             binding.loading.isVisible = building && !hasRows
             if (!building && pendingManualRefresh) {
                 pendingManualRefresh = false
@@ -391,13 +483,50 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
             if (identity != null) {
                 (requireActivity() as? LockScreenActivity)?.imitateUserInteraction()
                 header.blockchainIdentityData = identity
+                // Same reason as the sync and canJoin observers below: the identity
+                // record decides the processing/error/welcome tile AND the accept-
+                // invitation row, so it can turn the header from empty to non-empty.
+                // While the "no transactions" view is up the whole list — header
+                // included — is hidden, and that decision is otherwise only re-taken
+                // on a paging load-state emission, which a record change does not
+                // produce. Without this a wallet showing no rows (a filter that
+                // matches nothing, or a wallet with no history yet) renders the
+                // creation tile into a hidden list.
+                if (!header.isEmpty()) {
+                    showTransactionList()
+                }
             }
         }
 
-        inviteHandlerViewModel.invitation.observe(viewLifecycleOwner) { invitation ->
-            val isSynced = viewModel.isBlockchainSynced.value == true
-            if (invitation != null && isSynced) {
-                processInvitation(invitation, viewModel.isBlockchainSynced.value == true, isLockScreenActive())
+        // The hello card greets the user by name, and the identity record's
+        // username can be the DPNS-NORMALIZED label ("br1an-s21") rather than
+        // the one they typed. The local profile keeps the human label (the
+        // domain document's `.label`), so feed it in as the preferred display
+        // form — see HistoryHeaderAdapter.helloCardUsername.
+        viewModel.dashPayProfile.observe(viewLifecycleOwner) { profile ->
+            header.profileUsername = profile?.username
+        }
+
+        // Transient retry-status hint on the identity processing tile —
+        // why the current step is taking longer than usual (e.g. platform
+        // consensus core height lagging a fresh funding tx; no IS lock
+        // yet). Cleared by the service on success/fresh runs.
+        identityCreationStatus.statusHint.observe(viewLifecycleOwner) { hint ->
+            header.statusHint = when (hint) {
+                RetryStatusHint.CORE_HEIGHT_LAG -> getString(R.string.identity_processing_network_catching_up)
+                RetryStatusHint.WAITING_FOR_ISLOCK -> getString(R.string.identity_processing_waiting_confirmation)
+                null -> null
+            }
+        }
+
+        inviteHandlerViewModel.pendingInvitation.observe(viewLifecycleOwner) { pending ->
+            val invitation = pending?.data
+            val isSynced = viewModel.syncStatus.value.isSynced
+            // No longer gated on isSynced: an invite that arrives mid-scan
+            // must still get a verdict (the provisional NOT_SYNCED one) and
+            // the accompanying notice, instead of silently doing nothing.
+            if (pending != null) {
+                processInvitation(pending)
             }
             header.invitation = invitation
             header.isSynced = isSynced
@@ -409,6 +538,12 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
 
         viewModel.isAbleToCreateIdentity.observe(viewLifecycleOwner) { canJoinDashPay ->
             header.canJoinDashPay = canJoinDashPay && header.invitation == null
+            // Same reason as the sync collector above: this flag can turn the
+            // header from empty to non-empty while the "no transactions" view
+            // is up, and that view's decision is not otherwise re-taken.
+            if (!header.isEmpty()) {
+                showTransactionList()
+            }
         }
 
         val myListener = { onLockScreenDeactivated() }
@@ -423,54 +558,106 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
 
     private fun onLockScreenDeactivated() {
         lifecycleScope.launch {
-            inviteHandlerViewModel.invitation.value?.let {
-                // only process for the dialog
-                processInvitation(
-                    it,
-                    viewModel.isBlockchainSynced.value == true,
-                    false
-                )
+            inviteHandlerViewModel.pendingInvitation.value?.let {
+                // Delivers a verdict published while the lock screen was up
+                // (withheld then; for the terminal ones this also discards the
+                // invite — without it the invite stayed stored forever behind
+                // a verdict nobody saw), or validates an invite that has none.
+                // The lock screen is still reported as displayed while these
+                // listeners run, so say explicitly that it is gone.
+                processInvitation(it, lockScreenActive = { false })
             }
         }
     }
 
-    private suspend fun processInvitation(invitation: InvitationLinkData, isSynced: Boolean, isLockScreenActive: Boolean) {
-        if (invitation.validationState != null) return
-        if (isSynced) {
-            if (invitation.expired) {
-                inviteHandlerViewModel.validateInvitation()
-            }
+    private suspend fun processInvitation(
+        pending: PendingInvitation,
+        /**
+         * Whether the lock screen is up — evaluated at DELIVERY time, after
+         * any validation, not when the call starts: the user may unlock while
+         * the validation runs.
+         */
+        lockScreenActive: () -> Boolean = { isLockScreenActive() },
+        /**
+         * Re-drive validation for an invite that only ever got the PROVISIONAL
+         * NOT_SYNCED verdict. Set ONLY by the sync-state observer: validation
+         * republishes the invitation, so re-validating off the invitation feed
+         * itself would loop.
+         */
+        revalidate: Boolean = false
+    ) {
+        // NOT_SYNCED is a PROVISIONAL verdict, not a terminal one — the chain
+        // was still catching up when the invite was checked. Unlike every
+        // other state it must not latch, or the invite would never resolve.
+        val state = pending.data.validationState
+        val provisional = state == InvitationValidationState.NOT_SYNCED
 
-            val currentInvitation = inviteHandlerViewModel.invitation.value ?: invitation
-            if (!isLockScreenActive) {
-                showInviteValidationDialog(currentInvitation)
-            }
+        // InviteHandlerViewModel.validateInvitation() carries its own sync
+        // gate and answers NOT_SYNCED while the chain is behind, so calling it
+        // mid-sync is safe — and it is what lets the user hear something
+        // instead of being left with silence.
+        if ((state == null && pending.data.expired) || (provisional && revalidate)) {
+            inviteHandlerViewModel.validateInvitation()
+        }
+
+        // Publication and delivery are separate: whichever caller can show UI
+        // first delivers a definitive verdict, exactly once — no matter which
+        // (possibly overlapping, possibly lock-screen-blocked) validation
+        // published it. A settled invite arriving on the invitation feed thus
+        // still gets its undelivered verdict shown.
+        if (lockScreenActive()) return
+        val current = inviteHandlerViewModel.pendingInvitation.value
+        if (current?.data?.validationState == InvitationValidationState.NOT_SYNCED) {
+            showNotSyncedNotice()
+        }
+        inviteHandlerViewModel.takeUndeliveredVerdict { !lockScreenActive() }
+            ?.let { showInviteValidationDialog(it) }
+    }
+
+    /**
+     * SAFETY NET, not the primary surface: the invite tile itself already
+     * carries the "still syncing" text (accept_invitation_row.xml →
+     * join_dashpay_wait, shown while HistoryHeaderAdapter.isSynced is false),
+     * so a lightweight message is enough — no modal. Deliberately does NOT
+     * clear the invite: it must survive so processInvitation can re-validate
+     * it once the scan finishes. Shown once per launch so repeated sync-state
+     * emissions cannot turn it into a nag.
+     */
+    private fun showNotSyncedNotice() {
+        if (!notSyncedInviteNoticeShown) {
+            notSyncedInviteNoticeShown = true
+            Toast.makeText(
+                requireContext(),
+                R.string.invitation_not_synced_message,
+                Toast.LENGTH_LONG
+            ).show()
         }
     }
 
-    private suspend fun showInviteValidationDialog(invitation: InvitationLinkData) {
+    private suspend fun showInviteValidationDialog(pending: PendingInvitation) {
+        val invitation = pending.data
         when (invitation.validationState) {
             InvitationValidationState.INVALID -> {
                 InviteHandler(
                     requireActivity(),
                     viewModel.analytics
                 ).showInvalidInviteDialog(invitation.displayName)
-                // remove invite
-                inviteHandlerViewModel.clearInvitation()
+                // remove invite — only if it was not replaced in the meantime
+                inviteHandlerViewModel.clearInvitation(expectedGeneration = pending.generation)
             }
 
             InvitationValidationState.ALREADY_HAS_IDENTITY -> {
                 // show dialog
                 InviteHandler(requireActivity(), viewModel.analytics).showUsernameAlreadyDialog()
-                // remove invite
-                inviteHandlerViewModel.clearInvitation()
+                // remove invite — only if it was not replaced in the meantime
+                inviteHandlerViewModel.clearInvitation(expectedGeneration = pending.generation)
             }
 
             InvitationValidationState.ALREADY_HAS_REQUESTED_USERNAME -> {
                 // show dialog
                 InviteHandler(requireActivity(), viewModel.analytics).showContestedUsernameAlreadyDialog()
-                // remove invite
-                inviteHandlerViewModel.clearInvitation()
+                // remove invite — only if it was not replaced in the meantime
+                inviteHandlerViewModel.clearInvitation(expectedGeneration = pending.generation)
             }
 
             InvitationValidationState.VALID -> {
@@ -479,15 +666,11 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
 
             InvitationValidationState.ALREADY_CLAIMED -> {
                 InviteHandler(requireActivity(), viewModel.analytics).showInviteAlreadyClaimedDialog(invitation)
-                // remove invite
-                inviteHandlerViewModel.clearInvitation()
+                // remove invite — only if it was not replaced in the meantime
+                inviteHandlerViewModel.clearInvitation(expectedGeneration = pending.generation)
             }
 
             InvitationValidationState.NONE -> {
-
-            }
-
-            InvitationValidationState.NOT_SYNCED -> {
 
             }
 
@@ -502,7 +685,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
     }
 
     private fun onAcceptInvite() {
-        val invitation = inviteHandlerViewModel.invitation.value ?: return
+        val invitation = inviteHandlerViewModel.pendingInvitation.value?.data ?: return
         val createUsernameActivityIntent = CreateUsernameActivity.createIntentFromInvite(
             requireContext(),
             invitation,
@@ -511,21 +694,35 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         startActivity(createUsernameActivityIntent)
     }
 
-    private fun updateSyncState() {
-        val isSynced = viewModel.isBlockchainSynced.value
-        val percentage = viewModel.blockchainSyncPercentage.value
+    /**
+     * The single "Syncing N%" header — engine-agnostic (see L1SyncStatusService).
+     *
+     * Keyed on isFullySynced: the header must not disappear while the DashPay
+     * tail is still running (contact sync, the account-build drain, the
+     * coreHeight backfill), which on 11.10.86 lasted ~12 minutes past the
+     * point the L1 scan reported 100%. The PERCENTAGE stays the L1 figure, so
+     * that window reads "Syncing 100%" — still working, nearly done — rather
+     * than claiming the wallet is ready.
+     *
+     * Once synced the header disappears, including on a scan bounded by a
+     * wallet creation date: the home screen does not show "Synced from <date>".
+     * The Network Monitor screen still shows that date (SR-22).
+     */
+    private fun updateSyncState(status: L1SyncUiStatus) {
+        val isSynced = status.isFullySynced
+        val percentLabel = syncHeaderPercentLabel(status)
 
-        if (isSynced != null && isSynced) {
+        if (isSynced) {
             binding.syncing.isVisible = false
         } else {
             binding.syncing.isVisible = true
             var syncing = getString(R.string.syncing)
 
-            if (percentage == null || percentage == 0) {
+            if (percentLabel == null) {
                 syncing += "…"
                 binding.syncing.text = syncing
             } else {
-                val str = SpannableStringBuilder("$syncing $percentage%")
+                val str = SpannableStringBuilder("$syncing $percentLabel")
                 val start = syncing.length + 1
                 val end = str.length
                 str.setSpan(
@@ -541,6 +738,18 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
 
     fun scrollToTop() {
         binding.walletTransactionsList.scrollToPosition(0)
+    }
+
+    /** Names the active filter on the Filter button itself, e.g. "Filter: Received". */
+    private fun updateFilterButtonLabel(direction: TxFilterType) {
+        binding.transactionFilterBtn.text = when (direction) {
+            TxFilterType.ALL -> getString(R.string.explore_filter)
+            TxFilterType.SENT -> getString(R.string.filter_button_label, getString(R.string.sent_transactions))
+            TxFilterType.RECEIVED ->
+                getString(R.string.filter_button_label, getString(R.string.received_transactions))
+            TxFilterType.GIFT_CARD ->
+                getString(R.string.filter_button_label, getString(R.string.explore_filter_gift_cards))
+        }
     }
 
     private fun showTransactionList() {
@@ -559,12 +768,21 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
     private fun retryIdentityCreation(header: HistoryHeaderAdapter) {
         viewModel.blockchainIdentity.value?.let { blockchainIdentityData ->
             viewModel.logEvent(AnalyticsConstants.UsersContacts.CREATE_USERNAME_TRYAGAIN)
+            val route = identityRetryRoute(
+                blockchainIdentityData.creationStateErrorMessage,
+                blockchainIdentityData.restoring,
+                blockchainIdentityData.usingInvite
+            )
             // check to see if restoring or if an invite was used
-            if (blockchainIdentityData.restoring) {
+            if (route == IdentityRetryRoute.NEW_NAME) {
+                startActivity(CreateUsernameActivity.createIntentReuseTransaction(requireActivity(), blockchainIdentityData))
+            } else if (route == IdentityRetryRoute.NAME_ONLY) {
+                retryNameOnly(blockchainIdentityData)
+            } else if (route == IdentityRetryRoute.RESTORE) {
                 RestoreIdentityOperation(requireActivity().application)
                     .create(blockchainIdentityData.userId!!, true)
                     .enqueue()
-            } else if (!blockchainIdentityData.usingInvite) {
+            } else if (route == IdentityRetryRoute.LEGACY) {
                 requireActivity().startService(
                     CreateIdentityService.createIntentForRetry(
                         requireActivity(),
@@ -591,11 +809,49 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         }
     }
 
+    /**
+     * Sends a name-only retry's error back into the name-only retry with the requested names on
+     * record, after the cutover: never the restore worker, which would drop the replacement, nor
+     * CreateIdentityService, which would reset the identity and fund it again. A name that did
+     * land meanwhile is not submitted again there.
+     */
+    private fun retryNameOnly(blockchainIdentityData: BlockchainIdentityData) {
+        val identityId = blockchainIdentityData.userId
+        val username = blockchainIdentityData.username
+        viewLifecycleOwner.lifecycleScope.launch {
+            val accepted = identityId != null && username != null &&
+                transparentUsernameCreation.retryNameForExistingIdentity(
+                    identityId,
+                    username,
+                    blockchainIdentityData.usernameSecondary
+                )
+            if (!accepted && isAdded) {
+                Toast.makeText(
+                    requireContext(),
+                    blockchainIdentityData.creationStateErrorMessage,
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
+
     private fun openIdentityCreation() {
         viewModel.blockchainIdentity.value?.let { blockchainIdentityData ->
             if (blockchainIdentityData.creationStateErrorMessage != null) {
-                // are we restoring?
-                if (blockchainIdentityData.restoring) {
+                val route = identityRetryRoute(
+                    blockchainIdentityData.creationStateErrorMessage,
+                    blockchainIdentityData.restoring,
+                    blockchainIdentityData.usingInvite
+                )
+                if (route == IdentityRetryRoute.NEW_NAME) {
+                    // same as the Try again action: the name was lost, the user picks a new one
+                    startActivity(
+                        CreateUsernameActivity.createIntentReuseTransaction(requireActivity(), blockchainIdentityData)
+                    )
+                } else if (route == IdentityRetryRoute.NAME_ONLY) {
+                    retryNameOnly(blockchainIdentityData)
+                } else if (blockchainIdentityData.restoring) {
+                    // are we restoring?
                     RestoreIdentityOperation(requireActivity().application)
                         .create(blockchainIdentityData.userId!!, true)
                         .enqueue()
@@ -607,7 +863,11 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                                 blockchainIdentityData.creationState == IdentityCreationState.USERNAME_SECONDARY_REGISTERING) &&
                                 (errorMessage?.contains("Document transitions with duplicate unique properties") == true ||
                                         errorMessage?.contains("missing domain document for") == true ||
-                                errorMessage?.contains("DuplicateUniqueIndexError") == true)
+                                errorMessage?.contains("DuplicateUniqueIndexError") == true ||
+                                // The requested primary was lost to the pre-11.10.52
+                                // wrapper-adoption clobber (S22): the user must re-enter
+                                // it; the claimed-invite retry arm repairs the record.
+                                errorMessage?.contains("primary username was lost") == true)
                     if (needsNewUsername ||
                         // do we need this, cause the error could be due to a stale node
                         blockchainIdentityData.creationState == IdentityCreationState.REQUESTED_NAME_CHECKING &&
@@ -633,6 +893,17 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                 safeNavigate(WalletFragmentDirections.homeToSearchUser())
                 // hide "Hello Card" after first click
                 viewModel.dismissUsernameCreatedCard()
+            } else if (blockchainIdentityData.creationState == IdentityCreationState.VOTING &&
+                !blockchainIdentityData.usernameSecondary.isNullOrEmpty()
+            ) {
+                // DUAL creation welcome card (instant secondary usable while
+                // the contested primary is in voting): same first-click
+                // behavior as DONE, but the dismissal persists via the
+                // header's own pref — DONE_AND_DISMISS must not be written
+                // while the state machine is at VOTING (it would kill the
+                // More screen's voting tile).
+                safeNavigate(WalletFragmentDirections.homeToSearchUser())
+                header.dismissVotingDualHelloCard()
             } else {
                 // not possible to get here?
             }
@@ -644,3 +915,35 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         viewModel.joinDashPay()
     }
 }
+
+/** Where the home tile's retry sends an identity whose creation stopped with an error. */
+internal enum class IdentityRetryRoute { NEW_NAME, NAME_ONLY, RESTORE, LEGACY, INVITE }
+
+/** The route for [retryIdentityCreation] on the home tile. Pure, host-testable. */
+internal fun identityRetryRoute(
+    creationStateErrorMessage: String?,
+    restoring: Boolean,
+    usingInvite: Boolean
+): IdentityRetryRoute = when {
+    // the name is taken by someone else: retrying the same name cannot help, ask for a new one
+    SdkTransparentUsernameCreation.isNameOnlyRetryError(creationStateErrorMessage) &&
+        needsNewName(creationStateErrorMessage) -> IdentityRetryRoute.NEW_NAME
+    SdkTransparentUsernameCreation.isNameOnlyRetryError(creationStateErrorMessage) -> IdentityRetryRoute.NAME_ONLY
+    restoring -> IdentityRetryRoute.RESTORE
+    !usingInvite -> IdentityRetryRoute.LEGACY
+    else -> IdentityRetryRoute.INVITE
+}
+
+/**
+ * The failure says the requested name is taken (a duplicate, or a contest it is not part of):
+ * the user has to pick another name. Shared by the home tile's routing and the More screen;
+ * "primary username was lost" is the pre-11.10.52 wrapper-adoption clobber (S22).
+ */
+internal fun needsNewName(errorMessage: String?): Boolean = errorMessage != null && (
+    errorMessage.contains("Document transitions with duplicate unique properties") ||
+        errorMessage.contains("DuplicateUniqueIndexError") ||
+        errorMessage.contains("primary username was lost") ||
+        errorMessage.contains("Document Contest for vote_poll ContestedDocumentResourceVotePoll") ||
+        errorMessage.contains(Regex("does not have .* as a contender")) ||
+        errorMessage.contains("missing domain document for ")
+    )

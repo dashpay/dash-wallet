@@ -17,6 +17,7 @@
 package de.schildbach.wallet.ui
 
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Parcel
@@ -28,9 +29,7 @@ import androidx.activity.addCallback
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.core.view.isVisible
-import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.AutoLogout
@@ -58,12 +57,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.SecureActivity
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.LockScreenBroadcaster
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.common.ui.LockScreenAware
+import org.dash.wallet.common.ui.LockScreenHost
+import org.dash.wallet.common.ui.dismissDialogsForLockScreen
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dismissDialog
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
@@ -73,7 +73,7 @@ import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 @AndroidEntryPoint
-open class LockScreenActivity : SecureActivity() {
+open class LockScreenActivity : SecureActivity(), LockScreenHost {
 
     companion object {
         const val INTENT_EXTRA_KEEP_UNLOCKED = "LockScreenActivity.keep_unlocked"
@@ -86,7 +86,7 @@ open class LockScreenActivity : SecureActivity() {
 
     lateinit var alertDialog: AlertDialog
     @Inject lateinit var walletApplication: WalletApplication
-    @Inject lateinit var walletData: WalletDataProvider
+    @Inject lateinit var walletData: WalletData
     @Inject lateinit var lockScreenBroadcaster: LockScreenBroadcaster
     @Inject lateinit var configuration: Configuration
     @Inject lateinit var restartService: RestartService
@@ -101,8 +101,42 @@ open class LockScreenActivity : SecureActivity() {
     private lateinit var binding: ActivityLockScreenRootBinding
     private val pinLength by lazy { configuration.pinLength }
 
-    val lockScreenDisplayed: Boolean
-        get() = ::binding.isInitialized && binding.rootViewSwitcher.displayedChild == 0
+    /**
+     * False when onCreate took its early finish (no wallet, or a degraded
+     * launch) and never built the lock-screen UI. The activity is finishing,
+     * but the system can still call into it: a "user leaving" pause calls
+     * [onUserInteraction], which threw UninitializedPropertyAccessException on
+     * [binding] (a dash: link opened during a safe-mode retry). Everything that
+     * can run after that early finish and touches the UI checks this first.
+     */
+    private val lockScreenUiReady: Boolean
+        get() = ::binding.isInitialized
+
+    /**
+     * onCreate took its early finish: no wallet, or a degraded launch (which
+     * includes a safe-mode retry still loading). Set before that branch calls
+     * startActivity/finish, so subclass overrides of those see it too.
+     *
+     * THE SUBCLASS CONTRACT. Such an activity can be opened during a retry
+     * (a notification, a widget or shortcut, a link) or restored into a
+     * safe-mode process, and the system still calls into it after the early
+     * finish (pause, stop, destroy, user-leaving). Subclasses put their
+     * creation in [onCreateWithWallet], which is not called then, and every
+     * other callback they override checks this flag before touching their own
+     * UI or view models. A `by viewModels()` access creates the view model,
+     * and wallet-backed view models read the wallet on creation, which during
+     * a retry waits on the main thread for the whole parse.
+     */
+    protected var finishedForNoWallet: Boolean = false
+        private set
+
+    /**
+     * Without the lock-screen UI (see [lockScreenUiReady]) nothing is
+     * unlocked, so this reports locked: callers then skip the work meant for
+     * an unlocked wallet screen.
+     */
+    override val lockScreenDisplayed: Boolean
+        get() = !lockScreenUiReady || binding.rootViewSwitcher.displayedChild == 0
 
     private val _walletLocked = MutableStateFlow(true)
     val walletLocked = _walletLocked.asStateFlow()
@@ -141,30 +175,55 @@ open class LockScreenActivity : SecureActivity() {
     }
 
     protected var isLocked: Boolean = false
-
-    /**
-     * Set when [onCreate] gave up because there is no wallet. Lifecycle callbacks must check this
-     * rather than [isFinishing]: Activity.finish() only marks the activity finishing when the
-     * activity manager can finish it right away, so an activity finished mid-launch (for instance
-     * while a task is being restored) still reports isFinishing == false while it runs onStart().
-     */
-    protected var finishedWithoutWallet = false
-        private set
     private val shouldShowBackupReminder
         get() = configuration.remindBackupSeed && configuration.lastBackupSeedReminderMoreThan24hAgo()
     private val lockScreenDeactivatedListeners = arrayListOf<() -> Unit>()
 
     /**
-     * Subclasses must not override this - Hilt forbids making it final, but the whole body runs
-     * even when there is no wallet and the activity is already finishing. Override
-     * [onCreateWithWallet] instead.
+     * Subclasses must not override this; they override [onCreateWithWallet].
+     * Hilt forbids making it final (it overrides onCreate to inject the
+     * SavedStateHandle). A `return` here only leaves this method: a subclass
+     * override would carry on after its super.onCreate() call into a screen
+     * whose wallet is missing or unusable.
      */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        if (walletData.wallet == null) {
-            log.warn("no wallet, finishing {}", javaClass.simpleName)
-            finishedWithoutWallet = true
+        // Degraded FIRST, and the wallet only after it: during a safe-mode
+        // retry isWalletLoadDegraded answers at once, while reading the wallet
+        // waits on the main thread for the retry's parse (minutes on a large
+        // wallet), which is an input-dispatch ANR.
+        val degraded = walletApplication.isWalletLoadDegraded
+        if (degraded || walletData.wallet == null) {
+            // SAFE-MODE / DEGRADED LAUNCH. Android restores whatever activity
+            // was on top of the task straight into a fresh process, so any
+            // subclass of this class can be the FIRST activity of a launch
+            // whose wallet load was skipped (StartupBreadcrumbs safe mode) or
+            // failed. Joel's 12000012 report is exactly that: two ANRs armed
+            // safe mode, the next launch restored NetworkMonitorActivity, and
+            // it died in onCreate — which counts as another death before the
+            // main UI and re-arms safe mode, so the crash-loop breaker fed
+            // the loop it exists to break.
+            //
+            // OnboardingActivity is the only screen that owns the recovery
+            // (WalletApplication.retryWalletLoadAfterSafeMode) and the
+            // crash-report path, so send the user there instead of finishing
+            // into nothing. CLEAR_TASK drops the restored back stack, whose
+            // every entry would hit this same branch.
+            //
+            // Degraded also covers a recovered wallet that is in memory but
+            // not yet persisted: walletData.wallet is non-null, yet the
+            // wallet must not be used.
+            finishedForNoWallet = true
+            if (degraded) {
+                log.warn(
+                    "degraded launch: {} was restored without a usable wallet — routing to onboarding",
+                    javaClass.simpleName
+                )
+                if (redirectDegradedWallet(walletApplication)) return
+            } else {
+                log.warn("no wallet, finishing {}", javaClass.simpleName)
+            }
             finish()
             return
         }
@@ -185,21 +244,47 @@ open class LockScreenActivity : SecureActivity() {
     }
 
     /**
-     * Subclasses override this instead of [onCreate]. It runs at the point where onCreate() used
-     * to hand control back to the subclass, but only once the lock screen is set up and a wallet
-     * is known to exist - when there is none, the activity is finished and this is never called,
-     * so overrides can rely on [WalletDataProvider.wallet] being non-null.
+     * Subclasses override this instead of [onCreate]. It runs where onCreate
+     * used to hand control back to the subclass, once the lock screen is set
+     * up, and only with a usable wallet: when the launch is degraded (see
+     * [WalletApplication.isWalletLoadDegraded]) or there is no wallet,
+     * onCreate redirects or finishes and never calls it, and
+     * [finishedForNoWallet] is set for the remaining callbacks.
      */
     protected open fun onCreateWithWallet(savedInstanceState: Bundle?) = Unit
 
+    /**
+     * These two wrap the subclass's content view in the lock-screen root, so
+     * they need [binding] — which [onCreate] does NOT inflate on the
+     * no-wallet path above.
+     *
+     * They used to guard on `isFinishing` and RETURN, which made
+     * `setContentView` a silent no-op: the subclass's `onCreate` carried on
+     * believing its layout was installed, and the next `findViewById`
+     * returned null. Three activities dereference that immediately
+     * (`NetworkMonitorActivity` line 84, `AddressBookActivity` line 75,
+     * `BlockInfoActivity` line 59, all on `R.id.toolbar`), so a degraded
+     * launch turned into an NPE in `onCreate`.
+     *
+     * The real precondition is "the lock-screen root exists", not "we are
+     * finishing" — and when it does not, the honest answer is AppCompat's own
+     * `setContentView`. The activity is finishing either way; this only
+     * guarantees that a subclass which keeps running finds its own views
+     * instead of null.
+     */
     override fun setContentView(contentViewResId: Int) {
-        if (finishedWithoutWallet) return
+        if (!lockScreenUiReady) {
+            super.setContentView(contentViewResId)
+            return
+        }
         setContentView(layoutInflater.inflate(contentViewResId, null))
     }
 
     override fun setContentView(contentView: View?) {
-        // not isFinishing, which can still be false here - see finishedWithoutWallet
-        if (finishedWithoutWallet) return
+        if (!lockScreenUiReady) {
+            if (contentView != null) super.setContentView(contentView)
+            return
+        }
         binding.regularContent.removeAllViews()
         binding.regularContent.addView(contentView)
     }
@@ -218,6 +303,7 @@ open class LockScreenActivity : SecureActivity() {
 
     override fun onUserInteraction() {
         super.onUserInteraction()
+        if (!lockScreenUiReady) return // early finish in onCreate
 
         if (!lockScreenDisplayed) {
             resetAutoLogoutTimer()
@@ -241,10 +327,24 @@ open class LockScreenActivity : SecureActivity() {
 
     override fun onStart() {
         super.onStart()
+        // Early finish in onCreate: no UI to lock or unlock, and no wallet to
+        // start the blockchain service for.
+        if (!lockScreenUiReady) return
 
-        if (finishedWithoutWallet) {
-            // onCreate() gave up for having no wallet, but the system still starts the activity -
-            // everything below touches the lock screen binding it never inflated
+        if (isFinishing || redirectDegradedWallet(walletApplication)) return
+
+        // A Reset Wallet is destroying this wallet's data. Nothing below may
+        // run: not the unlock (its keys are being deleted), not
+        // startBlockchainService() (the service is shutting down to perform
+        // the wipe), and above all not the wallet screen itself. The reset
+        // clears the task to onboarding when it starts, but the system can
+        // still restore a wallet activity — after a process death mid-wipe, or
+        // from recents — and on S22 the auto-logout did exactly this: it put
+        // the lock screen up at 22:39:11, the user authenticated, and landed
+        // back on a wallet whose file and keystore secrets were already gone.
+        if (walletApplication.isWipeInProgress) {
+            log.warn("reset in progress — leaving {} for onboarding", javaClass.simpleName)
+            restartService.performRestart(this, true)
             return
         }
 
@@ -394,8 +494,28 @@ open class LockScreenActivity : SecureActivity() {
                 }
                 Status.SUCCESS -> {
                     if (biometricHelper.requiresEnabling) {
+                        // Fully SUSPEND auto-logout for the DURATION of the biometric enroll,
+                        // not merely clear the "locked" flags. Clearing deviceWasLocked /
+                        // keepLockedUntilPinEntered alone is not enough: shouldLogout() also
+                        // returns true via (autoLogoutEnabled && logoutTimeExceeded) — when the
+                        // system enroll dialog takes focus the app counts as backgrounded, so the
+                        // next auto-logout timer tick fires onLogout() -> biometricHelper
+                        // .cancelPending() and kills the live BiometricPrompt (ERROR_CANCELED).
+                        // turnOffAutoLogout() stops the timer outright so no tick can fire during
+                        // enrollment; turnOnAutoLogout() in finally always restores it, even if the
+                        // enroll throws. The flag clears stay as belt-and-suspenders (they are
+                        // normally cleared in onCorrectPin, which we defer until AFTER enrollment).
+                        // onCorrectPin still runs LAST so wallet content is not revealed until
+                        // enrollment finishes.
+                        autoLogout.deviceWasLocked = false
+                        autoLogout.keepLockedUntilPinEntered = false
+                        turnOffAutoLogout()
                         lifecycleScope.launch {
-                            biometricHelper.enableBiometricReminder(this@LockScreenActivity, it.data!!)
+                            try {
+                                biometricHelper.enableBiometricReminder(this@LockScreenActivity, it.data!!)
+                            } finally {
+                                turnOnAutoLogout()
+                            }
                             onCorrectPin(it.data)
                         }
                     } else {
@@ -439,11 +559,14 @@ open class LockScreenActivity : SecureActivity() {
         } else {
             binding.rootViewSwitcher.displayedChild = 1
             _walletLocked.value = false
+            // After the content is shown again: a listener may now re-show what the lock dismissed.
+            lockScreenBroadcaster.notifyUnlocked()
         }
     }
 
     private fun setLockState(suggestedState: State) {
         markWalletLocked()
+        if (!lockScreenUiReady) return // early finish in onCreate
         binding.lockScreen.apply {
             actionScanToPay.isEnabled = true
             var lockState = suggestedState
@@ -591,13 +714,15 @@ open class LockScreenActivity : SecureActivity() {
         }
     }
 
+    // Called once the lock screen is displayed (lockScreenDisplayed is true): handleWhenResumed
+    // reads it when a dialog this dismisses reports no answer, to ask again on unlock.
     private fun handleLockScreenActivated() {
         markWalletLocked()
         if (this::alertDialog.isInitialized) {
             alertDialog.dismissDialog()
         }
         lockScreenBroadcaster.activatingLockScreen.call()
-        notifyAndDismissFragments(supportFragmentManager)
+        dismissDialogsForLockScreen(supportFragmentManager)
         onLockScreenActivated()
     }
 
@@ -608,26 +733,6 @@ open class LockScreenActivity : SecureActivity() {
         lockScreenDeactivatedListeners.forEach {
             it.invoke()
         }
-    }
-
-    private fun notifyAndDismissFragments(fragmentManager: FragmentManager) {
-        fragmentManager.fragments
-            .takeIf { it.isNotEmpty() }
-            ?.forEach { fragment ->
-                // check to see if the activity is valid and fragment is added to its activity
-                if (fragment.activity != null && fragment.isAdded) {
-                    if (fragment is LockScreenAware) {
-                        fragment.onLockScreenActivated()
-                    }
-
-                    if (fragment is DialogFragment) {
-                        fragment.dialog?.hide()
-                        fragment.dismissAllowingStateLoss()
-                    } else {
-                        notifyAndDismissFragments(fragment.childFragmentManager)
-                    }
-                }
-            }
     }
 
     private fun dismissKeyboard() {
