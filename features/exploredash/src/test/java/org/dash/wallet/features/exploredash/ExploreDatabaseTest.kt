@@ -23,16 +23,25 @@ import android.database.sqlite.SQLiteException
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import androidx.work.Data
+import androidx.work.WorkerParameters
 import junit.framework.TestCase.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import net.lingala.zip4j.ZipFile
 import net.lingala.zip4j.model.ZipParameters
 import net.lingala.zip4j.model.enums.AesKeyStrength
 import net.lingala.zip4j.model.enums.EncryptionMethod
+import org.dash.wallet.features.exploredash.repository.ExploreDataSyncStatus
+import org.dash.wallet.features.exploredash.repository.ExploreRepository
 import org.dash.wallet.features.exploredash.repository.GCExploreDatabase
 import org.dash.wallet.features.exploredash.utils.ExploreConfig
 import org.dash.wallet.features.exploredash.utils.ExploreDatabasePrefs
@@ -40,12 +49,15 @@ import org.junit.*
 import org.junit.runner.RunWith
 import org.junit.runners.MethodSorters
 import org.mockito.ArgumentMatchers.anyLong
+import org.mockito.Mockito
 import org.mockito.kotlin.*
 import org.robolectric.RobolectricTestRunner
 import java.io.File
 import java.io.IOException
 import java.lang.IllegalArgumentException
 import java.lang.RuntimeException
+import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.atomic.AtomicInteger
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -306,6 +318,74 @@ class ExploreDatabaseTest {
         }
         zipExploreDb(appContext.getDatabasePath(innerName), repository.getUpdateFile())
         appContext.deleteDatabase(innerName)
+    }
+
+    /** A sync run as on an upgrade: the bundled asset is swapped in first, then the download. */
+    private class TwoSwapRepository(
+        private val files: GCExploreDatabase,
+        private val asset: File,
+        private val remote: File,
+        private val beforeDownload: suspend () -> Unit
+    ) : ExploreRepository by files {
+        override suspend fun preloadFromAssetsInto(dbUpdateFile: File, checkTestDB: Boolean): Boolean {
+            asset.copyTo(dbUpdateFile, overwrite = true)
+            return true
+        }
+
+        override suspend fun getRemoteTimestamp(): Long = files.getTimestamp(asset) + 1_000
+
+        override suspend fun download() {
+            beforeDownload()
+            remote.copyTo(files.getUpdateFile(), overwrite = true)
+        }
+    }
+
+    @Test
+    fun daoFromBeforeATwoSwapSync_readsTheSecondFileWhenToldOfTheNewCatalog() = runBlocking {
+        val config = updateConfig()
+        val files = GCExploreDatabase(appContext, config, mock(), mock())
+        val asset = File(appContext.cacheDir, "asset.zip")
+        val remote = File(appContext.cacheDir, "remote.zip")
+        stageUpdateWithCountries(files, "US")
+        files.getUpdateFile().copyTo(asset, overwrite = true)
+        stageUpdateWithCountries(files, "US", "GB")
+        files.getUpdateFile().copyTo(remote, overwrite = true)
+        files.getUpdateFile().delete()
+
+        // Hilt hands out the DAOs of the first instance for the whole session
+        val dao = ExploreDatabase.getAppDatabase(appContext, config).merchantDao()
+        val syncStatus = ExploreDataSyncStatus()
+        val handledGeneration = AtomicInteger(-1)
+        val countriesRead = CopyOnWriteArrayList<List<String>>()
+        val reader = launch(Dispatchers.IO) {
+            syncStatus.getCatalogGeneration().collect { generation ->
+                countriesRead.add(dao.getCountries().sorted())
+                handledGeneration.set(generation)
+            }
+        }
+        suspend fun awaitReader() = withTimeout(10_000) {
+            while (handledGeneration.get() != syncStatus.getCatalogGeneration().first()) {
+                delay(10)
+            }
+        }
+        awaitReader()
+        val repository = TwoSwapRepository(files, asset, remote) { awaitReader() }
+        val worker = ExploreSyncWorker(
+            appContext,
+            mock<WorkerParameters>(defaultAnswer = Mockito.RETURNS_DEEP_STUBS) {
+                on { inputData } doReturn Data.EMPTY
+            },
+            mock(),
+            repository,
+            syncStatus,
+            config
+        )
+
+        worker.doWork()
+        awaitReader()
+        reader.cancel()
+
+        assertEquals(listOf(listOf(), listOf("GB", "US")), countriesRead.toList())
     }
 
     @Test

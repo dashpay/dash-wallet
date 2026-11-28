@@ -79,6 +79,7 @@ class ExploreSyncWorker @AssistedInject constructor(
         var remoteDataTimestamp = 0L
         var preloadedDbTimestamp = 0L
         var databasePrefs = exploreConfig.exploreDatabasePrefs.first()
+        var isCatalogReplaced = false
 
         try {
             syncStatus.setSyncProgress(0.0)
@@ -105,7 +106,7 @@ class ExploreSyncWorker @AssistedInject constructor(
                     // forces migrations on an old user_version and risks crashing.
                     if (localDbTimestamp == 0L || localDbTimestamp < preloadedDbTimestamp) {
                         ExploreDatabase.updateDatabase(appContext, exploreRepository, exploreConfig)
-                        syncStatus.setCatalogReplaced()
+                        isCatalogReplaced = true
                         // The snapshot from the start of doWork() is stale by now: finalizeUpdate
                         // has written the new timestamp and schema version.
                         exploreConfig.updateExploreDatabasePrefs {
@@ -143,7 +144,7 @@ class ExploreSyncWorker @AssistedInject constructor(
                 syncStatus.setSyncProgress(80.0)
 
                 ExploreDatabase.updateDatabase(appContext, exploreRepository, exploreConfig)
-                syncStatus.setCatalogReplaced()
+                isCatalogReplaced = true
             }
 
             log.info("sync explore db finished, took $timeInMillis ms")
@@ -164,6 +165,12 @@ class ExploreSyncWorker @AssistedInject constructor(
             syncStatus.setSyncError(ex)
             exploreConfig.updateExploreDatabasePrefs { it.copy(failedSyncAttempts = it.failedSyncAttempts + 1) }
             return@withContext Result.failure()
+        } finally {
+            // Told once, after the last swap of the run: readers that reload between the asset
+            // swap and the download swap would stay on the file the second swap deletes.
+            if (isCatalogReplaced) {
+                syncStatus.setCatalogReplaced()
+            }
         }
 
         exploreConfig.updateExploreDatabasePrefs { it.copy(failedSyncAttempts = 0) }

@@ -864,7 +864,8 @@ class ExploreViewModel @Inject constructor(
                     userLat ?: 0.0,
                     userLng ?: 0.0,
                     onlineFirst,
-                    getCountryFilter(filterMode)
+                    getCountryFilter(filterMode),
+                    location.value.ifBlank { Locale.getDefault().country }
                 )
             }.flow.map { data ->
                 val excludeProvider = getExcludeProvider()

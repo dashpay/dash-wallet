@@ -75,13 +75,12 @@ abstract class ExploreDatabase : RoomDatabase() {
         private val log = LoggerFactory.getLogger(ExploreDatabase::class.java)
         private var instance: ExploreDatabase? = null
 
-        // Held only while a file is opened or swapped in, never during a download
+        // Held only to close, rename and open: a caller on the main thread may be waiting for it,
+        // so the download and the rebuild from the bundled asset stay outside.
         private val swapMutex = Mutex()
 
         suspend fun getAppDatabase(context: Context, exploreConfig: ExploreConfig): ExploreDatabase {
-            return swapMutex.withLock {
-                instance ?: open(context, exploreConfig).also { instance = it }
-            }
+            return openTracked(context, exploreConfig) {}
         }
 
         suspend fun updateDatabase(
@@ -90,13 +89,37 @@ abstract class ExploreDatabase : RoomDatabase() {
             exploreConfig: ExploreConfig
         ) {
             log.info("force update explore db")
-            // Null the field before closing / before calling update so that if either
-            // throws, callers don't get a handle to a closed RoomDatabase. If update
-            // succeeds, instance is reassigned to the fresh DB.
-            val previous = instance
-            instance = null
-            previous?.close()
-            instance = update(context, repository, exploreConfig)
+            stageUpdate(context, repository)
+            openTracked(context, exploreConfig) {
+                // Cleared before the close and the swap: if either throws, nobody is handed a
+                // closed database. Under the lock nobody opens the file that is being replaced.
+                val previous = instance
+                instance = null
+                previous?.close()
+                promoteStagingToProduction(context)
+                // Recorded only once the new data is the production database, so a failed update
+                // is downloaded again. It comes before the open, whose recovery resets the timestamp.
+                repository.finalizeUpdate()
+            }
+        }
+
+        private suspend fun openTracked(
+            context: Context,
+            exploreConfig: ExploreConfig,
+            swap: suspend () -> Unit
+        ): ExploreDatabase {
+            val opened = swapMutex.withLock {
+                swap()
+                instance ?: openOrDiscard(context, exploreConfig)?.also { instance = it }
+            }
+            if (opened != null) {
+                return opened
+            }
+
+            val isAssetStaged = stageAsset(context, exploreConfig)
+            return swapMutex.withLock {
+                instance ?: openRecovered(context, isAssetStaged).also { instance = it }
+            }
         }
 
         @VisibleForTesting
@@ -106,7 +129,8 @@ abstract class ExploreDatabase : RoomDatabase() {
             previous?.close()
         }
 
-        private suspend fun open(context: Context, exploreConfig: ExploreConfig): ExploreDatabase {
+        /** Opens the production file; one that cannot be opened is deleted and null is returned. */
+        private suspend fun openOrDiscard(context: Context, exploreConfig: ExploreConfig): ExploreDatabase? {
             fixObsoleteName(context, exploreConfig)
 
             return try {
@@ -129,24 +153,37 @@ abstract class ExploreDatabase : RoomDatabase() {
                 log.error("explore DB failed to open, recovering", ex)
                 cleanupPreviousDatabases(context)
                 clearLocalTimestamp(exploreConfig)
-                try {
-                    // Best effort: rebuild from the bundled asset so the user gets data
-                    // back immediately. If the asset itself is broken (bad schema, failing
-                    // migrations, missing entirely in the test classpath, etc.), fall
-                    // through to the empty rebuild — the sync worker will populate later.
-                    rebuildFromAsset(context, exploreConfig)
-                } catch (preloadEx: Exception) {
-                    log.error("asset preload failed during recovery, returning empty DB", preloadEx)
-                    cleanupPreviousDatabases(context)
-                    buildAndProbe(context)
-                }
+                null
             }
         }
 
-        private suspend fun rebuildFromAsset(
-            context: Context,
-            exploreConfig: ExploreConfig
-        ): ExploreDatabase {
+        // Best effort: the bundled asset gives the user data back immediately. If the asset itself
+        // is broken (bad schema, failing migrations, missing entirely in the test classpath, etc.),
+        // an empty database is built instead and the sync worker populates it later.
+        private suspend fun stageAsset(context: Context, exploreConfig: ExploreConfig): Boolean {
+            return try {
+                buildStagingFromAsset(context, exploreConfig)
+                true
+            } catch (ex: Exception) {
+                log.error("asset preload failed during recovery, returning empty DB", ex)
+                false
+            }
+        }
+
+        private fun openRecovered(context: Context, isAssetStaged: Boolean): ExploreDatabase {
+            if (isAssetStaged) {
+                try {
+                    promoteStagingToProduction(context)
+                    return buildAndProbe(context)
+                } catch (ex: Exception) {
+                    log.error("recovered asset DB failed to open, returning empty DB", ex)
+                }
+            }
+            cleanupPreviousDatabases(context)
+            return buildAndProbe(context)
+        }
+
+        private suspend fun buildStagingFromAsset(context: Context, exploreConfig: ExploreConfig) {
             // zip4j needs a File for AES-protected zips (random access for the password
             // path), so spool the asset into the cache dir first.
             val assetName = pickAssetName(context, exploreConfig)
@@ -186,7 +223,7 @@ abstract class ExploreDatabase : RoomDatabase() {
                     .build()
                 try {
                     // Force open: surfaces schema mismatch, migration failure, etc. now
-                    // (so the outer try/catch in open() can fall back to empty rebuild).
+                    // (so stageAsset() can fall back to the empty rebuild).
                     val supportDb = staging.openHelper.writableDatabase
                     if (!hasExpectedData(supportDb)) {
                         throw SQLiteException("asset DB has empty merchant or atm")
@@ -195,9 +232,7 @@ abstract class ExploreDatabase : RoomDatabase() {
                     staging.close()
                 }
 
-                promoteStagingToProduction(context)
-                log.info("recovered explore DB from bundled asset {}", assetName)
-                return buildAndProbe(context)
+                log.info("staged the explore DB from bundled asset {}", assetName)
             } finally {
                 cacheZip.delete()
             }
@@ -262,11 +297,7 @@ abstract class ExploreDatabase : RoomDatabase() {
             exploreConfig.updateExploreDatabasePrefs { it.copy(localDbTimestamp = 0L) }
         }
 
-        private suspend fun update(
-            context: Context,
-            repository: ExploreRepository,
-            exploreConfig: ExploreConfig
-        ): ExploreDatabase {
+        private suspend fun stageUpdate(context: Context, repository: ExploreRepository) {
             // Clear any leftover staging file from a previously interrupted update.
             context.deleteDatabase(EXPLORE_DB_STAGING_NAME)
 
@@ -281,21 +312,6 @@ abstract class ExploreDatabase : RoomDatabase() {
             // the production DB on disk is left untouched.
             val staging = preloadAndOpen(dbBuilder, repository, dbUpdateFile)
             staging.close()
-
-            return swapMutex.withLock { promoteAndOpen(context, repository, exploreConfig) }
-        }
-
-        private suspend fun promoteAndOpen(
-            context: Context,
-            repository: ExploreRepository,
-            exploreConfig: ExploreConfig
-        ): ExploreDatabase {
-            promoteStagingToProduction(context)
-            // Recorded only once the new data is the production database, so a failed update is
-            // downloaded again. It comes before open() because a recovery there resets the timestamp.
-            repository.finalizeUpdate()
-
-            return open(context, exploreConfig)
         }
 
         private fun promoteStagingToProduction(context: Context) {

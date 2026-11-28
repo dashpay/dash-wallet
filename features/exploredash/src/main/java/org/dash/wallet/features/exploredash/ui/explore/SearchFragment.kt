@@ -930,13 +930,13 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     }
 
     private fun shouldShowFiltersPanel(): Boolean {
-        return viewModel.selectedItem.value == null &&
-            viewModel.isLocationEnabled.value == true &&
+        val hasLocationFilters = viewModel.isLocationEnabled.value == true &&
             (
                 isPhysicalSearch || viewModel.appliedFilters.value.payment.isNotEmpty() ||
-                    viewModel.appliedFilters.value.territory.isNotEmpty() ||
-                    viewModel.appliedCountry.isNotEmpty()
+                    viewModel.appliedFilters.value.territory.isNotEmpty()
                 )
+        return viewModel.selectedItem.value == null &&
+            (hasLocationFilters || viewModel.appliedCountry.isNotEmpty())
     }
 
     private fun openFilters() {

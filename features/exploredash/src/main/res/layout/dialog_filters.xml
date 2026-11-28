@@ -107,6 +107,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="15dp"
                 android:visibility="gone"
+                android:importantForAccessibility="no"
                 android:text="@string/explore_country" />
 
             <androidx.constraintlayout.widget.ConstraintLayout

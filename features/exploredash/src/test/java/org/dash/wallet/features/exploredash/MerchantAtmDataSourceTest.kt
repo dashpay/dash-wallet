@@ -31,7 +31,6 @@ import org.dash.wallet.features.exploredash.ui.explore.DenomOption
 import org.junit.Test
 import org.mockito.ArgumentMatchers.anyString
 import org.mockito.kotlin.*
-import java.util.Locale
 
 class TestPagingSource : PagingSource<Int, MerchantInfo>() {
     override fun getRefreshKey(state: PagingState<Int, MerchantInfo>): Int? {
@@ -89,7 +88,7 @@ class MerchantDaoTest {
             } doReturn TestPagingSource()
         }
     private val giftCardProvidersMock = mock<GiftCardProviderDao>()
-    private val homeCountry = Locale.getDefault().country
+    private val homeCountry = "CA"
     private val dataSource = MerchantAtmDataSource(merchantDaoMock, atmDaoMock, giftCardProvidersMock)
 
     @Test
@@ -117,7 +116,8 @@ class MerchantDaoTest {
             0.0,
             0.0,
             false,
-            "GB"
+            "GB",
+            homeCountry
         )
 
         verify(merchantDaoMock).pagingGetGrouped(requiredOnlineTypes, "", "", "", "GB", false, 0.0, 0.0, homeCountry)
@@ -139,7 +139,8 @@ class MerchantDaoTest {
             0.0,
             0.0,
             false,
-            "GB"
+            "GB",
+            homeCountry
         )
 
         verify(dataSourceSpy).sanitizeQuery(query)
@@ -162,7 +163,8 @@ class MerchantDaoTest {
         // pagingGetByCoordinates method ---
         val bounds = GeoBounds(20.0, 21.0, 22.0, 23.0, 0.0, 0.0)
         dataSourceSpy.observeMerchantsPaging(
-            "", "", MerchantType.PHYSICAL, "", DenomOption.Both, "", bounds, SortOption.Name, 0.0, 0.0, false, "GB"
+            "", "", MerchantType.PHYSICAL, "", DenomOption.Both, "", bounds, SortOption.Name, 0.0, 0.0, false, "GB",
+            homeCountry
         )
 
         verify(merchantDaoMock)
@@ -188,7 +190,8 @@ class MerchantDaoTest {
         reset(merchantDaoMock)
 
         dataSourceSpy.observeMerchantsPaging(
-            query, "", MerchantType.PHYSICAL, "", DenomOption.Both, "", bounds, SortOption.Name, 0.0, 0.0, false, "GB"
+            query, "", MerchantType.PHYSICAL, "", DenomOption.Both, "", bounds, SortOption.Name, 0.0, 0.0, false, "GB",
+            homeCountry
         )
 
         verify(dataSourceSpy).sanitizeQuery(query)
@@ -217,7 +220,8 @@ class MerchantDaoTest {
         val territory = "Kansas"
 
         dataSourceSpy.observeMerchantsPaging(
-            "", territory, MerchantType.BOTH, "", DenomOption.Both, "", bounds, SortOption.Name, 0.0, 0.0, false, "GB"
+            "", territory, MerchantType.BOTH, "", DenomOption.Both, "", bounds, SortOption.Name, 0.0, 0.0, false, "GB",
+            homeCountry
         )
 
         verify(merchantDaoMock)
@@ -241,7 +245,8 @@ class MerchantDaoTest {
             0.0,
             0.0,
             false,
-            "GB"
+            "GB",
+            homeCountry
         )
 
         verify(dataSourceSpy).sanitizeQuery(query)
@@ -278,7 +283,8 @@ class MerchantDaoTest {
 
         dataSourceSpy.observeMerchantsPaging(
             "", "", MerchantType.BOTH, "", DenomOption.Both, "", GeoBounds.noBounds,
-            SortOption.Name, 0.0, 0.0, false, "GB"
+            SortOption.Name, 0.0, 0.0, false, "GB",
+            homeCountry
         )
 
         verify(merchantDaoMock)
@@ -301,7 +307,8 @@ class MerchantDaoTest {
             0.0,
             0.0,
             false,
-            "GB"
+            "GB",
+            homeCountry
         )
 
         verify(dataSourceSpy).sanitizeQuery(query)

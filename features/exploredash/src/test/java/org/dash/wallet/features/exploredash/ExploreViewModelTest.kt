@@ -1304,6 +1304,51 @@ class ExploreViewModelTest {
     }
 
     @Test
+    fun pagedList_isOrderedAroundTheResolvedUserCountry() {
+        runBlocking {
+            val network = mock<NetworkStateInt> {
+                on { isConnected } doReturn MutableStateFlow(true)
+                on { observeCountryFromIP() } doReturn flowOf("JP")
+            }
+            val dataSource = mock<ExploreDataSource> {
+                onBlocking { getMerchantCountries() } doReturn listOf("US", "GB")
+                onBlocking {
+                    getMerchantsResultCount(any(), any(), any(), any(), any(), any(), any(), any())
+                } doReturn 1
+                on {
+                    observeMerchantsPaging(
+                        any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()
+                    )
+                } doAnswer { TestPagingSource() }
+            }
+            val locationMock = mock<UserLocationStateInt> {
+                on { getRadiusBounds(any(), any(), any()) } doReturn GeoBounds.noBounds
+            }
+            val viewModel = ExploreViewModel(
+                dataSource,
+                locationMock,
+                syncStatusOf(MutableStateFlow(Resource.success(100.0))),
+                network,
+                mockPreferences,
+                mock<AnalyticsService>()
+            ).also { it.init(ExploreTopic.Merchants) }
+            kotlinx.coroutines.delay(200)
+            viewModel.setFilterMode(FilterMode.All)
+            viewModel.searchBounds = GeoBounds.noBounds
+            kotlinx.coroutines.delay(1000)
+
+            // Only the order follows the user's country: the list itself still shows every country
+            verify(dataSource, atLeastOnce()).observeMerchantsPaging(
+                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), eq(""), eq("JP")
+            )
+            verify(dataSource, never()).observeMerchantsPaging(
+                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(),
+                eq(Locale.getDefault().country)
+            )
+        }
+    }
+
+    @Test
     fun onlyASyncThatReplacedTheDatabase_readsTheListCountAndMapAgain() {
         runBlocking {
             val progress = MutableStateFlow(Resource.loading(50.0))
@@ -1315,7 +1360,7 @@ class ExploreViewModelTest {
                 } doReturn 1
                 on {
                     observeMerchantsPaging(
-                        any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()
+                        any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()
                     )
                 } doAnswer { TestPagingSource() }
                 on { observePhysicalMerchants(any(), any(), any(), any(), any(), any(), any(), any()) } doReturn
@@ -1344,7 +1389,7 @@ class ExploreViewModelTest {
             verify(dataSource, times(1))
                 .observePhysicalMerchants(any(), any(), any(), any(), any(), any(), any(), any())
             verify(dataSource, times(1)).observeMerchantsPaging(
-                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()
+                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()
             )
 
             // The sync found the local data up to date: the list on screen stays as it is
@@ -1356,7 +1401,7 @@ class ExploreViewModelTest {
             verify(dataSource, times(1))
                 .observePhysicalMerchants(any(), any(), any(), any(), any(), any(), any(), any())
             verify(dataSource, times(1)).observeMerchantsPaging(
-                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()
+                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()
             )
 
             catalogGeneration.value = 1
@@ -1369,7 +1414,7 @@ class ExploreViewModelTest {
             verify(dataSource, times(2))
                 .observePhysicalMerchants(any(), any(), any(), any(), any(), any(), any(), any())
             verify(dataSource, times(2)).observeMerchantsPaging(
-                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()
+                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()
             )
             mapJob.cancel()
         }

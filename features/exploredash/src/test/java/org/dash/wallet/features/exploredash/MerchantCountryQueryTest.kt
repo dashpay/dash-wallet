@@ -37,7 +37,6 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import java.util.Locale
 
 /**
  * Gift card rows carry a country; pay-with-Dash rows and rows from a database older than
@@ -118,7 +117,8 @@ class MerchantCountryQueryTest {
             0.0,
             0.0,
             false,
-            country
+            country,
+            ""
         ).ids()
 
     private suspend fun counted(type: String, query: String, country: String): Int =
@@ -134,12 +134,14 @@ class MerchantCountryQueryTest {
             insert("${country.lowercase()}-same", type, "gift card", "'$country'", "''", "Texas", "Same")
         }
         insert("none-same", type, "gift card", "NULL", "NULL", "Texas", "Same")
+        insert("blank-same", type, "gift card", "''", "''", "Texas", "Same")
     }
 
     private suspend fun sameNamedListed(
         type: String,
         query: String,
         sortOption: SortOption,
+        homeCountry: String,
         bounds: GeoBounds = GeoBounds.noBounds,
         territory: String = ""
     ): List<String> =
@@ -155,67 +157,57 @@ class MerchantCountryQueryTest {
             10.0,
             10.0,
             false,
-            ""
+            "",
+            homeCountry
         ).sameNamedInOrder()
 
-    private fun <T> withDeviceCountry(country: String, block: suspend () -> T): T {
-        val previous = Locale.getDefault()
-        Locale.setDefault(Locale("en", country))
-        return try {
-            runBlocking { block() }
-        } finally {
-            Locale.setDefault(previous)
-        }
-    }
-
-    private val britishDeviceOrder = listOf("gb-same", "us-same", "none-same", "de-same", "fr-same")
-    private val otherDeviceOrder = listOf("us-same", "none-same", "de-same", "fr-same", "gb-same")
+    private val britishOrder = listOf("gb-same", "us-same", "none-same", "blank-same", "de-same", "fr-same")
+    private val noHomeOrder = listOf("us-same", "none-same", "blank-same", "de-same", "fr-same", "gb-same")
 
     @Test
-    fun sameNamedMerchants_listTheDeviceCountryFirstThenUsThenByCode() {
+    fun sameNamedMerchants_listTheHomeCountryFirstThenUsThenByCode() = runBlocking {
         insertSameNamedMerchants("online")
         for (query in listOf("", "Same")) {
             for (type in listOf(MerchantType.ONLINE, "")) {
                 for (sortOption in listOf(SortOption.Name, SortOption.Discount)) {
                     val case = "query '$query', type '$type', $sortOption"
-                    assertEquals(
-                        case,
-                        britishDeviceOrder,
-                        withDeviceCountry("GB") { sameNamedListed(type, query, sortOption) }
-                    )
-                    assertEquals(
-                        case,
-                        otherDeviceOrder,
-                        withDeviceCountry("JP") { sameNamedListed(type, query, sortOption) }
-                    )
+                    assertEquals(case, britishOrder, sameNamedListed(type, query, sortOption, "GB"))
+                    assertEquals(case, noHomeOrder, sameNamedListed(type, query, sortOption, "JP"))
+                    // No home country: rows with a blank country must not be taken for it
+                    assertEquals(case, noHomeOrder, sameNamedListed(type, query, sortOption, ""))
                 }
                 assertEquals(
                     "the count must match the list for query '$query', type '$type'",
-                    runBlocking { listed(type, query, "") }.size,
-                    runBlocking { counted(type, query, "") }
+                    listed(type, query, "").size,
+                    counted(type, query, "")
                 )
             }
         }
     }
 
     @Test
-    fun sameNamedStores_keepThatOrderNearbyAndInATerritory() {
+    fun sameNamedStores_keepThatOrderNearbyAndInATerritory() = runBlocking {
         insertSameNamedMerchants("physical")
         val around = GeoBounds(11.0, 11.0, 9.0, 9.0, 10.0, 10.0)
+        val physical = MerchantType.PHYSICAL
         for (query in listOf("", "Same")) {
-            assertEquals(
-                britishDeviceOrder,
-                withDeviceCountry("GB") { sameNamedListed(MerchantType.PHYSICAL, query, SortOption.Name, around) }
-            )
-            assertEquals(
-                otherDeviceOrder,
-                withDeviceCountry("JP") { sameNamedListed(MerchantType.PHYSICAL, query, SortOption.Name, around) }
-            )
-            assertEquals(
-                britishDeviceOrder,
-                withDeviceCountry("GB") { sameNamedListed("", query, SortOption.Name, territory = "Texas") }
-            )
+            assertEquals(britishOrder, sameNamedListed(physical, query, SortOption.Name, "GB", around))
+            assertEquals(noHomeOrder, sameNamedListed(physical, query, SortOption.Name, "", around))
+            assertEquals(britishOrder, sameNamedListed(physical, query, SortOption.Distance, "GB", around))
+            assertEquals(britishOrder, sameNamedListed("", query, SortOption.Name, "GB", territory = "Texas"))
         }
+    }
+
+    @Test
+    fun rowsThatTieOnEverything_areListedById() = runBlocking {
+        for (id in listOf("c-same", "a-same", "b-same")) {
+            insert(id, "physical", "gift card", "'US'", "'USD'", "Texas", "Same")
+        }
+        val around = GeoBounds(11.0, 11.0, 9.0, 9.0, 10.0, 10.0)
+
+        val stores = sameNamedListed(MerchantType.PHYSICAL, "", SortOption.Name, "US", around)
+
+        assertEquals(listOf("c-same", "a-same", "b-same"), stores)
     }
 
     private fun onlineOf(ids: List<String>) = ids.filter { it.endsWith("-online") }.sorted()
@@ -318,7 +310,8 @@ class MerchantCountryQueryTest {
                 10.0,
                 10.0,
                 false,
-                "GB"
+                "GB",
+                ""
             ).ids()
         )
         assertEquals(stores, physicalOnMap("", around))
@@ -379,7 +372,8 @@ class MerchantCountryQueryTest {
             0.0,
             0.0,
             false,
-            "GB"
+            "GB",
+            ""
         ).load(PagingSource.LoadParams.Refresh(null, 100, false)) as PagingSource.LoadResult.Page
         read += page.data.map { it.merchant!! }
 
