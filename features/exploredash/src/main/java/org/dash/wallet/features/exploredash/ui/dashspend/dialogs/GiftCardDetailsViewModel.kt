@@ -226,7 +226,13 @@ class GiftCardDetailsViewModel @Inject constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            log.warn("could not look up the currency of a saved gift card", e)
+            // the answer holds the card's number and PIN, so nothing an error might quote from it is logged
+            log.warn(
+                "could not look up the currency of the gift card of {}: {} {}",
+                txid,
+                e.javaClass.simpleName,
+                (e as? CTXSpendException)?.errorCode ?: ""
+            )
             false
         }
     }
@@ -312,7 +318,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                             GiftCardStatus.FULFILLED -> {
                                 if (!giftCard.cardNumber.isNullOrEmpty()) {
                                     updateGiftCard(0, giftCard.cardNumber, giftCard.cardPin)
-                                    log.info("CTXSpend: saving barcode for: ${giftCard.barcodeUrl}")
+                                    log.info("CTXSpend: saving the barcode of order {}", giftCard.id)
                                     saveBarcode(giftCard.cardNumber, 0)
                                     val startPurchaseTime =
                                         ctxSpendConfig.get(CTXSpendConfig.PREFS_LAST_PURCHASE_START) ?: -1
@@ -551,7 +557,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                                     }
                                     if (!giftCard.cardNumber.isNullOrEmpty()) {
                                         updateGiftCard(cardIndex, giftCard.cardNumber, giftCard.cardPin)
-                                        log.info("PiggyCards: saving barcode for: ${giftCard.barcodeUrl}")
+                                        log.info("PiggyCards: saving the barcode of card {} of {}", cardIndex, txid)
                                         giftCard.barcodeUrl?.let {
                                             if (!saveBarcodeUrl(it, cardIndex)) {
                                                 saveBarcode(giftCard.cardNumber, BarcodeFormat.CODE_128, cardIndex)
@@ -683,7 +689,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                 )
             }.join()
         } catch (ex: Exception) {
-            log.error("Failed to save barcode for $giftCardNumber", ex)
+            log.error("Failed to save the barcode of card {} of {}", index, transactionId, ex)
         }
     }
 
@@ -698,7 +704,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                 )
             }.join()
         } catch (ex: Exception) {
-            log.error("Failed to save barcode for $giftCardNumber", ex)
+            log.error("Failed to save the barcode of card {} of {}", index, transactionId, ex)
         }
     }
 
@@ -748,11 +754,17 @@ class GiftCardDetailsViewModel @Inject constructor(
                 }.join()
                 true
             } else {
-                log.error("ScanBarcode returned null: $barcodeUrl")
+                log.error("ScanBarcode returned null for card {} of {}", index, transactionId)
                 false
             }
         } catch (ex: Exception) {
-            log.error("Failed to resize and decode barcode: $barcodeUrl", ex)
+            // the URL holds the card number, and an image loader's error can quote the URL
+            log.error(
+                "Failed to resize and decode the barcode of card {} of {}: {}",
+                index,
+                transactionId,
+                ex.javaClass.simpleName
+            )
             false
         }
     }

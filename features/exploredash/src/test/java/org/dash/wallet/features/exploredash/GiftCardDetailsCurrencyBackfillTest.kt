@@ -44,6 +44,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TestRule
+import org.mockito.Mockito.mockingDetails
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argThat
 import org.mockito.kotlin.doAnswer
@@ -92,6 +93,7 @@ class GiftCardDetailsCurrencyBackfillTest {
     private val accessToken = AtomicReference<String?>()
     private val storedToken = MutableStateFlow<String?>(null)
     private lateinit var api: CTXSpendApi
+    private lateinit var metadataProvider: TransactionMetadataProvider
 
     private fun open(card: GiftCard, accessToken: String?, failingLookups: Int = 0): GiftCardDao =
         open(flowOf(listOf(card)), card, accessToken, failingLookups)
@@ -123,12 +125,17 @@ class GiftCardDetailsCurrencyBackfillTest {
                 GiftCardResponse(
                     id = "order-1",
                     status = "fulfilled",
+                    barcodeUrl = "https://ctx.example/barcode?text=6006491234567890",
+                    cardNumber = "6006491234567890",
+                    cardPin = "4321",
+                    redeemUrl = "https://ctx.example/redeem/secret",
+                    redeemUrlChallenge = "challenge",
                     fiatAmount = "23.75",
                     fiatCurrency = if (blankReplies.getAndDecrement() > 0) " " else "GBP"
                 )
             }
         }
-        val metadataProvider = mock<TransactionMetadataProvider> {
+        metadataProvider = mock<TransactionMetadataProvider> {
             on { observeTransactionMetadata(eq(txId)) } doReturn metadata
             onBlocking { getTransactionMetadata(eq(txId)) } doAnswer { metadata.value }
         }
@@ -153,6 +160,23 @@ class GiftCardDetailsCurrencyBackfillTest {
     fun cardWithoutACurrency_isBackfilledWhenItsDetailsOpen() {
         val dao = open(legacyCard, accessToken = "token")
 
+        verifyBlocking(dao) { backfillCurrency(txIdBytes(), eq("GBP")) }
+    }
+
+    @Test
+    fun lookupForACardThatHasItsCredentials_storesTheCurrencyAndNothingElse() {
+        val dao = open(legacyCard, accessToken = "token")
+        allAttemptsMade()
+
+        // the answer carries the number, PIN, barcode and redeem URL again: none of it is written
+        assertEquals(
+            setOf("observeCardForTransaction", "getCardForTransaction", "backfillCurrency"),
+            mockingDetails(dao).invocations.map { it.method.name }.toSet()
+        )
+        assertEquals(
+            setOf("observeTransactionMetadata", "getTransactionMetadata"),
+            mockingDetails(metadataProvider).invocations.map { it.method.name }.toSet()
+        )
         verifyBlocking(dao) { backfillCurrency(txIdBytes(), eq("GBP")) }
     }
 
