@@ -188,9 +188,8 @@ class CTXSpendRepository @Inject constructor(
                 log.error("gift card order came back in {} but {} was ordered", reported, fiatCurrency)
                 throw CTXSpendException(ResourceString(R.string.gift_card_error))
             }
-        if (!response.cardFiatAmount.isNullOrBlank() &&
-            response.cardFiatAmount.trim().toBigDecimalOrNull()?.compareTo(fiatAmount.toBigDecimal()) != 0
-        ) {
+        // CTX always names the face amount, so an answer without one is not taken on trust
+        if (response.cardFiatAmount?.trim()?.toBigDecimalOrNull()?.compareTo(fiatAmount.toBigDecimal()) != 0) {
             log.error("gift card order came back for {} but {} was ordered", response.cardFiatAmount, fiatAmount)
             throw CTXSpendException(ResourceString(R.string.gift_card_error))
         }

@@ -55,6 +55,7 @@ class ExchangeRatesRepository @Inject constructor(
     var isLoading = MutableLiveData<Boolean>()
     @JvmField
     var hasError = MutableLiveData<Boolean>()
+    @Volatile
     private var isRefreshing = false
     private val refreshScope = CoroutineScope(Dispatchers.IO)
     private val updateTrigger = MutableSharedFlow<Long>()
@@ -151,8 +152,9 @@ class ExchangeRatesRepository @Inject constructor(
         if (shouldRefresh()) {
             withTimeoutOrNull(maxWaitMillis) {
                 coroutineScope {
-                    // listening before the refresh starts, or its end could be missed
-                    val refreshed = async(start = CoroutineStart.UNDISPATCHED) { updateTrigger.first() }
+                    // Listening before the refresh starts, or its end could be missed. A source that
+                    // fails signals too, with the next one still to be tried.
+                    val refreshed = async(start = CoroutineStart.UNDISPATCHED) { updateTrigger.first { !isRefreshing } }
                     refreshRates()
                     refreshed.await()
                 }

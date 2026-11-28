@@ -103,11 +103,14 @@ class FakeDashSpendService @Inject constructor(
         return if (dashUri.startsWith(DASH_SPEND_SCHEMA)) {
             val uri = Uri.parse(dashUri)
             val amount = Coin.valueOf(uri.getQueryParameter("amount")?.toLong() ?: 0)
+            // settled before the approval can suspend: the wallet installed after it may be another
+            val origin = realService.walletOf(session ?: realService.currentWalletSession())
+                ?: throw IllegalStateException("there is no wallet to pay from")
             approveAmount?.invoke(Dash(amount.value))
             val transaction = realService.sendCoins(
                 Address.fromBase58(walletDataProvider.networkParameters, "yiCvnqNp53bjCReThnPx8ttuhM7JXUUyfQ"),
                 amount,
-                originWallet = realService.walletOf(session)
+                originWallet = origin
             )
             // Callers persist the order from this callback, so skipping it leaves a completed
             // purchase with nothing for the details screen to load. Later than the real path,
