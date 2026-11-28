@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.Flow
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.ResourceString
 import org.dash.wallet.features.exploredash.R
+import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.DenominationType
 import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.GetMerchantResponse
 import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.GiftCardResponse
 import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.LoginRequest
@@ -182,8 +183,10 @@ class CTXSpendRepository @Inject constructor(
             cryptoCurrency = cryptoCurrency
         )
         // the Dash quoted in this response is paid as it stands, so it must be for the card ordered
+        val ordered = GiftCardCurrency.normalize(fiatCurrency)
+        // read the way a merchant's currency is: " gbp " is GBP, and what is no currency is not the one ordered
         listOfNotNull(response.fiatCurrency, response.cardFiatCurrency)
-            .firstOrNull { it.isNotBlank() && !it.equals(fiatCurrency, ignoreCase = true) }
+            .firstOrNull { it.isNotBlank() && GiftCardCurrency.normalize(it) != ordered }
             ?.let { reported ->
                 log.error("gift card order came back in {} but {} was ordered", reported, fiatCurrency)
                 throw CTXSpendException(ResourceString(R.string.gift_card_error))
@@ -214,7 +217,7 @@ class CTXSpendRepository @Inject constructor(
                 rate = response.rate,
                 redeemUrl = response.redeemUrl,
                 fiatAmount = response.fiatAmount,
-                fiatCurrency = response.fiatCurrency?.takeIf { it.isNotBlank() } ?: fiatCurrency,
+                fiatCurrency = GiftCardCurrency.normalize(response.fiatCurrency) ?: fiatCurrency,
                 paymentUrls = response.paymentUrls,
                 paymentUrlExpiration = response.paymentUrlExpiration,
                 created = response.created
@@ -319,6 +322,10 @@ class CTXSpendRepository @Inject constructor(
                 val currency = GiftCardCurrency.normalize(response.currency)
                 val amounts = response.denominations.map { denom -> denom.trim().toBigDecimal() }
                 require(amounts.all { amount -> GiftCardCurrency.isCardAmount(amount, currency) })
+                // a range is a minimum and a maximum; anything else cannot be bought from
+                val isRange = response.denominationsType == DenominationType.MinMax.value ||
+                    response.denominationsType == DenominationType.MinMaxMajor.value
+                require(!isRange || (amounts.size == 2 && amounts[0] <= amounts[1]))
                 UpdatedMerchantDetails(
                     id = response.id,
                     savingsPercentage = response.discount,

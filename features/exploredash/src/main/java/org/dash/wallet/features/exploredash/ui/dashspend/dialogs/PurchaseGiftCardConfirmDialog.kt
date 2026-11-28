@@ -57,7 +57,9 @@ import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -268,7 +270,9 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
             ),
             youPayText = youPayText,
             breakdownText = breakdown,
-            isLoading = false,
+            // the collector above has run already and will not again until the state changes
+            isLoading = viewModel.submissionState.value == GiftCardSubmissionState.IN_PROGRESS,
+            submissionBlocked = viewModel.submissionState.value != GiftCardSubmissionState.IDLE,
             useExpandedLayout = needsExpand,
             isNetworkAvailable = true
         )
@@ -332,18 +336,24 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
             }
         }
 
+        // Taken only while resumed: a dialog shown earlier waits for the activity to resume, and
+        // is lost, with the news already taken, when the activity is recreated first.
         viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.droppedPriceChange.collect { change ->
-                if (change != null && isAdded && viewModel.takeDroppedPriceChange(change)) {
-                    showPriceChangeUnpaid()
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                viewModel.droppedPriceChange.collect { change ->
+                    if (change != null && isAdded && viewModel.takeDroppedPriceChange(change)) {
+                        showPriceChangeUnpaid()
+                    }
                 }
             }
         }
 
         viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.paymentFailure.collect { failure ->
-                if (failure != null && isAdded && viewModel.takePaymentFailure(failure)) {
-                    submitPayment { throw failure }
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                viewModel.paymentFailure.collect { failure ->
+                    if (failure != null && isAdded && viewModel.takePaymentFailure(failure)) {
+                        submitPayment { throw failure }
+                    }
                 }
             }
         }
@@ -423,16 +433,17 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
                     viewModel.purchaseGiftCard(checkNotNull(shownQuote))
                 } catch (ex: CTXSpendException) {
                     hideLoading()
+                    val reason = ex.resourceString
                     when {
-                        ex.resourceString != null -> {
+                        reason != null -> {
                             if (isAdded) {
                                 AdaptiveDialog.create(
                                     R.drawable.ic_error,
                                     getString(R.string.gift_card_purchase_failed),
-                                    getString(ex.resourceString!!.resourceId),
+                                    getString(reason.resourceId),
                                     getString(R.string.button_close)
                                 ).show(requireActivity())
-                                if (ex.resourceString?.resourceId == R.string.gift_card_order_changed) {
+                                if (reason.resourceId == R.string.gift_card_order_changed) {
                                     dismissAllowingStateLoss()
                                 }
                             }
@@ -629,7 +640,7 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
         hideLoading()
         val activity = requireActivity()
         // one restored with the activity has lost its listener, and its buttons would do nothing
-        (activity.supportFragmentManager.findFragmentByTag(ADAPTIVE_DIALOG_TAG) as? DialogFragment)
+        (activity.supportFragmentManager.findFragmentByTag(PRICE_CHANGE_DIALOG_TAG) as? DialogFragment)
             ?.dismissAllowingStateLoss()
         val fiatFormat = GiftCardCurrency.displayFormat(change.currency)
         val dashFormat = viewModel.dashFormat.noCode()
@@ -645,7 +656,7 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
             ),
             getString(R.string.button_cancel),
             getString(R.string.gift_card_price_updated_pay)
-        ).show(activity) { result ->
+        ).show(activity, PRICE_CHANGE_DIALOG_TAG) { result ->
             when {
                 // answered already, or replaced by a newer change
                 viewModel.priceChange.value != change -> Unit
@@ -1158,7 +1169,7 @@ private fun PurchaseGiftCardConfirmExpandedPreview() {
     )
 }
 
-private const val ADAPTIVE_DIALOG_TAG = "adaptive_dialog"
+private const val PRICE_CHANGE_DIALOG_TAG = "gift_card_price_change"
 
 /**
  * For the purchase screens: a payment can end, or stop at a new price, when no confirmation
@@ -1201,18 +1212,23 @@ internal fun Fragment.observePurchaseWithoutSheet(viewModel: DashSpendViewModel)
         }
     }
 
+    // taken only while resumed, when the dialog can be shown at once
     viewLifecycleOwner.lifecycleScope.launch {
-        viewModel.droppedPriceChange.collect { change ->
-            if (change != null && isAdded && !hasSheet() && viewModel.takeDroppedPriceChange(change)) {
-                requireActivity().showPriceChangeUnpaid()
+        viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            viewModel.droppedPriceChange.collect { change ->
+                if (change != null && isAdded && !hasSheet() && viewModel.takeDroppedPriceChange(change)) {
+                    requireActivity().showPriceChangeUnpaid()
+                }
             }
         }
     }
 
     viewLifecycleOwner.lifecycleScope.launch {
-        viewModel.paymentFailure.collect { failure ->
-            if (failure != null && isAdded && !hasSheet() && viewModel.takePaymentFailure(failure)) {
-                requireActivity().showPaymentFailure(failure)
+        viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            viewModel.paymentFailure.collect { failure ->
+                if (failure != null && isAdded && !hasSheet() && viewModel.takePaymentFailure(failure)) {
+                    requireActivity().showPaymentFailure(failure)
+                }
             }
         }
     }

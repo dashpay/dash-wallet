@@ -63,4 +63,12 @@ class GiftCardPaymentGuardTest {
             assertNull("$it", GiftCardPaymentGuard.dashAmount(it))
         }
     }
+
+    @Test
+    fun quotedDash_beyondWhatDuffsCanCount_isNoAmount() {
+        assertEquals(Coin.valueOf(Long.MAX_VALUE), GiftCardPaymentGuard.dashAmount("92233720368.54775807"))
+        listOf("92233720368.54775808", "184467440737.09551617", "99999999999999999999").forEach {
+            assertNull(it, GiftCardPaymentGuard.dashAmount(it))
+        }
+    }
 }

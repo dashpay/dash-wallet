@@ -195,9 +195,13 @@ class EnterAmountViewModel @Inject constructor(
         return walletUIConfig.getExchangeCurrencyCode()
     }
 
-    fun resetCurrency() {
+    fun resetCurrency(clearAmount: Boolean = false) {
         viewModelScope.launch {
             _selectedCurrencyCode.value = walletUIConfig.getExchangeCurrencyCode()
+            if (clearAmount) {
+                // after the currency: the cleared amount must not stay in the one that was left
+                clearSavedState()
+            }
         }
     }
 

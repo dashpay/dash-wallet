@@ -95,7 +95,7 @@ fun GiftCardPurchaseBlock.message(context: Context, cardCurrency: String?): Stri
  */
 internal fun EnterAmountViewModel.leaveGiftCardPurchase() {
     clearSavedState()
-    resetCurrency()
+    resetCurrency(clearAmount = true)
     blockContinue = false
     fiatDecimalsLimit = null
 }
