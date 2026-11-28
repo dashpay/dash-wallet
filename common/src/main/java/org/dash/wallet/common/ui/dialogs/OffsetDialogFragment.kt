@@ -39,6 +39,15 @@ import androidx.core.view.WindowInsetsCompat
 
 open class OffsetDialogFragment(@LayoutRes private val layout: Int) : BottomSheetDialogFragment() {
     protected open val forceExpand: Boolean = false
+
+    /**
+     * Expand the sheet to its full CONTENT height on show (bottom-anchored,
+     * adapts to the device screen), so wrap-content sheets are never shown
+     * in the half-expanded state with their bottom controls clipped.
+     * Mutually exclusive with [forceExpand] (which pins a MATCH_PARENT
+     * sheet below the top offset).
+     */
+    protected open val expandToContent: Boolean = false
     @StyleRes protected open val backgroundStyle: Int = R.style.SecondaryBackground
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -92,6 +101,17 @@ open class OffsetDialogFragment(@LayoutRes private val layout: Int) : BottomShee
                 }
 
                 BottomSheetBehavior.from(sheet).apply {
+                    if (expandToContent) {
+                        // Bottom-anchored, full content height: EXPANDED with
+                        // fit-to-contents puts the sheet top at
+                        // (parentHeight - sheetHeight), so the whole content —
+                        // including the bottom buttons — is visible on any
+                        // screen size.
+                        isFitToContents = true
+                        skipCollapsed = true
+                        state = BottomSheetBehavior.STATE_EXPANDED
+                        return@apply
+                    }
                     isFitToContents = false
                     skipCollapsed = true
 

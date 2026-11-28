@@ -40,8 +40,12 @@ import de.schildbach.wallet.livedata.SeriousErrorListener
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.security.SecurityGuardException
-import de.schildbach.wallet.service.platform.ContestedUsernameFees
+import de.schildbach.wallet.service.platform.IdentityKeyChainBackfill
+import de.schildbach.wallet.service.platform.IdentityKeyChainBackfillException
 import de.schildbach.wallet.service.platform.PlatformService
+import de.schildbach.wallet.service.platform.sdk.SdkProfileQueries
+import de.schildbach.wallet.service.platform.sdk.SdkUsernameQueries
+import de.schildbach.wallet.service.platform.sdk.SdkVotingQueries
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.*
@@ -53,6 +57,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import org.bitcoinj.core.*
+import org.bitcoinj.crypto.ChildNumber
 import org.bitcoinj.crypto.IDeterministicKey
 import org.bitcoinj.evolution.AssetLockTransaction
 import org.bitcoinj.wallet.AuthenticationKeyChain
@@ -87,8 +92,11 @@ class PlatformRepo @Inject constructor(
     val walletApplication: WalletApplication,
     val appDatabase: AppDatabase,
     val platform: PlatformService,
-    val coinJoinConfig: CoinJoinConfig,
-    val dashPayConfig: DashPayConfig
+    val dashPayConfig: DashPayConfig,
+    private val sdkUsernameQueries: SdkUsernameQueries,
+    private val sdkVotingQueries: SdkVotingQueries,
+    private val sdkProfileQueries: SdkProfileQueries,
+    private val identityCreationStatus: IdentityCreationStatusHolder
 ) {
 
     @EntryPoint
@@ -101,10 +109,28 @@ class PlatformRepo @Inject constructor(
         private val log = LoggerFactory.getLogger(PlatformRepo::class.java)
         const val TIMESPAN: Long = DateUtils.DAY_IN_MILLIS * 90 // 90 days
         const val TOP_CONTACT_COUNT = 4
+
+        /**
+         * How long a `registerIdentity` call may run before the
+         * home-screen tile hints that the network is catching up —
+         * see [registerIdentityWithSlowRegistrationHint]. A healthy
+         * registration completes within seconds; dashj's internal
+         * chain-lock retry waits ~2.5 minutes per attempt.
+         */
+        const val REGISTRATION_SLOW_HINT_DELAY_MS = 35_000L
         private val PROTOCOL_VERSION_PROBE_ID = Identifier.from(ByteArray(32))
     }
 
     private val onSeriousErrorListeneners = arrayListOf<SeriousErrorListener>()
+
+    /**
+     * Serializes [issueIdentityChainKeys]' select-then-import across threads. dashj's
+     * `AuthenticationKeyChain.addNewKey` re-counts a key that is already on the chain (it bumps the
+     * issued-key counter again while that counter is <= the key's index), so two backfills that both
+     * selected the same unresolved index would advance the counter twice and a later fresh
+     * authentication key could reuse that index.
+     */
+    private val identityChainBackfillLock = Any()
 
     val authenticationGroupExtension: AuthenticationGroupExtension?
         get() = walletApplication.authenticationGroupExtension
@@ -173,6 +199,11 @@ class PlatformRepo @Inject constructor(
     }
 
     fun getUsername(username: String): Resource<Document> {
+        // Phase 3c (docs/kotlin-sdk-migration-plan.md): Kotlin-SDK read path
+        // behind USE_KOTLIN_SDK_DPNS_READS (default off). Returns null when
+        // the flag is off or on ANY SDK-path failure, falling through to the
+        // unchanged dashj-platform path below.
+        sdkUsernameQueries.getUsernameOrNull(username)?.let { return it }
         return try {
             val nameDocument = platform.names.get(Names.normalizeString(username))
             Resource.success(nameDocument)
@@ -191,15 +222,39 @@ class PlatformRepo @Inject constructor(
      */
     fun getVoteContendersOrNull(username: String): Contenders? {
         return try {
-            val watch = Stopwatch.createStarted()
-            val contenders = platform.names.getVoteContenders(Names.normalizeString(username))
-            log.info("getVoteContenders took {}", watch)
-            contenders
+            getVoteContendersOrThrow(username)
         } catch (e: Exception) {
             log.warn("getVoteContenders failed for {}", username, e)
             null
         }
     }
+
+    /**
+     * [getVoteContenders] with failures PROPAGATED instead of collapsed
+     * into "no contenders" — for the availability check, which must fail
+     * CLOSED (an empty result and a failed read mean different things
+     * there: the latter must never enable the request button).
+     */
+    fun getVoteContendersOrThrow(username: String): Contenders {
+        // Phase 3d (docs/kotlin-sdk-migration-plan.md): Kotlin-SDK read path
+        // behind USE_KOTLIN_SDK_DPNS_READS (default off). Returns null when
+        // the flag is off or on ANY SDK-path failure, falling through to the
+        // unchanged dashj-platform path below.
+        sdkVotingQueries.getVoteContendersOrNull(username)?.let { return it }
+        val watch = Stopwatch.createStarted()
+        val contenders = platform.names.getVoteContenders(Names.normalizeString(username))
+        log.info("getVoteContenders took {}", watch)
+        return contenders
+    }
+
+    /**
+     * The DPNS labels [userId] owns, through the same lookup the profile refresh uses (the Kotlin
+     * SDK read, else dashj). Throws when they cannot be read: a caller deciding whether to submit
+     * a name again must not mistake an unreadable answer for "owns none".
+     */
+    suspend fun getOwnedUsernamesOrThrow(userId: String): List<String> =
+        (sdkUsernameQueries.getDomainDocumentsByOwnerOrNull(userId) ?: platform.names.getByOwnerId(userId))
+            .map { DomainDocument(it).label }
 
     fun getFromProfiles(
         profiles: Map<String, DashPayProfile?>,
@@ -288,15 +343,52 @@ class PlatformRepo @Inject constructor(
         for (i in 0 until 3) {
             try {
                 val timer = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_IDENTITY_CREATE)
-                blockchainIdentity.registerIdentity(keyParameter, true, true)
+                registerIdentityWithSlowRegistrationHint(blockchainIdentity, keyParameter)
                 timer.logTiming() // we won't log timing for failed registrations
+                identityCreationStatus.clear()
                 return
             } catch (e: InvalidInstantAssetLockProofException) {
+                // Per-attempt hint: no IS lock on the funding tx (yet) —
+                // the tile shows "waiting for network confirmation" while
+                // we wait out the retry delay.
+                identityCreationStatus.setHint(identityRetryStatusHint(e))
                 log.info("instantSendLock error: retry registerIdentity again ($i)")
                 delay(3000)
             }
         }
         throw InvalidInstantAssetLockProofException("failed after 3 tries")
+    }
+
+    /**
+     * Runs the (blocking) dashj registration with a status watchdog.
+     *
+     * dashj's `BlockchainIdentity.registerIdentity` retries the
+     * chain-lock proof INTERNALLY — on "Asset Lock proof core chain
+     * height N is higher than the current consensus core height M" it
+     * waits for the next local block and tries again, swallowing every
+     * per-attempt throwable, so app code never sees an error while it
+     * loops (live incident: ~10 minutes of invisible retries). The only
+     * app-side observable is duration, so once the call outlives
+     * [REGISTRATION_SLOW_HINT_DELAY_MS] (a normal registration completes
+     * in seconds; each dashj retry waits a whole ~2.5 min block) the
+     * home-screen tile hint flips to "waiting for the network to catch
+     * up".
+     */
+    private suspend fun registerIdentityWithSlowRegistrationHint(
+        blockchainIdentity: BlockchainIdentity,
+        keyParameter: KeyParameter?
+    ) = coroutineScope {
+        val slowHintWatchdog = launch {
+            delay(REGISTRATION_SLOW_HINT_DELAY_MS)
+            log.info("identity registration still running after {}ms — surfacing catch-up hint",
+                REGISTRATION_SLOW_HINT_DELAY_MS)
+            identityCreationStatus.setHint(RetryStatusHint.CORE_HEIGHT_LAG)
+        }
+        try {
+            blockchainIdentity.registerIdentity(keyParameter, true, true)
+        } finally {
+            slowHintWatchdog.cancel()
+        }
     }
 
     //
@@ -358,9 +450,22 @@ class PlatformRepo @Inject constructor(
      */
     suspend fun updateDashPayProfile(userId: String): Boolean {
         try {
-            var profileDocument = platform.profiles.get(userId)
+            // Phase 3d (docs/kotlin-sdk-migration-plan.md): Kotlin-SDK read
+            // path behind USE_KOTLIN_SDK_DPNS_READS (default off). A null
+            // result means "flag off or SDK path failed" — fall through to
+            // the unchanged dashj-platform query; Optional.empty() is the
+            // SDK's definitive "no profile" (dashj parity: get returns null).
+            val sdkProfileDocument = sdkProfileQueries.getProfileDocumentOrNull(userId)
+            var profileDocument = if (sdkProfileDocument != null) {
+                sdkProfileDocument.orElse(null)
+            } else {
+                platform.profiles.get(userId)
+            }
             if (profileDocument == null) {
-                val identity = platform.identities.get(userId)
+                // Tolerant fetch: this identity may be the wallet's own (or a
+                // peer's) contract-bound-key identity, whose shape the legacy
+                // CBOR cache cannot serialize; getIdentity recovers it uncached.
+                val identity = platform.getIdentity(userId)
                 if (identity != null) {
                     profileDocument =
                         platform.profiles.createProfileDocument("", "", "", null, null, identity)
@@ -369,7 +474,11 @@ class PlatformRepo @Inject constructor(
                     return false
                 }
             }
-            val nameDocuments = platform.names.getByOwnerId(userId)
+            // Phase 3e: domain documents by owner via the Kotlin SDK behind
+            // the same read flag. Null = flag off or SDK path failed — fall
+            // through to the unchanged dashj-platform query.
+            val nameDocuments = sdkUsernameQueries.getDomainDocumentsByOwnerOrNull(userId)
+                ?: platform.names.getByOwnerId(userId)
 
             if (nameDocuments.isNotEmpty()) {
                 val username = DomainDocument(nameDocuments[0]).label
@@ -450,6 +559,150 @@ class PlatformRepo @Inject constructor(
         val key = decryptedChain.getKey(index)
         Preconditions.checkState(key.path.last().isHardened)
         return key
+    }
+
+    /**
+     * Ensures the BLOCKCHAIN_IDENTITY authentication key chain has ISSUED every key that
+     * [identity] registered from that chain, so that legacy dashj-platform signing
+     * (`WalletSignerCallback.sign` → `AuthenticationKeyChain.findKeyFromPubKey`) can resolve
+     * the private key. The identity chain has lookahead 0, so only issued keys are findable
+     * by public key.
+     *
+     * Identities created by the legacy dashj flow issue their keys at registration and this is
+     * a no-op for them. Identities created by the Kotlin SDK (canonical 4-key set, derivation
+     * index == keyId) arrive via the restore path with zero issued keys, and without this
+     * backfill every legacy-path signature (contact request send/accept, profile
+     * create/update) fails with "signer callback returned 0".
+     *
+     * The import mechanics mirror the encrypted-wallet fallback inside the legacy
+     * `BlockchainIdentity.privateKeyAtIndex`: decrypt the chain's watching (account) key,
+     * derive the hardened child, re-encrypt it against the watching key and add it via
+     * `AuthenticationGroupExtension.addNewKey` (which imports it into the chain's basic key
+     * chain and persists the wallet).
+     *
+     * Never throws except [CancellationException]: failures are logged and the number of keys
+     * issued so far is returned. Callers that act on the result must use [requireIdentityChainKeys].
+     *
+     * @return the number of keys that were newly issued (0 if nothing was missing)
+     */
+    fun ensureIdentityChainKeys(identity: Identity?, keyParameter: KeyParameter?): Int =
+        issueIdentityChainKeys(identity, keyParameter, strict = false)
+
+    /**
+     * Fail-closed [ensureIdentityChainKeys]: returns only once every identity key derived from
+     * this wallet's identity chain is issued on it. A key whose derived public key does not match
+     * is still skipped as "not this wallet's key", but a missing identity, authentication
+     * extension, identity chain or wallet, an encrypted wallet without [keyParameter] (only when
+     * some key is still unresolved on the chain), and any decryption, derivation or import failure
+     * throw. Failures are not logged here; the caller logs them. A [CancellationException] is
+     * rethrown as is, never wrapped.
+     *
+     * @return the number of keys that were newly issued (0 if nothing was missing)
+     * @throws IdentityKeyChainBackfillException if the backfill did not complete
+     */
+    fun requireIdentityChainKeys(identity: Identity?, keyParameter: KeyParameter?): Int =
+        issueIdentityChainKeys(identity, keyParameter, strict = true)
+
+    private fun issueIdentityChainKeys(identity: Identity?, keyParameter: KeyParameter?, strict: Boolean): Int {
+        // lenient callers get the historical silent 0; strict callers get the reason and log it
+        fun unavailable(reason: String): Int =
+            if (strict) throw IdentityKeyChainBackfillException(reason) else 0
+
+        identity ?: return unavailable("identity unavailable")
+        var issued = 0
+        try {
+            val authExtension = authenticationGroupExtension ?: return unavailable("no authentication extension")
+            val identityChain = authExtension.getKeyChain(
+                AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY
+            ) ?: return unavailable("no identity key chain")
+            val wallet = walletApplication.wallet ?: return unavailable("wallet unavailable")
+            val watchingKey = identityChain.watchingKey
+
+            // Decrypted only once some key is still unresolved on the chain, so a fully issued
+            // chain needs no keyParameter even on an encrypted wallet. Failing to decrypt aborts
+            // the backfill in both modes rather than skipping keys one by one.
+            var parent: IDeterministicKey? = null
+            fun decryptedParent(): IDeterministicKey = parent ?: run {
+                if (!wallet.isEncrypted) return@run watchingKey
+                val keyCrypter = wallet.keyCrypter
+                    ?: throw IdentityKeyChainBackfillException("encrypted wallet has no key crypter")
+                keyParameter ?: throw IdentityKeyChainBackfillException("wallet is encrypted but no key was provided")
+                try {
+                    watchingKey.decrypt(keyCrypter, keyParameter) as IDeterministicKey
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    throw IdentityKeyChainBackfillException("cannot decrypt the identity chain", e)
+                }
+            }.also { parent = it }
+
+            val derivedKeys = hashMapOf<Int, IDeterministicKey>()
+            fun derive(index: Int): IDeterministicKey = derivedKeys.getOrPut(index) {
+                decryptedParent().deriveChildKey(ChildNumber(index, true))
+            }
+
+            // Selection and import are one atomic step with respect to other backfills (see
+            // identityChainBackfillLock); nothing in here suspends.
+            val indexes = synchronized(identityChainBackfillLock) {
+                val selected = IdentityKeyChainBackfill.indexesToIssue(
+                    identity.publicKeys.map { IdentityKeyChainBackfill.IdentityKeyRef(it.id, it.data) },
+                    isIssued = { keyData ->
+                        when (keyData.size) {
+                            IdentityKeyChainBackfill.PUBLIC_KEY_SIZE -> identityChain.findKeyFromPubKey(keyData) != null
+                            IdentityKeyChainBackfill.HASH160_SIZE -> identityChain.findKeyFromPubHash(keyData) != null
+                            else -> false
+                        }
+                    },
+                    derivePublicKey = { index ->
+                        decryptedParent() // outside the per-key catch: an unusable parent aborts
+                        try {
+                            derive(index).pubKey
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            // a failed derivation is not "not ours": a strict caller fails closed
+                            if (strict) throw e
+                            log.warn("ensureIdentityChainKeys: cannot derive identity key at index $index", e)
+                            null
+                        }
+                    }
+                )
+
+                selected.forEach { index ->
+                    var key = derive(index)
+                    if (wallet.isEncrypted) {
+                        key = key.encrypt(wallet.keyCrypter, keyParameter, watchingKey)
+                    }
+                    authExtension.addNewKey(AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY, key)
+                    issued++
+                }
+                selected
+            }
+            if (issued > 0) {
+                log.info(
+                    "ensureIdentityChainKeys: issued {} missing identity chain key(s) at index(es) {} " +
+                        "for identity {}",
+                    issued,
+                    indexes,
+                    identity.id
+                )
+            }
+        } catch (e: CancellationException) {
+            // cancellation is neither a backfill failure nor something to swallow, in either mode
+            throw e
+        } catch (e: IdentityKeyChainBackfillException) {
+            if (strict) throw e
+            log.warn("ensureIdentityChainKeys: {}", e.message, e.cause)
+        } catch (e: Exception) {
+            if (strict) {
+                throw IdentityKeyChainBackfillException(
+                    "failed after issuing $issued key(s)",
+                    e
+                )
+            }
+            log.error("ensureIdentityChainKeys: failed after issuing $issued key(s)", e)
+        }
+        return issued
     }
 
     fun observeProfileByUserId(userId: String): Flow<DashPayProfile?> {
@@ -539,25 +792,6 @@ class PlatformRepo @Inject constructor(
         }
     }
 
-    /**
-     * Asks the network which Platform protocol version it runs and records it in
-     * [ContestedUsernameFees]. A failure is logged and leaves the last known version,
-     * so fees fall back to the higher, pre-v14 amounts until a refresh succeeds.
-     */
-    suspend fun refreshProtocolVersion(): Int {
-        return withContext(Dispatchers.IO) {
-            try {
-                val version = platform.client.refreshProtocolVersion()
-                ContestedUsernameFees.updateProtocolVersion(version)
-                log.info("platform protocol version: {}", version)
-            } catch (e: kotlinx.coroutines.CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                log.warn("unable to refresh the platform protocol version", e)
-            }
-            ContestedUsernameFees.currentProtocolVersion
-        }
-    }
 
     /**
      * The protocol version the network reported, or null when it did not answer. A refresh that fails
@@ -576,8 +810,9 @@ class PlatformRepo @Inject constructor(
                 log.warn("unable to read the platform protocol version", e)
                 return@withContext null
             }
+            // DashConnect's gate only. Contested-username fees follow the SDK's latched version
+            // (DashSdkService.currentProtocolVersion), not this legacy read.
             platform.client.getProtocolVersion().also {
-                ContestedUsernameFees.updateProtocolVersion(it)
                 log.info("platform protocol version: {}", it)
             }
         }

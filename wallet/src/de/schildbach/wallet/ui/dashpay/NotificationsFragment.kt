@@ -40,7 +40,7 @@ import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentNotificationsBinding
 import kotlinx.coroutines.launch
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
@@ -74,7 +74,7 @@ class NotificationsFragment : Fragment(R.layout.fragment_notifications) {
     private var lastSeenNotificationTime = 0L
     private var isBlockchainSynced = true
     private var userAlertItem: NotificationItemUserAlert? = null
-    @Inject lateinit var walletDataProvider: WalletDataProvider
+    @Inject lateinit var walletDataProvider: WalletData
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -155,6 +155,12 @@ class NotificationsFragment : Fragment(R.layout.fragment_notifications) {
         }
         dashPayViewModel.sendContactRequestState.observe(viewLifecycleOwner) {
             notificationsAdapter.sendContactRequestWorkStateMap = it
+            // A failed accept must never be a silent no-op — the row only
+            // reverts to its pending state — so surface newly-failed
+            // operations started from this screen.
+            if (dashPayViewModel.consumeNewSendContactRequestErrors(it).isNotEmpty()) {
+                showSendContactRequestError()
+            }
         }
         dashPayViewModel.recentlyModifiedContactsLiveData.observe(viewLifecycleOwner) {
             notificationsAdapter.recentlyModifiedContacts = it
@@ -268,6 +274,18 @@ class NotificationsFragment : Fragment(R.layout.fragment_notifications) {
 
     private fun onIgnoreRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
         // this Ignore Request function is not currently implemented
+    }
+
+    private fun showSendContactRequestError() {
+        // Every contact-request action on the notifications screen is an
+        // ACCEPT (onAcceptRequest → sendContactRequest), so use the accept
+        // wording.
+        AdaptiveDialog.create(
+            R.drawable.ic_warning_yellow_circle,
+            getString(R.string.accept_contact_request_error_title),
+            getString(R.string.accept_contact_request_error_message),
+            getString(R.string.button_ok)
+        ).show(requireActivity())
     }
 
     private fun sendContactRequest(usernameSearchResult: UsernameSearchResult) {

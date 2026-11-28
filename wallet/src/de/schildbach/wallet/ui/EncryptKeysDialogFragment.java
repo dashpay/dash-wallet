@@ -44,7 +44,7 @@ import com.google.common.base.Strings;
 import org.bitcoinj.crypto.KeyCrypterException;
 import org.bitcoinj.crypto.KeyCrypterScrypt;
 import org.bouncycastle.crypto.params.KeyParameter;
-import org.dash.wallet.common.WalletDataProvider;
+import de.schildbach.wallet.data.WalletData;
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
 import org.dash.wallet.common.ui.BaseDialogFragment;
 import org.dash.wallet.common.util.KeyboardUtil;
@@ -116,7 +116,7 @@ public class EncryptKeysDialogFragment extends DialogFragment {
     @Inject RestartService restartService;
     @Inject WalletApplication application;
     @Inject SecurityFunctions securityFunctions;
-    @Inject WalletDataProvider walletData;
+    @Inject WalletData walletData;
     @Inject PinRetryController pinRetryController;
 
     private enum State {

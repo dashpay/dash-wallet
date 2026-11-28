@@ -32,7 +32,7 @@ import org.robolectric.util.ReflectionHelpers
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
-@Config(application = Application::class, sdk = [28])
+@Config(application = Application::class, sdk = [29])
 class ConnectionsViewModelTest {
     private val dispatcher = StandardTestDispatcher()
     private val applicationScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + dispatcher)
@@ -40,7 +40,7 @@ class ConnectionsViewModelTest {
     private val identities = mockk<IdentityRepository>(relaxed = true)
     private val identityConfig = mockk<de.schildbach.wallet.database.entity.BlockchainIdentityConfig>(relaxed = true)
     private val auditConfig = mockk<DashConnectConfig>(relaxed = true)
-    private val walletData = mockk<org.dash.wallet.common.WalletDataProvider>(relaxed = true)
+    private val walletData = mockk<de.schildbach.wallet.data.WalletData>(relaxed = true)
     private fun availability(owner: IdentityRepository = identities) =
         ConnectIdentityAvailability(owner, identityConfig, auditConfig, walletData)
     private lateinit var model: ConnectionsViewModel
@@ -64,7 +64,7 @@ class ConnectionsViewModelTest {
         every { identities.blockchainIdentityFlow } returns MutableStateFlow(null)
         every { identities.initializationResult } returns MutableStateFlow(Result.success(Unit))
         every { identityConfig.observeIdentityPresence() } returns MutableStateFlow(true)
-        every { auditConfig.observeHasRecords() } returns MutableStateFlow(false)
+        every { auditConfig.observeRetainedRecords() } returns MutableStateFlow(RetainedConnectRecords(emptyList(), false))
         every { walletData.wallet } returns mockk(relaxed = true)
         coEvery { repository.parseQr(any()) } returns DashConnectQr(request)
         coEvery { repository.prepareLogin(any()) } returns plan
@@ -78,6 +78,11 @@ class ConnectionsViewModelTest {
     }
 
     @After fun teardown() {
+        // A test that paused the Choreographer can end with a Compose frame pending. Robolectric drops it between
+        // tests, and Compose's process-wide UI dispatcher, still marked as waiting for it, never schedules another
+        // frame: a later Compose test in this JVM would then never recompose. Run that frame now.
+        ShadowChoreographer.setPaused(false)
+        org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()
         if (::model.isInitialized) model.viewModelScope.cancel()
         applicationScope.cancel()
         Constants.SUPPORTS_PLATFORM = originalSupportsPlatform
@@ -532,7 +537,7 @@ class ConnectionsViewModelTest {
 
     @Test fun `saved audits without an identity remain unavailable rather than confirmed empty`() {
         every { identityConfig.observeIdentityPresence() } returns MutableStateFlow(false)
-        every { auditConfig.observeHasRecords() } returns MutableStateFlow(true)
+        every { auditConfig.observeRetainedRecords() } returns MutableStateFlow(RetainedConnectRecords(emptyList(), true))
         every { repository.observeConnections() } returns kotlinx.coroutines.flow.flow { error("Identity unavailable") }
         model.refreshConnections()
         dispatcher.scheduler.runCurrent()
@@ -631,11 +636,12 @@ class ConnectionsViewModelTest {
     @Test fun `real cancelled identity owner exposes Retry and explicit reload restores connections`() {
         model.viewModelScope.cancel()
         val storage = mockk<de.schildbach.wallet.database.entity.BlockchainIdentityConfig>(relaxed = true)
-        val provider = mockk<org.dash.wallet.common.WalletDataProvider>(relaxed = true)
+        val provider = mockk<de.schildbach.wallet.data.WalletData>(relaxed = true)
         val wallet = mockk<org.bitcoinj.wallet.Wallet>(relaxed = true)
         every { provider.wallet } returns wallet
         val owner = spyk(de.schildbach.wallet.service.platform.IdentityRepositoryImpl(mockk(relaxed = true),
-            mockk(relaxed = true), storage, provider, mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true)))
+            mockk(relaxed = true), storage, provider, mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true),
+            mockk(relaxed = true), mockk(relaxed = true)))
         val identity = mockk<org.dashj.platform.dashpay.BlockchainIdentity>(relaxed = true)
         val data = mockk<de.schildbach.wallet.database.entity.BlockchainIdentityData>(relaxed = true)
         every { owner.initBlockchainIdentity(data, wallet) } returns identity
@@ -667,11 +673,12 @@ class ConnectionsViewModelTest {
     @Test fun `real identity owner reloads a successful partial identity and restores saved connections`() {
         model.viewModelScope.cancel()
         val storage = mockk<de.schildbach.wallet.database.entity.BlockchainIdentityConfig>(relaxed = true)
-        val provider = mockk<org.dash.wallet.common.WalletDataProvider>(relaxed = true)
+        val provider = mockk<de.schildbach.wallet.data.WalletData>(relaxed = true)
         val wallet = mockk<org.bitcoinj.wallet.Wallet>(relaxed = true)
         every { provider.wallet } returns wallet
         val owner = spyk(de.schildbach.wallet.service.platform.IdentityRepositoryImpl(mockk(relaxed = true),
-            mockk(relaxed = true), storage, provider, mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true)))
+            mockk(relaxed = true), storage, provider, mockk(relaxed = true), mockk(relaxed = true), mockk(relaxed = true),
+            mockk(relaxed = true), mockk(relaxed = true)))
         val partial = mockk<org.dashj.platform.dashpay.BlockchainIdentity>(relaxed = true)
         every { partial.uniqueIdentifier } throws UninitializedPropertyAccessException("uniqueId")
         val healthy = mockk<org.dashj.platform.dashpay.BlockchainIdentity>(relaxed = true)
@@ -1176,12 +1183,9 @@ class ConnectionsViewModelTest {
             if (!restoredWhileLocked) {
                 assertTrue(sheet.requireDialog().isShowing)
                 unlocked = false
-                // Exercise the activity's real lock traversal with an ordinary parent fragment,
+                // Exercise the lock screen's real traversal with an ordinary parent fragment,
                 // the nesting that previously left approval sheets above the PIN screen.
-                val lockActivity = Robolectric.buildActivity(de.schildbach.wallet.ui.LockScreenActivity::class.java).get()
-                ReflectionHelpers.callInstanceMethod<Unit>(lockActivity, "notifyAndDismissFragments",
-                    ReflectionHelpers.ClassParameter.from(androidx.fragment.app.FragmentManager::class.java,
-                        activity.supportFragmentManager))
+                org.dash.wallet.common.ui.dismissDialogsForLockScreen(activity.supportFragmentManager)
             }
             parent.childFragmentManager.executePendingTransactions()
             assertFalse(sheet.dialog?.isShowing == true)

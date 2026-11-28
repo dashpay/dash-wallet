@@ -17,6 +17,9 @@
 
 package org.dash.wallet.common.services
 
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import org.dash.wallet.common.data.SingleLiveEvent
 
 // TODO: this class is created as a transitional measure for dismissing AlertDialogs.
@@ -31,4 +34,16 @@ class LockScreenBroadcaster {
      * the wallet locked (LockScreenActivity dismisses all DialogFragments on lock).
      */
     val deactivatingLockScreen = SingleLiveEvent<Void>()
+
+    private val _unlocked = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
+    /**
+     * Emits once the lock screen has been dismissed and the content is visible again. Unlike
+     * [deactivatingLockScreen], every collector receives it, and it is not replayed.
+     */
+    val unlocked: SharedFlow<Unit> = _unlocked.asSharedFlow()
+
+    fun notifyUnlocked() {
+        _unlocked.tryEmit(Unit)
+    }
 }

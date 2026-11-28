@@ -18,10 +18,9 @@
 package org.dash.wallet.common.services
 
 import kotlinx.coroutines.flow.Flow
-import org.bitcoinj.core.AbstractBlockChain
-import org.bitcoinj.core.PeerGroup
-import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.data.NetworkStatus
+import org.dash.wallet.common.data.SyncStage
+import org.dash.wallet.common.data.entity.BlockchainState
 
 /**
  * Blockchain state provider
@@ -41,13 +40,21 @@ interface BlockchainStateProvider {
      * Peers currently connected. [NetworkStatus] is not a substitute: it only leaves CONNECTED by
      * way of DISCONNECTING, so it can read CONNECTED with no peers at all when P2P connectivity
      * disappears while the device still has internet.
+     *
+     * Counts the dashj peer group only. Once the SDK owns L1 that peer group is held, so this
+     * reads 0 and says nothing about the network; the SDK engine exposes no peer count.
      */
     fun getConnectedPeerCount(): Int
     fun observeConnectedPeerCount(): Flow<Int>
 
-    fun getBlockChain(): AbstractBlockChain?
-    fun observeBlockChain(): Flow<AbstractBlockChain?>
+    fun observeSyncStage(): Flow<SyncStage?>
+    fun getSyncStage(): SyncStage
 
-    fun observeSyncStage(): Flow<PeerGroup.SyncStage?>
-    fun getSyncStage(): PeerGroup.SyncStage
+    /**
+     * Whether the wallet has finished its first scan of the chain and its engine can send now.
+     * Until then a payment waits for the wallet to be synced; afterwards an ordinary catch-up
+     * does not block one. False when not known, and while the engine is stopped, waiting for
+     * peers or in error.
+     */
+    fun observeFirstSyncDone(): Flow<Boolean> = kotlinx.coroutines.flow.flowOf(false)
 }

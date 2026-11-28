@@ -17,16 +17,13 @@
 package org.dash.wallet.integrations.maya.payments
 
 import androidx.annotation.StringRes
-import org.bitcoinj.core.Address
-import org.bitcoinj.core.AddressFormatException
-import org.bitcoinj.core.Base58
-import org.bitcoinj.core.ECKey
-import org.bitcoinj.params.MainNetParams
+import org.dash.wallet.common.payments.parsers.AddressNetwork
 import org.dash.wallet.common.payments.parsers.AddressParser
+import org.dash.wallet.common.payments.parsers.AddressUtils
+import org.dash.wallet.common.payments.parsers.Base58
 import org.dash.wallet.common.payments.parsers.Bech32
 import org.dash.wallet.common.payments.parsers.Bech32AddressParser
 import org.dash.wallet.common.payments.parsers.BitcoinAddressParser
-import org.dash.wallet.common.payments.parsers.BitcoinMainNetParams
 import org.dash.wallet.common.payments.parsers.PaymentIntentParser
 import org.dash.wallet.common.payments.parsers.PaymentParsers
 import org.dash.wallet.common.payments.parsers.SegwitAddress
@@ -67,7 +64,7 @@ interface MayaCryptoCurrency {
          * is never persisted or used to sign anything — the addresses are indicative only and
          * funds must never be sent to them.
          */
-        val sessionExampleKey: ECKey by lazy { ECKey() }
+        val sessionExampleKey: SessionExampleKey by lazy { SessionExampleKey() }
 
         /** Amount-entry precision of the UI; also the upper bound for [swapAmountScale]. */
         const val MAX_SWAP_AMOUNT_DECIMALS = 8
@@ -141,17 +138,13 @@ open class MayaBitcoinCryptoCurrency : MayaCryptoCurrency {
     override val asset: String = "BTC.BTC"
     override val exampleAddress: String = "bc1qxhgnnp745zryn2ud8hm6k3mygkkpkm35020js0"
     override val paymentIntentParser: PaymentIntentParser = BitcoinPaymentIntentParser()
-    override val addressParser: AddressParser = BitcoinAddressParser(BitcoinMainNetParams())
+    override val addressParser: AddressParser = BitcoinAddressParser()
     override val codeId: Int = R.string.cryptocurrency_bitcoin_code
     override val nameId: Int = R.string.cryptocurrency_bitcoin_network
     override fun getPaymentRequestURI(address: String, amount: String): String {
         // Validate the address before encoding it — legacy base58 or bech32 (SwapKit/NEAR
         // return bech32 deposit addresses). Either form goes into a plain BIP-21 URI.
-        try {
-            Address.fromBase58(BitcoinMainNetParams(), address)
-        } catch (_: AddressFormatException) {
-            SegwitAddress.fromBech32(BitcoinMainNetParams(), address)
-        }
+        AddressUtils.verify(AddressNetwork.BITCOIN_MAINNET, address)
         return "bitcoin:$address?amount=$amount"
     }
 
@@ -166,9 +159,10 @@ open class MayaBitcoinCryptoCurrency : MayaCryptoCurrency {
         return feeInSmallUnits.setScale(8, RoundingMode.HALF_UP).div(BigDecimal(SATOSHIS_PER_COIN))
     }
 
-    // Native segwit P2WPKH (bc1q…) of the session key — a genuinely derivable Bitcoin address.
+    // Native segwit P2WPKH (bc1q…) shape built from the session key's 20-byte payload.
     override fun getNewExampleAddress(): String =
-        SegwitAddress.fromKey(BitcoinMainNetParams(), MayaCryptoCurrency.sessionExampleKey).toBech32()
+        SegwitAddress.fromHash(AddressNetwork.BITCOIN_MAINNET, MayaCryptoCurrency.sessionExampleKey.pubKeyHash)
+            .toBech32()
 }
 class MayaDashCryptoCurrency : MayaBitcoinCryptoCurrency() {
     override val code: String = "DASH"
@@ -177,7 +171,7 @@ class MayaDashCryptoCurrency : MayaBitcoinCryptoCurrency() {
     override val exampleAddress: String = "XssjzLKgsfATYGqTQmiJURQzeKdpL5K1k3"
 
     // The inherited parser validates against *Bitcoin* params and rejects Dash addresses.
-    override val addressParser: AddressParser = AddressParser.getDashAddressParser(MainNetParams.get())
+    override val addressParser: AddressParser = AddressParser.getDashAddressParser(AddressNetwork.DASH_MAINNET)
     override fun getPaymentRequestURI(address: String, amount: String): String =
         "dash:$address?amount=$amount"
 
@@ -255,7 +249,7 @@ open class MayaKujiraCryptoCurrency : MayaBitcoinCryptoCurrency() {
         38,
         "KIJI.KUJI"
     )
-    override val addressParser: AddressParser = Bech32AddressParser("kujira", 38, null)
+    override val addressParser: AddressParser = Bech32AddressParser("kujira", 38)
     override val codeId: Int = R.string.cryptocurrency_kuji_code
     override val nameId: Int = R.string.cryptocurrency_kuji_network
 
@@ -407,8 +401,7 @@ open class MayaRadixCryptoCurrency : MayaBitcoinCryptoCurrency() {
     override val paymentIntentParser: PaymentIntentParser = XrdPaymentIntentParser()
     override val addressParser: AddressParser = Bech32AddressParser(
         "account_rdx",
-        "1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]{50,65}",
-        null
+        "1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]{50,65}"
     )
     override val codeId: Int = R.string.cryptocurrency_xrd_code
     override val nameId: Int = R.string.cryptocurrency_xrd_network

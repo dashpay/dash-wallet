@@ -25,6 +25,9 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
+import org.dash.wallet.common.services.AuthenticationManager
+import javax.inject.Inject
+import kotlinx.coroutines.launch
 import de.schildbach.wallet.ui.compose_views.createInstantUsernameDialog
 import de.schildbach.wallet.ui.username.UsernameType
 import de.schildbach.wallet_test.R
@@ -38,6 +41,9 @@ import org.dash.wallet.common.util.observe
 
 @AndroidEntryPoint
 class ConfirmUsernameRequestDialogFragment: OffsetDialogFragment(R.layout.dialog_confirm_username_request) {
+
+    @Inject
+    lateinit var authManager: AuthenticationManager
     private val binding by viewBinding(DialogConfirmUsernameRequestBinding::bind)
 
     private val viewModel by viewModels<ConfirmUserNameDialogViewModel>()
@@ -45,14 +51,24 @@ class ConfirmUsernameRequestDialogFragment: OffsetDialogFragment(R.layout.dialog
     private val args by navArgs<ConfirmUsernameRequestDialogFragmentArgs>()
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        viewModel.isContestableUsername = requestUserNameViewModel.isUsernameContestable()
-        viewModel.hasIdentity = requestUserNameViewModel.identity != null
         val usernameType = args.usernameType
-        viewModel.usernameType = usernameType
+        val isContestableUsername = requestUserNameViewModel.isUsernameContestable()
+        // The shown (and approved) amount is computed from these inputs; the
+        // confirm button stays disabled until it reflects them.
+        viewModel.setInputs(
+            ConfirmUserNameInputs(
+                usernameType = usernameType,
+                isContestableUsername = isContestableUsername,
+                hasIdentity = requestUserNameViewModel.identity != null,
+                // Shielded-funded creations show the denomination actually leaving
+                // the shielded balance (0.03/0.25 under v13), not the L1 fee schedule.
+                paymentSource = requestUserNameViewModel.paymentSource
+            )
+        )
         binding.confirmBtn.setOnClickListener {
             viewLifecycleOwner.lifecycleScope.launch {
                 requestUserNameViewModel.logEvent(AnalyticsConstants.UsersContacts.CREATE_USERNAME_CONFIRM)
-                if (usernameType == UsernameType.Primary && viewModel.isContestableUsername &&
+                if (usernameType == UsernameType.Primary && isContestableUsername &&
                     !requestUserNameViewModel.hasSecondaryName()) {
                     createInstantUsernameDialog(
                         onCreateInstantUsername = {
@@ -65,13 +81,17 @@ class ConfirmUsernameRequestDialogFragment: OffsetDialogFragment(R.layout.dialog
                             dismiss()
                         },
                         onCancel = {
-                            requestUserNameViewModel.submit()
-                            dismiss()
+                            lifecycleScope.launch {
+                                authenticateThenSubmit(this@ConfirmUsernameRequestDialogFragment, authManager, requestUserNameViewModel)
+                                dismiss()
+                            }
                         }
                     ).show(requireActivity())
                 } else {
-                    requestUserNameViewModel.submit()
-                    dismiss()
+                    lifecycleScope.launch {
+                        authenticateThenSubmit(this@ConfirmUsernameRequestDialogFragment, authManager, requestUserNameViewModel)
+                        dismiss()
+                    }
                 }
             }
         }
@@ -81,15 +101,21 @@ class ConfirmUsernameRequestDialogFragment: OffsetDialogFragment(R.layout.dialog
             UsernameType.Secondary -> getString(R.string.new_account_secondary_confirm_message, args.username)
         }
         binding.userAccepts.setOnClickListener {
-            binding.confirmBtn.isEnabled = binding.userAccepts.isChecked
+            updateConfirmEnabled(viewModel.uiState.value.amountReady)
         }
 
         binding.dismissBtn.setOnClickListener { dismiss() }
 
         viewModel.uiState.observe(viewLifecycleOwner) {
+            updateConfirmEnabled(it.amountReady)
             binding.dashAmountView.text = it.amountStr
             binding.fiatSymbolView.text = it.fiatSymbol
             binding.fiatAmountView.text = it.fiatAmountStr
+            // Shielded-funded creations spend the pool's exit denomination —
+            // say so under the amount instead of letting it read as an L1
+            // wallet spend.
+            binding.costSourceLabel.isVisible =
+                it.fromShieldedBalance && !requestUserNameViewModel.isUsingInvite()
         }
 
         if (requestUserNameViewModel.isUsingInvite()) {
@@ -98,5 +124,14 @@ class ConfirmUsernameRequestDialogFragment: OffsetDialogFragment(R.layout.dialog
             binding.fiatAmountView.isVisible = false
             binding.fiatSymbolView.isVisible = false
         }
+    }
+
+    /**
+     * Confirmation needs BOTH the user's acceptance and a resolved DASH amount:
+     * the checkbox alone would let the user approve a blank amount, or one not
+     * yet computed for this username kind and payment source.
+     */
+    private fun updateConfirmEnabled(amountReady: Boolean) {
+        binding.confirmBtn.isEnabled = binding.userAccepts.isChecked && amountReady
     }
 }

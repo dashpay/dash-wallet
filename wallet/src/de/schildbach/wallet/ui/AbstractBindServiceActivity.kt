@@ -47,11 +47,9 @@ abstract class AbstractBindServiceActivity : LockScreenActivity() {
 
     override fun onResume() {
         super.onResume()
-
-        if (finishedWithoutWallet) {
-            // no wallet - binding would start BlockchainServiceImpl, which needs one
-            return
-        }
+        // Never bind (BIND_AUTO_CREATE starts the blockchain service) for an
+        // activity LockScreenActivity finished for want of a wallet.
+        if (finishedForNoWallet) return
 
         doBindService()
     }

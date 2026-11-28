@@ -100,6 +100,36 @@
 
     </LinearLayout>
 
+    <!-- In-flight indicator for the ~30s shielded/SDK invite creation spend
+         (Fix C). Hidden by default; shown while the confirm handler runs so the
+         user has feedback instead of a frozen dialog. -->
+    <LinearLayout
+        android:id="@+id/creation_progress"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="17dp"
+        android:layout_marginHorizontal="20dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:visibility="gone"
+        tools:visibility="visible">
+
+        <ProgressBar
+            android:id="@+id/creation_progress_bar"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:indeterminate="true" />
+
+        <TextView
+            android:id="@+id/creation_progress_message"
+            style="@style/Body2.Tertiary"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:text="@string/shielded_proving_message" />
+    </LinearLayout>
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

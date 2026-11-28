@@ -4,9 +4,19 @@ on:
   pull_request:
     branches: [ master, feature-*, bugfix-*, feat/*, fix/* ]
 
+permissions:
+  contents: read
+  packages: read
+
 jobs:
   check:
     runs-on: ubuntu-latest
+
+    # See dashwallet.yml — needed to resolve org.dashj:dash-sdk-android from
+    # GitHub Packages on dashpay/platform.
+    env:
+      GITHUB_ACTOR: ${{ github.actor }}
+      GITHUB_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
 
     steps:
 

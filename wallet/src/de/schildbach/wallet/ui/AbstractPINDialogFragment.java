@@ -156,7 +156,7 @@ public abstract class AbstractPINDialogFragment extends DialogFragment {
 
     abstract protected void checkPassword(final String password);
 
-    // TODO: this needs better handling as it can be confused with the WalletDataProvider.
+    // TODO: this needs better handling as it can be confused with the WalletData.
     // Perhaps keep the walletBuffer from the activity in the RestoreWalletFromFileViewModel
     // and share it across fragments
     public interface WalletProvider {

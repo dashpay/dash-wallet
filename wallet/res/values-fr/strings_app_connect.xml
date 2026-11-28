@@ -11,7 +11,7 @@
     <string name="dash_st_purchase_title">Acheter des jetons ?</string>
     <string name="dash_st_key_setup">Configurer la clé de signature</string>
     <string name="dash_st_key_setup_title">Configurer la signature des achats ?</string>
-    <string name="dash_st_key_setup_warning">Ce portefeuille a besoin d\'une clé de signature pour les achats. Sa configuration enregistre sur votre identité une clé contrôlée par le portefeuille et entraîne des frais de réseau en crédits Platform. Cela n\'achète pas de jetons. Vous examinerez et approuverez l\'achat séparément ensuite.</string>
+    <string name="dash_st_key_setup_warning">La signature des achats doit être configurée sur ce portefeuille. La configuration restaure l\'accès à une clé existante contrôlée par le portefeuille ou, si nécessaire, enregistre une nouvelle clé sur votre identité. Des frais de réseau en crédits Platform s\'appliquent uniquement si une nouvelle clé est enregistrée. Cela n\'achète pas de jetons. Vous examinerez et approuverez l\'achat séparément ensuite.</string>
     <string name="dash_connect_records_unavailable">Historique des connexions indisponible</string>
     <string name="dash_connect_records_unavailable_message">L\'historique de vos connexions enregistrées n\'a pas pu être lu. Les accès existants des applications peuvent encore être actifs. Aucun accès n\'a été révoqué.</string>
     <string name="dash_connect_records_retry">Réessayer</string>

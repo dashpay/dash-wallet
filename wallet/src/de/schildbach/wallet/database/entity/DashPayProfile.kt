@@ -109,6 +109,8 @@ data class DashPayProfile(@PrimaryKey val userId: String,
         other as DashPayProfile
 
         if (userId != other.userId) return false
+        // a username-only change (a registered replacement name) is a change for observers
+        if (username != other.username) return false
         if (displayName != other.displayName) return false
         if (publicMessage != other.publicMessage) return false
         if (avatarUrl != other.avatarUrl) return false

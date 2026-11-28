@@ -34,9 +34,10 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
-import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.money.MonetaryFormat
 import org.dash.wallet.common.Configuration
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
+import de.schildbach.wallet.data.freshReceiveAddressStringOffMain
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.NetworkStateInt
@@ -52,6 +53,7 @@ import org.dash.wallet.integrations.uphold.api.getDashBalance
 import org.dash.wallet.integrations.uphold.api.hasValidCredentials
 import org.dash.wallet.integrations.uphold.api.isAuthenticated
 import javax.inject.Inject
+import de.schildbach.wallet.util.toDashjFiat
 
 data class BuyAndSellUIState(
     val servicesList: List<BuyAndSellDashServicesModel> = BuyAndSellDashServicesModel.getBuyAndSellDashServicesList(),
@@ -75,7 +77,7 @@ class BuyAndSellViewModel @Inject constructor(
     private val topperClient: TopperClient,
     private val networkState: NetworkStateInt,
     exchangeRates: ExchangeRatesProvider,
-    private val walletData: WalletDataProvider,
+    private val walletData: WalletData,
     private val walletUIConfig: WalletUIConfig,
     private val swapProvider: DispatchingSwapProvider
 ): ViewModel() {
@@ -206,7 +208,7 @@ class BuyAndSellViewModel @Inject constructor(
                 if (currentRate == null) {
                     model.copy(balance = balance)
                 } else {
-                    val exchangeRate = ExchangeRate(Coin.COIN, currentRate.fiat)
+                    val exchangeRate = ExchangeRate(Coin.COIN, currentRate.fiat.toDashjFiat())
                     val localValue = exchangeRate.coinToFiat(balance)
                     model.copy(balance = balance, localBalance = localValue)
                 }
@@ -221,7 +223,7 @@ class BuyAndSellViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val account = coinBaseRepository.getUserAccount()
-                coinbaseConfig.set(CoinbaseConfig.LAST_BALANCE, account.coinBalance().value)
+                coinbaseConfig.set(CoinbaseConfig.LAST_BALANCE, account.coinBalance().duffs)
                 showRowBalance(ServiceType.COINBASE, account.availableBalance.value)
             } catch (ex: Exception) {
                 showRowBalance(ServiceType.COINBASE, coinbaseBalanceString())
@@ -269,7 +271,9 @@ class BuyAndSellViewModel @Inject constructor(
     suspend fun topperBuyUrl(walletName: String): String {
         return topperClient.getOnRampUrl(
             walletUIConfig.getExchangeCurrencyCode(),
-            walletData.freshReceiveAddress(),
+            // Off-main: callers launch this from lifecycleScope (Main), and
+            // dashj's freshReceiveAddress() forces a synchronous full-wallet save.
+            walletData.freshReceiveAddressStringOffMain(),
             walletName
         )
     }

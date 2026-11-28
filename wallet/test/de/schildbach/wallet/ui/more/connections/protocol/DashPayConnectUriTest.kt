@@ -189,6 +189,20 @@ class DashPayConnectUriTest {
         rejects(uri(query = "v=2&n=d&r=$r&cb=" + java.net.URLEncoder.encode("https://yap.pr/" + "a".repeat(512), "UTF-8")))
     }
 
+    @Test fun `a rejected link never reaches the log through the exception chain`() {
+        // java.net.URI quotes the whole callback, token included, in its syntax error.
+        val token = "callback-secret-token"
+        val badCallback = java.net.URLEncoder.encode("https://yap.pr/connect?t=$token bad", "UTF-8")
+        val keyUri = fixture["uri"].asString.substringBefore("&cb=") + "&cb=$badCallback"
+        for (link in listOf(uri(query = "v=2&n=d&r=$r&cb=$badCallback"), keyUri)) {
+            val error = assertThrows(DashConnectUriException::class.java) { DashConnectUri.parseRequest(link) }
+            assertEquals("Invalid connection request", error.message)
+            assertNull(error.cause)
+            val logged = java.io.StringWriter().also { error.printStackTrace(java.io.PrintWriter(it)) }.toString()
+            assertFalse(logged, logged.contains(token))
+        }
+    }
+
     @Test fun `invite is not a connect link`() {
         val invite = "dashpay://invite?du=alice&assetlocktx=a0963d1b&pk=cNihCPEQ&islock=0101b1"
         assertFalse(DashConnectUri.isConnectUri(invite))

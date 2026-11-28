@@ -39,7 +39,7 @@ import org.bitcoinj.utils.MonetaryFormat;
 import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.WalletProtobufSerializer;
-import org.dash.wallet.common.transactions.TransactionUtils;
+import de.schildbach.wallet.transactions.TransactionUtils;
 
 import java.util.Calendar;
 import java.util.Locale;

@@ -17,9 +17,9 @@
 
 package org.dash.wallet.common.util
 
-import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.Fiat
-import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.money.Coin
+import org.dash.wallet.common.money.Fiat
+import org.dash.wallet.common.money.MonetaryFormat
 import org.dash.wallet.common.util.toBigDecimal
 import org.junit.Assert.assertEquals
 import org.junit.Test

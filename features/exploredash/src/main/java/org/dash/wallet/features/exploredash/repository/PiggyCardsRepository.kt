@@ -20,9 +20,9 @@ package org.dash.wallet.features.exploredash.repository
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
-import org.bitcoinj.uri.BitcoinURI
-import org.bitcoinj.uri.BitcoinURIParseException
 import org.dash.wallet.common.data.ServiceName
+import org.dash.wallet.common.payments.parsers.DashUri
+import org.dash.wallet.common.payments.parsers.DashUriParseException
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.DenominationType
 import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardInfo
@@ -446,7 +446,7 @@ class PiggyCardsRepository @Inject constructor(
         }
 
         return try {
-            val uri = BitcoinURI(Constants.NETWORK_PARAMETERS, orderResponse.payTo)
+            val uri = DashUri.parse(orderResponse.payTo)
             // the first query may return only one item, rather than all, so
             // let us fill out a mock of what the cards should be
             val giftCard = response.first()
@@ -458,7 +458,7 @@ class PiggyCardsRepository @Inject constructor(
                             id = orderResponse.id,
                             merchantName = giftCard.merchantName,
                             status = giftCard.status,
-                            cryptoAmount = uri.amount.toPlainString(),
+                            cryptoAmount = uri.amount!!.toPlainString(),
                             cryptoCurrency = Constants.DASH_CURRENCY,
                             paymentCryptoNetwork = Constants.DASH_CURRENCY,
                             rate = rate.exchangeRate.toString(),
@@ -470,7 +470,7 @@ class PiggyCardsRepository @Inject constructor(
                 }
             }
             cardsOrdered
-        } catch (e: BitcoinURIParseException) {
+        } catch (e: DashUriParseException) {
             if (e.message?.contains("Unsupported URI scheme") == true || orderResponse.payTo.isEmpty()) {
                 throw CTXSpendException(
                     orderResponse.payMessage,

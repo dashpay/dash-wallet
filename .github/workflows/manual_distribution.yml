@@ -16,10 +16,20 @@ on:
         required: true
         default: 'release'
 
+permissions:
+  contents: read
+  packages: read
+
 jobs:
   build:
 
     runs-on: ubuntu-latest
+
+    # See dashwallet.yml — needed to resolve org.dashj:dash-sdk-android from
+    # GitHub Packages on dashpay/platform.
+    env:
+      GITHUB_ACTOR: ${{ github.actor }}
+      GITHUB_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
 
     steps:
     - name: Map flavor to firebase app id

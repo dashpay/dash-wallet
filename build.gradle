@@ -3,8 +3,25 @@ buildscript {
         kotlin_version = '2.1.0'
         coroutinesVersion = '1.6.4'
         ok_http_version = '4.12.0'
-        dashjVersion = '24.0.0'
-        dppVersion = "5.0.1"
+        dashjVersion = '24.0.0' // Dash Core v24 support; required by dppVersion 5.1.0-dev.3
+        // Dash Platform Kotlin SDK (org.dashj:dash-sdk-android). Single source of
+        // truth for both the dependency coordinate (wallet/build.gradle) and the
+        // DASH_SDK_VERSION BuildConfig field shown on the About screen once the
+        // cutover hands L1 ownership to the SDK.
+        // Recipe: HashEngineering/dash-wallet-qa
+        // recipes/platform/5.1.0-int42.yaml.
+        dashSdkVersion = '5.1.0-int42-20261123.182722-1'
+        // Legacy dashj-platform SDK (org.dashj.platform). Moved from the 5.0.1 Maven
+        // Central release to the 5.1.0-dev.3 snapshot, pinned to an exact timestamped
+        // build rather than the floating -SNAPSHOT so the artifact is reproducible.
+        // 5.1.0-dev.3 is the SAME Platform base that the Kotlin SDK's int42 pin above
+        // was built from, which is why the two move together and are changed in one
+        // commit. It keeps the 5.0.1 client calls DashConnect needs
+        // (getProtocolVersion, getPlatformTime, contract groups), and still requires
+        // dashj 24.0.0.
+        // Published 2026-11-23 to central.sonatype.com/repository/maven-snapshots,
+        // which is already in the repository list in wallet/build.gradle.
+        dppVersion = "5.1.0-dev.3-20261123.212721-1"
         hiltVersion = '2.53'
         hiltCompilerVersion = '1.2.0'
         hiltWorkVersion = '1.2.0'
@@ -69,10 +86,48 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose") version "$kotlin_version" apply false
 }
 
+// Credentials for the GitHub Packages Maven registry that hosts the pre-release
+// Dash Platform Kotlin SDK (see the repository declaration below). GitHub Packages
+// requires authentication for reads as well as writes.
+//   CI     : GITHUB_ACTOR / GITHUB_TOKEN environment variables.
+//   Local  : optional gpr.user / gpr.token in ~/.gradle/gradle.properties.
+// Never commit a token; both sources are read at configuration time only.
+def githubPackagesUser = System.getenv('GITHUB_ACTOR') ?: findProperty('gpr.user')
+def githubPackagesToken = System.getenv('GITHUB_TOKEN') ?: findProperty('gpr.token')
+
 allprojects {
     repositories {
-        google()
         mavenLocal()
+        // org.dashj:dash-sdk-android pre-release snapshots are published to GitHub
+        // Packages on dashpay/platform; they are deliberately not on Maven Central
+        // until the SDK cutover ships. mavenLocal() above is declared first, so a
+        // locally published SDK build still wins for local development, and this
+        // repository is only consulted when the coordinate is not already in ~/.m2.
+        // The content filter keeps every other dependency off this registry —
+        // GitHub Packages answers unknown coordinates with 401/403, which would
+        // otherwise turn unrelated lookups into hard resolution failures.
+        // Declared only when credentials exist so a credential-less checkout keeps
+        // building against ~/.m2.
+        // The pre-release SDK AAR is published to THIS repo's own package
+        // registry (publishing needs write on the destination repo, which
+        // fork-based contributors do not have on dashpay/platform). The
+        // package is public, so no credentials are required to read it —
+        // CI resolves it with nothing configured. Credentials are still
+        // honoured when present, for private-package scenarios.
+        maven {
+            name 'GitHubPackagesDashSdk'
+            url 'https://maven.pkg.github.com/dashpay/dash-wallet'
+            if (githubPackagesUser && githubPackagesToken) {
+                credentials {
+                    username = githubPackagesUser
+                    password = githubPackagesToken
+                }
+            }
+            content {
+                includeModule('org.dashj', 'dash-sdk-android')
+            }
+        }
+        google()
         mavenCentral()
         maven { url 'https://jitpack.io' }
         maven { url 'https://s01.oss.sonatype.org/content/repositories/snapshots/' }

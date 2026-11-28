@@ -35,11 +35,13 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
-import org.bitcoinj.core.Coin
 import org.dash.wallet.common.databinding.FragmentIntegrationPortalBinding
+import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.blinkAnimator
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.common.ui.setAmount
+import org.dash.wallet.common.ui.setFormat
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.openCustomTab
@@ -113,7 +115,7 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_integration_portal) 
 
         binding.balanceDash.setFormat(viewModel.balanceFormat)
         binding.balanceDash.setApplyMarkup(false)
-        binding.balanceDash.setAmount(Coin.ZERO)
+        binding.balanceDash.setAmount(Dash.ZERO)
         this.balanceAnimator = binding.balanceHeader.blinkAnimator
 
         binding.root.setOnRefreshListener {

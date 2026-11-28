@@ -43,6 +43,11 @@ class UsernameVotingInfoFragment : Fragment(R.layout.fragment_username_voting_in
         }
         lifecycleScope.launchWhenStarted {
             lifecycleScope.launch {
+                // Harmless for the create path since CreateUsernameActivity's
+                // routing (resolveCreateUsernameStartDestination) always starts
+                // a wallet without an identity at the welcome screen regardless
+                // of this flag. It still matters for the invite/reuse re-entry
+                // arms, which show the welcome screen only until this is set.
                 dashPayViewModel.setIsDashPayInfoShown(true)
             }
         }

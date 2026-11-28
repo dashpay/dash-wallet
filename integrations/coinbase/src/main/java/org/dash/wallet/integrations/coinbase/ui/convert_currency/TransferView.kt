@@ -27,9 +27,10 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.core.view.setPadding
 import androidx.core.view.updateLayoutParams
-import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.ExchangeRate
-import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.money.FiatValue
+import org.dash.wallet.common.money.MoneyFormat
+import org.dash.wallet.common.money.dashToFiat
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.toFormattedString
@@ -41,14 +42,15 @@ import org.dash.wallet.integrations.coinbase.ui.convert_currency.model.BaseServi
 class TransferView(context: Context, attrs: AttributeSet) : ConstraintLayout(context, attrs) {
 
     private val binding = ConvertViewBinding.inflate(LayoutInflater.from(context), this)
-    private val dashFormat = MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
+    private val dashFormat = MoneyFormat().withLocale(GenericUtils.getDeviceLocale())
         .noCode().minDecimals(2).optionalDecimals(0,6)
 
     private var onTransferDirectionBtnClicked: (() -> Unit)? = null
 
-    var inputInDash: Coin = Coin.ZERO
+    var inputInDash: Dash = Dash.ZERO
 
-    var exchangeRate: ExchangeRate? = null
+    /** fiat price of one Dash */
+    var exchangeRate: FiatValue? = null
     var balanceOnCoinbase: BaseServiceWallet? = null
         set(value) {
             field = value
@@ -149,11 +151,11 @@ class TransferView(context: Context, attrs: AttributeSet) : ConstraintLayout(con
     private fun updateAmount() {
         if (walletToCoinbase) {
             exchangeRate?.let { rate ->
-                val fiatAmount = rate.coinToFiat(inputInDash).toFormattedString()
+                val fiatAmount = rate.dashToFiat(inputInDash).toFormattedString()
                 binding.convertFromDashBalance.text = "${dashFormat
                     .format(inputInDash)} ${Constants.DASH_CURRENCY}"
                 binding.convertFromDashFiatAmount.text = "${Constants.PREFIX_ALMOST_EQUAL_TO} $fiatAmount"
-                if (inputInDash.isGreaterThan(Coin.ZERO)){
+                if (inputInDash.isGreaterThan(Dash.ZERO)){
                     binding.convertFromDashBalance.isVisible = true
                     binding.convertFromDashFiatAmount.isVisible = true
                     binding.walletIcon.isVisible = true
@@ -165,9 +167,9 @@ class TransferView(context: Context, attrs: AttributeSet) : ConstraintLayout(con
                 if (balance.isNotEmpty() && balance != CoinbaseConstants.VALUE_ZERO){
                     val formattedAmount = GenericUtils.formatFiatWithoutComma(balance)
                     val coin = try {
-                        Coin.parseCoin(formattedAmount)
+                        Dash.parse(formattedAmount)
                     } catch (x: Exception) {
-                        Coin.ZERO
+                        Dash.ZERO
                     }
 
                     val formatDash = dashFormat.minDecimals(2)

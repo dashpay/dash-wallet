@@ -11,7 +11,7 @@
     <string name="dash_st_purchase_title">¿Comprar tokens?</string>
     <string name="dash_st_key_setup">Configurar clave de firma</string>
     <string name="dash_st_key_setup_title">¿Configurar la firma de compras?</string>
-    <string name="dash_st_key_setup_warning">Esta billetera necesita una clave de firma de compras. Al configurarla se registra en tu identidad una clave controlada por la billetera y se cobra una comisión de red en créditos de Platform. Esto no compra tokens. Después revisarás y aprobarás la compra por separado.</string>
+    <string name="dash_st_key_setup_warning">La firma de compras debe configurarse en esta billetera. La configuración restaura el acceso a una clave existente controlada por la billetera o, si es necesario, registra una clave nueva en tu identidad. Solo se cobra una comisión de red en créditos de Platform si se registra una clave nueva. Esto no compra tokens. Después revisarás y aprobarás la compra por separado.</string>
     <string name="dash_connect_records_unavailable">Registros de conexión no disponibles</string>
     <string name="dash_connect_records_unavailable_message">No se pudieron leer tus registros de conexión guardados. Es posible que el acceso de las aplicaciones existentes siga activo. No se ha revocado ningún acceso.</string>
     <string name="dash_connect_records_retry">Reintentar</string>

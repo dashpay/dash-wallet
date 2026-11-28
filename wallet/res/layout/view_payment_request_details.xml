@@ -175,6 +175,18 @@
 
     </LinearLayout>
 
+    <TextView
+        android:id="@+id/resend_notice"
+        style="@style/Body2.Secondary"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="12dp"
+        android:layout_marginEnd="16dp"
+        android:text="@string/payment_request_resending_earlier_payment"
+        android:visibility="gone"
+        tools:visibility="visible" />
+
     <Button
         android:id="@+id/confirm_payment"
         style="@style/Button.Primary.Large.Blue"

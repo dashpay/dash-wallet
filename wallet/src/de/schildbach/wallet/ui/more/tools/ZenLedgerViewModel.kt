@@ -30,7 +30,7 @@ import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Address
 import org.bitcoinj.script.ScriptPattern
 import org.bitcoinj.wallet.KeyChain
-import org.dash.wallet.common.WalletDataProvider
+import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.util.Constants.DASH_CURRENCY
 import org.slf4j.LoggerFactory
@@ -38,7 +38,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ZenLedgerViewModel @Inject constructor(
-    private val walletDataProvider: WalletDataProvider,
+    private val walletDataProvider: WalletData,
     private val blockchainStateProvider: BlockchainStateProvider,
     private val zenLedgerClient: ZenLedgerClient
 ) : ViewModel() {

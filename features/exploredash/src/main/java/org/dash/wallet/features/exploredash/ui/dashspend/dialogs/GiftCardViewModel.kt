@@ -19,7 +19,7 @@ package org.dash.wallet.features.exploredash.ui.dashspend.dialogs
 
 import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
-import org.bitcoinj.core.Sha256Hash
+import org.dash.wallet.common.money.TxIds
 import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
 import javax.inject.Inject
 
@@ -27,7 +27,7 @@ import javax.inject.Inject
 class GiftCardViewModel @Inject constructor(
     val giftCardsDao: GiftCardDao
 ) : ViewModel() {
-    suspend fun getGiftCardCount(txId: Sha256Hash): Int {
-        return giftCardsDao.getCardCountForTransaction(txId)
+    suspend fun getGiftCardCount(txId: String): Int {
+        return giftCardsDao.getCardCountForTransaction(TxIds.toBytes(txId))
     }
 }

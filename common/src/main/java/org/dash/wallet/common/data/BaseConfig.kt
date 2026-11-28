@@ -33,12 +33,15 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.util.security.EncryptionProvider
+import org.slf4j.LoggerFactory
 import java.io.IOException
+import java.util.WeakHashMap
 
 abstract class BaseConfig(
     private val context: Context,
@@ -47,8 +50,55 @@ abstract class BaseConfig(
     private val encryptionProvider: EncryptionProvider? = null,
     migrations: List<DataMigration<Preferences>> = listOf()
 ) {
+    companion object {
+        private val log = LoggerFactory.getLogger(BaseConfig::class.java)
+
+        // Registry of live BaseConfig instances, weakly referenced so GC'able
+        // configs don't leak. Every instance registers itself on construction.
+        // A wallet wipe must clear each LIVE config through its DataStore API
+        // (memory + disk reset atomically) instead of deleting the backing file
+        // out-of-band: an out-of-band delete leaves the live DataStore's
+        // in-memory cache populated while disk is empty, so later reads return
+        // stale values and later writes recreate the file with a random subset
+        // of keys (observed live: debug SDK flags never reseeding after a
+        // Reset Wallet because the stale cache made them look already-set).
+        private val registryLock = Any()
+        private val liveInstances = WeakHashMap<BaseConfig, Unit>()
+
+        /**
+         * Clears every live [BaseConfig] instance through its DataStore API and
+         * returns the DataStore file names (e.g. "dashpay.preferences_pb") that
+         * were cleared. An instance whose clear fails is logged and excluded
+         * from the returned set so callers can fall back to raw file deletion
+         * for it.
+         */
+        suspend fun clearAllLiveInstances(): Set<String> {
+            val snapshot = synchronized(registryLock) { liveInstances.keys.toList() }
+            val cleared = mutableSetOf<String>()
+
+            for (instance in snapshot) {
+                try {
+                    // The config's own wipe policy (clearAll() unless it keeps records that must
+                    // survive a same-seed restore, as DashConnectConfig's audit does).
+                    instance.onWalletWiped()
+                    cleared.add(instance.preferencesFileName)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    log.warn("failed to clear live config '{}' via API", instance.preferencesFileName, e)
+                }
+            }
+
+            return cleared
+        }
+    }
+
     private val securityKeyAlias = "${name}_security_key"
     private val json = Json { encodeDefaults = true }
+
+    /** File name used by the underlying preferences DataStore for this config. */
+    val preferencesFileName: String
+        get() = "$name.preferences_pb"
 
     protected val Context.dataStore by preferencesDataStore(
         name = name,
@@ -65,6 +115,7 @@ abstract class BaseConfig(
         }
 
     init {
+        synchronized(registryLock) { liveInstances[this] = Unit }
         walletDataProvider.attachOnWalletWipedListener {
             onWalletWiped()
         }
@@ -74,22 +125,66 @@ abstract class BaseConfig(
         clearAll()
     }
 
-    fun <T> observe(key: Preferences.Key<T>): Flow<T?> {
+    open fun <T> observe(key: Preferences.Key<T>): Flow<T?> {
         return data.map { preferences -> preferences[key] }
+    }
+
+    /**
+     * [observe] WITHOUT [data]'s IOException rescue — an unreadable store is
+     * delivered as the THROW it was instead of arriving as an absent key.
+     *
+     * [data] catches IOException and emits [emptyPreferences], so a corrupt,
+     * truncated or unreadable preferences file reaches [observe] exactly as a
+     * key that was never written does: `null`. For a preference that is only a
+     * hint that is the right trade — the unset default is harmless. For one that
+     * AUTHORISES something it is the wrong one: the caller cannot tell "nobody
+     * ever set this" from "we could not find out", so it takes the unset default
+     * on a read that never succeeded.
+     *
+     * Callers that must keep those apart collect this instead. `null` still
+     * means ABSENT, exactly as in [observe]; a FAILED read arrives as the
+     * IOException, for the caller to fail closed on.
+     */
+    open fun <T> observePreservingErrors(key: Preferences.Key<T>): Flow<T?> {
+        return context.dataStore.data.map { preferences -> preferences[key] }
     }
 
     open suspend fun <T> get(key: Preferences.Key<T>): T? {
         return data.map { preferences -> preferences[key] }.first()
     }
 
-    /** Reads a preference without converting an I/O failure into an empty value. */
-    protected suspend fun <T> getPreservingErrors(key: Preferences.Key<T>): T? {
-        return context.dataStore.data.map { preferences -> preferences[key] }.first()
+    /**
+     * One-shot [observePreservingErrors]: `null` means the key is ABSENT; an
+     * unreadable store THROWS (IOException) instead of reading as absent the
+     * way [get] does. For state whose absence authorises an action — callers
+     * must fail closed on the throw. [get] is unchanged for ordinary hints.
+     */
+    open suspend fun <T> getPreservingErrors(key: Preferences.Key<T>): T? {
+        return observePreservingErrors(key).first()
     }
 
     open suspend fun <T> set(key: Preferences.Key<T>, value: T) {
         context.dataStore.edit { preferences ->
             preferences[key] = value
+        }
+    }
+
+    /**
+     * Apply several key writes in ONE DataStore transaction.
+     *
+     * [set] is a transaction PER KEY, so a group of keys that is only
+     * meaningful together can be torn apart by a process death between two
+     * consecutive calls, leaving a half-written record that still reads as
+     * valid. Write such a group through this instead.
+     */
+    open suspend fun editPreferences(transform: (MutablePreferences) -> Unit) {
+        context.dataStore.edit { preferences -> transform(preferences) }
+    }
+
+    /** Remove [key] entirely, so a later [get] returns null (not a stale value). */
+    open suspend fun <T> remove(key: Preferences.Key<T>) {
+        context.dataStore.edit { preferences ->
+            preferences.remove(key)
         }
     }
 
@@ -104,7 +199,7 @@ abstract class BaseConfig(
         context.dataStore.secureEdit(value) { preferences, encryptedValue -> preferences[key] = encryptedValue }
     }
 
-    suspend fun clearAll() {
+    open suspend fun clearAll() {
         context.dataStore.edit { it.clear() }
     }
 

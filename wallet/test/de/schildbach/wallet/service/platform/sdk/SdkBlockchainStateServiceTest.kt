@@ -1,0 +1,382 @@
+/*
+ * Copyright 2026 Dash Core Group.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package de.schildbach.wallet.service.platform.sdk
+
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+import io.mockk.every
+import io.mockk.mockk
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
+import org.dash.wallet.common.data.SyncStage
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import java.util.concurrent.atomic.AtomicInteger
+
+/**
+ * Host-JVM tests for [SdkBlockchainStateService]: the cutover gate
+ * (pre-cutover provably inert), and the EQUALITY-GATED 1 Hz propagation —
+ * identical snapshots must not re-derive/re-write (the iOS-validated
+ * pattern), while progress, tip-timestamp and stall EDGES must.
+ */
+@OptIn(ExperimentalCoroutinesApi::class)
+class SdkBlockchainStateServiceTest {
+
+    // Filters at 50/100 with an HONEST aggregate — (100 + 100 + 50) / 3. The
+    // former 1.0 was inert; since 2026-09-21 the stall verdict reads it (the
+    // iOS caught-up exemption), and a 100% aggregate would exempt this
+    // fixture's stall from the NETWORK impediment these tests assert on.
+    private val syncing = ShadowSyncProgress(ShadowSyncPhase.FILTERS, 0.833, 100, 100, 50, 100)
+
+    private fun configWithState(state: String?): DashPayConfig = mockk {
+        every { observe(DashPayConfig.CUTOVER_STATE) } returns flowOf(state)
+    }
+
+    private class Harness(
+        testScope: TestScope,
+        stored: String?,
+        val progress: MutableStateFlow<ShadowSyncProgress>,
+        val tip: MutableStateFlow<Long> = MutableStateFlow(0L),
+        stallThresholdMs: Long = 5_000L
+    ) {
+        val updates = mutableListOf<SdkBlockchainStateUpdate>()
+        /** When the fake engine last delivered a wallet event; 0 = none. */
+        @Volatile var lastEngineActivityMs = 0L
+        val progressSubscriptions = AtomicInteger(0)
+        val tipSubscriptions = AtomicInteger(0)
+        /** Live cutover state — mutable so tests can roll the cutover back. */
+        val cutoverState = MutableStateFlow(stored)
+        val clearCalls = AtomicInteger(0)
+
+        val service = SdkBlockchainStateService(
+            dashPayConfig = mockk {
+                every { observe(DashPayConfig.CUTOVER_STATE) } returns cutoverState
+            },
+            scope = testScope.backgroundScope,
+            progress = flow {
+                progressSubscriptions.incrementAndGet()
+                emitAll(progress)
+            },
+            tipUnixSeconds = flow {
+                tipSubscriptions.incrementAndGet()
+                emitAll(tip)
+            },
+            applyUpdate = { updates += it },
+            clearDerivedState = { clearCalls.incrementAndGet() },
+            nowMs = { testScope.testScheduler.currentTime },
+            stallThresholdMs = stallThresholdMs,
+            tickIntervalMs = 1_000L,
+            lastEngineActivityMs = { lastEngineActivityMs }
+        )
+    }
+
+    // ── The cutover gate ──────────────────────────────────────────────
+
+    @Test
+    fun gate_activeOnlyWhenCutoverCommitted() = runBlocking {
+        for ((stored, expected) in listOf(
+            null to false,
+            "DUAL_RUNNING" to false,
+            "READY_OBSERVED" to false,
+            "garbage" to false,
+            "CUT_OVER" to true,
+            "SETTLED" to true
+        )) {
+            val service = SdkBlockchainStateService(
+                dashPayConfig = configWithState(stored),
+                scope = this,
+                progress = flowOf(),
+                tipUnixSeconds = flowOf(),
+                applyUpdate = {}
+            )
+            assertEquals("stored=$stored", expected, service.cutoverStateFeedActive().first())
+        }
+    }
+
+    @Test
+    fun preCutover_nothingCollectedNothingWritten() = runTest {
+        val h = Harness(this, "DUAL_RUNNING", MutableStateFlow(syncing))
+        h.service.start()
+        runCurrent()
+        advanceTimeBy(10_000)
+        runCurrent()
+
+        assertEquals(0, h.progressSubscriptions.get())
+        assertEquals(0, h.tipSubscriptions.get())
+        assertTrue(h.updates.isEmpty())
+        // The initial (never-active) gate=false must not clear either —
+        // pre-cutover the provider is entirely untouched.
+        assertEquals(0, h.clearCalls.get())
+    }
+
+    // ── The equality gate ─────────────────────────────────────────────
+
+    @Test
+    fun postCutover_identicalSnapshotsPropagateExactlyOnce() = runTest {
+        val h = Harness(this, "CUT_OVER", MutableStateFlow(syncing))
+        h.service.start()
+        runCurrent()
+        assertEquals(1, h.updates.size)
+
+        // Three more 1 Hz ticks with a byte-identical snapshot: gated.
+        advanceTimeBy(3_000)
+        runCurrent()
+        assertEquals(1, h.updates.size)
+        assertEquals(SyncStage.BLOCKS, h.updates.single().syncStage)
+        assertFalse(h.updates.single().networkStalled)
+    }
+
+    /**
+     * thepastaclaw on #1721. The scanner publishes every wallet-cursor advance. One that
+     * changes nothing the row stores is not written; the one that ends the replay is.
+     */
+    @Test
+    fun postCutover_aCursorAdvanceThatDerivesTheSameUpdate_isNotWritten() = runTest {
+        val atTip = ShadowSyncProgress(ShadowSyncPhase.SYNCED, 100.0, 100_000, 100_000, 100_000, 100_000)
+        val h = Harness(
+            this,
+            "CUT_OVER",
+            MutableStateFlow(atTip.copy(walletSyncedHeight = 10)),
+            tip = MutableStateFlow(1_700_000_000L)
+        )
+        h.service.start()
+        runCurrent()
+        // The tip feed starts with 0 before its real value, so the start may write twice.
+        val written = h.updates.size
+        assertEquals("the block pipeline is still behind", false, h.updates.last().replayComplete)
+
+        h.progress.value = atTip.copy(walletSyncedHeight = 20)
+        runCurrent()
+        h.progress.value = atTip.copy(walletSyncedHeight = 30)
+        runCurrent()
+        assertEquals("lagging cursor advances derive the same update", written, h.updates.size)
+
+        h.progress.value = atTip.copy(walletSyncedHeight = 100_000)
+        runCurrent()
+        assertEquals(written + 1, h.updates.size)
+        assertEquals("the catch-up is saved", true, h.updates.last().replayComplete)
+    }
+
+    @Test
+    fun postCutover_progressChangePropagates() = runTest {
+        val h = Harness(this, "CUT_OVER", MutableStateFlow(syncing))
+        h.service.start()
+        runCurrent()
+
+        h.progress.value = syncing.copy(filterHeight = 60)
+        runCurrent()
+        assertEquals(2, h.updates.size)
+
+        val synced = ShadowSyncProgress(ShadowSyncPhase.SYNCED, 100.0, 100, 100, 100, 100)
+        h.progress.value = synced
+        runCurrent()
+        assertEquals(3, h.updates.size)
+        assertEquals(100, h.updates.last().percentageSync)
+        assertEquals(SyncStage.COMPLETE, h.updates.last().syncStage)
+    }
+
+    @Test
+    fun postCutover_tipTimestampChangePropagates() = runTest {
+        val h = Harness(this, "CUT_OVER", MutableStateFlow(syncing))
+        h.service.start()
+        runCurrent()
+        assertEquals(1, h.updates.size)
+
+        // A new block lands: only the tip timestamp moves. The snapshot is
+        // mid-scan (filters 50/100), so the propagated date is the tip time
+        // held back by the remaining filter gap (freshness ⇒ completeness).
+        h.tip.value = 1_753_000_100L
+        runCurrent()
+        assertEquals(2, h.updates.size)
+        assertEquals(
+            1_753_000_100L * 1000 - 50 * SDK_BLOCK_TARGET_SPACING_MS,
+            h.updates.last().bestChainDateMs
+        )
+    }
+
+    // ── The stall edge (derived NETWORK impediment) ───────────────────
+
+    @Test
+    fun postCutover_stalledScanRaisesThenClearsNetworkImpediment() = runTest {
+        val h = Harness(this, "CUT_OVER", MutableStateFlow(syncing), stallThresholdMs = 5_000)
+        h.service.start()
+        runCurrent()
+        assertEquals(1, h.updates.size)
+
+        // Progress frozen mid-scan past the threshold: exactly ONE more
+        // propagation — the stall EDGE — despite 8 further ticks.
+        advanceTimeBy(8_000)
+        runCurrent()
+        assertEquals(2, h.updates.size)
+        assertTrue(h.updates.last().networkStalled)
+
+        // Progress resumes: the stall clears on the next snapshot.
+        h.progress.value = syncing.copy(filterHeight = 70)
+        runCurrent()
+        assertEquals(3, h.updates.size)
+        assertFalse(h.updates.last().networkStalled)
+    }
+
+    @Test
+    fun postCutover_engineEventsKeepAStillSnapshotFromStalling() = runTest {
+        // The field shape: the block-download tail, where the filter height sits
+        // still for minutes while the engine processes blocks and emits events.
+        val h = Harness(this, "CUT_OVER", MutableStateFlow(syncing), stallThresholdMs = 5_000)
+        h.service.start()
+        runCurrent()
+
+        repeat(20) {
+            h.lastEngineActivityMs = testScheduler.currentTime
+            advanceTimeBy(1_000)
+            runCurrent()
+        }
+        // 20 s with the snapshot unchanged, 4x the threshold: never stalled.
+        assertEquals(1, h.updates.size)
+        assertFalse(h.updates.single().networkStalled)
+    }
+
+    @Test
+    fun postCutover_stallRaisesOnceEngineEventsStop() = runTest {
+        val h = Harness(this, "CUT_OVER", MutableStateFlow(syncing), stallThresholdMs = 5_000)
+        h.service.start()
+        runCurrent()
+        advanceTimeBy(3_000)
+        h.lastEngineActivityMs = testScheduler.currentTime
+        runCurrent()
+
+        // Measured from the last event, not the last snapshot change: still
+        // inside the threshold 4 s after it, past it at 6 s.
+        advanceTimeBy(4_000)
+        runCurrent()
+        assertFalse(h.updates.last().networkStalled)
+        advanceTimeBy(2_000)
+        runCurrent()
+        assertTrue(h.updates.last().networkStalled)
+    }
+
+    @Test
+    fun postCutover_syncedNeverStalls() = runTest {
+        val synced = ShadowSyncProgress(ShadowSyncPhase.SYNCED, 100.0, 100, 100, 100, 100)
+        val h = Harness(this, "CUT_OVER", MutableStateFlow(synced), stallThresholdMs = 5_000)
+        h.service.start()
+        runCurrent()
+        advanceTimeBy(60_000)
+        runCurrent()
+
+        assertEquals(1, h.updates.size)
+        assertFalse(h.updates.single().networkStalled)
+    }
+
+    @Test
+    fun postCutover_errorPhaseStallsImmediately() = runTest {
+        val error = ShadowSyncProgress(ShadowSyncPhase.ERROR, 0.0, 0, 0, 0, 0)
+        val h = Harness(this, "CUT_OVER", MutableStateFlow(error))
+        h.service.start()
+        runCurrent()
+
+        assertEquals(1, h.updates.size)
+        assertTrue(h.updates.single().networkStalled)
+        assertEquals(SyncStage.OFFLINE, h.updates.single().syncStage)
+    }
+
+    @Test
+    fun postCutover_tipFeedFailureFallsBackToEstimator() = runTest {
+        val updates = mutableListOf<SdkBlockchainStateUpdate>()
+        val service = SdkBlockchainStateService(
+            dashPayConfig = configWithState("CUT_OVER"),
+            scope = backgroundScope,
+            progress = MutableStateFlow(syncing),
+            tipUnixSeconds = flow { throw IllegalStateException("SDK not ready") },
+            applyUpdate = { updates += it },
+            nowMs = { testScheduler.currentTime }
+        )
+        service.start()
+        runCurrent()
+
+        // The derivation still runs; the tip time comes from the estimator
+        // (header gap is 0 here → "now"), but the snapshot is MID-SCAN
+        // (filters 50/100), so the date is held back by the remaining
+        // 50-block filter gap — a STALE date, never a fresh one, while the
+        // wallet-relevant scan is incomplete.
+        assertEquals(1, updates.size)
+        assertEquals(
+            testScheduler.currentTime - 50 * SDK_BLOCK_TARGET_SPACING_MS,
+            updates.single().bestChainDateMs
+        )
+    }
+
+    // ── Rollback (gate true → false) clears SDK-derived state ─────────
+
+    @Test
+    fun rollback_clearsSdkDerivedStateExactlyOnce() = runTest {
+        val h = Harness(this, "CUT_OVER", MutableStateFlow(syncing), stallThresholdMs = 5_000)
+        h.service.start()
+        runCurrent()
+
+        // Raise the stall NETWORK impediment before the rollback.
+        advanceTimeBy(8_000)
+        runCurrent()
+        assertTrue(h.updates.last().networkStalled)
+        val propagatedBeforeRollback = h.updates.size
+
+        // ROLLBACK: the derivation cancels AND the provider is told to
+        // clear the SDK-derived state (stall bit + sync stage) — otherwise
+        // the raised NETWORK impediment would latch until process restart.
+        h.cutoverState.value = "DUAL_RUNNING"
+        runCurrent()
+        assertEquals(1, h.clearCalls.get())
+
+        // Cancelled for real: further progress/ticks propagate nothing.
+        h.progress.value = syncing.copy(filterHeight = 90)
+        advanceTimeBy(10_000)
+        runCurrent()
+        assertEquals(propagatedBeforeRollback, h.updates.size)
+        assertEquals(1, h.clearCalls.get())
+    }
+
+    // ── Transient ERROR must not regress the percent ──────────────────
+
+    @Test
+    fun postCutover_transientErrorPreservesPercentage() = runTest {
+        val synced = ShadowSyncProgress(ShadowSyncPhase.SYNCED, 100.0, 100, 100, 100, 100)
+        val h = Harness(this, "CUT_OVER", MutableStateFlow(synced))
+        h.service.start()
+        runCurrent()
+        assertEquals(100, h.updates.single().percentageSync)
+
+        // A transient SDK ERROR (peer loss): the propagated update carries
+        // a null percent (preserve the row's 100) while the stall NETWORK
+        // impediment raises — no 100 → 0 → 100 flap for isSynced() readers.
+        h.progress.value = ShadowSyncProgress(ShadowSyncPhase.ERROR, 0.0, 0, 0, 0, 0)
+        runCurrent()
+        assertEquals(2, h.updates.size)
+        assertNull(h.updates.last().percentageSync)
+        assertTrue(h.updates.last().networkStalled)
+    }
+}

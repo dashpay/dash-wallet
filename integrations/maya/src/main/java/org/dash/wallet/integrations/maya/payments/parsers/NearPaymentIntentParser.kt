@@ -18,9 +18,9 @@ package org.dash.wallet.integrations.maya.payments.parsers
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.bitcoinj.core.AddressFormatException
 import org.dash.wallet.common.R
 import org.dash.wallet.common.data.PaymentIntent
+import org.dash.wallet.common.payments.parsers.AddressFormatException
 import org.dash.wallet.common.payments.parsers.PaymentIntentParserException
 import org.dash.wallet.common.util.ResourceString
 import org.slf4j.LoggerFactory
@@ -33,7 +33,7 @@ open class NearPaymentIntentParser(
     currency: String = "NEAR",
     asset: String = "NEAR.NEAR",
     shortAsset: String? = null
-) : MayaPaymentIntentParser(currency, "near", asset, shortAsset, null) {
+) : MayaPaymentIntentParser(currency, "near", asset, shortAsset) {
     private val log = LoggerFactory.getLogger(NearPaymentIntentParser::class.java)
     private val addressParser = NearAddressParser()
 

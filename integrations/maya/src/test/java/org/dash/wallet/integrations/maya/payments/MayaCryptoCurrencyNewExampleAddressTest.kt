@@ -18,11 +18,10 @@
 package org.dash.wallet.integrations.maya.payments
 
 import com.google.common.io.BaseEncoding
-import org.bitcoinj.core.Address
-import org.bitcoinj.core.Base58
-import org.bitcoinj.params.MainNetParams
+import org.dash.wallet.common.payments.parsers.AddressNetwork
+import org.dash.wallet.common.payments.parsers.AddressUtils
+import org.dash.wallet.common.payments.parsers.Base58
 import org.dash.wallet.common.payments.parsers.Bech32
-import org.dash.wallet.common.payments.parsers.BitcoinMainNetParams
 import org.dash.wallet.common.payments.parsers.SegwitAddress
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
@@ -65,7 +64,7 @@ class MayaCryptoCurrencyNewExampleAddressTest {
         val address = generateAndCheck(MayaBitcoinCryptoCurrency())
         assertTrue("expected bc1q P2WPKH, got $address", address.startsWith("bc1q"))
         // Round-trip through the real decoder: verifies the bech32 checksum and program length.
-        val decoded = SegwitAddress.fromBech32(BitcoinMainNetParams(), address)
+        val decoded = SegwitAddress.fromBech32(AddressNetwork.BITCOIN_MAINNET, address)
         assertEquals(0, decoded.witnessVersion)
         assertEquals(20, decoded.witnessProgram.size)
     }
@@ -74,8 +73,8 @@ class MayaCryptoCurrencyNewExampleAddressTest {
     fun dash_generatesMainnetP2pkh() {
         val address = generateAndCheck(MayaDashCryptoCurrency())
         assertTrue("expected X-prefixed Dash address, got $address", address.startsWith("X"))
-        // dashj's MainNetParams IS Dash mainnet: verifies Base58 checksum + version byte 76.
-        Address.fromBase58(MainNetParams.get(), address)
+        // Verifies the Base58 checksum + Dash mainnet version byte 76.
+        AddressUtils.verify(AddressNetwork.DASH_MAINNET, address)
     }
 
     @Test

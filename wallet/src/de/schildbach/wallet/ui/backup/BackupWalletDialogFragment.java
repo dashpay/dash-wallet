@@ -61,7 +61,7 @@ import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.WalletProtobufSerializer;
 import org.bouncycastle.crypto.params.KeyParameter;
 import org.dash.wallet.common.Configuration;
-import org.dash.wallet.common.WalletDataProvider;
+import de.schildbach.wallet.data.WalletData;
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder;
 import org.dash.wallet.common.ui.BaseDialogFragment;
 import org.slf4j.Logger;
@@ -113,7 +113,7 @@ public class BackupWalletDialogFragment extends DialogFragment {
     }
 
     @Inject SecurityFunctions securityFunctions;
-    @Inject WalletDataProvider walletData;
+    @Inject WalletData walletData;
     @Inject Configuration config;
 
     private AlertDialog alertDialog;

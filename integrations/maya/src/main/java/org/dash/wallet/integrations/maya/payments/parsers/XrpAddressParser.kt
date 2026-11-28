@@ -16,7 +16,6 @@
  */
 package org.dash.wallet.integrations.maya.payments.parsers
 
-import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.payments.parsers.AddressParser
 import org.dash.wallet.integrations.maya.payments.AddressGenerator
 
@@ -31,7 +30,7 @@ class XrpAddressParser : AddressParser("r[1-9A-HJ-NP-Za-km-z]{24,34}", null) {
         // Version byte (0x00 = account id) + 20-byte account id + 4-byte checksum.
         require(data.size == 25) { "XRP address must decode to 25 bytes" }
         require(data[0] == 0.toByte()) { "not an XRP account-id version byte" }
-        val checksum = Sha256Hash.hashTwice(data.copyOfRange(0, 21)).copyOfRange(0, 4)
+        val checksum = AddressGenerator.sha256Twice(data.copyOfRange(0, 21)).copyOfRange(0, 4)
         require(checksum.contentEquals(data.copyOfRange(21, 25))) { "invalid XRP address checksum" }
     }
 }

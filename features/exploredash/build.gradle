@@ -13,7 +13,7 @@ android {
     compileSdk 36
 
     defaultConfig {
-        minSdkVersion 24
+        minSdkVersion 29
         targetSdkVersion 36
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
@@ -78,7 +78,6 @@ dependencies {
     implementation "androidx.appcompat:appcompat:$appCompatVersion"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-play-services:$coroutinesVersion"
     implementation "androidx.work:work-runtime-ktx:$workRuntimeVersion"
-    implementation "org.dashj:dashj-core:$dashjVersion"
 
     // Architecture
     implementation "androidx.navigation:navigation-fragment-ktx:$navigationVersion"

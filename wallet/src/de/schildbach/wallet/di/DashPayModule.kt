@@ -24,8 +24,6 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import de.schildbach.wallet.service.CoinJoinMixingService
-import de.schildbach.wallet.service.CoinJoinService
 import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.IdentityRepositoryImpl
 import de.schildbach.wallet.service.platform.PlatformBroadcastService
@@ -68,10 +66,6 @@ abstract class DashPayModule {
 
     @Binds
     abstract fun bindsPlatformBroadcastService(platformBroadcastService: PlatformDocumentBroadcastService): PlatformBroadcastService
-
-    @Binds
-    @Singleton
-    abstract fun bindsCoinJoinService(coinJoinMixingService: CoinJoinMixingService): CoinJoinService
 
     @Singleton // only want one of PlatformSyncService created
     @Binds

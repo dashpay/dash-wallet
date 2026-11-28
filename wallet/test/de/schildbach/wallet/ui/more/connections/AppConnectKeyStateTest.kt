@@ -19,7 +19,7 @@ import org.robolectric.annotation.Implementation
 import org.robolectric.annotation.Implements
 
 @RunWith(RobolectricTestRunner::class)
-@Config(application = Application::class, sdk = [28], manifest = Config.NONE,
+@Config(application = Application::class, sdk = [29], manifest = Config.NONE,
     shadows = [AppConnectKeyStateTest.ShadowSdkEnums::class])
 class AppConnectKeyStateTest {
     @Test fun `pending registrations choose a missing authentication ID as atomic fence`() {

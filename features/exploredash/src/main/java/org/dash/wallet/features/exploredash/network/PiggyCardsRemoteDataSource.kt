@@ -19,9 +19,9 @@ package org.dash.wallet.features.exploredash.network
 import okhttp3.Authenticator
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
-import org.bitcoinj.core.NetworkParameters
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ServiceName
+import org.dash.wallet.common.money.DashNetworks
 import org.dash.wallet.features.exploredash.network.authenticator.PiggyCardsAuthenticator
 import org.dash.wallet.features.exploredash.network.interceptor.ErrorHandlingInterceptor
 import org.dash.wallet.features.exploredash.network.interceptor.PiggyCardsHeadersInterceptor
@@ -46,7 +46,7 @@ class PiggyCardsRemoteDataSource @Inject constructor(
     fun <Api> buildApi(api: Class<Api>): Api {
         return Retrofit.Builder()
             .baseUrl(
-                if (walletData.networkParameters.id == NetworkParameters.ID_MAINNET) {
+                if (walletData.networkId == DashNetworks.MAINNET) {
                     PiggyCardsConstants.BASE_URL_PROD
                 } else {
                     PiggyCardsConstants.BASE_URL_DEV
@@ -61,7 +61,7 @@ class PiggyCardsRemoteDataSource @Inject constructor(
     private fun buildTokenApi(): PiggyCardsTokenApi {
         return Retrofit.Builder()
             .baseUrl(
-                if (walletData.networkParameters.id == NetworkParameters.ID_MAINNET) {
+                if (walletData.networkId == DashNetworks.MAINNET) {
                     PiggyCardsConstants.BASE_URL_PROD
                 } else {
                     PiggyCardsConstants.BASE_URL_DEV

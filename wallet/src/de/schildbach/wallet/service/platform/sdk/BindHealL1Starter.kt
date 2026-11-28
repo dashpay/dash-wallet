@@ -1,0 +1,162 @@
+/*
+ * Copyright 2026 Dash Core Group.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+package de.schildbach.wallet.service.platform.sdk
+
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import org.slf4j.LoggerFactory
+
+/**
+ * Starts the SDK L1 engine when the wallet bind heals INSIDE a service
+ * lifetime.
+ *
+ * `PlatformSynchronizationService.resume()` starts the engine once, after the
+ * startup bind pass. When that pass fails — the device locked at upgrade time
+ * is the field case (MO-995) — `startIfEnabled()` declines because no wallet
+ * is bound, and the unlock receiver and the retry ladder then run only the
+ * bind. A successful retry clears the blocker and resets the backoff but
+ * nothing starts L1: the blockchain service calls `resume()` on creation,
+ * not on every `onStartCommand`, so opening the app did not repair the
+ * running instance either. The upgrade replay marker stayed set (IDLE
+ * snapshots preserve it) and the cleared blocker re-enabled the replay
+ * idle-stop guard for an engine that was not running (review, 2026-09-23).
+ *
+ * [arm] waits for the binder's `bindEstablished` to go true and then starts
+ * L1 once through the same idempotent entry point the startup path uses.
+ * [cancel] is called from the service's shutdown, so a heal that lands after
+ * teardown starts nothing; [serviceTearingDown] covers the window in which
+ * the shutdown has begun but not yet reached the cancel. The caller's
+ * `stillCurrent` check covers the other order: an [arm] that lands AFTER the
+ * shutdown's [cancel] (the kick that armed it was past its last suspension
+ * point when the shutdown ran), whose waiter would otherwise survive the
+ * teardown and start L1 once the cleanup flag cleared, with no service.
+ * [arm] and [cancel] run on different threads, so they are serialized.
+ *
+ * Those checks and the start are not one step: a shutdown can pass between
+ * them and finish the engine stop before the start runs. So the start carries
+ * the engine's stop generation ([stopGeneration]), sampled BEFORE the checks,
+ * and [startL1] refuses under the engine's own lock if a stop has moved it
+ * since — the guard a filter-stall restart already uses.
+ *
+ * Kept out of `PlatformSynchronizationService` so the ordering can be pinned
+ * by a host test with plain flows.
+ */
+internal class BindHealL1Starter(
+    private val scope: CoroutineScope,
+    private val bindEstablished: Flow<Boolean>,
+    private val serviceTearingDown: () -> Boolean,
+    private val stopGeneration: () -> Long,
+    private val startL1: suspend (expectedStopGeneration: Long) -> Boolean
+) {
+    private val log = LoggerFactory.getLogger(BindHealL1Starter::class.java)
+
+    @Volatile
+    private var job: Job? = null
+
+    /** Whether a heal is currently being waited for. */
+    val isArmed: Boolean get() = job?.isActive == true
+
+    /**
+     * Arm for this service lifetime; a later arm replaces an earlier one.
+     *
+     * [stillCurrent] says whether the service lifetime asking is still the
+     * current one. It is checked FIRST, under the monitor: a startup kick of a
+     * lifetime that has since ended can reach this after the next lifetime has
+     * armed its own waiter (the kick passed its lifetime check, then
+     * shutdown and the next start ran), and replacing that valid waiter with an
+     * obsolete one would leave the running service with no L1 engine and nothing
+     * waiting to start it. An obsolete arm therefore touches nothing. It is
+     * re-read once the bind heals, for a lifetime that ends while waiting.
+     */
+    @Synchronized
+    fun arm(stillCurrent: () -> Boolean = { true }) {
+        if (!stillCurrent()) {
+            log.info("SDK bind-heal arm from an ended service lifetime ignored; the current waiter is kept")
+            return
+        }
+        job?.cancel()
+        job = scope.launch {
+            // Nothing may escape this job. It is launched on a long-lived
+            // service scope with no exception handler, so a throwable here goes
+            // to the JVM's default handler — invisible in production, and in the
+            // host tests reported against whatever unrelated test happens to
+            // start next. The wait itself can throw: `first` raises
+            // NoSuchElementException if the bind feed ever COMPLETES without a
+            // true (the production feed is a StateFlow, but the seam takes any
+            // Flow, and [SdkBindRetryService] already defaults one to empty).
+            try {
+                awaitHealAndStart(stillCurrent)
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                log.warn("SDK bind-heal wait ended abnormally; nothing was started", t)
+            }
+        }
+    }
+
+    private suspend fun awaitHealAndStart(stillCurrent: () -> Boolean) {
+        bindEstablished.first { it }
+        // Sampled before the checks: a stop that lands after them moves it, and
+        // the start refuses. A cancel (shutdown, engine stop) that landed before
+        // the sample is caught here, as nothing below suspends before the start.
+        val generation = stopGeneration()
+        currentCoroutineContext().ensureActive()
+        if (!stillCurrent()) {
+            log.info(
+                "SDK bind healed after the service lifetime that waited for it ended — not starting " +
+                    "L1; the next service start kicks it"
+            )
+            return
+        }
+        if (serviceTearingDown()) {
+            log.info(
+                "SDK bind healed while the blockchain service is tearing down — not starting L1; " +
+                    "the next service start kicks it"
+            )
+            return
+        }
+        val started = try {
+            startL1(generation)
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("SDK L1 engine start after the in-session bind heal failed", t)
+            false
+        }
+        log.info(
+            "SDK bind healed in-session — L1 engine start {}",
+            if (started) "succeeded" else "declined"
+        )
+    }
+
+    /**
+     * Stop waiting. Called unconditionally from the service's shutdown and
+     * engine stop, and with [stillCurrent] from a startup kick whose own start
+     * succeeded: like [arm], a kick of an ended lifetime must not cancel the
+     * waiter the current lifetime armed.
+     */
+    @Synchronized
+    fun cancel(stillCurrent: () -> Boolean = { true }) {
+        if (!stillCurrent()) return
+        job?.cancel()
+        job = null
+    }
+}

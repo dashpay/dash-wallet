@@ -33,8 +33,7 @@ import android.widget.RemoteViews;
 
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.utils.Fiat;
-import org.bitcoinj.utils.MonetaryFormat;
-import org.bitcoinj.wallet.Wallet.BalanceType;
+import org.dash.wallet.common.money.MonetaryFormat;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.data.WalletUIConfig;
 import org.dash.wallet.common.data.entity.ExchangeRate;
@@ -121,7 +120,8 @@ public class WalletBalanceWidgetProvider extends AppWidgetProvider {
 
     private Coin getBalance(Context context) {
         final WalletApplication application = (WalletApplication) context.getApplicationContext();
-        return application.getWallet().getBalance(BalanceType.ESTIMATED);
+        // Through the seam (not wallet.getBalance directly): cutover-aware.
+        return application.getWalletBalance();
     }
 
     @Override
@@ -179,8 +179,10 @@ public class WalletBalanceWidgetProvider extends AppWidgetProvider {
         final Configuration config = new Configuration(PreferenceManager.getDefaultSharedPreferences(context));
         final MonetaryFormat btcFormat = config.getFormat();
 
-        final Spannable balanceStr = new MonetarySpannable(btcFormat.noCode(), balance).applyMarkup(null,
-                MonetarySpannable.STANDARD_INSIGNIFICANT_SPANS);
+        final Spannable balanceStr = new MonetarySpannable(
+                btcFormat.noCode(),
+                org.dash.wallet.common.money.Coin.valueOf(balance.getValue())
+        ).applyMarkup(null, MonetarySpannable.STANDARD_INSIGNIFICANT_SPANS);
 
         new AsyncTask<Context, Void, WidgetData>() {
             private final ExchangeRatesDao exchangeRatesDao =
@@ -202,9 +204,10 @@ public class WalletBalanceWidgetProvider extends AppWidgetProvider {
                 final ExchangeRate exchangeRate = widgetData.exchangeRate;
                 final Spannable localBalanceStr;
                 if (exchangeRate != null) {
-                    org.bitcoinj.utils.ExchangeRate rate = new org.bitcoinj.utils.ExchangeRate(Coin.COIN,
-                            exchangeRate.getFiat());
-                    final Fiat localBalance = rate.coinToFiat(balance);
+                    org.dash.wallet.common.money.ExchangeRate rate = new org.dash.wallet.common.money.ExchangeRate(
+                            org.dash.wallet.common.money.Coin.COIN, exchangeRate.getFiat());
+                    final org.dash.wallet.common.money.Fiat localBalance =
+                            rate.coinToFiat(org.dash.wallet.common.money.Coin.valueOf(balance.getValue()));
                     final MonetaryFormat localFormat = Constants.LOCAL_FORMAT.code(0,
                             PREFIX_ALMOST_EQUAL_TO + GenericUtils.INSTANCE.currencySymbol(exchangeRate.getCurrencyCode()));
                     final Object[] prefixSpans = new Object[]{MonetarySpannable.SMALLER_SPAN,
@@ -253,7 +256,16 @@ public class WalletBalanceWidgetProvider extends AppWidgetProvider {
         }
     }
 
+    /**
+     * No wallet to show. Every widget callback runs on the main thread, and
+     * during a safe-mode retry getWallet() would wait there for the retry's
+     * parse (minutes on a large wallet: a broadcast or input-dispatch ANR on
+     * the recovery screen). So a retry in progress counts as not ready, and
+     * the widget is left as it is; the retry refreshes it when it succeeds
+     * (WalletApplication.completeSafeModeRetry).
+     */
     private static boolean walletNotReady(Context context) {
-        return ((WalletApplication) context.getApplicationContext()).getWallet() == null;
+        final WalletApplication application = (WalletApplication) context.getApplicationContext();
+        return application.isSafeModeRetryInProgress() || application.getWallet() == null;
     }
 }

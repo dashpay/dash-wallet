@@ -19,7 +19,7 @@ package org.dash.wallet.common.data.entity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import org.bitcoinj.core.Sha256Hash
+import org.dash.wallet.common.data.TxId
 
 /** Mirrors the SwapKit /track `status` values. */
 enum class SwapOrderStatus {
@@ -49,7 +49,7 @@ enum class SwapOrderStatus {
  */
 @Entity(tableName = "swap_orders")
 data class SwapOrder(
-    @PrimaryKey val txId: Sha256Hash,
+    @PrimaryKey val txId: TxId,
     val service: String,
     val provider: String? = null,
     val fromAsset: String,

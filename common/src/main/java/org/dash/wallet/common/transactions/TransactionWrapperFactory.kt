@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 Dash Core Group.
+ * Copyright 2022 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,10 +17,8 @@
 
 package org.dash.wallet.common.transactions
 
-import org.bitcoinj.core.Transaction
-
 interface TransactionWrapperFactory {
     val averageTransactions: Long
     val wrappers: List<TransactionWrapper>
-    fun tryInclude(tx: Transaction): Pair<Boolean, TransactionWrapper?>
+    fun tryInclude(tx: TxInfo): Pair<Boolean, TransactionWrapper?>
 }

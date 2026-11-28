@@ -28,12 +28,21 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.DialogConfirmTransactionBinding
 import kotlinx.coroutines.suspendCancellableCoroutine
-import org.bitcoinj.utils.ExchangeRate
+import org.dash.wallet.common.money.ExchangeRate
 import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import de.schildbach.wallet.util.format
+import de.schildbach.wallet.util.setAmount
+import de.schildbach.wallet.util.setFiatAmount
+import de.schildbach.wallet.util.toDashjFiat
+import de.schildbach.wallet.util.toDashjCoin
+import de.schildbach.wallet.util.toNeutralCoin
+import de.schildbach.wallet.util.toNeutralFiat
+import de.schildbach.wallet.util.toTxId
+import de.schildbach.wallet.util.toSha256Hash
 
 @AndroidEntryPoint
 class ConfirmTransactionDialog(
