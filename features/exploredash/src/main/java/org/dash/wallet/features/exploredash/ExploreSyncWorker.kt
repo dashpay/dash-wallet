@@ -28,6 +28,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProvider
 import org.dash.wallet.features.exploredash.data.explore.model.Merchant
 import org.dash.wallet.features.exploredash.repository.ExploreDataSyncStatus
@@ -78,8 +79,13 @@ class ExploreSyncWorker @AssistedInject constructor(
         var remoteDataTimestamp = 0L
         var preloadedDbTimestamp = 0L
         var databasePrefs = exploreConfig.exploreDatabasePrefs.first()
+        var isCatalogReplaced = false
 
         try {
+            // Opening checks the file on disk and resets the timestamp of one that is empty or
+            // from an older schema, so the timestamp read next describes the data that is there.
+            ExploreDatabase.getAppDatabase(appContext, exploreConfig)
+            databasePrefs = exploreConfig.exploreDatabasePrefs.first()
             syncStatus.setSyncProgress(0.0)
 
             val timeInMillis = measureTimeMillis {
@@ -87,9 +93,8 @@ class ExploreSyncWorker @AssistedInject constructor(
                 val checkTestDB = inputData.getBoolean(USE_TEST_DB_KEY, false)
                 val hasPreloaded = exploreRepository.preloadFromAssetsInto(updateFile, checkTestDB)
 
-                log.info(
-                    "local data timestamp: ${databasePrefs.localDbTimestamp} (${Date(databasePrefs.localDbTimestamp)})"
-                )
+                var localDbTimestamp = databasePrefs.localDbTimestampFor(ExploreDatabase.VERSION)
+                log.info("local data timestamp: $localDbTimestamp (${Date(localDbTimestamp)})")
 
                 remoteDataTimestamp = exploreRepository.getRemoteTimestamp()
                 log.info("remote data timestamp: $remoteDataTimestamp (${Date(remoteDataTimestamp)})")
@@ -103,17 +108,17 @@ class ExploreSyncWorker @AssistedInject constructor(
                     // "local doesn't match remote" case is what the server download
                     // below is for — loading a stale asset over a newer local DB just
                     // forces migrations on an old user_version and risks crashing.
-                    if (databasePrefs.localDbTimestamp == 0L ||
-                        databasePrefs.localDbTimestamp < preloadedDbTimestamp
-                    ) {
-                        ExploreDatabase.updateDatabase(appContext, exploreRepository, exploreConfig)
-                        // Re-read prefs after updateDatabase: finalizeUpdate writes the new
-                        // localDbTimestamp asynchronously on configScope, so the snapshot
-                        // captured at the start of doWork() is now stale. Saving the stale
-                        // copy here would clobber finalizeUpdate's concurrent write.
-                        val latestPrefs = exploreConfig.exploreDatabasePrefs.first()
-                        databasePrefs = latestPrefs.copy(preloadedOnTimestamp = preloadedDbTimestamp)
-                        exploreConfig.saveExploreDatabasePrefs(databasePrefs)
+                    if (localDbTimestamp == 0L || localDbTimestamp < preloadedDbTimestamp) {
+                        ExploreDatabase.updateDatabase(appContext, exploreRepository, exploreConfig) {
+                            isCatalogReplaced = true
+                        }
+                        // The snapshot from the start of doWork() is stale by now: finalizeUpdate
+                        // has written the new timestamp and schema version.
+                        exploreConfig.updateExploreDatabasePrefs {
+                            it.copy(preloadedOnTimestamp = preloadedDbTimestamp)
+                        }
+                        databasePrefs = exploreConfig.exploreDatabasePrefs.first()
+                        localDbTimestamp = databasePrefs.localDbTimestampFor(ExploreDatabase.VERSION)
                     }
                 }
 
@@ -121,19 +126,18 @@ class ExploreSyncWorker @AssistedInject constructor(
                     log.error("unable to delete " + updateFile.absolutePath)
                 }
 
-                if (databasePrefs.localDbTimestamp >= remoteDataTimestamp) {
+                if (localDbTimestamp >= remoteDataTimestamp) {
                     log.info("explore db is up to date, nothing to sync")
                     syncStatus.setSyncProgress(100.0)
-                    databasePrefs = databasePrefs.copy(failedSyncAttempts = 0)
-
-                    if (databasePrefs.lastSyncTimestamp <= 0) {
-                        // Some devices might have this as 0 due to the bug. Need to update
-                        // manually
+                    exploreConfig.updateExploreDatabasePrefs { prefs ->
+                        // Some devices might have lastSyncTimestamp as 0 due to the bug. Need to
+                        // update manually
                         // TODO: this can be removed after some time
-                        databasePrefs = databasePrefs.copy(lastSyncTimestamp = remoteDataTimestamp)
+                        prefs.copy(
+                            failedSyncAttempts = 0,
+                            lastSyncTimestamp = prefs.lastSyncTimestamp.takeIf { it > 0 } ?: remoteDataTimestamp
+                        )
                     }
-
-                    exploreConfig.saveExploreDatabasePrefs(databasePrefs)
 
                     addPiggyCardsTestMerchantIfNeeded()
                     return@withContext Result.success()
@@ -144,7 +148,9 @@ class ExploreSyncWorker @AssistedInject constructor(
 
                 syncStatus.setSyncProgress(80.0)
 
-                ExploreDatabase.updateDatabase(appContext, exploreRepository, exploreConfig)
+                ExploreDatabase.updateDatabase(appContext, exploreRepository, exploreConfig) {
+                    isCatalogReplaced = true
+                }
             }
 
             log.info("sync explore db finished, took $timeInMillis ms")
@@ -163,14 +169,17 @@ class ExploreSyncWorker @AssistedInject constructor(
             )
             log.error("sync explore db crashed ${ex.message}", ex)
             syncStatus.setSyncError(ex)
-            exploreConfig.saveExploreDatabasePrefs(
-                databasePrefs.copy(failedSyncAttempts = databasePrefs.failedSyncAttempts + 1)
-            )
+            exploreConfig.updateExploreDatabasePrefs { it.copy(failedSyncAttempts = it.failedSyncAttempts + 1) }
             return@withContext Result.failure()
+        } finally {
+            // Told once, after the last swap of the run: readers that reload between the asset
+            // swap and the download swap would stay on the file the second swap deletes.
+            if (isCatalogReplaced) {
+                syncStatus.setCatalogReplaced()
+            }
         }
 
-        databasePrefs = exploreConfig.exploreDatabasePrefs.first()
-        exploreConfig.saveExploreDatabasePrefs(databasePrefs.copy(failedSyncAttempts = 0))
+        exploreConfig.updateExploreDatabasePrefs { it.copy(failedSyncAttempts = 0) }
         return@withContext Result.success()
     }
 
@@ -206,7 +215,9 @@ class ExploreSyncWorker @AssistedInject constructor(
                     savingsPercentage = data.providerSavingsPercentage,
                     denominationsType = data.providerDenominationsType,
                     addDate = now,
-                    updateDate = now
+                    updateDate = now,
+                    country = Locale.US.country,
+                    currency = Constants.USD_CURRENCY
                 ).apply {
                     name = data.name
                     active = true
@@ -230,7 +241,8 @@ class ExploreSyncWorker @AssistedInject constructor(
                         savingsPercentage = data.providerSavingsPercentage,
                         active = true,
                         denominationsType = data.providerDenominationsType,
-                        sourceId = data.sourceId
+                        sourceId = data.sourceId,
+                        currency = Constants.USD_CURRENCY
                     )
                 )
             }

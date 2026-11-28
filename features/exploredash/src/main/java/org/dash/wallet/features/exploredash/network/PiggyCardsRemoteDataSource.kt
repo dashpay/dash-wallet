@@ -22,6 +22,7 @@ import okhttp3.logging.HttpLoggingInterceptor
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.money.DashNetworks
+import org.dash.wallet.features.exploredash.BuildConfig
 import org.dash.wallet.features.exploredash.network.authenticator.PiggyCardsAuthenticator
 import org.dash.wallet.features.exploredash.network.interceptor.ErrorHandlingInterceptor
 import org.dash.wallet.features.exploredash.network.interceptor.PiggyCardsHeadersInterceptor
@@ -74,12 +75,6 @@ class PiggyCardsRemoteDataSource @Inject constructor(
     }
 
     private fun getOkHttpClient(authenticator: Authenticator? = null): OkHttpClient {
-        val loggingInterceptor = HttpLoggingInterceptor { message ->
-            log.info(message)
-        }
-        loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY)
-        loggingInterceptor.redactHeader("Authorization")
-
         return OkHttpClient.Builder()
             .connectTimeout(20.seconds.toJavaDuration())
             .readTimeout(20.seconds.toJavaDuration())
@@ -87,8 +82,13 @@ class PiggyCardsRemoteDataSource @Inject constructor(
             .addInterceptor(ErrorHandlingInterceptor(ServiceName.PiggyCards))
             .also { client ->
                 authenticator?.let { client.authenticator(it) }
+                if (BuildConfig.DEBUG) {
+                    val logging = HttpLoggingInterceptor { message -> log.info(message) }
+                    logging.redactHeader("Authorization")
+                    logging.level = HttpLoggingInterceptor.Level.BODY
+                    client.addInterceptor(logging)
+                }
             }
-            .addInterceptor(loggingInterceptor)
             .build()
     }
 }

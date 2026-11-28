@@ -84,6 +84,7 @@ import org.dash.wallet.features.exploredash.ui.explore.dialogs.ExploreDashInfoDi
 import org.dash.wallet.features.exploredash.ui.extensions.*
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
 import org.slf4j.LoggerFactory
+import java.util.Locale
 
 @AndroidEntryPoint
 class SearchFragment : Fragment(R.layout.fragment_search) {
@@ -410,7 +411,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             searchHeaderAdapter.title = getSearchTitle()
             searchHeaderAdapter.subtitle = getSearchSubtitle()
             searchHeaderAdapter.setFilterMode(mode)
-            binding.filterPanel.isVisible = shouldShowFiltersPanel()
+            showAppliedFilters(viewModel.appliedFilters.value)
             refreshManageGpsView()
 
             if (mode == FilterMode.Online) {
@@ -518,6 +519,9 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
 
         binding.resetFiltersBtn.setOnClickListener {
+            if (viewModel.appliedCountry.isNotEmpty()) {
+                viewModel.setCountry(null)
+            }
             viewModel.clearFilters()
             searchHeaderAdapter.clearSearchQuery()
             binding.resetFiltersBtn.isEnabled = false
@@ -535,13 +539,11 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         viewModel.searchLocationName.observe(viewLifecycleOwner) { searchHeaderAdapter.title = getSearchTitle() }
 
         viewModel.appliedFilters.observe(viewLifecycleOwner) { filters ->
-            resolveAppliedFilters(filters)
-            searchHeaderAdapter.subtitle = getSearchSubtitle()
-            binding.resetFiltersBtn.isEnabled =
-                filters.query.isNotEmpty() ||
-                filters.radius != ExploreViewModel.DEFAULT_RADIUS_OPTION ||
-                filters.payment.isNotEmpty() ||
-                filters.territory.isNotEmpty()
+            showAppliedFilters(filters)
+        }
+
+        viewModel.selectedCountry.observe(viewLifecycleOwner) {
+            showAppliedFilters(viewModel.appliedFilters.value)
         }
 
         viewModel.appliedFilters
@@ -870,6 +872,17 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         return getString(R.string.explore_in_radius, quantityStr, searchLocation)
     }
 
+    private fun showAppliedFilters(filters: FilterOptions) {
+        resolveAppliedFilters(filters)
+        searchHeaderAdapter.subtitle = getSearchSubtitle()
+        binding.resetFiltersBtn.isEnabled =
+            filters.query.isNotEmpty() ||
+            filters.radius != ExploreViewModel.DEFAULT_RADIUS_OPTION ||
+            filters.payment.isNotEmpty() ||
+            filters.territory.isNotEmpty() ||
+            viewModel.appliedCountry.isNotEmpty()
+    }
+
     private fun resolveAppliedFilters(filters: FilterOptions) {
         val appliedFilterNames = mutableListOf<String>()
 
@@ -887,6 +900,10 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         if (filters.territory.isNotEmpty()) {
             appliedFilterNames.add(filters.territory)
+        }
+
+        if (viewModel.appliedCountry.isNotEmpty()) {
+            appliedFilterNames.add(Locale("", viewModel.appliedCountry).displayCountry)
         }
 
         if (isPhysicalSearch) {
@@ -913,12 +930,13 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     }
 
     private fun shouldShowFiltersPanel(): Boolean {
-        return viewModel.selectedItem.value == null &&
-            viewModel.isLocationEnabled.value == true &&
+        val hasLocationFilters = viewModel.isLocationEnabled.value == true &&
             (
                 isPhysicalSearch || viewModel.appliedFilters.value.payment.isNotEmpty() ||
                     viewModel.appliedFilters.value.territory.isNotEmpty()
                 )
+        return viewModel.selectedItem.value == null &&
+            (hasLocationFilters || viewModel.appliedCountry.isNotEmpty())
     }
 
     private fun openFilters() {

@@ -19,6 +19,13 @@ package org.dash.wallet.features.exploredash.data.dashspend.model
 
 import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.DenominationType
 
+/** The provider answered, but with details that cannot be read. Not a failure to reach it. */
+class UnusableMerchantDetailsException(
+    cause: Throwable,
+    /** The answer is clear enough: no card is sold right now. */
+    val isNothingOffered: Boolean = false
+) : Exception("merchant details cannot be read", cause)
+
 data class UpdatedMerchantDetails(
     val id: String,
     val denominations: List<Double>,
@@ -27,7 +34,9 @@ data class UpdatedMerchantDetails(
     val redeemType: String = "",
     val enabled: Boolean = true,
     val productId: String = "",
-    val quantity: Map<Double, Int> = mapOf()
+    val quantity: Map<Double, Int> = mapOf(),
+    // the currency the denominations are in; only CTX reports one
+    val currency: String? = null
 ) {
     val denominationType: DenominationType
         get() = DenominationType.fromString(denominationsType)
@@ -44,8 +53,9 @@ data class UpdatedMerchantDetails(
                     require(denominations.size == 2)
                     denominations[1].toDouble()
                 }
+                // CTX sends this type as (min, max) too; only the amounts must be whole
                 is DenominationType.MinMaxMajor -> {
-                    require(denominations.size == 3)
+                    require(denominations.size == 2)
                     denominations[1].toDouble()
                 }
                 is DenominationType.Fixed -> {

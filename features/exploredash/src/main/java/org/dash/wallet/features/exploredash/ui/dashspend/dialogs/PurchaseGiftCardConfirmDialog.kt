@@ -53,13 +53,20 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.view.updateLayoutParams
+import androidx.fragment.app.DialogFragment
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.data.ServiceName
@@ -80,28 +87,33 @@ import org.dash.wallet.common.ui.components.Style
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.ComposeBottomSheet
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
-import org.dash.wallet.common.util.Constants
+import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.features.exploredash.R
+import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderType
 import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardInfo
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
 import org.dash.wallet.features.exploredash.ui.dashspend.DashSpendViewModel
 import org.dash.wallet.features.exploredash.ui.dashspend.DuplicateGiftCardSubmissionException
+import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardPriceChange
+import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardPurchaseBlock
 import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardPurchaseMode
+import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardQuote
 import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardSubmissionState
+import org.dash.wallet.features.exploredash.ui.dashspend.PaidOrder
+import org.dash.wallet.features.exploredash.ui.dashspend.message
 import org.dash.wallet.features.exploredash.ui.explore.MerchantLogo
+import org.dash.wallet.features.exploredash.utils.GiftCardCurrency
 import org.dash.wallet.features.exploredash.utils.SavingsFormatting
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
 import org.slf4j.LoggerFactory
-import java.math.RoundingMode
 import java.text.NumberFormat
-import java.util.Currency
 import javax.inject.Inject
 
 data class PurchaseConfirmUIState(
     val merchantName: String = "",
     val merchantLogoUrl: String? = null,
     val purchaseValueText: String = "",
-    val purchaseValueCurrency: String = "$",
+    val currencyCode: String = "",
     val giftCardTotalText: String = "",
     val discountText: String = "",
     val youPayText: String = "",
@@ -131,15 +143,7 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
         // force the sheet to expand (full height + scrollable body with pinned buttons).
         // Tune this value if clipping is still observed.
         private const val SMALL_SCREEN_HEIGHT_DP = 720
-        private val USD_CURRENCY = Currency.getInstance(Constants.USD_CURRENCY)
-        private val noCentsFormat = NumberFormat.getCurrencyInstance().apply {
-            currency = USD_CURRENCY
-            minimumFractionDigits = 0
-        }
         private val currencyFormatNoSymbol = NumberFormat.getInstance()
-        private val currencyFormat = NumberFormat.getCurrencyInstance().apply {
-            currency = USD_CURRENCY
-        }
     }
 
     private val viewModel by exploreViewModels<DashSpendViewModel>()
@@ -151,6 +155,9 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
     private val launcher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         // Optionally handle result here
     }
+
+    // what this sheet shows, and so the only order, currency and total Confirm may buy
+    private var shownQuote: GiftCardQuote? = null
 
     private val _uiState = MutableStateFlow(PurchaseConfirmUIState())
     val uiState: StateFlow<PurchaseConfirmUIState> = _uiState.asStateFlow()
@@ -166,15 +173,35 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        // first: a payment started from an earlier instance of this sheet ends here, whatever
+        // has become of the cart since
+        observePurchaseOutcome()
 
         val merchant = viewModel.giftCardMerchant.value
         if (merchant == null) {
             log.warn("PurchaseGiftCardConfirmDialog: No merchant available, dismissing dialog")
-            dismiss()
+            dismissUnlessPurchaseOutstanding()
             return
         }
 
-        val orderEntries = viewModel.giftCardOrderInfo.value.entries
+        val cardCurrency = viewModel.cardCurrency
+        if (cardCurrency == null) {
+            log.warn("PurchaseGiftCardConfirmDialog: card currency unknown, dismissing dialog")
+            dismissUnlessPurchaseOutstanding()
+            return
+        }
+        val quote = viewModel.currentQuote()
+        if (quote == null || viewModel.purchaseBlock.isAboutTheAmount()) {
+            log.warn("PurchaseGiftCardConfirmDialog: nothing to buy, dismissing dialog")
+            dismissUnlessPurchaseOutstanding()
+            return
+        }
+        shownQuote = quote
+        val shownOrder = quote.order
+        val noCentsFormat = GiftCardCurrency.displayFormat(cardCurrency, trimZeroDecimals = true)
+        val currencyFormat = GiftCardCurrency.displayFormat(cardCurrency)
+
+        val orderEntries = shownOrder.entries
         val orderTotalAmount = orderEntries.sumOf { it.key * it.value }
         // Compute a weighted savings fraction: sum each (denom * qty * (1 - per-denom discount))
         // across line items, then derive the overall discount. A single getGiftCardDiscount call
@@ -213,11 +240,8 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
             }
         }
 
-        val discountedValue = orderTotalAmount - savingsFraction * orderTotalAmount
         val youPayText = currencyFormat.format(
-            discountedValue.toBigDecimal()
-                .setScale(USD_CURRENCY.defaultFractionDigits, RoundingMode.UP)
-                .toDouble()
+            quote.total
         )
 
         val breakdownLines = breakdown?.lineSequence()?.count() ?: 0
@@ -237,7 +261,7 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
             merchantName = merchant.name ?: "",
             merchantLogoUrl = merchant.logoLocation,
             purchaseValueText = currencyFormatNoSymbol.format(orderTotalAmount.toBigDecimal().toDouble()),
-            purchaseValueCurrency = "$",
+            currencyCode = cardCurrency,
             giftCardTotalText = noCentsFormat.format(orderTotalAmount.toBigDecimal().toDouble()),
             discountText = SavingsFormatting.format(
                 context = requireContext(),
@@ -247,7 +271,9 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
             ),
             youPayText = youPayText,
             breakdownText = breakdown,
-            isLoading = false,
+            // the collector above has run already and will not again until the state changes
+            isLoading = viewModel.submissionState.value == GiftCardSubmissionState.IN_PROGRESS,
+            submissionBlocked = viewModel.submissionState.value != GiftCardSubmissionState.IDLE,
             useExpandedLayout = needsExpand,
             isNetworkAvailable = true
         )
@@ -258,10 +284,89 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
             }
         }
 
+        // The amounts on this sheet are fixed when it opens, so it closes once they are no longer
+        // what would be ordered. Not during a purchase: its order has been placed by then.
+        viewLifecycleOwner.lifecycleScope.launch {
+            combine(
+                viewModel.cardCurrencyState,
+                viewModel.giftCardOrderInfo,
+                viewModel.giftCardMerchant,
+                viewModel.acceptedDetailsVersion
+            ) { _, _, _, _ -> }.collect {
+                // a cart of PiggyCards is rebuilt by its screen on recreation, so only a new price
+                // of the same cart closes its sheet; Confirm checks the cart itself
+                val current = viewModel.currentQuote()
+                val isOtherOrder = if (viewModel.selectedProvider == GiftCardProviderType.CTX) {
+                    current != quote
+                } else {
+                    current?.order == quote.order && current.total.compareTo(quote.total) != 0
+                }
+                val isOutdated = viewModel.cardCurrency != cardCurrency || isOtherOrder ||
+                    viewModel.purchaseBlock.isAboutTheAmount()
+                // nor while its order waits for the buyer's answer to a new price
+                if (isOutdated && viewModel.submissionState.value == GiftCardSubmissionState.IDLE &&
+                    viewModel.priceChange.value == null
+                ) {
+                    dismissAllowingStateLoss()
+                }
+            }
+        }
+    }
+
+    private fun dismissUnlessPurchaseOutstanding() {
+        if (!viewModel.isPurchaseOutstanding) {
+            dismiss()
+        }
+    }
+
+    private fun observePurchaseOutcome() {
+        // taken only while resumed: the details dialog waits for that, and a recreation first would lose it
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                viewModel.paidOrder.collect { order ->
+                    if (order != null && isAdded && viewModel.takePaidOrder(order)) {
+                        enterAmountViewModel.clearSavedState()
+                        showGiftCardDetailsDialog(order)
+                    }
+                }
+            }
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.priceChange.collect { change ->
+                if (change != null && isAdded) {
+                    showPriceChange(change)
+                }
+            }
+        }
+
+        // Taken only while resumed: a dialog shown earlier waits for the activity to resume, and
+        // is lost, with the news already taken, when the activity is recreated first.
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                viewModel.droppedPriceChange.collect { change ->
+                    if (change != null && isAdded && viewModel.takeDroppedPriceChange(change)) {
+                        showPriceChangeUnpaid()
+                    }
+                }
+            }
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                viewModel.paymentFailure.collect { failure ->
+                    if (failure != null && isAdded && viewModel.takePaymentFailure(failure)) {
+                        submitPayment { throw failure }
+                    }
+                }
+            }
+        }
+
         // Held by the view model, so a dialog rebuilt after activity recreation starts out
         // knowing a purchase is outstanding instead of offering Confirm again.
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.submissionState.collect { state ->
+                isCancelable = state != GiftCardSubmissionState.IN_PROGRESS
                 _uiState.update {
                     it.copy(
                         isLoading = state == GiftCardSubmissionState.IN_PROGRESS,
@@ -287,10 +392,27 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
         }
     }
 
+    private fun GiftCardPurchaseBlock?.isAboutTheAmount() =
+        this == GiftCardPurchaseBlock.NO_AMOUNT || this == GiftCardPurchaseBlock.AMOUNT_NOT_OFFERED
+
+    private fun showPurchaseBlocked(block: GiftCardPurchaseBlock) {
+        AdaptiveDialog.create(
+            R.drawable.ic_error,
+            getString(R.string.gift_card_purchase_failed),
+            block.message(requireContext(), viewModel.cardCurrency),
+            getString(R.string.button_close)
+        ).show(requireActivity())
+    }
+
     private fun onConfirmButtonClicked() {
         // Claim before purchaseGiftCard(), which creates a fresh order at the merchant. Merely
         // checking here would let two quick taps both pass, since the state was not claimed until
         // payAndRecordOrder, and each would leave an order behind.
+        viewModel.purchaseBlock?.let { block ->
+            log.warn("ignoring Confirm, the purchase is blocked: {}", block)
+            showPurchaseBlocked(block)
+            return
+        }
         if (!viewModel.tryStartSubmission()) {
             log.warn("ignoring Confirm, a gift card purchase is already outstanding")
             return
@@ -312,10 +434,24 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
                 }
 
                 val data = try {
-                    viewModel.purchaseGiftCard()
+                    viewModel.purchaseGiftCard(checkNotNull(shownQuote))
                 } catch (ex: CTXSpendException) {
                     hideLoading()
+                    val reason = ex.resourceString
                     when {
+                        reason != null -> {
+                            if (isAdded) {
+                                AdaptiveDialog.create(
+                                    R.drawable.ic_error,
+                                    getString(R.string.gift_card_purchase_failed),
+                                    getString(reason.resourceId),
+                                    getString(R.string.button_close)
+                                ).show(requireActivity())
+                                if (reason.resourceId == R.string.gift_card_order_changed) {
+                                    dismissAllowingStateLoss()
+                                }
+                            }
+                        }
                         ex.isNetworkError -> {
                             if (isAdded) {
                                 AdaptiveDialog.create(
@@ -494,13 +630,53 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
                     }
                     return@launch
                 }
-                val transactionId = createSendingRequestFromDashUri(dashPaymentUrl, data)
-                transactionId?.let {
-                    enterAmountViewModel.clearSavedState()
-                    showGiftCardDetailsDialog(it)
-                }
+                // the details are shown from paidOrder: this sheet may be gone by the time it is paid
+                createSendingRequestFromDashUri(dashPaymentUrl, data)
             } finally {
                 viewModel.releaseUnusedSubmission()
+            }
+        }
+    }
+
+    private fun showPriceChangeUnpaid() = requireActivity().showPriceChangeUnpaid()
+
+    private fun showPriceChange(change: GiftCardPriceChange) {
+        hideLoading()
+        val activity = requireActivity()
+        // one restored with the activity has lost its listener, and its buttons would do nothing
+        (activity.supportFragmentManager.findFragmentByTag(PRICE_CHANGE_DIALOG_TAG) as? DialogFragment)
+            ?.dismissAllowingStateLoss()
+        val fiatFormat = GiftCardCurrency.displayFormat(change.currency)
+        val dashFormat = viewModel.dashFormat.noCode()
+        AdaptiveDialog.create(
+            R.drawable.ic_info_blue,
+            getString(R.string.gift_card_price_updated_title),
+            getString(
+                R.string.gift_card_price_updated_message,
+                fiatFormat.format(change.chargedTotal),
+                dashFormat.format(change.charged),
+                fiatFormat.format(change.shownTotal),
+                dashFormat.format(change.shown)
+            ),
+            getString(R.string.button_cancel),
+            getString(R.string.gift_card_price_updated_pay)
+        ).show(activity, PRICE_CHANGE_DIALOG_TAG) { result ->
+            when {
+                // answered already, or replaced by a newer change
+                viewModel.priceChange.value != change -> Unit
+                // the view model pays, and reports, whatever becomes of this sheet meanwhile
+                result == true -> {
+                    if (isAdded && view != null) {
+                        showLoading()
+                    }
+                    viewModel.acceptPriceChange(change)
+                }
+                else -> {
+                    viewModel.declinePriceChange()
+                    if (isAdded) {
+                        dismissAllowingStateLoss()
+                    }
+                }
             }
         }
     }
@@ -509,9 +685,34 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
         url: String,
         giftCards: List<GiftCardInfo>
     ): String? {
+        val quote = checkNotNull(shownQuote)
+        // submission and order recording together, so a destroyed view cannot separate them
         return try {
-            // submission and order recording together, so a destroyed view cannot separate them
-            viewModel.payAndRecordOrder(url, giftCards)
+            viewModel.payOrder(quote, url, giftCards)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // published as a payment failure, and reported once by whichever screen takes it
+            null
+        }
+    }
+
+    /** [pay] returns null when the order was left unpaid for the buyer to decide on a new price. */
+    private suspend fun submitPayment(pay: suspend () -> String?): String? {
+        return try {
+            pay()
+        } catch (ex: CTXSpendException) {
+            log.error("purchaseGiftCard error: the order was not paid", ex)
+            hideLoading()
+            if (isAdded) {
+                AdaptiveDialog.create(
+                    R.drawable.ic_error,
+                    getString(R.string.gift_card_purchase_failed),
+                    getString(ex.resourceString?.resourceId ?: R.string.gift_card_error),
+                    getString(R.string.button_close)
+                ).show(requireActivity())
+            }
+            null
         } catch (x: InsufficientFundsException) {
             hideLoading()
             log.error("purchaseGiftCard InsufficientMoneyException", x)
@@ -530,7 +731,9 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
             // found, and its inputs are released if it never appears. Don't let the user retry now.
             log.warn("purchaseGiftCard submission result unknown for {}", ex.txId, ex)
             // payAndRecordOrder has already recorded the order against this transaction id.
-            enterAmountViewModel.clearSavedState()
+            if (isAdded) {
+                enterAmountViewModel.clearSavedState()
+            }
             showPaymentPending()
             null
         } catch (ex: PaymentStillConfirmingException) {
@@ -661,9 +864,10 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
         this@PurchaseGiftCardConfirmDialog.dismissAllowingStateLoss()
     }
 
-    private fun showGiftCardDetailsDialog(txId: String) {
+    private fun showGiftCardDetailsDialog(order: PaidOrder) {
+        val txId = order.txId
         if (isAdded) {
-            if (viewModel.giftCardOrderInfo.value.entries.sumOf { it.value } > 1) {
+            if (order.isMultipleCards) {
                 GiftCardOrderDetailsDialog.newInstance(txId).show(requireActivity()).also {
                     val navController = findNavController()
                     navController.popBackStack(navController.graph.startDestinationId, false)
@@ -746,7 +950,7 @@ internal fun PurchaseGiftCardConfirmView(
         ) {
             EnterAmount(
                 primaryAmount = uiState.purchaseValueText,
-                currencyCodes = listOf(Constants.USD_CURRENCY),
+                currencyCodes = listOf(uiState.currencyCode),
                 showSecondary = false,
                 showMaxButton = false,
                 showPrimaryChevron = false,
@@ -974,4 +1178,96 @@ private fun PurchaseGiftCardConfirmExpandedPreview() {
             youPayText = "$247.00"
         )
     )
+}
+
+private const val PRICE_CHANGE_DIALOG_TAG = "gift_card_price_change"
+
+/**
+ * For the purchase screens: a payment can end, or stop at a new price, when no confirmation
+ * sheet is left to say so.
+ */
+internal fun Fragment.observePurchaseWithoutSheet(viewModel: DashSpendViewModel) {
+    fun hasSheet() = requireActivity().supportFragmentManager.fragments.any { it is PurchaseGiftCardConfirmDialog }
+
+    // leaving the purchase leaves nobody to answer: the order stays unpaid, and the buyer is told
+    viewLifecycleOwner.observeOnDestroy {
+        val activity = activity
+        if (activity != null && !activity.isChangingConfigurations) {
+            viewModel.dropPriceChange()
+            viewModel.droppedPriceChange.value?.takeIf(viewModel::takeDroppedPriceChange)?.let {
+                activity.showPriceChangeUnpaid()
+            }
+        }
+    }
+
+    viewLifecycleOwner.lifecycleScope.launch {
+        viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            viewModel.paidOrder.collect { order ->
+                if (order != null && isAdded && !hasSheet() && viewModel.takePaidOrder(order)) {
+                    val details = if (order.isMultipleCards) {
+                        GiftCardOrderDetailsDialog.newInstance(order.txId)
+                    } else {
+                        GiftCardDetailsDialog.newInstance(order.txId)
+                    }
+                    details.show(requireActivity())
+                    val navController = findNavController()
+                    navController.popBackStack(navController.graph.startDestinationId, false)
+                }
+            }
+        }
+    }
+
+    viewLifecycleOwner.lifecycleScope.launch {
+        viewModel.priceChange.collect { change ->
+            if (change != null && isAdded && !hasSheet()) {
+                viewModel.dropPriceChange()
+            }
+        }
+    }
+
+    // taken only while resumed, when the dialog can be shown at once
+    viewLifecycleOwner.lifecycleScope.launch {
+        viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            viewModel.droppedPriceChange.collect { change ->
+                if (change != null && isAdded && !hasSheet() && viewModel.takeDroppedPriceChange(change)) {
+                    requireActivity().showPriceChangeUnpaid()
+                }
+            }
+        }
+    }
+
+    viewLifecycleOwner.lifecycleScope.launch {
+        viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            viewModel.paymentFailure.collect { failure ->
+                if (failure != null && isAdded && !hasSheet() && viewModel.takePaymentFailure(failure)) {
+                    requireActivity().showPaymentFailure(failure)
+                }
+            }
+        }
+    }
+}
+
+private fun FragmentActivity.showPriceChangeUnpaid() {
+    AdaptiveDialog.create(
+        R.drawable.ic_info_blue,
+        getString(R.string.gift_card_price_updated_title),
+        getString(R.string.gift_card_price_changed_unpaid),
+        getString(R.string.button_close)
+    ).show(this)
+}
+
+// with no sheet left, only whether the payment may be out matters
+private fun FragmentActivity.showPaymentFailure(failure: Exception) {
+    val isPending = failure is PaymentSubmissionPendingException
+    AdaptiveDialog.create(
+        if (isPending) R.drawable.ic_warning else R.drawable.ic_error,
+        getString(if (isPending) R.string.payment_submission_pending_title else R.string.gift_card_purchase_failed),
+        getString(
+            when {
+                isPending -> R.string.payment_submission_pending_message
+                else -> (failure as? CTXSpendException)?.resourceString?.resourceId ?: R.string.gift_card_error
+            }
+        ),
+        getString(R.string.button_close)
+    ).show(this)
 }

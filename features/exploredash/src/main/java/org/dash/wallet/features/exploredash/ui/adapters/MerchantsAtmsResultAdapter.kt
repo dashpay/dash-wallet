@@ -60,7 +60,8 @@ class SearchResultDiffCallback<T : SearchResult> : DiffUtil.ItemCallback<T>() {
     }
 
     override fun areContentsTheSame(oldItem: T, newItem: T): Boolean {
-        return oldItem == newItem
+        // A merchant row shows its country, which Merchant.equals() does not compare
+        return oldItem == newItem && (oldItem as? Merchant)?.country == (newItem as? Merchant)?.country
     }
 }
 
@@ -125,8 +126,13 @@ class MerchantViewHolder(val binding: MerchantRowBinding) : ExploreViewHolder(bi
     fun bind(merchant: Merchant?) {
         val resources = binding.root.resources
         binding.title.text = merchant?.name
-        binding.subtitle.text = getDistanceText(resources, merchant)
-        binding.subtitle.isVisible = merchant?.type != MerchantType.ONLINE && binding.subtitle.text.isNotEmpty()
+        // Lists can mix countries, so every row that has one says where it is
+        val country = merchant?.country?.takeIf { it.isNotBlank() }?.let { Locale("", it).displayCountry }
+        val distance = getDistanceText(resources, merchant).takeIf {
+            it.isNotEmpty() && merchant?.type != MerchantType.ONLINE
+        }
+        binding.subtitle.text = listOfNotNull(distance, country).joinToString(" • ")
+        binding.subtitle.isVisible = binding.subtitle.text.isNotEmpty()
         if (merchant != null) {
             val text = SavingsFormatting.format(
                 context = binding.root.context,

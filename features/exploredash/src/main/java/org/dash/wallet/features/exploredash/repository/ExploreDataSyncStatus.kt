@@ -34,7 +34,14 @@ class ExploreDataSyncStatus @Inject constructor() : DataSyncStatusService {
     private val _syncProgressFlow = MutableStateFlow(Resource.loading(0.00))
     private val _hasObservedLastError = MutableStateFlow(false)
 
+    private val catalogGeneration = MutableStateFlow(0)
     override fun getSyncProgressFlow(): Flow<Resource<Double>> = _syncProgressFlow
+
+    override fun getCatalogGeneration(): Flow<Int> = catalogGeneration
+
+    fun setCatalogReplaced() {
+        catalogGeneration.value++
+    }
 
     suspend fun setSyncError(exception: Exception) {
         log.info("sync explore data failure", exception)

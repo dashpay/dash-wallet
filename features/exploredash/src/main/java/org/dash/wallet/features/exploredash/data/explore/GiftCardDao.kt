@@ -20,6 +20,7 @@ package org.dash.wallet.features.exploredash.data.explore
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Update
 import com.google.zxing.BarcodeFormat
 import kotlinx.coroutines.flow.Flow
@@ -38,7 +39,20 @@ interface GiftCardDao {
     suspend fun insertGiftCards(giftCards: List<GiftCard>)
 
     @Update(entity = GiftCard::class)
-    suspend fun updateGiftCard(giftCard: GiftCard): Int
+    suspend fun updateGiftCardRow(giftCard: GiftCard): Int
+
+    @Query("SELECT currency FROM gift_cards WHERE txId = :txId AND `index` = :index")
+    suspend fun getCurrency(txId: ByteArray, index: Int): String?
+
+    /** Rewrites the row. A caller that read it before its currency was filled in does not erase it. */
+    @Transaction
+    suspend fun updateGiftCard(giftCard: GiftCard): Int {
+        val currency = giftCard.currency ?: getCurrency(giftCard.txId.bytes, giftCard.index)
+        return updateGiftCardRow(giftCard.copy(currency = currency))
+    }
+
+    @Query("UPDATE gift_cards SET currency = :currency WHERE txId = :txId AND currency IS NULL")
+    suspend fun backfillCurrency(txId: ByteArray, currency: String): Int
 
     @Query("SELECT COUNT(*) FROM gift_cards WHERE txId = :txId")
     suspend fun getCardCountForTransaction(txId: ByteArray): Int

@@ -3,14 +3,19 @@ package de.schildbach.wallet.rates
 import androidx.lifecycle.MutableLiveData
 import de.schildbach.wallet.database.dao.ExchangeRatesDao
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import org.dash.wallet.common.data.CurrencyInfo
 import org.dash.wallet.common.data.ExchangeRatesConfig
 import org.dash.wallet.common.data.ExchangeRatesConfig.Companion.EXCHANGE_RATES_PREVIOUS_RETRIEVAL_TIME
@@ -41,10 +46,16 @@ class ExchangeRatesRepository @Inject constructor(
     private val exchangeRatesClients: Deque<ExchangeRatesClient> = ArrayDeque()
 
     private var lastUpdated: Long = 0
+
+    // What the last successful refresh returned, and when. Rows are only ever replaced, so one
+    // for a currency the source has dropped stays in the table at its old rate.
+    @Volatile
+    private var lastRefresh: Pair<Set<String>, Long>? = null
     @JvmField
     var isLoading = MutableLiveData<Boolean>()
     @JvmField
     var hasError = MutableLiveData<Boolean>()
+    @Volatile
     private var isRefreshing = false
     private val refreshScope = CoroutineScope(Dispatchers.IO)
     private val updateTrigger = MutableSharedFlow<Long>()
@@ -91,6 +102,7 @@ class ExchangeRatesRepository @Inject constructor(
                     previousRates.addAll(exchangeRatesDao.getAll())
                     exchangeRatesDao.insertAll(rates)
                     lastUpdated = System.currentTimeMillis()
+                    lastRefresh = rates.mapTo(HashSet()) { it.currencyCode } to lastUpdated
                     populateExchangeRatesStack()
                     hasError.postValue(false)
                     config.set(EXCHANGE_RATES_RETRIEVAL_FAILURE, false)
@@ -135,6 +147,25 @@ class ExchangeRatesRepository @Inject constructor(
     // This will return null if not found
     override suspend fun getExchangeRate(currencyCode: String): ExchangeRate? =
         exchangeRatesDao.getExchangeRateForCurrency(currencyCode)
+
+    override suspend fun getFreshExchangeRate(currencyCode: String, maxWaitMillis: Long): ExchangeRate? {
+        if (shouldRefresh()) {
+            withTimeoutOrNull(maxWaitMillis) {
+                coroutineScope {
+                    // Listening before the refresh starts, or its end could be missed. A source that
+                    // fails signals too, with the next one still to be tried.
+                    val refreshed = async(start = CoroutineStart.UNDISPATCHED) { updateTrigger.first { !isRefreshing } }
+                    refreshRates()
+                    refreshed.await()
+                }
+            }
+        }
+        val (refreshedCurrencies, refreshedAt) = lastRefresh ?: return null
+        if (System.currentTimeMillis() - refreshedAt > STALE_DURATION_MS || currencyCode !in refreshedCurrencies) {
+            return null
+        }
+        return exchangeRatesDao.getExchangeRateForCurrency(currencyCode)
+    }
 
     override suspend fun cleanupObsoleteCurrencies() {
         exchangeRatesDao.delete(CurrencyInfo.obsoleteCurrencyMap.keys)

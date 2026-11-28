@@ -13,5 +13,6 @@ data class GiftCardProvider(
     val savingsPercentage: Int,
     val active: Boolean,
     val denominationsType: String,
-    val sourceId: String
+    val sourceId: String,
+    val currency: String? = null
 )

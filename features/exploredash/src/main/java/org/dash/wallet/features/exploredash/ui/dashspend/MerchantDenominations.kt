@@ -26,7 +26,7 @@ import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.Size
 import org.dash.wallet.common.ui.components.Style
 import org.dash.wallet.features.exploredash.R
-import java.text.NumberFormat
+import org.dash.wallet.features.exploredash.utils.GiftCardCurrency
 import java.util.Currency
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -40,11 +40,8 @@ fun MerchantDenominations(
     onDenominationSelected: (Double) -> Unit = {},
     onContinue: () -> Unit = {}
 ) {
-    val numberFormat = remember {
-        NumberFormat.getCurrencyInstance().apply {
-            this.currency = currency
-            minimumFractionDigits = 0
-        }
+    val numberFormat = remember(currency) {
+        GiftCardCurrency.displayFormat(currency.currencyCode, trimZeroDecimals = true)
     }
     val colors = LocalDashColors.current
     Column(modifier = modifier) {

@@ -200,5 +200,39 @@ class ExploreDatabaseMigrations {
                 )
             }
         }
+
+        val migration4To5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE merchant ADD COLUMN country TEXT")
+                db.execSQL("ALTER TABLE merchant ADD COLUMN currency TEXT")
+
+                // The published version 4 file declares this table differently from the entity
+                // (nullable id, INTEGER sourceId), which Room only checks after a migration.
+                db.execSQL(
+                    "CREATE TABLE gift_card_providers_new (" +
+                        "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "merchantId TEXT NOT NULL, " +
+                        "provider TEXT NOT NULL, " +
+                        "redeemType TEXT NOT NULL, " +
+                        "savingsPercentage INTEGER NOT NULL, " +
+                        "active INTEGER NOT NULL, " +
+                        "denominationsType TEXT NOT NULL, " +
+                        "sourceId TEXT NOT NULL, " +
+                        "currency TEXT" +
+                        ")"
+                )
+                db.execSQL(
+                    "INSERT INTO gift_card_providers_new (" +
+                        "id, merchantId, provider, redeemType, savingsPercentage, active, denominationsType, " +
+                        "sourceId" +
+                        ") SELECT " +
+                        "id, merchantId, provider, redeemType, savingsPercentage, active, denominationsType, " +
+                        "CAST(sourceId AS TEXT) " +
+                        "FROM gift_card_providers"
+                )
+                db.execSQL("DROP TABLE gift_card_providers")
+                db.execSQL("ALTER TABLE gift_card_providers_new RENAME TO gift_card_providers")
+            }
+        }
     }
 }

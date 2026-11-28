@@ -34,7 +34,8 @@ interface ExploreDataSource {
         denomType: DenomOption,
         provider: String,
         bounds: GeoBounds,
-        excludeProvider: String = ""
+        excludeProvider: String = "",
+        country: String = ""
     ): Flow<List<Merchant>>
 
     fun observeMerchantsPaging(
@@ -48,7 +49,9 @@ interface ExploreDataSource {
         sortOption: SortOption,
         userLat: Double,
         userLng: Double,
-        onlineFirst: Boolean
+        onlineFirst: Boolean,
+        country: String,
+        homeCountry: String
     ): PagingSource<Int, MerchantInfo>
 
     suspend fun getMerchantsResultCount(
@@ -58,7 +61,8 @@ interface ExploreDataSource {
         paymentMethod: String,
         denomType: DenomOption,
         provider: String,
-        bounds: GeoBounds
+        bounds: GeoBounds,
+        country: String
     ): Int
 
     fun observePhysicalAtms(query: String, territory: String, types: List<String>, bounds: GeoBounds): Flow<List<Atm>>
@@ -87,6 +91,7 @@ interface ExploreDataSource {
     ): Flow<List<Merchant>>
 
     suspend fun getMerchantTerritories(): List<String>
+    suspend fun getMerchantCountries(): List<String>
     suspend fun getAtmTerritories(): List<String>
     fun sanitizeQuery(query: String): String
     suspend fun getMerchantById(merchantId: String): Merchant?
@@ -106,7 +111,8 @@ open class MerchantAtmDataSource @Inject constructor(
         denomType: DenomOption,
         provider: String,
         bounds: GeoBounds,
-        excludeProvider: String
+        excludeProvider: String,
+        country: String
     ): Flow<List<Merchant>> {
         val denominationType = if (denomType == DenomOption.Both) {
             ""
@@ -168,8 +174,14 @@ open class MerchantAtmDataSource @Inject constructor(
             }
         }
 
+        val countryFlow = if (country.isNotBlank()) {
+            baseFlow.map { merchants -> merchants.filter { it.country.isNullOrBlank() || it.country == country } }
+        } else {
+            baseFlow
+        }
+
         return if (excludeProvider.isNotBlank()) {
-            baseFlow.map { merchants ->
+            countryFlow.map { merchants ->
                 merchants.filter { merchant ->
                     merchant.merchantId?.let { id ->
                         val providers = giftCardProviderDao.getProvidersByMerchantId(id)
@@ -178,7 +190,7 @@ open class MerchantAtmDataSource @Inject constructor(
                 }
             }
         } else {
-            baseFlow
+            countryFlow
         }
     }
 
@@ -193,7 +205,9 @@ open class MerchantAtmDataSource @Inject constructor(
         sortOption: SortOption,
         userLat: Double,
         userLng: Double,
-        onlineFirst: Boolean
+        onlineFirst: Boolean,
+        country: String,
+        homeCountry: String
     ): PagingSource<Int, MerchantInfo> {
         val denominationType = if (denomType == DenomOption.Both) {
             ""
@@ -217,9 +231,11 @@ open class MerchantAtmDataSource @Inject constructor(
                         paymentMethod,
                         denominationType,
                         provider,
+                        country,
                         sortByDiscount,
                         userLat,
-                        userLng
+                        userLng,
+                        homeCountry
                     )
                 } else {
                     merchantDao.pagingGetGrouped(
@@ -227,9 +243,11 @@ open class MerchantAtmDataSource @Inject constructor(
                         paymentMethod,
                         denominationType,
                         provider,
+                        country,
                         sortByDiscount,
                         userLat,
-                        userLng
+                        userLng,
+                        homeCountry
                     )
                 }
             }
@@ -251,7 +269,8 @@ open class MerchantAtmDataSource @Inject constructor(
                         bounds.westLng,
                         sortOption.ordinal,
                         userLat,
-                        userLng
+                        userLng,
+                        homeCountry
                     )
                 } else {
                     merchantDao.pagingGetByCoordinates(
@@ -265,7 +284,8 @@ open class MerchantAtmDataSource @Inject constructor(
                         bounds.westLng,
                         sortOption.ordinal,
                         userLat,
-                        userLng
+                        userLng,
+                        homeCountry
                     )
                 }
             }
@@ -289,11 +309,13 @@ open class MerchantAtmDataSource @Inject constructor(
                         paymentMethod,
                         denominationType,
                         provider,
+                        country,
                         sortOption.ordinal,
                         userLat,
                         userLng,
                         onlineOrder,
-                        physicalOrder
+                        physicalOrder,
+                        homeCountry
                     )
                 } else {
                     merchantDao.pagingGetByTerritory(
@@ -302,11 +324,13 @@ open class MerchantAtmDataSource @Inject constructor(
                         paymentMethod,
                         denominationType,
                         provider,
+                        country,
                         sortOption.ordinal,
                         userLat,
                         userLng,
                         onlineOrder,
-                        physicalOrder
+                        physicalOrder,
+                        homeCountry
                     )
                 }
             }
@@ -320,7 +344,8 @@ open class MerchantAtmDataSource @Inject constructor(
         paymentMethod: String,
         denomType: DenomOption,
         provider: String,
-        bounds: GeoBounds
+        bounds: GeoBounds,
+        country: String
     ): Int {
         val denominationType = if (denomType == DenomOption.Both) {
             ""
@@ -341,10 +366,11 @@ open class MerchantAtmDataSource @Inject constructor(
                         types,
                         paymentMethod,
                         denominationType,
-                        provider
+                        provider,
+                        country
                     )
                 } else {
-                    merchantDao.getGroupedResultCount(types, paymentMethod, denominationType, provider)
+                    merchantDao.getGroupedResultCount(types, paymentMethod, denominationType, provider, country)
                 }
             }
             type == MerchantType.PHYSICAL && territory.isBlank() && bounds != GeoBounds.noBounds -> {
@@ -387,10 +413,18 @@ open class MerchantAtmDataSource @Inject constructor(
                         types,
                         paymentMethod,
                         denominationType,
-                        provider
+                        provider,
+                        country
                     )
                 } else {
-                    merchantDao.getByTerritoryResultCount(territory, types, paymentMethod, denominationType, provider)
+                    merchantDao.getByTerritoryResultCount(
+                        territory,
+                        types,
+                        paymentMethod,
+                        denominationType,
+                        provider,
+                        country
+                    )
                 }
             }
         }
@@ -506,6 +540,10 @@ open class MerchantAtmDataSource @Inject constructor(
 
     override suspend fun getMerchantTerritories(): List<String> {
         return merchantDao.getTerritories()
+    }
+
+    override suspend fun getMerchantCountries(): List<String> {
+        return merchantDao.getCountries()
     }
 
     override suspend fun getAtmTerritories(): List<String> {

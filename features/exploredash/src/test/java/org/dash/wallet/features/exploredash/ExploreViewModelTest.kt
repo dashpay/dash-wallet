@@ -21,11 +21,13 @@ import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.TestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -34,11 +36,13 @@ import kotlinx.coroutines.test.setMain
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProvider
 import org.dash.wallet.features.exploredash.data.explore.ExploreDataSource
 import org.dash.wallet.features.exploredash.data.explore.model.GeoBounds
 import org.dash.wallet.features.exploredash.data.explore.model.Merchant
 import org.dash.wallet.features.exploredash.data.explore.model.MerchantType
 import org.dash.wallet.features.exploredash.data.explore.model.PaymentMethod
+import org.dash.wallet.features.exploredash.data.explore.model.SearchResult
 import org.dash.wallet.features.exploredash.data.explore.model.SortOption
 import org.dash.wallet.features.exploredash.repository.DataSyncStatusService
 import org.dash.wallet.features.exploredash.services.UserLocation
@@ -50,12 +54,14 @@ import org.dash.wallet.features.exploredash.ui.explore.FilterMode
 import org.dash.wallet.features.exploredash.ui.explore.ScreenState
 import org.dash.wallet.features.exploredash.utils.ExploreConfig
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TestRule
 import org.junit.rules.TestWatcher
 import org.junit.runner.Description
 import org.mockito.kotlin.*
+import java.util.Locale
 
 @ExperimentalCoroutinesApi
 class MainCoroutineRule(
@@ -279,6 +285,7 @@ class ExploreViewModelTest {
 
     private val mockPreferences = mock<ExploreConfig>().stub {
         onBlocking { get<Long>(any()) }.doReturn(-1L)
+        on { selectedCountry } doReturn flowOf(null)
     }
 
     @Test
@@ -287,7 +294,9 @@ class ExploreViewModelTest {
             val territory = "Texas"
             val dataSource =
                 mock<ExploreDataSource> {
-                    on { observePhysicalMerchants(eq(""), eq(territory), eq(""), any(), any(), any(), any()) } doReturn
+                    on {
+                        observePhysicalMerchants(eq(""), eq(territory), eq(""), any(), any(), any(), any(), any())
+                    } doReturn
                         flow { emit(merchants.filter { it.territory == territory }) }
                 }
 
@@ -300,6 +309,7 @@ class ExploreViewModelTest {
             val dataSyncStatus =
                 mock<DataSyncStatusService> {
                     on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0)) }
+                    on { getCatalogGeneration() } doReturn flowOf(0)
                     on { hasObservedLastError() } doReturn flow { emit(false) }
                 }
             val analyticsService = mock<AnalyticsService>()
@@ -326,7 +336,8 @@ class ExploreViewModelTest {
             val actual = viewModel.boundedSearchFlow.first()
 
             assertEquals(expected, actual)
-            verify(dataSource).observePhysicalMerchants("", territory, "", DenomOption.Both, "", GeoBounds.noBounds)
+            verify(dataSource)
+                .observePhysicalMerchants("", territory, "", DenomOption.Both, "", GeoBounds.noBounds, "")
             verify(locationState).getRadiusBounds(0.0, 0.0, viewModel.radius)
         }
     }
@@ -340,7 +351,16 @@ class ExploreViewModelTest {
             val dataSource =
                 mock<ExploreDataSource> {
                     on {
-                        observePhysicalMerchants(eq(query), eq(""), eq(PaymentMethod.DASH), any(), any(), any(), any())
+                        observePhysicalMerchants(
+                            eq(query),
+                            eq(""),
+                            eq(PaymentMethod.DASH),
+                            any(),
+                            any(),
+                            any(),
+                            any(),
+                            any()
+                        )
                     } doReturn
                         flow {
                             emit(
@@ -361,6 +381,7 @@ class ExploreViewModelTest {
             val dataSyncStatus =
                 mock<DataSyncStatusService> {
                     on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0)) }
+                    on { getCatalogGeneration() } doReturn flowOf(0)
                     on { hasObservedLastError() } doReturn flow { emit(false) }
                 }
             val analyticsService = mock<AnalyticsService>()
@@ -406,7 +427,7 @@ class ExploreViewModelTest {
             val dataSource =
                 mock<ExploreDataSource> {
                     on {
-                        observePhysicalMerchants(eq(query), eq(territory), eq(""), any(), any(), any(), any())
+                        observePhysicalMerchants(eq(query), eq(territory), eq(""), any(), any(), any(), any(), any())
                     } doReturn flow {
                         emit(
                             merchants.filter {
@@ -425,6 +446,7 @@ class ExploreViewModelTest {
             val dataSyncStatus =
                 mock<DataSyncStatusService> {
                     on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0)) }
+                    on { getCatalogGeneration() } doReturn flowOf(0)
                     on { hasObservedLastError() } doReturn flow { emit(false) }
                 }
             val analyticsService = mock<AnalyticsService>()
@@ -454,7 +476,8 @@ class ExploreViewModelTest {
             val actual = viewModel.boundedSearchFlow.first()
 
             assertEquals(expected, actual)
-            verify(dataSource).observePhysicalMerchants(query, territory, "", DenomOption.Both, "", GeoBounds.noBounds)
+            verify(dataSource)
+                .observePhysicalMerchants(query, territory, "", DenomOption.Both, "", GeoBounds.noBounds, "")
             verify(locationState).getRadiusBounds(0.0, 0.0, viewModel.radius)
         }
     }
@@ -477,7 +500,7 @@ class ExploreViewModelTest {
 
             val dataSource =
                 mock<ExploreDataSource> {
-                    on { observePhysicalMerchants(eq(""), eq(""), eq(""), any(), any(), any(), any()) } doReturn
+                    on { observePhysicalMerchants(eq(""), eq(""), eq(""), any(), any(), any(), any(), any()) } doReturn
                         flow {
                             emit(
                                 merchants
@@ -500,6 +523,7 @@ class ExploreViewModelTest {
             val dataSyncStatus =
                 mock<DataSyncStatusService> {
                     on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0)) }
+                    on { getCatalogGeneration() } doReturn flowOf(0)
                     on { hasObservedLastError() } doReturn flow { emit(false) }
                 }
             val analyticsService = mock<AnalyticsService>()
@@ -560,6 +584,7 @@ class ExploreViewModelTest {
             val dataSyncStatus =
                 mock<DataSyncStatusService> {
                     on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0)) }
+                    on { getCatalogGeneration() } doReturn flowOf(0)
                     on { hasObservedLastError() } doReturn flow { emit(false) }
                 }
 
@@ -625,6 +650,7 @@ class ExploreViewModelTest {
             val dataSyncStatus =
                 mock<DataSyncStatusService> {
                     on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0)) }
+                    on { getCatalogGeneration() } doReturn flowOf(0)
                     on { hasObservedLastError() } doReturn flow { emit(false) }
                 }
 
@@ -686,6 +712,7 @@ class ExploreViewModelTest {
         }
         val dataSyncStatus = mock<DataSyncStatusService> {
             on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0)) }
+            on { getCatalogGeneration() } doReturn flowOf(0)
             on { hasObservedLastError() } doReturn flow { emit(false) }
         }
         return ExploreViewModel(
@@ -853,6 +880,7 @@ class ExploreViewModelTest {
             val dataSyncStatus =
                 mock<DataSyncStatusService> {
                     on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0)) }
+                    on { getCatalogGeneration() } doReturn flowOf(0)
                     on { hasObservedLastError() } doReturn flow { emit(false) }
                 }
 
@@ -934,6 +962,7 @@ class ExploreViewModelTest {
             val dataSyncStatus =
                 mock<DataSyncStatusService> {
                     on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0)) }
+                    on { getCatalogGeneration() } doReturn flowOf(0)
                     on { hasObservedLastError() } doReturn flow { emit(false) }
                 }
 
@@ -989,6 +1018,7 @@ class ExploreViewModelTest {
             val dataSource = mock<ExploreDataSource>()
             val dataSyncStatus = mock<DataSyncStatusService> {
                 on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0)) }
+                on { getCatalogGeneration() } doReturn flowOf(0)
                 on { hasObservedLastError() } doReturn flow { emit(false) }
             }
             val analyticsService = mock<AnalyticsService>()
@@ -1008,6 +1038,387 @@ class ExploreViewModelTest {
             val actual = viewModel.selectedItem.value as Merchant
 
             assertEquals(expected, actual)
+        }
+    }
+
+    private fun viewModelWithCountries(
+        dataSource: ExploreDataSource,
+        config: ExploreConfig,
+        countries: List<String>
+    ): ExploreViewModel {
+        dataSource.stub {
+            onBlocking { getMerchantCountries() } doReturn countries
+            on { observePhysicalMerchants(any(), any(), any(), any(), any(), any(), any(), any()) } doReturn
+                flowOf(listOf())
+        }
+        val locationMock = mock<UserLocationStateInt> {
+            on { getRadiusBounds(any(), any(), any()) } doReturn GeoBounds.noBounds
+            onBlocking { getCountryCodeFromLocation() } doReturn "US"
+        }
+        val dataSyncStatus = mock<DataSyncStatusService> {
+            on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0)) }
+            on { getCatalogGeneration() } doReturn flowOf(0)
+            on { hasObservedLastError() } doReturn flow { emit(false) }
+        }
+        return ExploreViewModel(
+            dataSource,
+            locationMock,
+            dataSyncStatus,
+            networkState,
+            config,
+            mock<AnalyticsService>()
+        ).also { it.init(ExploreTopic.Merchants) }
+    }
+
+    private fun configWithChosenCountry(country: String?) = mock<ExploreConfig> {
+        on { selectedCountry } doReturn flowOf(country)
+    }
+
+    @Test
+    fun allMode_filtersByTheChosenCountry() {
+        runBlocking {
+            val dataSource = mock<ExploreDataSource>()
+            val viewModel = viewModelWithCountries(dataSource, configWithChosenCountry("GB"), listOf("US", "GB"))
+            viewModel.setFilterMode(FilterMode.All)
+            viewModel.searchBounds = GeoBounds.noBounds
+            kotlinx.coroutines.delay(100)
+
+            viewModel.boundedSearchFlow.first()
+
+            assertEquals("GB", viewModel.selectedCountry.value)
+            verify(dataSource)
+                .observePhysicalMerchants("", "", "", DenomOption.Both, "", GeoBounds.noBounds, "", "GB")
+        }
+    }
+
+    @Test
+    fun nearbyMode_isNotFilteredByCountry() {
+        runBlocking {
+            val dataSource = mock<ExploreDataSource>()
+            val viewModel = viewModelWithCountries(dataSource, configWithChosenCountry("GB"), listOf("US", "GB"))
+            viewModel.setFilterMode(FilterMode.Nearby)
+            viewModel.searchBounds = GeoBounds.noBounds
+            kotlinx.coroutines.delay(100)
+
+            viewModel.boundedSearchFlow.first()
+
+            assertEquals("GB", viewModel.selectedCountry.value)
+            verify(dataSource)
+                .observePhysicalMerchants("", "", "", DenomOption.Both, "", GeoBounds.noBounds, "", "")
+        }
+    }
+
+    @Test
+    fun allCountriesDefault_isNotSaved_aPickIsAndResetForgetsIt() {
+        runBlocking {
+            val config = configWithChosenCountry(null)
+            val viewModel = viewModelWithCountries(mock<ExploreDataSource>(), config, listOf("US", "GB"))
+            kotlinx.coroutines.delay(100)
+
+            assertEquals("", viewModel.selectedCountry.value)
+            assertEquals(listOf("US", "GB"), viewModel.countries.value)
+            verify(config, never()).setSelectedCountry(anyOrNull())
+
+            viewModel.setCountry("GB")
+            verify(config).setSelectedCountry("GB")
+
+            viewModel.setCountry(null)
+            verify(config).setSelectedCountry(null)
+        }
+    }
+
+    @Test
+    fun noPickedCountry_showsEveryCountryWhateverIsDetected() {
+        runBlocking {
+            val config = configWithChosenCountry(null)
+            val network = mock<NetworkStateInt> {
+                on { isConnected } doReturn MutableStateFlow(true)
+                on { observeCountryFromIP() } doReturn flowOf("GB")
+            }
+            val dataSource = mock<ExploreDataSource> {
+                onBlocking { getMerchantCountries() } doReturn listOf("US", "GB")
+                on { observePhysicalMerchants(any(), any(), any(), any(), any(), any(), any(), any()) } doReturn
+                    flowOf(listOf())
+            }
+            val locationMock = mock<UserLocationStateInt> {
+                on { getRadiusBounds(any(), any(), any()) } doReturn GeoBounds.noBounds
+            }
+            val viewModel = ExploreViewModel(
+                dataSource,
+                locationMock,
+                syncStatusOf(MutableStateFlow(Resource.loading(50.0))),
+                network,
+                config,
+                mock<AnalyticsService>()
+            ).also { it.init(ExploreTopic.Merchants) }
+            viewModel.setFilterMode(FilterMode.All)
+            viewModel.searchBounds = GeoBounds.noBounds
+            kotlinx.coroutines.delay(100)
+
+            viewModel.boundedSearchFlow.first()
+
+            assertEquals("GB", viewModel.location.value)
+            assertEquals("", viewModel.selectedCountry.value)
+            verify(dataSource)
+                .observePhysicalMerchants("", "", "", DenomOption.Both, "", GeoBounds.noBounds, "", "")
+            verify(config, never()).setSelectedCountry(anyOrNull())
+        }
+    }
+
+    @Test
+    fun forgettingThePickedCountry_returnsToEveryCountry() {
+        runBlocking {
+            val stored = MutableStateFlow<String?>("GB")
+            val config = mock<ExploreConfig> {
+                on { selectedCountry } doReturn stored
+                onBlocking { setSelectedCountry(anyOrNull()) } doAnswer { stored.value = it.arguments[0] as String? }
+            }
+            val viewModel = viewModelWithCountries(mock<ExploreDataSource>(), config, listOf("US", "GB"))
+            kotlinx.coroutines.delay(100)
+            assertEquals("GB", viewModel.selectedCountry.value)
+
+            viewModel.setCountry(null)
+            kotlinx.coroutines.delay(100)
+
+            assertEquals("", viewModel.selectedCountry.value)
+        }
+    }
+
+    @Test
+    fun pickedCountryGoneFromTheDatabase_showsEveryCountry() {
+        runBlocking {
+            val viewModel =
+                viewModelWithCountries(mock<ExploreDataSource>(), configWithChosenCountry("CA"), listOf("US", "GB"))
+            kotlinx.coroutines.delay(100)
+
+            assertEquals("", viewModel.selectedCountry.value)
+        }
+    }
+
+    private fun syncStatusOf(
+        progress: Flow<Resource<Double>>,
+        catalogGeneration: Flow<Int> = flowOf(0)
+    ) = mock<DataSyncStatusService> {
+        on { getSyncProgressFlow() } doReturn progress
+        on { getCatalogGeneration() } doReturn catalogGeneration
+        on { hasObservedLastError() } doReturn flow { emit(false) }
+    }
+
+    @Test
+    fun finishedSync_reloadsTheCountriesAndResolvesTheCountryAgain() {
+        runBlocking {
+            val progress = MutableStateFlow(Resource.loading(50.0))
+            val dataSource = mock<ExploreDataSource> {
+                onBlocking { getMerchantCountries() }.doReturn(listOf(), listOf("US", "GB"))
+            }
+            val viewModel = ExploreViewModel(
+                dataSource,
+                mock<UserLocationStateInt>(),
+                syncStatusOf(progress),
+                networkState,
+                configWithChosenCountry("GB"),
+                mock<AnalyticsService>()
+            ).also { it.init(ExploreTopic.Merchants) }
+            kotlinx.coroutines.delay(100)
+            assertEquals(listOf<String>(), viewModel.countries.value)
+            assertEquals("", viewModel.selectedCountry.value)
+
+            progress.value = Resource.loading(80.0)
+            kotlinx.coroutines.delay(100)
+            assertEquals(listOf<String>(), viewModel.countries.value)
+
+            progress.value = Resource.success(100.0)
+            kotlinx.coroutines.delay(100)
+
+            assertEquals(listOf("US", "GB"), viewModel.countries.value)
+            assertEquals("GB", viewModel.selectedCountry.value)
+        }
+    }
+
+    private fun providersOf(vararg names: String) = names.map { name ->
+        GiftCardProvider(
+            merchantId = "merchant",
+            provider = name,
+            redeemType = "barcode",
+            savingsPercentage = 0,
+            active = true,
+            denominationsType = "fixed",
+            sourceId = "source"
+        )
+    }
+
+    private fun offeredProviders(country: String?, currency: String?): List<String> = runBlocking {
+        val dataSource = mock<ExploreDataSource> {
+            onBlocking { getGiftCardProvidersFor(any()) } doReturn providersOf("CTX", "PiggyCards")
+        }
+        val viewModel = ExploreViewModel(
+            dataSource,
+            mock<UserLocationStateInt>(),
+            syncStatusOf(MutableStateFlow(Resource.loading(50.0))),
+            networkState,
+            mockPreferences,
+            mock<AnalyticsService>()
+        )
+        val merchant = Merchant(merchantId = "merchant", country = country, currency = currency).apply {
+            type = MerchantType.ONLINE
+        }
+
+        viewModel.openMerchantDetails(merchant, isGrouped = true)
+        val opened = (viewModel.selectedItem.value as Merchant).giftCardProviders.map { it.provider }
+
+        merchant.giftCardProviders = providersOf("CTX", "PiggyCards")
+        viewModel.updateSelectedItem(merchant)
+        val updated = (viewModel.selectedItem.value as Merchant).giftCardProviders.map { it.provider }
+
+        assertEquals(opened, updated)
+        opened
+    }
+
+    @Test
+    fun piggyCards_isOfferedOnlyForUsDollarMerchants() {
+        val both = listOf("CTX", "PiggyCards")
+        assertEquals(both, offeredProviders("US", "USD"))
+        assertEquals(both, offeredProviders(null, null))
+        assertEquals(both, offeredProviders("", " "))
+
+        assertEquals(listOf("CTX"), offeredProviders("GB", "GBP"))
+        assertEquals(listOf("CTX"), offeredProviders("GB", "USD"))
+        assertEquals(listOf("CTX"), offeredProviders("US", "EUR"))
+        assertEquals(listOf("CTX"), offeredProviders("GB", null))
+        assertEquals(listOf("CTX"), offeredProviders(null, "GBP"))
+    }
+    @Test
+    fun countryNames_mapEachNameToItsCountryInNameOrder() {
+        val names = ExploreViewModel.countryNames(listOf("US", "GB", "DE", "AE"), Locale.ENGLISH)
+
+        assertEquals(listOf("Germany", "United Arab Emirates", "United Kingdom", "United States"), names.keys.toList())
+        assertEquals(listOf("DE", "AE", "GB", "US"), names.values.toList())
+        // A search for "united k" leaves one row at index 0; the name, not the index, gives the country
+        assertEquals("GB", names["United Kingdom"])
+        assertEquals("US", names["United States"])
+        assertNull(names["Atlantis"])
+
+        val german = ExploreViewModel.countryNames(listOf("US", "GB", "DE", "AT"), Locale.GERMAN)
+        assertEquals(listOf("DE", "AT", "GB", "US"), german.values.toList())
+        assertEquals("AT", german["Österreich"])
+    }
+
+    @Test
+    fun pagedList_isOrderedAroundTheResolvedUserCountry() {
+        runBlocking {
+            // Never the device's own country, so the two cannot be told apart by accident
+            val userCountry = if (Locale.getDefault().country == "JP") "KR" else "JP"
+            val network = mock<NetworkStateInt> {
+                on { isConnected } doReturn MutableStateFlow(true)
+                on { observeCountryFromIP() } doReturn flowOf(userCountry)
+            }
+            val dataSource = mock<ExploreDataSource> {
+                onBlocking { getMerchantCountries() } doReturn listOf("US", "GB")
+                onBlocking {
+                    getMerchantsResultCount(any(), any(), any(), any(), any(), any(), any(), any())
+                } doReturn 1
+                on {
+                    observeMerchantsPaging(
+                        any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()
+                    )
+                } doAnswer { TestPagingSource() }
+            }
+            val locationMock = mock<UserLocationStateInt> {
+                on { getRadiusBounds(any(), any(), any()) } doReturn GeoBounds.noBounds
+            }
+            val viewModel = ExploreViewModel(
+                dataSource,
+                locationMock,
+                syncStatusOf(MutableStateFlow(Resource.success(100.0))),
+                network,
+                mockPreferences,
+                mock<AnalyticsService>()
+            ).also { it.init(ExploreTopic.Merchants) }
+            kotlinx.coroutines.delay(200)
+            viewModel.setFilterMode(FilterMode.All)
+            viewModel.searchBounds = GeoBounds.noBounds
+            kotlinx.coroutines.delay(1000)
+
+            // Only the order follows the user's country: the list itself still shows every country
+            verify(dataSource, atLeastOnce()).observeMerchantsPaging(
+                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), eq(""), eq(userCountry)
+            )
+            verify(dataSource, never()).observeMerchantsPaging(
+                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(),
+                eq(Locale.getDefault().country)
+            )
+        }
+    }
+
+    @Test
+    fun onlyASyncThatReplacedTheDatabase_readsTheListCountAndMapAgain() {
+        runBlocking {
+            val progress = MutableStateFlow(Resource.loading(50.0))
+            val catalogGeneration = MutableStateFlow(0)
+            val dataSource = mock<ExploreDataSource> {
+                onBlocking { getMerchantCountries() } doReturn listOf("US")
+                onBlocking {
+                    getMerchantsResultCount(any(), any(), any(), any(), any(), any(), any(), any())
+                } doReturn 1
+                on {
+                    observeMerchantsPaging(
+                        any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()
+                    )
+                } doAnswer { TestPagingSource() }
+                on { observePhysicalMerchants(any(), any(), any(), any(), any(), any(), any(), any()) } doReturn
+                    flowOf(listOf())
+            }
+            val locationMock = mock<UserLocationStateInt> {
+                on { getRadiusBounds(any(), any(), any()) } doReturn GeoBounds.noBounds
+            }
+            val viewModel = ExploreViewModel(
+                dataSource,
+                locationMock,
+                syncStatusOf(progress, catalogGeneration),
+                networkState,
+                mockPreferences,
+                mock<AnalyticsService>()
+            ).also { it.init(ExploreTopic.Merchants) }
+            viewModel.setFilterMode(FilterMode.All)
+            viewModel.searchBounds = GeoBounds.noBounds
+            val mapResults = mutableListOf<List<SearchResult>>()
+            val mapJob = launch(Dispatchers.Unconfined) { viewModel.boundedSearchFlow.collect { mapResults.add(it) } }
+            kotlinx.coroutines.delay(1000)
+
+            verify(dataSource, times(1)).getMerchantCountries()
+            verify(dataSource, times(1))
+                .getMerchantsResultCount(any(), any(), any(), any(), any(), any(), any(), any())
+            verify(dataSource, times(1))
+                .observePhysicalMerchants(any(), any(), any(), any(), any(), any(), any(), any())
+            verify(dataSource, times(1)).observeMerchantsPaging(
+                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()
+            )
+
+            // The sync found the local data up to date: the list on screen stays as it is
+            progress.value = Resource.success(100.0)
+            kotlinx.coroutines.delay(1000)
+
+            verify(dataSource, times(1))
+                .getMerchantsResultCount(any(), any(), any(), any(), any(), any(), any(), any())
+            verify(dataSource, times(1))
+                .observePhysicalMerchants(any(), any(), any(), any(), any(), any(), any(), any())
+            verify(dataSource, times(1)).observeMerchantsPaging(
+                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()
+            )
+
+            catalogGeneration.value = 1
+            kotlinx.coroutines.delay(1000)
+
+            assertEquals("", viewModel.selectedCountry.value)
+            verify(dataSource, times(3)).getMerchantCountries()
+            verify(dataSource, times(2))
+                .getMerchantsResultCount(any(), any(), any(), any(), any(), any(), any(), any())
+            verify(dataSource, times(2))
+                .observePhysicalMerchants(any(), any(), any(), any(), any(), any(), any(), any())
+            verify(dataSource, times(2)).observeMerchantsPaging(
+                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()
+            )
+            mapJob.cancel()
         }
     }
 }

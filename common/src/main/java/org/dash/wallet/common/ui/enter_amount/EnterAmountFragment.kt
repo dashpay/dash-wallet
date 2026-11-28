@@ -339,6 +339,8 @@ class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
             value.append(binding.amountView.input)
         }
 
+        fun maxDecimals() = AmountInputRules.maxDecimals(binding.amountView.dashToFiat, viewModel.fiatDecimalsLimit)
+
         override fun onNumber(number: Int) {
             refreshValue()
 
@@ -347,16 +349,8 @@ class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
                 value.clear()
             }
 
-            val formattedValue = value.toString()
-            val isFraction = formattedValue.indexOf(decimalSeparator) > -1
-
-            if (isFraction) {
-                val lengthOfDecimalPart = formattedValue.length - formattedValue.indexOf(decimalSeparator)
-                val decimalsThreshold = if (binding.amountView.dashToFiat) 8 else 2
-
-                if (lengthOfDecimalPart > decimalsThreshold) {
-                    return
-                }
+            if (!AmountInputRules.acceptsDigit(value.toString(), decimalSeparator, maxDecimals())) {
+                return
             }
 
             if (!maxSelected) {
@@ -390,7 +384,7 @@ class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
 
             refreshValue()
 
-            if (value.indexOf(decimalSeparator) < 0) {
+            if (AmountInputRules.acceptsSeparator(value.toString(), decimalSeparator, maxDecimals())) {
                 value.append(decimalSeparator)
             }
 

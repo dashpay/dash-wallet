@@ -100,7 +100,7 @@ public final class Constants {
                 FILENAME_NETWORK_SUFFIX = "";
                 FEE_NETWORK_SUFFIX = FILENAME_NETWORK_SUFFIX;
                 WALLET_NAME_CURRENCY_CODE = "dash";
-                org.dash.wallet.common.util.Constants.INSTANCE.setEXPLORE_GC_FILE_PATH("explore/explore-v4.db");
+                org.dash.wallet.common.util.Constants.INSTANCE.setEXPLORE_GC_FILE_PATH("explore/explore-v5.db");
                 SUPPORTS_PLATFORM = !is32Bit;
                 SUPPORTS_INVITES = true;
                 SUPPORTS_TXMETADATA = true;
@@ -133,7 +133,7 @@ public final class Constants {
                 // faucet.testnet.networks.dash.org, which no longer accepts
                 // connections and whose captcha challenge fails).
                 org.dash.wallet.common.util.Constants.FAUCET_URL = "https://faucet.thepasta.org/";
-                org.dash.wallet.common.util.Constants.INSTANCE.setEXPLORE_GC_FILE_PATH("explore/explore-v4-testnet.db");
+                org.dash.wallet.common.util.Constants.INSTANCE.setEXPLORE_GC_FILE_PATH("explore/explore-v5-testnet.db");
                 break;
             }
             case "devnet": {

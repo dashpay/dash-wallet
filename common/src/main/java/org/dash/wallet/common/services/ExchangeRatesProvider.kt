@@ -24,6 +24,13 @@ interface ExchangeRatesProvider {
     fun observeExchangeRates(): Flow<List<ExchangeRate>>
     fun observeExchangeRate(currencyCode: String): Flow<ExchangeRate?>
     suspend fun getExchangeRate(currencyCode: String): ExchangeRate?
+
+    /**
+     * The rate once a refresh that was due has ended, waited for at most [maxWaitMillis].
+     * Null when there is no rate, or only one too old to rely on.
+     */
+    suspend fun getFreshExchangeRate(currencyCode: String, maxWaitMillis: Long): ExchangeRate? =
+        getExchangeRate(currencyCode)
     suspend fun cleanupObsoleteCurrencies()
     fun observeStaleRates(currencyCode: String): Flow<RateRetrievalState>
 }

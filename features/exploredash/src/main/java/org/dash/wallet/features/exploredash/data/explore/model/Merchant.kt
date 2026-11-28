@@ -20,7 +20,9 @@ package org.dash.wallet.features.exploredash.data.explore.model
 import androidx.room.Entity
 import androidx.room.Ignore
 import androidx.room.Index
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProvider
+import java.util.Locale
 
 object PaymentMethod {
     const val DASH = "dash"
@@ -57,8 +59,15 @@ data class Merchant(
     @Ignore var fixedDenomination: Boolean = false,
     @Ignore var denominations: List<Double> = listOf(),
     @Ignore var giftCardProviders: List<GiftCardProvider> = listOf(),
-    @Ignore var quantities: Map<Double, Int> = mapOf()
+    @Ignore var quantities: Map<Double, Int> = mapOf(),
+    var country: String? = null,
+    var currency: String? = null
 ) : SearchResult() {
+
+    // PiggyCards only sells USD cards for the US; a row without a country or currency is US / USD
+    val supportsPiggyCards: Boolean
+        get() = (country.isNullOrBlank() || country == Locale.US.country) &&
+            (currency.isNullOrBlank() || currency == Constants.USD_CURRENCY)
 
     // 1% discount is 0.01
     val savingsFraction: Double

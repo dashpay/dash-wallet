@@ -18,7 +18,6 @@
 package org.dash.wallet.features.exploredash.repository
 
 import android.content.Context
-import androidx.annotation.VisibleForTesting
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthException
 import com.google.firebase.auth.FirebaseUser
@@ -26,10 +25,10 @@ import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.StorageReference
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.tasks.await
 import net.lingala.zip4j.ZipFile
 import org.dash.wallet.common.util.Constants
+import org.dash.wallet.features.exploredash.ExploreDatabase
 import org.dash.wallet.features.exploredash.utils.ExploreConfig
 import org.slf4j.LoggerFactory
 import java.io.*
@@ -45,7 +44,7 @@ interface ExploreRepository {
     fun getUpdateFile(): File
     suspend fun download()
     suspend fun preloadFromAssetsInto(dbUpdateFile: File, checkTestDB: Boolean): Boolean
-    fun finalizeUpdate()
+    suspend fun finalizeUpdate()
 }
 
 class GCExploreDatabase @Inject constructor(
@@ -72,9 +71,6 @@ class GCExploreDatabase @Inject constructor(
 
     private var remoteDataRef: StorageReference? = null
     private var updateTimestampCache = -1L
-
-    @VisibleForTesting
-    val configScope = CoroutineScope(Dispatchers.IO)
 
     override suspend fun getRemoteTimestamp(): Long {
         val remoteDataInfo = try {
@@ -191,13 +187,10 @@ class GCExploreDatabase @Inject constructor(
         }
     }
 
-    override fun finalizeUpdate() {
+    override suspend fun finalizeUpdate() {
         log.info("finalizing update: $updateTimestampCache")
-        configScope.launch {
-            val prefs = exploreConfig.exploreDatabasePrefs.first()
-            exploreConfig.saveExploreDatabasePrefs(
-                prefs.copy(localDbTimestamp = updateTimestampCache)
-            )
+        exploreConfig.updateExploreDatabasePrefs {
+            it.copy(localDbTimestamp = updateTimestampCache, localDbSchemaVersion = ExploreDatabase.VERSION)
         }
     }
 }

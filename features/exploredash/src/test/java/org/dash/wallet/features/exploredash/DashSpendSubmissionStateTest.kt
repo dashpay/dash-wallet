@@ -125,7 +125,7 @@ class DashSpendSubmissionStateTest {
 
     /** Submits a payment whose result never came back, leaving the purchase unresolved. */
     private suspend fun submitAmbiguously(viewModel: DashSpendViewModel) {
-        coEvery { sendPaymentService.payWithDashUrl(any(), any(), any(), any(), any()) } answers {
+        coEvery { sendPaymentService.payWithDashUrl(any(), any(), any(), any(), any(), any()) } answers {
             // the verifier quarantines and persists the payment before the submission fails, so
             // the record is already on disk by the time the screen hears about it
             unresolvedOnDisk.value = true
@@ -155,7 +155,7 @@ class DashSpendSubmissionStateTest {
         }
         val paidFrom = mutableListOf<WalletSession?>()
         // the payment service's contract: a session whose wallet is no longer installed is refused
-        coEvery { sendPaymentService.payWithDashUrl(any(), any(), any(), any(), any()) } answers {
+        coEvery { sendPaymentService.payWithDashUrl(any(), any(), any(), any(), any(), any()) } answers {
             val session = arg<WalletSession?>(3)
             if (session == null || session !== installed) {
                 throw IllegalStateException("the wallet this payment was confirmed on has been wiped")
@@ -186,7 +186,7 @@ class DashSpendSubmissionStateTest {
         var installed: WalletSession? = walletA
         every { sendPaymentService.currentWalletSession() } answers { installed }
         val paidFrom = mutableListOf<WalletSession?>()
-        coEvery { sendPaymentService.payWithDashUrl(any(), any(), any(), any(), any()) } answers {
+        coEvery { sendPaymentService.payWithDashUrl(any(), any(), any(), any(), any(), any()) } answers {
             val session = arg<WalletSession?>(3)
             if (session == null || session !== installed) {
                 throw IllegalStateException("the wallet this payment was confirmed on has been wiped")
@@ -220,14 +220,21 @@ class DashSpendSubmissionStateTest {
         }
         val transaction = mockk<TxInfo>(relaxed = true)
         every { transaction.txId } returns ZERO_TX_ID
-        coEvery { sendPaymentService.payWithDashUrl(any(), any(), any(), any(), any()) } returns transaction
+        coEvery { sendPaymentService.payWithDashUrl(any(), any(), any(), any(), any(), any()) } returns transaction
 
         viewModel.payAndRecordOrder(paymentUri, emptyList())
 
         val ctx = GiftCardProviderType.CTX.serviceName
-        coVerify(exactly = 1) { sendPaymentService.payWithDashUrl(any(), ctx, any(), any(), any()) }
+        coVerify(exactly = 1) { sendPaymentService.payWithDashUrl(any(), ctx, any(), any(), any(), any()) }
         coVerify(exactly = 0) {
-            sendPaymentService.payWithDashUrl(any(), GiftCardProviderType.PiggyCards.serviceName, any(), any(), any())
+            sendPaymentService.payWithDashUrl(
+                any(),
+                GiftCardProviderType.PiggyCards.serviceName,
+                any(),
+                any(),
+                any(),
+                any()
+            )
         }
         coVerify(exactly = 1) { transactionMetadata.markGiftCardTransaction(any(), ctx, any()) }
     }
@@ -239,8 +246,8 @@ class DashSpendSubmissionStateTest {
         // order and let the user pay for it again.
         val transaction = mockk<TxInfo>(relaxed = true)
         every { transaction.txId } returns ZERO_TX_ID
-        coEvery { sendPaymentService.payWithDashUrl(any(), any(), any(), any(), any()) } coAnswers {
-            arg<(suspend (String) -> Unit)?>(4)?.invoke(ZERO_TX_ID)
+        coEvery { sendPaymentService.payWithDashUrl(any(), any(), any(), any(), any(), any()) } coAnswers {
+            checkNotNull(arg<(suspend (String) -> Unit)?>(5)) { "no transaction callback" }.invoke(ZERO_TX_ID)
             transaction
         }
         coEvery { transactionMetadata.markGiftCardTransaction(any(), any(), any()) } throws
@@ -276,7 +283,7 @@ class DashSpendSubmissionStateTest {
         val viewModel = createViewModel()
         val transaction = mockk<TxInfo>(relaxed = true)
         every { transaction.txId } returns ZERO_TX_ID
-        coEvery { sendPaymentService.payWithDashUrl(any(), any(), any(), any(), any()) } returns transaction
+        coEvery { sendPaymentService.payWithDashUrl(any(), any(), any(), any(), any(), any()) } returns transaction
 
         viewModel.payAndRecordOrder(paymentUri, emptyList())
         assertEquals(GiftCardSubmissionState.COMPLETED, viewModel.submissionState.value)
@@ -412,7 +419,7 @@ class DashSpendSubmissionStateTest {
             assertEquals(GiftCardSubmissionState.PENDING, expected.state)
         }
 
-        coVerify(exactly = 0) { sendPaymentService.payWithDashUrl(any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { sendPaymentService.payWithDashUrl(any(), any(), any(), any(), any(), any()) }
     }
 
     private companion object {

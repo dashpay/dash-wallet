@@ -44,7 +44,8 @@ data class GetMerchantResponse(
     val userDiscount: Int? = 0,
     val redeemType: String = "",
     val enabled: Boolean = true,
-    val productId: String = ""
+    val productId: String = "",
+    val currency: String? = null
 ) {
     val discount
         get() = userDiscount ?: savingsPercentage ?: 0
@@ -63,8 +64,9 @@ data class GetMerchantResponse(
                     require(denominations.size == 2)
                     denominations[1].toDouble()
                 }
+                // CTX sends this type as (min, max) too; only the amounts must be whole
                 is DenominationType.MinMaxMajor -> {
-                    require(denominations.size == 3)
+                    require(denominations.size == 2)
                     denominations[1].toDouble()
                 }
                 is DenominationType.Fixed -> {

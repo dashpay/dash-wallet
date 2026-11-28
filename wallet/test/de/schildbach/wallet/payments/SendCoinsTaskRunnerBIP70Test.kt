@@ -58,6 +58,7 @@ import de.schildbach.wallet.data.PendingDirectPaymentConfig
 import de.schildbach.wallet.data.WalletData
 import org.dash.wallet.common.data.NetworkStatus
 import org.dash.wallet.common.data.PaymentIntent
+import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.PaymentRecoveryMetadata
 import org.dash.wallet.common.services.PaymentSubmissionPendingException
@@ -1725,7 +1726,7 @@ class SendCoinsTaskRunnerBIP70Test {
         // payWithDashUrl converts the sent transaction for its caller by reading the installed
         // wallet; a wipe can leave none. The payment is out: a plain failure here would have the
         // gift card flow discard its order and let it be paid again.
-        coEvery { sendCoinsTaskRunner.payWithDashUrlTx(any(), any(), any(), any(), any()) } returns deferredTx
+        coEvery { sendCoinsTaskRunner.payWithDashUrlTx(any(), any(), any(), any(), any(), any()) } returns deferredTx
         every { walletDataProvider.transactionBag } throws IllegalStateException("Wallet is null")
 
         try {
@@ -1733,6 +1734,98 @@ class SendCoinsTaskRunnerBIP70Test {
             fail("a sent payment was reported as a failure")
         } catch (e: PaymentSubmissionPendingException) {
             assertEquals(deferredTxidHex, e.txId)
+        }
+    }
+
+    // ==================== the caller's say on the amount about to be paid ====================
+
+    private fun enqueuePaymentRequest(address: Address, amount: Coin) {
+        mockWebServer.enqueue(
+            MockResponse()
+                .setResponseCode(HttpURLConnection.HTTP_OK)
+                .setHeader("Content-Type", PaymentProtocol.MIMETYPE_PAYMENTREQUEST)
+                .setBody(
+                    okio.Buffer().write(
+                        createPaymentRequest(address, amount, paymentUrl = mockWebServer.url("/payment").toString())
+                    )
+                )
+        )
+    }
+
+    @Test
+    fun `a refused payment request amount builds, reserves, records and posts nothing`() = runBlocking {
+        // Given: a request that asks for more than the URI that led to it
+        val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
+        enqueuePaymentRequest(testAddress, Coin.parseCoin("0.02"))
+        val bip72Uri = "dash:$testAddress?amount=0.01&r=${mockWebServer.url("/request")}"
+        var offered: Dash? = null
+        var createdTxId: String? = null
+
+        // When: the caller refuses it
+        val thrown = runCatching {
+            sendCoinsTaskRunner.payWithDashUrl(
+                bip72Uri,
+                "TestService",
+                approveAmount = {
+                    offered = it
+                    throw IllegalArgumentException("refused")
+                }
+            ) { createdTxId = it }
+        }.exceptionOrNull()
+
+        // Then
+        assertEquals(Dash(2_000_000), offered)
+        assertTrue("expected the caller's refusal, got $thrown", thrown is IllegalArgumentException)
+        io.mockk.coVerify(exactly = 0) { sdkL1SendService.buildDeferredPayment(any(), any()) }
+        io.mockk.coVerify(exactly = 0) { sdkL1SendService.broadcastDeferredPayment(any(), any()) }
+        io.mockk.coVerify(exactly = 0) { pendingPaymentConfig.add(any(), any()) }
+        io.mockk.verify(exactly = 0) { securityFunctions.deriveKey(any(), any()) }
+        assertEquals("only the request itself was fetched", 1, mockWebServer.requestCount)
+        assertNull(createdTxId)
+    }
+
+    @Test
+    fun `the payment request amount the caller approved is the amount built`() = runBlocking {
+        val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
+        enqueuePaymentRequest(testAddress, Coin.parseCoin("0.02"))
+        // the build is as far as this needs to go
+        coEvery { sdkL1SendService.buildDeferredPayment(any(), any()) } throws IllegalStateException("built")
+        val bip72Uri = "dash:$testAddress?amount=0.01&r=${mockWebServer.url("/request")}"
+        var offered: Dash? = null
+
+        runCatching {
+            sendCoinsTaskRunner.payWithDashUrl(bip72Uri, "TestService", approveAmount = { offered = it })
+        }
+
+        io.mockk.coVerify(exactly = 1) {
+            sdkL1SendService.buildDeferredPayment(listOf(testAddress.toBase58() to offered!!.duffs), any())
+        }
+    }
+
+    @Test
+    fun `a refused plain address amount builds and signs nothing on either engine`() = runBlocking {
+        val testAddress = Address.fromString(networkParams, "yWdXnYxGbouNoo8yMvcbZmZ3Gdp6BpySxL")
+        listOf(false, true).forEach { cutover ->
+            coEvery { sdkL1SendService.cutoverCommitted() } returns cutover
+            var offered: Dash? = null
+            var createdTxId: String? = null
+
+            val thrown = runCatching {
+                sendCoinsTaskRunner.payWithDashUrl(
+                    "dash:$testAddress?amount=0.01",
+                    "TestService",
+                    approveAmount = {
+                        offered = it
+                        throw IllegalArgumentException("refused")
+                    }
+                ) { createdTxId = it }
+            }.exceptionOrNull()
+
+            assertEquals("cutover $cutover", Dash(1_000_000), offered)
+            assertTrue("expected the caller's refusal, got $thrown", thrown is IllegalArgumentException)
+            io.mockk.coVerify(exactly = 0) { sdkL1SendService.buildDeferredPayment(any(), any()) }
+            io.mockk.verify(exactly = 0) { securityFunctions.deriveKey(any(), any()) }
+            assertNull(createdTxId)
         }
     }
 

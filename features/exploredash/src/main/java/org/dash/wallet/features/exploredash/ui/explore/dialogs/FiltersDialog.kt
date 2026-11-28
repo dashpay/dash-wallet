@@ -31,6 +31,7 @@ import org.dash.wallet.common.ui.radio_group.OptionPickerDialog
 import org.dash.wallet.common.ui.radio_group.RadioGroupAdapter
 import org.dash.wallet.common.ui.radio_group.setupRadioGroup
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.observe
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.explore.model.PaymentMethod
 import org.dash.wallet.features.exploredash.data.explore.model.SortOption
@@ -44,15 +45,31 @@ import org.dash.wallet.features.exploredash.ui.extensions.openAppSettings
 import org.dash.wallet.features.exploredash.ui.extensions.registerPermissionLauncher
 import org.dash.wallet.features.exploredash.ui.extensions.runLocationFlow
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
+import java.util.Locale
 
 @AndroidEntryPoint
 class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
+    companion object {
+        private const val PICKED_COUNTRY_KEY = "picked_country"
+        private const val COUNTRY_RESET_KEY = "country_reset"
+    }
+
     override val backgroundStyle = R.style.PrimaryBackground
 
     private val radiusOptions = listOf(1, 5, 20, 50)
     private var selectedRadiusOption: Int = ExploreViewModel.DEFAULT_RADIUS_OPTION
     private var sortOption = ExploreViewModel.DEFAULT_SORT_OPTION
     private var selectedTerritory: String = ""
+    private var countryNames: Map<String, String> = mapOf()
+    private var isCountryShown = false
+
+    private val isCountryFiltered: Boolean
+        get() = viewModel.exploreTopic == ExploreTopic.Merchants &&
+            (viewModel.filterMode.value == FilterMode.Online || viewModel.filterMode.value == FilterMode.All)
+
+    // Only a country the user picked here is saved; the one shown by default is not a choice
+    private var pickedCountry: String? = null
+    private var isCountryReset = false
     private var dashPaymentOn: Boolean = true
     private var ctxPaymentOn: Boolean = true
     private var piggyCardsPaymentOn: Boolean = true
@@ -75,6 +92,8 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        pickedCountry = savedInstanceState?.getString(PICKED_COUNTRY_KEY)
+        isCountryReset = savedInstanceState?.getBoolean(COUNTRY_RESET_KEY) ?: false
 
         if (viewModel.exploreTopic == ExploreTopic.Merchants) {
             setupPaymentMethods()
@@ -101,6 +120,7 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
         }
 
         setupSortByOptions()
+        setupCountryFilter()
 
         binding.applyButton.setOnClickListener {
             applyFilters()
@@ -383,6 +403,65 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
         }
     }
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putString(PICKED_COUNTRY_KEY, pickedCountry)
+        outState.putBoolean(COUNTRY_RESET_KEY, isCountryReset)
+    }
+
+    private fun setupCountryFilter() {
+        viewModel.selectedCountry.observe(viewLifecycleOwner) {
+            showCountry()
+            checkResetButton()
+        }
+        viewModel.countries.observe(viewLifecycleOwner) { countries ->
+            // With a single country there is nothing to choose between
+            val isShown = isCountryFiltered && countries.size > 1
+            isCountryShown = isShown
+            binding.countryLabel.isVisible = isShown
+            binding.countryBtn.isVisible = isShown
+            countryNames = ExploreViewModel.countryNames(countries)
+            showCountry()
+            checkResetButton()
+        }
+
+        binding.countryBtn.setOnClickListener {
+            val names = countryNames
+            val allCountries = getString(R.string.explore_all_countries)
+            OptionPickerDialog(
+                getString(R.string.explore_country),
+                listOf(IconifiedViewItem(allCountries)) + names.keys.map { IconifiedViewItem(it) },
+                names.values.indexOf(shownCountry) + 1,
+                useCheckMark = true
+            ) { item, _, dialog ->
+                dialog.dismiss()
+                // The picker's index counts within its search results, so the name identifies the pick
+                val country = names[item.title]
+                if (country != null || item.title == allCountries) {
+                    pickedCountry = country
+                    isCountryReset = country == null
+                    showCountry()
+                    checkResetButton()
+                }
+            }.show(requireActivity())
+        }
+    }
+
+    private val shownCountry: String
+        get() = pickedCountry ?: if (isCountryReset) "" else viewModel.selectedCountry.value
+
+    private fun showCountry() {
+        val name = shownCountry.ifEmpty { null }?.let { Locale("", it).displayCountry }
+            ?: getString(R.string.explore_all_countries)
+        binding.countryName.text = name
+        binding.countryBtn.contentDescription =
+            getString(R.string.explore_country_selected, getString(R.string.explore_country), name)
+    }
+
+    private val hasCountryChoice: Boolean
+        get() = isCountryShown &&
+            (pickedCountry != null || (!isCountryReset && viewModel.chosenCountry.value != null))
+
     private fun setupLocationPermission() {
         binding.locationSettingsLabel.isVisible = true
         binding.locationSettingsBtn.isVisible = true
@@ -468,6 +547,10 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
             }
         }
 
+        if (pickedCountry != null || isCountryReset) {
+            viewModel.setCountry(pickedCountry)
+        }
+
         viewModel.setFilters(
             paymentFilter,
             selectedTerritory,
@@ -498,7 +581,7 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
             }
         }
 
-        if (selectedTerritory.isNotEmpty()) {
+        if (selectedTerritory.isNotEmpty() || hasCountryChoice) {
             isEnabled = true
         }
 
@@ -540,6 +623,13 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
 
         sortOption = ExploreViewModel.DEFAULT_SORT_OPTION
         sortByOptionsAdapter?.selectedIndex = sortOptions.indexOf(sortOption)
+
+        // Also without the picker: a saved country the database no longer has is forgotten too
+        if (isCountryFiltered) {
+            pickedCountry = null
+            isCountryReset = true
+            showCountry()
+        }
 
         updateGiftCardVisibility()
         binding.resetFiltersBtn.isEnabled = false
