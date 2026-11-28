@@ -21,6 +21,7 @@ import android.graphics.Bitmap
 import android.os.Bundle
 import android.util.Size
 import android.view.View
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -96,6 +97,8 @@ import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.Barcode
 import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardStatus
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
 import org.dash.wallet.features.exploredash.ui.dashspend.DashSpendViewModel
+import org.dash.wallet.features.exploredash.ui.dashspend.redeem.RedeemLinkActivity
+import org.dash.wallet.features.exploredash.ui.dashspend.redeem.RedeemLinkPolicy
 import org.dash.wallet.features.exploredash.ui.explore.MerchantLogo
 import java.text.DecimalFormat
 import java.text.NumberFormat
@@ -108,7 +111,6 @@ class GiftCardDetailsDialog : ComposeBottomSheet() {
     companion object {
         private const val ARG_TRANSACTION_ID = "transactionId"
         private const val ARG_CARD_INDEX = "cardIndex"
-        private const val WAIT_LIMIT_FOR_ERROR = 60
 
         /** [transactionId] is the hex transaction id (`Sha256Hash.toString()` format). */
         fun newInstance(transactionId: String, cardIndex: Int = 0) =
@@ -139,7 +141,7 @@ class GiftCardDetailsDialog : ComposeBottomSheet() {
     override fun Content() {
         GiftCardDetailsContent(
             viewModel = viewModel,
-            waitLimitForError = WAIT_LIMIT_FOR_ERROR,
+            waitLimitForError = GiftCardDetailsViewModel.WAIT_LIMIT_FOR_ERROR,
             onCloseClick = { dismiss() },
             onMaxBrightness = { enable -> setMaxBrightness(enable) },
             onViewTransaction = {
@@ -236,13 +238,40 @@ private fun GiftCardDetailsContent(
         onViewTransaction = onViewTransaction,
         onContactSupport = onContactSupport,
         onHowToUse = { viewModel.logEvent(AnalyticsConstants.DashSpend.HOW_TO_USE) },
-        onBalanceCheck = { url -> context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri())) },
-        onCopyNumber = { number -> number.copy(activity, "card number") },
-        onCopyPin = { pin -> pin.copy(activity, "card pin") },
+        onRedeemLink = { url ->
+            viewModel.logEvent(AnalyticsConstants.DashSpend.REDEEM_LINK)
+            val giftCard = uiState.giftCard
+
+            if (RedeemLinkActivity.canOpenInApp(context, url, viewModel.ctxBaseUrl)) {
+                context.startActivity(
+                    RedeemLinkActivity.createIntent(
+                        context,
+                        url,
+                        giftCard?.challengeCode,
+                        giftCard?.merchantName
+                    ).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                )
+            } else if (!RedeemLinkPolicy.canOpenExternally(url, viewModel.ctxBaseUrl)) {
+                Toast.makeText(context, R.string.redeem_link_blocked, Toast.LENGTH_LONG).show()
+            } else {
+                try {
+                    context.startActivity(
+                        Intent(Intent.ACTION_VIEW, url.toUri().normalizeScheme())
+                            .addCategory(Intent.CATEGORY_BROWSABLE)
+                    )
+                } catch (e: RuntimeException) {
+                    Toast.makeText(context, R.string.redeem_link_no_browser, Toast.LENGTH_LONG).show()
+                }
+            }
+        },
+        onCopyNumber = { number -> number.copy(activity, "card number", sensitive = true) },
+        onCopyPin = { pin -> pin.copy(activity, "card pin", sensitive = true) },
+        onCopyChallenge = { challenge -> challenge.copy(activity, "challenge code", sensitive = true) },
         onCopyOrder = { order -> order.copy(activity, "order") },
         onRefresh = {
             viewModel.refresh()
-        }
+        },
+        onRetry = { viewModel.retry() }
     )
 }
 
@@ -255,21 +284,28 @@ internal fun GiftCardDetailsView(
     onViewTransaction: () -> Unit = {},
     onContactSupport: () -> Unit = {},
     onHowToUse: () -> Unit = {},
-    onBalanceCheck: (String) -> Unit = {},
+    onRedeemLink: (String) -> Unit = {},
     onCopyNumber: (String) -> Unit = {},
     onCopyPin: (String) -> Unit = {},
+    onCopyChallenge: (String) -> Unit = {},
     onCopyOrder: (String) -> Unit = {},
-    onRefresh: () -> Unit = {}
+    onRefresh: () -> Unit = {},
+    onRetry: () -> Unit = {}
 ) {
     val colors = LocalDashColors.current
     var showHowToUse by remember { mutableStateOf(false) }
+    val isLinkOnlyCard = uiState.giftCard?.let {
+        !it.merchantUrl.isNullOrBlank() && it.number.isNullOrEmpty()
+    } == true
+    val hasChallenge = uiState.giftCard?.challengeCode != null
 
     val hasExceededWaitLimit = uiState.queries >= waitLimitForError
     val shouldShowTimeoutError = when (uiState.status) {
         GiftCardStatus.UNPAID, GiftCardStatus.PAID -> hasExceededWaitLimit
         else -> false
     }
-    val shouldShowError = (shouldShowTimeoutError || uiState.status == GiftCardStatus.REJECTED) && uiState.error != null
+    val hasFailed = shouldShowTimeoutError || uiState.status == GiftCardStatus.REJECTED || uiState.isMissingDetails
+    val shouldShowError = hasFailed && uiState.error != null
 
     Column(
         modifier = Modifier
@@ -293,9 +329,10 @@ internal fun GiftCardDetailsView(
                 shouldShowTimeoutError = shouldShowTimeoutError,
                 error = uiState.error,
                 onMaxBrightness = onMaxBrightness,
-                onBalanceCheck = { uiState.giftCard?.merchantUrl?.let { onBalanceCheck(it) } },
+                onRedeemLink = { uiState.giftCard?.merchantUrl?.trim()?.let { onRedeemLink(it) } },
                 onCopyNumber = onCopyNumber,
                 onCopyPin = onCopyPin,
+                onCopyChallenge = onCopyChallenge,
                 onCopyOrder = onCopyOrder,
                 onRefresh = onRefresh
             )
@@ -314,6 +351,9 @@ internal fun GiftCardDetailsView(
                     else -> stringResource(R.string.gift_card_contact_support)
                 }
                 DashList {
+                    if (uiState.isMissingDetails) {
+                        NavigationRow(label = stringResource(R.string.try_again), onClick = onRetry)
+                    }
                     NavigationRow(label = supportLabel, onClick = onContactSupport)
                 }
             }
@@ -328,7 +368,7 @@ internal fun GiftCardDetailsView(
                     }
                 )
             } else {
-                HowToUseCard()
+                HowToUseCard(isLinkOnlyCard, hasChallenge)
             }
 
             Column(
@@ -401,9 +441,10 @@ private fun GiftCardItemCard(
     shouldShowTimeoutError: Boolean,
     error: Exception?,
     onMaxBrightness: (Boolean) -> Unit,
-    onBalanceCheck: () -> Unit,
+    onRedeemLink: () -> Unit,
     onCopyNumber: (String) -> Unit,
     onCopyPin: (String) -> Unit,
+    onCopyChallenge: (String) -> Unit,
     onCopyOrder: (String) -> Unit,
     onRefresh: () -> Unit
 ) {
@@ -416,8 +457,9 @@ private fun GiftCardItemCard(
 
     val hasNumber = !giftCard?.number.isNullOrEmpty()
     val hasPin = !giftCard?.pin.isNullOrEmpty()
-    val hasMerchantUrl = !giftCard?.merchantUrl.isNullOrEmpty()
-    val hasRedeemUrlChallenge = !giftCard?.redeemUrlChallenge.isNullOrEmpty()
+    val hasMerchantUrl = !giftCard?.merchantUrl.isNullOrBlank()
+    val isLinkOnlyCard = hasMerchantUrl && !hasNumber
+    val challenge = giftCard?.challengeCode
     val isLoading = giftCard != null &&
         !hasNumber &&
         !hasMerchantUrl &&
@@ -433,32 +475,42 @@ private fun GiftCardItemCard(
             )
         }
 
-        if (!hasMerchantUrl) {
-            // Original purchase row
-            ListItem(
-                label = stringResource(R.string.purchase_original_purchase),
-                trailingText = currencyFormat.format(giftCard?.price ?: 0.0)
-            )
-        } else {
+        // Original purchase row
+        if (hasMerchantUrl && !isLinkOnlyCard) {
             ListItem(
                 label = stringResource(R.string.purchase_original_purchase),
                 trailingText = currencyFormat.format(giftCard?.price ?: 0.0),
                 trailingActionText = stringResource(R.string.purchase_check_current_balance),
-                onTrailingActionClick = { onBalanceCheck() }
+                onTrailingActionClick = onRedeemLink
             )
-            if (hasRedeemUrlChallenge) {
+        } else {
+            ListItem(
+                label = stringResource(R.string.purchase_original_purchase),
+                trailingText = currencyFormat.format(giftCard?.price ?: 0.0)
+            )
+        }
+
+        if (hasMerchantUrl) {
+            if (challenge != null) {
                 ListItem(
                     label = stringResource(R.string.purchase_redeem_url_challange),
-                    trailingText = giftCard.redeemUrlChallenge,
+                    trailingText = challenge,
                     trailingTrailingIcon = {
                         Icon(
                             painter = painterResource(R.drawable.ic_copy),
-                            contentDescription = null,
+                            contentDescription = stringResource(R.string.redeem_link_copy_challenge),
                             modifier = Modifier
                                 .size(14.dp)
-                                .clickable { onCopyNumber(giftCard.redeemUrlChallenge!!) }
+                                .clickable { onCopyChallenge(challenge) }
                         )
                     }
+                )
+            }
+            if (isLinkOnlyCard) {
+                DashButton(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                    text = stringResource(R.string.purchase_redeem_gift_card),
+                    onClick = onRedeemLink
                 )
             }
         }
@@ -699,7 +751,7 @@ private fun NavigationRow(label: String, onClick: () -> Unit) {
 }
 
 @Composable
-private fun HowToUseCard() {
+private fun HowToUseCard(isLinkOnlyCard: Boolean, hasChallenge: Boolean) {
     val colors = LocalDashColors.current
     Column(
         modifier = Modifier
@@ -716,23 +768,39 @@ private fun HowToUseCard() {
             modifier = Modifier.padding(top = 16.dp, bottom = 4.dp)
         )
 
-        HowToUseItem(
-            iconRes = R.drawable.ic_self_checkout_blue,
-            title = stringResource(R.string.purchase_self_checkout),
-            description = stringResource(R.string.purchase_Request_assistance)
-        )
+        if (isLinkOnlyCard) {
+            HowToUseItem(
+                iconRes = R.drawable.ic_online_blue,
+                title = stringResource(R.string.purchase_how_to_open_link),
+                description = stringResource(R.string.purchase_how_to_open_link_description)
+            )
 
-        HowToUseItem(
-            iconRes = R.drawable.ic_instore_blue,
-            title = stringResource(R.string.purchase_in_store),
-            description = stringResource(R.string.purchase_tell_the_cashier)
-        )
+            if (hasChallenge) {
+                HowToUseItem(
+                    iconRes = R.drawable.ic_online_blue,
+                    title = stringResource(R.string.purchase_how_to_enter_challenge),
+                    description = stringResource(R.string.purchase_how_to_enter_challenge_description)
+                )
+            }
+        } else {
+            HowToUseItem(
+                iconRes = R.drawable.ic_self_checkout_blue,
+                title = stringResource(R.string.purchase_self_checkout),
+                description = stringResource(R.string.purchase_Request_assistance)
+            )
 
-        HowToUseItem(
-            iconRes = R.drawable.ic_online_blue,
-            title = stringResource(R.string.explore_online_merchant),
-            description = stringResource(R.string.purchase_in_the_payment_section)
-        )
+            HowToUseItem(
+                iconRes = R.drawable.ic_instore_blue,
+                title = stringResource(R.string.purchase_in_store),
+                description = stringResource(R.string.purchase_tell_the_cashier)
+            )
+
+            HowToUseItem(
+                iconRes = R.drawable.ic_online_blue,
+                title = stringResource(R.string.explore_online_merchant),
+                description = stringResource(R.string.purchase_in_the_payment_section)
+            )
+        }
     }
 }
 
@@ -769,6 +837,9 @@ private fun HowToUseItem(iconRes: Int, title: String, description: String) {
         }
     }
 }
+
+private val GiftCard.challengeCode: String?
+    get() = RedeemLinkPolicy.normalizeChallenge(redeemUrlChallenge)
 
 // ─── Previews ────────────────────────────────────────────────────────────────
 

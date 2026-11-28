@@ -21,7 +21,7 @@ import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ServiceName
-import org.dash.wallet.common.money.DashNetworks
+import org.dash.wallet.features.exploredash.BuildConfig
 import org.dash.wallet.features.exploredash.network.authenticator.TokenAuthenticator
 import org.dash.wallet.features.exploredash.network.interceptor.ErrorHandlingInterceptor
 import org.dash.wallet.features.exploredash.network.interceptor.HeadersInterceptor
@@ -45,13 +45,7 @@ class RemoteDataSource @Inject constructor(
 
     fun <Api> buildApi(api: Class<Api>): Api {
         return Retrofit.Builder()
-            .baseUrl(
-                if (walletData.networkId == DashNetworks.MAINNET) {
-                    CTXSpendConstants.BASE_URL
-                } else {
-                    CTXSpendConstants.DEV_BASE_URL
-                }
-            )
+            .baseUrl(CTXSpendConstants.baseUrl(walletData.networkId))
             .client(getOkHttpClient(TokenAuthenticator(buildTokenApi(), config)))
             .addConverterFactory(GsonConverterFactory.create())
             .build()
@@ -60,13 +54,7 @@ class RemoteDataSource @Inject constructor(
 
     fun buildTokenApi(): CTXSpendTokenApi {
         return Retrofit.Builder()
-            .baseUrl(
-                if (walletData.networkId == DashNetworks.MAINNET) {
-                    CTXSpendConstants.BASE_URL
-                } else {
-                    CTXSpendConstants.DEV_BASE_URL
-                }
-            )
+            .baseUrl(CTXSpendConstants.baseUrl(walletData.networkId))
             .client(getOkHttpClient(includeAuthorization = false))
             .addConverterFactory(GsonConverterFactory.create())
             .build()
@@ -85,12 +73,12 @@ class RemoteDataSource @Inject constructor(
             .readTimeout(20.seconds.toJavaDuration())
             .also { client ->
                 authenticator?.let { client.authenticator(it) }
-                //                if (BuildConfig.DEBUG) { TODO
-                val logging = HttpLoggingInterceptor { message -> log.info(message) }
-                logging.redactHeader("Authorization")
-                logging.level = HttpLoggingInterceptor.Level.BODY
-                client.addInterceptor(logging)
-                //                }
+                if (BuildConfig.DEBUG) {
+                    val logging = HttpLoggingInterceptor { message -> log.info(message) }
+                    logging.redactHeader("Authorization")
+                    logging.level = HttpLoggingInterceptor.Level.BODY
+                    client.addInterceptor(logging)
+                }
             }
             .build()
     }

@@ -441,6 +441,7 @@
     <string name="advanced">Advanced</string>
     <string name="intermediate_level_card_decs">Advanced users who have a very high level of technical expertise can determine your transaction history</string>
     <string name="advanced_level_card_decs">It would be very difficult for advanced users with any level of technical expertise to determine your transaction history</string>
+    <string name="appwidget_balance_hidden" translatable="false">••••••</string>
 
     <!-- credit balance messages / buttons -->
     <string name="credit_balance_empty_warning_title">Your credit balance is low</string>

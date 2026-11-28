@@ -17,17 +17,23 @@
 
 package org.dash.wallet.common.util
 
+import android.annotation.SuppressLint
 import android.content.ClipData
+import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.Context
+import android.os.PersistableBundle
 import android.widget.Toast
 import androidx.fragment.app.FragmentActivity
 import org.dash.wallet.common.R
 
-fun String.copy(activity: FragmentActivity, label: String) {
-    (activity.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).run {
-        setPrimaryClip(ClipData.newPlainText(label, this@copy))
+@SuppressLint("InlinedApi")
+fun String.copy(activity: FragmentActivity, label: String, sensitive: Boolean = false) {
+    val clip = ClipData.newPlainText(label, this)
+    if (sensitive) {
+        clip.description.extras = PersistableBundle().apply { putBoolean(ClipDescription.EXTRA_IS_SENSITIVE, true) }
     }
+    (activity.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(clip)
     Toast.makeText(activity, activity.getString(R.string.copied), Toast.LENGTH_SHORT).show()
 }
 
