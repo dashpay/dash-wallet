@@ -92,6 +92,8 @@ import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.webkit.ProxyConfig
 import androidx.webkit.ProxyController
+import androidx.webkit.ServiceWorkerClientCompat
+import androidx.webkit.ServiceWorkerControllerCompat
 import androidx.webkit.WebStorageCompat
 import androidx.webkit.WebViewFeature
 import dagger.hilt.android.AndroidEntryPoint
@@ -141,7 +143,9 @@ class RedeemLinkActivity : InteractionAwareActivity() {
         private fun canIsolate(): Boolean {
             return try {
                 WebViewFeature.isFeatureSupported(WebViewFeature.DELETE_BROWSING_DATA) &&
-                    WebViewFeature.isFeatureSupported(WebViewFeature.PROXY_OVERRIDE)
+                    WebViewFeature.isFeatureSupported(WebViewFeature.PROXY_OVERRIDE) &&
+                    WebViewFeature.isFeatureSupported(WebViewFeature.SERVICE_WORKER_BASIC_USAGE) &&
+                    WebViewFeature.isFeatureSupported(WebViewFeature.SERVICE_WORKER_SHOULD_INTERCEPT_REQUEST)
             } catch (e: Exception) {
                 log.warn("WebView is not available: {}", e.javaClass.simpleName)
                 false
@@ -238,24 +242,11 @@ class RedeemLinkActivity : InteractionAwareActivity() {
         }
 
         override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
-            // The proxy broadcast can trail the setting, and this runs before each request the page starts.
-            val verdict = RedeemLinkPolicy.requestVerdict(request.url?.scheme) {
-                proxyChecks.isDirect(request.url?.host) {
-                    connectsDirectly(this@RedeemLinkActivity, request.url?.toString(), isPageRequest = true)
+            return screenRequest(request.url) {
+                if (isShowing(view)) {
+                    showBlockedByProxy()
                 }
             }
-
-            if (verdict == RedeemLinkPolicy.RequestVerdict.ALLOW) {
-                return super.shouldInterceptRequest(view, request)
-            }
-            if (verdict == RedeemLinkPolicy.RequestVerdict.BLOCKED_BY_PROXY) {
-                Handler(Looper.getMainLooper()).post {
-                    if (isShowing(view)) {
-                        showBlockedByProxy()
-                    }
-                }
-            }
-            return WebResourceResponse("text/plain", "utf-8", ByteArrayInputStream(ByteArray(0)))
         }
 
         override fun doUpdateVisitedHistory(view: WebView, url: String?, isReload: Boolean) {
@@ -298,6 +289,18 @@ class RedeemLinkActivity : InteractionAwareActivity() {
             discardWebView(view)
             hasError = true
             return true
+        }
+    }
+
+    // A service worker fetches outside the page, so the page client never sees its requests.
+    @VisibleForTesting
+    internal val redeemServiceWorkerClient = object : ServiceWorkerClientCompat() {
+        override fun shouldInterceptRequest(request: WebResourceRequest): WebResourceResponse? {
+            return screenRequest(request.url) {
+                if (!isFinishing && webView != null) {
+                    showBlockedByProxy()
+                }
+            }
         }
     }
 
@@ -501,6 +504,23 @@ class RedeemLinkActivity : InteractionAwareActivity() {
         return LoadResult.STARTED
     }
 
+    // The proxy broadcast can trail the setting, and this runs before each request a page or worker starts.
+    private fun screenRequest(url: Uri?, onProxyFound: Runnable): WebResourceResponse? {
+        val verdict = RedeemLinkPolicy.requestVerdict(url?.scheme) {
+            proxyChecks.isDirect(url?.host) {
+                connectsDirectly(this, url?.toString(), isPageRequest = true)
+            }
+        }
+
+        if (verdict == RedeemLinkPolicy.RequestVerdict.ALLOW) {
+            return null
+        }
+        if (verdict == RedeemLinkPolicy.RequestVerdict.BLOCKED_BY_PROXY) {
+            Handler(Looper.getMainLooper()).post(onProxyFound)
+        }
+        return WebResourceResponse("text/plain", "utf-8", ByteArrayInputStream(ByteArray(0)))
+    }
+
     // Setup callbacks can arrive after the screen was closed but before onDestroy has run.
     private fun isShowing(view: WebView): Boolean {
         return !isFinishing && !isDestroyed && view === webView
@@ -578,6 +598,7 @@ class RedeemLinkActivity : InteractionAwareActivity() {
             .build()
 
         overrideClaims.claim(this)
+        ServiceWorkerControllerCompat.getInstance().setServiceWorkerClient(redeemServiceWorkerClient)
         ProxyController.getInstance().setProxyOverride(config, ContextCompat.getMainExecutor(this), onBlocked)
     }
 
@@ -585,6 +606,7 @@ class RedeemLinkActivity : InteractionAwareActivity() {
     private fun liftCleartextBlock() {
         if (overrideClaims.release(this)) {
             runCatching { ProxyController.getInstance().clearProxyOverride(ContextCompat.getMainExecutor(this)) {} }
+            runCatching { ServiceWorkerControllerCompat.getInstance().setServiceWorkerClient(null) }
         }
     }
 

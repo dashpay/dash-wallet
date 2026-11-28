@@ -56,6 +56,17 @@ class RedeemLinkActivityTest {
     @After
     fun tearDown() {
         RedeemLinkActivity.overrideClaims.release(activity)
+        System.clearProperty("https.proxyHost")
+        System.clearProperty("https.proxyPort")
+    }
+
+    private fun configureProxy() {
+        System.setProperty("https.proxyHost", "proxy.example.com")
+        System.setProperty("https.proxyPort", "8080")
+    }
+
+    private fun request(url: String): WebResourceRequest {
+        return mock { on { getUrl() } doReturn Uri.parse(url) }
     }
 
     private fun mainFrameRequest(url: String): WebResourceRequest {
@@ -117,6 +128,45 @@ class RedeemLinkActivityTest {
         assertSame(view, activity.webView)
         assertFalse(activity.hasError)
         assertFalse(RedeemLinkActivity.overrideClaims.isEmpty)
+    }
+
+    @Test
+    fun `a service worker request over plain http is dropped`() {
+        val response = activity.redeemServiceWorkerClient.shouldInterceptRequest(request("http://example.com/a.js"))
+
+        assertEquals(0, response?.data?.available())
+        shadowOf(Looper.getMainLooper()).idle()
+        assertSame(view, activity.webView)
+    }
+
+    @Test
+    fun `a service worker request goes out while the device connects directly`() {
+        assertNull(activity.redeemServiceWorkerClient.shouldInterceptRequest(request("https://example.com/a.js")))
+    }
+
+    @Test
+    fun `a service worker request under a new proxy is dropped and closes the page`() {
+        configureProxy()
+
+        val response = activity.redeemServiceWorkerClient.shouldInterceptRequest(request("https://example.com/a.js"))
+
+        assertEquals(0, response?.data?.available())
+        shadowOf(Looper.getMainLooper()).idle()
+        assertTrue(activity.isBlockedByProxy)
+        assertNull(activity.webView)
+        assertTrue(RedeemLinkActivity.overrideClaims.isEmpty)
+    }
+
+    @Test
+    fun `a page request under a new proxy is dropped and closes the page`() {
+        configureProxy()
+
+        val response = activity.redeemWebViewClient.shouldInterceptRequest(view, request("https://example.com/a.js"))
+
+        assertEquals(0, response?.data?.available())
+        shadowOf(Looper.getMainLooper()).idle()
+        assertTrue(activity.isBlockedByProxy)
+        assertNull(activity.webView)
     }
 
     @Test
