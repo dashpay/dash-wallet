@@ -2363,4 +2363,18 @@ class DashSpendCardCurrencyTest {
         assertRefusedAsExpired { viewModel.payCtxOrder(shown, "dash:?r=x", order) }
         assertEquals(emptyList<Dash?>(), sentPayments)
     }
+
+    @Test
+    fun ctxQuote_isRoundedTheWayCtxChargesAndPiggyCardsStaysAsItWas() = runBlocking {
+        ctxSells("GBP", listOf("5", "500"), discount = 160)
+        setRate("GBP", "30")
+        val viewModel = viewModel()
+        viewModel.openCtxMerchant()
+        viewModel.enter("5.55")
+
+        assertEquals(BigDecimal("5.46"), viewModel.currentQuote()?.total)
+
+        viewModel.selectedProvider = GiftCardProviderType.PiggyCards
+        assertEquals(BigDecimal("5.47"), viewModel.discountedTotal(mapOf(5.55 to 1), "USD") { 0.016 })
+    }
 }

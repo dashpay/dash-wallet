@@ -518,7 +518,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
         binding.discountValue.setTextColor(resources.getColor(R.color.content_primary, null))
         val discountedAmount = Fiat.parseFiat(
             purchaseAmount.currencyCode,
-            GiftCardCurrency.discountedTotal(
+            viewModel.discountedTotal(
                 mapOf(purchaseAmount.toBigDecimal().toDouble() to 1),
                 purchaseAmount.currencyCode
             ) { savingsFraction }.toPlainString()

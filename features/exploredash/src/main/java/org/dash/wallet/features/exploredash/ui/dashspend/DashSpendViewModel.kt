@@ -513,7 +513,18 @@ class DashSpendViewModel @Inject constructor(
     fun currentQuote(): GiftCardQuote? {
         val currency = cardCurrency ?: return null
         val order = giftCardOrderInfo.value
-        return GiftCardQuote(currency, order, GiftCardCurrency.discountedTotal(order, currency, ::getGiftCardDiscount))
+        return GiftCardQuote(currency, order, discountedTotal(order, currency))
+    }
+
+    /** What [order] costs: by CTX's own rounding for its cards, so that what is shown is what it charges. */
+    fun discountedTotal(
+        order: Map<Double, Int>,
+        currencyCode: String,
+        discountOf: (Double) -> Double = ::getGiftCardDiscount
+    ): BigDecimal = if (selectedProvider == GiftCardProviderType.CTX) {
+        GiftCardCurrency.ctxTotal(order, currencyCode, discountOf)
+    } else {
+        GiftCardCurrency.discountedTotal(order, currencyCode, discountOf)
     }
 
     /** [shown] is what the confirmation showed. Any other order, currency or total is refused. */

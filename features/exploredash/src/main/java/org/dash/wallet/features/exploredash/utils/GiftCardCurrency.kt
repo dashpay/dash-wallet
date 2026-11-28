@@ -71,6 +71,23 @@ object GiftCardCurrency {
             total + price * BigDecimal(quantity)
         }.setScale(fractionDigits(currencyCode), RoundingMode.UP)
 
+    /**
+     * What CTX charges for [order]: it rounds each card's discount half up to the currency's
+     * smallest unit and takes that off the face value. The fraction is used as the binary double
+     * it is, as CTX does, which is what decides an exact half.
+     */
+    fun ctxTotal(order: Map<Double, Int>, currencyCode: String, discountOf: (Double) -> Double): BigDecimal {
+        val digits = fractionDigits(currencyCode)
+        return order.entries.fold(BigDecimal.ZERO) { total, (value, quantity) ->
+            val face = BigDecimal.valueOf(value).setScale(digits, RoundingMode.HALF_UP)
+            val fraction = BigDecimal(discountOf(value).coerceIn(0.0, 1.0))
+            val discount = (face.unscaledValue().toBigDecimal() * fraction + BigDecimal("0.5"))
+                .setScale(0, RoundingMode.FLOOR)
+                .movePointLeft(digits)
+            total + (face - discount) * BigDecimal(quantity)
+        }.setScale(digits, RoundingMode.UNNECESSARY)
+    }
+
     // Fiat counts in its smallest unit, far finer than any ISO 4217 currency (JPY 0, KWD 3 decimals)
     fun toFiat(amount: Double, currencyCode: String): Fiat =
         Fiat.valueOf(
