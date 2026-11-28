@@ -209,11 +209,8 @@ class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
         if (binding.amountView.dashToFiat) {
             binding.amountView.input = viewModel.amount.value?.toPlainString() ?: Coin.ZERO.toPlainString()
         } else {
-            val fiat = viewModel.fiatAmount.value ?: Fiat.valueOf(viewModel.selectedCurrencyCode, 0)
-            binding.amountView.input = AmountInputRules.fitDecimals(
-                fiat.toPlainString(),
-                AmountInputRules.maxDecimals(false, fiat.currencyCode)
-            )
+            binding.amountView.input = viewModel.fiatAmount.value?.toPlainString()
+                ?: Fiat.valueOf(viewModel.selectedCurrencyCode, 0).toPlainString()
         }
     }
 

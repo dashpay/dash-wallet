@@ -122,7 +122,8 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
 
                     if (exchangeRate != null) {
                         fiatAmount = exchangeRate!!.coinToFiat(dashAmount)
-                        val fiatStr = AmountInputRules.fiatInput(fiatAmount, fiatFormat)
+                        val fiatStr = fiatFormat.minDecimals(0)
+                            .optionalDecimals(0, 2).format(fiatAmount).toString()
                         _input = if (fiatStr.trimStart().startsWith("-")) "0" else fiatStr
                         binding.inputAmount.text = formatInputWithCurrency()
                         setIconWithText(formatInputWithCurrency())
